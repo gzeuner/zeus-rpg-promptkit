@@ -11,7 +11,7 @@ const { generateMarkdownReport } = require('../src/report/markdownReport');
 const { writeJsonReport } = require('../src/report/jsonReport');
 
 function printHelp() {
-  console.log('Usage: zeus analyze --source <dir> --program <name> [--profile <name>] [--output <dir>] [--extensions .rpgle,.rpg]');
+  console.log('Usage: zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--verbose]');
 }
 
 function parseArgs(argv) {
@@ -30,7 +30,11 @@ function parseArgs(argv) {
 }
 
 function loadProfiles() {
-  const profilePath = path.resolve(process.cwd(), 'config', 'profiles.example.json');
+  const configDir = path.resolve(process.cwd(), 'config');
+  const preferredPath = path.join(configDir, 'profiles.json');
+  const fallbackPath = path.join(configDir, 'profiles.example.json');
+  const profilePath = fs.existsSync(preferredPath) ? preferredPath : fallbackPath;
+
   if (!fs.existsSync(profilePath)) {
     return {};
   }
@@ -42,24 +46,24 @@ function loadProfiles() {
 function resolveConfig(args) {
   const profiles = loadProfiles();
   const profileName = args.profile;
-  const profile = profileName ? profiles[profileName] : {};
+  const profile = profileName ? profiles[profileName] : null;
 
   if (profileName && !profile) {
-    throw new Error(`Profile "${profileName}" not found in config/profiles.example.json`);
+    throw new Error(`Profile "${profileName}" not found in config/profiles.json or config/profiles.example.json`);
   }
 
-  const sourceRoot = args.source || profile.sourceRoot || './rpg';
-  const outputRoot = args.output || profile.outputRoot || './output';
+  const sourceRoot = args.source || (profile && profile.sourceRoot);
+  const outputRoot = args.out || args.output || (profile && profile.outputRoot) || 'output';
 
   const extensions = args.extensions
     ? String(args.extensions).split(',').map((ext) => ext.trim()).filter(Boolean)
-    : (profile.extensions || ['.rpgle', '.rpg', '.sqlrpgle', '.rpgleinc']);
+    : ((profile && profile.extensions) || ['.rpgle', '.rpg', '.sqlrpgle', '.rpgleinc']);
 
   return {
     sourceRoot,
     outputRoot,
     extensions,
-    db: profile.db || null,
+    db: (profile && profile.db) || null,
   };
 }
 
@@ -92,29 +96,49 @@ function main() {
   }
 
   const args = parseArgs(argv.slice(1));
+  const verbose = Boolean(args.verbose);
 
-  if (!args.program) {
+  const logVerbose = (message) => {
+    if (verbose) {
+      console.log(`[verbose] ${message}`);
+    }
+  };
+
+  if (!args.program || !String(args.program).trim()) {
     console.error('Missing required option: --program <name>');
-    process.exit(1);
+    process.exit(2);
   }
 
   const config = resolveConfig(args);
+  if (!config.sourceRoot || !String(config.sourceRoot).trim()) {
+    console.error('Missing required option: --source <path>');
+    process.exit(2);
+  }
+
   const sourceRoot = path.resolve(process.cwd(), config.sourceRoot);
   const outputRoot = path.resolve(process.cwd(), config.outputRoot);
-  const program = String(args.program);
+  const program = String(args.program).trim();
+
+  logVerbose(`Program: ${program}`);
+  logVerbose(`Source root: ${sourceRoot}`);
+  logVerbose(`Output root: ${outputRoot}`);
+  logVerbose(`Extensions: ${config.extensions.join(', ')}`);
 
   if (!fs.existsSync(sourceRoot)) {
-    console.error(`Source directory not found: ${sourceRoot}`);
-    process.exit(1);
+    console.error(`Source directory not found: ${sourceRoot}. Provide a valid --source path.`);
+    process.exit(2);
   }
 
   const sourceFiles = collectSourceFiles(sourceRoot, config.extensions);
+  logVerbose(`Collected source files: ${sourceFiles.length}`);
   const scanResults = sourceFiles.map((filePath) => scanRpgFile(filePath));
   const dependencies = aggregateDependencies(scanResults);
 
   const notes = [];
   if (sourceFiles.length === 0) {
-    notes.push('No source files found for provided sourceRoot/extensions.');
+    const warning = 'No source files found for provided sourceRoot/extensions.';
+    notes.push(warning);
+    console.warn(`Warning: ${warning}`);
   }
   if (config.db) {
     notes.push('DB profile found. Run java/Db2MetadataExporter.java separately to enrich table metadata.');
@@ -138,6 +162,7 @@ function main() {
 
   const outputProgramDir = path.join(outputRoot, program);
   fs.mkdirSync(outputProgramDir, { recursive: true });
+  logVerbose(`Writing output to ${outputProgramDir}`);
 
   writeJsonReport(path.join(outputProgramDir, 'context.json'), context);
   fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');
