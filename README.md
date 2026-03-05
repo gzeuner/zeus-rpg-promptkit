@@ -65,6 +65,12 @@ npm run analyze -- --source ./rpg --program ORDERPGM
 
 ## Usage
 
+Command syntax:
+
+```bash
+zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--verbose]
+```
+
 ### Basic analyze
 
 ```bash
@@ -80,7 +86,7 @@ node cli/zeus.js analyze --profile default --program ORDERPGM
 ### Override profile output location
 
 ```bash
-node cli/zeus.js analyze --profile default --program ORDERPGM --output ./output
+node cli/zeus.js analyze --profile default --program ORDERPGM --out ./output
 ```
 
 ## Output Contract
@@ -135,7 +141,9 @@ The helper prints JSON to stdout with table and column metadata.
 
 ## Configuration Profiles
 
-`config/profiles.example.json` supports named profiles. A profile can define:
+Profiles are loaded from `config/profiles.json` when present, otherwise from `config/profiles.example.json`.
+
+A profile can define:
 
 - `sourceRoot`
 - `outputRoot`
