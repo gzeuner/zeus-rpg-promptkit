@@ -13,5 +13,17 @@
       "user": "MYUSER",
       "password": "MYPASSWORD"
     }
+  },
+  "sample-fetch": {
+    "fetch": {
+      "host": "myibmi.example.com",
+      "user": "MYUSER",
+      "password": "MYPASSWORD",
+      "sourceLib": "SOURCEN",
+      "ifsDir": "/home/zeus/rpg_sources",
+      "out": "./rpg_sources",
+      "files": ["QRPGLESRC", "QSQLRPGLESRC", "QCLLESRC"],
+      "replace": true
+    }
   }
 }

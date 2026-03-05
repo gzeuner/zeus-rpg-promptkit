@@ -8,8 +8,12 @@
   },
   "scripts": {
     "analyze": "node ./cli/zeus.js analyze",
+    "fetch": "node ./cli/zeus.js fetch",
     "lint": "echo \"No lint configured\"",
     "test": "echo \"No tests configured\""
+  },
+  "dependencies": {
+    "ssh2-sftp-client": "^11.0.0"
   },
   "engines": {
     "node": ">=20"
