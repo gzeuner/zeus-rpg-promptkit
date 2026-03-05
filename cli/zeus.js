@@ -3,8 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { collectSourceFiles } = require('../src/collector/sourceCollector');
-const { scanRpgFile } = require('../src/scanner/rpgScanner');
-const { aggregateDependencies } = require('../src/scanner/dependencyScanner');
+const { scanSourceFiles } = require('../src/scanner/rpgScanner');
 const { buildContext } = require('../src/context/contextBuilder');
 const { buildPrompts } = require('../src/prompt/promptBuilder');
 const { generateMarkdownReport } = require('../src/report/markdownReport');
@@ -57,7 +56,7 @@ function resolveConfig(args) {
 
   const extensions = args.extensions
     ? String(args.extensions).split(',').map((ext) => ext.trim()).filter(Boolean)
-    : ((profile && profile.extensions) || ['.rpgle', '.rpg', '.sqlrpgle', '.rpgleinc']);
+    : ((profile && profile.extensions) || ['.rpg', '.rpgle', '.sqlrpgle', '.rpgile', '.clle', '.dds', '.dspf', '.prtf', '.pf', '.lf']);
 
   return {
     sourceRoot,
@@ -72,11 +71,16 @@ function pickSourceSnippet(sourceFiles, programName) {
     return 'No source files were found.';
   }
 
+  const paths = sourceFiles.map((entry) => (typeof entry === 'string' ? entry : entry.path)).filter(Boolean);
+  if (paths.length === 0) {
+    return 'No source files were found.';
+  }
+
   const normalizedProgram = String(programName || '').toLowerCase();
-  const preferred = sourceFiles.find((file) => {
+  const preferred = paths.find((file) => {
     const base = path.basename(file).toLowerCase();
     return base.startsWith(normalizedProgram);
-  }) || sourceFiles[0];
+  }) || paths[0];
 
   const content = fs.readFileSync(preferred, 'utf8');
   return content.split(/\r?\n/).slice(0, 120).join('\n');
@@ -131,10 +135,15 @@ function main() {
 
   const sourceFiles = collectSourceFiles(sourceRoot, config.extensions);
   logVerbose(`Collected source files: ${sourceFiles.length}`);
-  const scanResults = sourceFiles.map((filePath) => scanRpgFile(filePath));
-  const dependencies = aggregateDependencies(scanResults);
+  const scanSummary = scanSourceFiles(sourceFiles);
+  const dependencies = {
+    tables: scanSummary.tables,
+    calls: scanSummary.calls,
+    copyMembers: scanSummary.copyMembers,
+    sqlStatements: scanSummary.sqlStatements,
+  };
 
-  const notes = [];
+  const notes = [...(scanSummary.notes || [])];
   if (sourceFiles.length === 0) {
     const warning = 'No source files found for provided sourceRoot/extensions.';
     notes.push(warning);
@@ -146,12 +155,12 @@ function main() {
 
   const context = buildContext({
     program,
-    sourceFiles,
+    sourceFiles: scanSummary.sourceFiles || [],
     dependencies,
     notes,
   });
 
-  const sourceSnippet = pickSourceSnippet(sourceFiles, program);
+  const sourceSnippet = pickSourceSnippet(scanSummary.sourceFiles, program);
   const prompts = buildPrompts({
     program,
     context,
@@ -170,7 +179,7 @@ function main() {
   fs.writeFileSync(path.join(outputProgramDir, 'ai_prompt_error_analysis.md'), prompts.errorAnalysis, 'utf8');
 
   console.log(`Analysis complete for program ${program}`);
-  console.log(`Source files scanned: ${sourceFiles.length}`);
+  console.log(`Source files scanned: ${(scanSummary.sourceFiles || []).length}`);
   console.log(`Output written to: ${outputProgramDir}`);
 }
 
