@@ -1,103 +1,369 @@
 const fs = require('fs');
 
-function uniquePush(target, value) {
-  if (!value) return;
-  if (!target.includes(value)) {
-    target.push(value);
+function normalizeWhitespace(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+function isCommentLine(rawLine) {
+  if (!rawLine) return true;
+  if (rawLine.length >= 7 && rawLine[6] === '*') {
+    return true;
   }
+
+  const trimmed = rawLine.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('*')) return true;
+  if (trimmed.startsWith('//')) return true;
+  return false;
+}
+
+function normalizeName(name) {
+  return String(name || '').trim().toUpperCase();
+}
+
+function normalizeTableName(rawName) {
+  const cleaned = String(rawName || '').trim().replace(/^"(.*)"$/, '$1').replace(/\//g, '.');
+  if (!cleaned) return '';
+  const segments = cleaned.split('.').filter(Boolean);
+  const table = segments.length > 0 ? segments[segments.length - 1] : cleaned;
+  return normalizeName(table);
+}
+
+function addEntity(map, name, payload) {
+  const normalized = normalizeName(name);
+  if (!normalized) return;
+
+  if (!map.has(normalized)) {
+    map.set(normalized, {
+      ...payload,
+      name: normalized,
+      evidence: [],
+    });
+  }
+
+  const entity = map.get(normalized);
+  const evidenceKey = JSON.stringify(payload.evidence);
+  const hasEvidence = entity.evidence.some((item) => JSON.stringify(item) === evidenceKey);
+  if (!hasEvidence) {
+    entity.evidence.push(payload.evidence);
+  }
+}
+
+function detectSqlType(sqlText) {
+  const normalized = normalizeWhitespace(sqlText).toUpperCase();
+  if (/\bSELECT\b/.test(normalized)) return 'SELECT';
+  if (/\bINSERT\b/.test(normalized)) return 'INSERT';
+  if (/\bUPDATE\b/.test(normalized)) return 'UPDATE';
+  if (/\bDELETE\b/.test(normalized)) return 'DELETE';
+  if (/\bMERGE\b/.test(normalized)) return 'MERGE';
+  return 'OTHER';
+}
+
+function extractSqlTables(sqlText) {
+  const tables = new Set();
+  const regex = /\b(?:FROM|JOIN|UPDATE|INTO|MERGE\s+INTO)\s+("[^"]+"|[A-Z0-9_#$@./]+)/gi;
+  let match = regex.exec(sqlText);
+
+  while (match) {
+    const normalized = normalizeTableName(match[1]);
+    if (normalized) {
+      tables.add(normalized);
+    }
+    match = regex.exec(sqlText);
+  }
+
+  return Array.from(tables).sort();
+}
+
+function scanContent(filePath, content) {
+  const lines = content.split(/\r?\n/);
+  const tablesMap = new Map();
+  const callsMap = new Map();
+  const copyMembersMap = new Map();
+  const sqlStatements = [];
+
+  let inExecSql = false;
+  let execStartLine = 0;
+  let execBuffer = [];
+
+  const finalizeExecSql = (endLine) => {
+    if (execBuffer.length === 0) return;
+
+    const sqlText = normalizeWhitespace(execBuffer.join(' '));
+    const tables = extractSqlTables(sqlText);
+    sqlStatements.push({
+      type: detectSqlType(sqlText),
+      text: sqlText,
+      tables,
+      evidence: [
+        {
+          file: filePath,
+          startLine: execStartLine,
+          endLine,
+        },
+      ],
+    });
+
+    for (const tableName of tables) {
+      addEntity(tablesMap, tableName, {
+        kind: 'SQL',
+        evidence: { file: filePath, line: execStartLine, text: sqlText },
+      });
+    }
+
+    execBuffer = [];
+    inExecSql = false;
+    execStartLine = 0;
+  };
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const rawLine = lines[i];
+    const lineNo = i + 1;
+
+    if (isCommentLine(rawLine)) {
+      continue;
+    }
+
+    const trimmed = rawLine.trim();
+
+    const dclFMatch = rawLine.match(/^\s*dcl-f\s+([A-Z0-9_#$@]+)/i);
+    if (dclFMatch) {
+      const upperLine = rawLine.toUpperCase();
+      let kind = 'FILE';
+      if (upperLine.includes('WORKSTN')) kind = 'WORKSTN';
+      if (upperLine.includes('PRINTER')) kind = 'PRINTER';
+      if (upperLine.includes('DISK')) kind = 'DISK';
+      addEntity(tablesMap, dclFMatch[1], {
+        kind,
+        evidence: { file: filePath, line: lineNo, text: trimmed },
+      });
+    }
+
+    const fixedFSpecMatch = rawLine.match(/^\s*F[A-Z0-9_#$@]/i);
+    if (fixedFSpecMatch) {
+      const trimmedUpper = trimmed.toUpperCase();
+      if (!trimmedUpper.startsWith('FROM ')) {
+        const tokenMatch = rawLine.match(/^\s*F([A-Z0-9_#$@]+)/i);
+        const fIndex = rawLine.search(/F/i);
+        const fixedColName = fIndex >= 0 ? rawLine.slice(fIndex + 1, fIndex + 11).replace(/\s+/g, '') : '';
+        const tableName = ((tokenMatch ? tokenMatch[1] : '') || fixedColName).trim();
+        if (tableName) {
+          const upperLine = rawLine.toUpperCase();
+          let kind = 'FILE';
+          if (upperLine.includes('WORKSTN')) kind = 'WORKSTN';
+          if (upperLine.includes('PRINTER')) kind = 'PRINTER';
+          if (upperLine.includes('DISK')) kind = 'DISK';
+          addEntity(tablesMap, tableName, {
+            kind,
+            evidence: { file: filePath, line: lineNo, text: trimmed },
+          });
+        }
+      }
+    }
+
+    const copyMatch = rawLine.match(/^\s*\/(?:COPY|INCLUDE)\s+(.+)$/i) || rawLine.match(/^\s*COPY\s+(.+)$/i);
+    if (copyMatch) {
+      const copyName = normalizeName(copyMatch[1].replace(/["']/g, '').trim());
+      if (copyName) {
+        addEntity(copyMembersMap, copyName, {
+          evidence: { file: filePath, line: lineNo, text: trimmed },
+        });
+      }
+    }
+
+    const callPatterns = [
+      { regex: /\bCALL\s+PGM\s*\(\s*['"]?([A-Z0-9_#$@./]+)['"]?\s*\)/i, kind: 'PROGRAM' },
+      { regex: /\bCALL\s+['"]([A-Z0-9_#$@]+)['"]/i, kind: 'PROGRAM' },
+      { regex: /\bCALL\s+(?!PGM\b)([A-Z0-9_#$@]+)\b/i, kind: 'PROGRAM' },
+      { regex: /\bCALLP\s*\(\s*['"]([A-Z0-9_#$@]+)['"]\s*\)/i, kind: 'PROCEDURE' },
+      { regex: /\bCALLP\s+([A-Z0-9_#$@]+)\b/i, kind: 'PROCEDURE' },
+      { regex: /\bCALLPRC\s*\(\s*['"]([A-Z0-9_#$@]+)['"]\s*\)/i, kind: 'PROCEDURE' },
+      { regex: /\bCALLPRC\s*\(\s*([A-Z0-9_#$@]+)\s*\)/i, kind: 'PROCEDURE' },
+      { regex: /\bCALLB\s+['"]?([A-Z0-9_#$@]+)['"]?/i, kind: 'PROCEDURE' },
+    ];
+
+    for (const pattern of callPatterns) {
+      const match = rawLine.match(pattern.regex);
+      if (match) {
+        addEntity(callsMap, match[1], {
+          kind: pattern.kind,
+          evidence: { file: filePath, line: lineNo, text: trimmed },
+        });
+      }
+    }
+
+    if (/\bCALLP\s*\(/i.test(rawLine) && !/\bCALLP\s*\(\s*['"][A-Z0-9_#$@]+['"]\s*\)/i.test(rawLine)) {
+      addEntity(callsMap, '<DYNAMIC>', {
+        kind: 'DYNAMIC',
+        evidence: { file: filePath, line: lineNo, text: trimmed },
+      });
+    }
+
+    const execSqlMatch = rawLine.match(/\bEXEC\s+SQL\b/i);
+    if (execSqlMatch) {
+      if (inExecSql) {
+        finalizeExecSql(lineNo - 1);
+      }
+
+      inExecSql = true;
+      execStartLine = lineNo;
+      const sqlPart = rawLine.slice(execSqlMatch.index);
+      execBuffer.push(sqlPart.trim());
+      if (rawLine.includes(';')) {
+        finalizeExecSql(lineNo);
+      }
+      continue;
+    }
+
+    if (inExecSql) {
+      execBuffer.push(trimmed);
+      if (rawLine.includes(';')) {
+        finalizeExecSql(lineNo);
+      }
+      continue;
+    }
+
+    if (/\b(SELECT|INSERT|UPDATE|DELETE|MERGE|WITH)\b/i.test(rawLine)) {
+      const sqlText = normalizeWhitespace(trimmed);
+      const tables = extractSqlTables(sqlText);
+      sqlStatements.push({
+        type: detectSqlType(sqlText),
+        text: sqlText,
+        tables,
+        evidence: [
+          {
+            file: filePath,
+            startLine: lineNo,
+            endLine: lineNo,
+          },
+        ],
+      });
+
+      for (const tableName of tables) {
+        addEntity(tablesMap, tableName, {
+          kind: 'SQL',
+          evidence: { file: filePath, line: lineNo, text: sqlText },
+        });
+      }
+    }
+  }
+
+  if (inExecSql) {
+    finalizeExecSql(lines.length);
+  }
+
+  return {
+    sourceFile: {
+      path: filePath,
+      sizeBytes: Buffer.byteLength(content, 'utf8'),
+      lines: lines.length,
+    },
+    tables: Array.from(tablesMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
+    calls: Array.from(callsMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
+    copyMembers: Array.from(copyMembersMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
+    sqlStatements,
+    notes: [],
+  };
 }
 
 function scanRpgFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
-  const lines = content.split(/\r?\n/);
+  return scanContent(filePath, content);
+}
 
-  const tables = [];
-  const calls = [];
-  const copyMembers = [];
-  const sqlStatements = [];
-
-  let inSqlBlock = false;
-  let sqlBuffer = [];
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-
-    const fixedFSpec = rawLine.match(/^\s*F([A-Z0-9_#$@]+)/i);
-    if (fixedFSpec) {
-      uniquePush(tables, fixedFSpec[1].toUpperCase());
+function mergeEntities(targetMap, entities, withKind) {
+  for (const entity of entities) {
+    const key = normalizeName(entity.name);
+    if (!targetMap.has(key)) {
+      const base = {
+        name: key,
+        evidence: [],
+      };
+      if (withKind) {
+        base.kind = entity.kind || withKind;
+      }
+      targetMap.set(key, base);
     }
 
-    const freeFSpec = rawLine.match(/^\s*dcl-f\s+([A-Z0-9_#$@]+)/i);
-    if (freeFSpec) {
-      uniquePush(tables, freeFSpec[1].toUpperCase());
+    const target = targetMap.get(key);
+    if (withKind && !target.kind && entity.kind) {
+      target.kind = entity.kind;
     }
 
-    const copyMatch = rawLine.match(/^\s*\/(?:COPY|INCLUDE)\s+(.+)$/i);
-    if (copyMatch) {
-      uniquePush(copyMembers, copyMatch[1].trim());
-    }
-
-    const copyKeywordMatch = rawLine.match(/^\s*COPY\s+(.+)$/i);
-    if (copyKeywordMatch) {
-      uniquePush(copyMembers, copyKeywordMatch[1].trim());
-    }
-
-    const callPatterns = [
-      /\bCALL\s+['"]?([A-Z0-9_#$@]+)['"]?/i,
-      /\bCALLP\s+([A-Z0-9_#$@]+)\b/i,
-      /\bCALLP\s*\(\s*['"]?([A-Z0-9_#$@]+)['"]?\s*\)/i,
-      /\bCALLB\s+['"]?([A-Z0-9_#$@]+)['"]?/i,
-      /\bCALLPRC\s*\(\s*['"]?([A-Z0-9_#$@]+)['"]?\s*\)/i,
-      /\bCALLPRC\s+['"]?([A-Z0-9_#$@]+)['"]?/i,
-    ];
-
-    for (const pattern of callPatterns) {
-      const match = rawLine.match(pattern);
-      if (match) {
-        uniquePush(calls, match[1].toUpperCase());
+    for (const evidence of entity.evidence || []) {
+      const evidenceKey = JSON.stringify(evidence);
+      const exists = target.evidence.some((item) => JSON.stringify(item) === evidenceKey);
+      if (!exists) {
+        target.evidence.push(evidence);
       }
     }
+  }
+}
 
-    const startsExecSql = /\bEXEC\s+SQL\b/i.test(rawLine);
-    if (startsExecSql) {
-      inSqlBlock = true;
-      sqlBuffer.push(line);
-      if (line.includes(';')) {
-        uniquePush(sqlStatements, sqlBuffer.join(' ').trim());
-        sqlBuffer = [];
-        inSqlBlock = false;
+function mergeSqlStatements(scanResults) {
+  const map = new Map();
+  for (const result of scanResults) {
+    for (const sql of result.sqlStatements || []) {
+      const key = `${sql.type}|${sql.text.toUpperCase()}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          type: sql.type,
+          text: sql.text,
+          tables: Array.from(new Set(sql.tables || [])).sort(),
+          evidence: [],
+        });
       }
-      continue;
-    }
 
-    if (inSqlBlock) {
-      sqlBuffer.push(line);
-      if (line.includes(';')) {
-        uniquePush(sqlStatements, sqlBuffer.join(' ').trim());
-        sqlBuffer = [];
-        inSqlBlock = false;
+      const item = map.get(key);
+      item.tables = Array.from(new Set([...(item.tables || []), ...(sql.tables || [])])).sort();
+
+      for (const evidence of sql.evidence || []) {
+        const evidenceKey = JSON.stringify(evidence);
+        const exists = item.evidence.some((entry) => JSON.stringify(entry) === evidenceKey);
+        if (!exists) {
+          item.evidence.push(evidence);
+        }
       }
-      continue;
     }
+  }
+  return Array.from(map.values());
+}
 
-    if (/\b(SELECT|INSERT|UPDATE|DELETE)\b/i.test(rawLine) && !inSqlBlock) {
-      uniquePush(sqlStatements, line);
+function scanSourceFiles(filePaths) {
+  const scanResults = [];
+  const notes = [];
+
+  for (const filePath of filePaths || []) {
+    try {
+      scanResults.push(scanRpgFile(filePath));
+    } catch (error) {
+      notes.push(`Skipped file ${filePath}: ${error.message}`);
     }
   }
 
-  if (sqlBuffer.length > 0) {
-    uniquePush(sqlStatements, sqlBuffer.join(' ').trim());
+  const sourceFiles = [];
+  for (const result of scanResults) {
+    sourceFiles.push(result.sourceFile);
   }
+
+  const tablesMap = new Map();
+  const callsMap = new Map();
+  const copyMembersMap = new Map();
+  mergeEntities(tablesMap, scanResults.flatMap((item) => item.tables || []), 'FILE');
+  mergeEntities(callsMap, scanResults.flatMap((item) => item.calls || []), 'PROGRAM');
+  mergeEntities(copyMembersMap, scanResults.flatMap((item) => item.copyMembers || []));
 
   return {
-    filePath,
-    tables,
-    calls,
-    copyMembers,
-    sqlStatements,
+    sourceFiles,
+    tables: Array.from(tablesMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
+    calls: Array.from(callsMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
+    copyMembers: Array.from(copyMembersMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
+    sqlStatements: mergeSqlStatements(scanResults),
+    notes,
   };
 }
 
 module.exports = {
   scanRpgFile,
+  scanSourceFiles,
 };
