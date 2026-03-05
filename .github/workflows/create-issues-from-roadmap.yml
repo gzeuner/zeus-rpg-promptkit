@@ -4,9 +4,21 @@ on:
   workflow_dispatch:
     inputs:
       allow_duplicates:
-        description: "Allow creating issues even if Epic already exists"
+        description: "Allow creating a new epic even if an epic with same title already exists"
         required: false
         default: "false"
+      update_existing:
+        description: "Update labels/body of existing issues to match roadmap"
+        required: false
+        default: "false"
+      dry_run:
+        description: "Dry run (no API writes); useful for testing parsing"
+        required: false
+        default: "false"
+      roadmap_path:
+        description: "Roadmap file path"
+        required: false
+        default: "V2_ROADMAP.md"
 
 permissions:
   issues: write
@@ -32,6 +44,9 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_API_URL: https://api.github.com
           ALLOW_DUPLICATES: ${{ github.event.inputs.allow_duplicates }}
+          UPDATE_EXISTING: ${{ github.event.inputs.update_existing }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+          ROADMAP_PATH: ${{ github.event.inputs.roadmap_path }}
         run: |
           python scripts/create_issues_from_roadmap.py
 

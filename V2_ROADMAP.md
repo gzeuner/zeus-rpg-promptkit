@@ -247,3 +247,39 @@ Acceptance criteria:
   - report.md
   - prompts
 - [ ] Optional zipped bundle
+
+### 11) IBM i source fetch via JT400 + SFTP (Enabler, P1)
+Labels: `tech-debt`, `db2`, `priority:P1`
+Part of: `#<EPIC>`
+
+Context:
+The current workflow assumes sources are already available locally. In real IBM i environments
+RPG sources live in QSYS source files (QRPGLESRC, QCLSRC, QCPYSRC, ...). We need a reliable and
+secure way to export source members to the IFS and download them to a local workspace before
+running `zeus analyze`.
+
+Proposed solution:
+Add a new command:
+
+- `zeus fetch`
+
+Workflow:
+- JT400 CommandCall runs `CPYTOSTMF` to export members to IFS stream files
+- SFTP downloads the IFS directory to a local folder
+
+Scope (In):
+- JT400 command runner (CommandCall)
+- CPYTOSTMF export to IFS (with overwrite option)
+- SFTP download to local workspace
+- Extension mapping per source file type
+
+Scope (Out):
+- incremental sync
+- SSH key auth (later)
+- advanced filtering / masking (later)
+
+Acceptance criteria:
+- [ ] `zeus fetch` CLI implemented and documented
+- [ ] Exports source members via CPYTOSTMF to IFS
+- [ ] Downloads exported IFS directory via SFTP to local folder
+- [ ] Output is compatible with `zeus analyze`
