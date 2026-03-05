@@ -37,6 +37,8 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - Node.js 20+
 - Java 11+ (for metadata helper)
 - Optional: DB2/JT400 JDBC driver for metadata export
+- IBM i SSH/SFTP enabled for `zeus fetch`
+- `JT400_JAR` environment variable set to your `jt400.jar` path for Java helpers
 
 ## Installation
 
@@ -71,6 +73,12 @@ Command syntax:
 zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--verbose]
 ```
 
+Fetch source syntax:
+
+```bash
+zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--profile <name>] [--verbose]
+```
+
 ### Basic analyze
 
 ```bash
@@ -87,6 +95,19 @@ node cli/zeus.js analyze --profile default --program ORDERPGM
 
 ```bash
 node cli/zeus.js analyze --profile default --program ORDERPGM --out ./output
+```
+
+### Fetch IBM i source to local folder
+
+```bash
+node cli/zeus.js fetch --host myibmi.example.com --user MYUSER --password MYPASSWORD --source-lib SOURCEN --ifs-dir /home/zeus/rpg_sources --out ./rpg_sources --members ORDERPGM
+```
+
+### Typical pipeline
+
+```bash
+node cli/zeus.js fetch --host myibmi.example.com --user MYUSER --password MYPASSWORD --source-lib SOURCEN --ifs-dir /home/zeus/rpg_sources --out ./rpg_sources
+node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM
 ```
 
 ## Output Contract
@@ -149,6 +170,7 @@ A profile can define:
 - `outputRoot`
 - `extensions`
 - `db` (optional): `url`, `user`, `password`
+- `fetch` (optional): `host`, `user`, `password`, `sourceLib`, `ifsDir`, `out`, `files`, `members`, `replace`
 
 Example:
 
