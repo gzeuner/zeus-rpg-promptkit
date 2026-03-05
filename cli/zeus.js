@@ -8,9 +8,12 @@ const { buildContext } = require('../src/context/contextBuilder');
 const { buildPrompts } = require('../src/prompt/promptBuilder');
 const { generateMarkdownReport } = require('../src/report/markdownReport');
 const { writeJsonReport } = require('../src/report/jsonReport');
+const { fetchSources, DEFAULT_SOURCE_FILES } = require('../src/fetch/fetchService');
 
 function printHelp() {
-  console.log('Usage: zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--verbose]');
+  console.log('Usage:');
+  console.log('  zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--verbose]');
+  console.log('  zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--profile <name>] [--verbose]');
 }
 
 function parseArgs(argv) {
@@ -66,6 +69,49 @@ function resolveConfig(args) {
   };
 }
 
+function parseBoolean(value, fallback) {
+  if (value === undefined || value === null || value === true) return fallback;
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === 'true') return true;
+  if (normalized === 'false') return false;
+  return fallback;
+}
+
+function parseCsv(value, fallback) {
+  if (!value) return fallback;
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean).map((item) => item.toUpperCase());
+  }
+  return String(value)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => item.toUpperCase());
+}
+
+function resolveFetchConfig(args) {
+  const profiles = loadProfiles();
+  const profileName = args.profile;
+  const profile = profileName ? profiles[profileName] : null;
+  const fetchProfile = profile ? (profile.fetch || profile) : {};
+
+  if (profileName && !profile) {
+    throw new Error(`Profile "${profileName}" not found in config/profiles.json or config/profiles.example.json`);
+  }
+
+  return {
+    host: args.host || fetchProfile.host,
+    user: args.user || fetchProfile.user,
+    password: args.password || fetchProfile.password,
+    sourceLib: (args['source-lib'] || fetchProfile.sourceLib || '').toUpperCase(),
+    ifsDir: args['ifs-dir'] || fetchProfile.ifsDir,
+    out: args.out || fetchProfile.out || './rpg_sources',
+    files: parseCsv(args.files || fetchProfile.files, [...DEFAULT_SOURCE_FILES]),
+    members: parseCsv(args.members || fetchProfile.members, []),
+    replace: parseBoolean(args.replace !== undefined ? args.replace : fetchProfile.replace, true),
+  };
+}
+
 function pickSourceSnippet(sourceFiles, programName) {
   if (!sourceFiles || sourceFiles.length === 0) {
     return 'No source files were found.';
@@ -86,20 +132,7 @@ function pickSourceSnippet(sourceFiles, programName) {
   return content.split(/\r?\n/).slice(0, 120).join('\n');
 }
 
-function main() {
-  const argv = process.argv.slice(2);
-  if (argv.length === 0) {
-    printHelp();
-    process.exit(1);
-  }
-
-  const command = argv[0];
-  if (command !== 'analyze') {
-    printHelp();
-    process.exit(1);
-  }
-
-  const args = parseArgs(argv.slice(1));
+function runAnalyze(args) {
   const verbose = Boolean(args.verbose);
 
   const logVerbose = (message) => {
@@ -183,11 +216,80 @@ function main() {
   console.log(`Output written to: ${outputProgramDir}`);
 }
 
-if (require.main === module) {
-  try {
-    main();
-  } catch (error) {
-    console.error(error.message);
+async function runFetch(args) {
+  const verbose = Boolean(args.verbose);
+  const config = resolveFetchConfig(args);
+
+  const required = [
+    ['host', '--host <hostname>'],
+    ['user', '--user <username>'],
+    ['password', '--password <password>'],
+    ['sourceLib', '--source-lib <lib>'],
+    ['ifsDir', '--ifs-dir <ifsPath>'],
+    ['out', '--out <localPath>'],
+  ];
+
+  for (const [key, flag] of required) {
+    if (!config[key] || !String(config[key]).trim()) {
+      console.error(`Missing required option: ${flag}`);
+      process.exit(2);
+    }
+  }
+
+  if (verbose) {
+    console.log(`[verbose] Fetch host: ${config.host}`);
+    console.log(`[verbose] Source library: ${config.sourceLib}`);
+    console.log(`[verbose] IFS dir: ${config.ifsDir}`);
+    console.log(`[verbose] Local out: ${path.resolve(process.cwd(), config.out)}`);
+    console.log(`[verbose] Source files: ${config.files.join(', ')}`);
+    if (config.members.length > 0) {
+      console.log(`[verbose] Members (global filter): ${config.members.join(', ')}`);
+    }
+  }
+
+  const summary = await fetchSources({
+    ...config,
+    verbose,
+  });
+
+  console.log(`Exported streamfiles: ${summary.exportedSuccess}/${summary.exportedTotal}`);
+  console.log(`Downloaded files: ${summary.downloadedCount}`);
+  console.log(`Local destination: ${summary.localDestination}`);
+  if (summary.notes.length > 0) {
+    console.log('Notes:');
+    for (const note of summary.notes) {
+      console.log(`- ${note}`);
+    }
+  }
+}
+
+async function main() {
+  const argv = process.argv.slice(2);
+  if (argv.length === 0) {
+    printHelp();
     process.exit(1);
   }
+
+  const command = argv[0];
+  const args = parseArgs(argv.slice(1));
+
+  if (command === 'analyze') {
+    runAnalyze(args);
+    return;
+  }
+
+  if (command === 'fetch') {
+    await runFetch(args);
+    return;
+  }
+
+  printHelp();
+  process.exit(1);
+}
+
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
 }
