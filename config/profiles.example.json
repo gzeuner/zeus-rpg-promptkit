@@ -1,0 +1,17 @@
+{
+  "default": {
+    "sourceRoot": "./rpg",
+    "outputRoot": "./output",
+    "extensions": [".rpgle", ".rpg", ".sqlrpgle", ".rpgleinc"]
+  },
+  "sample-db2": {
+    "sourceRoot": "./rpg",
+    "outputRoot": "./output",
+    "extensions": [".rpgle", ".rpg"],
+    "db": {
+      "url": "jdbc:as400://myibmi.example.com;naming=system;libraries=MYLIB",
+      "user": "MYUSER",
+      "password": "MYPASSWORD"
+    }
+  }
+}
