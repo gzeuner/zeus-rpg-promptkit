@@ -1,0 +1,53 @@
+name: "Feature"
+description: "A user-facing feature"
+title: "Feature: <short title>"
+labels: ["enhancement"]
+body:
+  - type: input
+    id: partof
+    attributes:
+      label: Part of (Epic issue number)
+      placeholder: "#<epic>"
+    validations:
+      required: false
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Value
+      placeholder: "Why do we need this? What user pain does it solve?"
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope (In / Out)
+      placeholder: |
+        In:
+        - ...
+        Out:
+        - ...
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed approach
+      placeholder: "High-level design + key decisions"
+    validations:
+      required: false
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Testable criterion #1
+        - [ ] Testable criterion #2
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / references
+      placeholder: "Files, links, examples"
+    validations:
+      required: false

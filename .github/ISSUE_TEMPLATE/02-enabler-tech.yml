@@ -1,0 +1,46 @@
+name: "Enabler / Tech"
+description: "Technical enabler / refactor / internal capability"
+title: "Tech: <short title>"
+labels: ["tech-debt"]
+body:
+  - type: input
+    id: partof
+    attributes:
+      label: Part of (Epic issue number)
+      placeholder: "#<epic>"
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      placeholder: "Why is this needed? Which features depend on it?"
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope (In / Out)
+      placeholder: |
+        In:
+        - ...
+        Out:
+        - ...
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks / migration notes
+      placeholder: "Backward compatibility, rollout steps"
+    validations:
+      required: false
