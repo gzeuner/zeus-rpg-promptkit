@@ -2,7 +2,34 @@ function sectionList(values) {
   if (!values || values.length === 0) {
     return '- None detected';
   }
-  return values.map((value) => `- ${value}`).join('\n');
+  return values.map((value) => {
+    if (typeof value === 'string') {
+      return `- ${value}`;
+    }
+
+    if (value && typeof value === 'object') {
+      if (value.path) {
+        const details = [];
+        if (typeof value.sizeBytes === 'number') details.push(`${value.sizeBytes} bytes`);
+        if (typeof value.lines === 'number') details.push(`${value.lines} lines`);
+        return `- ${value.path}${details.length ? ` (${details.join(', ')})` : ''}`;
+      }
+
+      if (value.name && value.kind) {
+        return `- ${value.name} (${value.kind})`;
+      }
+
+      if (value.name) {
+        return `- ${value.name}`;
+      }
+
+      if (value.text && value.type) {
+        return `- [${value.type}] ${value.text}`;
+      }
+    }
+
+    return `- ${String(value)}`;
+  }).join('\n');
 }
 
 function generateMarkdownReport(context) {

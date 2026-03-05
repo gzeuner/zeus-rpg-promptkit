@@ -10,7 +10,25 @@ function asBulletList(values) {
   if (!values || values.length === 0) {
     return '- None detected';
   }
-  return values.map((value) => `- ${value}`).join('\n');
+  return values.map((value) => {
+    if (typeof value === 'string') {
+      return `- ${value}`;
+    }
+
+    if (value && typeof value === 'object') {
+      if (value.name && value.kind) {
+        return `- ${value.name} (${value.kind})`;
+      }
+      if (value.name) {
+        return `- ${value.name}`;
+      }
+      if (value.text && value.type) {
+        return `- [${value.type}] ${value.text}`;
+      }
+    }
+
+    return `- ${String(value)}`;
+  }).join('\n');
 }
 
 function renderTemplate(template, data) {
