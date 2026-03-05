@@ -1,0 +1,18 @@
+{
+  "name": "zeus-rpg-promptkit",
+  "version": "0.1.0",
+  "description": "CLI tool to prepare structured AI analysis context for IBM i RPG programs",
+  "main": "cli/zeus.js",
+  "bin": {
+    "zeus": "./cli/zeus.js"
+  },
+  "scripts": {
+    "analyze": "node ./cli/zeus.js analyze",
+    "lint": "echo \"No lint configured\"",
+    "test": "echo \"No tests configured\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
