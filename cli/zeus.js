@@ -8,6 +8,12 @@ const { buildContext } = require('../src/context/contextBuilder');
 const { buildPrompts } = require('../src/prompt/promptBuilder');
 const { generateMarkdownReport } = require('../src/report/markdownReport');
 const { writeJsonReport } = require('../src/report/jsonReport');
+const {
+  buildDependencyGraph,
+  renderMermaid,
+  renderMarkdown,
+  buildGraphSummary,
+} = require('../src/report/dependencyGraphReport');
 const { fetchSources, DEFAULT_SOURCE_FILES, DEFAULT_TRANSPORT } = require('../src/fetch/fetchService');
 
 function printHelp() {
@@ -189,10 +195,23 @@ function runAnalyze(args) {
 
   const context = buildContext({
     program,
+    sourceRoot,
     sourceFiles: scanSummary.sourceFiles || [],
     dependencies,
     notes,
+    graph: {
+      nodeCount: 0,
+      edgeCount: 0,
+      files: {
+        json: 'dependency-graph.json',
+        mermaid: 'dependency-graph.mmd',
+        markdown: 'dependency-graph.md',
+      },
+    },
   });
+
+  const graph = buildDependencyGraph(context);
+  context.graph = buildGraphSummary(graph);
 
   const sourceSnippet = pickSourceSnippet(scanSummary.sourceFiles, program);
   const prompts = buildPrompts({
@@ -211,6 +230,9 @@ function runAnalyze(args) {
   fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');
   fs.writeFileSync(path.join(outputProgramDir, 'ai_prompt_documentation.md'), prompts.documentation, 'utf8');
   fs.writeFileSync(path.join(outputProgramDir, 'ai_prompt_error_analysis.md'), prompts.errorAnalysis, 'utf8');
+  writeJsonReport(path.join(outputProgramDir, 'dependency-graph.json'), graph);
+  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.mmd'), renderMermaid(graph), 'utf8');
+  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph, context), 'utf8');
 
   console.log(`Analysis complete for program ${program}`);
   console.log(`Source files scanned: ${(scanSummary.sourceFiles || []).length}`);
