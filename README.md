@@ -130,17 +130,24 @@ Generated files:
 - `report.md`
 - `ai_prompt_documentation.md`
 - `ai_prompt_error_analysis.md`
+- `dependency-graph.json`
+- `dependency-graph.mmd`
+- `dependency-graph.md`
 
 `context.json` contains top-level keys:
 
 - `program`
 - `scannedAt`
+- `sourceRoot`
 - `sourceFiles`
-- `tables`
-- `calls`
-- `copyMembers`
-- `sqlStatements`
+- `summary`
+- `dependencies`
+- `sql`
+- `graph`
+- `aiContext`
 - `notes`
+
+`context.json` is the central AI-ready artifact. Prompt generation and report generation both consume this unified context model, and `graph` provides compact references to dependency graph artifacts.
 
 `report.md` includes sections:
 
@@ -150,6 +157,7 @@ Generated files:
 - `Program Calls`
 - `Copy Members`
 - `SQL Statements`
+- `Dependency Graph`
 - `Next Steps`
 
 ## DB2 Metadata Export (Java Helper)
