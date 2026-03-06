@@ -23,7 +23,8 @@
       "ifsDir": "/home/zeus/rpg_sources",
       "out": "./rpg_sources",
       "files": ["QRPGLESRC", "QSQLRPGLESRC", "QCLLESRC"],
-      "replace": true
+      "replace": true,
+      "transport": "auto"
     }
   }
 }

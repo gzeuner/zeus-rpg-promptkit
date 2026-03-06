@@ -79,6 +79,14 @@ Fetch source syntax:
 zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--profile <name>] [--verbose]
 ```
 
+Download transport option:
+
+```bash
+--transport auto|sftp|jt400|ftp
+```
+
+Default is `auto` and tries in order: `sftp -> jt400 -> ftp`.
+
 ### Basic analyze
 
 ```bash

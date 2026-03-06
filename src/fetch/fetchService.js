@@ -2,6 +2,8 @@ const path = require('path');
 const { listMembers } = require('./jt400CommandRunner');
 const { exportMembersForSourceFile } = require('./ifsExporter');
 const { downloadDirectory } = require('./sftpDownloader');
+const { downloadDirectoryViaJt400 } = require('./jt400Downloader');
+const { downloadDirectoryViaFtp } = require('./ftpDownloader');
 
 const DEFAULT_SOURCE_FILES = [
   'QRPGLESRC',
@@ -11,6 +13,8 @@ const DEFAULT_SOURCE_FILES = [
   'QSQLRPGLESRC',
   'QDDSSRC',
 ];
+const DEFAULT_TRANSPORT = 'auto';
+const TRANSPORTS = ['auto', 'sftp', 'jt400', 'ftp'];
 
 function parseList(value, fallback) {
   if (!value) {
@@ -30,7 +34,10 @@ function parseList(value, fallback) {
 
 async function resolveMembersForFile(options, sourceFile) {
   if (options.members && options.members.length > 0) {
-    return [...options.members];
+    return {
+      members: [...options.members],
+      notes: [],
+    };
   }
 
   const result = listMembers({
@@ -65,6 +72,7 @@ async function fetchSources(options) {
     downloadedCount: 0,
     localDestination: path.resolve(process.cwd(), options.out),
     notes: [],
+    transportUsed: null,
   };
 
   for (const sourceFile of files) {
@@ -103,20 +111,67 @@ async function fetchSources(options) {
     }
   }
 
-  const downloadResult = await downloadDirectory({
-    host: options.host,
-    user: options.user,
-    password: options.password,
-    remoteDir: options.ifsDir,
-    localDir: options.out,
-    verbose: options.verbose,
-  });
+  const transport = String(options.transport || DEFAULT_TRANSPORT).trim().toLowerCase();
+  if (!TRANSPORTS.includes(transport)) {
+    throw new Error(`Unsupported transport "${transport}". Valid values: ${TRANSPORTS.join(', ')}`);
+  }
 
-  summary.downloadedCount = downloadResult.downloadedCount || 0;
+  const strategies = transport === 'auto'
+    ? ['sftp', 'jt400', 'ftp']
+    : [transport];
+
+  let lastError = null;
+  for (const strategy of strategies) {
+    try {
+      let downloadResult;
+      if (strategy === 'sftp') {
+        downloadResult = await downloadDirectory({
+          host: options.host,
+          user: options.user,
+          password: options.password,
+          remoteDir: options.ifsDir,
+          localDir: options.out,
+          verbose: options.verbose,
+        });
+      } else if (strategy === 'jt400') {
+        downloadResult = await downloadDirectoryViaJt400({
+          host: options.host,
+          user: options.user,
+          password: options.password,
+          remoteDir: options.ifsDir,
+          localDir: options.out,
+          verbose: options.verbose,
+        });
+      } else {
+        downloadResult = await downloadDirectoryViaFtp({
+          host: options.host,
+          user: options.user,
+          password: options.password,
+          remoteDir: options.ifsDir,
+          localDir: options.out,
+          verbose: options.verbose,
+        });
+      }
+
+      summary.downloadedCount = downloadResult.downloadedCount || 0;
+      summary.transportUsed = strategy;
+      lastError = null;
+      break;
+    } catch (error) {
+      lastError = error;
+      summary.notes.push(`Download via ${strategy} failed: ${error.message}`);
+    }
+  }
+
+  if (lastError) {
+    throw new Error(`All download transports failed. Last error: ${lastError.message}`);
+  }
+
   return summary;
 }
 
 module.exports = {
   fetchSources,
   DEFAULT_SOURCE_FILES,
+  DEFAULT_TRANSPORT,
 };
