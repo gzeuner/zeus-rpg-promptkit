@@ -1,12 +1,15 @@
-# RPG Error Analysis Prompt
+# Program Error Analysis
 
-You are troubleshooting RPG program `{{program}}` on IBM i.
+Program: `{{program}}`
+
+## Summary
+{{summary}}
 
 ## Tables in Scope
 {{tables}}
 
 ## Program Calls in Scope
-{{calls}}
+{{programCalls}}
 
 ## Copy Members in Scope
 {{copyMembers}}
@@ -14,9 +17,16 @@ You are troubleshooting RPG program `{{program}}` on IBM i.
 ## SQL Statements in Scope
 {{sqlStatements}}
 
+## Dependency Graph
+{{dependencyGraphSummary}}
+
 ## Source Snippet
 ```rpg
 {{sourceSnippet}}
 ```
 
-Analyze possible runtime and logic failures. Focus on file I/O issues, SQL failures, parameter mismatch in calls, and missing copy definitions. Provide diagnostics and remediation steps.
+Identify likely failure points with focus on:
+- Logic bugs and edge-case handling
+- Risky or unsafe SQL behavior
+- Missing/weak error handling
+- Risky external program/procedure calls
