@@ -31,6 +31,21 @@ function asBulletList(values) {
   }).join('\n');
 }
 
+function dependenciesList(entries) {
+  return asBulletList((entries || []).map((entry) => {
+    if (!entry || typeof entry !== 'object') return String(entry);
+    if (entry.kind) return `${entry.name} (${entry.kind})`;
+    return entry.name;
+  }));
+}
+
+function sqlStatementList(statements) {
+  return asBulletList((statements || []).map((statement) => {
+    if (!statement || typeof statement !== 'object') return String(statement);
+    return `[${statement.type}] ${statement.text}`;
+  }));
+}
+
 function renderTemplate(template, data) {
   return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
     return data[key] !== undefined ? String(data[key]) : '';
@@ -42,11 +57,11 @@ function buildPrompts({ program, context, sourceSnippet }) {
   const errorTemplate = loadTemplate('error-analysis.md');
 
   const renderData = {
-    program,
-    tables: asBulletList(context.tables),
-    calls: asBulletList(context.calls),
-    copyMembers: asBulletList(context.copyMembers),
-    sqlStatements: asBulletList(context.sqlStatements),
+    program: context.program || program,
+    tables: dependenciesList(context.dependencies && context.dependencies.tables),
+    calls: dependenciesList(context.dependencies && context.dependencies.programCalls),
+    copyMembers: dependenciesList(context.dependencies && context.dependencies.copyMembers),
+    sqlStatements: sqlStatementList(context.sql && context.sql.statements),
     sourceSnippet,
   };
 
