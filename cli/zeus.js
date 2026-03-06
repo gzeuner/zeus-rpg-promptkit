@@ -8,12 +8,12 @@ const { buildContext } = require('../src/context/contextBuilder');
 const { buildPrompts } = require('../src/prompt/promptBuilder');
 const { generateMarkdownReport } = require('../src/report/markdownReport');
 const { writeJsonReport } = require('../src/report/jsonReport');
-const { fetchSources, DEFAULT_SOURCE_FILES } = require('../src/fetch/fetchService');
+const { fetchSources, DEFAULT_SOURCE_FILES, DEFAULT_TRANSPORT } = require('../src/fetch/fetchService');
 
 function printHelp() {
   console.log('Usage:');
   console.log('  zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--verbose]');
-  console.log('  zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--profile <name>] [--verbose]');
+  console.log('  zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--transport auto|sftp|jt400|ftp] [--profile <name>] [--verbose]');
 }
 
 function parseArgs(argv) {
@@ -109,6 +109,7 @@ function resolveFetchConfig(args) {
     files: parseCsv(args.files || fetchProfile.files, [...DEFAULT_SOURCE_FILES]),
     members: parseCsv(args.members || fetchProfile.members, []),
     replace: parseBoolean(args.replace !== undefined ? args.replace : fetchProfile.replace, true),
+    transport: (args.transport || fetchProfile.transport || DEFAULT_TRANSPORT).toLowerCase(),
   };
 }
 
@@ -242,6 +243,7 @@ async function runFetch(args) {
     console.log(`[verbose] IFS dir: ${config.ifsDir}`);
     console.log(`[verbose] Local out: ${path.resolve(process.cwd(), config.out)}`);
     console.log(`[verbose] Source files: ${config.files.join(', ')}`);
+    console.log(`[verbose] Download transport: ${config.transport}`);
     if (config.members.length > 0) {
       console.log(`[verbose] Members (global filter): ${config.members.join(', ')}`);
     }
@@ -254,6 +256,7 @@ async function runFetch(args) {
 
   console.log(`Exported streamfiles: ${summary.exportedSuccess}/${summary.exportedTotal}`);
   console.log(`Downloaded files: ${summary.downloadedCount}`);
+  console.log(`Download transport used: ${summary.transportUsed}`);
   console.log(`Local destination: ${summary.localDestination}`);
   if (summary.notes.length > 0) {
     console.log('Notes:');
