@@ -33,7 +33,12 @@ function sectionList(values) {
 }
 
 function generateMarkdownReport(context) {
-  return `# Zeus RPG Analysis Report\n\n## Overview\n- Program: ${context.program}\n- Scanned At: ${context.scannedAt}\n- Source File Count: ${context.sourceFiles.length}\n\n## Source Files\n${sectionList(context.sourceFiles)}\n\n## Tables\n${sectionList(context.tables)}\n\n## Program Calls\n${sectionList(context.calls)}\n\n## Copy Members\n${sectionList(context.copyMembers)}\n\n## SQL Statements\n${sectionList(context.sqlStatements)}\n\n## Next Steps\n- Validate table and call detection against known application design.\n- Enrich table metadata with java/Db2MetadataExporter.java if DB2 access is available.\n- Use generated AI prompts to produce deep documentation and error analysis.\n`;
+  const summary = context.summary || {};
+  const dependencies = context.dependencies || {};
+  const sql = context.sql || {};
+  const graph = context.graph || {};
+
+  return `# Zeus RPG Analysis Report\n\n## Overview\n- Program: ${context.program}\n- Scanned At: ${context.scannedAt}\n- Source Root: ${context.sourceRoot}\n- Source File Count: ${summary.sourceFileCount || 0}\n- Table Count: ${summary.tableCount || 0}\n- Program Call Count: ${summary.programCallCount || 0}\n- Copy Member Count: ${summary.copyMemberCount || 0}\n- SQL Statement Count: ${summary.sqlStatementCount || 0}\n${summary.text ? `- Summary: ${summary.text}\n` : ''}\n## Source Files\n${sectionList(context.sourceFiles)}\n\n## Tables\n${sectionList(dependencies.tables)}\n\n## Program Calls\n${sectionList(dependencies.programCalls)}\n\n## Copy Members\n${sectionList(dependencies.copyMembers)}\n\n## SQL Statements\n${sectionList(sql.statements)}\n\n## Dependency Graph\n- Nodes: ${graph.nodeCount || 0}\n- Edges: ${graph.edgeCount || 0}\n- JSON: ${(graph.files && graph.files.json) || 'dependency-graph.json'}\n- Mermaid: ${(graph.files && graph.files.mermaid) || 'dependency-graph.mmd'}\n- Markdown: ${(graph.files && graph.files.markdown) || 'dependency-graph.md'}\n\n## Next Steps\n- Validate detected dependencies with the application design and naming standards.\n- Use context.json as the canonical AI input and generated prompts for deeper analysis.\n- Enrich with DB metadata when available to improve table-level reasoning.\n`;
 }
 
 module.exports = {
