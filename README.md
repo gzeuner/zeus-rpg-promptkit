@@ -160,6 +160,35 @@ Generated files:
 - `Dependency Graph`
 - `Next Steps`
 
+## AI Prompt Templates
+
+Prompt templates are stored in:
+
+- `src/prompt/templates/`
+
+Available prompt types today:
+
+- `documentation`
+- `error-analysis`
+
+The analyze pipeline loads templates from disk, resolves placeholders from `context.json`, and writes prompt files to `output/<program>/`.
+
+Supported placeholders include:
+
+- `{{program}}`
+- `{{summary}}`
+- `{{tables}}`
+- `{{programCalls}}`
+- `{{copyMembers}}`
+- `{{sqlStatements}}`
+- `{{dependencyGraphSummary}}`
+- `{{sourceSnippet}}`
+
+To add a new template:
+
+1. Create `src/prompt/templates/<name>.md`
+2. Call `buildPrompt("<name>", context, outputPath)` or include the name in `buildPrompts(...)`
+
 ## DB2 Metadata Export (Java Helper)
 
 Compile:

@@ -214,12 +214,6 @@ function runAnalyze(args) {
   context.graph = buildGraphSummary(graph);
 
   const sourceSnippet = pickSourceSnippet(scanSummary.sourceFiles, program);
-  const prompts = buildPrompts({
-    program,
-    context,
-    sourceSnippet,
-  });
-
   const reportMarkdown = generateMarkdownReport(context);
 
   const outputProgramDir = path.join(outputRoot, program);
@@ -227,9 +221,12 @@ function runAnalyze(args) {
   logVerbose(`Writing output to ${outputProgramDir}`);
 
   writeJsonReport(path.join(outputProgramDir, 'context.json'), context);
+  buildPrompts({
+    context,
+    outputDir: outputProgramDir,
+    sourceSnippet,
+  });
   fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'ai_prompt_documentation.md'), prompts.documentation, 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'ai_prompt_error_analysis.md'), prompts.errorAnalysis, 'utf8');
   writeJsonReport(path.join(outputProgramDir, 'dependency-graph.json'), graph);
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.mmd'), renderMermaid(graph), 'utf8');
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph, context), 'utf8');
