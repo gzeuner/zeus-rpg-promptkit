@@ -21,7 +21,9 @@ async function downloadDirectoryViaFtp({
     for (const entry of list) {
       const remoteChild = path.posix.join(remotePath, entry.name);
       const localChild = path.join(localPath, entry.name);
-      const isDirectory = entry.isDirectory || entry.type === 1 || String(entry.permissions || '').startsWith('d');
+      const isDirectory = entry.isDirectory === true
+        || entry.type === 2
+        || String(entry.permissions || '').startsWith('d');
 
       if (isDirectory) {
         await walk(remoteChild, localChild);
@@ -52,4 +54,3 @@ async function downloadDirectoryViaFtp({
 module.exports = {
   downloadDirectoryViaFtp,
 };
-
