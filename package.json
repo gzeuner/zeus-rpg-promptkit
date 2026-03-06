@@ -13,6 +13,7 @@
     "test": "echo \"No tests configured\""
   },
   "dependencies": {
+    "basic-ftp": "^5.0.5",
     "ssh2-sftp-client": "^11.0.0"
   },
   "engines": {
