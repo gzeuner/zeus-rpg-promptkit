@@ -1,12 +1,15 @@
-# RPG Documentation Prompt
+# Program Documentation
 
-You are analyzing IBM i RPG source for program `{{program}}`.
+Program: `{{program}}`
 
-## Detected Tables
+## Summary
+{{summary}}
+
+## Tables Used
 {{tables}}
 
-## Detected Program Calls
-{{calls}}
+## Program Calls
+{{programCalls}}
 
 ## Copy Members
 {{copyMembers}}
@@ -14,9 +17,16 @@ You are analyzing IBM i RPG source for program `{{program}}`.
 ## SQL Statements
 {{sqlStatements}}
 
+## Dependency Graph
+{{dependencyGraphSummary}}
+
 ## Source Snippet
 ```rpg
 {{sourceSnippet}}
 ```
 
-Generate detailed Markdown documentation for this program, including responsibilities, data flow, external dependencies, and risks.
+Create concise technical documentation covering:
+- Program purpose and high-level flow
+- Business logic and decision points
+- Data access behavior and table usage
+- External calls and integration points

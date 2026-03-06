@@ -1,76 +1,108 @@
 const fs = require('fs');
 const path = require('path');
 
-function loadTemplate(templateFileName) {
-  const templatePath = path.join(__dirname, 'templates', templateFileName);
+function loadTemplate(templateName) {
+  const templatePath = path.join(__dirname, 'templates', `${templateName}.md`);
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`Prompt template not found: ${templateName}`);
+  }
   return fs.readFileSync(templatePath, 'utf8');
 }
 
-function asBulletList(values) {
+function sortByName(values) {
+  return [...(values || [])].sort((a, b) => {
+    const an = String((a && a.name) || a || '').toUpperCase();
+    const bn = String((b && b.name) || b || '').toUpperCase();
+    return an.localeCompare(bn);
+  });
+}
+
+function asBulletList(values, transform) {
   if (!values || values.length === 0) {
     return '- None detected';
   }
-  return values.map((value) => {
-    if (typeof value === 'string') {
-      return `- ${value}`;
-    }
-
-    if (value && typeof value === 'object') {
-      if (value.name && value.kind) {
-        return `- ${value.name} (${value.kind})`;
-      }
-      if (value.name) {
-        return `- ${value.name}`;
-      }
-      if (value.text && value.type) {
-        return `- [${value.type}] ${value.text}`;
-      }
-    }
-
+  return values.map((raw) => {
+    const value = transform ? transform(raw) : raw;
     return `- ${String(value)}`;
   }).join('\n');
 }
 
-function dependenciesList(entries) {
-  return asBulletList((entries || []).map((entry) => {
-    if (!entry || typeof entry !== 'object') return String(entry);
-    if (entry.kind) return `${entry.name} (${entry.kind})`;
-    return entry.name;
-  }));
-}
-
-function sqlStatementList(statements) {
-  return asBulletList((statements || []).map((statement) => {
-    if (!statement || typeof statement !== 'object') return String(statement);
-    return `[${statement.type}] ${statement.text}`;
-  }));
-}
-
 function renderTemplate(template, data) {
-  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
-    return data[key] !== undefined ? String(data[key]) : '';
-  });
+  let rendered = template;
+  for (const [key, value] of Object.entries(data)) {
+    const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+    rendered = rendered.replace(regex, value !== undefined ? String(value) : '');
+  }
+  return rendered.replace(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
 }
 
-function buildPrompts({ program, context, sourceSnippet }) {
-  const docsTemplate = loadTemplate('documentation.md');
-  const errorTemplate = loadTemplate('error-analysis.md');
-
-  const renderData = {
-    program: context.program || program,
-    tables: dependenciesList(context.dependencies && context.dependencies.tables),
-    calls: dependenciesList(context.dependencies && context.dependencies.programCalls),
-    copyMembers: dependenciesList(context.dependencies && context.dependencies.copyMembers),
-    sqlStatements: sqlStatementList(context.sql && context.sql.statements),
-    sourceSnippet,
-  };
+function extractSections(context) {
+  const tables = sortByName((context.dependencies && context.dependencies.tables) || context.tables || []);
+  const programCalls = sortByName((context.dependencies && context.dependencies.programCalls) || context.calls || []);
+  const copyMembers = sortByName((context.dependencies && context.dependencies.copyMembers) || context.copyMembers || []);
+  const sqlStatements = [...(((context.sql && context.sql.statements) || context.sqlStatements || []) || [])]
+    .sort((a, b) => {
+      const at = String((a && a.type) || '').toUpperCase();
+      const bt = String((b && b.type) || '').toUpperCase();
+      if (at !== bt) return at.localeCompare(bt);
+      return String((a && a.text) || '').localeCompare(String((b && b.text) || ''));
+    });
 
   return {
-    documentation: renderTemplate(docsTemplate, renderData),
-    errorAnalysis: renderTemplate(errorTemplate, renderData),
+    tables,
+    programCalls,
+    copyMembers,
+    sqlStatements,
   };
+}
+
+function buildTemplateData(context, sourceSnippet) {
+  const { tables, programCalls, copyMembers, sqlStatements } = extractSections(context);
+  const summary = context.summary && context.summary.text
+    ? context.summary.text
+    : `Program ${context.program || ''} has ${tables.length} tables, ${programCalls.length} program calls, ${copyMembers.length} copy members, and ${sqlStatements.length} SQL statements.`;
+  const graph = context.graph || {};
+  const dependencyGraphSummary = `Nodes: ${graph.nodeCount || 0}, Edges: ${graph.edgeCount || 0}`;
+
+  return {
+    program: context.program || '',
+    summary,
+    tables: asBulletList(tables, (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
+    programCalls: asBulletList(programCalls, (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
+    copyMembers: asBulletList(copyMembers, (item) => item.name || item),
+    sqlStatements: asBulletList(sqlStatements, (item) => (item.type && item.text ? `[${item.type}] ${item.text}` : item)),
+    dependencyGraphSummary,
+    sourceSnippet: sourceSnippet || 'No source snippet available.',
+  };
+}
+
+function buildPrompt(templateName, context, outputPath, options = {}) {
+  const template = loadTemplate(templateName);
+  const data = buildTemplateData(context, options.sourceSnippet);
+  const resolved = renderTemplate(template, data);
+  const generatedAt = context.scannedAt || new Date().toISOString();
+  const content = `Generated by: zeus-rpg-promptkit\nProgram: ${context.program || ''}\nGenerated at: ${generatedAt}\n\n${resolved}`;
+  fs.writeFileSync(outputPath, content, 'utf8');
+  return content;
+}
+
+function buildPrompts({ context, outputDir, sourceSnippet, templates }) {
+  const selected = Array.isArray(templates) && templates.length > 0
+    ? templates
+    : ['documentation', 'error-analysis'];
+  const outputs = {};
+
+  for (const templateName of selected) {
+    const outputFileName = `ai_prompt_${templateName.replace(/-/g, '_')}.md`;
+    const outputPath = path.join(outputDir, outputFileName);
+    outputs[templateName] = buildPrompt(templateName, context, outputPath, { sourceSnippet });
+  }
+
+  return outputs;
 }
 
 module.exports = {
+  buildPrompt,
   buildPrompts,
 };
+
