@@ -44,6 +44,7 @@ function ensureRemoteDirectory(options, remoteDir) {
   const combined = `${mkdirResult.stderr || ''} ${(mkdirResult.messages || []).join(' ')}`.toUpperCase();
   const alreadyExists = combined.includes('ALREADY EXISTS')
     || combined.includes('CPFA0A9')
+    || combined.includes('CPFA0A0')
     || combined.includes('CPF0000');
 
   if (!alreadyExists) {
@@ -97,4 +98,3 @@ function exportMembersForSourceFile({
 module.exports = {
   exportMembersForSourceFile,
 };
-

@@ -114,7 +114,8 @@ function listMembers({ host, user, password, sourceLib, sourceFile, verbose }) {
 }
 
 module.exports = {
+  ensureJavaHelperCompiled,
+  runJavaHelper,
   runClCommand,
   listMembers,
 };
-
