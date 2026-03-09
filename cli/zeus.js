@@ -8,6 +8,7 @@ const { buildContext } = require('../src/context/contextBuilder');
 const { buildPrompts } = require('../src/prompt/promptBuilder');
 const { generateMarkdownReport } = require('../src/report/markdownReport');
 const { writeJsonReport } = require('../src/report/jsonReport');
+const { generateArchitectureReport } = require('../src/report/architectureReport');
 const { optimizeContext, DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../src/ai/contextOptimizer');
 const { estimateTokensFromObject, computeReduction } = require('../src/ai/tokenEstimator');
 const {
@@ -274,15 +275,22 @@ function runAnalyze(args) {
   if (optimizedContext) {
     writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), optimizedContext);
   }
+  writeJsonReport(path.join(outputProgramDir, 'dependency-graph.json'), graph);
+  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.mmd'), renderMermaid(graph), 'utf8');
+  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph, context), 'utf8');
+  generateArchitectureReport({
+    contextPath: path.join(outputProgramDir, 'context.json'),
+    graphPath: path.join(outputProgramDir, 'dependency-graph.json'),
+    outputPath: path.join(outputProgramDir, 'architecture-report.md'),
+    optimizedContextPath: optimizedContext ? path.join(outputProgramDir, 'optimized-context.json') : null,
+    mermaidPath: path.join(outputProgramDir, 'dependency-graph.mmd'),
+  });
   buildPrompts({
     context: promptContext,
     outputDir: outputProgramDir,
     sourceSnippet,
   });
   fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');
-  writeJsonReport(path.join(outputProgramDir, 'dependency-graph.json'), graph);
-  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.mmd'), renderMermaid(graph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph, context), 'utf8');
 
   console.log(`Analysis complete for program ${program}`);
   console.log(`Source files scanned: ${(scanSummary.sourceFiles || []).length}`);
