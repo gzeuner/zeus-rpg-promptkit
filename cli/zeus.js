@@ -8,6 +8,8 @@ const { buildContext } = require('../src/context/contextBuilder');
 const { buildPrompts } = require('../src/prompt/promptBuilder');
 const { generateMarkdownReport } = require('../src/report/markdownReport');
 const { writeJsonReport } = require('../src/report/jsonReport');
+const { optimizeContext, DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../src/ai/contextOptimizer');
+const { estimateTokensFromObject, computeReduction } = require('../src/ai/tokenEstimator');
 const {
   buildDependencyGraph,
   renderMermaid,
@@ -18,7 +20,7 @@ const { fetchSources, DEFAULT_SOURCE_FILES, DEFAULT_TRANSPORT } = require('../sr
 
 function printHelp() {
   console.log('Usage:');
-  console.log('  zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--verbose]');
+  console.log('  zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--optimize-context] [--verbose]');
   console.log('  zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--transport auto|sftp|jt400|ftp] [--profile <name>] [--verbose]');
 }
 
@@ -48,7 +50,23 @@ function loadProfiles() {
   }
 
   const raw = fs.readFileSync(profilePath, 'utf8');
-  return JSON.parse(raw);
+  const parsed = JSON.parse(raw);
+  return parsed && typeof parsed === 'object' ? parsed : {};
+}
+
+function readContextOptimizerConfig(profiles, profile) {
+  const globalConfig = profiles && typeof profiles.contextOptimizer === 'object'
+    ? profiles.contextOptimizer
+    : {};
+  const profileConfig = profile && typeof profile.contextOptimizer === 'object'
+    ? profile.contextOptimizer
+    : {};
+
+  return {
+    ...DEFAULT_CONTEXT_OPTIMIZER_OPTIONS,
+    ...globalConfig,
+    ...profileConfig,
+  };
 }
 
 function resolveConfig(args) {
@@ -72,6 +90,7 @@ function resolveConfig(args) {
     outputRoot,
     extensions,
     db: (profile && profile.db) || null,
+    contextOptimizer: readContextOptimizerConfig(profiles, profile),
   };
 }
 
@@ -141,6 +160,7 @@ function pickSourceSnippet(sourceFiles, programName) {
 
 function runAnalyze(args) {
   const verbose = Boolean(args.verbose);
+  const optimizeContextEnabled = Boolean(args['optimize-context']);
 
   const logVerbose = (message) => {
     if (verbose) {
@@ -167,6 +187,7 @@ function runAnalyze(args) {
   logVerbose(`Source root: ${sourceRoot}`);
   logVerbose(`Output root: ${outputRoot}`);
   logVerbose(`Extensions: ${config.extensions.join(', ')}`);
+  logVerbose(`Context optimization: ${optimizeContextEnabled ? 'enabled' : 'disabled'}`);
 
   if (!fs.existsSync(sourceRoot)) {
     console.error(`Source directory not found: ${sourceRoot}. Provide a valid --source path.`);
@@ -214,15 +235,47 @@ function runAnalyze(args) {
   context.graph = buildGraphSummary(graph);
 
   const sourceSnippet = pickSourceSnippet(scanSummary.sourceFiles, program);
-  const reportMarkdown = generateMarkdownReport(context);
+  const contextTokens = estimateTokensFromObject(context);
+
+  let promptContext = context;
+  let optimizedContext = null;
+  let optimizationReport = null;
+  if (optimizeContextEnabled) {
+    optimizedContext = optimizeContext(context, config.contextOptimizer);
+    const optimizedTokens = estimateTokensFromObject(optimizedContext);
+    const reductionPercent = computeReduction(contextTokens, optimizedTokens);
+    optimizationReport = {
+      enabled: true,
+      contextTokens,
+      optimizedTokens,
+      reductionPercent,
+      softTokenLimit: Number(config.contextOptimizer.softTokenLimit) || DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit,
+      warning: optimizedTokens > (Number(config.contextOptimizer.softTokenLimit) || DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit),
+    };
+    promptContext = optimizedContext;
+  } else {
+    optimizationReport = {
+      enabled: false,
+      contextTokens,
+      optimizedTokens: contextTokens,
+      reductionPercent: 0,
+      softTokenLimit: Number(config.contextOptimizer.softTokenLimit) || DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit,
+      warning: false,
+    };
+  }
+
+  const reportMarkdown = generateMarkdownReport(context, optimizationReport);
 
   const outputProgramDir = path.join(outputRoot, program);
   fs.mkdirSync(outputProgramDir, { recursive: true });
   logVerbose(`Writing output to ${outputProgramDir}`);
 
   writeJsonReport(path.join(outputProgramDir, 'context.json'), context);
+  if (optimizedContext) {
+    writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), optimizedContext);
+  }
   buildPrompts({
-    context,
+    context: promptContext,
     outputDir: outputProgramDir,
     sourceSnippet,
   });
@@ -233,6 +286,16 @@ function runAnalyze(args) {
 
   console.log(`Analysis complete for program ${program}`);
   console.log(`Source files scanned: ${(scanSummary.sourceFiles || []).length}`);
+  if (optimizationReport.enabled) {
+    console.log(`Context tokens: ${optimizationReport.contextTokens}`);
+    console.log(`Optimized tokens: ${optimizationReport.optimizedTokens}`);
+    console.log(`Reduction: ${optimizationReport.reductionPercent}%`);
+    if (optimizationReport.warning) {
+      console.warn('Warning: optimized context may exceed safe prompt size.');
+    }
+  } else {
+    console.log(`Context tokens: ${optimizationReport.contextTokens}`);
+  }
   console.log(`Output written to: ${outputProgramDir}`);
 }
 

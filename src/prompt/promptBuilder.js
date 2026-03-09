@@ -45,7 +45,9 @@ function extractSections(context) {
       const at = String((a && a.type) || '').toUpperCase();
       const bt = String((b && b.type) || '').toUpperCase();
       if (at !== bt) return at.localeCompare(bt);
-      return String((a && a.text) || '').localeCompare(String((b && b.text) || ''));
+      const aText = String((a && (a.text || a.snippet)) || '');
+      const bText = String((b && (b.text || b.snippet)) || '');
+      return aText.localeCompare(bText);
     });
 
   return {
@@ -70,7 +72,13 @@ function buildTemplateData(context, sourceSnippet) {
     tables: asBulletList(tables, (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
     programCalls: asBulletList(programCalls, (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
     copyMembers: asBulletList(copyMembers, (item) => item.name || item),
-    sqlStatements: asBulletList(sqlStatements, (item) => (item.type && item.text ? `[${item.type}] ${item.text}` : item)),
+    sqlStatements: asBulletList(sqlStatements, (item) => {
+      const text = (item && (item.text || item.snippet)) || '';
+      if (item && item.type && text) {
+        return `[${item.type}] ${text}`;
+      }
+      return item;
+    }),
     dependencyGraphSummary,
     sourceSnippet: sourceSnippet || 'No source snippet available.',
   };
