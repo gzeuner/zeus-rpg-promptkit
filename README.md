@@ -70,7 +70,7 @@ npm run analyze -- --source ./rpg --program ORDERPGM
 Command syntax:
 
 ```bash
-zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--verbose]
+zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--optimize-context] [--verbose]
 ```
 
 Fetch source syntax:
@@ -91,6 +91,12 @@ Default is `auto` and tries in order: `sftp -> jt400 -> ftp`.
 
 ```bash
 node cli/zeus.js analyze --source ./rpg --program ORDERPGM
+```
+
+### Basic analyze with context optimization
+
+```bash
+node cli/zeus.js analyze --source ./rpg --program ORDERPGM --optimize-context
 ```
 
 ### Analyze using profile
@@ -127,6 +133,7 @@ The command writes files into:
 Generated files:
 
 - `context.json`
+- `optimized-context.json` (when `--optimize-context` is enabled)
 - `report.md`
 - `ai_prompt_documentation.md`
 - `ai_prompt_error_analysis.md`
@@ -148,6 +155,8 @@ Generated files:
 - `notes`
 
 `context.json` is the central AI-ready artifact. Prompt generation and report generation both consume this unified context model, and `graph` provides compact references to dependency graph artifacts.
+
+When `--optimize-context` is enabled, prompts are generated from `optimized-context.json` instead of the full `context.json`.
 
 `report.md` includes sections:
 
@@ -216,17 +225,62 @@ A profile can define:
 - `extensions`
 - `db` (optional): `url`, `user`, `password`
 - `fetch` (optional): `host`, `user`, `password`, `sourceLib`, `ifsDir`, `out`, `files`, `members`, `replace`
+- `contextOptimizer` (optional): `maxTables`, `maxProgramCalls`, `maxCopyMembers`, `maxSQLStatements`, `maxSourceSnippets`, `maxSnippetLines`, `softTokenLimit`
 
 Example:
 
 ```json
 {
+  "contextOptimizer": {
+    "maxTables": 20,
+    "maxProgramCalls": 20,
+    "maxCopyMembers": 10,
+    "maxSQLStatements": 10,
+    "maxSourceSnippets": 20,
+    "maxSnippetLines": 12,
+    "softTokenLimit": 3000
+  },
   "default": {
     "sourceRoot": "./rpg",
     "outputRoot": "./output",
-    "extensions": [".rpgle", ".rpg"]
+    "extensions": [".rpgle", ".rpg"],
+    "contextOptimizer": {
+      "maxTables": 20,
+      "maxProgramCalls": 20,
+      "maxCopyMembers": 10,
+      "maxSQLStatements": 10,
+      "maxSourceSnippets": 20,
+      "maxSnippetLines": 12
+    }
   }
 }
+```
+
+## AI Context Optimization
+
+Large RPG programs often exceed practical LLM context limits when full scan output is passed directly to prompts.  
+`--optimize-context` adds a deterministic reduction step:
+
+- keeps program metadata, dependency summary, tables, program calls, copy members, and SQL
+- prioritizes SQL and call/table signals
+- limits section sizes using configurable caps
+- extracts short evidence-based source snippets (default max: 12 lines)
+
+Token estimation uses a lightweight heuristic:
+
+- `estimatedTokens ~= characters / 4`
+
+During `analyze`, CLI output and `report.md` include:
+
+- context token estimate
+- optimized token estimate (when enabled)
+- percentage reduction
+- optional warning if optimized context exceeds `softTokenLimit`
+
+Example:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --optimize-context
 ```
 
 ## Notes

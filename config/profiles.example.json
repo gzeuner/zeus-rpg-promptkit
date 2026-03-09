@@ -1,8 +1,25 @@
 {
+  "contextOptimizer": {
+    "maxTables": 20,
+    "maxProgramCalls": 20,
+    "maxCopyMembers": 10,
+    "maxSQLStatements": 10,
+    "maxSourceSnippets": 20,
+    "maxSnippetLines": 12,
+    "softTokenLimit": 3000
+  },
   "default": {
     "sourceRoot": "./rpg",
     "outputRoot": "./output",
-    "extensions": [".rpgle", ".rpg", ".sqlrpgle", ".rpgleinc"]
+    "extensions": [".rpgle", ".rpg", ".sqlrpgle", ".rpgleinc"],
+    "contextOptimizer": {
+      "maxTables": 20,
+      "maxProgramCalls": 20,
+      "maxCopyMembers": 10,
+      "maxSQLStatements": 10,
+      "maxSourceSnippets": 20,
+      "maxSnippetLines": 12
+    }
   },
   "sample-db2": {
     "sourceRoot": "./rpg",
