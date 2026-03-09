@@ -14,6 +14,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
   - Embedded SQL blocks (`EXEC SQL` + statement content)
 - Builds a normalized analysis context JSON
 - Generates a Markdown report with key sections
+- Generates an automatic architecture report with dependency and data-flow overview
 - Generates AI prompt files from reusable templates
 - Supports profile-based configuration (`--profile`)
 - Includes a Java helper (`JT400/JDBC compatible`) for DB2 metadata export
@@ -26,6 +27,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `src/scanner/dependencyScanner.js` - Aggregated dependency extraction
 - `src/context/contextBuilder.js` - Context JSON builder
 - `src/report/markdownReport.js` - Markdown report generation
+- `src/report/architectureReport.js` - Architecture report generation
 - `src/report/jsonReport.js` - JSON report writer
 - `src/prompt/promptBuilder.js` - Prompt generation from templates
 - `src/prompt/templates/*.md` - Prompt templates
@@ -135,6 +137,7 @@ Generated files:
 - `context.json`
 - `optimized-context.json` (when `--optimize-context` is enabled)
 - `report.md`
+- `architecture-report.md`
 - `ai_prompt_documentation.md`
 - `ai_prompt_error_analysis.md`
 - `dependency-graph.json`
@@ -167,7 +170,34 @@ When `--optimize-context` is enabled, prompts are generated from `optimized-cont
 - `Copy Members`
 - `SQL Statements`
 - `Dependency Graph`
+- `Architecture`
 - `Next Steps`
+
+## Architecture Report
+
+Each analyze run now generates `architecture-report.md` in `output/<program>/`.
+
+Purpose:
+
+- automatic architecture documentation for legacy IBM i RPG programs
+- quick overview of program interactions with tables, called programs, copy members, and SQL activity
+- embedded Mermaid dependency view based on generated graph artifacts
+
+How it works:
+
+- uses `context.json` as the primary structured source
+- reuses `dependency-graph.json` and `dependency-graph.mmd` (no duplicate dependency logic)
+- optionally includes SQL examples from `optimized-context.json` when available
+
+Example:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM
+```
+
+Produces:
+
+- `output/ORDERPGM/architecture-report.md`
 
 ## AI Prompt Templates
 
