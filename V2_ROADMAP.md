@@ -283,3 +283,69 @@ Acceptance criteria:
 - [ ] Exports source members via CPYTOSTMF to IFS
 - [ ] Downloads exported IFS directory via SFTP to local folder
 - [ ] Output is compatible with `zeus analyze`
+
+---
+
+### 12) Cross-Program dependency graph (Feature, P1)
+Labels: `enhancement`, `priority:P1`
+Part of: `#<EPIC>`
+
+Problem / Value:
+The current analysis focuses on a single RPG program. In real IBM i systems
+developers must understand multi-program call chains to understand the full
+application architecture.
+
+This feature expands dependency analysis to multiple programs and produces
+a system-level dependency graph.
+
+Scope (In):
+- Recursively follow detected program calls
+- Scan additional RPG programs if source is available locally
+- Track visited programs to avoid recursion loops
+- Build a multi-program dependency graph
+- Export graph as JSON and Mermaid
+
+Scope (Out):
+- Full enterprise-wide dependency analysis
+- Runtime tracing
+- Semantic business rule inference
+
+Acceptance criteria:
+- [ ] Recursive scan of called programs implemented
+- [ ] Already visited programs are not processed twice
+- [ ] Multi-program dependency graph generated
+- [ ] Output files created:
+  - `program-call-tree.json`
+  - `program-call-tree.mmd`
+  - `program-call-tree.md`
+- [ ] Graph shows relationships between programs across call chains
+
+---
+
+### 13) Interactive architecture viewer (Feature, P2)
+Labels: `enhancement`, `ui`, `priority:P2`
+Part of: `#<EPIC>`
+
+Problem / Value:
+Markdown reports and static graphs are useful but difficult to explore for
+larger systems. Developers benefit from an interactive architecture view.
+
+This feature generates a browser-based visualization of the program
+dependency graph.
+
+Scope (In):
+- Generate an interactive HTML architecture viewer
+- Visualize dependency graph nodes and edges
+- Enable zoom, pan and node highlighting
+- Different node types (program, table, copy member)
+
+Scope (Out):
+- Full web application
+- Real-time graph editing
+- Server-side components
+
+Acceptance criteria:
+- [ ] `architecture.html` generated in output folder
+- [ ] Graph visualization rendered in browser
+- [ ] Nodes are clickable and highlight dependencies
+- [ ] Supports graphs generated from dependency graph module
