@@ -26,6 +26,8 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `src/scanner/rpgScanner.js` - RPG heuristics scanner
 - `src/scanner/dependencyScanner.js` - Aggregated dependency extraction
 - `src/context/contextBuilder.js` - Context JSON builder
+- `src/dependency/dependencyGraphBuilder.js` - Deterministic dependency graph model builder
+- `src/dependency/graphSerializer.js` - Dependency graph serializers (JSON/Mermaid/Markdown wrapper)
 - `src/report/markdownReport.js` - Markdown report generation
 - `src/report/architectureReport.js` - Architecture report generation
 - `src/report/jsonReport.js` - JSON report writer
@@ -172,6 +174,37 @@ When `--optimize-context` is enabled, prompts are generated from `optimized-cont
 - `Dependency Graph`
 - `Architecture`
 - `Next Steps`
+
+## Dependency Graph
+
+Purpose:
+
+- provide a deterministic central dependency model for reports and AI prompts
+- represent `program -> program calls`, `program -> tables`, and `program -> copy members`
+- keep output stable (uppercase identifiers, alphabetical ordering, deduplicated nodes/edges)
+
+Generated files in `output/<program>/`:
+
+- `dependency-graph.json`
+- `dependency-graph.mmd`
+- `dependency-graph.md`
+
+Mermaid rendering:
+
+- GitHub renders Mermaid code blocks directly in Markdown views
+- VSCode renders Mermaid in Markdown preview when Mermaid support is enabled
+
+Example:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM
+```
+
+Outputs:
+
+- `output/ORDERPGM/dependency-graph.json`
+- `output/ORDERPGM/dependency-graph.mmd`
+- `output/ORDERPGM/dependency-graph.md`
 
 ## Architecture Report
 

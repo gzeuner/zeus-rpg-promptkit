@@ -209,6 +209,9 @@ function buildContext({ program, sourceRoot, sourceFiles, dependencies, notes, g
   const normalizedGraph = graph || {
     nodeCount: 0,
     edgeCount: 0,
+    tableCount: 0,
+    programCallCount: 0,
+    copyMemberCount: 0,
     files: {
       json: 'dependency-graph.json',
       mermaid: 'dependency-graph.mmd',

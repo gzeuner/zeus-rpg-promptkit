@@ -13,10 +13,9 @@ const { optimizeContext, DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../src/a
 const { estimateTokensFromObject, computeReduction } = require('../src/ai/tokenEstimator');
 const {
   buildDependencyGraph,
-  renderMermaid,
-  renderMarkdown,
   buildGraphSummary,
-} = require('../src/report/dependencyGraphReport');
+} = require('../src/dependency/dependencyGraphBuilder');
+const { renderJson, renderMermaid, renderMarkdown } = require('../src/dependency/graphSerializer');
 const { fetchSources, DEFAULT_SOURCE_FILES, DEFAULT_TRANSPORT } = require('../src/fetch/fetchService');
 
 function printHelp() {
@@ -224,6 +223,9 @@ function runAnalyze(args) {
     graph: {
       nodeCount: 0,
       edgeCount: 0,
+      tableCount: 0,
+      programCallCount: 0,
+      copyMemberCount: 0,
       files: {
         json: 'dependency-graph.json',
         mermaid: 'dependency-graph.mmd',
@@ -265,8 +267,6 @@ function runAnalyze(args) {
     };
   }
 
-  const reportMarkdown = generateMarkdownReport(context, optimizationReport);
-
   const outputProgramDir = path.join(outputRoot, program);
   fs.mkdirSync(outputProgramDir, { recursive: true });
   logVerbose(`Writing output to ${outputProgramDir}`);
@@ -275,9 +275,10 @@ function runAnalyze(args) {
   if (optimizedContext) {
     writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), optimizedContext);
   }
-  writeJsonReport(path.join(outputProgramDir, 'dependency-graph.json'), graph);
+  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.json'), renderJson(graph), 'utf8');
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.mmd'), renderMermaid(graph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph, context), 'utf8');
+  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph), 'utf8');
+  const reportMarkdown = generateMarkdownReport(context, optimizationReport);
   generateArchitectureReport({
     contextPath: path.join(outputProgramDir, 'context.json'),
     graphPath: path.join(outputProgramDir, 'dependency-graph.json'),
