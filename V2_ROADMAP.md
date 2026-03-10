@@ -349,3 +349,38 @@ Acceptance criteria:
 - [ ] Graph visualization rendered in browser
 - [ ] Nodes are clickable and highlight dependencies
 - [ ] Supports graphs generated from dependency graph module
+
+### 14) Impact analysis for tables and programs (Feature, P2)
+Labels: `enhancement`, `priority:P2`
+Part of: `#<EPIC>`
+
+Problem / Value:
+Developers working on IBM i systems often need to answer questions such as:
+
+- Which programs use table ORDERS?
+- Which programs call INVOICEPGM?
+- What is affected if a table or program changes?
+
+This feature adds impact analysis on top of the existing dependency graph and cross-program graph so that developers can quickly identify affected programs and dependencies.
+
+Scope (In):
+- Analyze dependency graph and cross-program graph for reverse lookups
+- Support table-to-program impact analysis
+- Support program-to-program impact analysis
+- Generate a structured impact report
+- Export results as JSON and Markdown
+
+Scope (Out):
+- Runtime impact analysis
+- Change simulation
+- Full enterprise-wide repository indexing
+- Semantic business rule inference
+
+Acceptance criteria:
+- [ ] Impact analysis can identify all programs using a given table
+- [ ] Impact analysis can identify all programs calling a given program
+- [ ] Output files created:
+  - `impact-analysis.json`
+  - `impact-analysis.md`
+- [ ] Results are deterministic and sorted
+- [ ] Report clearly distinguishes direct and indirect dependencies
