@@ -1,0 +1,64 @@
+function toMermaidId(value) {
+  const normalized = String(value || '').trim().replace(/[^A-Za-z0-9_]/g, '_');
+  if (!normalized) return 'NODE';
+  if (/^[0-9]/.test(normalized)) {
+    return `N_${normalized}`;
+  }
+  return normalized;
+}
+
+function escapeMermaidLabel(value) {
+  return String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"');
+}
+
+function renderMermaid(graph) {
+  const lines = ['graph TD'];
+  const nodes = (graph && graph.nodes) || [];
+  const edges = (graph && graph.edges) || [];
+
+  for (const node of nodes) {
+    const nodeId = toMermaidId(node.id);
+    const label = escapeMermaidLabel(`${node.id} (${node.type})`);
+    lines.push(`${nodeId}["${label}"]`);
+  }
+
+  if (nodes.length > 0 && edges.length > 0) {
+    lines.push('');
+  }
+
+  for (const edge of edges) {
+    const from = toMermaidId(edge.from);
+    const to = toMermaidId(edge.to);
+    lines.push(`${from} -->|${edge.type}| ${to}`);
+  }
+
+  return `${lines.join('\n')}\n`;
+}
+
+function renderJson(graph) {
+  return `${JSON.stringify(graph, null, 2)}\n`;
+}
+
+function renderMarkdown(graph) {
+  const summary = (graph && graph.summary) || {};
+  return `# Dependency Graph
+
+The following diagram shows dependencies for program ${graph && graph.program ? graph.program : 'UNKNOWN'}.
+
+Tables: ${summary.tableCount || 0}
+Programs Called: ${summary.programCallCount || 0}
+Copy Members: ${summary.copyMemberCount || 0}
+
+\`\`\`mermaid
+${renderMermaid(graph).trim()}
+\`\`\`
+`;
+}
+
+module.exports = {
+  renderJson,
+  renderMermaid,
+  renderMarkdown,
+};
