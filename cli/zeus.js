@@ -11,6 +11,7 @@ const { writeJsonReport } = require('../src/report/jsonReport');
 const { generateArchitectureReport } = require('../src/report/architectureReport');
 const { optimizeContext, DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../src/ai/contextOptimizer');
 const { estimateTokensFromObject, computeReduction } = require('../src/ai/tokenEstimator');
+const { generateArchitectureViewer } = require('../src/viewer/architectureViewerGenerator');
 const {
   buildDependencyGraph,
   buildGraphSummary,
@@ -297,12 +298,17 @@ function runAnalyze(args) {
   if (optimizedContext) {
     writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), optimizedContext);
   }
+  const programCallTreeJsonPath = path.join(outputProgramDir, 'program-call-tree.json');
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.json'), renderJson(graph), 'utf8');
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.mmd'), renderMermaid(graph), 'utf8');
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.json'), renderJson(crossProgramGraph), 'utf8');
+  fs.writeFileSync(programCallTreeJsonPath, renderJson(crossProgramGraph), 'utf8');
   fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.mmd'), renderMermaid(crossProgramGraph), 'utf8');
   fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.md'), renderCrossProgramMarkdown(crossProgramGraph), 'utf8');
+  generateArchitectureViewer({
+    graphPath: programCallTreeJsonPath,
+    outputPath: path.join(outputProgramDir, 'architecture.html'),
+  });
   const reportMarkdown = generateMarkdownReport(context, optimizationReport);
   generateArchitectureReport({
     contextPath: path.join(outputProgramDir, 'context.json'),

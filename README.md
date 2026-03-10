@@ -30,6 +30,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `src/dependency/crossProgramGraphBuilder.js` - Recursive multi-program dependency graph builder
 - `src/dependency/programResolver.js` - Local program name to source file resolver
 - `src/dependency/graphSerializer.js` - Dependency graph serializers (JSON/Mermaid/Markdown wrapper)
+- `src/viewer/architectureViewerGenerator.js` - Generates interactive `architecture.html` from `program-call-tree.json`
 - `src/report/markdownReport.js` - Markdown report generation
 - `src/report/architectureReport.js` - Architecture report generation
 - `src/report/jsonReport.js` - JSON report writer
@@ -150,6 +151,7 @@ Generated files:
 - `program-call-tree.json`
 - `program-call-tree.mmd`
 - `program-call-tree.md`
+- `architecture.html`
 
 `context.json` contains top-level keys:
 
@@ -179,6 +181,7 @@ When `--optimize-context` is enabled, prompts are generated from `optimized-cont
 - `SQL Statements`
 - `Dependency Graph`
 - `Cross-Program Graph`
+- `Interactive Architecture Viewer`
 - `Architecture`
 - `Next Steps`
 
@@ -244,6 +247,45 @@ Produces:
 - `output/ORDERPGM/program-call-tree.json`
 - `output/ORDERPGM/program-call-tree.mmd`
 - `output/ORDERPGM/program-call-tree.md`
+
+## Interactive Architecture Viewer
+
+Each analyze run now also generates:
+
+- `output/<program>/architecture.html`
+
+Purpose:
+
+- browser-based interactive visualization of the cross-program dependency graph
+- single self-contained HTML file (no local server required)
+- graph data sourced from `program-call-tree.json`
+
+Rendering details:
+
+- visualization library: `vis-network` loaded via CDN
+- node type colors:
+  - `PROGRAM` -> blue
+  - `TABLE` -> green
+  - `COPY` -> orange
+- hierarchical top-down layout (`UD`) to keep the root program at the top
+
+Interactions:
+
+- zoom and pan
+- draggable nodes
+- hover highlighting
+- click node to highlight connected edges
+- double-click node to focus/center it
+
+Example:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM
+```
+
+Output:
+
+- `output/ORDERPGM/architecture.html`
 
 ## Architecture Report
 
