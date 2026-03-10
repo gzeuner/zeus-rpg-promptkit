@@ -27,6 +27,8 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `src/scanner/dependencyScanner.js` - Aggregated dependency extraction
 - `src/context/contextBuilder.js` - Context JSON builder
 - `src/dependency/dependencyGraphBuilder.js` - Deterministic dependency graph model builder
+- `src/dependency/crossProgramGraphBuilder.js` - Recursive multi-program dependency graph builder
+- `src/dependency/programResolver.js` - Local program name to source file resolver
 - `src/dependency/graphSerializer.js` - Dependency graph serializers (JSON/Mermaid/Markdown wrapper)
 - `src/report/markdownReport.js` - Markdown report generation
 - `src/report/architectureReport.js` - Architecture report generation
@@ -145,6 +147,9 @@ Generated files:
 - `dependency-graph.json`
 - `dependency-graph.mmd`
 - `dependency-graph.md`
+- `program-call-tree.json`
+- `program-call-tree.mmd`
+- `program-call-tree.md`
 
 `context.json` contains top-level keys:
 
@@ -156,6 +161,7 @@ Generated files:
 - `dependencies`
 - `sql`
 - `graph`
+- `crossProgramGraph`
 - `aiContext`
 - `notes`
 
@@ -172,6 +178,7 @@ When `--optimize-context` is enabled, prompts are generated from `optimized-cont
 - `Copy Members`
 - `SQL Statements`
 - `Dependency Graph`
+- `Cross-Program Graph`
 - `Architecture`
 - `Next Steps`
 
@@ -205,6 +212,38 @@ Outputs:
 - `output/ORDERPGM/dependency-graph.json`
 - `output/ORDERPGM/dependency-graph.mmd`
 - `output/ORDERPGM/dependency-graph.md`
+
+## Cross-Program Dependency Graph
+
+Purpose:
+
+- recursively follow local program calls starting from the analyzed root program
+- build a multi-program call chain view for architecture analysis
+- list unresolved called programs when local source files are not available
+
+Generated files in `output/<program>/`:
+
+- `program-call-tree.json`
+- `program-call-tree.mmd`
+- `program-call-tree.md`
+
+Scope and limitation:
+
+- recursion follows only source members that exist locally under `--source`
+- unresolved calls are tracked in the graph summary and Markdown wrapper
+- recursion is loop-safe via a visited program set
+
+Example:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM
+```
+
+Produces:
+
+- `output/ORDERPGM/program-call-tree.json`
+- `output/ORDERPGM/program-call-tree.mmd`
+- `output/ORDERPGM/program-call-tree.md`
 
 ## Architecture Report
 
