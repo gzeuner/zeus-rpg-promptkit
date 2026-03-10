@@ -15,7 +15,13 @@ const {
   buildDependencyGraph,
   buildGraphSummary,
 } = require('../src/dependency/dependencyGraphBuilder');
-const { renderJson, renderMermaid, renderMarkdown } = require('../src/dependency/graphSerializer');
+const { buildCrossProgramGraph } = require('../src/dependency/crossProgramGraphBuilder');
+const {
+  renderJson,
+  renderMermaid,
+  renderMarkdown,
+  renderCrossProgramMarkdown,
+} = require('../src/dependency/graphSerializer');
 const { fetchSources, DEFAULT_SOURCE_FILES, DEFAULT_TRANSPORT } = require('../src/fetch/fetchService');
 
 function printHelp() {
@@ -83,7 +89,7 @@ function resolveConfig(args) {
 
   const extensions = args.extensions
     ? String(args.extensions).split(',').map((ext) => ext.trim()).filter(Boolean)
-    : ((profile && profile.extensions) || ['.rpg', '.rpgle', '.sqlrpgle', '.rpgile', '.clle', '.dds', '.dspf', '.prtf', '.pf', '.lf']);
+    : ((profile && profile.extensions) || ['.rpg', '.rpgle', '.sqlrpgle', '.rpgile', '.clp', '.clle', '.dds', '.dspf', '.prtf', '.pf', '.lf']);
 
   return {
     sourceRoot,
@@ -236,6 +242,22 @@ function runAnalyze(args) {
 
   const graph = buildDependencyGraph(context);
   context.graph = buildGraphSummary(graph);
+  const crossProgramGraph = buildCrossProgramGraph({
+    rootProgram: program,
+    sourceFiles,
+  });
+  context.crossProgramGraph = {
+    programCount: Number(crossProgramGraph.summary.programCount) || 0,
+    tableCount: Number(crossProgramGraph.summary.tableCount) || 0,
+    copyMemberCount: Number(crossProgramGraph.summary.copyMemberCount) || 0,
+    edgeCount: Number(crossProgramGraph.summary.edgeCount) || 0,
+    unresolvedPrograms: crossProgramGraph.unresolvedPrograms || [],
+    files: {
+      json: 'program-call-tree.json',
+      mermaid: 'program-call-tree.mmd',
+      markdown: 'program-call-tree.md',
+    },
+  };
 
   const sourceSnippet = pickSourceSnippet(scanSummary.sourceFiles, program);
   const contextTokens = estimateTokensFromObject(context);
@@ -278,6 +300,9 @@ function runAnalyze(args) {
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.json'), renderJson(graph), 'utf8');
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.mmd'), renderMermaid(graph), 'utf8');
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph), 'utf8');
+  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.json'), renderJson(crossProgramGraph), 'utf8');
+  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.mmd'), renderMermaid(crossProgramGraph), 'utf8');
+  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.md'), renderCrossProgramMarkdown(crossProgramGraph), 'utf8');
   const reportMarkdown = generateMarkdownReport(context, optimizationReport);
   generateArchitectureReport({
     contextPath: path.join(outputProgramDir, 'context.json'),
