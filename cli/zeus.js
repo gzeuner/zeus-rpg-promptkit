@@ -12,6 +12,7 @@ const { generateArchitectureReport } = require('../src/report/architectureReport
 const { optimizeContext, DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../src/ai/contextOptimizer');
 const { estimateTokensFromObject, computeReduction } = require('../src/ai/tokenEstimator');
 const { generateArchitectureViewer } = require('../src/viewer/architectureViewerGenerator');
+const { generateImpactAnalysis, normalizeId } = require('../src/impact/impactAnalyzer');
 const {
   buildDependencyGraph,
   buildGraphSummary,
@@ -28,6 +29,7 @@ const { fetchSources, DEFAULT_SOURCE_FILES, DEFAULT_TRANSPORT } = require('../sr
 function printHelp() {
   console.log('Usage:');
   console.log('  zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--optimize-context] [--verbose]');
+  console.log('  zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--verbose]');
   console.log('  zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--transport auto|sftp|jt400|ftp] [--profile <name>] [--verbose]');
 }
 
@@ -163,6 +165,67 @@ function pickSourceSnippet(sourceFiles, programName) {
 
   const content = fs.readFileSync(preferred, 'utf8');
   return content.split(/\r?\n/).slice(0, 120).join('\n');
+}
+
+function findImpactGraph({ outputRoot, target, program }) {
+  const normalizedTarget = normalizeId(target);
+  if (!normalizedTarget) {
+    throw new Error('Impact analysis requires --target <name>');
+  }
+
+  if (program && String(program).trim()) {
+    const resolvedProgram = normalizeId(program);
+    const outputProgramDir = path.join(outputRoot, resolvedProgram);
+    const graphPath = path.join(outputProgramDir, 'program-call-tree.json');
+    if (!fs.existsSync(graphPath)) {
+      throw new Error(`Cross-program graph not found: ${graphPath}. Run analyze first.`);
+    }
+    return { program: resolvedProgram, graphPath, outputProgramDir };
+  }
+
+  if (!fs.existsSync(outputRoot)) {
+    throw new Error(`Output directory not found: ${outputRoot}`);
+  }
+
+  const candidateDirs = fs.readdirSync(outputRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  const candidates = [];
+  for (const directory of candidateDirs) {
+    const outputProgramDir = path.join(outputRoot, directory);
+    const graphPath = path.join(outputProgramDir, 'program-call-tree.json');
+    if (!fs.existsSync(graphPath)) continue;
+
+    const parsed = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
+    const nodeIds = new Set(((parsed && parsed.nodes) || []).map((node) => normalizeId(node.id)).filter(Boolean));
+    candidates.push({
+      program: normalizeId(directory),
+      graphPath,
+      outputProgramDir,
+      hasTarget: nodeIds.has(normalizedTarget),
+    });
+  }
+
+  if (candidates.length === 0) {
+    throw new Error(`No program-call-tree.json found under ${outputRoot}. Run analyze first.`);
+  }
+
+  const matching = candidates.filter((entry) => entry.hasTarget);
+  if (matching.length > 1) {
+    const options = matching.map((entry) => entry.program).join(', ');
+    throw new Error(`Target "${normalizedTarget}" found in multiple program graphs (${options}). Use --program to disambiguate.`);
+  }
+  if (matching.length === 1) {
+    return matching[0];
+  }
+  if (candidates.length === 1) {
+    return candidates[0];
+  }
+
+  const options = candidates.map((entry) => entry.program).join(', ');
+  throw new Error(`Could not infer graph for target "${normalizedTarget}". Available program outputs: ${options}. Use --program.`);
 }
 
 function runAnalyze(args) {
@@ -339,6 +402,44 @@ function runAnalyze(args) {
   console.log(`Output written to: ${outputProgramDir}`);
 }
 
+function runImpact(args) {
+  const verbose = Boolean(args.verbose);
+  const logVerbose = (message) => {
+    if (verbose) {
+      console.log(`[verbose] ${message}`);
+    }
+  };
+
+  if (!args.target || !String(args.target).trim()) {
+    console.error('Missing required option: --target <name>');
+    process.exit(2);
+  }
+
+  const config = resolveConfig(args);
+  const outputRoot = path.resolve(process.cwd(), config.outputRoot);
+  const resolved = findImpactGraph({
+    outputRoot,
+    target: args.target,
+    program: args.program,
+  });
+
+  logVerbose(`Target: ${normalizeId(args.target)}`);
+  logVerbose(`Graph path: ${resolved.graphPath}`);
+  logVerbose(`Output program: ${resolved.program}`);
+
+  const result = generateImpactAnalysis({
+    graphPath: resolved.graphPath,
+    target: args.target,
+    jsonOutputPath: path.join(resolved.outputProgramDir, 'impact-analysis.json'),
+    markdownOutputPath: path.join(resolved.outputProgramDir, 'impact-analysis.md'),
+  });
+
+  console.log(`Impact analysis complete for target ${result.target}`);
+  console.log(`Type: ${result.type}`);
+  console.log(`Total affected programs: ${result.totalAffectedPrograms || 0}`);
+  console.log(`Output written to: ${resolved.outputProgramDir}`);
+}
+
 async function runFetch(args) {
   const verbose = Boolean(args.verbose);
   const config = resolveFetchConfig(args);
@@ -400,6 +501,11 @@ async function main() {
 
   if (command === 'analyze') {
     runAnalyze(args);
+    return;
+  }
+
+  if (command === 'impact') {
+    runImpact(args);
     return;
   }
 

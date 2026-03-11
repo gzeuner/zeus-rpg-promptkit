@@ -8,6 +8,7 @@
   },
   "scripts": {
     "analyze": "node ./cli/zeus.js analyze",
+    "impact": "node ./cli/zeus.js impact",
     "fetch": "node ./cli/zeus.js fetch",
     "lint": "echo \"No lint configured\"",
     "test": "echo \"No tests configured\""
