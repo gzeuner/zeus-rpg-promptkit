@@ -467,3 +467,11 @@ zeus analyze --source ./rpg_sources --program ORDERPGM --optimize-context
 ## Notes
 
 This initial version is intentionally lightweight and heuristic-driven. It is designed to be easy to read, easy to extend, and safe to evolve toward deeper RPG/SQL parsing in future iterations.
+
+## License
+
+This project is licensed under the Apache License 2.0.
+
+You may use, modify, and distribute this software in accordance with the terms of the Apache License.
+
+See the LICENSE file for details.
