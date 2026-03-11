@@ -1,5 +1,5 @@
 const { scanSourceFiles } = require('../scanner/rpgScanner');
-const { buildSourceIndex, normalizeProgramName, resolveProgram } = require('./programResolver');
+const { buildSourceIndex, normalizeProgramName, resolveProgram } = require('./programSourceResolver');
 
 function asName(entry) {
   if (!entry) return '';
@@ -164,7 +164,7 @@ function buildCrossProgramGraph({
     tableCount: sortedNodes.filter((node) => node.type === 'TABLE').length,
     copyMemberCount: sortedNodes.filter((node) => node.type === 'COPY').length,
     edgeCount: sortedEdges.length,
-    unresolvedPrograms: unresolved.length,
+    unresolvedPrograms: unresolved,
   };
 
   return {
