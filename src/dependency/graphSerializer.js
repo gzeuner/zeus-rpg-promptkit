@@ -61,6 +61,9 @@ ${renderMermaid(graph).trim()}
 function renderCrossProgramMarkdown(graph) {
   const summary = (graph && graph.summary) || {};
   const unresolved = (graph && graph.unresolvedPrograms) || [];
+  const unresolvedCount = Array.isArray(summary.unresolvedPrograms)
+    ? summary.unresolvedPrograms.length
+    : (Number(summary.unresolvedPrograms) || unresolved.length || 0);
   const unresolvedSection = unresolved.length > 0
     ? `## Unresolved Programs
 
@@ -79,7 +82,7 @@ Programs: ${summary.programCount || 0}
 Tables: ${summary.tableCount || 0}
 Copy Members: ${summary.copyMemberCount || 0}
 Edges: ${summary.edgeCount || 0}
-Unresolved Programs: ${summary.unresolvedPrograms || 0}
+Unresolved Programs: ${unresolvedCount}
 
 ${unresolvedSection}## Graph
 
