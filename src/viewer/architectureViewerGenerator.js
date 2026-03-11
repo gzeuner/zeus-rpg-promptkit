@@ -16,7 +16,9 @@ function escapeInlineJson(value) {
 
 function renderSummary(graph) {
   const summary = (graph && graph.summary) || {};
-  const unresolvedCount = Number(summary.unresolvedPrograms) || 0;
+  const unresolvedCount = Array.isArray(summary.unresolvedPrograms)
+    ? summary.unresolvedPrograms.length
+    : (Number(summary.unresolvedPrograms) || 0);
 
   return [
     `Programs discovered: ${Number(summary.programCount) || 0}`,
