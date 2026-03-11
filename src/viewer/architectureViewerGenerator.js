@@ -97,6 +97,11 @@ function renderHtml(graph) {
       TABLE: { color: { background: '#16a34a', border: '#15803d' }, font: { color: '#ffffff' }, shape: 'box' },
       COPY: { color: { background: '#ea580c', border: '#c2410c' }, font: { color: '#ffffff' }, shape: 'box' }
     };
+    const nodeColorByGroup = {
+      PROGRAM: { background: '#2563eb', border: '#1d4ed8', font: '#ffffff' },
+      TABLE: { background: '#16a34a', border: '#15803d', font: '#ffffff' },
+      COPY: { background: '#ea580c', border: '#c2410c', font: '#ffffff' }
+    };
 
     function computeLevels(graph) {
       const levels = {};
@@ -202,13 +207,25 @@ function renderHtml(graph) {
       edges.update(updates);
     }
 
+    function resetNodeHighlight() {
+      const updates = nodes.get().map((node) => ({
+        id: node.id,
+        color: null,
+        font: null,
+        borderWidth: 1.5
+      }));
+      nodes.update(updates);
+    }
+
     network.on('click', (params) => {
       if (!params.nodes || params.nodes.length === 0) {
         resetEdgeHighlight();
+        resetNodeHighlight();
         return;
       }
 
       const selectedNode = params.nodes[0];
+      const relatedNodes = new Set([selectedNode, ...(network.getConnectedNodes(selectedNode) || [])]);
       const connected = new Set(network.getConnectedEdges(selectedNode));
       const updates = edges.get().map((edge) => ({
         id: edge.id,
@@ -218,6 +235,28 @@ function renderHtml(graph) {
           : { color: '#cbd5e1', highlight: '#94a3b8', hover: '#94a3b8' }
       }));
       edges.update(updates);
+
+      const nodeUpdates = nodes.get().map((node) => {
+        if (relatedNodes.has(node.id)) {
+          const groupColor = nodeColorByGroup[node.group] || { background: '#64748b', border: '#475569', font: '#ffffff' };
+          return {
+            id: node.id,
+            color: {
+              background: groupColor.background,
+              border: groupColor.border
+            },
+            font: { color: groupColor.font },
+            borderWidth: node.id === selectedNode ? 3 : 2
+          };
+        }
+        return {
+          id: node.id,
+          color: { background: '#e2e8f0', border: '#cbd5e1' },
+          font: { color: '#64748b' },
+          borderWidth: 1
+        };
+      });
+      nodes.update(nodeUpdates);
     });
 
     network.on('doubleClick', (params) => {
