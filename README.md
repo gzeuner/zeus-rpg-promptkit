@@ -29,7 +29,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `src/context/contextBuilder.js` - Context JSON builder
 - `src/dependency/dependencyGraphBuilder.js` - Deterministic dependency graph model builder
 - `src/dependency/crossProgramGraphBuilder.js` - Recursive multi-program dependency graph builder
-- `src/dependency/programResolver.js` - Local program name to source file resolver
+- `src/dependency/programSourceResolver.js` - Local program name to source file resolver
 - `src/dependency/graphSerializer.js` - Dependency graph serializers (JSON/Mermaid/Markdown wrapper)
 - `src/viewer/architectureViewerGenerator.js` - Generates interactive `architecture.html` from `program-call-tree.json`
 - `src/impact/impactAnalyzer.js` - Computes reverse dependency impact from `program-call-tree.json`
@@ -190,7 +190,7 @@ When `--optimize-context` is enabled, prompts are generated from `optimized-cont
 - `Copy Members`
 - `SQL Statements`
 - `Dependency Graph`
-- `Cross-Program Graph`
+- `Cross Program Dependency Graph`
 - `Impact Analysis`
 - `Interactive Architecture Viewer`
 - `Architecture`
