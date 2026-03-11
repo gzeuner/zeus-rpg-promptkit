@@ -15,6 +15,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - Builds a normalized analysis context JSON
 - Generates a Markdown report with key sections
 - Generates an automatic architecture report with dependency and data-flow overview
+- Performs reverse dependency impact analysis for tables and programs
 - Generates AI prompt files from reusable templates
 - Supports profile-based configuration (`--profile`)
 - Includes a Java helper (`JT400/JDBC compatible`) for DB2 metadata export
@@ -31,6 +32,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `src/dependency/programResolver.js` - Local program name to source file resolver
 - `src/dependency/graphSerializer.js` - Dependency graph serializers (JSON/Mermaid/Markdown wrapper)
 - `src/viewer/architectureViewerGenerator.js` - Generates interactive `architecture.html` from `program-call-tree.json`
+- `src/impact/impactAnalyzer.js` - Computes reverse dependency impact from `program-call-tree.json`
 - `src/report/markdownReport.js` - Markdown report generation
 - `src/report/architectureReport.js` - Architecture report generation
 - `src/report/jsonReport.js` - JSON report writer
@@ -78,6 +80,12 @@ Command syntax:
 
 ```bash
 zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--optimize-context] [--verbose]
+```
+
+Impact command syntax:
+
+```bash
+zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--verbose]
 ```
 
 Fetch source syntax:
@@ -151,6 +159,8 @@ Generated files:
 - `program-call-tree.json`
 - `program-call-tree.mmd`
 - `program-call-tree.md`
+- `impact-analysis.json` (when `zeus impact` is executed)
+- `impact-analysis.md` (when `zeus impact` is executed)
 - `architecture.html`
 
 `context.json` contains top-level keys:
@@ -181,6 +191,7 @@ When `--optimize-context` is enabled, prompts are generated from `optimized-cont
 - `SQL Statements`
 - `Dependency Graph`
 - `Cross-Program Graph`
+- `Impact Analysis`
 - `Interactive Architecture Viewer`
 - `Architecture`
 - `Next Steps`
@@ -286,6 +297,32 @@ zeus analyze --source ./rpg_sources --program ORDERPGM
 Output:
 
 - `output/ORDERPGM/architecture.html`
+
+## Impact Analysis
+
+Purpose:
+
+- provide reverse dependency lookup using `program-call-tree.json` as source of truth
+- identify direct and indirect affected programs for a table or called program
+- keep results deterministic (uppercase IDs, deduplicated, sorted)
+
+Usage:
+
+```bash
+zeus impact --target ORDERS
+zeus impact --target INVOICEPGM --program ORDERPGM
+```
+
+Generated files:
+
+- `output/<program>/impact-analysis.json`
+- `output/<program>/impact-analysis.md`
+
+Example interpretation:
+
+- Programs affected by table `ORDERS` may include:
+  - `ORDERPGM`
+  - `INVOICEPGM`
 
 ## Architecture Report
 
