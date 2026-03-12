@@ -26,9 +26,11 @@
     "outputRoot": "./output",
     "extensions": [".rpgle", ".rpg"],
     "db": {
+      "host": "myibmi.example.com",
       "url": "jdbc:as400://myibmi.example.com;naming=system;libraries=MYLIB",
       "user": "MYUSER",
-      "password": "MYPASSWORD"
+      "password": "MYPASSWORD",
+      "defaultSchema": "MYLIB"
     }
   },
   "sample-fetch": {
