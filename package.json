@@ -8,12 +8,14 @@
   },
   "scripts": {
     "analyze": "node ./cli/zeus.js analyze",
+    "bundle": "node ./cli/zeus.js bundle",
     "impact": "node ./cli/zeus.js impact",
     "fetch": "node ./cli/zeus.js fetch",
     "lint": "echo \"No lint configured\"",
     "test": "echo \"No tests configured\""
   },
   "dependencies": {
+    "adm-zip": "^0.5.16",
     "basic-ftp": "^5.0.5",
     "ssh2-sftp-client": "^11.0.0"
   },

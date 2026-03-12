@@ -55,3 +55,4 @@ Thumbs.db
 
 output/*
 !output/.gitkeep
+bundles/
