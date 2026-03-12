@@ -159,6 +159,8 @@ Generated files:
 - `program-call-tree.json`
 - `program-call-tree.mmd`
 - `program-call-tree.md`
+- `db2-metadata.json` (when DB2 metadata export succeeds)
+- `db2-metadata.md` (when DB2 metadata export succeeds)
 - `impact-analysis.json` (when `zeus impact` is executed)
 - `impact-analysis.md` (when `zeus impact` is executed)
 - `architecture.html`
@@ -174,6 +176,7 @@ Generated files:
 - `sql`
 - `graph`
 - `crossProgramGraph`
+- `db2Metadata`
 - `aiContext`
 - `notes`
 
@@ -189,6 +192,7 @@ When `--optimize-context` is enabled, prompts are generated from `optimized-cont
 - `Program Calls`
 - `Copy Members`
 - `SQL Statements`
+- `DB2 Metadata`
 - `Dependency Graph`
 - `Cross Program Dependency Graph`
 - `Impact Analysis`
@@ -379,21 +383,66 @@ To add a new template:
 1. Create `src/prompt/templates/<name>.md`
 2. Call `buildPrompt("<name>", context, outputPath)` or include the name in `buildPrompts(...)`
 
-## DB2 Metadata Export (Java Helper)
+## DB2 Metadata Export
 
-Compile:
+`zeus analyze` now attempts DB2 metadata export automatically after dependency/context analysis and before report and prompt generation.
 
-```bash
-javac java/Db2MetadataExporter.java
+Exported metadata includes:
+
+- table name
+- schema or library
+- column names
+- column types
+- length, precision, and scale when JDBC metadata provides them
+- nullable flag
+- primary key flag
+- imported foreign keys when available
+
+Generated files in `output/<program>/` when export succeeds:
+
+- `db2-metadata.json`
+- `db2-metadata.md`
+
+`context.json` also includes a compact `db2Metadata` block with file references and exported table count.
+
+Required configuration:
+
+- `db.user`
+- `db.password`
+- either `db.url` or `db.host`
+- optional `db.defaultSchema` or `db.defaultLibrary`
+- `JT400_JAR` pointing to `jt400.jar`
+
+Example profile:
+
+```json
+{
+  "sample-db2": {
+    "sourceRoot": "./rpg",
+    "outputRoot": "./output",
+    "db": {
+      "host": "myibmi.example.com",
+      "user": "MYUSER",
+      "password": "MYPASSWORD",
+      "defaultSchema": "MYLIB"
+    }
+  }
+}
 ```
 
-Run:
+Behavior:
+
+- if DB2 configuration is available, export runs automatically during `analyze`
+- if DB2 configuration or Java/JT400 prerequisites are missing, analysis still succeeds
+- `report.md` records whether metadata export ran or was skipped
+- unresolved table lookups are added as notes in `context.json`
+
+The Java helper can still be executed directly:
 
 ```bash
-java -cp java Db2MetadataExporter "jdbc:as400://host;naming=system;libraries=MYLIB" MYUSER MYPASSWORD "ORDHDR,ORDDTL"
+javac -cp %JT400_JAR% -d java/bin java/Db2MetadataExporter.java
+java -cp "%JT400_JAR%;java/bin" Db2MetadataExporter "jdbc:as400://host;naming=system;libraries=MYLIB" MYUSER MYPASSWORD MYLIB "ORDHDR,ORDDTL"
 ```
-
-The helper prints JSON to stdout with table and column metadata.
 
 ## Configuration Profiles
 
@@ -404,7 +453,7 @@ A profile can define:
 - `sourceRoot`
 - `outputRoot`
 - `extensions`
-- `db` (optional): `url`, `user`, `password`
+- `db` (optional): `url`, `host`, `user`, `password`, `defaultSchema`, `defaultLibrary`
 - `fetch` (optional): `host`, `user`, `password`, `sourceLib`, `ifsDir`, `out`, `files`, `members`, `replace`
 - `contextOptimizer` (optional): `maxTables`, `maxProgramCalls`, `maxCopyMembers`, `maxSQLStatements`, `maxSourceSnippets`, `maxSnippetLines`, `softTokenLimit`
 
