@@ -82,6 +82,12 @@ Command syntax:
 zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--optimize-context] [--verbose]
 ```
 
+Bundle command syntax:
+
+```bash
+zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--profile <name>] [--verbose]
+```
+
 Impact command syntax:
 
 ```bash
@@ -161,6 +167,7 @@ Generated files:
 - `program-call-tree.md`
 - `db2-metadata.json` (when DB2 metadata export succeeds)
 - `db2-metadata.md` (when DB2 metadata export succeeds)
+- `bundle-manifest.json` (when `zeus bundle` is executed)
 - `impact-analysis.json` (when `zeus impact` is executed)
 - `impact-analysis.md` (when `zeus impact` is executed)
 - `architecture.html`
@@ -443,6 +450,47 @@ The Java helper can still be executed directly:
 javac -cp %JT400_JAR% -d java/bin java/Db2MetadataExporter.java
 java -cp "%JT400_JAR%;java/bin" Db2MetadataExporter "jdbc:as400://host;naming=system;libraries=MYLIB" MYUSER MYPASSWORD MYLIB "ORDHDR,ORDDTL"
 ```
+
+## Output Bundle Packaging
+
+`zeus bundle` packages generated artifacts from a single `output/<program>/` folder into one portable ZIP archive.
+
+Default bundle location:
+
+- `bundles/<program>-analysis-bundle.zip`
+
+Included by default:
+
+- all `.json` files in `output/<program>/`
+- all `.md` files in `output/<program>/`
+- all `.html` files in `output/<program>/`
+
+Use include filters to restrict the archive:
+
+- `--include-json`
+- `--include-md`
+- `--include-html`
+
+If any include filter is passed, only the selected file types are packaged.
+
+The ZIP also contains:
+
+- `manifest.json` with the included file list and summary counts
+- `README.txt` with a short bundle description
+
+`zeus bundle` also writes `bundle-manifest.json` to `output/<program>/` for local reference.
+
+Examples:
+
+```bash
+zeus bundle --program ORDERPGM
+zeus bundle --program ORDERPGM --output ./bundles --include-json
+zeus bundle --program ORDERPGM --source-output-root ./output --verbose
+```
+
+Produces:
+
+- `bundles/ORDERPGM-analysis-bundle.zip`
 
 ## Configuration Profiles
 
