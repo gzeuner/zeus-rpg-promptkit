@@ -27,6 +27,7 @@ const { optimizeContext, DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../src/a
 const { estimateTokensFromObject, computeReduction } = require('../src/ai/tokenEstimator');
 const { generateArchitectureViewer } = require('../src/viewer/architectureViewerGenerator');
 const { generateImpactAnalysis, normalizeId } = require('../src/impact/impactAnalyzer');
+const { exportDb2Metadata } = require('../src/db2/metadataExportService');
 const {
   buildDependencyGraph,
   buildGraphSummary,
@@ -294,9 +295,6 @@ function runAnalyze(args) {
     notes.push(warning);
     console.warn(`Warning: ${warning}`);
   }
-  if (config.db) {
-    notes.push('DB profile found. Run java/Db2MetadataExporter.java separately to enrich table metadata.');
-  }
 
   const context = buildContext({
     program,
@@ -370,6 +368,24 @@ function runAnalyze(args) {
   const outputProgramDir = path.join(outputRoot, program);
   fs.mkdirSync(outputProgramDir, { recursive: true });
   logVerbose(`Writing output to ${outputProgramDir}`);
+
+  const db2Export = exportDb2Metadata({
+    program,
+    dependencies: context.dependencies,
+    dbConfig: config.db,
+    outputDir: outputProgramDir,
+    verbose,
+  });
+  context.db2Metadata = db2Export.summary;
+  if (db2Export.notes && db2Export.notes.length > 0) {
+    context.notes = Array.from(new Set([...(context.notes || []), ...db2Export.notes])).sort((a, b) => a.localeCompare(b));
+  }
+  if (optimizedContext) {
+    optimizedContext.db2Metadata = db2Export.summary;
+    if (db2Export.notes && db2Export.notes.length > 0) {
+      optimizedContext.notes = Array.from(new Set([...(optimizedContext.notes || []), ...db2Export.notes])).sort((a, b) => a.localeCompare(b));
+    }
+  }
 
   writeJsonReport(path.join(outputProgramDir, 'context.json'), context);
   if (optimizedContext) {
