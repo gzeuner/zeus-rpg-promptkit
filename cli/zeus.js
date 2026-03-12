@@ -28,6 +28,7 @@ const { estimateTokensFromObject, computeReduction } = require('../src/ai/tokenE
 const { generateArchitectureViewer } = require('../src/viewer/architectureViewerGenerator');
 const { generateImpactAnalysis, normalizeId } = require('../src/impact/impactAnalyzer');
 const { exportDb2Metadata } = require('../src/db2/metadataExportService');
+const { buildOutputBundle } = require('../src/bundle/outputBundleBuilder');
 const {
   buildDependencyGraph,
   buildGraphSummary,
@@ -44,6 +45,7 @@ const { fetchSources, DEFAULT_SOURCE_FILES, DEFAULT_TRANSPORT } = require('../sr
 function printHelp() {
   console.log('Usage:');
   console.log('  zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--optimize-context] [--verbose]');
+  console.log('  zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--profile <name>] [--verbose]');
   console.log('  zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--verbose]');
   console.log('  zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--transport auto|sftp|jt400|ftp] [--profile <name>] [--verbose]');
 }
@@ -159,6 +161,21 @@ function resolveFetchConfig(args) {
     members: parseCsv(args.members || fetchProfile.members, []),
     replace: parseBoolean(args.replace !== undefined ? args.replace : fetchProfile.replace, true),
     transport: (args.transport || fetchProfile.transport || DEFAULT_TRANSPORT).toLowerCase(),
+  };
+}
+
+function resolveBundleConfig(args) {
+  const profiles = loadProfiles();
+  const profileName = args.profile;
+  const profile = profileName ? profiles[profileName] : null;
+
+  if (profileName && !profile) {
+    throw new Error(`Profile "${profileName}" not found in config/profiles.json or config/profiles.example.json`);
+  }
+
+  return {
+    sourceOutputRoot: args['source-output-root'] || (profile && profile.outputRoot) || 'output',
+    bundleOutputRoot: args.output || args.out || 'bundles',
   };
 }
 
@@ -470,6 +487,34 @@ function runImpact(args) {
   console.log(`Output written to: ${resolved.outputProgramDir}`);
 }
 
+function runBundle(args) {
+  const verbose = Boolean(args.verbose);
+
+  if (!args.program || !String(args.program).trim()) {
+    console.error('Missing required option: --program <name>');
+    process.exit(2);
+  }
+
+  const config = resolveBundleConfig(args);
+  const result = buildOutputBundle({
+    program: String(args.program).trim(),
+    sourceOutputRoot: config.sourceOutputRoot,
+    bundleOutputRoot: config.bundleOutputRoot,
+    includeJson: args['include-json'] === true,
+    includeMd: args['include-md'] === true,
+    includeHtml: args['include-html'] === true,
+  });
+
+  if (verbose) {
+    console.log(`[verbose] Program output: ${result.programOutputDir}`);
+    console.log(`[verbose] Bundle output: ${result.bundleOutputRoot}`);
+  }
+
+  console.log(`Bundle created for program ${result.program}`);
+  console.log(`Files included: ${result.manifest.summary.totalFiles}`);
+  console.log(`Bundle written to: ${result.zipPath}`);
+}
+
 async function runFetch(args) {
   const verbose = Boolean(args.verbose);
   const config = resolveFetchConfig(args);
@@ -536,6 +581,11 @@ async function main() {
 
   if (command === 'impact') {
     runImpact(args);
+    return;
+  }
+
+  if (command === 'bundle') {
+    runBundle(args);
     return;
   }
 
