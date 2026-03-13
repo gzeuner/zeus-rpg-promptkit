@@ -77,7 +77,11 @@ function buildTemplateData(context, sourceSnippet) {
     ? context.summary.text
     : `Program ${context.program || ''} has ${tables.length} tables, ${programCalls.length} program calls, ${copyMembers.length} copy members, and ${sqlStatements.length} SQL statements.`;
   const graph = context.graph || {};
+  const testData = context.testData || {};
   const dependencyGraphSummary = `Nodes: ${graph.nodeCount || 0}, Edges: ${graph.edgeCount || 0}`;
+  const testDataHint = testData.status === 'exported'
+    ? `Representative sample rows are available in ${testData.file || 'test-data.json'} and ${testData.markdownFile || 'test-data.md'} for ${testData.tableCount || 0} tables.`
+    : 'Representative sample rows are not available in this analysis run.';
 
   return {
     program: context.program || '',
@@ -93,6 +97,7 @@ function buildTemplateData(context, sourceSnippet) {
       return item;
     }),
     dependencyGraphSummary,
+    testDataHint,
     sourceSnippet: sourceSnippet || 'No source snippet available.',
   };
 }
