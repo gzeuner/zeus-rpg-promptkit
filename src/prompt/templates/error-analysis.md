@@ -20,6 +20,9 @@ Program: `{{program}}`
 ## Dependency Graph
 {{dependencyGraphSummary}}
 
+## Test Data
+{{testDataHint}}
+
 ## Source Snippet
 ```rpg
 {{sourceSnippet}}

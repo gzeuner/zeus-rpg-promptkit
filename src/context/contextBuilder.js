@@ -242,6 +242,7 @@ function buildContext({ program, sourceRoot, sourceFiles, dependencies, notes, g
     sql: sqlBlock,
     graph: normalizedGraph,
     db2Metadata: null,
+    testData: null,
     aiContext,
     notes: (notes || []).map((note) => String(note)).sort((a, b) => a.localeCompare(b)),
   };
