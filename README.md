@@ -75,6 +75,12 @@ node cli/zeus.js analyze --source ./rpg --program ORDERPGM
 npm run analyze -- --source ./rpg --program ORDERPGM
 ```
 
+Run the smoke tests with:
+
+```bash
+npm test
+```
+
 ## Usage
 
 Command syntax:
