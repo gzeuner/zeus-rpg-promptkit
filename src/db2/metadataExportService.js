@@ -14,48 +14,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 const { ensureJavaHelperCompiled, runJavaHelper } = require('../fetch/jt400CommandRunner');
+const {
+  normalizeIdentifier,
+  resolveDefaultSchema,
+  buildJdbcUrl,
+  isDbConfigured,
+} = require('./db2Config');
 
 const JSON_FILE = 'db2-metadata.json';
 const MARKDOWN_FILE = 'db2-metadata.md';
-
-function normalizeIdentifier(value) {
-  return String(value || '').trim().toUpperCase();
-}
-
-function resolveDefaultSchema(dbConfig) {
-  return normalizeIdentifier(
-    (dbConfig && (dbConfig.defaultSchema || dbConfig.defaultLibrary || dbConfig.schema || dbConfig.library)) || '',
-  );
-}
-
-function buildJdbcUrl(dbConfig, defaultSchema) {
-  if (dbConfig && dbConfig.url) {
-    return String(dbConfig.url).trim();
-  }
-
-  const host = dbConfig && dbConfig.host ? String(dbConfig.host).trim() : '';
-  if (!host) {
-    return '';
-  }
-
-  const parts = [`jdbc:as400://${host}`, 'naming=system'];
-  if (defaultSchema) {
-    parts.push(`libraries=${defaultSchema}`);
-  }
-  return parts.join(';');
-}
-
-function isDbConfigured(dbConfig) {
-  if (!dbConfig || typeof dbConfig !== 'object') {
-    return false;
-  }
-
-  const hasUrl = Boolean(String(dbConfig.url || '').trim());
-  const hasHost = Boolean(String(dbConfig.host || '').trim());
-  const hasUser = Boolean(String(dbConfig.user || '').trim());
-  const hasPassword = dbConfig.password !== undefined && dbConfig.password !== null;
-  return (hasUrl || hasHost) && hasUser && hasPassword;
-}
 
 function parseJavaJson(stdout) {
   const content = String(stdout || '').trim();

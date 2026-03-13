@@ -18,7 +18,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - Performs reverse dependency impact analysis for tables and programs
 - Generates AI prompt files from reusable templates
 - Supports profile-based configuration (`--profile`)
-- Includes a Java helper (`JT400/JDBC compatible`) for DB2 metadata export
+- Includes Java helpers (`JT400/JDBC compatible`) for DB2 metadata export and test data extraction
 
 ## Project Structure
 
@@ -39,13 +39,14 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `src/prompt/promptBuilder.js` - Prompt generation from templates
 - `src/prompt/templates/*.md` - Prompt templates
 - `java/Db2MetadataExporter.java` - DB2 table metadata exporter
+- `java/Db2TestDataExtractor.java` - DB2 sample row extractor
 - `config/profiles.example.json` - Example profiles
 
 ## Requirements
 
 - Node.js 20+
-- Java 11+ (for metadata helper)
-- Optional: DB2/JT400 JDBC driver for metadata export
+- Java 11+ (for DB2 helpers)
+- Optional: DB2/JT400 JDBC driver for metadata export and test data extraction
 - IBM i SSH/SFTP enabled for `zeus fetch`
 - `JT400_JAR` environment variable set to your `jt400.jar` path for Java helpers
 
@@ -79,7 +80,7 @@ npm run analyze -- --source ./rpg --program ORDERPGM
 Command syntax:
 
 ```bash
-zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--optimize-context] [--verbose]
+zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--optimize-context] [--test-data-limit <n>] [--skip-test-data] [--verbose]
 ```
 
 Bundle command syntax:
@@ -167,6 +168,8 @@ Generated files:
 - `program-call-tree.md`
 - `db2-metadata.json` (when DB2 metadata export succeeds)
 - `db2-metadata.md` (when DB2 metadata export succeeds)
+- `test-data.json` (when test data extraction runs)
+- `test-data.md` (when test data extraction runs)
 - `bundle-manifest.json` (when `zeus bundle` is executed)
 - `impact-analysis.json` (when `zeus impact` is executed)
 - `impact-analysis.md` (when `zeus impact` is executed)
@@ -184,6 +187,7 @@ Generated files:
 - `graph`
 - `crossProgramGraph`
 - `db2Metadata`
+- `testData`
 - `aiContext`
 - `notes`
 
@@ -200,6 +204,7 @@ When `--optimize-context` is enabled, prompts are generated from `optimized-cont
 - `Copy Members`
 - `SQL Statements`
 - `DB2 Metadata`
+- `Test Data Extract`
 - `Dependency Graph`
 - `Cross Program Dependency Graph`
 - `Impact Analysis`
@@ -451,6 +456,57 @@ javac -cp %JT400_JAR% -d java/bin java/Db2MetadataExporter.java
 java -cp "%JT400_JAR%;java/bin" Db2MetadataExporter "jdbc:as400://host;naming=system;libraries=MYLIB" MYUSER MYPASSWORD MYLIB "ORDHDR,ORDDTL"
 ```
 
+## Test Data Extractor
+
+`zeus analyze` now attempts DB2 test data extraction automatically after DB2 metadata export and before report and prompt generation.
+
+Purpose:
+
+- export representative sample rows for detected DB2 tables
+- make reports and prompts more concrete without dumping full tables
+- keep extraction bounded and read-only
+
+Behavior:
+
+- default limit is `50` rows per table
+- override with `--test-data-limit <n>`
+- skip explicitly with `--skip-test-data`
+- if DB2 configuration is missing, `analyze` still succeeds and `report.md` records the skip
+- if one table extraction fails, the remaining tables are still processed
+
+Generated files in `output/<program>/` when extraction runs:
+
+- `test-data.json`
+- `test-data.md`
+
+`context.json` includes a compact `testData` block with file references, extracted table count, and row limit.
+
+Optional masking is supported through profile configuration:
+
+```json
+{
+  "testData": {
+    "limit": 50,
+    "maskColumns": ["NAME", "EMAIL", "PHONE"]
+  }
+}
+```
+
+Masked columns are written as `MASKED` in the exported rows.
+
+Safety constraints:
+
+- read-only JDBC queries only
+- no unlimited extraction
+- no full table dumps
+- no write-back operations
+
+Example:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --test-data-limit 25
+```
+
 ## Output Bundle Packaging
 
 `zeus bundle` packages generated artifacts from a single `output/<program>/` folder into one portable ZIP archive.
@@ -502,6 +558,7 @@ A profile can define:
 - `outputRoot`
 - `extensions`
 - `db` (optional): `url`, `host`, `user`, `password`, `defaultSchema`, `defaultLibrary`
+- `testData` (optional): `limit`, `maskColumns`
 - `fetch` (optional): `host`, `user`, `password`, `sourceLib`, `ifsDir`, `out`, `files`, `members`, `replace`
 - `contextOptimizer` (optional): `maxTables`, `maxProgramCalls`, `maxCopyMembers`, `maxSQLStatements`, `maxSourceSnippets`, `maxSnippetLines`, `softTokenLimit`
 
@@ -517,6 +574,10 @@ Example:
     "maxSourceSnippets": 20,
     "maxSnippetLines": 12,
     "softTokenLimit": 3000
+  },
+  "testData": {
+    "limit": 50,
+    "maskColumns": ["NAME", "EMAIL", "PHONE"]
   },
   "default": {
     "sourceRoot": "./rpg",
