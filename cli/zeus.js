@@ -28,6 +28,7 @@ const { estimateTokensFromObject, computeReduction } = require('../src/ai/tokenE
 const { generateArchitectureViewer } = require('../src/viewer/architectureViewerGenerator');
 const { generateImpactAnalysis, normalizeId } = require('../src/impact/impactAnalyzer');
 const { exportDb2Metadata } = require('../src/db2/metadataExportService');
+const { exportTestData, DEFAULT_TEST_DATA_LIMIT } = require('../src/db2/testDataExportService');
 const { buildOutputBundle } = require('../src/bundle/outputBundleBuilder');
 const {
   buildDependencyGraph,
@@ -44,7 +45,7 @@ const { fetchSources, DEFAULT_SOURCE_FILES, DEFAULT_TRANSPORT } = require('../sr
 
 function printHelp() {
   console.log('Usage:');
-  console.log('  zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--optimize-context] [--verbose]');
+  console.log('  zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--optimize-context] [--test-data-limit <n>] [--skip-test-data] [--verbose]');
   console.log('  zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--profile <name>] [--verbose]');
   console.log('  zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--verbose]');
   console.log('  zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--transport auto|sftp|jt400|ftp] [--profile <name>] [--verbose]');
@@ -95,6 +96,22 @@ function readContextOptimizerConfig(profiles, profile) {
   };
 }
 
+function readTestDataConfig(profiles, profile) {
+  const globalConfig = profiles && typeof profiles.testData === 'object'
+    ? profiles.testData
+    : {};
+  const profileConfig = profile && typeof profile.testData === 'object'
+    ? profile.testData
+    : {};
+
+  return {
+    limit: DEFAULT_TEST_DATA_LIMIT,
+    maskColumns: [],
+    ...globalConfig,
+    ...profileConfig,
+  };
+}
+
 function resolveConfig(args) {
   const profiles = loadProfiles();
   const profileName = args.profile;
@@ -117,6 +134,7 @@ function resolveConfig(args) {
     extensions,
     db: (profile && profile.db) || null,
     contextOptimizer: readContextOptimizerConfig(profiles, profile),
+    testData: readTestDataConfig(profiles, profile),
   };
 }
 
@@ -138,6 +156,13 @@ function parseCsv(value, fallback) {
     .map((item) => item.trim())
     .filter(Boolean)
     .map((item) => item.toUpperCase());
+}
+
+function parsePositiveInteger(value, fallback) {
+  if (value === undefined || value === null || value === true) return fallback;
+  const parsed = Number.parseInt(String(value).trim(), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
 }
 
 function resolveFetchConfig(args) {
@@ -284,12 +309,20 @@ function runAnalyze(args) {
   const sourceRoot = path.resolve(process.cwd(), config.sourceRoot);
   const outputRoot = path.resolve(process.cwd(), config.outputRoot);
   const program = String(args.program).trim();
+  const testDataLimit = parsePositiveInteger(args['test-data-limit'], Number(config.testData.limit) || DEFAULT_TEST_DATA_LIMIT);
+  const skipTestData = Boolean(args['skip-test-data']);
+
+  if (testDataLimit === null) {
+    console.error('Invalid option: --test-data-limit must be a positive integer');
+    process.exit(2);
+  }
 
   logVerbose(`Program: ${program}`);
   logVerbose(`Source root: ${sourceRoot}`);
   logVerbose(`Output root: ${outputRoot}`);
   logVerbose(`Extensions: ${config.extensions.join(', ')}`);
   logVerbose(`Context optimization: ${optimizeContextEnabled ? 'enabled' : 'disabled'}`);
+  logVerbose(`Test data extraction: ${skipTestData ? 'disabled' : `enabled (limit ${testDataLimit})`}`);
 
   if (!fs.existsSync(sourceRoot)) {
     console.error(`Source directory not found: ${sourceRoot}. Provide a valid --source path.`);
@@ -401,6 +434,30 @@ function runAnalyze(args) {
     optimizedContext.db2Metadata = db2Export.summary;
     if (db2Export.notes && db2Export.notes.length > 0) {
       optimizedContext.notes = Array.from(new Set([...(optimizedContext.notes || []), ...db2Export.notes])).sort((a, b) => a.localeCompare(b));
+    }
+  }
+
+  const testDataExport = exportTestData({
+    program,
+    dependencies: context.dependencies,
+    dbConfig: config.db,
+    outputDir: outputProgramDir,
+    metadataPayload: db2Export.payload,
+    testDataConfig: {
+      ...config.testData,
+      limit: testDataLimit,
+    },
+    skipTestData,
+    verbose,
+  });
+  context.testData = testDataExport.summary;
+  if (testDataExport.notes && testDataExport.notes.length > 0) {
+    context.notes = Array.from(new Set([...(context.notes || []), ...testDataExport.notes])).sort((a, b) => a.localeCompare(b));
+  }
+  if (optimizedContext) {
+    optimizedContext.testData = testDataExport.summary;
+    if (testDataExport.notes && testDataExport.notes.length > 0) {
+      optimizedContext.notes = Array.from(new Set([...(optimizedContext.notes || []), ...testDataExport.notes])).sort((a, b) => a.localeCompare(b));
     }
   }
 

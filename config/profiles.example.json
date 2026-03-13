@@ -8,6 +8,10 @@
     "maxSnippetLines": 12,
     "softTokenLimit": 3000
   },
+  "testData": {
+    "limit": 50,
+    "maskColumns": ["NAME", "EMAIL", "PHONE"]
+  },
   "default": {
     "sourceRoot": "./rpg",
     "outputRoot": "./output",
@@ -31,6 +35,10 @@
       "user": "MYUSER",
       "password": "MYPASSWORD",
       "defaultSchema": "MYLIB"
+    },
+    "testData": {
+      "limit": 50,
+      "maskColumns": ["NAME", "EMAIL", "PHONE"]
     }
   },
   "sample-fetch": {
