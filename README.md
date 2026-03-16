@@ -48,7 +48,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - Java 11+ (for DB2 helpers)
 - Optional: DB2/JT400 JDBC driver for metadata export and test data extraction
 - IBM i SSH/SFTP enabled for `zeus fetch`
-- `JT400_JAR` environment variable set to your `jt400.jar` path for Java helpers
+- `java/lib/jt400.jar` available for local Java helper compilation and runtime
 
 ## Installation
 
@@ -429,7 +429,7 @@ Required configuration:
 - `db.password`
 - either `db.url` or `db.host`
 - optional `db.defaultSchema` or `db.defaultLibrary`
-- `JT400_JAR` pointing to `jt400.jar`
+- `java/lib/jt400.jar` present in the project
 
 Example profile:
 
@@ -458,8 +458,8 @@ Behavior:
 The Java helper can still be executed directly:
 
 ```bash
-javac -cp %JT400_JAR% -d java/bin java/Db2MetadataExporter.java
-java -cp "%JT400_JAR%;java/bin" Db2MetadataExporter "jdbc:as400://host;naming=system;libraries=MYLIB" MYUSER MYPASSWORD MYLIB "ORDHDR,ORDDTL"
+javac -cp java/lib/jt400.jar -d java/bin java/Db2MetadataExporter.java
+java -cp "java/lib/jt400.jar;java/bin" Db2MetadataExporter "jdbc:as400://host;naming=system;libraries=MYLIB" MYUSER MYPASSWORD MYLIB "ORDHDR,ORDDTL"
 ```
 
 ## Test Data Extractor
@@ -517,6 +517,8 @@ zeus analyze --source ./rpg_sources --program ORDERPGM --test-data-limit 25
 
 `zeus bundle` packages generated artifacts from a single `output/<program>/` folder into one portable ZIP archive.
 
+When `analyze-run-manifest.json` is present, `zeus bundle` uses it as the source of truth for artifact selection and metadata. This keeps analyze and bundle aligned on one deterministic output contract, which is the same direction needed for future workflow presets and a local UI/API layer.
+
 Default bundle location:
 
 - `bundles/<program>-analysis-bundle.zip`
@@ -541,6 +543,14 @@ The ZIP also contains:
 - `README.txt` with a short bundle description
 
 `zeus bundle` also writes `bundle-manifest.json` to `output/<program>/` for local reference.
+
+Both bundle manifest files are versioned and include:
+
+- `schemaVersion`
+- tool/command metadata
+- included file list
+- artifact entries with `path`, `kind`, `sizeBytes`, and `sha256` when available
+- analyze-run linkage metadata when the bundle was created from an analyze manifest
 
 Examples:
 

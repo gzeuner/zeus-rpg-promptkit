@@ -11,56 +11,10 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
-const fs = require('fs');
-const path = require('path');
-const { spawnSync } = require('child_process');
+const { ensureJavaSourcesCompiled, runJavaClass } = require('../java/javaRuntime');
 
-const JAVA_SOURCE_DIR = path.resolve(process.cwd(), 'java');
-const JAVA_BIN_DIR = path.join(JAVA_SOURCE_DIR, 'bin');
-
-function getJt400JarPath() {
-  const jarPath = process.env.JT400_JAR;
-  if (!jarPath) {
-    throw new Error('JT400_JAR is not set. Example: set JT400_JAR=C:\\path\\to\\jt400.jar');
-  }
-  if (!fs.existsSync(jarPath)) {
-    throw new Error(`JT400_JAR points to a missing file: ${jarPath}`);
-  }
-  return jarPath;
-}
-
-function runProcess(command, args, errorLabel) {
-  const result = spawnSync(command, args, {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-
-  if (result.error) {
-    throw new Error(`${errorLabel}: ${result.error.message}`);
-  }
-
-  return result;
-}
-
-function ensureJavaHelperCompiled(sourceFileName, className) {
-  const jarPath = getJt400JarPath();
-  fs.mkdirSync(JAVA_BIN_DIR, { recursive: true });
-
-  const sourcePath = path.join(JAVA_SOURCE_DIR, sourceFileName);
-  const classPath = path.join(JAVA_BIN_DIR, `${className}.class`);
-  const shouldCompile = !fs.existsSync(classPath)
-    || fs.statSync(sourcePath).mtimeMs > fs.statSync(classPath).mtimeMs;
-
-  if (!shouldCompile) {
-    return;
-  }
-
-  const compileArgs = ['-cp', jarPath, '-d', JAVA_BIN_DIR, sourcePath];
-  const compileResult = runProcess('javac', compileArgs, 'Failed to run javac');
-  if (compileResult.status !== 0) {
-    const stderr = (compileResult.stderr || '').trim();
-    throw new Error(`Java compile failed for ${sourceFileName}: ${stderr || 'unknown error'}`);
-  }
+function ensureJavaHelperCompiled() {
+  return ensureJavaSourcesCompiled();
 }
 
 function parseJsonResult(stdout, fallback) {
@@ -77,13 +31,11 @@ function parseJsonResult(stdout, fallback) {
 }
 
 function runJavaHelper(className, args) {
-  const jarPath = getJt400JarPath();
-  const classpath = `${jarPath}${path.delimiter}${JAVA_BIN_DIR}`;
-  return runProcess('java', ['-cp', classpath, className, ...args], `Failed to run Java helper ${className}`);
+  return runJavaClass(className, args);
 }
 
 function runClCommand({ host, user, password, command, verbose }) {
-  ensureJavaHelperCompiled('IbmiCommandRunner.java', 'IbmiCommandRunner');
+  ensureJavaHelperCompiled();
   if (verbose) {
     console.log(`[verbose] CL command: ${command}`);
   }
@@ -104,7 +56,7 @@ function runClCommand({ host, user, password, command, verbose }) {
 }
 
 function listMembers({ host, user, password, sourceLib, sourceFile, verbose }) {
-  ensureJavaHelperCompiled('IbmiMemberLister.java', 'IbmiMemberLister');
+  ensureJavaHelperCompiled();
   if (verbose) {
     console.log(`[verbose] Listing members in ${sourceLib}/${sourceFile}`);
   }
