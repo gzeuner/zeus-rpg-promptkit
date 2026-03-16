@@ -11,13 +11,23 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
+const {
+  ANALYZE_RUN_MANIFEST_FILE,
+  readAnalyzeRunManifest,
+} = require('../analyze/analyzeRunManifest');
 
 const MANIFEST_FILE = 'bundle-manifest.json';
 const ZIP_MANIFEST_FILE = 'manifest.json';
 const README_FILE = 'README.txt';
+const BUNDLE_MANIFEST_SCHEMA_VERSION = 1;
+
+function hashContent(content) {
+  return crypto.createHash('sha256').update(content).digest('hex');
+}
 
 function normalizeProgramName(program) {
   return String(program || '').trim();
@@ -39,6 +49,15 @@ function resolveIncludeTypes(options) {
   return selected;
 }
 
+function inferBundleArtifactKind(fileName) {
+  const ext = path.extname(String(fileName || '').toLowerCase());
+  if (ext === '.json') return 'json';
+  if (ext === '.md') return 'markdown';
+  if (ext === '.mmd') return 'mermaid';
+  if (ext === '.html') return 'html';
+  return ext ? ext.slice(1) : 'unknown';
+}
+
 function shouldIncludeFile(fileName, includeTypes) {
   const ext = path.extname(fileName).toLowerCase();
   if (!includeTypes.has(ext)) {
@@ -50,10 +69,8 @@ function shouldIncludeFile(fileName, includeTypes) {
   return true;
 }
 
-function collectBundleFiles(programOutputDir, includeTypes) {
-  return fs.readdirSync(programOutputDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name)
+function mapBundleFiles(programOutputDir, fileNames, includeTypes) {
+  return fileNames
     .filter((fileName) => shouldIncludeFile(fileName, includeTypes))
     .sort((a, b) => a.localeCompare(b))
     .map((fileName) => ({
@@ -61,6 +78,30 @@ function collectBundleFiles(programOutputDir, includeTypes) {
       path: path.join(programOutputDir, fileName),
       ext: path.extname(fileName).toLowerCase(),
     }));
+}
+
+function collectLegacyBundleFiles(programOutputDir, includeTypes) {
+  return mapBundleFiles(
+    programOutputDir,
+    fs.readdirSync(programOutputDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name),
+    includeTypes,
+  );
+}
+
+function collectManifestBundleFiles(programOutputDir, includeTypes, analyzeManifest) {
+  if (!analyzeManifest || !Array.isArray(analyzeManifest.artifacts)) {
+    return collectLegacyBundleFiles(programOutputDir, includeTypes);
+  }
+
+  const fileNames = Array.from(new Set([
+    ...analyzeManifest.artifacts.map((artifact) => artifact.path),
+    ANALYZE_RUN_MANIFEST_FILE,
+  ]));
+
+  return mapBundleFiles(programOutputDir, fileNames, includeTypes)
+    .filter((file) => fs.existsSync(file.path));
 }
 
 function buildSummary(files) {
@@ -80,13 +121,62 @@ function buildSummary(files) {
   return summary;
 }
 
-function buildManifest(program, files) {
-  return {
+function buildArtifactMetadata(files, analyzeManifest) {
+  const analyzeArtifacts = new Map(
+    (analyzeManifest && Array.isArray(analyzeManifest.artifacts) ? analyzeManifest.artifacts : [])
+      .map((artifact) => [artifact.path, artifact]),
+  );
+
+  return files.map((file) => {
+    const baseArtifact = analyzeArtifacts.get(file.name);
+    return {
+      path: file.name,
+      kind: baseArtifact && baseArtifact.kind ? baseArtifact.kind : inferBundleArtifactKind(file.name),
+      sizeBytes: baseArtifact && Number.isFinite(Number(baseArtifact.sizeBytes))
+        ? Number(baseArtifact.sizeBytes)
+        : fs.statSync(file.path).size,
+      sha256: baseArtifact && typeof baseArtifact.sha256 === 'string' && baseArtifact.sha256
+        ? baseArtifact.sha256
+        : hashContent(fs.readFileSync(file.path)),
+      source: baseArtifact ? 'analyze-manifest' : 'bundle-scan',
+    };
+  });
+}
+
+function buildManifest(program, files, analyzeManifest) {
+  const artifacts = buildArtifactMetadata(files, analyzeManifest);
+  const manifest = {
+    schemaVersion: BUNDLE_MANIFEST_SCHEMA_VERSION,
+    tool: {
+      name: 'zeus-rpg-promptkit',
+      command: 'bundle',
+    },
     program: normalizeProgramName(program).toUpperCase(),
     generatedAt: new Date().toISOString(),
     files: files.map((file) => file.name),
-    summary: buildSummary(files),
+    artifacts,
+    summary: {
+      ...buildSummary(files),
+      totalSizeBytes: artifacts.reduce((sum, artifact) => sum + artifact.sizeBytes, 0),
+    },
   };
+
+  if (analyzeManifest) {
+    manifest.analyzeRun = {
+      schemaVersion: analyzeManifest.schemaVersion || null,
+      manifestFile: ANALYZE_RUN_MANIFEST_FILE,
+      status: analyzeManifest.run && analyzeManifest.run.status ? analyzeManifest.run.status : null,
+      completedAt: analyzeManifest.run && analyzeManifest.run.completedAt ? analyzeManifest.run.completedAt : null,
+      sourceFingerprint: analyzeManifest.inputs
+        && analyzeManifest.inputs.sourceSnapshot
+        && analyzeManifest.inputs.sourceSnapshot.fingerprint
+        ? analyzeManifest.inputs.sourceSnapshot.fingerprint
+        : null,
+      artifactCount: Array.isArray(analyzeManifest.artifacts) ? analyzeManifest.artifacts.length : 0,
+    };
+  }
+
+  return manifest;
 }
 
 function buildReadmeText(program, manifest) {
@@ -128,8 +218,9 @@ function buildOutputBundle({
   }
 
   const includeTypes = resolveIncludeTypes({ includeJson, includeMd, includeHtml });
-  const files = collectBundleFiles(programOutputDir, includeTypes);
-  const manifest = buildManifest(resolvedProgram, files);
+  const analyzeManifest = readAnalyzeRunManifest(programOutputDir);
+  const files = collectManifestBundleFiles(programOutputDir, includeTypes, analyzeManifest);
+  const manifest = buildManifest(resolvedProgram, files, analyzeManifest);
   const zip = new AdmZip();
 
   for (const file of files) {
@@ -157,4 +248,5 @@ function buildOutputBundle({
 
 module.exports = {
   buildOutputBundle,
+  BUNDLE_MANIFEST_SCHEMA_VERSION,
 };
