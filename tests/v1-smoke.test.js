@@ -46,6 +46,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
 
     const programOutputDir = path.join(outputRoot, 'ORDERPGM');
     const expectedFiles = [
+      'analyze-run-manifest.json',
       'context.json',
       'optimized-context.json',
       'report.md',
@@ -106,6 +107,19 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.equal(graph.summary.programCount, 3);
     assert.equal(graph.summary.tableCount, 3);
 
+    const analyzeManifest = readJson(path.join(programOutputDir, 'analyze-run-manifest.json'));
+    assert.equal(analyzeManifest.schemaVersion, 1);
+    assert.equal(analyzeManifest.tool.command, 'analyze');
+    assert.equal(analyzeManifest.run.status, 'succeeded');
+    assert.equal(analyzeManifest.inputs.program, 'ORDERPGM');
+    assert.equal(analyzeManifest.summary.stageCount, 6);
+    assert.ok(analyzeManifest.summary.generatedArtifactCount >= 13);
+    assert.equal(analyzeManifest.inputs.sourceSnapshot.fileCount, 2);
+    assert.ok(analyzeManifest.stages.some((stage) => stage.id === 'collect-scan'));
+    assert.ok(analyzeManifest.stages.some((stage) => stage.id === 'write-artifacts'));
+    assert.ok(analyzeManifest.artifacts.some((artifact) => artifact.path === 'context.json'));
+    assert.equal(analyzeManifest.comparison, null);
+
     runCli([
       'bundle',
       '--program',
@@ -120,10 +134,15 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.equal(fs.existsSync(bundlePath), true);
 
     const manifest = readJson(path.join(programOutputDir, 'bundle-manifest.json'));
+    assert.equal(manifest.schemaVersion, 1);
+    assert.equal(manifest.tool.command, 'bundle');
     assert.equal(manifest.program, 'ORDERPGM');
     assert.ok(manifest.files.includes('context.json'));
     assert.ok(manifest.files.includes('report.md'));
     assert.ok(manifest.files.includes('architecture.html'));
+    assert.ok(Array.isArray(manifest.artifacts));
+    assert.ok(manifest.artifacts.some((artifact) => artifact.path === 'context.json' && artifact.sha256));
+    assert.equal(manifest.analyzeRun.status, 'succeeded');
 
     const zip = new AdmZip(bundlePath);
     const entryNames = zip.getEntries().map((entry) => entry.entryName).sort();
