@@ -56,3 +56,9 @@ Thumbs.db
 output/*
 !output/.gitkeep
 bundles/
+
+# -----------------------------
+# Local planning
+# -----------------------------
+
+.local-roadmap/
