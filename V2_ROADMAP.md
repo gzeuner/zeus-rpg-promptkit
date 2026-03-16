@@ -1,104 +1,72 @@
 # V2 Roadmap
 
-## Purpose
+## Status
 
-Zeus V2 will extend the current CLI-based RPG analysis tooling into a more maintainable and reusable platform for IBM i analysis workflows.
+Zeus already has a substantial V1 in place:
 
-The goal is to keep the existing deterministic artifact model while improving extensibility, operational visibility, and reuse across CLI, bundle, and future UI-oriented workflows.
+- IBM i source fetch with `sftp`, `jt400`, and `ftp` transport paths
+- local source collection and heuristic scanning
+- deterministic dependency graph and cross-program graph artifacts
+- impact analysis
+- DB2 metadata export and bounded test-data extraction
+- AI-ready context, prompt generation, reports, viewer output, and portable bundles
 
-## Guiding Principles
+The March 16, 2026 architecture review conclusion is straightforward:
 
-- preserve deterministic outputs and stable artifact contracts
-- keep the CLI useful as the primary automation surface
-- add structure and reuse before adding large new feature areas
-- improve analysis depth without forcing brittle all-at-once parser rewrites
-- make outputs easier to consume by automation and future interactive tooling
+- the V1 foundation is real and usable
+- the next phase should focus on source fidelity, analysis depth, scalability, and reusable architecture boundaries
+- Windows-readable source export and normalization is the most urgent gap to close
 
-## Current V2 Focus Areas
+## V2 Priorities
 
-### 1. Analysis Pipeline and Extensibility
+### P1: Source Fidelity, Analysis Depth, and Platform Hardening
 
-Strengthen the internal stage pipeline so analysis steps are easier to compose, evolve, and debug.
+#### IBM i source fidelity and Windows compatibility
 
-Focus:
+- [#55](https://github.com/gzeuner/zeus-rpg-promptkit/issues/55) Guarantee UTF-8 IBM i Source Export and Windows-Readable Local Files
+- [#56](https://github.com/gzeuner/zeus-rpg-promptkit/issues/56) Add Encoding Detection and Source Normalization to the Analyze Pipeline
+- [#57](https://github.com/gzeuner/zeus-rpg-promptkit/issues/57) Persist Source Provenance and Fetch Metadata for Imported Members
+- [#58](https://github.com/gzeuner/zeus-rpg-promptkit/issues/58) Resolve Duplicate Member Names with Source-File-Aware Program Identity
 
-- clearer stage contracts
-- structured stage metadata and diagnostics
-- easier addition of new analysis and enrichment steps
+#### Better IBM i and RPG understanding
 
-### 2. Output Contracts and Run Metadata
+- [#39](https://github.com/gzeuner/zeus-rpg-promptkit/issues/39) Build an RPG Pattern Corpus and Detection Benchmark Suite
+- [#40](https://github.com/gzeuner/zeus-rpg-promptkit/issues/40) Add Procedure-Level and Call-Site Analysis for RPGLE
+- [#41](https://github.com/gzeuner/zeus-rpg-promptkit/issues/41) Detect Service Programs, Modules, and Binder Directories
+- [#42](https://github.com/gzeuner/zeus-rpg-promptkit/issues/42) Classify File Usage and Improve Embedded SQL Semantics
+- [#59](https://github.com/gzeuner/zeus-rpg-promptkit/issues/59) Add Source-Type Classification and Dedicated CL/DDS Scanners
 
-Make generated artifacts more useful for automation, debugging, and downstream tools.
+#### Architecture quality, determinism, and scalability
 
-Focus:
+- [#43](https://github.com/gzeuner/zeus-rpg-promptkit/issues/43) Introduce an Extensible Analyzer Plugin Pipeline
+- [#44](https://github.com/gzeuner/zeus-rpg-promptkit/issues/44) Add Incremental Analysis Caching and Artifact Reuse
+- [#45](https://github.com/gzeuner/zeus-rpg-promptkit/issues/45) Add Structured Logging, Diagnostics, and Run Manifests
+- [#46](https://github.com/gzeuner/zeus-rpg-promptkit/issues/46) Add Configuration Schema Validation and Profile Inheritance
+- [#47](https://github.com/gzeuner/zeus-rpg-promptkit/issues/47) Expand Test Infrastructure with Contract, Corpus, and Performance Suites
+- [#60](https://github.com/gzeuner/zeus-rpg-promptkit/issues/60) Split Analyze Orchestration from Artifact Writers for CLI and UI Reuse
+- [#61](https://github.com/gzeuner/zeus-rpg-promptkit/issues/61) Make Analysis Outputs Reproducible with a Stable-Timestamp Mode
+- [#62](https://github.com/gzeuner/zeus-rpg-promptkit/issues/62) Scale Cross-Program Analysis for Large IBM i Source Trees
+- [#63](https://github.com/gzeuner/zeus-rpg-promptkit/issues/63) Harden DB2 Test-Data Governance and Extraction Auditability
 
-- versioned manifests
-- richer artifact inventories
-- stable machine-readable diagnostics
-- stronger alignment between `analyze` and `bundle`
+### P2: Prompt, Workflow, and Bundle Quality
 
-### 3. Configuration and Runtime Hardening
+- [#48](https://github.com/gzeuner/zeus-rpg-promptkit/issues/48) Build a Prompt Registry, Versioning Model, and Validation Harness
+- [#49](https://github.com/gzeuner/zeus-rpg-promptkit/issues/49) Add Specialized Prompt Packs for Architecture, Modernization, Refactoring, and Test Generation
+- [#50](https://github.com/gzeuner/zeus-rpg-promptkit/issues/50) Add Workflow Presets and Guided Analysis Bundles
+- [#51](https://github.com/gzeuner/zeus-rpg-promptkit/issues/51) Add Best-Practice Review Workflows for Modernization and Dependency Risk
+- [#64](https://github.com/gzeuner/zeus-rpg-promptkit/issues/64) Make the Architecture Viewer Offline-Capable and Version-Stable
 
-Improve configuration handling so larger workflows remain predictable and easier to operate.
+### P3: Local UI and Usability
 
-Focus:
+- [#52](https://github.com/gzeuner/zeus-rpg-promptkit/issues/52) Build a Local Web UI Shell and Analysis API Layer
+- [#53](https://github.com/gzeuner/zeus-rpg-promptkit/issues/53) Add Interactive Views for Graphs, DB2 Metadata, Test Data, and Prompt Preview
 
-- stronger validation
-- clearer profile behavior
-- safer environment override handling
+## What Success Looks Like
 
-### 4. Test Infrastructure
+V2 should be considered successful when:
 
-Expand beyond smoke coverage to protect output contracts and future analysis work.
-
-Focus:
-
-- contract tests for generated outputs
-- broader regression coverage for analysis logic
-- clearer test tiers for unit, contract, and smoke validation
-
-### 5. Workflow and Prompt Evolution
-
-Prepare the project for more guided review modes without fragmenting the core artifact model.
-
-Focus:
-
-- reusable workflow-oriented bundles
-- clearer prompt packaging and metadata
-- stronger separation between core analysis data and workflow-specific presentation
-
-### 6. Foundation for Local UI and Automation Clients
-
-Keep future interactive usage in mind while preserving the CLI-first model.
-
-Focus:
-
-- stable internal data contracts
-- reusable manifest-driven artifact discovery
-- outputs that can be consumed without duplicating parsing logic
-
-## Near-Term Direction
-
-The next V2 steps are expected to continue in this order:
-
-1. strengthen shared analysis and bundle contracts
-2. improve diagnostics and runtime observability
-3. harden configuration and validation behavior
-4. expand test coverage around contracts and regression safety
-5. build toward guided workflows and a local UI/API layer
-
-## Public Backlog Themes
-
-The public backlog currently groups work around:
-
-- analysis depth improvements
-- architecture and pipeline improvements
-- workflow and prompt improvements
-- local UI and usability improvements
-
-Issue details can continue to evolve over time, but the main direction remains:
-
-- more extensible analysis
-- more repeatable outputs
-- better workflow support
-- a stronger foundation for future product surfaces
+- fetched IBM i sources are readable and scannable on Windows by default
+- source provenance, encoding, and ambiguity are explicit instead of implicit
+- larger repositories can be analyzed with stable diagnostics and repeatable artifact contracts
+- prompt packs and guided workflows build on the same core context model
+- a local UI can reuse shared analysis contracts instead of reimplementing core logic
