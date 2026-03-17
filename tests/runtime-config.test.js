@@ -123,6 +123,7 @@ test('resolveFetchConfig accepts environment overrides for sensitive fetch setti
         ifsDir: '/home/profile',
         out: './download',
         files: ['qrpglesrc'],
+        streamFileCcsid: 1208,
         replace: false,
         transport: 'sftp',
       },
@@ -148,6 +149,7 @@ test('resolveFetchConfig accepts environment overrides for sensitive fetch setti
     assert.equal(config.password, 'env-pass');
     assert.equal(config.sourceLib, 'QCLLESRC');
     assert.deepEqual(config.files, ['QRPGLESRC', 'QSQLRPGLESRC']);
+    assert.equal(config.streamFileCcsid, 1208);
     assert.equal(config.replace, true);
     assert.equal(config.transport, 'sftp');
   } finally {
@@ -216,6 +218,25 @@ test('resolveFetchConfig rejects unsupported transport values', () => {
     assert.throws(
       () => resolveFetchConfig({ profile: 'fetcher' }, { cwd: tempRoot, env: {} }),
       /Invalid configuration: profile "fetcher"\.fetch\.transport must be one of: auto, sftp, jt400, ftp/,
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveFetchConfig rejects invalid stream file CCSID values', () => {
+  const tempRoot = createTempProject({
+    fetcher: {
+      fetch: {
+        streamFileCcsid: 0,
+      },
+    },
+  });
+
+  try {
+    assert.throws(
+      () => resolveFetchConfig({ profile: 'fetcher' }, { cwd: tempRoot, env: {} }),
+      /Invalid configuration: profile "fetcher"\.fetch\.streamFileCcsid must be a positive integer/,
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
