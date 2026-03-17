@@ -12,7 +12,10 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
-const { runClCommand } = require('./jt400CommandRunner');
+const {
+  runClCommand,
+  exportSourceMemberViaJdbc,
+} = require('./jt400CommandRunner');
 
 const DEFAULT_STREAM_FILE_CCSID = 1208;
 
@@ -38,6 +41,10 @@ function buildMkdirCommand(remoteDir) {
   return `MKDIR DIR(${clQuote(remoteDir)})`;
 }
 
+function buildRemoteTargetPath({ sourceFile, member, ifsDir }) {
+  return path.posix.join(ifsDir, sourceFile, `${member}${memberToExtension(sourceFile)}`);
+}
+
 function buildCopyCommandWithEncoding({
   sourceLib,
   sourceFile,
@@ -46,14 +53,18 @@ function buildCopyCommandWithEncoding({
   replace,
   streamFileCcsid,
 }) {
-  const extension = memberToExtension(sourceFile);
   const fromMember = `/QSYS.LIB/${sourceLib}.LIB/${sourceFile}.FILE/${member}.MBR`;
-  const toFile = path.posix.join(ifsDir, sourceFile, `${member}${extension}`);
+  const toFile = buildRemoteTargetPath({ sourceFile, member, ifsDir });
   const stmfOpt = replace ? '*REPLACE' : '*NONE';
   const targetCcsid = Number.isInteger(streamFileCcsid) && streamFileCcsid > 0
     ? streamFileCcsid
     : DEFAULT_STREAM_FILE_CCSID;
   return `CPYTOSTMF FROMMBR(${clQuote(fromMember)}) TOSTMF(${clQuote(toFile)}) STMFOPT(${stmfOpt}) STMFCODPAG(${targetCcsid})`;
+}
+
+function shouldUseJdbcFallback(result) {
+  const combined = `${result && result.stderr ? result.stderr : ''} ${((result && result.messages) || []).join(' ')}`.toUpperCase();
+  return combined.includes('CPDA08C') || combined.includes('CCSID 65535');
 }
 
 function ensureRemoteDirectory(options, remoteDir) {
@@ -95,6 +106,7 @@ function exportMembersForSourceFile({
 
   const results = [];
   for (const member of members) {
+    const targetPath = buildRemoteTargetPath({ sourceFile, member, ifsDir });
     const command = buildCopyCommandWithEncoding({
       sourceLib,
       sourceFile,
@@ -109,13 +121,41 @@ function exportMembersForSourceFile({
       command,
     });
 
+    let finalResult = result;
+    let fallback = null;
+    if (result.ok !== true && shouldUseJdbcFallback(result)) {
+      fallback = exportSourceMemberViaJdbc({
+        host,
+        user,
+        password,
+        sourceLib,
+        sourceFile,
+        member,
+        targetPath,
+        streamFileCcsid,
+        verbose,
+      });
+      if (fallback.ok) {
+        finalResult = {
+          ok: true,
+          messages: [
+            ...((result.messages || []).filter(Boolean)),
+            `Fell back to JDBC source export for ${sourceLib}/${sourceFile}(${member}).`,
+            ...((fallback.messages || []).filter(Boolean)),
+          ],
+          stderr: fallback.stderr || '',
+        };
+      }
+    }
+
     results.push({
       sourceFile,
       member,
-      ok: result.ok === true,
+      ok: finalResult.ok === true,
       command,
-      messages: result.messages || [],
-      stderr: result.stderr || '',
+      messages: finalResult.messages || [],
+      stderr: finalResult.stderr || '',
+      fallbackUsed: Boolean(fallback && fallback.ok),
     });
   }
 
@@ -125,5 +165,7 @@ function exportMembersForSourceFile({
 module.exports = {
   exportMembersForSourceFile,
   buildCopyCommand: buildCopyCommandWithEncoding,
+  buildRemoteTargetPath,
+  shouldUseJdbcFallback,
   DEFAULT_STREAM_FILE_CCSID,
 };
