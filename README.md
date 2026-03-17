@@ -7,6 +7,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 ## Features
 
 - Scans RPG source files from a configurable root directory
+- Exports IBM i source members to Windows-readable UTF-8 stream files by default during `zeus fetch`
 - Detects common dependencies using practical heuristics:
   - F-spec and `dcl-f` table/file declarations
   - Program calls (`CALL`, `CALLP`, `CALLB`, `CALLPRC`)
@@ -104,7 +105,7 @@ zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>]
 Fetch source syntax:
 
 ```bash
-zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--profile <name>] [--verbose]
+zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--profile <name>] [--verbose]
 ```
 
 Download transport option:
@@ -114,6 +115,17 @@ Download transport option:
 ```
 
 Default is `auto` and tries in order: `sftp -> jt400 -> ftp`.
+
+Fetch encoding option:
+
+```bash
+--streamfile-ccsid 1208
+```
+
+Default behavior:
+
+- `zeus fetch` exports source members as UTF-8 stream files using IBM i CCSID `1208`
+- this keeps downloaded RPG, CL, and DDS sources readable in common Windows editors and terminals without manual conversion
 
 ### Basic analyze
 
@@ -575,7 +587,7 @@ A profile can define:
 - `extensions`
 - `db` (optional): `url`, `host`, `user`, `password`, `defaultSchema`, `defaultLibrary`
 - `testData` (optional): `limit`, `maskColumns`
-- `fetch` (optional): `host`, `user`, `password`, `sourceLib`, `ifsDir`, `out`, `files`, `members`, `replace`
+- `fetch` (optional): `host`, `user`, `password`, `sourceLib`, `ifsDir`, `out`, `files`, `members`, `replace`, `streamFileCcsid`, `transport`
 - `contextOptimizer` (optional): `maxTables`, `maxProgramCalls`, `maxCopyMembers`, `maxSQLStatements`, `maxSourceSnippets`, `maxSnippetLines`, `softTokenLimit`
 
 Example:
@@ -606,6 +618,20 @@ Example:
       "maxSQLStatements": 10,
       "maxSourceSnippets": 20,
       "maxSnippetLines": 12
+    }
+  },
+  "sample-fetch": {
+    "fetch": {
+      "host": "myibmi.example.com",
+      "user": "MYUSER",
+      "password": "MYPASSWORD",
+      "sourceLib": "SOURCEN",
+      "ifsDir": "/home/zeus/rpg_sources",
+      "out": "./rpg_sources",
+      "files": ["QRPGLESRC", "QSQLRPGLESRC", "QCLLESRC"],
+      "streamFileCcsid": 1208,
+      "replace": true,
+      "transport": "auto"
     }
   }
 }
@@ -641,6 +667,11 @@ zeus analyze --source ./rpg_sources --program ORDERPGM --optimize-context
 ## Notes
 
 This initial version is intentionally lightweight and heuristic-driven. It is designed to be easy to read, easy to extend, and safe to evolve toward deeper RPG/SQL parsing in future iterations.
+
+IBM i source export note:
+
+- fetched source members are exported as UTF-8 stream files (`CCSID 1208`) by default
+- analyzer components read local sources as UTF-8, so keeping fetch output on that contract avoids broken umlauts and Windows-side mojibake
 
 ## License
 

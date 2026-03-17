@@ -16,6 +16,7 @@ const path = require('path');
 const { DEFAULT_TEST_DATA_LIMIT } = require('../db2/testDataExportService');
 const { DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../ai/contextOptimizer');
 const { DEFAULT_SOURCE_FILES, DEFAULT_TRANSPORT } = require('../fetch/fetchService');
+const { DEFAULT_STREAM_FILE_CCSID } = require('../fetch/ifsExporter');
 
 const DEFAULT_EXTENSIONS = ['.rpg', '.rpgle', '.sqlrpgle', '.rpgile', '.clp', '.clle', '.dds', '.dspf', '.prtf', '.pf', '.lf'];
 const ALLOWED_FETCH_TRANSPORTS = new Set(['auto', 'sftp', 'jt400', 'ftp']);
@@ -103,6 +104,9 @@ function validateFetchProfile(value, label) {
   if (value.replace !== undefined && typeof value.replace !== 'boolean') {
     failValidation(`${label}.replace must be a boolean`);
   }
+  if (value.streamFileCcsid !== undefined) {
+    assertPositiveInteger(value.streamFileCcsid, `${label}.streamFileCcsid`);
+  }
   if (value.transport !== undefined) {
     assertOptionalString(value.transport, `${label}.transport`);
     const normalized = String(value.transport).trim().toLowerCase();
@@ -182,6 +186,7 @@ function validateFetchConfig(config) {
   if (typeof config.replace !== 'boolean') {
     failValidation('fetch.replace must be a boolean');
   }
+  assertPositiveInteger(config.streamFileCcsid, 'fetch.streamFileCcsid');
   assertOptionalString(config.transport, 'fetch.transport');
   if (!ALLOWED_FETCH_TRANSPORTS.has(config.transport)) {
     failValidation('fetch.transport must be one of: auto, sftp, jt400, ftp');
@@ -323,6 +328,15 @@ function resolveFetchConfig(args, { cwd = process.cwd(), env = process.env } = {
     replace: parseBoolean(
       args.replace !== undefined ? args.replace : (env.ZEUS_FETCH_REPLACE !== undefined ? env.ZEUS_FETCH_REPLACE : fetchProfile.replace),
       true,
+    ),
+    streamFileCcsid: Number.parseInt(
+      String(
+        args['streamfile-ccsid']
+        || env.ZEUS_FETCH_STREAMFILE_CCSID
+        || fetchProfile.streamFileCcsid
+        || DEFAULT_STREAM_FILE_CCSID,
+      ).trim(),
+      10,
     ),
     transport: String(args.transport || env.ZEUS_FETCH_TRANSPORT || fetchProfile.transport || DEFAULT_TRANSPORT).toLowerCase(),
   };

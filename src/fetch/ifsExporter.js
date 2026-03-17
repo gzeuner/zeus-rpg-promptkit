@@ -14,6 +14,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const path = require('path');
 const { runClCommand } = require('./jt400CommandRunner');
 
+const DEFAULT_STREAM_FILE_CCSID = 1208;
+
 const EXTENSION_MAP = {
   QRPGLESRC: '.rpgle',
   QSQLRPGLESRC: '.sqlrpgle',
@@ -36,12 +38,22 @@ function buildMkdirCommand(remoteDir) {
   return `MKDIR DIR(${clQuote(remoteDir)})`;
 }
 
-function buildCopyCommand({ sourceLib, sourceFile, member, ifsDir, replace }) {
+function buildCopyCommandWithEncoding({
+  sourceLib,
+  sourceFile,
+  member,
+  ifsDir,
+  replace,
+  streamFileCcsid,
+}) {
   const extension = memberToExtension(sourceFile);
   const fromMember = `/QSYS.LIB/${sourceLib}.LIB/${sourceFile}.FILE/${member}.MBR`;
   const toFile = path.posix.join(ifsDir, sourceFile, `${member}${extension}`);
   const stmfOpt = replace ? '*REPLACE' : '*NONE';
-  return `CPYTOSTMF FROMMBR(${clQuote(fromMember)}) TOSTMF(${clQuote(toFile)}) STMFOPT(${stmfOpt}) STMFCODPAG(*STMF)`;
+  const targetCcsid = Number.isInteger(streamFileCcsid) && streamFileCcsid > 0
+    ? streamFileCcsid
+    : DEFAULT_STREAM_FILE_CCSID;
+  return `CPYTOSTMF FROMMBR(${clQuote(fromMember)}) TOSTMF(${clQuote(toFile)}) STMFOPT(${stmfOpt}) STMFCODPAG(${targetCcsid})`;
 }
 
 function ensureRemoteDirectory(options, remoteDir) {
@@ -74,6 +86,7 @@ function exportMembersForSourceFile({
   members,
   ifsDir,
   replace,
+  streamFileCcsid = DEFAULT_STREAM_FILE_CCSID,
   verbose,
 }) {
   const baseOptions = { host, user, password, verbose };
@@ -82,12 +95,13 @@ function exportMembersForSourceFile({
 
   const results = [];
   for (const member of members) {
-    const command = buildCopyCommand({
+    const command = buildCopyCommandWithEncoding({
       sourceLib,
       sourceFile,
       member,
       ifsDir,
       replace,
+      streamFileCcsid,
     });
 
     const result = runClCommand({
@@ -110,4 +124,6 @@ function exportMembersForSourceFile({
 
 module.exports = {
   exportMembersForSourceFile,
+  buildCopyCommand: buildCopyCommandWithEncoding,
+  DEFAULT_STREAM_FILE_CCSID,
 };
