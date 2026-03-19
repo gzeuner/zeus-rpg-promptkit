@@ -13,7 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
 const { listMembers } = require('./jt400CommandRunner');
-const { exportMembersForSourceFile } = require('./ifsExporter');
+const {
+  exportMembersForSourceFile,
+  DEFAULT_STREAM_FILE_CCSID,
+} = require('./ifsExporter');
 const { downloadDirectory } = require('./sftpDownloader');
 const { downloadDirectoryViaJt400 } = require('./jt400Downloader');
 const { downloadDirectoryViaFtp } = require('./ftpDownloader');
@@ -28,6 +31,13 @@ const DEFAULT_SOURCE_FILES = [
 ];
 const DEFAULT_TRANSPORT = 'auto';
 const TRANSPORTS = ['auto', 'sftp', 'jt400', 'ftp'];
+
+function describeEncodingPolicy(streamFileCcsid) {
+  if (Number(streamFileCcsid) === DEFAULT_STREAM_FILE_CCSID) {
+    return `UTF-8 stream files (CCSID ${DEFAULT_STREAM_FILE_CCSID})`;
+  }
+  return `stream files with CCSID ${streamFileCcsid}`;
+}
 
 function parseList(value, fallback) {
   if (!value) {
@@ -85,6 +95,7 @@ async function fetchSources(options) {
     downloadedCount: 0,
     localDestination: path.resolve(process.cwd(), options.out),
     notes: [],
+    encodingPolicy: describeEncodingPolicy(options.streamFileCcsid),
     transportUsed: null,
   };
 
@@ -111,6 +122,7 @@ async function fetchSources(options) {
       members,
       ifsDir: options.ifsDir,
       replace: options.replace !== false,
+      streamFileCcsid: options.streamFileCcsid,
       verbose: options.verbose,
     });
 
@@ -187,4 +199,5 @@ module.exports = {
   fetchSources,
   DEFAULT_SOURCE_FILES,
   DEFAULT_TRANSPORT,
+  describeEncodingPolicy,
 };
