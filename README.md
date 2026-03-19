@@ -8,6 +8,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 
 - Scans RPG source files from a configurable root directory
 - Exports IBM i source members to Windows-readable UTF-8 stream files by default during `zeus fetch`
+- Writes a fetch import manifest and validates imported source files before scanning
 - Detects common dependencies using practical heuristics:
   - F-spec and `dcl-f` table/file declarations
   - Program calls (`CALL`, `CALLP`, `CALLB`, `CALLPRC`)
@@ -126,6 +127,13 @@ Default behavior:
 
 - `zeus fetch` exports source members as UTF-8 stream files using IBM i CCSID `1208`
 - this keeps downloaded RPG, CL, and DDS sources readable in common Windows editors and terminals without manual conversion
+- `zeus fetch` writes `zeus-import-manifest.json` into the local source root to persist remote identity, transport, checksum, and validation details for imported members
+
+Imported source validation:
+
+- when `zeus-import-manifest.json` is present, `zeus analyze` validates imported files before scanning
+- invalid UTF-8 sources are skipped with explicit diagnostics instead of being scanned implicitly
+- checksum drift and newline problems are surfaced as warnings in the analyze stage metadata and notes
 
 ### Basic analyze
 

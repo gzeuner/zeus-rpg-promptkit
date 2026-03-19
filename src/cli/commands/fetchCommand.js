@@ -58,6 +58,9 @@ async function runFetch(args) {
   console.log(`Download transport used: ${summary.transportUsed}`);
   console.log(`Source encoding policy: ${summary.encodingPolicy}`);
   console.log(`Local destination: ${summary.localDestination}`);
+  if (summary.importManifestPath) {
+    console.log(`Import manifest: ${summary.importManifestPath}`);
+  }
   if (summary.notes.length > 0) {
     console.log('Notes:');
     for (const note of summary.notes) {
