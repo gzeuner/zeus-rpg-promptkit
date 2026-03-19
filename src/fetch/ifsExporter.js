@@ -45,6 +45,10 @@ function buildRemoteTargetPath({ sourceFile, member, ifsDir }) {
   return path.posix.join(ifsDir, sourceFile, `${member}${memberToExtension(sourceFile)}`);
 }
 
+function buildLocalTargetPath({ sourceFile, member, localRoot }) {
+  return path.join(localRoot, sourceFile, `${member}${memberToExtension(sourceFile)}`);
+}
+
 function buildCopyCommandWithEncoding({
   sourceLib,
   sourceFile,
@@ -165,7 +169,9 @@ function exportMembersForSourceFile({
 module.exports = {
   exportMembersForSourceFile,
   buildCopyCommand: buildCopyCommandWithEncoding,
+  buildLocalTargetPath,
   buildRemoteTargetPath,
+  memberToExtension,
   shouldUseJdbcFallback,
   DEFAULT_STREAM_FILE_CCSID,
 };

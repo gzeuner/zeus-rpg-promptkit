@@ -35,6 +35,8 @@ const {
 } = require('../dependency/graphSerializer');
 const { pickSourceSnippet } = require('../cli/helpers/sourceSnippet');
 const { runStages } = require('./runStages');
+const { readImportManifest } = require('../fetch/importManifest');
+const { validateSourceFiles } = require('../source/sourceIntegrity');
 
 function addNotes(target, notes) {
   if (!notes || notes.length === 0) {
@@ -48,9 +50,46 @@ function collectAndScanStage(state) {
   const sourceFiles = collectSourceFiles(sourceRoot, config.extensions);
   logVerbose(`Collected source files: ${sourceFiles.length}`);
 
-  const scanSummary = scanSourceFiles(sourceFiles);
-  const notes = [...(scanSummary.notes || [])];
+  const importManifestResult = readImportManifest(sourceRoot);
+  const validation = validateSourceFiles(sourceFiles, {
+    rootDir: sourceRoot,
+    importManifest: importManifestResult.manifest,
+    importManifestPath: importManifestResult.manifestPath,
+  });
+  logVerbose(`Validated scannable source files: ${validation.validFiles.length}`);
+
+  const scanSummary = scanSourceFiles(validation.validFiles);
+  const notes = [
+    ...(scanSummary.notes || []),
+    ...validation.results.flatMap((result) => result.issues.map((issue) => issue.message)),
+  ];
   const stageDiagnostics = [];
+
+  if (importManifestResult.error) {
+    stageDiagnostics.push({
+      severity: 'warning',
+      code: 'IMPORT_MANIFEST_INVALID',
+      message: `Import manifest could not be read: ${importManifestResult.manifestPath}`,
+      details: {
+        error: importManifestResult.error.message,
+      },
+    });
+    notes.push(`Import manifest could not be read: ${importManifestResult.manifestPath}`);
+  }
+
+  for (const result of validation.results) {
+    for (const issue of result.issues) {
+      stageDiagnostics.push({
+        severity: issue.severity,
+        code: issue.code,
+        message: issue.message,
+        details: {
+          file: result.relativePath,
+        },
+      });
+    }
+  }
+
   if (sourceFiles.length === 0) {
     const warning = 'No source files found for provided sourceRoot/extensions.';
     notes.push(warning);
@@ -65,10 +104,24 @@ function collectAndScanStage(state) {
     });
     console.warn(`Warning: ${warning}`);
   }
+  if (sourceFiles.length > 0 && validation.validFiles.length === 0) {
+    const warning = 'No valid UTF-8 source files remained after source integrity validation.';
+    notes.push(warning);
+    stageDiagnostics.push({
+      severity: 'warning',
+      code: 'NO_SCANNABLE_SOURCE_FILES',
+      message: warning,
+      details: {
+        sourceRoot,
+      },
+    });
+  }
 
   return {
     ...state,
     sourceFiles,
+    scannableSourceFiles: validation.validFiles,
+    importManifest: importManifestResult.manifest,
     scanSummary,
     notes,
     dependencies: {
@@ -79,6 +132,10 @@ function collectAndScanStage(state) {
     },
     stageMetadata: {
       sourceFileCount: sourceFiles.length,
+      scannableSourceFileCount: validation.validFiles.length,
+      invalidSourceFileCount: validation.invalidCount,
+      sourceValidationWarningCount: validation.warningCount,
+      importManifestFound: Boolean(importManifestResult.manifest),
       scannedFileCount: (scanSummary.sourceFiles || []).length,
       tableCount: (scanSummary.tables || []).length,
       programCallCount: (scanSummary.calls || []).length,
@@ -91,7 +148,7 @@ function collectAndScanStage(state) {
 }
 
 function buildContextStage(state) {
-  const { program, sourceRoot, sourceFiles, scanSummary, dependencies, notes } = state;
+  const { program, sourceRoot, scannableSourceFiles, scanSummary, dependencies, notes } = state;
   const context = buildContext({
     program,
     sourceRoot,
@@ -116,7 +173,7 @@ function buildContextStage(state) {
   context.graph = buildGraphSummary(graph);
   const crossProgramGraph = buildCrossProgramGraph({
     rootProgram: program,
-    sourceFiles,
+    sourceFiles: scannableSourceFiles || [],
   });
   context.crossProgramGraph = {
     programCount: Number(crossProgramGraph.summary.programCount) || 0,
