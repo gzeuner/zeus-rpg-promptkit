@@ -55,16 +55,22 @@ function sortEdges(edges) {
 function buildCrossProgramGraph({
   rootProgram,
   sourceFiles,
+  sourceRoot,
+  importManifest,
 }) {
   const root = normalizeProgramName(rootProgram);
   if (!root) {
     throw new Error('Cross-program graph generation requires rootProgram');
   }
 
-  const sourceIndex = buildSourceIndex(sourceFiles || []);
+  const sourceIndex = buildSourceIndex(sourceFiles || [], {
+    sourceRoot,
+    importManifest,
+  });
   const visitedPrograms = new Set();
   const scannedFiles = new Set();
   const unresolvedPrograms = new Set();
+  const ambiguousPrograms = new Set();
   const notes = [];
 
   const nodeSet = new Set();
@@ -113,13 +119,16 @@ function buildCrossProgramGraph({
 
     const resolved = resolveProgram(currentProgram, sourceIndex);
     if (!resolved || !resolved.path) {
+      if (resolved && resolved.ambiguous) {
+        ambiguousPrograms.add(currentProgram);
+        if (resolved.warning) {
+          notes.push(resolved.warning);
+        }
+      }
       if (currentProgram !== root) {
         unresolvedPrograms.add(currentProgram);
       }
       return;
-    }
-    if (resolved.warning) {
-      notes.push(resolved.warning);
     }
 
     if (scannedFiles.has(resolved.path)) {
@@ -157,10 +166,13 @@ function buildCrossProgramGraph({
       const calledResolved = resolveProgram(calledProgram, sourceIndex);
       if (!calledResolved || !calledResolved.path) {
         unresolvedPrograms.add(calledProgram);
+        if (calledResolved && calledResolved.ambiguous) {
+          ambiguousPrograms.add(calledProgram);
+          if (calledResolved.warning) {
+            notes.push(calledResolved.warning);
+          }
+        }
         continue;
-      }
-      if (calledResolved.warning) {
-        notes.push(calledResolved.warning);
       }
       walkProgram(calledProgram);
     }
@@ -171,12 +183,14 @@ function buildCrossProgramGraph({
   const sortedNodes = sortNodes(nodes);
   const sortedEdges = sortEdges(edges);
   const unresolved = Array.from(unresolvedPrograms).sort((a, b) => a.localeCompare(b));
+  const ambiguous = Array.from(ambiguousPrograms).sort((a, b) => a.localeCompare(b));
 
   const summary = {
     programCount: sortedNodes.filter((node) => node.type === 'PROGRAM').length,
     tableCount: sortedNodes.filter((node) => node.type === 'TABLE').length,
     copyMemberCount: sortedNodes.filter((node) => node.type === 'COPY').length,
     edgeCount: sortedEdges.length,
+    ambiguousPrograms: ambiguous,
     unresolvedPrograms: unresolved,
   };
 
@@ -185,6 +199,8 @@ function buildCrossProgramGraph({
     nodes: sortedNodes,
     edges: sortedEdges,
     summary,
+    sourceCatalog: sourceIndex.summary,
+    ambiguousPrograms: ambiguous,
     unresolvedPrograms: unresolved,
     notes: Array.from(new Set(notes)).sort((a, b) => a.localeCompare(b)),
   };

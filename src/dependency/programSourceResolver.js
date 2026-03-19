@@ -11,60 +11,87 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
-const path = require('path');
+const { buildSourceCatalog, inferMemberName, normalizeName } = require('../source/sourceCatalog');
 
 function normalizeProgramName(value) {
-  return String(value || '').trim().toUpperCase();
+  return normalizeName(value);
 }
 
 function toMemberName(filePath) {
-  const baseName = path.basename(String(filePath || ''), path.extname(String(filePath || '')));
-  return normalizeProgramName(baseName);
+  return inferMemberName(filePath);
 }
 
 function toSortedUniquePaths(paths) {
-  return Array.from(new Set((paths || []).filter(Boolean).map((entry) => String(entry))))
-    .sort((a, b) => a.localeCompare(b));
+  return buildSourceCatalog({ sourceFiles: paths }).entries.map((entry) => entry.path);
 }
 
-function buildSourceIndex(sourceFiles) {
-  const index = new Map();
-  for (const filePath of toSortedUniquePaths(sourceFiles)) {
-    const memberName = toMemberName(filePath);
-    if (!memberName) continue;
-    if (!index.has(memberName)) {
-      index.set(memberName, []);
-    }
-    index.get(memberName).push(filePath);
-  }
-
-  for (const [programName, entries] of index.entries()) {
-    entries.sort((a, b) => a.localeCompare(b));
-    index.set(programName, entries);
-  }
-
-  return index;
+function buildSourceIndex(sourceFiles, options = {}) {
+  return buildSourceCatalog({
+    sourceFiles,
+    sourceRoot: options.sourceRoot,
+    importManifest: options.importManifest,
+  });
 }
 
 function resolveProgram(programName, sourceIndex) {
   const normalized = normalizeProgramName(programName);
   if (!normalized) return null;
 
-  const matches = (sourceIndex && sourceIndex.get(normalized)) || [];
+  const matches = sourceIndex && sourceIndex.byMemberName instanceof Map
+    ? (sourceIndex.byMemberName.get(normalized) || [])
+    : ((sourceIndex && sourceIndex.get && sourceIndex.get(normalized)) || []).map((filePath) => ({
+      name: normalized,
+      path: filePath,
+      identity: `LOCAL:${filePath}`,
+      relativePath: filePath,
+      sourceLib: '',
+      sourceFile: '',
+      sourceType: '',
+    }));
   if (matches.length === 0) {
     return null;
   }
 
-  const selectedPath = matches[0];
-  const warning = matches.length > 1
-    ? `Multiple local sources found for program ${normalized}. Selected ${selectedPath}.`
-    : null;
+  if (matches.length > 1) {
+    return {
+      name: normalized,
+      path: null,
+      identity: null,
+      ambiguous: true,
+      warning: `Ambiguous local sources found for program ${normalized}: ${matches.map((match) => match.identity || match.path).join(', ')}.`,
+      matches: matches.map((match) => ({
+        identity: match.identity || `LOCAL:${match.path}`,
+        path: match.path,
+        relativePath: match.relativePath || match.path,
+        sourceLib: match.sourceLib || '',
+        sourceFile: match.sourceFile || '',
+        sourceType: match.sourceType || '',
+      })),
+      alternatives: [],
+    };
+  }
+
+  const selectedMatch = matches[0];
 
   return {
     name: normalized,
-    path: selectedPath,
-    warning,
-    alternatives: matches.slice(1),
+    path: selectedMatch.path,
+    identity: selectedMatch.identity || `LOCAL:${selectedMatch.path}`,
+    relativePath: selectedMatch.relativePath || selectedMatch.path,
+    sourceLib: selectedMatch.sourceLib || '',
+    sourceFile: selectedMatch.sourceFile || '',
+    sourceType: selectedMatch.sourceType || '',
+    ambiguous: false,
+    warning: null,
+    matches: [{
+      identity: selectedMatch.identity || `LOCAL:${selectedMatch.path}`,
+      path: selectedMatch.path,
+      relativePath: selectedMatch.relativePath || selectedMatch.path,
+      sourceLib: selectedMatch.sourceLib || '',
+      sourceFile: selectedMatch.sourceFile || '',
+      sourceType: selectedMatch.sourceType || '',
+    }],
+    alternatives: [],
   };
 }
 
