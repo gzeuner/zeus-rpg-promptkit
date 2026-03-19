@@ -1,105 +1,159 @@
 # Architecture Review
 
+## Review Date
+
+2026-03-19
+
 ## Scope Reviewed
 
-The review covered the current repository state across:
+The review covered the live repository across:
 
-- CLI entry points and command flow
-- fetch and IBM i export paths
-- analyze pipeline and stage execution
-- source scanning and dependency extraction
-- dependency graphs, impact analysis, and architecture viewer generation
-- context building, prompt generation, reports, and bundles
-- DB2 metadata and test-data integration
-- Java helper integration and test coverage
+- CLI entry points and command adapters
+- fetch/import flow and IBM i source export
+- analyze staging, manifests, reports, prompts, and bundle packaging
+- scanner depth for RPG, SQL, and mixed IBM i source sets
+- dependency graphs, cross-program resolution, and impact analysis
+- DB2 metadata and test-data enrichment
+- workflow usability, reproducibility, and scalability
 
-## Delivery State
+## Current System Reality
 
-This is a real V1, not a stub project.
+Zeus is a real V1.
 
-Verified capabilities in the codebase include:
+The repository already delivers a coherent CLI workflow:
 
-- `zeus fetch` with member listing, remote export, and three download transports
-- `zeus analyze` with staged context generation, reports, prompts, graphs, and viewer output
-- `zeus impact` based on the generated cross-program graph
-- `zeus bundle` with manifest-driven packaging
-- DB2 metadata export and bounded test-data extraction through Java helpers
-- automated tests for runtime configuration, analyze staging, manifests, bundle packaging, Java runtime behavior, and a full smoke flow
+1. `zeus fetch`
+   - exports IBM i source members to stream files
+   - downloads them locally through `sftp`, `jt400`, or `ftp`
+2. `zeus analyze`
+   - collects local sources
+   - scans them heuristically
+   - builds context, graphs, prompts, reports, viewer output, and manifests
+   - enriches analysis with DB2 metadata and bounded test data when available
+3. `zeus impact`
+   - reuses the generated cross-program graph for reverse dependency analysis
+4. `zeus bundle`
+   - packages outputs using the analyze manifest as the primary contract
 
-The current automated suite passed during review with `node --test`.
+This is not a stub project and not just a prompt generator. It is already an IBM i analysis pipeline with real artifact contracts.
+
+## Module Interaction Summary
+
+- `cli/zeus.js` dispatches to thin command adapters.
+- `src/config/runtimeConfig.js` resolves profiles, defaults, and validation.
+- `src/fetch/fetchService.js` orchestrates IBM i export plus transport download.
+- `src/analyze/analyzePipeline.js` runs the staged analyze flow through `src/analyze/runStages.js`.
+- `src/scanner/rpgScanner.js` produces the primary heuristic signals for files, calls, copy members, and SQL.
+- `src/context/contextBuilder.js` builds the canonical V1 context artifact consumed by reports and prompts.
+- `src/dependency/*.js` builds deterministic single-program and cross-program graph artifacts.
+- `src/report/*.js`, `src/prompt/promptBuilder.js`, and `src/viewer/architectureViewerGenerator.js` turn analysis state into human and AI-facing outputs.
+- `src/analyze/analyzeRunManifest.js` and `src/bundle/outputBundleBuilder.js` enforce the emerging artifact contract.
+
+## True Goal
+
+The true goal of the project is not merely to emit Markdown prompts.
+
+The real target is:
+
+- deep understanding of IBM i application source
+- extraction of structured semantic knowledge
+- enrichment of that knowledge with provenance, DB2 metadata, and repository relationships
+- projection of the right evidence into task-specific AI context
+- support for architecture review, defect analysis, impact analysis, and modernization planning
+
+In short: Zeus should evolve from a useful heuristic artifact generator into an IBM i analysis and AI-context platform.
 
 ## Strengths
 
-- The project already has a coherent CLI-centered artifact model. `context.json`, graph files, reports, prompts, manifests, and bundles line up well enough to support real workflows.
-- The analyze flow is explicit and understandable. `runStages()` and the staged pipeline make the current orchestration readable and reasonably easy to extend.
-- Output structure is disciplined. Graph nodes and edges are normalized and sorted, bundle manifests include checksums, and analyze manifests capture stage metadata and diagnostics.
-- DB2 integration is kept behind Java helpers instead of leaking IBM i and JDBC concerns all through the Node.js layer.
-- Test-data extraction is bounded and read-only, which is the right default posture for a tool that may run near production-adjacent systems.
+- The CLI workflow is coherent and already usable end to end.
+- The staged analyze runner is simple, explicit, and testable.
+- Artifact discipline is strong for a V1: sorted outputs, manifests, checksums, and bundle metadata already exist.
+- IBM i and DB2 platform concerns are mostly isolated behind Java helpers instead of leaking through the Node.js codebase.
+- Bundle and impact commands reuse analyze outputs instead of inventing parallel models.
 
-## Weaknesses
+## Strategic Gaps
 
-### IBM i source fidelity and Windows readability
+### 1. No explicit semantic core yet
 
-This is the clearest architectural gap.
+The current `context.json` is useful, but it is still closer to a report-shaped summary than a durable analysis model. Reports, prompts, and graphs are aligned, but they are not yet derived from a clearly defined semantic core.
 
-- The fetch export command is built in [src/fetch/ifsExporter.js](/c:/Java/workspace-java/zeus-rpg-promptkit/src/fetch/ifsExporter.js) and uses `CPYTOSTMF ... STMFCODPAG(*STMF)`.
-- No code path explicitly guarantees UTF-8 output for downloaded source members.
-- All download transports then move the resulting bytes locally without any normalization step.
-- The scanner and related consumers read source files as UTF-8 directly in [src/scanner/rpgScanner.js](/c:/Java/workspace-java/zeus-rpg-promptkit/src/scanner/rpgScanner.js), [src/cli/helpers/sourceSnippet.js](/c:/Java/workspace-java/zeus-rpg-promptkit/src/cli/helpers/sourceSnippet.js), and [src/ai/contextOptimizer.js](/c:/Java/workspace-java/zeus-rpg-promptkit/src/ai/contextOptimizer.js).
+### 2. Source identity and provenance are not first-class
 
-That means Windows readability and even successful analysis currently depend on remote/default CCSID behavior. There is no explicit source-normalization contract and no test coverage around mixed encodings, umlauts, or mojibake scenarios.
+The system now targets UTF-8 export during fetch, but repository identity is still weak. Cross-program resolution is basename-driven, duplicate member names remain hazardous, and there is no repository-wide source catalog or import manifest that downstream analysis can trust.
 
-### Scanner depth vs. product ambition
+### 3. RPG understanding is still heuristic
 
-- The current scanner is intentionally heuristic and lightweight, which is acceptable for V1.
-- It does not yet provide procedure/subroutine depth, service program recognition, binder awareness, or robust SQL semantics.
-- The default extension list includes CL and DDS types, but scanning is still largely RPG-centric.
+The scanner detects important surface signals, but Zeus does not yet model:
 
-### Source identity and ambiguity handling
+- procedures and prototypes deeply
+- service programs, modules, and binder relationships
+- native file I/O semantics
+- robust SQL intent and uncertainty
 
-- Cross-program resolution is basename-driven in [src/dependency/programSourceResolver.js](/c:/Java/workspace-java/zeus-rpg-promptkit/src/dependency/programSourceResolver.js).
-- When duplicate member names exist, the first local path wins and the rest are reduced to a warning.
+That means Zeus is currently better at dependency hinting than true RPG understanding.
 
-That is not strong enough for larger IBM i estates where identical member names across source files or libraries are normal.
+### 4. AI context is useful but not optimized for reasoning
 
-### Reuse boundaries
+The current prompt system works, but it still depends on summary-oriented context and a blunt source snippet strategy. Evidence ranking, workflow-specific context projection, and prompt contracts are not mature enough for serious modernization or root-cause workflows.
 
-- `analyzePipeline.js` still mixes orchestration, enrichment, report generation, prompt generation, graph serialization, and viewer writing in one execution path.
-- The project is heading toward UI/API reuse, but the internal boundary between core analysis results and output adapters is not strong enough yet.
+### 5. Workflow quality lags behind artifact richness
 
-### Public artifact portability
+The repository creates many useful files, but developers still need to know which artifacts matter for which task. Guided modes, task-oriented indexes, and workflow-specific bundles are still underdeveloped.
 
-- The generated architecture viewer in [src/viewer/architectureViewerGenerator.js](/c:/Java/workspace-java/zeus-rpg-promptkit/src/viewer/architectureViewerGenerator.js) loads `vis-network` from a CDN.
-- That means the HTML artifact is local-server-free, but not truly offline-portable or version-stable.
+### 6. Scale and portability need another step
 
-## Risks
+Cross-program analysis rescans files during traversal. Reproducibility is partial because timestamps still vary. The architecture viewer still depends on a CDN, which weakens offline portability.
 
-- Source imports can become unreadable or partially unscannable on Windows when IBM i export CCSID behavior does not match the scanner's UTF-8 assumption.
-- Mixed or duplicate member names can produce incorrect cross-program graphs or impact analysis in larger repositories.
-- Larger source trees will stress current whole-tree collection and repeated file-read behavior before V2 scalability work lands.
-- The public claim of deterministic or portable artifacts is directionally true, but not yet complete because timestamps and CDN dependencies still leak into outputs.
+## Strategic Direction
 
-## Recommended Priorities
+The next phase should follow five principles:
 
-### Priority 1
+1. Semantic core first
+   - make the internal IBM i analysis model explicit before adding more outputs
+2. Identity and provenance before scale
+   - resolve duplicate members, fetch provenance, and source validation before claiming enterprise-grade analysis
+3. Typed IBM i analysis before generic extensibility
+   - deeper RPG, CL, DDS, SQL, and DB2 understanding matters more than a generic plugin story right now
+4. AI knowledge projection, not just more templates
+   - prompt quality depends on better context structure and evidence selection
+5. CLI-first workflows, UI later
+   - the local UI remains valuable, but only after the shared contracts stabilize
 
-- Close the IBM i source fidelity gap end to end: export encoding, local normalization, provenance, and Windows-readable defaults.
-- Strengthen source identity and ambiguity handling before pushing harder on cross-program analysis scale.
-- Add dedicated CL and DDS scanning so mixed IBM i repositories are first-class rather than incidental.
-- Separate core analysis services from filesystem writers so the future UI/API layer can reuse the same contracts.
-- Improve reproducibility and scalability to make regression testing and enterprise adoption more credible.
+## Recommended Priority Order
 
-### Priority 2
+### Short-Term
 
-- Continue prompt-system maturation through prompt packs, validation, and workflow presets.
-- Make the architecture viewer offline-capable so bundle artifacts are reliable in restricted environments.
+- `#65` Define a Canonical IBM i Analysis Model and Evidence Schema
+- `#66` Build a Repository Source Catalog with Provenance-Aware Member Identity
+- `#67` Add a Fetch Import Manifest and Source Integrity Verification Gate
+- `#68` Rebuild Cross-Program Analysis on a Repository Catalog and Reusable Scan Cache
+- `#69` Add Procedure, Prototype, and Subprocedure Extraction for RPGLE
+- `#70` Add Service Program, Module, and Binder Relationship Modeling
+- `#71` Add Native File I/O and Record-Format Usage Analysis
+- `#72` Add an Embedded SQL Semantic Analyzer with Intent and Dynamic SQL Flags
 
-### Priority 3
+### Mid-Term
 
-- Build the local UI on top of shared manifests and analysis contracts, not parallel parsing logic.
+- `#73` Introduce an AI Knowledge Projection Layer for Prompt-Ready Context
+- `#74` Add Salience-Based Evidence Packs and Token-Budgeted Context Assembly
+- `#75` Add Prompt Contracts and a Fixture-Driven Evaluation Harness
+- `#76` Add Task-Oriented Analysis Indexes and Guided CLI Modes
+- `#77` Link DB2 Metadata and Test Data Back to Source Evidence and AI Context
 
-## Recommended Next Implementation Step
+### Supporting Work That Still Matters
 
-The next implementation step should be [#55](https://github.com/gzeuner/zeus-rpg-promptkit/issues/55): guarantee UTF-8 IBM i source export and Windows-readable local files.
+- `#55` through `#58` remain necessary to harden the fetch/import contract.
+- `#60` through `#64` remain important for reuse, reproducibility, scale, DB2 governance, and offline portability.
+- `#39` through `#42` and `#59` remain valid, but they should now be read as part of the deeper semantic-analysis track rather than isolated feature work.
 
-It removes the highest-risk ingestion weakness, aligns fetch behavior with the current UTF-8 scanner contract, and creates the foundation for the rest of the roadmap.
+## Reframed Priorities
+
+- `#43` generic analyzer plugins are not on the critical path. A plugin system only becomes valuable after the canonical analysis model is stable.
+- `#52` and `#53` stay long-term. UI work should consume the same contracts produced for the CLI, not drive the shape of the core model.
+- `#45` is directionally already present through staged diagnostics and manifests. Remaining improvements should be folded into the shared artifact-contract work rather than treated as a separate top-level theme.
+
+## Bottom Line
+
+Zeus already has a credible V1 foundation.
+
+The best next move is not to add more surface area. It is to make IBM i semantics, provenance, and AI-ready evidence first-class so every downstream workflow becomes more trustworthy.
