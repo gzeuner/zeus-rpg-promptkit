@@ -174,12 +174,15 @@ function buildContextStage(state) {
   const crossProgramGraph = buildCrossProgramGraph({
     rootProgram: program,
     sourceFiles: scannableSourceFiles || [],
+    sourceRoot,
+    importManifest: state.importManifest,
   });
   context.crossProgramGraph = {
     programCount: Number(crossProgramGraph.summary.programCount) || 0,
     tableCount: Number(crossProgramGraph.summary.tableCount) || 0,
     copyMemberCount: Number(crossProgramGraph.summary.copyMemberCount) || 0,
     edgeCount: Number(crossProgramGraph.summary.edgeCount) || 0,
+    ambiguousPrograms: crossProgramGraph.ambiguousPrograms || [],
     unresolvedPrograms: crossProgramGraph.unresolvedPrograms || [],
     files: {
       json: 'program-call-tree.json',
@@ -197,6 +200,7 @@ function buildContextStage(state) {
     stageMetadata: {
       dependencyGraph: buildGraphSummary(graph),
       crossProgramGraph: crossProgramGraph.summary,
+      sourceCatalog: crossProgramGraph.sourceCatalog,
       sourceSnippetFound: Boolean(pickSourceSnippet(scanSummary.sourceFiles, program)),
     },
   };
