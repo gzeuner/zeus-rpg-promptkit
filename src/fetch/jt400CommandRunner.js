@@ -78,9 +78,53 @@ function listMembers({ host, user, password, sourceLib, sourceFile, verbose }) {
   };
 }
 
+function exportSourceMemberViaJdbc({
+  host,
+  user,
+  password,
+  sourceLib,
+  sourceFile,
+  member,
+  targetPath,
+  streamFileCcsid,
+  verbose,
+}) {
+  ensureJavaHelperCompiled();
+  if (verbose) {
+    console.log(`[verbose] JDBC source export fallback for ${sourceLib}/${sourceFile}(${member}) -> ${targetPath}`);
+  }
+
+  const result = runJavaHelper('IbmiSourceMemberExporter', [
+    host,
+    user,
+    password,
+    sourceLib,
+    sourceFile,
+    member,
+    targetPath,
+    String(streamFileCcsid),
+  ]);
+
+  const parsed = parseJsonResult(result.stdout, {
+    ok: false,
+    messages: [(result.stderr || '').trim()].filter(Boolean),
+    timestamp: new Date().toISOString(),
+  });
+
+  return {
+    ok: parsed.ok === true && result.status === 0,
+    linesWritten: Number(parsed.linesWritten || 0),
+    usedFallback: parsed.usedFallback === true,
+    messages: parsed.messages || [],
+    exitCode: result.status,
+    stderr: (result.stderr || '').trim(),
+  };
+}
+
 module.exports = {
   ensureJavaHelperCompiled,
   runJavaHelper,
   runClCommand,
   listMembers,
+  exportSourceMemberViaJdbc,
 };

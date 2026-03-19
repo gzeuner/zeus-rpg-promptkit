@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
 const { resolveFetchConfig } = require('../../config/runtimeConfig');
-const { fetchSources } = require('../../fetch/fetchService');
+const { fetchSources, describeEncodingPolicy } = require('../../fetch/fetchService');
 
 async function runFetch(args) {
   const verbose = Boolean(args.verbose);
@@ -41,6 +41,7 @@ async function runFetch(args) {
     console.log(`[verbose] IFS dir: ${config.ifsDir}`);
     console.log(`[verbose] Local out: ${path.resolve(process.cwd(), config.out)}`);
     console.log(`[verbose] Source files: ${config.files.join(', ')}`);
+    console.log(`[verbose] Stream file encoding: ${describeEncodingPolicy(config.streamFileCcsid)}`);
     console.log(`[verbose] Download transport: ${config.transport}`);
     if (config.members.length > 0) {
       console.log(`[verbose] Members (global filter): ${config.members.join(', ')}`);
@@ -55,6 +56,7 @@ async function runFetch(args) {
   console.log(`Exported streamfiles: ${summary.exportedSuccess}/${summary.exportedTotal}`);
   console.log(`Downloaded files: ${summary.downloadedCount}`);
   console.log(`Download transport used: ${summary.transportUsed}`);
+  console.log(`Source encoding policy: ${summary.encodingPolicy}`);
   console.log(`Local destination: ${summary.localDestination}`);
   if (summary.notes.length > 0) {
     console.log('Notes:');
