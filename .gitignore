@@ -61,4 +61,5 @@ bundles/
 # Local planning
 # -----------------------------
 
+.local/
 .local-roadmap/

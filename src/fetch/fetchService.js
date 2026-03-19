@@ -15,11 +15,14 @@ const path = require('path');
 const { listMembers } = require('./jt400CommandRunner');
 const {
   exportMembersForSourceFile,
+  buildLocalTargetPath,
+  buildRemoteTargetPath,
   DEFAULT_STREAM_FILE_CCSID,
 } = require('./ifsExporter');
 const { downloadDirectory } = require('./sftpDownloader');
 const { downloadDirectoryViaJt400 } = require('./jt400Downloader');
 const { downloadDirectoryViaFtp } = require('./ftpDownloader');
+const { buildImportManifest, writeImportManifest } = require('./importManifest');
 
 const DEFAULT_SOURCE_FILES = [
   'QRPGLESRC',
@@ -55,7 +58,8 @@ function parseList(value, fallback) {
     .map((item) => item.toUpperCase());
 }
 
-async function resolveMembersForFile(options, sourceFile) {
+async function resolveMembersForFile(options, sourceFile, services = {}) {
+  const listMembersFn = services.listMembersFn || listMembers;
   if (options.members && options.members.length > 0) {
     return {
       members: [...options.members],
@@ -63,7 +67,7 @@ async function resolveMembersForFile(options, sourceFile) {
     };
   }
 
-  const result = listMembers({
+  const result = await listMembersFn({
     host: options.host,
     user: options.user,
     password: options.password,
@@ -85,25 +89,33 @@ async function resolveMembersForFile(options, sourceFile) {
   };
 }
 
-async function fetchSources(options) {
+async function fetchSources(options, services = {}) {
+  const exportMembersForSourceFileFn = services.exportMembersForSourceFileFn || exportMembersForSourceFile;
+  const downloadDirectoryFn = services.downloadDirectoryFn || downloadDirectory;
+  const downloadDirectoryViaJt400Fn = services.downloadDirectoryViaJt400Fn || downloadDirectoryViaJt400;
+  const downloadDirectoryViaFtpFn = services.downloadDirectoryViaFtpFn || downloadDirectoryViaFtp;
+  const writeImportManifestFn = services.writeImportManifestFn || writeImportManifest;
   const files = parseList(options.files, DEFAULT_SOURCE_FILES);
   const globalMembers = options.members ? parseList(options.members, []) : null;
+  const localDestination = path.resolve(process.cwd(), options.out);
+  const exportRecords = [];
 
   const summary = {
     exportedSuccess: 0,
     exportedTotal: 0,
     downloadedCount: 0,
-    localDestination: path.resolve(process.cwd(), options.out),
+    localDestination,
     notes: [],
     encodingPolicy: describeEncodingPolicy(options.streamFileCcsid),
     transportUsed: null,
+    importManifestPath: null,
   };
 
   for (const sourceFile of files) {
     const memberResolution = await resolveMembersForFile({
       ...options,
       members: globalMembers,
-    }, sourceFile);
+    }, sourceFile, services);
 
     const members = Array.isArray(memberResolution.members) ? memberResolution.members : [];
     summary.notes.push(...(memberResolution.notes || []));
@@ -113,7 +125,7 @@ async function fetchSources(options) {
       continue;
     }
 
-    const exportResults = exportMembersForSourceFile({
+    const exportResults = await exportMembersForSourceFileFn({
       host: options.host,
       user: options.user,
       password: options.password,
@@ -133,6 +145,21 @@ async function fetchSources(options) {
       } else {
         summary.notes.push(`Export failed ${result.sourceFile}/${result.member}: ${(result.messages || []).join('; ') || result.stderr || 'unknown error'}`);
       }
+
+      exportRecords.push({
+        ...result,
+        sourceLib: options.sourceLib,
+        localPath: buildLocalTargetPath({
+          sourceFile: result.sourceFile,
+          member: result.member,
+          localRoot: localDestination,
+        }),
+        remotePath: buildRemoteTargetPath({
+          sourceFile: result.sourceFile,
+          member: result.member,
+          ifsDir: options.ifsDir,
+        }),
+      });
     }
   }
 
@@ -150,7 +177,7 @@ async function fetchSources(options) {
     try {
       let downloadResult;
       if (strategy === 'sftp') {
-        downloadResult = await downloadDirectory({
+        downloadResult = await downloadDirectoryFn({
           host: options.host,
           user: options.user,
           password: options.password,
@@ -159,7 +186,7 @@ async function fetchSources(options) {
           verbose: options.verbose,
         });
       } else if (strategy === 'jt400') {
-        downloadResult = await downloadDirectoryViaJt400({
+        downloadResult = await downloadDirectoryViaJt400Fn({
           host: options.host,
           user: options.user,
           password: options.password,
@@ -168,7 +195,7 @@ async function fetchSources(options) {
           verbose: options.verbose,
         });
       } else {
-        downloadResult = await downloadDirectoryViaFtp({
+        downloadResult = await downloadDirectoryViaFtpFn({
           host: options.host,
           user: options.user,
           password: options.password,
@@ -191,6 +218,14 @@ async function fetchSources(options) {
   if (lastError) {
     throw new Error(`All download transports failed. Last error: ${lastError.message}`);
   }
+
+  const manifest = buildImportManifest({
+    options,
+    summary,
+    exportRecords,
+    localDestination,
+  });
+  summary.importManifestPath = await writeImportManifestFn(localDestination, manifest);
 
   return summary;
 }
