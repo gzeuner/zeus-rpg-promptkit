@@ -342,13 +342,17 @@ function mergeSqlStatements(scanResults) {
   return Array.from(map.values());
 }
 
-function scanSourceFiles(filePaths) {
+function scanSourceFiles(filePaths, options = {}) {
   const scanResults = [];
   const notes = [];
+  const scanCache = options && options.scanCache ? options.scanCache : null;
 
   for (const filePath of filePaths || []) {
     try {
-      scanResults.push(scanRpgFile(filePath));
+      const result = scanCache && typeof scanCache.getOrScan === 'function'
+        ? scanCache.getOrScan(filePath, scanRpgFile)
+        : scanRpgFile(filePath);
+      scanResults.push(result);
     } catch (error) {
       notes.push(`Skipped file ${filePath}: ${error.message}`);
     }
