@@ -80,7 +80,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     );
     assert.deepEqual(
       context.dependencies.programCalls.map((entry) => entry.name),
-      ['INVPGM', 'PROCESSORDER'],
+      ['INVPGM'],
     );
     assert.deepEqual(
       context.dependencies.copyMembers.map((entry) => entry.name),
@@ -94,6 +94,9 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.equal(context.db2Metadata.status, 'skipped');
     assert.equal(context.testData.status, 'skipped');
     assert.equal(context.testData.rowLimit, 25);
+    assert.equal(context.procedureAnalysis.summary.procedureCount, 2);
+    assert.equal(context.procedureAnalysis.summary.externalCallCount, 0);
+    assert.equal(context.procedureAnalysis.summary.unresolvedCallCount, 1);
     assert.match(
       context.notes.join('\n'),
       /Test data extraction was skipped because no DB2 connection configuration was available\./,
@@ -110,7 +113,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.match(prompt, /Representative sample rows are not available in this analysis run\./);
 
     const graph = readJson(path.join(programOutputDir, 'program-call-tree.json'));
-    assert.equal(graph.summary.programCount, 3);
+    assert.equal(graph.summary.programCount, 2);
     assert.equal(graph.summary.tableCount, 3);
 
     const analyzeManifest = readJson(path.join(programOutputDir, 'analyze-run-manifest.json'));

@@ -23,14 +23,20 @@ Top-level fields:
 ## Entity Collections
 
 - `entities.programs`
-  - includes the root program and directly called programs currently discovered by the scanner
-  - `role` is `ROOT` for the analyzed entry point and `CALLED` for discovered callees
+  - includes the root program plus scanned/called program owners discovered by the analyzer
+  - `role` is `ROOT`, `SCANNED`, or `CALLED`
 - `entities.tables`
   - deduplicated table dependencies including SQL-only tables
 - `entities.copyMembers`
   - deduplicated copy member dependencies
 - `entities.sqlStatements`
   - normalized SQL statements with type, text, table names, and evidence
+- `entities.procedures`
+  - local free-form procedures and fixed-form subroutines with owner, source range, and export metadata
+- `entities.prototypes`
+  - declared prototypes with import/export hints and external names when present
+- `entities.procedureReferences`
+  - synthetic targets for dynamic and unresolved procedure calls
 
 ## Relation Types
 
@@ -38,8 +44,11 @@ Top-level fields:
 - `USES_TABLE`: root program to table
 - `CALLS_PROGRAM`: root program to called program
 - `INCLUDES_COPY`: root program to copy member
+- `OWNS_PROCEDURE`: program to local procedure or subroutine
+- `DECLARES_PROTOTYPE`: program to prototype
 - `EXECUTES_SQL`: root program to SQL statement
 - `SQL_REFERENCES_TABLE`: SQL statement to referenced table
+- `CALLS_PROCEDURE`: procedure/program owner to a local procedure, prototype, or explicit unresolved/dynamic reference
 
 ## Evidence Schema
 
