@@ -47,6 +47,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     const programOutputDir = path.join(outputRoot, 'ORDERPGM');
     const expectedFiles = [
       'analyze-run-manifest.json',
+      'canonical-analysis.json',
       'context.json',
       'optimized-context.json',
       'report.md',
@@ -65,6 +66,11 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     for (const fileName of expectedFiles) {
       assert.equal(fs.existsSync(path.join(programOutputDir, fileName)), true, `missing ${fileName}`);
     }
+
+    const canonicalAnalysis = readJson(path.join(programOutputDir, 'canonical-analysis.json'));
+    assert.equal(canonicalAnalysis.rootProgram, 'ORDERPGM');
+    assert.equal(canonicalAnalysis.kind, 'canonical-analysis');
+    assert.ok(canonicalAnalysis.relations.some((relation) => relation.type === 'CALLS_PROGRAM'));
 
     const context = readJson(path.join(programOutputDir, 'context.json'));
     assert.equal(context.program, 'ORDERPGM');
@@ -137,6 +143,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.equal(manifest.schemaVersion, 1);
     assert.equal(manifest.tool.command, 'bundle');
     assert.equal(manifest.program, 'ORDERPGM');
+    assert.ok(manifest.files.includes('canonical-analysis.json'));
     assert.ok(manifest.files.includes('context.json'));
     assert.ok(manifest.files.includes('report.md'));
     assert.ok(manifest.files.includes('architecture.html'));
@@ -146,6 +153,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
 
     const zip = new AdmZip(bundlePath);
     const entryNames = zip.getEntries().map((entry) => entry.entryName).sort();
+    assert.ok(entryNames.includes('canonical-analysis.json'));
     assert.ok(entryNames.includes('context.json'));
     assert.ok(entryNames.includes('report.md'));
     assert.ok(entryNames.includes('architecture.html'));

@@ -28,7 +28,8 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `src/collector/sourceCollector.js` - Source file discovery
 - `src/scanner/rpgScanner.js` - RPG heuristics scanner
 - `src/scanner/dependencyScanner.js` - Aggregated dependency extraction
-- `src/context/contextBuilder.js` - Context JSON builder
+- `src/context/canonicalAnalysisModel.js` - Canonical semantic analysis model builder and validator
+- `src/context/contextBuilder.js` - Backward-compatible `context.json` projection builder
 - `src/dependency/dependencyGraphBuilder.js` - Deterministic dependency graph model builder
 - `src/dependency/crossProgramGraphBuilder.js` - Recursive multi-program dependency graph builder
 - `src/dependency/programSourceResolver.js` - Local program name to source file resolver
@@ -180,6 +181,7 @@ The command writes files into:
 
 Generated files:
 
+- `canonical-analysis.json`
 - `context.json`
 - `optimized-context.json` (when `--optimize-context` is enabled)
 - `report.md`
@@ -217,9 +219,13 @@ Generated files:
 - `aiContext`
 - `notes`
 
-`context.json` is the central AI-ready artifact. Prompt generation and report generation both consume this unified context model, and `graph` provides compact references to dependency graph artifacts.
+`canonical-analysis.json` is now the semantic source of truth for the analyze pipeline.
+
+`context.json` remains the backward-compatible AI-ready projection. Prompt generation and report generation still consume this projection today, and `graph` provides compact references to dependency graph artifacts.
 
 When `--optimize-context` is enabled, prompts are generated from `optimized-context.json` instead of the full `context.json`.
+
+The canonical schema and invariants are documented in `docs/canonical-analysis-model.md`.
 
 `report.md` includes sections:
 
@@ -379,6 +385,7 @@ Purpose:
 How it works:
 
 - uses `context.json` as the primary structured source
+- derives that file from `canonical-analysis.json` to keep existing output contracts stable
 - reuses `dependency-graph.json` and `dependency-graph.mmd` (no duplicate dependency logic)
 - optionally includes SQL examples from `optimized-context.json` when available
 
@@ -403,7 +410,7 @@ Available prompt types today:
 - `documentation`
 - `error-analysis`
 
-The analyze pipeline loads templates from disk, resolves placeholders from `context.json`, and writes prompt files to `output/<program>/`.
+The analyze pipeline loads templates from disk, resolves placeholders from the projected prompt context, and writes prompt files to `output/<program>/`.
 
 Supported placeholders include:
 
