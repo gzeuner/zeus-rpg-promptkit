@@ -12,6 +12,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
+const path = require('path');
 
 function normalizeWhitespace(text) {
   return String(text || '').replace(/\s+/g, ' ').trim();
@@ -42,6 +43,18 @@ function normalizeTableName(rawName) {
   return normalizeName(table);
 }
 
+function toRelativeProgramName(filePath) {
+  return normalizeName(path.basename(String(filePath || ''), path.extname(String(filePath || ''))));
+}
+
+function normalizeDefinitionName(rawName, fallbackName) {
+  const normalized = normalizeName(rawName);
+  if (!normalized || normalized === '*N') {
+    return normalizeName(fallbackName);
+  }
+  return normalized;
+}
+
 function addEntity(map, name, payload) {
   const normalized = normalizeName(name);
   if (!normalized) return;
@@ -59,6 +72,26 @@ function addEntity(map, name, payload) {
   const hasEvidence = entity.evidence.some((item) => JSON.stringify(item) === evidenceKey);
   if (!hasEvidence) {
     entity.evidence.push(payload.evidence);
+  }
+}
+
+function addStructuredItem(map, key, payload) {
+  if (!key) return;
+  if (!map.has(key)) {
+    map.set(key, {
+      ...payload,
+      evidence: [],
+    });
+  }
+
+  const item = map.get(key);
+  const evidenceList = payload.evidence || [];
+  for (const evidence of evidenceList) {
+    const evidenceKey = JSON.stringify(evidence);
+    const exists = item.evidence.some((entry) => JSON.stringify(entry) === evidenceKey);
+    if (!exists) {
+      item.evidence.push(evidence);
+    }
   }
 }
 
@@ -88,12 +121,372 @@ function extractSqlTables(sqlText) {
   return Array.from(tables).sort();
 }
 
+function createDefinition({
+  filePath,
+  ownerProgram,
+  name,
+  kind,
+  startLine,
+  endLine,
+  sourceForm,
+  exported = false,
+  imported = false,
+  externalName = null,
+  text = '',
+}) {
+  return {
+    name,
+    kind,
+    ownerProgram,
+    sourceFile: filePath,
+    startLine,
+    endLine,
+    sourceForm,
+    exported: Boolean(exported),
+    imported: Boolean(imported),
+    externalName: externalName ? normalizeName(externalName) : null,
+    evidence: [{
+      file: filePath,
+      startLine,
+      endLine,
+      text: normalizeWhitespace(text),
+    }],
+  };
+}
+
+function createProcedureCall({
+  filePath,
+  ownerProgram,
+  ownerName,
+  ownerKind,
+  lineNo,
+  text,
+  name,
+  resolution,
+  targetKind,
+  targetProgram = null,
+}) {
+  return {
+    name: normalizeName(name),
+    ownerProgram: normalizeName(ownerProgram),
+    ownerName: normalizeName(ownerName),
+    ownerKind: normalizeName(ownerKind),
+    resolution: normalizeName(resolution),
+    targetKind: normalizeName(targetKind),
+    targetProgram: targetProgram ? normalizeName(targetProgram) : null,
+    ownerFile: filePath,
+    evidence: [{
+      file: filePath,
+      line: lineNo,
+      text: normalizeWhitespace(text),
+    }],
+  };
+}
+
+function parseFixedPrototype(rawLine) {
+  const match = rawLine.match(/^\s*D\s+([A-Z0-9_#$@*]+)\s+PR\b(.*)$/i);
+  if (!match) return null;
+  return {
+    name: match[1],
+    detail: match[2] || '',
+  };
+}
+
+function collectDefinitions(filePath, lines) {
+  const ownerProgram = toRelativeProgramName(filePath);
+  const proceduresMap = new Map();
+  const prototypesMap = new Map();
+
+  let currentProcedure = null;
+  let currentPrototype = null;
+  let currentSubroutine = null;
+
+  function finalizeProcedure(endLine) {
+    if (!currentProcedure) return;
+    const definition = createDefinition({
+      filePath,
+      ownerProgram,
+      name: currentProcedure.name,
+      kind: 'PROCEDURE',
+      startLine: currentProcedure.startLine,
+      endLine,
+      sourceForm: 'FREE_FORM',
+      exported: currentProcedure.exported,
+      text: currentProcedure.text,
+    });
+    addStructuredItem(
+      proceduresMap,
+      `${definition.ownerProgram}|${definition.sourceFile}|${definition.kind}|${definition.name}|${definition.startLine}`,
+      definition,
+    );
+    currentProcedure = null;
+  }
+
+  function finalizePrototype(endLine) {
+    if (!currentPrototype) return;
+    const definition = createDefinition({
+      filePath,
+      ownerProgram,
+      name: currentPrototype.name,
+      kind: 'PROTOTYPE',
+      startLine: currentPrototype.startLine,
+      endLine,
+      sourceForm: currentPrototype.sourceForm,
+      exported: currentPrototype.exported,
+      imported: currentPrototype.imported,
+      externalName: currentPrototype.externalName,
+      text: currentPrototype.text,
+    });
+    addStructuredItem(
+      prototypesMap,
+      `${definition.ownerProgram}|${definition.sourceFile}|${definition.kind}|${definition.name}|${definition.startLine}`,
+      definition,
+    );
+    currentPrototype = null;
+  }
+
+  function finalizeSubroutine(endLine) {
+    if (!currentSubroutine) return;
+    const definition = createDefinition({
+      filePath,
+      ownerProgram,
+      name: currentSubroutine.name,
+      kind: 'SUBROUTINE',
+      startLine: currentSubroutine.startLine,
+      endLine,
+      sourceForm: 'FIXED_FORM',
+      text: currentSubroutine.text,
+    });
+    addStructuredItem(
+      proceduresMap,
+      `${definition.ownerProgram}|${definition.sourceFile}|${definition.kind}|${definition.name}|${definition.startLine}`,
+      definition,
+    );
+    currentSubroutine = null;
+  }
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const rawLine = lines[i];
+    const lineNo = i + 1;
+    if (isCommentLine(rawLine)) {
+      continue;
+    }
+
+    const trimmed = rawLine.trim();
+
+    if (currentPrototype) {
+      if (/\bend-pr\b/i.test(trimmed)) {
+        finalizePrototype(lineNo);
+      }
+      continue;
+    }
+
+    if (currentProcedure) {
+      if (/\bend-proc\b/i.test(trimmed)) {
+        finalizeProcedure(lineNo);
+      }
+      continue;
+    }
+
+    if (currentSubroutine) {
+      if (/^\s*endsr\b/i.test(trimmed) || /\bENDSR\b/i.test(trimmed)) {
+        finalizeSubroutine(lineNo);
+      }
+      continue;
+    }
+
+    const dclPrMatch = trimmed.match(/^dcl-pr\s+([A-Z0-9_#$@*]+)\b(.*)$/i);
+    if (dclPrMatch) {
+      const detail = dclPrMatch[2] || '';
+      const externalMatch = detail.match(/\bext(?:proc|pgm)\s*\(\s*['"]?([A-Z0-9_#$@]+)['"]?\s*\)/i);
+      currentPrototype = {
+        name: normalizeDefinitionName(dclPrMatch[1], ownerProgram),
+        startLine: lineNo,
+        sourceForm: 'FREE_FORM',
+        imported: Boolean(externalMatch),
+        exported: /\bexport\b/i.test(detail),
+        externalName: externalMatch ? externalMatch[1] : null,
+        text: trimmed,
+      };
+      if (/\bend-pr\b/i.test(trimmed)) {
+        finalizePrototype(lineNo);
+      }
+      continue;
+    }
+
+    const fixedPrototype = parseFixedPrototype(rawLine);
+    if (fixedPrototype) {
+      const externalMatch = String(fixedPrototype.detail || '').match(/\bEXT(?:PROC|PGM)\s*\(\s*['"]?([A-Z0-9_#$@]+)['"]?\s*\)/i);
+      const definition = createDefinition({
+        filePath,
+        ownerProgram,
+        name: normalizeDefinitionName(fixedPrototype.name, ownerProgram),
+        kind: 'PROTOTYPE',
+        startLine: lineNo,
+        endLine: lineNo,
+        sourceForm: 'FIXED_FORM',
+        imported: Boolean(externalMatch),
+        externalName: externalMatch ? externalMatch[1] : null,
+        text: trimmed,
+      });
+      addStructuredItem(
+        prototypesMap,
+        `${definition.ownerProgram}|${definition.sourceFile}|${definition.kind}|${definition.name}|${definition.startLine}`,
+        definition,
+      );
+      continue;
+    }
+
+    const dclProcMatch = trimmed.match(/^dcl-proc\s+([A-Z0-9_#$@*]+)\b(.*)$/i);
+    if (dclProcMatch) {
+      currentProcedure = {
+        name: normalizeDefinitionName(dclProcMatch[1], ownerProgram),
+        startLine: lineNo,
+        exported: /\bexport\b/i.test(dclProcMatch[2] || ''),
+        text: trimmed,
+      };
+      if (/\bend-proc\b/i.test(trimmed)) {
+        finalizeProcedure(lineNo);
+      }
+      continue;
+    }
+
+    const freeBegsrMatch = trimmed.match(/^begsr\s+([A-Z0-9_#$@*]+)\b/i);
+    if (freeBegsrMatch) {
+      currentSubroutine = {
+        name: normalizeDefinitionName(freeBegsrMatch[1], ownerProgram),
+        startLine: lineNo,
+        text: trimmed,
+      };
+      continue;
+    }
+
+    const fixedBegsrMatch = rawLine.match(/^\s*C?\s*([A-Z0-9_#$@*]+)\s+BEGSR\b/i);
+    if (fixedBegsrMatch) {
+      currentSubroutine = {
+        name: normalizeDefinitionName(fixedBegsrMatch[1], ownerProgram),
+        startLine: lineNo,
+        text: trimmed,
+      };
+    }
+  }
+
+  if (currentPrototype) {
+    finalizePrototype(lines.length);
+  }
+  if (currentProcedure) {
+    finalizeProcedure(lines.length);
+  }
+  if (currentSubroutine) {
+    finalizeSubroutine(lines.length);
+  }
+
+  const procedures = Array.from(proceduresMap.values()).sort((a, b) => {
+    if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
+    if (a.startLine !== b.startLine) return a.startLine - b.startLine;
+    return a.name.localeCompare(b.name);
+  });
+  const localProcedureNames = new Set(procedures.map((entry) => entry.name));
+  const prototypes = Array.from(prototypesMap.values())
+    .map((prototype) => ({
+      ...prototype,
+      imported: prototype.imported || !localProcedureNames.has(prototype.name),
+    }))
+    .sort((a, b) => {
+      if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
+      if (a.startLine !== b.startLine) return a.startLine - b.startLine;
+      return a.name.localeCompare(b.name);
+    });
+
+  return {
+    ownerProgram,
+    procedures,
+    prototypes,
+  };
+}
+
+function findCurrentOwner(lineNo, ownerProgram, procedures) {
+  const active = (procedures || []).find((procedure) => lineNo >= procedure.startLine && lineNo <= procedure.endLine);
+  if (active) {
+    return {
+      ownerProgram,
+      ownerName: active.name,
+      ownerKind: active.kind,
+    };
+  }
+  return {
+    ownerProgram,
+    ownerName: ownerProgram,
+    ownerKind: 'PROGRAM',
+  };
+}
+
+function classifyProcedureCall(targetName, localProcedures, prototypes, forceInternalSubroutine = false) {
+  const normalized = normalizeName(targetName);
+  if (!normalized) {
+    return {
+      resolution: 'DYNAMIC',
+      targetKind: 'DYNAMIC',
+      targetProgram: null,
+      name: '<DYNAMIC>',
+    };
+  }
+
+  if (forceInternalSubroutine) {
+    const subroutine = (localProcedures || []).find((entry) => entry.kind === 'SUBROUTINE' && entry.name === normalized);
+    if (subroutine) {
+      return {
+        resolution: 'INTERNAL',
+        targetKind: 'SUBROUTINE',
+        targetProgram: subroutine.ownerProgram,
+        name: normalized,
+      };
+    }
+    return {
+      resolution: 'UNRESOLVED',
+      targetKind: 'UNRESOLVED',
+      targetProgram: null,
+      name: normalized,
+    };
+  }
+
+  const localProcedure = (localProcedures || []).find((entry) => entry.name === normalized);
+  if (localProcedure) {
+    return {
+      resolution: 'INTERNAL',
+      targetKind: localProcedure.kind,
+      targetProgram: localProcedure.ownerProgram,
+      name: normalized,
+    };
+  }
+
+  const prototype = (prototypes || []).find((entry) => entry.name === normalized);
+  if (prototype) {
+    return {
+      resolution: 'EXTERNAL',
+      targetKind: 'PROTOTYPE',
+      targetProgram: prototype.ownerProgram,
+      name: normalized,
+    };
+  }
+
+  return {
+    resolution: 'UNRESOLVED',
+    targetKind: 'UNRESOLVED',
+    targetProgram: null,
+    name: normalized,
+  };
+}
+
 function scanContent(filePath, content) {
   const lines = content.split(/\r?\n/);
   const tablesMap = new Map();
   const callsMap = new Map();
   const copyMembersMap = new Map();
+  const procedureCallsMap = new Map();
   const sqlStatements = [];
+
+  const { ownerProgram, procedures, prototypes } = collectDefinitions(filePath, lines);
 
   let inExecSql = false;
   let execStartLine = 0;
@@ -129,6 +522,23 @@ function scanContent(filePath, content) {
     execStartLine = 0;
   };
 
+  const addProcedureCallEntry = (call) => {
+    addStructuredItem(
+      procedureCallsMap,
+      [
+        call.ownerProgram,
+        call.ownerFile,
+        call.ownerName,
+        call.ownerKind,
+        call.name,
+        call.resolution,
+        call.targetKind,
+        call.targetProgram || '',
+      ].join('|'),
+      call,
+    );
+  };
+
   for (let i = 0; i < lines.length; i += 1) {
     const rawLine = lines[i];
     const lineNo = i + 1;
@@ -138,6 +548,7 @@ function scanContent(filePath, content) {
     }
 
     const trimmed = rawLine.trim();
+    const owner = findCurrentOwner(lineNo, ownerProgram, procedures);
 
     const dclFMatch = rawLine.match(/^\s*dcl-f\s+([A-Z0-9_#$@]+)/i);
     if (dclFMatch) {
@@ -184,32 +595,82 @@ function scanContent(filePath, content) {
       }
     }
 
-    const callPatterns = [
-      { regex: /\bCALL\s+PGM\s*\(\s*['"]?([A-Z0-9_#$@./]+)['"]?\s*\)/i, kind: 'PROGRAM' },
-      { regex: /\bCALL\s+['"]([A-Z0-9_#$@]+)['"]/i, kind: 'PROGRAM' },
-      { regex: /\bCALL\s+(?!PGM\b)([A-Z0-9_#$@]+)\b/i, kind: 'PROGRAM' },
-      { regex: /\bCALLP\s*\(\s*['"]([A-Z0-9_#$@]+)['"]\s*\)/i, kind: 'PROCEDURE' },
-      { regex: /\bCALLP\s+([A-Z0-9_#$@]+)\b/i, kind: 'PROCEDURE' },
-      { regex: /\bCALLPRC\s*\(\s*['"]([A-Z0-9_#$@]+)['"]\s*\)/i, kind: 'PROCEDURE' },
-      { regex: /\bCALLPRC\s*\(\s*([A-Z0-9_#$@]+)\s*\)/i, kind: 'PROCEDURE' },
-      { regex: /\bCALLB\s+['"]?([A-Z0-9_#$@]+)['"]?/i, kind: 'PROCEDURE' },
+    const programCallPatterns = [
+      /\bCALL\s+PGM\s*\(\s*['"]?([A-Z0-9_#$@./]+)['"]?\s*\)/i,
+      /\bCALL\s+['"]([A-Z0-9_#$@]+)['"]/i,
+      /\bCALL\s+(?!PGM\b)([A-Z0-9_#$@]+)\b/i,
     ];
 
-    for (const pattern of callPatterns) {
-      const match = rawLine.match(pattern.regex);
+    for (const regex of programCallPatterns) {
+      const match = rawLine.match(regex);
       if (match) {
         addEntity(callsMap, match[1], {
-          kind: pattern.kind,
+          kind: 'PROGRAM',
           evidence: { file: filePath, line: lineNo, text: trimmed },
         });
       }
     }
 
-    if (/\bCALLP\s*\(/i.test(rawLine) && !/\bCALLP\s*\(\s*['"][A-Z0-9_#$@]+['"]\s*\)/i.test(rawLine)) {
-      addEntity(callsMap, '<DYNAMIC>', {
-        kind: 'DYNAMIC',
-        evidence: { file: filePath, line: lineNo, text: trimmed },
-      });
+    const staticProcedureCallPatterns = [
+      /\bCALLP\s*\(\s*['"]([A-Z0-9_#$@]+)['"]\s*\)/i,
+      /\bCALLP\s+([A-Z0-9_#$@]+)\b/i,
+      /\bCALLPRC\s*\(\s*['"]([A-Z0-9_#$@]+)['"]\s*\)/i,
+      /\bCALLPRC\s*\(\s*([A-Z0-9_#$@]+)\s*\)/i,
+      /\bCALLB\s+['"]?([A-Z0-9_#$@]+)['"]?/i,
+    ];
+
+    for (const regex of staticProcedureCallPatterns) {
+      const match = rawLine.match(regex);
+      if (match) {
+        const classification = classifyProcedureCall(match[1], procedures, prototypes);
+        addProcedureCallEntry(createProcedureCall({
+          filePath,
+          ownerProgram: owner.ownerProgram,
+          ownerName: owner.ownerName,
+          ownerKind: owner.ownerKind,
+          lineNo,
+          text: trimmed,
+          name: classification.name,
+          resolution: classification.resolution,
+          targetKind: classification.targetKind,
+          targetProgram: classification.targetProgram,
+        }));
+      }
+    }
+
+    const exsrMatch = trimmed.match(/^exsr\s+([A-Z0-9_#$@*]+)\b/i) || rawLine.match(/\bEXSR\s+([A-Z0-9_#$@*]+)\b/i);
+    if (exsrMatch) {
+      const classification = classifyProcedureCall(exsrMatch[1], procedures, prototypes, true);
+      addProcedureCallEntry(createProcedureCall({
+        filePath,
+        ownerProgram: owner.ownerProgram,
+        ownerName: owner.ownerName,
+        ownerKind: owner.ownerKind,
+        lineNo,
+        text: trimmed,
+        name: classification.name,
+        resolution: classification.resolution,
+        targetKind: classification.targetKind,
+        targetProgram: classification.targetProgram,
+      }));
+    }
+
+    const dynamicProcedurePatterns = [
+      /\bCALLP\s*\((?!\s*['"][A-Z0-9_#$@]+['"]\s*\))/i,
+      /\bCALLPRC\s*\((?!\s*['"][A-Z0-9_#$@]+['"]\s*\))(?!\s*[A-Z0-9_#$@]+\s*\))/i,
+    ];
+    if (dynamicProcedurePatterns.some((regex) => regex.test(rawLine))) {
+      addProcedureCallEntry(createProcedureCall({
+        filePath,
+        ownerProgram: owner.ownerProgram,
+        ownerName: owner.ownerName,
+        ownerKind: owner.ownerKind,
+        lineNo,
+        text: trimmed,
+        name: '<DYNAMIC>',
+        resolution: 'DYNAMIC',
+        targetKind: 'DYNAMIC',
+      }));
     }
 
     const execSqlMatch = rawLine.match(/\bEXEC\s+SQL\b/i);
@@ -275,6 +736,14 @@ function scanContent(filePath, content) {
     calls: Array.from(callsMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
     copyMembers: Array.from(copyMembersMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
     sqlStatements,
+    procedures,
+    prototypes,
+    procedureCalls: Array.from(procedureCallsMap.values()).sort((a, b) => {
+      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+      if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
+      if (a.name !== b.name) return a.name.localeCompare(b.name);
+      return a.resolution.localeCompare(b.resolution);
+    }),
     notes: [],
   };
 }
@@ -285,8 +754,9 @@ function scanRpgFile(filePath) {
 }
 
 function mergeEntities(targetMap, entities, withKind) {
-  for (const entity of entities) {
+  for (const entity of entities || []) {
     const key = normalizeName(entity.name);
+    if (!key) continue;
     if (!targetMap.has(key)) {
       const base = {
         name: key,
@@ -313,9 +783,34 @@ function mergeEntities(targetMap, entities, withKind) {
   }
 }
 
+function mergeStructuredItems(scanResults, key, identityBuilder) {
+  const map = new Map();
+  for (const result of scanResults || []) {
+    for (const item of result[key] || []) {
+      const identity = identityBuilder(item);
+      if (!identity) continue;
+      if (!map.has(identity)) {
+        map.set(identity, {
+          ...item,
+          evidence: [],
+        });
+      }
+      const target = map.get(identity);
+      for (const evidence of item.evidence || []) {
+        const evidenceKey = JSON.stringify(evidence);
+        const exists = target.evidence.some((entry) => JSON.stringify(entry) === evidenceKey);
+        if (!exists) {
+          target.evidence.push(evidence);
+        }
+      }
+    }
+  }
+  return Array.from(map.values());
+}
+
 function mergeSqlStatements(scanResults) {
   const map = new Map();
-  for (const result of scanResults) {
+  for (const result of scanResults || []) {
     for (const sql of result.sqlStatements || []) {
       const key = `${sql.type}|${sql.text.toUpperCase()}`;
       if (!map.has(key)) {
@@ -376,6 +871,45 @@ function scanSourceFiles(filePaths, options = {}) {
     calls: Array.from(callsMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
     copyMembers: Array.from(copyMembersMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
     sqlStatements: mergeSqlStatements(scanResults),
+    procedures: mergeStructuredItems(
+      scanResults,
+      'procedures',
+      (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
+    ).sort((a, b) => {
+      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+      if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
+      if (a.startLine !== b.startLine) return a.startLine - b.startLine;
+      return a.name.localeCompare(b.name);
+    }),
+    prototypes: mergeStructuredItems(
+      scanResults,
+      'prototypes',
+      (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
+    ).sort((a, b) => {
+      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+      if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
+      if (a.startLine !== b.startLine) return a.startLine - b.startLine;
+      return a.name.localeCompare(b.name);
+    }),
+    procedureCalls: mergeStructuredItems(
+      scanResults,
+      'procedureCalls',
+      (item) => [
+        item.ownerProgram,
+        item.ownerFile,
+        item.ownerName,
+        item.ownerKind,
+        item.name,
+        item.resolution,
+        item.targetKind,
+        item.targetProgram || '',
+      ].join('|'),
+    ).sort((a, b) => {
+      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+      if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
+      if (a.name !== b.name) return a.name.localeCompare(b.name);
+      return a.resolution.localeCompare(b.resolution);
+    }),
     notes,
   };
 }
