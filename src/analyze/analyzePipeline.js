@@ -16,6 +16,10 @@ const path = require('path');
 const { collectSourceFiles } = require('../collector/sourceCollector');
 const { scanSourceFiles } = require('../scanner/rpgScanner');
 const { createSourceScanCache } = require('../scanner/sourceScanCache');
+const {
+  buildCanonicalAnalysisModel,
+  enrichCanonicalAnalysisModel,
+} = require('../context/canonicalAnalysisModel');
 const { buildContext } = require('../context/contextBuilder');
 const { buildPrompts } = require('../prompt/promptBuilder');
 const { generateMarkdownReport } = require('../report/markdownReport');
@@ -39,11 +43,8 @@ const { runStages } = require('./runStages');
 const { readImportManifest } = require('../fetch/importManifest');
 const { validateSourceFiles } = require('../source/sourceIntegrity');
 
-function addNotes(target, notes) {
-  if (!notes || notes.length === 0) {
-    return;
-  }
-  target.notes = Array.from(new Set([...(target.notes || []), ...notes])).sort((a, b) => a.localeCompare(b));
+function resolvePromptContext(context, optimizedContext) {
+  return optimizedContext || context;
 }
 
 function collectAndScanStage(state) {
@@ -161,28 +162,18 @@ function buildContextStage(state) {
     notes,
     scanCache,
   } = state;
-  const context = buildContext({
+
+  let canonicalAnalysis = buildCanonicalAnalysisModel({
     program,
     sourceRoot,
     sourceFiles: scanSummary.sourceFiles || [],
     dependencies,
     notes,
-    graph: {
-      nodeCount: 0,
-      edgeCount: 0,
-      tableCount: 0,
-      programCallCount: 0,
-      copyMemberCount: 0,
-      files: {
-        json: 'dependency-graph.json',
-        mermaid: 'dependency-graph.mmd',
-        markdown: 'dependency-graph.md',
-      },
-    },
+    importManifest: state.importManifest,
   });
+  let context = buildContext({ canonicalAnalysis });
 
   const graph = buildDependencyGraph(context);
-  context.graph = buildGraphSummary(graph);
   const crossProgramGraph = buildCrossProgramGraph({
     rootProgram: program,
     sourceFiles: scannableSourceFiles || [],
@@ -190,32 +181,46 @@ function buildContextStage(state) {
     importManifest: state.importManifest,
     scanCache,
   });
-  context.crossProgramGraph = {
-    programCount: Number(crossProgramGraph.summary.programCount) || 0,
-    tableCount: Number(crossProgramGraph.summary.tableCount) || 0,
-    copyMemberCount: Number(crossProgramGraph.summary.copyMemberCount) || 0,
-    edgeCount: Number(crossProgramGraph.summary.edgeCount) || 0,
-    ambiguousPrograms: crossProgramGraph.ambiguousPrograms || [],
-    unresolvedPrograms: crossProgramGraph.unresolvedPrograms || [],
-    files: {
-      json: 'program-call-tree.json',
-      mermaid: 'program-call-tree.mmd',
-      markdown: 'program-call-tree.md',
+
+  canonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
+    graph: buildGraphSummary(graph),
+    crossProgramGraph: {
+      programCount: Number(crossProgramGraph.summary.programCount) || 0,
+      tableCount: Number(crossProgramGraph.summary.tableCount) || 0,
+      copyMemberCount: Number(crossProgramGraph.summary.copyMemberCount) || 0,
+      edgeCount: Number(crossProgramGraph.summary.edgeCount) || 0,
+      ambiguousPrograms: crossProgramGraph.ambiguousPrograms || [],
+      unresolvedPrograms: crossProgramGraph.unresolvedPrograms || [],
+      files: {
+        json: 'program-call-tree.json',
+        mermaid: 'program-call-tree.mmd',
+        markdown: 'program-call-tree.md',
+      },
     },
-  };
+    sourceCatalog: crossProgramGraph.sourceCatalog,
+  });
+  context = buildContext({ canonicalAnalysis });
+
+  const sourceSnippet = pickSourceSnippet(scanSummary.sourceFiles, program);
 
   return {
     ...state,
+    canonicalAnalysis,
     context,
     graph,
     crossProgramGraph,
-    sourceSnippet: pickSourceSnippet(scanSummary.sourceFiles, program),
+    sourceSnippet,
     stageMetadata: {
+      canonicalAnalysis: {
+        schemaVersion: canonicalAnalysis.schemaVersion,
+        relationCount: canonicalAnalysis.relations.length,
+        sourceFileCount: canonicalAnalysis.sourceFiles.length,
+      },
       dependencyGraph: buildGraphSummary(graph),
       crossProgramGraph: crossProgramGraph.summary,
       sourceCatalog: crossProgramGraph.sourceCatalog,
       scanCache: scanCache ? scanCache.getStats() : null,
-      sourceSnippetFound: Boolean(pickSourceSnippet(scanSummary.sourceFiles, program)),
+      sourceSnippetFound: Boolean(sourceSnippet),
     },
   };
 }
@@ -282,7 +287,15 @@ function optimizeContextStage(state) {
 }
 
 function exportDb2Stage(state) {
-  const { program, context, optimizedContext, config, outputProgramDir, verbose } = state;
+  const {
+    program,
+    canonicalAnalysis,
+    context,
+    optimizedContext,
+    config,
+    outputProgramDir,
+    verbose,
+  } = state;
   const db2Export = exportDb2Metadata({
     program,
     dependencies: context.dependencies,
@@ -291,15 +304,25 @@ function exportDb2Stage(state) {
     verbose,
   });
 
-  context.db2Metadata = db2Export.summary;
-  addNotes(context, db2Export.notes);
-  if (optimizedContext) {
-    optimizedContext.db2Metadata = db2Export.summary;
-    addNotes(optimizedContext, db2Export.notes);
-  }
+  const nextCanonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
+    db2Metadata: db2Export.summary,
+    notes: db2Export.notes || [],
+  });
+  const nextContext = buildContext({ canonicalAnalysis: nextCanonicalAnalysis });
+  const nextOptimizedContext = optimizedContext
+    ? {
+      ...optimizedContext,
+      db2Metadata: db2Export.summary,
+      notes: nextContext.notes,
+    }
+    : null;
 
   return {
     ...state,
+    canonicalAnalysis: nextCanonicalAnalysis,
+    context: nextContext,
+    optimizedContext: nextOptimizedContext,
+    promptContext: resolvePromptContext(nextContext, nextOptimizedContext),
     db2Export,
     stageMetadata: db2Export.summary,
     stageDiagnostics: (db2Export.notes || []).map((message) => ({
@@ -313,6 +336,7 @@ function exportDb2Stage(state) {
 function exportTestDataStage(state) {
   const {
     program,
+    canonicalAnalysis,
     context,
     optimizedContext,
     config,
@@ -337,15 +361,25 @@ function exportTestDataStage(state) {
     verbose,
   });
 
-  context.testData = testDataExport.summary;
-  addNotes(context, testDataExport.notes);
-  if (optimizedContext) {
-    optimizedContext.testData = testDataExport.summary;
-    addNotes(optimizedContext, testDataExport.notes);
-  }
+  const nextCanonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
+    testData: testDataExport.summary,
+    notes: testDataExport.notes || [],
+  });
+  const nextContext = buildContext({ canonicalAnalysis: nextCanonicalAnalysis });
+  const nextOptimizedContext = optimizedContext
+    ? {
+      ...optimizedContext,
+      testData: testDataExport.summary,
+      notes: nextContext.notes,
+    }
+    : null;
 
   return {
     ...state,
+    canonicalAnalysis: nextCanonicalAnalysis,
+    context: nextContext,
+    optimizedContext: nextOptimizedContext,
+    promptContext: resolvePromptContext(nextContext, nextOptimizedContext),
     testDataExport,
     stageMetadata: testDataExport.summary,
     stageDiagnostics: (testDataExport.notes || []).map((message) => ({
@@ -358,6 +392,7 @@ function exportTestDataStage(state) {
 
 function writeArtifactsStage(state) {
   const {
+    canonicalAnalysis,
     context,
     optimizedContext,
     graph,
@@ -368,6 +403,7 @@ function writeArtifactsStage(state) {
     optimizationReport,
   } = state;
 
+  writeJsonReport(path.join(outputProgramDir, 'canonical-analysis.json'), canonicalAnalysis);
   writeJsonReport(path.join(outputProgramDir, 'context.json'), context);
   if (optimizedContext) {
     writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), optimizedContext);
@@ -404,6 +440,7 @@ function writeArtifactsStage(state) {
     ...state,
     reportMarkdown,
     generatedFiles: [
+      'canonical-analysis.json',
       'context.json',
       ...(optimizedContext ? ['optimized-context.json'] : []),
       'dependency-graph.json',
@@ -419,8 +456,9 @@ function writeArtifactsStage(state) {
       'report.md',
     ],
     stageMetadata: {
-      fileCount: optimizedContext ? 13 : 12,
+      fileCount: optimizedContext ? 14 : 13,
       generatedFiles: [
+        'canonical-analysis.json',
         'context.json',
         ...(optimizedContext ? ['optimized-context.json'] : []),
         'dependency-graph.json',
