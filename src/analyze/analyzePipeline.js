@@ -15,6 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const { collectSourceFiles } = require('../collector/sourceCollector');
 const { scanSourceFiles } = require('../scanner/rpgScanner');
+const { createSourceScanCache } = require('../scanner/sourceScanCache');
 const { buildContext } = require('../context/contextBuilder');
 const { buildPrompts } = require('../prompt/promptBuilder');
 const { generateMarkdownReport } = require('../report/markdownReport');
@@ -47,6 +48,7 @@ function addNotes(target, notes) {
 
 function collectAndScanStage(state) {
   const { sourceRoot, config, logVerbose } = state;
+  const scanCache = state.scanCache || createSourceScanCache();
   const sourceFiles = collectSourceFiles(sourceRoot, config.extensions);
   logVerbose(`Collected source files: ${sourceFiles.length}`);
 
@@ -58,7 +60,7 @@ function collectAndScanStage(state) {
   });
   logVerbose(`Validated scannable source files: ${validation.validFiles.length}`);
 
-  const scanSummary = scanSourceFiles(validation.validFiles);
+  const scanSummary = scanSourceFiles(validation.validFiles, { scanCache });
   const notes = [
     ...(scanSummary.notes || []),
     ...validation.results.flatMap((result) => result.issues.map((issue) => issue.message)),
@@ -119,6 +121,7 @@ function collectAndScanStage(state) {
 
   return {
     ...state,
+    scanCache,
     sourceFiles,
     scannableSourceFiles: validation.validFiles,
     importManifest: importManifestResult.manifest,
@@ -136,6 +139,7 @@ function collectAndScanStage(state) {
       invalidSourceFileCount: validation.invalidCount,
       sourceValidationWarningCount: validation.warningCount,
       importManifestFound: Boolean(importManifestResult.manifest),
+      scanCache: scanCache.getStats(),
       scannedFileCount: (scanSummary.sourceFiles || []).length,
       tableCount: (scanSummary.tables || []).length,
       programCallCount: (scanSummary.calls || []).length,
@@ -148,7 +152,15 @@ function collectAndScanStage(state) {
 }
 
 function buildContextStage(state) {
-  const { program, sourceRoot, scannableSourceFiles, scanSummary, dependencies, notes } = state;
+  const {
+    program,
+    sourceRoot,
+    scannableSourceFiles,
+    scanSummary,
+    dependencies,
+    notes,
+    scanCache,
+  } = state;
   const context = buildContext({
     program,
     sourceRoot,
@@ -176,6 +188,7 @@ function buildContextStage(state) {
     sourceFiles: scannableSourceFiles || [],
     sourceRoot,
     importManifest: state.importManifest,
+    scanCache,
   });
   context.crossProgramGraph = {
     programCount: Number(crossProgramGraph.summary.programCount) || 0,
@@ -201,6 +214,7 @@ function buildContextStage(state) {
       dependencyGraph: buildGraphSummary(graph),
       crossProgramGraph: crossProgramGraph.summary,
       sourceCatalog: crossProgramGraph.sourceCatalog,
+      scanCache: scanCache ? scanCache.getStats() : null,
       sourceSnippetFound: Boolean(pickSourceSnippet(scanSummary.sourceFiles, program)),
     },
   };
