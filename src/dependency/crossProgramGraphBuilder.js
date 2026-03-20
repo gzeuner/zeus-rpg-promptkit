@@ -57,6 +57,7 @@ function buildCrossProgramGraph({
   sourceFiles,
   sourceRoot,
   importManifest,
+  scanCache,
 }) {
   const root = normalizeProgramName(rootProgram);
   if (!root) {
@@ -136,7 +137,7 @@ function buildCrossProgramGraph({
     }
     scannedFiles.add(resolved.path);
 
-    const scanResult = scanSourceFiles([resolved.path]);
+    const scanResult = scanSourceFiles([resolved.path], { scanCache });
 
     const tableNames = new Set(
       (scanResult.tables || []).map((table) => asName(table)).filter(Boolean),
