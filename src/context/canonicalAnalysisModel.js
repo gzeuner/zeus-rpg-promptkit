@@ -133,16 +133,19 @@ function mergeSqlTablesIntoDependencies(tables, sqlTableNames) {
   return merged.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function buildRiskHints(dependencies, sql) {
+function buildRiskHints(dependencies, sql, procedureCalls) {
   const hints = [];
   if ((sql.statements || []).length > 0) {
     hints.push('Embedded SQL detected');
   }
-  if ((dependencies.programCalls || []).some((call) => call.kind === 'DYNAMIC' || call.name === '<DYNAMIC>')) {
-    hints.push('Dynamic call detected');
-  }
   if ((dependencies.programCalls || []).length > 0) {
     hints.push('External program calls detected');
+  }
+  if ((procedureCalls || []).some((call) => call.resolution === 'DYNAMIC')) {
+    hints.push('Dynamic procedure call detected');
+  }
+  if ((procedureCalls || []).some((call) => call.resolution === 'UNRESOLVED')) {
+    hints.push('Unresolved procedure call detected');
   }
   if ((dependencies.copyMembers || []).length >= 5) {
     hints.push('Many copy members included');
@@ -201,6 +204,31 @@ function normalizeSourceFiles(sourceFiles, sourceRoot, importManifest) {
     .sort((a, b) => a.path.localeCompare(b.path));
 }
 
+function normalizeStructuredItems(items, sourceRoot, mapper, identityBuilder) {
+  const map = new Map();
+  for (const item of items || []) {
+    if (!item || typeof item !== 'object') continue;
+    const normalized = mapper(item, sourceRoot);
+    const key = identityBuilder(normalized);
+    if (!key) continue;
+    if (!map.has(key)) {
+      map.set(key, {
+        ...normalized,
+        evidence: [],
+      });
+    }
+    const target = map.get(key);
+    for (const evidence of normalized.evidence || []) {
+      const serialized = JSON.stringify(evidence);
+      const exists = target.evidence.some((entry) => JSON.stringify(entry) === serialized);
+      if (!exists) {
+        target.evidence.push(evidence);
+      }
+    }
+  }
+  return Array.from(map.values());
+}
+
 function createEntityId(type, name) {
   return `${String(type || '').trim().toUpperCase()}:${String(name || '').trim()}`;
 }
@@ -209,28 +237,220 @@ function createRelationId(type, from, to) {
   return `${String(type || '').trim().toUpperCase()}:${String(from || '')}->${String(to || '')}`;
 }
 
-function buildProgramEntities(rootProgram, programCalls) {
-  const entities = [{
-    id: createEntityId('PROGRAM', rootProgram),
-    name: normalizeName(rootProgram),
-    role: 'ROOT',
-  }];
-
-  for (const call of programCalls || []) {
-    if (normalizeName(call.name) === normalizeName(rootProgram)) continue;
-    entities.push({
-      id: createEntityId('PROGRAM', call.name),
-      name: normalizeName(call.name),
-      role: 'CALLED',
-      kind: call.kind || 'PROGRAM',
-      evidenceCount: Number(call.evidenceCount) || 0,
-    });
-  }
-
-  return entities.sort((a, b) => a.name.localeCompare(b.name));
+function normalizeProgramCalls(calls, sourceRoot) {
+  return dedupeByName(calls, sourceRoot, 'PROGRAM').map((call) => ({
+    ...call,
+    kind: call.kind || 'PROGRAM',
+    id: createEntityId('PROGRAM', call.name),
+  }));
 }
 
-function buildRelations(rootProgram, sourceFiles, tables, programCalls, copyMembers, sqlStatements) {
+function normalizeProcedures(procedures, sourceRoot) {
+  return normalizeStructuredItems(
+    procedures,
+    sourceRoot,
+    (item, rootDir) => ({
+      name: normalizeName(item.name),
+      kind: normalizeName(item.kind || 'PROCEDURE'),
+      ownerProgram: normalizeName(item.ownerProgram),
+      sourceFile: normalizeRelativePath(rootDir, item.sourceFile),
+      startLine: Number(item.startLine) || 0,
+      endLine: Number(item.endLine) || Number(item.startLine) || 0,
+      sourceForm: normalizeName(item.sourceForm || ''),
+      exported: Boolean(item.exported),
+      imported: Boolean(item.imported),
+      externalName: item.externalName ? normalizeName(item.externalName) : null,
+      evidence: normalizeEvidenceList(item.evidence || [], rootDir),
+    }),
+    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
+  )
+    .map((item) => ({
+      ...item,
+      id: createEntityId(item.kind === 'SUBROUTINE' ? 'SUBROUTINE' : 'PROCEDURE', `${item.ownerProgram}:${item.sourceFile}:${item.name}`),
+      evidenceCount: item.evidence.length,
+    }))
+    .sort((a, b) => {
+      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+      if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
+      if (a.startLine !== b.startLine) return a.startLine - b.startLine;
+      return a.name.localeCompare(b.name);
+    });
+}
+
+function normalizePrototypes(prototypes, sourceRoot) {
+  return normalizeStructuredItems(
+    prototypes,
+    sourceRoot,
+    (item, rootDir) => ({
+      name: normalizeName(item.name),
+      kind: 'PROTOTYPE',
+      ownerProgram: normalizeName(item.ownerProgram),
+      sourceFile: normalizeRelativePath(rootDir, item.sourceFile),
+      startLine: Number(item.startLine) || 0,
+      endLine: Number(item.endLine) || Number(item.startLine) || 0,
+      sourceForm: normalizeName(item.sourceForm || ''),
+      exported: Boolean(item.exported),
+      imported: Boolean(item.imported),
+      externalName: item.externalName ? normalizeName(item.externalName) : null,
+      evidence: normalizeEvidenceList(item.evidence || [], rootDir),
+    }),
+    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
+  )
+    .map((item) => ({
+      ...item,
+      id: createEntityId('PROTOTYPE', `${item.ownerProgram}:${item.sourceFile}:${item.name}`),
+      evidenceCount: item.evidence.length,
+    }))
+    .sort((a, b) => {
+      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+      if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
+      if (a.startLine !== b.startLine) return a.startLine - b.startLine;
+      return a.name.localeCompare(b.name);
+    });
+}
+
+function normalizeProcedureCalls(procedureCalls, sourceRoot) {
+  return normalizeStructuredItems(
+    procedureCalls,
+    sourceRoot,
+    (item, rootDir) => ({
+      name: normalizeName(item.name),
+      ownerProgram: normalizeName(item.ownerProgram),
+      ownerName: normalizeName(item.ownerName),
+      ownerKind: normalizeName(item.ownerKind),
+      ownerFile: normalizeRelativePath(rootDir, item.ownerFile || item.sourceFile || ''),
+      resolution: normalizeName(item.resolution),
+      targetKind: normalizeName(item.targetKind),
+      targetProgram: item.targetProgram ? normalizeName(item.targetProgram) : null,
+      evidence: normalizeEvidenceList(item.evidence || [], rootDir),
+    }),
+    (item) => [
+      item.ownerProgram,
+      item.ownerFile,
+      item.ownerName,
+      item.ownerKind,
+      item.name,
+      item.resolution,
+      item.targetKind,
+      item.targetProgram || '',
+    ].join('|'),
+  )
+    .map((item) => ({
+      ...item,
+      evidenceCount: item.evidence.length,
+    }))
+    .sort((a, b) => {
+      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+      if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
+      if (a.name !== b.name) return a.name.localeCompare(b.name);
+      return a.resolution.localeCompare(b.resolution);
+    });
+}
+
+function buildSqlEntities(sqlStatements) {
+  return sqlStatements.map((statement, index) => ({
+    ...statement,
+    id: createEntityId('SQL', String(index + 1).padStart(4, '0')),
+  }));
+}
+
+function buildProgramEntities(rootProgram, sourceFiles, programCalls, procedures, prototypes) {
+  const sourcePrograms = new Set((sourceFiles || []).map((entry) => normalizeName(path.basename(entry.path, path.extname(entry.path)))));
+  const ownerPrograms = new Set([
+    ...(procedures || []).map((entry) => entry.ownerProgram),
+    ...(prototypes || []).map((entry) => entry.ownerProgram),
+  ]);
+  const calledPrograms = new Set((programCalls || []).map((entry) => entry.name));
+  const programNames = uniqueSortedStrings([rootProgram, ...sourcePrograms, ...ownerPrograms, ...calledPrograms]);
+
+  return programNames.map((programName) => ({
+    id: createEntityId('PROGRAM', programName),
+    name: programName,
+    role: programName === normalizeName(rootProgram)
+      ? 'ROOT'
+      : sourcePrograms.has(programName) || ownerPrograms.has(programName) ? 'SCANNED' : 'CALLED',
+  }));
+}
+
+function buildProcedureReferenceEntities(procedureCalls) {
+  const map = new Map();
+  let sequence = 1;
+
+  for (const call of procedureCalls || []) {
+    if (call.resolution === 'INTERNAL' || call.resolution === 'EXTERNAL') {
+      continue;
+    }
+
+    const evidence = call.evidence && call.evidence[0] ? call.evidence[0] : {};
+    const key = [
+      call.ownerProgram,
+      call.ownerName,
+      call.name,
+      call.resolution,
+      evidence.file || '',
+      evidence.line || evidence.startLine || sequence,
+    ].join('|');
+
+    if (!map.has(key)) {
+      map.set(key, {
+        id: createEntityId('PROCEDURE_REF', `${call.ownerProgram}:${call.ownerName}:${String(sequence).padStart(4, '0')}`),
+        name: call.name,
+        resolution: call.resolution,
+        targetKind: call.targetKind,
+        ownerProgram: call.ownerProgram,
+        ownerName: call.ownerName,
+        evidenceCount: call.evidenceCount || (call.evidence || []).length,
+        evidence: call.evidence || [],
+      });
+      sequence += 1;
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function findProcedureEntity(procedures, ownerProgram, name, expectedKind = null) {
+  return (procedures || []).find((entry) => entry.ownerProgram === ownerProgram
+    && entry.name === normalizeName(name)
+    && (!expectedKind || entry.kind === normalizeName(expectedKind)));
+}
+
+function findPrototypeEntity(prototypes, ownerProgram, name) {
+  return (prototypes || []).find((entry) => entry.ownerProgram === ownerProgram && entry.name === normalizeName(name))
+    || (prototypes || []).find((entry) => entry.name === normalizeName(name));
+}
+
+function resolveCallSourceEntityId(call, procedures) {
+  if (call.ownerKind === 'PROGRAM') {
+    return createEntityId('PROGRAM', call.ownerProgram);
+  }
+  const local = findProcedureEntity(procedures, call.ownerProgram, call.ownerName, call.ownerKind);
+  return local ? local.id : createEntityId('PROGRAM', call.ownerProgram);
+}
+
+function resolveCallTargetEntityId(call, procedures, prototypes, procedureReferences) {
+  if (call.resolution === 'INTERNAL') {
+    const local = findProcedureEntity(procedures, call.targetProgram || call.ownerProgram, call.name, call.targetKind);
+    return local ? local.id : null;
+  }
+  if (call.resolution === 'EXTERNAL') {
+    const prototype = findPrototypeEntity(prototypes, call.targetProgram || call.ownerProgram, call.name);
+    return prototype ? prototype.id : null;
+  }
+  const reference = (procedureReferences || []).find((entry) => {
+    const evidence = entry.evidence && entry.evidence[0] ? entry.evidence[0] : {};
+    const callEvidence = call.evidence && call.evidence[0] ? call.evidence[0] : {};
+    return entry.ownerProgram === call.ownerProgram
+      && entry.ownerName === call.ownerName
+      && entry.name === call.name
+      && entry.resolution === call.resolution
+      && String(evidence.file || '') === String(callEvidence.file || '')
+      && Number(evidence.line || evidence.startLine || 0) === Number(callEvidence.line || callEvidence.startLine || 0);
+  });
+  return reference ? reference.id : null;
+}
+
+function buildRelations(rootProgram, sourceFiles, tables, programCalls, copyMembers, sqlStatements, procedures, prototypes, procedureReferences, procedureCalls) {
   const relations = [];
   const rootProgramId = createEntityId('PROGRAM', rootProgram);
 
@@ -277,8 +497,35 @@ function buildRelations(rootProgram, sourceFiles, tables, programCalls, copyMemb
     });
   }
 
-  sqlStatements.forEach((statement, index) => {
-    const statementId = statement.id || createEntityId('SQL', String(index + 1).padStart(4, '0'));
+  for (const procedure of procedures || []) {
+    relations.push({
+      id: createRelationId('OWNS_PROCEDURE', createEntityId('PROGRAM', procedure.ownerProgram), procedure.id),
+      type: 'OWNS_PROCEDURE',
+      from: createEntityId('PROGRAM', procedure.ownerProgram),
+      to: procedure.id,
+      evidence: procedure.evidence || [],
+      attributes: {
+        procedureKind: procedure.kind,
+      },
+    });
+  }
+
+  for (const prototype of prototypes || []) {
+    relations.push({
+      id: createRelationId('DECLARES_PROTOTYPE', createEntityId('PROGRAM', prototype.ownerProgram), prototype.id),
+      type: 'DECLARES_PROTOTYPE',
+      from: createEntityId('PROGRAM', prototype.ownerProgram),
+      to: prototype.id,
+      evidence: prototype.evidence || [],
+      attributes: {
+        imported: Boolean(prototype.imported),
+        externalName: prototype.externalName,
+      },
+    });
+  }
+
+  sqlStatements.forEach((statement) => {
+    const statementId = statement.id;
     relations.push({
       id: createRelationId('EXECUTES_SQL', rootProgramId, statementId),
       type: 'EXECUTES_SQL',
@@ -301,18 +548,47 @@ function buildRelations(rootProgram, sourceFiles, tables, programCalls, copyMemb
     }
   });
 
+  for (const call of procedureCalls || []) {
+    const from = resolveCallSourceEntityId(call, procedures);
+    const to = resolveCallTargetEntityId(call, procedures, prototypes, procedureReferences);
+    if (!from || !to) {
+      continue;
+    }
+    const firstEvidence = call.evidence && call.evidence[0] ? call.evidence[0] : {};
+    const callSiteMarker = Number(firstEvidence.line || firstEvidence.startLine || 0);
+    relations.push({
+      id: `${createRelationId('CALLS_PROCEDURE', from, to)}:${callSiteMarker}`,
+      type: 'CALLS_PROCEDURE',
+      from,
+      to,
+      evidence: call.evidence || [],
+      attributes: {
+        resolution: call.resolution,
+        targetKind: call.targetKind,
+        targetName: call.name,
+      },
+    });
+  }
+
   return relations.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements) {
+function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, procedures, prototypes, procedureCalls) {
   const summary = {
     sourceFileCount: sourceFiles.length,
     tableCount: (dependencies.tables || []).length,
     programCallCount: (dependencies.programCalls || []).length,
     copyMemberCount: (dependencies.copyMembers || []).length,
     sqlStatementCount: sqlStatements.length,
+    procedureCount: (procedures || []).length,
+    prototypeCount: (prototypes || []).length,
+    procedureCallCount: (procedureCalls || []).length,
+    internalProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'INTERNAL').length,
+    externalProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'EXTERNAL').length,
+    dynamicProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'DYNAMIC').length,
+    unresolvedProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'UNRESOLVED').length,
   };
-  summary.text = `Program ${normalizeName(rootProgram)} references ${summary.tableCount} tables, calls ${summary.programCallCount} programs, includes ${summary.copyMemberCount} copy members, and contains ${summary.sqlStatementCount} SQL statements.`;
+  summary.text = `Program ${normalizeName(rootProgram)} references ${summary.tableCount} tables, calls ${summary.programCallCount} programs, includes ${summary.copyMemberCount} copy members, contains ${summary.sqlStatementCount} SQL statements, and exposes ${summary.procedureCount} procedures with ${summary.procedureCallCount} procedure call sites.`;
   return summary;
 }
 
@@ -365,27 +641,23 @@ function buildCanonicalAnalysisModel({
     kind: table.kind || 'TABLE',
     id: createEntityId('TABLE', table.name),
   }));
-  const programCalls = dedupeByName(dependencies && dependencies.calls, normalizedSourceRoot, 'PROGRAM').map((call) => ({
-    ...call,
-    kind: call.kind || 'PROGRAM',
-    id: createEntityId('PROGRAM', call.name),
-  }));
+  const programCalls = normalizeProgramCalls(dependencies && dependencies.calls, normalizedSourceRoot);
   const copyMembers = dedupeByName(dependencies && dependencies.copyMembers, normalizedSourceRoot).map((copyMember) => ({
     ...copyMember,
     kind: 'COPY_MEMBER',
     id: createEntityId('COPY_MEMBER', copyMember.name),
   }));
-  const sqlStatements = sortSqlStatements(dependencies && dependencies.sqlStatements, normalizedSourceRoot)
-    .map((statement, index) => ({
-      ...statement,
-      id: createEntityId('SQL', String(index + 1).padStart(4, '0')),
-    }));
+  const sqlStatements = buildSqlEntities(sortSqlStatements(dependencies && dependencies.sqlStatements, normalizedSourceRoot));
+  const procedures = normalizeProcedures(dependencies && dependencies.procedures, normalizedSourceRoot);
+  const prototypes = normalizePrototypes(dependencies && dependencies.prototypes, normalizedSourceRoot);
+  const procedureCalls = normalizeProcedureCalls(dependencies && dependencies.procedureCalls, normalizedSourceRoot);
   const sqlTableNames = uniqueSortedStrings(sqlStatements.flatMap((statement) => statement.tables || []).map((name) => normalizeName(name)));
   const mergedTables = mergeSqlTablesIntoDependencies(tables, sqlTableNames)
     .map((table) => ({
       ...table,
       id: createEntityId('TABLE', table.name),
     }));
+  const procedureReferences = buildProcedureReferenceEntities(procedureCalls);
 
   const dependencyBlock = {
     tables: mergedTables,
@@ -416,19 +688,33 @@ function buildCanonicalAnalysisModel({
     },
     sourceFiles: normalizedSourceFiles,
     entities: {
-      programs: buildProgramEntities(normalizedProgram, programCalls),
+      programs: buildProgramEntities(normalizedProgram, normalizedSourceFiles, programCalls, procedures, prototypes),
       tables: mergedTables,
       copyMembers,
       sqlStatements,
+      procedures,
+      prototypes,
+      procedureReferences,
     },
-    relations: buildRelations(normalizedProgram, normalizedSourceFiles, mergedTables, programCalls, copyMembers, sqlStatements),
+    relations: buildRelations(
+      normalizedProgram,
+      normalizedSourceFiles,
+      mergedTables,
+      programCalls,
+      copyMembers,
+      sqlStatements,
+      procedures,
+      prototypes,
+      procedureReferences,
+      procedureCalls,
+    ),
     enrichments: {
-      summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements),
+      summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements, procedures, prototypes, procedureCalls),
       aiContext: {
         programPurposeHint: '',
         primaryTables: dependencyBlock.tables.slice(0, 10).map((entry) => entry.name),
         primaryCalls: dependencyBlock.programCalls.slice(0, 10).map((entry) => entry.name),
-        riskHints: buildRiskHints(dependencyBlock, sqlBlock),
+        riskHints: buildRiskHints(dependencyBlock, sqlBlock, procedureCalls),
       },
       graph: defaultGraphSummary(),
       crossProgramGraph: defaultCrossProgramSummary(),
