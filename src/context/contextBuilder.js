@@ -24,6 +24,13 @@ function sortByName(items) {
 
 function projectDependencies(canonicalAnalysis) {
   const entities = canonicalAnalysis.entities || {};
+  const relations = canonicalAnalysis.relations || [];
+  const calledProgramNames = new Set(
+    relations
+      .filter((entry) => entry.type === 'CALLS_PROGRAM')
+      .map((entry) => String(entry.to || '').replace(/^PROGRAM:/, ''))
+      .filter(Boolean),
+  );
 
   return {
     tables: sortByName((entities.tables || []).map((entry) => ({
@@ -32,7 +39,7 @@ function projectDependencies(canonicalAnalysis) {
       evidenceCount: Number(entry.evidenceCount) || 0,
     }))),
     programCalls: sortByName((entities.programs || [])
-      .filter((entry) => entry.role !== 'ROOT')
+      .filter((entry) => calledProgramNames.has(String(entry.name || '')))
       .map((entry) => ({
         name: entry.name,
         kind: entry.kind || 'PROGRAM',
@@ -42,6 +49,67 @@ function projectDependencies(canonicalAnalysis) {
       name: entry.name,
       evidenceCount: Number(entry.evidenceCount) || 0,
     }))),
+  };
+}
+
+function projectProcedureAnalysis(canonicalAnalysis) {
+  const entities = canonicalAnalysis.entities || {};
+  const relations = canonicalAnalysis.relations || [];
+  const procedures = sortByName((entities.procedures || []).map((entry) => ({
+    name: entry.name,
+    kind: entry.kind,
+    ownerProgram: entry.ownerProgram,
+    sourceFile: entry.sourceFile,
+    startLine: entry.startLine,
+    endLine: entry.endLine,
+    sourceForm: entry.sourceForm,
+    exported: Boolean(entry.exported),
+    evidenceCount: Number(entry.evidenceCount) || 0,
+  })));
+  const prototypes = sortByName((entities.prototypes || []).map((entry) => ({
+    name: entry.name,
+    ownerProgram: entry.ownerProgram,
+    sourceFile: entry.sourceFile,
+    startLine: entry.startLine,
+    endLine: entry.endLine,
+    sourceForm: entry.sourceForm,
+    imported: Boolean(entry.imported),
+    externalName: entry.externalName || null,
+    evidenceCount: Number(entry.evidenceCount) || 0,
+  })));
+  const calls = relations
+    .filter((entry) => entry.type === 'CALLS_PROCEDURE')
+    .map((entry) => {
+      const from = String(entry.from || '');
+      const to = String(entry.to || '');
+      const caller = from.split(':').slice(-1)[0] || from;
+      return {
+        caller,
+        target: String(entry.attributes && entry.attributes.targetName ? entry.attributes.targetName : (to.split(':').slice(-1)[0] || to)),
+        resolution: entry.attributes && entry.attributes.resolution ? entry.attributes.resolution : 'UNKNOWN',
+        targetKind: entry.attributes && entry.attributes.targetKind ? entry.attributes.targetKind : '',
+        evidenceCount: Array.isArray(entry.evidence) ? entry.evidence.length : 0,
+      };
+    })
+    .sort((a, b) => {
+      if (a.caller !== b.caller) return a.caller.localeCompare(b.caller);
+      if (a.target !== b.target) return a.target.localeCompare(b.target);
+      return a.resolution.localeCompare(b.resolution);
+    });
+
+  return {
+    summary: {
+      procedureCount: procedures.length,
+      prototypeCount: prototypes.length,
+      procedureCallCount: calls.length,
+      internalCallCount: calls.filter((entry) => entry.resolution === 'INTERNAL').length,
+      externalCallCount: calls.filter((entry) => entry.resolution === 'EXTERNAL').length,
+      dynamicCallCount: calls.filter((entry) => entry.resolution === 'DYNAMIC').length,
+      unresolvedCallCount: calls.filter((entry) => entry.resolution === 'UNRESOLVED').length,
+    },
+    procedures,
+    prototypes,
+    calls,
   };
 }
 
@@ -82,6 +150,7 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
         text: '',
       },
     dependencies: projectDependencies(canonicalAnalysis),
+    procedureAnalysis: projectProcedureAnalysis(canonicalAnalysis),
     sql: projectSql(canonicalAnalysis),
     graph: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.graph
       ? canonicalAnalysis.enrichments.graph

@@ -211,6 +211,7 @@ Generated files:
 - `sourceFiles`
 - `summary`
 - `dependencies`
+- `procedureAnalysis`
 - `sql`
 - `graph`
 - `crossProgramGraph`
@@ -223,6 +224,8 @@ Generated files:
 
 `context.json` remains the backward-compatible AI-ready projection. Prompt generation and report generation still consume this projection today, and `graph` provides compact references to dependency graph artifacts.
 
+`procedureAnalysis` exposes detected local procedures, subroutines, prototypes, and classified procedure call sites so internal, external, dynamic, and unresolved procedure calls are no longer conflated with program calls.
+
 When `--optimize-context` is enabled, prompts are generated from `optimized-context.json` instead of the full `context.json`.
 
 The canonical schema and invariants are documented in `docs/canonical-analysis-model.md`.
@@ -233,6 +236,7 @@ The canonical schema and invariants are documented in `docs/canonical-analysis-m
 - `Source Files`
 - `Tables`
 - `Program Calls`
+- `Procedure Semantics`
 - `Copy Members`
 - `SQL Statements`
 - `DB2 Metadata`
