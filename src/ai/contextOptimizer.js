@@ -187,6 +187,18 @@ function summarize(optimized) {
   };
 }
 
+function buildSummaryText(optimized, context) {
+  const nativeSummary = context && context.nativeFileUsage && context.nativeFileUsage.summary
+    ? context.nativeFileUsage.summary
+    : null;
+
+  const nativeText = nativeSummary
+    ? ` It preserves ${nativeSummary.fileCount || 0} native files (${nativeSummary.mutatingFileCount || 0} mutating, ${nativeSummary.interactiveFileCount || 0} interactive).`
+    : '';
+
+  return `Optimized context for ${optimized.program} keeps ${optimized.summary.tables} tables, ${optimized.summary.programCalls} program calls, ${optimized.summary.copyMembers} copy members, and ${optimized.summary.sqlStatements} SQL statements.${nativeText}`;
+}
+
 function optimizeContext(context, config = {}) {
   const options = normalizeOptions(config);
   const dependencies = (context && context.dependencies) || {};
@@ -226,7 +238,7 @@ function optimizeContext(context, config = {}) {
   };
 
   optimized.summary = summarize(optimized);
-  optimized.summary.text = `Optimized context for ${optimized.program} keeps ${optimized.summary.tables} tables, ${optimized.summary.programCalls} program calls, ${optimized.summary.copyMembers} copy members, and ${optimized.summary.sqlStatements} SQL statements.`;
+  optimized.summary.text = buildSummaryText(optimized, context);
   optimized.estimatedTokens = estimateTokensFromObject(optimized);
 
   return optimized;

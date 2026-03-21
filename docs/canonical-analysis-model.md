@@ -27,6 +27,8 @@ Top-level fields:
   - `role` is `ROOT`, `SCANNED`, or `CALLED`
 - `entities.tables`
   - deduplicated table dependencies including SQL-only tables
+- `entities.nativeFiles`
+  - deduplicated native file declarations with file kind, declared access, and keyed hints
 - `entities.copyMembers`
   - deduplicated copy member dependencies
 - `entities.sqlStatements`
@@ -42,6 +44,7 @@ Top-level fields:
 
 - `HAS_SOURCE`: root program to scanned source file
 - `USES_TABLE`: root program to table
+- `USES_NATIVE_FILE`: root program to native file with file-level usage attributes
 - `CALLS_PROGRAM`: root program to called program
 - `INCLUDES_COPY`: root program to copy member
 - `OWNS_PROCEDURE`: program to local procedure or subroutine
@@ -49,6 +52,7 @@ Top-level fields:
 - `EXECUTES_SQL`: root program to SQL statement
 - `SQL_REFERENCES_TABLE`: SQL statement to referenced table
 - `CALLS_PROCEDURE`: procedure/program owner to a local procedure, prototype, or explicit unresolved/dynamic reference
+- `ACCESSES_NATIVE_FILE`: procedure/program owner to a native file access site with opcode, access kind, and record-format hints
 
 ## Evidence Schema
 
@@ -90,6 +94,7 @@ Imported provenance currently carries:
 - `graph`
 - `crossProgramGraph`
 - `sourceCatalog`
+- `nativeFileUsage`
 - `db2Metadata`
 - `testData`
 
