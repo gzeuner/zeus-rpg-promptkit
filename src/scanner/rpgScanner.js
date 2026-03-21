@@ -14,6 +14,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 
+const NATIVE_IO_OPCODES = new Set([
+  'CHAIN',
+  'SETLL',
+  'SETGT',
+  'READ',
+  'READE',
+  'READP',
+  'READPE',
+  'WRITE',
+  'UPDATE',
+  'DELETE',
+  'EXFMT',
+]);
+
 function normalizeWhitespace(text) {
   return String(text || '').replace(/\s+/g, ' ').trim();
 }
@@ -53,6 +67,11 @@ function normalizeDefinitionName(rawName, fallbackName) {
     return normalizeName(fallbackName);
   }
   return normalized;
+}
+
+function uniqueSortedStrings(values) {
+  return Array.from(new Set((values || []).map((value) => normalizeName(value)).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b));
 }
 
 function addEntity(map, name, payload) {
@@ -183,6 +202,68 @@ function createProcedureCall({
   };
 }
 
+function createNativeFileDeclaration({
+  filePath,
+  ownerProgram,
+  name,
+  kind,
+  lineNo,
+  declaredAccess,
+  keyed,
+  text,
+}) {
+  return {
+    name: normalizeName(name),
+    ownerProgram: normalizeName(ownerProgram),
+    sourceFile: filePath,
+    kind: normalizeName(kind || 'FILE') || 'FILE',
+    declaredAccess: uniqueSortedStrings(declaredAccess),
+    keyed: Boolean(keyed),
+    evidence: [{
+      file: filePath,
+      line: lineNo,
+      text: normalizeWhitespace(text),
+    }],
+  };
+}
+
+function createNativeFileAccess({
+  filePath,
+  ownerProgram,
+  ownerName,
+  ownerKind,
+  lineNo,
+  text,
+  fileName,
+  fileKind,
+  opcode,
+  accessKind,
+  recordFormat = null,
+  keyed = false,
+  interactive = false,
+  mutating = false,
+}) {
+  return {
+    fileName: normalizeName(fileName),
+    fileKind: normalizeName(fileKind || 'FILE') || 'FILE',
+    opcode: normalizeName(opcode),
+    accessKind: normalizeName(accessKind),
+    recordFormat: recordFormat ? normalizeName(recordFormat) : null,
+    keyed: Boolean(keyed),
+    interactive: Boolean(interactive),
+    mutating: Boolean(mutating),
+    ownerProgram: normalizeName(ownerProgram),
+    ownerName: normalizeName(ownerName),
+    ownerKind: normalizeName(ownerKind),
+    ownerFile: filePath,
+    evidence: [{
+      file: filePath,
+      line: lineNo,
+      text: normalizeWhitespace(text),
+    }],
+  };
+}
+
 function parseFixedPrototype(rawLine) {
   const match = rawLine.match(/^\s*D\s+([A-Z0-9_#$@*]+)\s+PR\b(.*)$/i);
   if (!match) return null;
@@ -190,6 +271,54 @@ function parseFixedPrototype(rawLine) {
     name: match[1],
     detail: match[2] || '',
   };
+}
+
+function inferNativeFileKind(detail) {
+  const upper = String(detail || '').toUpperCase();
+  if (upper.includes('WORKSTN')) return 'WORKSTN';
+  if (upper.includes('PRINTER')) return 'PRINTER';
+  if (upper.includes('DISK')) return 'DISK';
+  return 'FILE';
+}
+
+function parseDeclaredAccess(detail) {
+  const upper = String(detail || '').toUpperCase();
+  const usageMatch = upper.match(/\bUSAGE\s*\(\s*([^)]+)\)/);
+  const modes = new Set();
+  const tokens = usageMatch ? usageMatch[1].split(/[:\s,]+/) : [];
+
+  for (const token of tokens) {
+    const normalized = token.replace(/^\*/, '');
+    if (normalized === 'INPUT') {
+      modes.add('READ');
+    } else if (normalized === 'OUTPUT' || normalized === 'ADD') {
+      modes.add('WRITE');
+    } else if (normalized === 'UPDATE') {
+      modes.add('READ');
+      modes.add('UPDATE');
+    }
+  }
+
+  return Array.from(modes).sort((a, b) => a.localeCompare(b));
+}
+
+function parseFixedDeclaredAccess(rawLine) {
+  const match = rawLine.match(/^\s*F[A-Z0-9_#$@]+\s+([A-Z]{1,3})\b/i);
+  const token = match ? normalizeName(match[1]) : '';
+  const modes = new Set();
+
+  if (token.includes('I')) {
+    modes.add('READ');
+  }
+  if (token.includes('O')) {
+    modes.add('WRITE');
+  }
+  if (token.includes('U')) {
+    modes.add('READ');
+    modes.add('UPDATE');
+  }
+
+  return Array.from(modes).sort((a, b) => a.localeCompare(b));
 }
 
 function collectDefinitions(filePath, lines) {
@@ -405,6 +534,68 @@ function collectDefinitions(filePath, lines) {
   };
 }
 
+function collectNativeFileDeclarations(filePath, lines) {
+  const ownerProgram = toRelativeProgramName(filePath);
+  const nativeFilesMap = new Map();
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const rawLine = lines[i];
+    const lineNo = i + 1;
+    if (isCommentLine(rawLine)) {
+      continue;
+    }
+
+    const trimmed = rawLine.trim();
+    const dclFMatch = rawLine.match(/^\s*dcl-f\s+([A-Z0-9_#$@]+)\b(.*)$/i);
+    if (dclFMatch) {
+      const declaration = createNativeFileDeclaration({
+        filePath,
+        ownerProgram,
+        name: dclFMatch[1],
+        kind: inferNativeFileKind(dclFMatch[2] || ''),
+        lineNo,
+        declaredAccess: parseDeclaredAccess(dclFMatch[2] || ''),
+        keyed: /\bKEYED\b/i.test(dclFMatch[2] || ''),
+        text: trimmed,
+      });
+      addStructuredItem(nativeFilesMap, declaration.name, declaration);
+      continue;
+    }
+
+    const fixedFSpecMatch = rawLine.match(/^\s*F[A-Z0-9_#$@]/i);
+    if (!fixedFSpecMatch) {
+      continue;
+    }
+
+    const trimmedUpper = trimmed.toUpperCase();
+    if (trimmedUpper.startsWith('FROM ')) {
+      continue;
+    }
+
+    const tokenMatch = rawLine.match(/^\s*F([A-Z0-9_#$@]+)/i);
+    const fIndex = rawLine.search(/F/i);
+    const fixedColName = fIndex >= 0 ? rawLine.slice(fIndex + 1, fIndex + 11).replace(/\s+/g, '') : '';
+    const tableName = ((tokenMatch ? tokenMatch[1] : '') || fixedColName).trim();
+    if (!tableName) {
+      continue;
+    }
+
+    const declaration = createNativeFileDeclaration({
+      filePath,
+      ownerProgram,
+      name: tableName,
+      kind: inferNativeFileKind(rawLine),
+      lineNo,
+      declaredAccess: parseFixedDeclaredAccess(rawLine),
+      keyed: /\bK\b/i.test(rawLine),
+      text: trimmed,
+    });
+    addStructuredItem(nativeFilesMap, declaration.name, declaration);
+  }
+
+  return Array.from(nativeFilesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
 function findCurrentOwner(lineNo, ownerProgram, procedures) {
   const active = (procedures || []).find((procedure) => lineNo >= procedure.startLine && lineNo <= procedure.endLine);
   if (active) {
@@ -478,15 +669,183 @@ function classifyProcedureCall(targetName, localProcedures, prototypes, forceInt
   };
 }
 
+function looksLikeStandaloneSql(text) {
+  const normalized = normalizeWhitespace(text).toUpperCase();
+  if (/^SELECT\b.*\bFROM\b/.test(normalized)) return true;
+  if (/^INSERT\b.*\bINTO\b/.test(normalized)) return true;
+  if (/^UPDATE\b.*\bSET\b/.test(normalized)) return true;
+  if (/^DELETE\b\s+FROM\b/.test(normalized)) return true;
+  if (/^MERGE\b\s+INTO\b/.test(normalized)) return true;
+  if (/^WITH\b/.test(normalized)) return true;
+  return false;
+}
+
+function mapNativeOpcode(opcode) {
+  const normalized = normalizeName(opcode);
+  if (['CHAIN', 'READ', 'READE', 'READP', 'READPE'].includes(normalized)) {
+    return {
+      accessKind: 'READ',
+      keyed: ['CHAIN', 'READE', 'READPE'].includes(normalized),
+      interactive: false,
+      mutating: false,
+    };
+  }
+  if (['SETLL', 'SETGT'].includes(normalized)) {
+    return {
+      accessKind: 'POSITION',
+      keyed: true,
+      interactive: false,
+      mutating: false,
+    };
+  }
+  if (normalized === 'WRITE') {
+    return {
+      accessKind: 'WRITE',
+      keyed: false,
+      interactive: false,
+      mutating: true,
+    };
+  }
+  if (normalized === 'UPDATE') {
+    return {
+      accessKind: 'UPDATE',
+      keyed: false,
+      interactive: false,
+      mutating: true,
+    };
+  }
+  if (normalized === 'DELETE') {
+    return {
+      accessKind: 'DELETE',
+      keyed: false,
+      interactive: false,
+      mutating: true,
+    };
+  }
+  if (normalized === 'EXFMT') {
+    return {
+      accessKind: 'DISPLAY',
+      keyed: false,
+      interactive: true,
+      mutating: false,
+    };
+  }
+  return null;
+}
+
+function extractTargetToken(text) {
+  const matches = String(text || '').match(/[A-Z0-9_#$@*]+/gi);
+  if (!matches || matches.length === 0) return '';
+  return matches[matches.length - 1];
+}
+
+function parseFreeFormNativeIo(trimmed) {
+  if (!trimmed || looksLikeStandaloneSql(trimmed)) {
+    return null;
+  }
+
+  const opcodeMatch = trimmed.match(/^(CHAIN|SETLL|SETGT|READPE|READP|READE|READ|WRITE|UPDATE|DELETE|EXFMT)\b(?:\s*\([^)]*\))?\s+(.+)$/i);
+  if (!opcodeMatch) {
+    return null;
+  }
+
+  const opcode = normalizeName(opcodeMatch[1]);
+  if (!NATIVE_IO_OPCODES.has(opcode)) {
+    return null;
+  }
+
+  const target = extractTargetToken(opcodeMatch[2].replace(/[;)]\s*$/, ''));
+  if (!target) {
+    return null;
+  }
+
+  return {
+    opcode,
+    target: normalizeName(target),
+  };
+}
+
+function parseFixedFormNativeIo(rawLine) {
+  const match = rawLine.match(/^\s*C\b.*?\b(CHAIN|SETLL|SETGT|READPE|READP|READE|READ|WRITE|UPDATE|DELETE|EXFMT)\b\s+([A-Z0-9_#$@*]+)/i);
+  if (!match) {
+    return null;
+  }
+
+  const opcode = normalizeName(match[1]);
+  if (!NATIVE_IO_OPCODES.has(opcode)) {
+    return null;
+  }
+
+  return {
+    opcode,
+    target: normalizeName(match[2]),
+  };
+}
+
+function resolveNativeFileTarget(targetName, opcode, nativeFiles) {
+  const normalizedTarget = normalizeName(targetName);
+  if (!normalizedTarget) {
+    return null;
+  }
+
+  const direct = (nativeFiles || []).find((entry) => entry.name === normalizedTarget);
+  if (direct) {
+    return {
+      fileName: direct.name,
+      fileKind: direct.kind || 'FILE',
+      keyed: Boolean(direct.keyed),
+      recordFormat: null,
+    };
+  }
+
+  if (normalizeName(opcode) === 'EXFMT') {
+    const workstationFiles = (nativeFiles || []).filter((entry) => entry.kind === 'WORKSTN');
+    if (workstationFiles.length === 1) {
+      return {
+        fileName: workstationFiles[0].name,
+        fileKind: workstationFiles[0].kind,
+        keyed: Boolean(workstationFiles[0].keyed),
+        recordFormat: normalizedTarget,
+      };
+    }
+  }
+
+  if (normalizeName(opcode) === 'WRITE') {
+    const printerFiles = (nativeFiles || []).filter((entry) => entry.kind === 'PRINTER');
+    if (printerFiles.length === 1) {
+      return {
+        fileName: printerFiles[0].name,
+        fileKind: printerFiles[0].kind,
+        keyed: Boolean(printerFiles[0].keyed),
+        recordFormat: normalizedTarget,
+      };
+    }
+
+    const workstationFiles = (nativeFiles || []).filter((entry) => entry.kind === 'WORKSTN');
+    if (workstationFiles.length === 1) {
+      return {
+        fileName: workstationFiles[0].name,
+        fileKind: workstationFiles[0].kind,
+        keyed: Boolean(workstationFiles[0].keyed),
+        recordFormat: normalizedTarget,
+      };
+    }
+  }
+
+  return null;
+}
+
 function scanContent(filePath, content) {
   const lines = content.split(/\r?\n/);
   const tablesMap = new Map();
   const callsMap = new Map();
   const copyMembersMap = new Map();
   const procedureCallsMap = new Map();
+  const nativeFileAccessesMap = new Map();
   const sqlStatements = [];
 
   const { ownerProgram, procedures, prototypes } = collectDefinitions(filePath, lines);
+  const nativeFiles = collectNativeFileDeclarations(filePath, lines);
 
   let inExecSql = false;
   let execStartLine = 0;
@@ -534,8 +893,27 @@ function scanContent(filePath, content) {
         call.resolution,
         call.targetKind,
         call.targetProgram || '',
+        (call.evidence && call.evidence[0] && (call.evidence[0].line || call.evidence[0].startLine)) || 0,
       ].join('|'),
       call,
+    );
+  };
+
+  const addNativeFileAccessEntry = (access) => {
+    addStructuredItem(
+      nativeFileAccessesMap,
+      [
+        access.fileName,
+        access.ownerProgram,
+        access.ownerFile,
+        access.ownerName,
+        access.ownerKind,
+        access.opcode,
+        access.accessKind,
+        access.recordFormat || '',
+        (access.evidence && access.evidence[0] && access.evidence[0].line) || 0,
+      ].join('|'),
+      access,
     );
   };
 
@@ -592,6 +970,30 @@ function scanContent(filePath, content) {
         addEntity(copyMembersMap, copyName, {
           evidence: { file: filePath, line: lineNo, text: trimmed },
         });
+      }
+    }
+
+    const nativeIoMatch = parseFreeFormNativeIo(trimmed) || parseFixedFormNativeIo(rawLine);
+    if (nativeIoMatch) {
+      const resolvedTarget = resolveNativeFileTarget(nativeIoMatch.target, nativeIoMatch.opcode, nativeFiles);
+      const opcodeAttributes = mapNativeOpcode(nativeIoMatch.opcode);
+      if (resolvedTarget && opcodeAttributes) {
+        addNativeFileAccessEntry(createNativeFileAccess({
+          filePath,
+          ownerProgram: owner.ownerProgram,
+          ownerName: owner.ownerName,
+          ownerKind: owner.ownerKind,
+          lineNo,
+          text: trimmed,
+          fileName: resolvedTarget.fileName,
+          fileKind: resolvedTarget.fileKind,
+          opcode: nativeIoMatch.opcode,
+          accessKind: opcodeAttributes.accessKind,
+          recordFormat: resolvedTarget.recordFormat,
+          keyed: opcodeAttributes.keyed || resolvedTarget.keyed,
+          interactive: opcodeAttributes.interactive || resolvedTarget.fileKind === 'WORKSTN',
+          mutating: opcodeAttributes.mutating,
+        }));
       }
     }
 
@@ -697,7 +1099,7 @@ function scanContent(filePath, content) {
       continue;
     }
 
-    if (/\b(SELECT|INSERT|UPDATE|DELETE|MERGE|WITH)\b/i.test(rawLine)) {
+    if (looksLikeStandaloneSql(rawLine)) {
       const sqlText = normalizeWhitespace(trimmed);
       const tables = extractSqlTables(sqlText);
       sqlStatements.push({
@@ -744,6 +1146,14 @@ function scanContent(filePath, content) {
       if (a.name !== b.name) return a.name.localeCompare(b.name);
       return a.resolution.localeCompare(b.resolution);
     }),
+    nativeFiles,
+    nativeFileAccesses: Array.from(nativeFileAccessesMap.values()).sort((a, b) => {
+      if (a.fileName !== b.fileName) return a.fileName.localeCompare(b.fileName);
+      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+      if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
+      if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
+      return ((a.evidence && a.evidence[0] && a.evidence[0].line) || 0) - ((b.evidence && b.evidence[0] && b.evidence[0].line) || 0);
+    }),
     notes: [],
   };
 }
@@ -783,7 +1193,7 @@ function mergeEntities(targetMap, entities, withKind) {
   }
 }
 
-function mergeStructuredItems(scanResults, key, identityBuilder) {
+function mergeStructuredItems(scanResults, key, identityBuilder, merger) {
   const map = new Map();
   for (const result of scanResults || []) {
     for (const item of result[key] || []) {
@@ -796,6 +1206,9 @@ function mergeStructuredItems(scanResults, key, identityBuilder) {
         });
       }
       const target = map.get(identity);
+      if (typeof merger === 'function') {
+        merger(target, item);
+      }
       for (const evidence of item.evidence || []) {
         const evidenceKey = JSON.stringify(evidence);
         const exists = target.evidence.some((entry) => JSON.stringify(entry) === evidenceKey);
@@ -903,12 +1316,44 @@ function scanSourceFiles(filePaths, options = {}) {
         item.resolution,
         item.targetKind,
         item.targetProgram || '',
+        (item.evidence && item.evidence[0] && (item.evidence[0].line || item.evidence[0].startLine)) || 0,
       ].join('|'),
     ).sort((a, b) => {
       if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
       if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
       if (a.name !== b.name) return a.name.localeCompare(b.name);
       return a.resolution.localeCompare(b.resolution);
+    }),
+    nativeFiles: mergeStructuredItems(
+      scanResults,
+      'nativeFiles',
+      (item) => item.name,
+      (target, item) => {
+        target.kind = target.kind === 'FILE' && item.kind ? item.kind : (target.kind || item.kind || 'FILE');
+        target.keyed = Boolean(target.keyed || item.keyed);
+        target.declaredAccess = uniqueSortedStrings([...(target.declaredAccess || []), ...(item.declaredAccess || [])]);
+      },
+    ).sort((a, b) => a.name.localeCompare(b.name)),
+    nativeFileAccesses: mergeStructuredItems(
+      scanResults,
+      'nativeFileAccesses',
+      (item) => [
+        item.fileName,
+        item.ownerProgram,
+        item.ownerFile,
+        item.ownerName,
+        item.ownerKind,
+        item.opcode,
+        item.accessKind,
+        item.recordFormat || '',
+        (item.evidence && item.evidence[0] && item.evidence[0].line) || 0,
+      ].join('|'),
+    ).sort((a, b) => {
+      if (a.fileName !== b.fileName) return a.fileName.localeCompare(b.fileName);
+      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+      if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
+      if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
+      return ((a.evidence && a.evidence[0] && a.evidence[0].line) || 0) - ((b.evidence && b.evidence[0] && b.evidence[0].line) || 0);
     }),
     notes,
   };
