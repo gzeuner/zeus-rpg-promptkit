@@ -40,6 +40,27 @@ test('buildCanonicalAnalysisModel creates a validated semantic core with provena
         tables: ['orders'],
         evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 8, endLine: 10 }],
       }],
+      nativeFiles: [{
+        name: 'orders',
+        kind: 'disk',
+        declaredAccess: ['READ'],
+        keyed: true,
+        evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 3, endLine: 3 }],
+      }],
+      nativeFileAccesses: [{
+        fileName: 'orders',
+        fileKind: 'disk',
+        opcode: 'CHAIN',
+        accessKind: 'READ',
+        ownerProgram: 'orderpgm',
+        ownerName: 'orderpgm',
+        ownerKind: 'program',
+        keyed: true,
+        interactive: false,
+        mutating: false,
+        ownerFile: path.join(sourceRoot, 'ORDERPGM.rpgle'),
+        evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), line: 4 }],
+      }],
     },
     notes: ['Scanner note'],
     importManifest: {
@@ -67,6 +88,8 @@ test('buildCanonicalAnalysisModel creates a validated semantic core with provena
   assert.equal(canonicalAnalysis.sourceFiles[0].provenance.import.member, 'ORDERPGM');
   assert.ok(canonicalAnalysis.entities.programs.some((entry) => entry.id === 'PROGRAM:ORDERPGM' && entry.role === 'ROOT'));
   assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'USES_TABLE' && entry.to === 'TABLE:ORDERS'));
+  assert.ok(canonicalAnalysis.entities.nativeFiles.some((entry) => entry.id === 'NATIVE_FILE:ORDERS'));
+  assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'USES_NATIVE_FILE' && entry.to === 'NATIVE_FILE:ORDERS'));
   assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'CALLS_PROGRAM' && entry.to === 'PROGRAM:INVPGM'));
   assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'EXECUTES_SQL'));
 
@@ -74,6 +97,8 @@ test('buildCanonicalAnalysisModel creates a validated semantic core with provena
   assert.equal(projectedContext.program, 'ORDERPGM');
   assert.deepEqual(projectedContext.dependencies.tables.map((entry) => entry.name), ['ORDERS']);
   assert.deepEqual(projectedContext.dependencies.programCalls.map((entry) => entry.name), ['INVPGM']);
+  assert.equal(projectedContext.nativeFileUsage.summary.fileCount, 1);
+  assert.equal(projectedContext.nativeFileUsage.summary.keyedFileCount, 1);
   assert.equal(projectedContext.sql.statements[0].evidence[0].file, 'ORDERPGM.rpgle');
 });
 

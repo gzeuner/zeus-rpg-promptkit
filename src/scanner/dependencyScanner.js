@@ -105,6 +105,8 @@ function aggregateDependencies(scanResults) {
     calls: mergeEntityList(scanResults, 'calls', 'PROGRAM'),
     copyMembers: mergeEntityList(scanResults, 'copyMembers'),
     sqlStatements: mergeSqlStatements(scanResults),
+    nativeFiles: mergeEntityList(scanResults, 'nativeFiles', 'FILE'),
+    nativeFileAccesses: (scanResults || []).flatMap((result) => result.nativeFileAccesses || []),
     notes,
   };
 }

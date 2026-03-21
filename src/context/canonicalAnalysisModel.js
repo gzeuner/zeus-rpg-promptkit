@@ -133,7 +133,35 @@ function mergeSqlTablesIntoDependencies(tables, sqlTableNames) {
   return merged.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function buildRiskHints(dependencies, sql, procedureCalls) {
+function chooseMoreSpecificNativeFileKind(currentKind, nextKind) {
+  const rank = {
+    FILE: 0,
+    DISK: 1,
+    WORKSTN: 2,
+    PRINTER: 2,
+  };
+  const current = normalizeName(currentKind || 'FILE') || 'FILE';
+  const next = normalizeName(nextKind || 'FILE') || 'FILE';
+  return (rank[next] || 0) > (rank[current] || 0) ? next : current;
+}
+
+function defaultNativeFileUsage() {
+  return {
+    summary: {
+      fileCount: 0,
+      readOnlyFileCount: 0,
+      mutatingFileCount: 0,
+      interactiveFileCount: 0,
+      workstationFileCount: 0,
+      printerFileCount: 0,
+      keyedFileCount: 0,
+      recordFormatCount: 0,
+    },
+    files: [],
+  };
+}
+
+function buildRiskHints(dependencies, sql, procedureCalls, nativeFileUsage) {
   const hints = [];
   if ((sql.statements || []).length > 0) {
     hints.push('Embedded SQL detected');
@@ -152,6 +180,12 @@ function buildRiskHints(dependencies, sql, procedureCalls) {
   }
   if (((dependencies.tables || []).length + (dependencies.programCalls || []).length) >= 10) {
     hints.push('Many external dependencies');
+  }
+  if (nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.mutatingFileCount > 0) {
+    hints.push('Mutating native file I/O detected');
+  }
+  if (nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.interactiveFileCount > 0) {
+    hints.push('Interactive workstation I/O detected');
   }
   return hints;
 }
@@ -347,6 +381,210 @@ function normalizeProcedureCalls(procedureCalls, sourceRoot) {
     });
 }
 
+function normalizeNativeFiles(nativeFiles, sourceRoot) {
+  const map = new Map();
+
+  for (const item of nativeFiles || []) {
+    if (!item || typeof item !== 'object') continue;
+    const name = normalizeName(item.name);
+    if (!name) continue;
+
+    const normalized = {
+      name,
+      kind: normalizeName(item.kind || 'FILE') || 'FILE',
+      declaredAccess: uniqueSortedStrings(item.declaredAccess || []),
+      keyed: Boolean(item.keyed),
+      evidence: normalizeEvidenceList(item.evidence || [], sourceRoot),
+    };
+
+    if (!map.has(name)) {
+      map.set(name, {
+        ...normalized,
+        evidence: [],
+      });
+    }
+
+    const target = map.get(name);
+    target.kind = chooseMoreSpecificNativeFileKind(target.kind, normalized.kind);
+    target.keyed = Boolean(target.keyed || normalized.keyed);
+    target.declaredAccess = uniqueSortedStrings([...(target.declaredAccess || []), ...(normalized.declaredAccess || [])]);
+
+    for (const evidence of normalized.evidence || []) {
+      const serialized = JSON.stringify(evidence);
+      const exists = target.evidence.some((entry) => JSON.stringify(entry) === serialized);
+      if (!exists) {
+        target.evidence.push(evidence);
+      }
+    }
+  }
+
+  return Array.from(map.values())
+    .map((item) => ({
+      ...item,
+      id: createEntityId('NATIVE_FILE', item.name),
+      evidenceCount: item.evidence.length,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function normalizeNativeFileAccesses(nativeFileAccesses, sourceRoot) {
+  return normalizeStructuredItems(
+    nativeFileAccesses,
+    sourceRoot,
+    (item, rootDir) => ({
+      fileName: normalizeName(item.fileName),
+      fileKind: normalizeName(item.fileKind || 'FILE') || 'FILE',
+      opcode: normalizeName(item.opcode),
+      accessKind: normalizeName(item.accessKind),
+      recordFormat: item.recordFormat ? normalizeName(item.recordFormat) : null,
+      keyed: Boolean(item.keyed),
+      interactive: Boolean(item.interactive),
+      mutating: Boolean(item.mutating),
+      ownerProgram: normalizeName(item.ownerProgram),
+      ownerName: normalizeName(item.ownerName),
+      ownerKind: normalizeName(item.ownerKind),
+      ownerFile: normalizeRelativePath(rootDir, item.ownerFile || ''),
+      evidence: normalizeEvidenceList(item.evidence || [], rootDir),
+    }),
+    (item) => [
+      item.fileName,
+      item.ownerProgram,
+      item.ownerFile,
+      item.ownerName,
+      item.ownerKind,
+      item.opcode,
+      item.accessKind,
+      item.recordFormat || '',
+      ((item.evidence && item.evidence[0] && (item.evidence[0].line || item.evidence[0].startLine)) || 0),
+    ].join('|'),
+  )
+    .map((item) => ({
+      ...item,
+      evidenceCount: item.evidence.length,
+    }))
+    .sort((a, b) => {
+      if (a.fileName !== b.fileName) return a.fileName.localeCompare(b.fileName);
+      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+      if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
+      if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
+      return (((a.evidence && a.evidence[0] && (a.evidence[0].line || a.evidence[0].startLine)) || 0)
+        - ((b.evidence && b.evidence[0] && (b.evidence[0].line || b.evidence[0].startLine)) || 0));
+    });
+}
+
+function summarizeNativeFileUsage(nativeFiles, nativeFileAccesses) {
+  const files = new Map();
+
+  for (const nativeFile of nativeFiles || []) {
+    files.set(nativeFile.name, {
+      name: nativeFile.name,
+      kind: nativeFile.kind || 'FILE',
+      keyed: Boolean(nativeFile.keyed),
+      declaredAccess: uniqueSortedStrings(nativeFile.declaredAccess || []),
+      access: {
+        read: (nativeFile.declaredAccess || []).includes('READ'),
+        write: (nativeFile.declaredAccess || []).includes('WRITE'),
+        update: (nativeFile.declaredAccess || []).includes('UPDATE'),
+        delete: false,
+        position: false,
+        display: nativeFile.kind === 'WORKSTN',
+        mutating: (nativeFile.declaredAccess || []).some((entry) => ['WRITE', 'UPDATE'].includes(entry)),
+        interactive: nativeFile.kind === 'WORKSTN',
+      },
+      owners: [],
+      recordFormats: [],
+      evidenceCount: Number(nativeFile.evidenceCount) || (nativeFile.evidence || []).length || 0,
+    });
+  }
+
+  for (const access of nativeFileAccesses || []) {
+    if (!access.fileName) continue;
+    if (!files.has(access.fileName)) {
+      files.set(access.fileName, {
+        name: access.fileName,
+        kind: access.fileKind || 'FILE',
+        keyed: Boolean(access.keyed),
+        declaredAccess: [],
+        access: {
+          read: false,
+          write: false,
+          update: false,
+          delete: false,
+          position: false,
+          display: false,
+          mutating: false,
+          interactive: false,
+        },
+        owners: [],
+        recordFormats: [],
+        evidenceCount: 0,
+      });
+    }
+
+    const file = files.get(access.fileName);
+    file.kind = chooseMoreSpecificNativeFileKind(file.kind, access.fileKind || 'FILE');
+    file.keyed = Boolean(file.keyed || access.keyed);
+    file.evidenceCount += Number(access.evidenceCount) || (access.evidence || []).length || 0;
+
+    if (access.accessKind === 'READ') file.access.read = true;
+    if (access.accessKind === 'WRITE') file.access.write = true;
+    if (access.accessKind === 'UPDATE') file.access.update = true;
+    if (access.accessKind === 'DELETE') file.access.delete = true;
+    if (access.accessKind === 'POSITION') file.access.position = true;
+    if (access.accessKind === 'DISPLAY') file.access.display = true;
+    if (access.mutating) file.access.mutating = true;
+    if (access.interactive) file.access.interactive = true;
+
+    const ownerKey = `${access.ownerKind}:${access.ownerName}`;
+    const ownerExists = file.owners.some((entry) => `${entry.kind}:${entry.name}` === ownerKey);
+    if (!ownerExists) {
+      file.owners.push({
+        name: access.ownerName,
+        kind: access.ownerKind,
+      });
+      file.owners.sort((a, b) => {
+        if (a.kind !== b.kind) return a.kind.localeCompare(b.kind);
+        return a.name.localeCompare(b.name);
+      });
+    }
+
+    if (access.recordFormat) {
+      let recordFormat = file.recordFormats.find((entry) => entry.name === access.recordFormat);
+      if (!recordFormat) {
+        recordFormat = {
+          name: access.recordFormat,
+          operations: [],
+        };
+        file.recordFormats.push(recordFormat);
+      }
+      recordFormat.operations = uniqueSortedStrings([...(recordFormat.operations || []), access.opcode]);
+      file.recordFormats.sort((a, b) => a.name.localeCompare(b.name));
+    }
+  }
+
+  const fileList = Array.from(files.values())
+    .map((file) => ({
+      ...file,
+      declaredAccess: uniqueSortedStrings(file.declaredAccess || []),
+      recordFormats: (file.recordFormats || []).sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    summary: {
+      fileCount: fileList.length,
+      readOnlyFileCount: fileList.filter((file) => file.access.read && !file.access.mutating && !file.access.interactive).length,
+      mutatingFileCount: fileList.filter((file) => file.access.mutating).length,
+      interactiveFileCount: fileList.filter((file) => file.access.interactive).length,
+      workstationFileCount: fileList.filter((file) => file.kind === 'WORKSTN').length,
+      printerFileCount: fileList.filter((file) => file.kind === 'PRINTER').length,
+      keyedFileCount: fileList.filter((file) => file.keyed || file.access.position).length,
+      recordFormatCount: fileList.reduce((sum, file) => sum + ((file.recordFormats || []).length), 0),
+    },
+    files: fileList,
+  };
+}
+
 function buildSqlEntities(sqlStatements) {
   return sqlStatements.map((statement, index) => ({
     ...statement,
@@ -450,7 +688,21 @@ function resolveCallTargetEntityId(call, procedures, prototypes, procedureRefere
   return reference ? reference.id : null;
 }
 
-function buildRelations(rootProgram, sourceFiles, tables, programCalls, copyMembers, sqlStatements, procedures, prototypes, procedureReferences, procedureCalls) {
+function buildRelations(
+  rootProgram,
+  sourceFiles,
+  tables,
+  programCalls,
+  copyMembers,
+  sqlStatements,
+  procedures,
+  prototypes,
+  procedureReferences,
+  procedureCalls,
+  nativeFiles,
+  nativeFileAccesses,
+  nativeFileUsage,
+) {
   const relations = [];
   const rootProgramId = createEntityId('PROGRAM', rootProgram);
 
@@ -471,6 +723,26 @@ function buildRelations(rootProgram, sourceFiles, tables, programCalls, copyMemb
       from: rootProgramId,
       to: createEntityId('TABLE', table.name),
       evidence: table.evidence || [],
+    });
+  }
+
+  for (const nativeFile of nativeFiles || []) {
+    const usageEntry = nativeFileUsage && Array.isArray(nativeFileUsage.files)
+      ? nativeFileUsage.files.find((entry) => entry.name === nativeFile.name)
+      : null;
+    relations.push({
+      id: createRelationId('USES_NATIVE_FILE', rootProgramId, nativeFile.id),
+      type: 'USES_NATIVE_FILE',
+      from: rootProgramId,
+      to: nativeFile.id,
+      evidence: nativeFile.evidence || [],
+      attributes: {
+        fileKind: nativeFile.kind || 'FILE',
+        keyed: Boolean(nativeFile.keyed),
+        declaredAccess: nativeFile.declaredAccess || [],
+        mutating: Boolean(usageEntry && usageEntry.access && usageEntry.access.mutating),
+        interactive: Boolean(usageEntry && usageEntry.access && usageEntry.access.interactive),
+      },
     });
   }
 
@@ -570,10 +842,36 @@ function buildRelations(rootProgram, sourceFiles, tables, programCalls, copyMemb
     });
   }
 
+  for (const access of nativeFileAccesses || []) {
+    const from = resolveCallSourceEntityId(access, procedures);
+    const to = createEntityId('NATIVE_FILE', access.fileName);
+    if (!from || !to) {
+      continue;
+    }
+    const firstEvidence = access.evidence && access.evidence[0] ? access.evidence[0] : {};
+    const accessSiteMarker = Number(firstEvidence.line || firstEvidence.startLine || 0);
+    relations.push({
+      id: `${createRelationId('ACCESSES_NATIVE_FILE', from, to)}:${accessSiteMarker}:${access.opcode}`,
+      type: 'ACCESSES_NATIVE_FILE',
+      from,
+      to,
+      evidence: access.evidence || [],
+      attributes: {
+        opcode: access.opcode,
+        accessKind: access.accessKind,
+        recordFormat: access.recordFormat,
+        keyed: Boolean(access.keyed),
+        interactive: Boolean(access.interactive),
+        mutating: Boolean(access.mutating),
+        fileKind: access.fileKind || 'FILE',
+      },
+    });
+  }
+
   return relations.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, procedures, prototypes, procedureCalls) {
+function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, procedures, prototypes, procedureCalls, nativeFileUsage) {
   const summary = {
     sourceFileCount: sourceFiles.length,
     tableCount: (dependencies.tables || []).length,
@@ -587,8 +885,12 @@ function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, pro
     externalProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'EXTERNAL').length,
     dynamicProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'DYNAMIC').length,
     unresolvedProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'UNRESOLVED').length,
+    nativeFileCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.fileCount) || 0,
+    mutatingNativeFileCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.mutatingFileCount) || 0,
+    interactiveNativeFileCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.interactiveFileCount) || 0,
+    recordFormatCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.recordFormatCount) || 0,
   };
-  summary.text = `Program ${normalizeName(rootProgram)} references ${summary.tableCount} tables, calls ${summary.programCallCount} programs, includes ${summary.copyMemberCount} copy members, contains ${summary.sqlStatementCount} SQL statements, and exposes ${summary.procedureCount} procedures with ${summary.procedureCallCount} procedure call sites.`;
+  summary.text = `Program ${normalizeName(rootProgram)} references ${summary.tableCount} tables, calls ${summary.programCallCount} programs, includes ${summary.copyMemberCount} copy members, contains ${summary.sqlStatementCount} SQL statements, exposes ${summary.procedureCount} procedures with ${summary.procedureCallCount} procedure call sites, and uses ${summary.nativeFileCount} native files (${summary.mutatingNativeFileCount} mutating, ${summary.interactiveNativeFileCount} interactive).`;
   return summary;
 }
 
@@ -651,6 +953,9 @@ function buildCanonicalAnalysisModel({
   const procedures = normalizeProcedures(dependencies && dependencies.procedures, normalizedSourceRoot);
   const prototypes = normalizePrototypes(dependencies && dependencies.prototypes, normalizedSourceRoot);
   const procedureCalls = normalizeProcedureCalls(dependencies && dependencies.procedureCalls, normalizedSourceRoot);
+  const nativeFiles = normalizeNativeFiles(dependencies && dependencies.nativeFiles, normalizedSourceRoot);
+  const nativeFileAccesses = normalizeNativeFileAccesses(dependencies && dependencies.nativeFileAccesses, normalizedSourceRoot);
+  const nativeFileUsage = summarizeNativeFileUsage(nativeFiles, nativeFileAccesses);
   const sqlTableNames = uniqueSortedStrings(sqlStatements.flatMap((statement) => statement.tables || []).map((name) => normalizeName(name)));
   const mergedTables = mergeSqlTablesIntoDependencies(tables, sqlTableNames)
     .map((table) => ({
@@ -690,6 +995,7 @@ function buildCanonicalAnalysisModel({
     entities: {
       programs: buildProgramEntities(normalizedProgram, normalizedSourceFiles, programCalls, procedures, prototypes),
       tables: mergedTables,
+      nativeFiles,
       copyMembers,
       sqlStatements,
       procedures,
@@ -707,15 +1013,19 @@ function buildCanonicalAnalysisModel({
       prototypes,
       procedureReferences,
       procedureCalls,
+      nativeFiles,
+      nativeFileAccesses,
+      nativeFileUsage,
     ),
     enrichments: {
-      summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements, procedures, prototypes, procedureCalls),
+      summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements, procedures, prototypes, procedureCalls, nativeFileUsage),
       aiContext: {
         programPurposeHint: '',
         primaryTables: dependencyBlock.tables.slice(0, 10).map((entry) => entry.name),
         primaryCalls: dependencyBlock.programCalls.slice(0, 10).map((entry) => entry.name),
-        riskHints: buildRiskHints(dependencyBlock, sqlBlock, procedureCalls),
+        riskHints: buildRiskHints(dependencyBlock, sqlBlock, procedureCalls, nativeFileUsage),
       },
+      nativeFileUsage,
       graph: defaultGraphSummary(),
       crossProgramGraph: defaultCrossProgramSummary(),
       sourceCatalog: null,
@@ -746,6 +1056,7 @@ function enrichCanonicalAnalysisModel(model, updates = {}) {
       ...model.enrichments,
       ...(updates.summary ? { summary: mergeObject(model.enrichments.summary, updates.summary) } : {}),
       ...(updates.aiContext ? { aiContext: mergeObject(model.enrichments.aiContext, updates.aiContext) } : {}),
+      ...(updates.nativeFileUsage ? { nativeFileUsage: mergeObject(model.enrichments.nativeFileUsage, updates.nativeFileUsage) } : {}),
       ...(updates.graph ? { graph: mergeObject(model.enrichments.graph, updates.graph) } : {}),
       ...(updates.crossProgramGraph ? { crossProgramGraph: mergeObject(model.enrichments.crossProgramGraph, updates.crossProgramGraph) } : {}),
       ...(updates.sourceCatalog !== undefined ? { sourceCatalog: updates.sourceCatalog } : {}),
@@ -887,6 +1198,7 @@ module.exports = {
   buildCanonicalAnalysisModel,
   defaultCrossProgramSummary,
   defaultGraphSummary,
+  defaultNativeFileUsage,
   enrichCanonicalAnalysisModel,
   validateCanonicalAnalysisModel,
 };

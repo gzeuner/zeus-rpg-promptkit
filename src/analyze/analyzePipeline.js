@@ -136,6 +136,8 @@ function collectAndScanStage(state) {
       procedures: scanSummary.procedures,
       prototypes: scanSummary.prototypes,
       procedureCalls: scanSummary.procedureCalls,
+      nativeFiles: scanSummary.nativeFiles,
+      nativeFileAccesses: scanSummary.nativeFileAccesses,
     },
     stageMetadata: {
       sourceFileCount: sourceFiles.length,
@@ -152,6 +154,8 @@ function collectAndScanStage(state) {
       procedureCount: (scanSummary.procedures || []).length,
       prototypeCount: (scanSummary.prototypes || []).length,
       procedureCallCount: (scanSummary.procedureCalls || []).length,
+      nativeFileCount: (scanSummary.nativeFiles || []).length,
+      nativeFileAccessCount: (scanSummary.nativeFileAccesses || []).length,
       noteCount: notes.length,
     },
     stageDiagnostics,

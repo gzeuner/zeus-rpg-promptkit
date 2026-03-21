@@ -69,6 +69,10 @@ function collectSqlStats(context) {
     .sort((a, b) => a.type.localeCompare(b.type));
 }
 
+function collectNativeFileUsage(context) {
+  return (context && context.nativeFileUsage) || { summary: {}, files: [] };
+}
+
 function listSection(items, emptyLabel = 'None detected') {
   if (!items || items.length === 0) {
     return `- ${emptyLabel}`;
@@ -100,12 +104,14 @@ function sqlSection(stats, optimizedContext) {
   return lines.join('\n');
 }
 
-function buildOverview(program, tables, calls, copies, sqlStats) {
+function buildOverview(program, tables, calls, copies, sqlStats, nativeFileUsage) {
   const sqlCount = (sqlStats || []).reduce((sum, entry) => sum + entry.count, 0);
   const hasSql = sqlCount > 0;
+  const nativeSummary = (nativeFileUsage && nativeFileUsage.summary) || {};
   return [
     `Program ${program} interacts with ${tables.length} database table${tables.length === 1 ? '' : 's'} and calls ${calls.length} external program${calls.length === 1 ? '' : 's'}.`,
     `The program ${hasSql ? 'contains embedded SQL statements' : 'does not contain embedded SQL statements'} and includes ${copies.length} copy member${copies.length === 1 ? '' : 's'}.`,
+    `Native file usage covers ${nativeSummary.fileCount || 0} file${(nativeSummary.fileCount || 0) === 1 ? '' : 's'}, including ${nativeSummary.mutatingFileCount || 0} mutating and ${nativeSummary.interactiveFileCount || 0} interactive file${(nativeSummary.interactiveFileCount || 0) === 1 ? '' : 's'}.`,
   ].join(' ');
 }
 
@@ -113,9 +119,10 @@ function first(items, count) {
   return (items || []).slice(0, count);
 }
 
-function buildDataFlow(program, tables, calls, sqlStats) {
+function buildDataFlow(program, tables, calls, sqlStats, nativeFileUsage) {
   const sqlRead = (sqlStats || []).some((entry) => entry.type === 'SELECT');
   const sqlWrite = (sqlStats || []).some((entry) => ['UPDATE', 'INSERT', 'DELETE', 'MERGE'].includes(entry.type));
+  const nativeSummary = (nativeFileUsage && nativeFileUsage.summary) || {};
   const tableList = first(tables, 3);
   const callList = first(calls, 2);
 
@@ -135,7 +142,39 @@ function buildDataFlow(program, tables, calls, sqlStats) {
     parts.push(`invokes external program${callList.length === 1 ? '' : 's'} ${callList.join(', ')}`);
   }
 
+  if ((nativeSummary.interactiveFileCount || 0) > 0) {
+    parts.push('performs interactive workstation I/O');
+  }
+
+  if ((nativeSummary.mutatingFileCount || 0) > 0) {
+    parts.push('updates native files');
+  }
+
   return `${parts.join(', ')}.`;
+}
+
+function nativeFileSection(nativeFileUsage) {
+  const summary = (nativeFileUsage && nativeFileUsage.summary) || {};
+  const files = (nativeFileUsage && nativeFileUsage.files) || [];
+
+  const details = files.length > 0
+    ? files.map((file) => {
+      const flags = [];
+      if (file.kind) flags.push(file.kind);
+      if (file.access && file.access.read) flags.push('READ');
+      if (file.access && file.access.write) flags.push('WRITE');
+      if (file.access && file.access.update) flags.push('UPDATE');
+      if (file.access && file.access.delete) flags.push('DELETE');
+      if (file.access && file.access.display) flags.push('DISPLAY');
+      if (file.keyed) flags.push('KEYED');
+      if (file.access && file.access.interactive) flags.push('INTERACTIVE');
+      if (file.access && file.access.mutating) flags.push('MUTATING');
+      const recordFormats = (file.recordFormats || []).map((entry) => entry.name).join(', ');
+      return `- ${file.name}${flags.length ? ` [${flags.join(', ')}]` : ''}${recordFormats ? ` record formats: ${recordFormats}` : ''}`;
+    }).join('\n')
+    : '- None detected';
+
+  return `- Native Files: ${summary.fileCount || 0}\n- Mutating Files: ${summary.mutatingFileCount || 0}\n- Interactive Files: ${summary.interactiveFileCount || 0}\n- Workstation Files: ${summary.workstationFileCount || 0}\n- Printer Files: ${summary.printerFileCount || 0}\n- Keyed Files: ${summary.keyedFileCount || 0}\n- Record Formats: ${summary.recordFormatCount || 0}\n\n${details}`;
 }
 
 function renderMermaidBlock(graph, fallbackText) {
@@ -162,9 +201,10 @@ function renderArchitectureReport({ context, graph, optimizedContext, mermaidTex
   const calls = collectProgramCalls(context);
   const copyMembers = collectCopyMembers(context);
   const sqlStats = collectSqlStats(context);
+  const nativeFileUsage = collectNativeFileUsage(context);
   const sqlCount = sqlStats.reduce((sum, entry) => sum + entry.count, 0);
-  const overview = buildOverview(program, tables, calls, copyMembers, sqlStats);
-  const dataFlow = buildDataFlow(program, tables, calls, sqlStats);
+  const overview = buildOverview(program, tables, calls, copyMembers, sqlStats, nativeFileUsage);
+  const dataFlow = buildDataFlow(program, tables, calls, sqlStats, nativeFileUsage);
   const mermaid = renderMermaidBlock(graph, mermaidText);
 
   return `# Architecture Report
@@ -195,6 +235,10 @@ ${listSection(calls)}
 ### Tables Used
 
 ${listSection(tables)}
+
+## Native File I/O
+
+${nativeFileSection(nativeFileUsage)}
 
 ## Copy Member Dependencies
 
