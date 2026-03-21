@@ -16,6 +16,7 @@ const {
   buildCanonicalAnalysisModel,
   defaultCrossProgramSummary,
   defaultGraphSummary,
+  defaultNativeFileUsage,
 } = require('./canonicalAnalysisModel');
 
 function sortByName(items) {
@@ -151,6 +152,9 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
       },
     dependencies: projectDependencies(canonicalAnalysis),
     procedureAnalysis: projectProcedureAnalysis(canonicalAnalysis),
+    nativeFileUsage: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.nativeFileUsage
+      ? canonicalAnalysis.enrichments.nativeFileUsage
+      : defaultNativeFileUsage(),
     sql: projectSql(canonicalAnalysis),
     graph: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.graph
       ? canonicalAnalysis.enrichments.graph
