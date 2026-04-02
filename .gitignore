@@ -41,6 +41,20 @@ yarn-error.log*
 
 __pycache__/
 *.pyc
+scripts/__pycache__/
+
+# -----------------------------
+# Secrets and local config
+# -----------------------------
+
+.env
+.env.*
+*.secret
+*.secrets
+*.credentials
+credentials.*
+config/local.*
+config/private.*
 
 # -----------------------------
 # OS files
@@ -56,6 +70,16 @@ Thumbs.db
 output/*
 !output/.gitkeep
 bundles/
+*.zip
+*.7z
+
+# -----------------------------
+# Local external/reference material
+# -----------------------------
+
+.tools/
+rpg_sources/
+java/lib/
 
 # -----------------------------
 # Local planning
