@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const {
   assertCanonicalAnalysisModel,
   buildCanonicalAnalysisModel,
+  defaultBindingAnalysis,
   defaultCrossProgramSummary,
   defaultGraphSummary,
   defaultNativeFileUsage,
@@ -141,6 +142,12 @@ function projectSql(canonicalAnalysis) {
   };
 }
 
+function projectBindingAnalysis(canonicalAnalysis) {
+  return canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.bindingAnalysis
+    ? canonicalAnalysis.enrichments.bindingAnalysis
+    : defaultBindingAnalysis();
+}
+
 function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
   assertCanonicalAnalysisModel(canonicalAnalysis);
 
@@ -165,6 +172,7 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
       },
     dependencies: projectDependencies(canonicalAnalysis),
     procedureAnalysis: projectProcedureAnalysis(canonicalAnalysis),
+    bindingAnalysis: projectBindingAnalysis(canonicalAnalysis),
     nativeFileUsage: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.nativeFileUsage
       ? canonicalAnalysis.enrichments.nativeFileUsage
       : defaultNativeFileUsage(),

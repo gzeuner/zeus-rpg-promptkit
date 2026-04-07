@@ -27,6 +27,7 @@ const NATIVE_IO_OPCODES = new Set([
   'DELETE',
   'EXFMT',
 ]);
+const BINDER_SOURCE_EXTENSIONS = new Set(['.BND', '.BINDER', '.BNDSRC']);
 
 function normalizeWhitespace(text) {
   return String(text || '').replace(/\s+/g, ' ').trim();
@@ -421,6 +422,309 @@ function createNativeFileAccess({
       line: lineNo,
       text: normalizeWhitespace(text),
     }],
+  };
+}
+
+function createModule({
+  filePath,
+  ownerProgram,
+  name,
+  lineNo,
+  kind,
+  bindingDirectories = [],
+  servicePrograms = [],
+  importedProcedures = [],
+  text,
+}) {
+  return {
+    name: normalizeName(name),
+    ownerProgram: normalizeName(ownerProgram),
+    sourceFile: filePath,
+    kind: normalizeName(kind || 'PROGRAM_MODULE') || 'PROGRAM_MODULE',
+    bindingDirectories: uniqueSortedStrings(bindingDirectories),
+    servicePrograms: uniqueSortedStrings(servicePrograms),
+    importedProcedures: uniqueSortedStrings(importedProcedures),
+    evidence: [{
+      file: filePath,
+      line: lineNo,
+      text: normalizeWhitespace(text),
+    }],
+  };
+}
+
+function createBindingDirectory({
+  filePath,
+  name,
+  lineNo,
+  text,
+}) {
+  return {
+    name: normalizeName(name),
+    sourceFile: filePath,
+    evidence: [{
+      file: filePath,
+      line: lineNo,
+      text: normalizeWhitespace(text),
+    }],
+  };
+}
+
+function createServiceProgram({
+  filePath,
+  name,
+  lineNo,
+  sourceKind = 'HINT',
+  exports = [],
+  text,
+}) {
+  return {
+    name: normalizeName(name),
+    sourceFile: filePath || null,
+    sourceKind: normalizeName(sourceKind || 'HINT') || 'HINT',
+    exports: (exports || [])
+      .map((entry) => ({
+        symbol: normalizeName(entry && entry.symbol),
+        signatureLevel: normalizeName(entry && entry.signatureLevel ? entry.signatureLevel : 'CURRENT') || 'CURRENT',
+      }))
+      .filter((entry) => entry.symbol)
+      .sort((a, b) => {
+        if (a.symbol !== b.symbol) return a.symbol.localeCompare(b.symbol);
+        return a.signatureLevel.localeCompare(b.signatureLevel);
+      }),
+    evidence: [{
+      file: filePath || '',
+      line: lineNo,
+      text: normalizeWhitespace(text),
+    }],
+  };
+}
+
+function createBindingDiagnostic({
+  code,
+  severity = 'warning',
+  message,
+  filePath,
+  ownerProgram = null,
+  symbol = null,
+  moduleName = null,
+  serviceProgram = null,
+}) {
+  return {
+    code: normalizeName(code),
+    severity: String(severity || 'warning').toLowerCase(),
+    message: String(message || '').trim(),
+    details: {
+      file: filePath || '',
+      ownerProgram: ownerProgram ? normalizeName(ownerProgram) : null,
+      moduleName: moduleName ? normalizeName(moduleName) : null,
+      symbol: symbol ? normalizeName(symbol) : null,
+      serviceProgram: serviceProgram ? normalizeName(serviceProgram) : null,
+    },
+  };
+}
+
+function isBinderSourceFile(filePath, lines) {
+  const ext = String(path.extname(String(filePath || '')) || '').toUpperCase();
+  if (BINDER_SOURCE_EXTENSIONS.has(ext)) {
+    return true;
+  }
+  return (lines || []).some((line) => /\bSTRPGMEXP\b|\bENDPGMEXP\b|\bEXPORT\s+SYMBOL\b/i.test(String(line || '')));
+}
+
+function isRpgLikeSourceFile(filePath) {
+  const ext = String(path.extname(String(filePath || '')) || '').toUpperCase();
+  return ['.RPG', '.RPGLE', '.SQLRPGLE', '.RPGILE'].includes(ext);
+}
+
+function extractKeywordValues(text, keyword) {
+  const match = String(text || '').match(new RegExp(`\\b${keyword}\\s*\\(([^)]*)\\)`, 'i'));
+  if (!match) return [];
+
+  const raw = match[1] || '';
+  const quoted = Array.from(raw.matchAll(/['"]([^'"]+)['"]/g)).map((entry) => entry[1]);
+  if (quoted.length > 0) {
+    return uniqueSortedStrings(quoted);
+  }
+
+  return uniqueSortedStrings(raw
+    .split(/[:\s,]+/)
+    .map((value) => value.replace(/^\*/, ''))
+    .filter(Boolean));
+}
+
+function collectControlOptionBlocks(lines) {
+  const blocks = [];
+  let collecting = false;
+  let buffer = [];
+  let startLine = 0;
+
+  for (let i = 0; i < (lines || []).length; i += 1) {
+    const rawLine = lines[i];
+    const lineNo = i + 1;
+    if (isCommentLine(rawLine)) continue;
+    const trimmed = String(rawLine || '').trim();
+
+    if (!collecting && /^ctl-opt\b/i.test(trimmed)) {
+      collecting = true;
+      startLine = lineNo;
+      buffer = [trimmed];
+      if (trimmed.includes(';')) {
+        blocks.push({ lineNo: startLine, text: normalizeWhitespace(buffer.join(' ')) });
+        collecting = false;
+        buffer = [];
+      }
+      continue;
+    }
+
+    if (collecting) {
+      buffer.push(trimmed);
+      if (trimmed.includes(';')) {
+        blocks.push({ lineNo: startLine, text: normalizeWhitespace(buffer.join(' ')) });
+        collecting = false;
+        buffer = [];
+      }
+      continue;
+    }
+
+    if (/^\s*H\b/i.test(rawLine) && /\b(BNDDIR|BNDSRVPGM|NOMAIN)\b/i.test(rawLine)) {
+      blocks.push({ lineNo, text: normalizeWhitespace(trimmed) });
+    }
+  }
+
+  if (collecting && buffer.length > 0) {
+    blocks.push({ lineNo: startLine || 1, text: normalizeWhitespace(buffer.join(' ')) });
+  }
+
+  return blocks;
+}
+
+function collectBinderSourceSemantics(filePath, lines) {
+  const serviceProgramName = toRelativeProgramName(filePath);
+  const exports = [];
+  let signatureLevel = 'CURRENT';
+  let firstLine = 1;
+
+  for (let i = 0; i < (lines || []).length; i += 1) {
+    const rawLine = lines[i];
+    const lineNo = i + 1;
+    if (isCommentLine(rawLine)) continue;
+    const trimmed = String(rawLine || '').trim();
+
+    const startMatch = trimmed.match(/\bSTRPGMEXP\b(?:.*\bPGMLVL\s*\(\s*\*?([A-Z]+)\s*\))?/i);
+    if (startMatch) {
+      signatureLevel = normalizeName(startMatch[1] || 'CURRENT') || 'CURRENT';
+      firstLine = lineNo;
+    }
+
+    const exportMatch = trimmed.match(/\bEXPORT\s+SYMBOL\s*\(\s*['"]?([A-Z0-9_#$@]+)['"]?\s*\)/i);
+    if (exportMatch) {
+      exports.push({
+        symbol: exportMatch[1],
+        signatureLevel,
+      });
+      if (!firstLine) {
+        firstLine = lineNo;
+      }
+    }
+  }
+
+  const servicePrograms = exports.length > 0 || isBinderSourceFile(filePath, lines)
+    ? [createServiceProgram({
+      filePath,
+      name: serviceProgramName,
+      lineNo: firstLine || 1,
+      sourceKind: 'BINDER_SOURCE',
+      exports,
+      text: `Binder source for ${serviceProgramName}`,
+    })]
+    : [];
+
+  return {
+    modules: [],
+    bindingDirectories: [],
+    servicePrograms,
+    diagnostics: [],
+  };
+}
+
+function collectModuleBindingSemantics(filePath, lines, ownerProgram, prototypes) {
+  if (!isRpgLikeSourceFile(filePath)) {
+    return {
+      modules: [],
+      bindingDirectories: [],
+      servicePrograms: [],
+      diagnostics: [],
+    };
+  }
+
+  const controlBlocks = collectControlOptionBlocks(lines);
+  const bindingDirectoryMap = new Map();
+  const serviceProgramMap = new Map();
+  let moduleLineNo = 1;
+  let moduleText = path.basename(filePath);
+  let noMain = false;
+
+  for (const block of controlBlocks) {
+    moduleLineNo = block.lineNo || moduleLineNo;
+    moduleText = block.text || moduleText;
+    if (/\bNOMAIN\b/i.test(block.text || '')) {
+      noMain = true;
+    }
+
+    for (const bindingDirectory of extractKeywordValues(block.text, 'BNDDIR')) {
+      bindingDirectoryMap.set(bindingDirectory, createBindingDirectory({
+        filePath,
+        name: bindingDirectory,
+        lineNo: block.lineNo,
+        text: block.text,
+      }));
+    }
+
+    for (const serviceProgram of extractKeywordValues(block.text, 'BNDSRVPGM')) {
+      serviceProgramMap.set(serviceProgram, createServiceProgram({
+        filePath,
+        name: serviceProgram,
+        lineNo: block.lineNo,
+        sourceKind: 'HINT',
+        exports: [],
+        text: block.text,
+      }));
+    }
+  }
+
+  const importedProcedures = uniqueSortedStrings((prototypes || [])
+    .filter((entry) => entry.imported)
+    .map((entry) => entry.name));
+  const bindingDirectories = Array.from(bindingDirectoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  const servicePrograms = Array.from(serviceProgramMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  const modules = [createModule({
+    filePath,
+    ownerProgram,
+    name: ownerProgram,
+    lineNo: moduleLineNo,
+    kind: noMain ? 'NOMAIN_MODULE' : 'PROGRAM_MODULE',
+    bindingDirectories: bindingDirectories.map((entry) => entry.name),
+    servicePrograms: servicePrograms.map((entry) => entry.name),
+    importedProcedures,
+    text: moduleText,
+  })];
+
+  const diagnostics = [];
+  if (importedProcedures.length > 0 && bindingDirectories.length === 0 && servicePrograms.length === 0) {
+    diagnostics.push(createBindingDiagnostic({
+      code: 'UNRESOLVED_BINDING_IMPORTS',
+      message: `Imported procedures lack explicit binding evidence in ${ownerProgram}.`,
+      filePath,
+      ownerProgram,
+      moduleName: ownerProgram,
+    }));
+  }
+
+  return {
+    modules,
+    bindingDirectories,
+    servicePrograms,
+    diagnostics,
   };
 }
 
@@ -997,6 +1301,31 @@ function resolveNativeFileTarget(targetName, opcode, nativeFiles) {
 
 function scanContent(filePath, content) {
   const lines = content.split(/\r?\n/);
+  if (isBinderSourceFile(filePath, lines)) {
+    const binderSemantics = collectBinderSourceSemantics(filePath, lines);
+    return {
+      sourceFile: {
+        path: filePath,
+        sizeBytes: Buffer.byteLength(content, 'utf8'),
+        lines: lines.length,
+      },
+      tables: [],
+      calls: [],
+      copyMembers: [],
+      sqlStatements: [],
+      procedures: [],
+      prototypes: [],
+      procedureCalls: [],
+      nativeFiles: [],
+      nativeFileAccesses: [],
+      modules: binderSemantics.modules,
+      bindingDirectories: binderSemantics.bindingDirectories,
+      servicePrograms: binderSemantics.servicePrograms,
+      diagnostics: binderSemantics.diagnostics,
+      notes: [],
+    };
+  }
+
   const tablesMap = new Map();
   const callsMap = new Map();
   const copyMembersMap = new Map();
@@ -1006,6 +1335,7 @@ function scanContent(filePath, content) {
 
   const { ownerProgram, procedures, prototypes } = collectDefinitions(filePath, lines);
   const nativeFiles = collectNativeFileDeclarations(filePath, lines);
+  const bindingSemantics = collectModuleBindingSemantics(filePath, lines, ownerProgram, prototypes);
 
   let inExecSql = false;
   let execStartLine = 0;
@@ -1300,6 +1630,10 @@ function scanContent(filePath, content) {
       if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
       return ((a.evidence && a.evidence[0] && a.evidence[0].line) || 0) - ((b.evidence && b.evidence[0] && b.evidence[0].line) || 0);
     }),
+    modules: bindingSemantics.modules,
+    bindingDirectories: bindingSemantics.bindingDirectories,
+    servicePrograms: bindingSemantics.servicePrograms,
+    diagnostics: bindingSemantics.diagnostics,
     notes: [],
   };
 }
@@ -1458,6 +1792,98 @@ function scanSourceFiles(filePaths, options = {}) {
   mergeEntities(tablesMap, scanResults.flatMap((item) => item.tables || []), 'FILE');
   mergeEntities(callsMap, scanResults.flatMap((item) => item.calls || []), 'PROGRAM');
   mergeEntities(copyMembersMap, scanResults.flatMap((item) => item.copyMembers || []));
+  const procedures = mergeStructuredItems(
+    scanResults,
+    'procedures',
+    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
+  ).sort((a, b) => {
+    if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+    if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
+    if (a.startLine !== b.startLine) return a.startLine - b.startLine;
+    return a.name.localeCompare(b.name);
+  });
+  const prototypes = mergeStructuredItems(
+    scanResults,
+    'prototypes',
+    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
+  ).sort((a, b) => {
+    if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+    if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
+    if (a.startLine !== b.startLine) return a.startLine - b.startLine;
+    return a.name.localeCompare(b.name);
+  });
+  const modules = mergeStructuredItems(
+    scanResults,
+    'modules',
+    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name].join('|'),
+    (target, item) => {
+      target.kind = target.kind || item.kind;
+      target.bindingDirectories = uniqueSortedStrings([...(target.bindingDirectories || []), ...(item.bindingDirectories || [])]);
+      target.servicePrograms = uniqueSortedStrings([...(target.servicePrograms || []), ...(item.servicePrograms || [])]);
+      target.importedProcedures = uniqueSortedStrings([...(target.importedProcedures || []), ...(item.importedProcedures || [])]);
+    },
+  ).sort((a, b) => {
+    if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+    if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
+    return a.name.localeCompare(b.name);
+  });
+  const bindingDirectories = mergeStructuredItems(
+    scanResults,
+    'bindingDirectories',
+    (item) => item.name,
+  ).sort((a, b) => a.name.localeCompare(b.name));
+  const servicePrograms = mergeStructuredItems(
+    scanResults,
+    'servicePrograms',
+    (item) => item.name,
+    (target, item) => {
+      target.sourceKind = target.sourceKind === 'BINDER_SOURCE' ? target.sourceKind : (item.sourceKind || target.sourceKind || 'HINT');
+      target.sourceFile = target.sourceFile || item.sourceFile || null;
+      const exportSet = new Set((target.exports || []).map((entry) => `${entry.symbol}:${entry.signatureLevel || 'CURRENT'}`));
+      for (const entry of item.exports || []) {
+        exportSet.add(`${normalizeName(entry.symbol)}:${normalizeName(entry.signatureLevel || 'CURRENT') || 'CURRENT'}`);
+      }
+      target.exports = Array.from(exportSet)
+        .map((value) => {
+          const [symbol, signatureLevel] = value.split(':');
+          return { symbol, signatureLevel };
+        })
+        .sort((a, b) => {
+          if (a.symbol !== b.symbol) return a.symbol.localeCompare(b.symbol);
+          return a.signatureLevel.localeCompare(b.signatureLevel);
+        });
+    },
+  ).sort((a, b) => a.name.localeCompare(b.name));
+  const diagnostics = mergeStructuredItems(
+    scanResults,
+    'diagnostics',
+    (item) => [item.code, item.details && item.details.file, item.details && item.details.ownerProgram, item.details && item.details.symbol, item.details && item.details.serviceProgram].join('|'),
+  ).sort((a, b) => {
+    if (a.code !== b.code) return a.code.localeCompare(b.code);
+    return String(a.message || '').localeCompare(String(b.message || ''));
+  });
+
+  const exportedProcedures = new Set((procedures || []).filter((entry) => entry.exported).map((entry) => entry.name));
+  for (const serviceProgram of servicePrograms) {
+    for (const exportedSymbol of serviceProgram.exports || []) {
+      if (!exportedProcedures.has(exportedSymbol.symbol)) {
+        diagnostics.push(createBindingDiagnostic({
+          code: 'UNRESOLVED_BINDER_EXPORT',
+          message: `Binder export symbol ${exportedSymbol.symbol} could not be matched to a local exported procedure.`,
+          filePath: serviceProgram.sourceFile,
+          symbol: exportedSymbol.symbol,
+          serviceProgram: serviceProgram.name,
+        }));
+      }
+    }
+  }
+  diagnostics.sort((a, b) => {
+    if (a.code !== b.code) return a.code.localeCompare(b.code);
+    return String(a.message || '').localeCompare(String(b.message || ''));
+  });
+  for (const diagnostic of diagnostics) {
+    notes.push(diagnostic.message);
+  }
 
   return {
     sourceFiles,
@@ -1465,26 +1891,8 @@ function scanSourceFiles(filePaths, options = {}) {
     calls: Array.from(callsMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
     copyMembers: Array.from(copyMembersMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
     sqlStatements: mergeSqlStatements(scanResults),
-    procedures: mergeStructuredItems(
-      scanResults,
-      'procedures',
-      (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
-    ).sort((a, b) => {
-      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
-      if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
-      if (a.startLine !== b.startLine) return a.startLine - b.startLine;
-      return a.name.localeCompare(b.name);
-    }),
-    prototypes: mergeStructuredItems(
-      scanResults,
-      'prototypes',
-      (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
-    ).sort((a, b) => {
-      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
-      if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
-      if (a.startLine !== b.startLine) return a.startLine - b.startLine;
-      return a.name.localeCompare(b.name);
-    }),
+    procedures,
+    prototypes,
     procedureCalls: mergeStructuredItems(
       scanResults,
       'procedureCalls',
@@ -1536,6 +1944,10 @@ function scanSourceFiles(filePaths, options = {}) {
       if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
       return ((a.evidence && a.evidence[0] && a.evidence[0].line) || 0) - ((b.evidence && b.evidence[0] && b.evidence[0].line) || 0);
     }),
+    modules,
+    bindingDirectories,
+    servicePrograms,
+    diagnostics,
     notes,
   };
 }

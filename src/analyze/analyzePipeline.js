@@ -93,6 +93,15 @@ function collectAndScanStage(state) {
     }
   }
 
+  for (const diagnostic of scanSummary.diagnostics || []) {
+    stageDiagnostics.push({
+      severity: diagnostic.severity || 'warning',
+      code: diagnostic.code || 'SCAN_DIAGNOSTIC',
+      message: diagnostic.message || 'Scanner diagnostic',
+      details: diagnostic.details || {},
+    });
+  }
+
   if (sourceFiles.length === 0) {
     const warning = 'No source files found for provided sourceRoot/extensions.';
     notes.push(warning);
@@ -138,6 +147,9 @@ function collectAndScanStage(state) {
       procedureCalls: scanSummary.procedureCalls,
       nativeFiles: scanSummary.nativeFiles,
       nativeFileAccesses: scanSummary.nativeFileAccesses,
+      modules: scanSummary.modules,
+      bindingDirectories: scanSummary.bindingDirectories,
+      servicePrograms: scanSummary.servicePrograms,
     },
     stageMetadata: {
       sourceFileCount: sourceFiles.length,
@@ -156,6 +168,10 @@ function collectAndScanStage(state) {
       procedureCallCount: (scanSummary.procedureCalls || []).length,
       nativeFileCount: (scanSummary.nativeFiles || []).length,
       nativeFileAccessCount: (scanSummary.nativeFileAccesses || []).length,
+      moduleCount: (scanSummary.modules || []).length,
+      bindingDirectoryCount: (scanSummary.bindingDirectories || []).length,
+      serviceProgramCount: (scanSummary.servicePrograms || []).length,
+      diagnosticCount: (scanSummary.diagnostics || []).length,
       noteCount: notes.length,
     },
     stageDiagnostics,

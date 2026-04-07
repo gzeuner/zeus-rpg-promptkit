@@ -13,6 +13,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
   - F-spec and `dcl-f` table/file declarations
   - Native file I/O semantics including read/write/update/delete, workstation/printer behavior, and record-format hints
   - Embedded SQL semantics including read/write intent, cursor activity, host variables, dynamic SQL flags, and uncertainty markers
+  - Module, service-program, binder-source, and binding-directory relationships where source evidence exists
   - Program calls (`CALL`, `CALLP`, `CALLB`, `CALLPRC`)
   - Copy/include directives (`/COPY`, `/INCLUDE`, `COPY`)
   - Embedded SQL blocks (`EXEC SQL` + statement content)
@@ -214,6 +215,7 @@ Generated files:
 - `summary`
 - `dependencies`
 - `procedureAnalysis`
+- `bindingAnalysis`
 - `nativeFileUsage`
 - `sql`
 - `graph`
@@ -232,6 +234,8 @@ Generated files:
 `nativeFileUsage` exposes native IBM i file semantics including per-file read-only versus mutating usage, workstation and printer behavior, keyed/native I/O hints, procedure ownership, and detected record formats where feasible.
 
 `sql` now exposes structured embedded SQL semantics including statement intent, read/write behavior, host variables, cursor names/actions, dynamic SQL markers, and unresolved dependency hints.
+
+`bindingAnalysis` exposes module-level bind metadata including `BNDDIR` references, service-program hints, binder-source exports, imported procedure symbols, and unresolved bind diagnostics where explicit binding evidence is missing.
 
 When `--optimize-context` is enabled, prompts are generated from `optimized-context.json` instead of the full `context.json`.
 
