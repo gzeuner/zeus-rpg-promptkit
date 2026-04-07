@@ -17,6 +17,8 @@ const {
   defaultCrossProgramSummary,
   defaultGraphSummary,
   defaultNativeFileUsage,
+  defaultSqlAnalysis,
+  summarizeSqlStatements,
 } = require('./canonicalAnalysisModel');
 
 function sortByName(items) {
@@ -116,15 +118,26 @@ function projectProcedureAnalysis(canonicalAnalysis) {
 
 function projectSql(canonicalAnalysis) {
   const sqlStatements = (canonicalAnalysis.entities && canonicalAnalysis.entities.sqlStatements) || [];
+  const sqlAnalysis = summarizeSqlStatements(sqlStatements);
   return {
+    summary: sqlAnalysis.summary,
     statements: sqlStatements.map((statement) => ({
       type: statement.type,
+      intent: statement.intent || 'OTHER',
       text: statement.text,
       tables: statement.tables || [],
+      hostVariables: statement.hostVariables || [],
+      cursors: statement.cursors || [],
+      readsData: Boolean(statement.readsData),
+      writesData: Boolean(statement.writesData),
+      dynamic: Boolean(statement.dynamic),
+      unresolved: Boolean(statement.unresolved),
+      uncertainty: statement.uncertainty || [],
       evidence: statement.evidence || [],
     })),
-    tableNames: Array.from(new Set(sqlStatements.flatMap((statement) => statement.tables || [])))
-      .sort((a, b) => a.localeCompare(b)),
+    tableNames: sqlAnalysis.tableNames,
+    hostVariables: sqlAnalysis.hostVariables,
+    cursors: sqlAnalysis.cursors,
   };
 }
 
@@ -155,7 +168,7 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
     nativeFileUsage: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.nativeFileUsage
       ? canonicalAnalysis.enrichments.nativeFileUsage
       : defaultNativeFileUsage(),
-    sql: projectSql(canonicalAnalysis),
+    sql: projectSql(canonicalAnalysis) || defaultSqlAnalysis(),
     graph: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.graph
       ? canonicalAnalysis.enrichments.graph
       : defaultGraphSummary(),

@@ -69,6 +69,21 @@ function collectSqlStats(context) {
     .sort((a, b) => a.type.localeCompare(b.type));
 }
 
+function collectSqlSummary(context) {
+  const sql = (context && context.sql) || {};
+  const summary = sql.summary || {};
+  return {
+    statementCount: Number(summary.statementCount) || 0,
+    readStatementCount: Number(summary.readStatementCount) || 0,
+    writeStatementCount: Number(summary.writeStatementCount) || 0,
+    dynamicStatementCount: Number(summary.dynamicStatementCount) || 0,
+    unresolvedStatementCount: Number(summary.unresolvedStatementCount) || 0,
+    cursorStatementCount: Number(summary.cursorStatementCount) || 0,
+    hostVariableCount: Number(summary.hostVariableCount) || 0,
+    cursorCount: Number(summary.cursorCount) || 0,
+  };
+}
+
 function collectNativeFileUsage(context) {
   return (context && context.nativeFileUsage) || { summary: {}, files: [] };
 }
@@ -80,11 +95,19 @@ function listSection(items, emptyLabel = 'None detected') {
   return items.map((item) => `- ${item}`).join('\n');
 }
 
-function sqlSection(stats, optimizedContext) {
+function sqlSection(stats, sqlSummary, optimizedContext) {
   const lines = [];
   if (!stats || stats.length === 0) {
     lines.push('- None detected');
   } else {
+    lines.push(`- Read statements: ${sqlSummary.readStatementCount || 0}`);
+    lines.push(`- Write statements: ${sqlSummary.writeStatementCount || 0}`);
+    lines.push(`- Dynamic statements: ${sqlSummary.dynamicStatementCount || 0}`);
+    lines.push(`- Unresolved statements: ${sqlSummary.unresolvedStatementCount || 0}`);
+    lines.push(`- Cursor statements: ${sqlSummary.cursorStatementCount || 0}`);
+    lines.push(`- Host variables: ${sqlSummary.hostVariableCount || 0}`);
+    lines.push(`- Cursors: ${sqlSummary.cursorCount || 0}`);
+    lines.push('');
     for (const item of stats) {
       lines.push(`- ${item.type} statements: ${item.count}`);
     }
@@ -104,13 +127,13 @@ function sqlSection(stats, optimizedContext) {
   return lines.join('\n');
 }
 
-function buildOverview(program, tables, calls, copies, sqlStats, nativeFileUsage) {
-  const sqlCount = (sqlStats || []).reduce((sum, entry) => sum + entry.count, 0);
+function buildOverview(program, tables, calls, copies, sqlSummary, nativeFileUsage) {
+  const sqlCount = Number(sqlSummary && sqlSummary.statementCount) || 0;
   const hasSql = sqlCount > 0;
   const nativeSummary = (nativeFileUsage && nativeFileUsage.summary) || {};
   return [
     `Program ${program} interacts with ${tables.length} database table${tables.length === 1 ? '' : 's'} and calls ${calls.length} external program${calls.length === 1 ? '' : 's'}.`,
-    `The program ${hasSql ? 'contains embedded SQL statements' : 'does not contain embedded SQL statements'} and includes ${copies.length} copy member${copies.length === 1 ? '' : 's'}.`,
+    `The program ${hasSql ? `contains embedded SQL statements (${sqlSummary.readStatementCount || 0} read, ${sqlSummary.writeStatementCount || 0} write, ${sqlSummary.dynamicStatementCount || 0} dynamic)` : 'does not contain embedded SQL statements'} and includes ${copies.length} copy member${copies.length === 1 ? '' : 's'}.`,
     `Native file usage covers ${nativeSummary.fileCount || 0} file${(nativeSummary.fileCount || 0) === 1 ? '' : 's'}, including ${nativeSummary.mutatingFileCount || 0} mutating and ${nativeSummary.interactiveFileCount || 0} interactive file${(nativeSummary.interactiveFileCount || 0) === 1 ? '' : 's'}.`,
   ].join(' ');
 }
@@ -119,9 +142,9 @@ function first(items, count) {
   return (items || []).slice(0, count);
 }
 
-function buildDataFlow(program, tables, calls, sqlStats, nativeFileUsage) {
-  const sqlRead = (sqlStats || []).some((entry) => entry.type === 'SELECT');
-  const sqlWrite = (sqlStats || []).some((entry) => ['UPDATE', 'INSERT', 'DELETE', 'MERGE'].includes(entry.type));
+function buildDataFlow(program, tables, calls, sqlSummary, nativeFileUsage) {
+  const sqlRead = (sqlSummary.readStatementCount || 0) > 0;
+  const sqlWrite = (sqlSummary.writeStatementCount || 0) > 0;
   const nativeSummary = (nativeFileUsage && nativeFileUsage.summary) || {};
   const tableList = first(tables, 3);
   const callList = first(calls, 2);
@@ -136,6 +159,10 @@ function buildDataFlow(program, tables, calls, sqlStats, nativeFileUsage) {
 
   if (sqlWrite && tableList.length > 0) {
     parts.push(`updates ${tableList.join(', ')}`);
+  }
+
+  if ((sqlSummary.dynamicStatementCount || 0) > 0) {
+    parts.push('uses dynamic SQL');
   }
 
   if (callList.length > 0) {
@@ -201,10 +228,11 @@ function renderArchitectureReport({ context, graph, optimizedContext, mermaidTex
   const calls = collectProgramCalls(context);
   const copyMembers = collectCopyMembers(context);
   const sqlStats = collectSqlStats(context);
+  const sqlSummary = collectSqlSummary(context);
   const nativeFileUsage = collectNativeFileUsage(context);
   const sqlCount = sqlStats.reduce((sum, entry) => sum + entry.count, 0);
-  const overview = buildOverview(program, tables, calls, copyMembers, sqlStats, nativeFileUsage);
-  const dataFlow = buildDataFlow(program, tables, calls, sqlStats, nativeFileUsage);
+  const overview = buildOverview(program, tables, calls, copyMembers, sqlSummary, nativeFileUsage);
+  const dataFlow = buildDataFlow(program, tables, calls, sqlSummary, nativeFileUsage);
   const mermaid = renderMermaidBlock(graph, mermaidText);
 
   return `# Architecture Report
@@ -248,7 +276,7 @@ ${listSection(copyMembers)}
 
 ## SQL Activity
 
-${sqlSection(sqlStats, optimizedContext)}
+${sqlSection(sqlStats, sqlSummary, optimizedContext)}
 
 ## Dependency Graph
 
