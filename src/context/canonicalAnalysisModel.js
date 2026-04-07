@@ -86,13 +86,50 @@ function dedupeByName(items, sourceRoot, withKind) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function inferSqlIntent(type) {
+  const normalizedType = normalizeName(type || 'OTHER') || 'OTHER';
+  if (['SELECT', 'FETCH', 'VALUES'].includes(normalizedType)) return 'READ';
+  if (['INSERT', 'UPDATE', 'DELETE', 'MERGE'].includes(normalizedType)) return 'WRITE';
+  if (['DECLARE_CURSOR', 'OPEN_CURSOR', 'CLOSE_CURSOR'].includes(normalizedType)) return 'CURSOR';
+  if (normalizedType === 'CALL') return 'CALL';
+  if (['COMMIT', 'ROLLBACK'].includes(normalizedType)) return 'TRANSACTION';
+  return 'OTHER';
+}
+
 function sortSqlStatements(statements, sourceRoot) {
   const normalized = (statements || []).map((statement) => {
     const evidence = normalizeEvidenceList(statement.evidence || [], sourceRoot);
+    const type = normalizeName(statement.type || 'OTHER') || 'OTHER';
+    const intent = normalizeName(statement.intent || inferSqlIntent(type)) || 'OTHER';
+    const readsData = typeof statement.readsData === 'boolean'
+      ? statement.readsData
+      : intent === 'READ';
+    const writesData = typeof statement.writesData === 'boolean'
+      ? statement.writesData
+      : intent === 'WRITE';
     return {
-      type: normalizeName(statement.type || 'OTHER') || 'OTHER',
+      type,
+      intent,
       text: String(statement.text || '').trim(),
       tables: uniqueSortedStrings((statement.tables || []).map((name) => normalizeName(name)).filter(Boolean)),
+      hostVariables: uniqueSortedStrings((statement.hostVariables || []).map((name) => normalizeName(name)).filter(Boolean)),
+      cursors: Array.from(new Map((statement.cursors || [])
+        .map((cursor) => {
+          const name = normalizeName(cursor && cursor.name);
+          const action = normalizeName(cursor && cursor.action);
+          return [`${name}:${action}`, { name, action }];
+        })
+        .filter((entry) => entry[1].name && entry[1].action))
+        .values())
+        .sort((a, b) => {
+          if (a.name !== b.name) return a.name.localeCompare(b.name);
+          return a.action.localeCompare(b.action);
+        }),
+      readsData: Boolean(readsData),
+      writesData: Boolean(writesData),
+      dynamic: Boolean(statement.dynamic),
+      unresolved: Boolean(statement.unresolved),
+      uncertainty: uniqueSortedStrings((statement.uncertainty || []).map((name) => normalizeName(name)).filter(Boolean)),
       evidence,
     };
   });
@@ -161,10 +198,76 @@ function defaultNativeFileUsage() {
   };
 }
 
+function defaultSqlAnalysis() {
+  return {
+    summary: {
+      statementCount: 0,
+      readStatementCount: 0,
+      writeStatementCount: 0,
+      dynamicStatementCount: 0,
+      unresolvedStatementCount: 0,
+      cursorStatementCount: 0,
+      hostVariableCount: 0,
+      cursorCount: 0,
+    },
+    tableNames: [],
+    hostVariables: [],
+    cursors: [],
+  };
+}
+
+function summarizeSqlStatements(sqlStatements) {
+  const statements = sqlStatements || [];
+  const tableNames = uniqueSortedStrings(statements.flatMap((statement) => statement.tables || []).map((name) => normalizeName(name)));
+  const hostVariables = uniqueSortedStrings(statements.flatMap((statement) => statement.hostVariables || []).map((name) => normalizeName(name)));
+
+  const cursorMap = new Map();
+  for (const statement of statements) {
+    for (const cursor of statement.cursors || []) {
+      const name = normalizeName(cursor && cursor.name);
+      const action = normalizeName(cursor && cursor.action);
+      if (!name || !action) continue;
+      if (!cursorMap.has(name)) {
+        cursorMap.set(name, new Set());
+      }
+      cursorMap.get(name).add(action);
+    }
+  }
+
+  const cursors = Array.from(cursorMap.entries())
+    .map(([name, actions]) => ({
+      name,
+      actions: Array.from(actions).sort((a, b) => a.localeCompare(b)),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    summary: {
+      statementCount: statements.length,
+      readStatementCount: statements.filter((statement) => statement.readsData).length,
+      writeStatementCount: statements.filter((statement) => statement.writesData).length,
+      dynamicStatementCount: statements.filter((statement) => statement.dynamic).length,
+      unresolvedStatementCount: statements.filter((statement) => statement.unresolved).length,
+      cursorStatementCount: statements.filter((statement) => (statement.cursors || []).length > 0).length,
+      hostVariableCount: hostVariables.length,
+      cursorCount: cursors.length,
+    },
+    tableNames,
+    hostVariables,
+    cursors,
+  };
+}
+
 function buildRiskHints(dependencies, sql, procedureCalls, nativeFileUsage) {
   const hints = [];
   if ((sql.statements || []).length > 0) {
     hints.push('Embedded SQL detected');
+  }
+  if ((sql.statements || []).some((statement) => statement.dynamic)) {
+    hints.push('Dynamic SQL detected');
+  }
+  if ((sql.statements || []).some((statement) => statement.unresolved)) {
+    hints.push('Unresolved SQL dependencies detected');
   }
   if ((dependencies.programCalls || []).length > 0) {
     hints.push('External program calls detected');
@@ -806,6 +909,14 @@ function buildRelations(
       evidence: statement.evidence || [],
       attributes: {
         sqlType: statement.type,
+        intent: statement.intent || 'OTHER',
+        readsData: Boolean(statement.readsData),
+        writesData: Boolean(statement.writesData),
+        dynamic: Boolean(statement.dynamic),
+        unresolved: Boolean(statement.unresolved),
+        hostVariables: statement.hostVariables || [],
+        cursorNames: (statement.cursors || []).map((cursor) => cursor.name),
+        uncertainty: statement.uncertainty || [],
       },
     });
 
@@ -871,13 +982,17 @@ function buildRelations(
   return relations.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, procedures, prototypes, procedureCalls, nativeFileUsage) {
+function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, sqlAnalysis, procedures, prototypes, procedureCalls, nativeFileUsage) {
   const summary = {
     sourceFileCount: sourceFiles.length,
     tableCount: (dependencies.tables || []).length,
     programCallCount: (dependencies.programCalls || []).length,
     copyMemberCount: (dependencies.copyMembers || []).length,
     sqlStatementCount: sqlStatements.length,
+    readSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.readStatementCount) || 0,
+    writeSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.writeStatementCount) || 0,
+    dynamicSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.dynamicStatementCount) || 0,
+    unresolvedSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.unresolvedStatementCount) || 0,
     procedureCount: (procedures || []).length,
     prototypeCount: (prototypes || []).length,
     procedureCallCount: (procedureCalls || []).length,
@@ -890,7 +1005,7 @@ function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, pro
     interactiveNativeFileCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.interactiveFileCount) || 0,
     recordFormatCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.recordFormatCount) || 0,
   };
-  summary.text = `Program ${normalizeName(rootProgram)} references ${summary.tableCount} tables, calls ${summary.programCallCount} programs, includes ${summary.copyMemberCount} copy members, contains ${summary.sqlStatementCount} SQL statements, exposes ${summary.procedureCount} procedures with ${summary.procedureCallCount} procedure call sites, and uses ${summary.nativeFileCount} native files (${summary.mutatingNativeFileCount} mutating, ${summary.interactiveNativeFileCount} interactive).`;
+  summary.text = `Program ${normalizeName(rootProgram)} references ${summary.tableCount} tables, calls ${summary.programCallCount} programs, includes ${summary.copyMemberCount} copy members, contains ${summary.sqlStatementCount} SQL statements (${summary.readSqlStatementCount} read, ${summary.writeSqlStatementCount} write, ${summary.dynamicSqlStatementCount} dynamic), exposes ${summary.procedureCount} procedures with ${summary.procedureCallCount} procedure call sites, and uses ${summary.nativeFileCount} native files (${summary.mutatingNativeFileCount} mutating, ${summary.interactiveNativeFileCount} interactive).`;
   return summary;
 }
 
@@ -956,8 +1071,8 @@ function buildCanonicalAnalysisModel({
   const nativeFiles = normalizeNativeFiles(dependencies && dependencies.nativeFiles, normalizedSourceRoot);
   const nativeFileAccesses = normalizeNativeFileAccesses(dependencies && dependencies.nativeFileAccesses, normalizedSourceRoot);
   const nativeFileUsage = summarizeNativeFileUsage(nativeFiles, nativeFileAccesses);
-  const sqlTableNames = uniqueSortedStrings(sqlStatements.flatMap((statement) => statement.tables || []).map((name) => normalizeName(name)));
-  const mergedTables = mergeSqlTablesIntoDependencies(tables, sqlTableNames)
+  const sqlAnalysis = summarizeSqlStatements(sqlStatements);
+  const mergedTables = mergeSqlTablesIntoDependencies(tables, sqlAnalysis.tableNames)
     .map((table) => ({
       ...table,
       id: createEntityId('TABLE', table.name),
@@ -970,8 +1085,11 @@ function buildCanonicalAnalysisModel({
     copyMembers,
   };
   const sqlBlock = {
+    summary: sqlAnalysis.summary,
     statements: sqlStatements,
-    tableNames: sqlTableNames,
+    tableNames: sqlAnalysis.tableNames,
+    hostVariables: sqlAnalysis.hostVariables,
+    cursors: sqlAnalysis.cursors,
   };
 
   const model = {
@@ -1018,7 +1136,7 @@ function buildCanonicalAnalysisModel({
       nativeFileUsage,
     ),
     enrichments: {
-      summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements, procedures, prototypes, procedureCalls, nativeFileUsage),
+      summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements, sqlAnalysis, procedures, prototypes, procedureCalls, nativeFileUsage),
       aiContext: {
         programPurposeHint: '',
         primaryTables: dependencyBlock.tables.slice(0, 10).map((entry) => entry.name),
@@ -1199,6 +1317,8 @@ module.exports = {
   defaultCrossProgramSummary,
   defaultGraphSummary,
   defaultNativeFileUsage,
+  defaultSqlAnalysis,
   enrichCanonicalAnalysisModel,
+  summarizeSqlStatements,
   validateCanonicalAnalysisModel,
 };

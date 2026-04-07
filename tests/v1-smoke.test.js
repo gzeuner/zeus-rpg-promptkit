@@ -87,6 +87,9 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
       ['QRPGLESRC,ORDCOPY'],
     );
     assert.equal(context.sql.statements.length, 2);
+    assert.equal(context.sql.summary.readStatementCount, 1);
+    assert.equal(context.sql.summary.writeStatementCount, 1);
+    assert.equal(context.sql.summary.dynamicStatementCount, 0);
     assert.deepEqual(
       context.sql.statements.map((statement) => statement.tables.join(',')).sort(),
       ['CUSTOMER,ORDERS', 'INVOICE'],
@@ -109,11 +112,13 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
 
     const report = fs.readFileSync(path.join(programOutputDir, 'report.md'), 'utf8');
     assert.match(report, /## Native File I\/O/);
+    assert.match(report, /Read Statements: 1/);
     assert.match(report, /## Test Data Extract/);
     assert.match(report, /Test data extraction was skipped because no DB2 connection configuration was available\./);
 
     const prompt = fs.readFileSync(path.join(programOutputDir, 'ai_prompt_documentation.md'), 'utf8');
     assert.match(prompt, /3 native files/);
+    assert.match(prompt, /\[SELECT\/READ\]/);
     assert.match(prompt, /Representative sample rows are not available in this analysis run\./);
 
     const graph = readJson(path.join(programOutputDir, 'program-call-tree.json'));

@@ -92,7 +92,14 @@ function buildTemplateData(context, sourceSnippet) {
     sqlStatements: asBulletList(sqlStatements, (item) => {
       const text = (item && (item.text || item.snippet)) || '';
       if (item && item.type && text) {
-        return `[${item.type}] ${text}`;
+        const flags = [];
+        if (item.intent && item.intent !== 'OTHER') flags.push(item.intent);
+        if (item.dynamic) flags.push('DYNAMIC');
+        if (item.unresolved) flags.push('UNRESOLVED');
+        const tables = Array.isArray(item.tables) && item.tables.length > 0
+          ? ` tables: ${item.tables.join(', ')}`
+          : '';
+        return `[${item.type}${flags.length ? `/${flags.join('/')}` : ''}] ${text}${tables}`;
       }
       return item;
     }),

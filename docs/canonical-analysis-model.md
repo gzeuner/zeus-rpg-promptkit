@@ -32,7 +32,7 @@ Top-level fields:
 - `entities.copyMembers`
   - deduplicated copy member dependencies
 - `entities.sqlStatements`
-  - normalized SQL statements with type, text, table names, and evidence
+  - normalized SQL statements with statement type, intent, read/write flags, dynamic/unresolved markers, host variables, cursor actions, table names, and evidence
 - `entities.procedures`
   - local free-form procedures and fixed-form subroutines with owner, source range, and export metadata
 - `entities.prototypes`
@@ -97,6 +97,21 @@ Imported provenance currently carries:
 - `nativeFileUsage`
 - `db2Metadata`
 - `testData`
+
+## SQL Semantics
+
+Each SQL statement entity may include:
+
+- `type`: normalized statement type such as `SELECT`, `UPDATE`, `DECLARE_CURSOR`, `FETCH`, `PREPARE`, or `EXECUTE`
+- `intent`: coarse semantic category such as `READ`, `WRITE`, `CURSOR`, `CALL`, `TRANSACTION`, or `OTHER`
+- `readsData` / `writesData`: boolean access markers
+- `dynamic`: true when the statement uses dynamic SQL patterns such as `PREPARE`, `EXECUTE`, or `EXECUTE IMMEDIATE`
+- `unresolved`: true when the statement depends on runtime SQL text or unresolved table identity
+- `hostVariables`: normalized host variable names referenced by the statement
+- `cursors`: normalized cursor name/action pairs
+- `uncertainty`: explicit markers such as `DYNAMIC_SQL`, `UNRESOLVED_SQL`, or `UNRESOLVED_TABLES`
+
+`EXECUTES_SQL` relations mirror the key SQL access attributes so downstream projections can reason over SQL intent without reparsing statement text.
 
 This split keeps the semantic model stable while allowing prompt/report/viewer outputs to evolve independently.
 

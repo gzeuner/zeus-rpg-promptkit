@@ -126,7 +126,10 @@ function buildSqlStatements(sqlStatements, maxSQLStatements) {
     .slice(0, maxSQLStatements)
     .map((statement) => ({
       type: normalizeName(statement.type || 'OTHER') || 'OTHER',
+      intent: normalizeName(statement.intent || 'OTHER') || 'OTHER',
       tables: asNameList(statement.tables),
+      dynamic: Boolean(statement.dynamic),
+      unresolved: Boolean(statement.unresolved),
       snippet: String(statement.text || '').trim(),
       evidence: asArray(statement.evidence),
     }));
@@ -226,7 +229,10 @@ function optimizeContext(context, config = {}) {
     copyMembers,
     sqlStatements: selectedSql.map((statement) => ({
       type: statement.type,
+      intent: statement.intent,
       tables: statement.tables,
+      dynamic: statement.dynamic,
+      unresolved: statement.unresolved,
       snippet: statement.snippet,
     })),
     snippets,

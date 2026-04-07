@@ -116,28 +116,188 @@ function addStructuredItem(map, key, payload) {
 
 function detectSqlType(sqlText) {
   const normalized = normalizeWhitespace(sqlText).toUpperCase();
-  if (/\bSELECT\b/.test(normalized)) return 'SELECT';
-  if (/\bINSERT\b/.test(normalized)) return 'INSERT';
-  if (/\bUPDATE\b/.test(normalized)) return 'UPDATE';
-  if (/\bDELETE\b/.test(normalized)) return 'DELETE';
-  if (/\bMERGE\b/.test(normalized)) return 'MERGE';
+  if (/^EXEC\s+SQL\b/.test(normalized)) {
+    return detectSqlType(normalized.replace(/^EXEC\s+SQL\s+/, ''));
+  }
+  if (/^DECLARE\b.+\bCURSOR\b/.test(normalized)) return 'DECLARE_CURSOR';
+  if (/^OPEN\b/.test(normalized)) return 'OPEN_CURSOR';
+  if (/^FETCH\b/.test(normalized)) return 'FETCH';
+  if (/^CLOSE\b/.test(normalized)) return 'CLOSE_CURSOR';
+  if (/^PREPARE\b/.test(normalized)) return 'PREPARE';
+  if (/^EXECUTE\s+IMMEDIATE\b/.test(normalized)) return 'EXECUTE_IMMEDIATE';
+  if (/^EXECUTE\b/.test(normalized)) return 'EXECUTE';
+  if (/^CALL\b/.test(normalized)) return 'CALL';
+  if (/^VALUES\b/.test(normalized)) return 'VALUES';
+  if (/^SELECT\b/.test(normalized) || /^WITH\b/.test(normalized)) return 'SELECT';
+  if (/^INSERT\b/.test(normalized)) return 'INSERT';
+  if (/^UPDATE\b/.test(normalized)) return 'UPDATE';
+  if (/^DELETE\b/.test(normalized)) return 'DELETE';
+  if (/^MERGE\b/.test(normalized)) return 'MERGE';
+  if (/^SET\b/.test(normalized)) return 'SET';
+  if (/^COMMIT\b/.test(normalized)) return 'COMMIT';
+  if (/^ROLLBACK\b/.test(normalized)) return 'ROLLBACK';
   return 'OTHER';
 }
 
 function extractSqlTables(sqlText) {
   const tables = new Set();
-  const regex = /\b(?:FROM|JOIN|UPDATE|INTO|MERGE\s+INTO)\s+("[^"]+"|[A-Z0-9_#$@./]+)/gi;
-  let match = regex.exec(sqlText);
+  const patterns = [
+    /\b(?:FROM|JOIN)\s+("[^"]+"|[A-Z0-9_#$@./]+)/gi,
+    /\bINSERT\s+INTO\s+("[^"]+"|[A-Z0-9_#$@./]+)/gi,
+    /\bUPDATE\s+("[^"]+"|[A-Z0-9_#$@./]+)/gi,
+    /\bDELETE\s+FROM\s+("[^"]+"|[A-Z0-9_#$@./]+)/gi,
+    /\bMERGE\s+INTO\s+("[^"]+"|[A-Z0-9_#$@./]+)/gi,
+  ];
 
-  while (match) {
-    const normalized = normalizeTableName(match[1]);
-    if (normalized) {
-      tables.add(normalized);
+  for (const regex of patterns) {
+    let match = regex.exec(sqlText);
+    while (match) {
+      const normalized = normalizeTableName(match[1]);
+      if (normalized) {
+        tables.add(normalized);
+      }
+      match = regex.exec(sqlText);
     }
-    match = regex.exec(sqlText);
   }
 
   return Array.from(tables).sort();
+}
+
+function extractSqlHostVariables(sqlText) {
+  const variables = new Set();
+  const regex = /(^|[^A-Z0-9_#$@]):([A-Z][A-Z0-9_#$@]*)/gi;
+  let match = regex.exec(sqlText);
+
+  while (match) {
+    variables.add(normalizeName(match[2]));
+    match = regex.exec(sqlText);
+  }
+
+  return Array.from(variables).sort((a, b) => a.localeCompare(b));
+}
+
+function extractSqlCursorActions(sqlText) {
+  const actions = [];
+  const patterns = [
+    { action: 'DECLARE', regex: /\bDECLARE\s+([A-Z0-9_#$@]+)\s+CURSOR\b/i },
+    { action: 'OPEN', regex: /\bOPEN\s+([A-Z0-9_#$@]+)\b/i },
+    { action: 'FETCH', regex: /\bFETCH(?:\s+NEXT)?(?:\s+FROM)?\s+([A-Z0-9_#$@]+)\b/i },
+    { action: 'CLOSE', regex: /\bCLOSE\s+([A-Z0-9_#$@]+)\b/i },
+  ];
+
+  for (const pattern of patterns) {
+    const match = sqlText.match(pattern.regex);
+    if (match) {
+      actions.push({
+        name: normalizeName(match[1]),
+        action: pattern.action,
+      });
+    }
+  }
+
+  return actions
+    .filter((entry) => entry.name)
+    .sort((a, b) => {
+      if (a.name !== b.name) return a.name.localeCompare(b.name);
+      return a.action.localeCompare(b.action);
+    });
+}
+
+function hasDynamicSqlMarker(sqlText, sqlType) {
+  const normalized = normalizeWhitespace(sqlText).toUpperCase();
+  if (['PREPARE', 'EXECUTE', 'EXECUTE_IMMEDIATE'].includes(sqlType)) {
+    return true;
+  }
+  if (/\bFROM\s+:[A-Z][A-Z0-9_#$@]*\b/i.test(normalized)) {
+    return true;
+  }
+  if (/\bCURSOR\s+FOR\s+:[A-Z][A-Z0-9_#$@]*\b/i.test(normalized)) {
+    return true;
+  }
+  const declareCursorMatch = normalized.match(/\bCURSOR\s+FOR\s+([A-Z0-9_#$@]+)\b/);
+  if (sqlType === 'DECLARE_CURSOR' && declareCursorMatch) {
+    const target = declareCursorMatch[1];
+    if (!['SELECT', 'WITH', 'VALUES'].includes(target)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function determineSqlIntent(sqlType, sqlText) {
+  if (['SELECT', 'FETCH', 'VALUES'].includes(sqlType)) return 'READ';
+  if (['INSERT', 'UPDATE', 'DELETE', 'MERGE'].includes(sqlType)) return 'WRITE';
+  if (sqlType === 'DECLARE_CURSOR') {
+    return /\bCURSOR\s+FOR\s+(SELECT|WITH|VALUES)\b/i.test(sqlText) ? 'READ' : 'CURSOR';
+  }
+  if (['OPEN_CURSOR', 'CLOSE_CURSOR'].includes(sqlType)) return 'CURSOR';
+  if (sqlType === 'CALL') return 'CALL';
+  if (['COMMIT', 'ROLLBACK'].includes(sqlType)) return 'TRANSACTION';
+  return 'OTHER';
+}
+
+function buildSqlUncertainty({ sqlType, intent, tables, cursors, dynamic, unresolved }) {
+  const markers = [];
+  if (dynamic) {
+    markers.push('DYNAMIC_SQL');
+  }
+  if (unresolved) {
+    markers.push('UNRESOLVED_SQL');
+  }
+  if ((intent === 'READ' || intent === 'WRITE') && tables.length === 0 && (cursors || []).length === 0) {
+    markers.push('UNRESOLVED_TABLES');
+  }
+  if (sqlType === 'OTHER') {
+    markers.push('UNKNOWN_STATEMENT_TYPE');
+  }
+  return Array.from(new Set(markers)).sort((a, b) => a.localeCompare(b));
+}
+
+function createSqlStatement({
+  filePath,
+  startLine,
+  endLine,
+  sqlText,
+}) {
+  const normalizedText = normalizeWhitespace(sqlText);
+  const type = detectSqlType(normalizedText);
+  const tables = extractSqlTables(normalizedText);
+  const hostVariables = extractSqlHostVariables(normalizedText);
+  const cursors = extractSqlCursorActions(normalizedText);
+  const dynamic = hasDynamicSqlMarker(normalizedText, type);
+  const intent = determineSqlIntent(type, normalizedText);
+  const readsData = intent === 'READ';
+  const writesData = intent === 'WRITE';
+  const unresolved = dynamic || ((readsData || writesData) && tables.length === 0 && cursors.length === 0);
+  const uncertainty = buildSqlUncertainty({
+    sqlType: type,
+    intent,
+    tables,
+    cursors,
+    dynamic,
+    unresolved,
+  });
+
+  return {
+    type,
+    intent,
+    text: normalizedText,
+    tables,
+    hostVariables,
+    cursors,
+    readsData,
+    writesData,
+    dynamic,
+    unresolved,
+    uncertainty,
+    evidence: [
+      {
+        file: filePath,
+        startLine,
+        endLine,
+      },
+    ],
+  };
 }
 
 function createDefinition({
@@ -854,25 +1014,18 @@ function scanContent(filePath, content) {
   const finalizeExecSql = (endLine) => {
     if (execBuffer.length === 0) return;
 
-    const sqlText = normalizeWhitespace(execBuffer.join(' '));
-    const tables = extractSqlTables(sqlText);
-    sqlStatements.push({
-      type: detectSqlType(sqlText),
-      text: sqlText,
-      tables,
-      evidence: [
-        {
-          file: filePath,
-          startLine: execStartLine,
-          endLine,
-        },
-      ],
+    const statement = createSqlStatement({
+      filePath,
+      startLine: execStartLine,
+      endLine,
+      sqlText: execBuffer.join(' '),
     });
+    sqlStatements.push(statement);
 
-    for (const tableName of tables) {
+    for (const tableName of statement.tables) {
       addEntity(tablesMap, tableName, {
-        kind: 'SQL',
-        evidence: { file: filePath, line: execStartLine, text: sqlText },
+        kind: statement.dynamic ? 'SQL_DYNAMIC' : 'SQL',
+        evidence: { file: filePath, line: execStartLine, text: statement.text },
       });
     }
 
@@ -1100,25 +1253,18 @@ function scanContent(filePath, content) {
     }
 
     if (looksLikeStandaloneSql(rawLine)) {
-      const sqlText = normalizeWhitespace(trimmed);
-      const tables = extractSqlTables(sqlText);
-      sqlStatements.push({
-        type: detectSqlType(sqlText),
-        text: sqlText,
-        tables,
-        evidence: [
-          {
-            file: filePath,
-            startLine: lineNo,
-            endLine: lineNo,
-          },
-        ],
+      const statement = createSqlStatement({
+        filePath,
+        startLine: lineNo,
+        endLine: lineNo,
+        sqlText: trimmed,
       });
+      sqlStatements.push(statement);
 
-      for (const tableName of tables) {
+      for (const tableName of statement.tables) {
         addEntity(tablesMap, tableName, {
-          kind: 'SQL',
-          evidence: { file: filePath, line: lineNo, text: sqlText },
+          kind: statement.dynamic ? 'SQL_DYNAMIC' : 'SQL',
+          evidence: { file: filePath, line: lineNo, text: statement.text },
         });
       }
     }
@@ -1229,14 +1375,49 @@ function mergeSqlStatements(scanResults) {
       if (!map.has(key)) {
         map.set(key, {
           type: sql.type,
+          intent: sql.intent || 'OTHER',
           text: sql.text,
           tables: Array.from(new Set(sql.tables || [])).sort(),
+          hostVariables: Array.from(new Set(sql.hostVariables || [])).sort(),
+          cursors: Array.from(new Set((sql.cursors || []).map((entry) => `${entry.name}:${entry.action}`)))
+            .map((value) => {
+              const [name, action] = value.split(':');
+              return { name, action };
+            })
+            .sort((a, b) => {
+              if (a.name !== b.name) return a.name.localeCompare(b.name);
+              return a.action.localeCompare(b.action);
+            }),
+          readsData: Boolean(sql.readsData),
+          writesData: Boolean(sql.writesData),
+          dynamic: Boolean(sql.dynamic),
+          unresolved: Boolean(sql.unresolved),
+          uncertainty: Array.from(new Set(sql.uncertainty || [])).sort(),
           evidence: [],
         });
       }
 
       const item = map.get(key);
       item.tables = Array.from(new Set([...(item.tables || []), ...(sql.tables || [])])).sort();
+      item.hostVariables = Array.from(new Set([...(item.hostVariables || []), ...(sql.hostVariables || [])])).sort();
+      item.readsData = item.readsData || Boolean(sql.readsData);
+      item.writesData = item.writesData || Boolean(sql.writesData);
+      item.dynamic = item.dynamic || Boolean(sql.dynamic);
+      item.unresolved = item.unresolved || Boolean(sql.unresolved);
+      item.uncertainty = Array.from(new Set([...(item.uncertainty || []), ...(sql.uncertainty || [])])).sort();
+      const cursorSet = new Set((item.cursors || []).map((entry) => `${entry.name}:${entry.action}`));
+      for (const cursor of sql.cursors || []) {
+        cursorSet.add(`${cursor.name}:${cursor.action}`);
+      }
+      item.cursors = Array.from(cursorSet)
+        .map((value) => {
+          const [name, action] = value.split(':');
+          return { name, action };
+        })
+        .sort((a, b) => {
+          if (a.name !== b.name) return a.name.localeCompare(b.name);
+          return a.action.localeCompare(b.action);
+        });
 
       for (const evidence of sql.evidence || []) {
         const evidenceKey = JSON.stringify(evidence);

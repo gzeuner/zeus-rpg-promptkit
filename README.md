@@ -12,6 +12,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - Detects common dependencies using practical heuristics:
   - F-spec and `dcl-f` table/file declarations
   - Native file I/O semantics including read/write/update/delete, workstation/printer behavior, and record-format hints
+  - Embedded SQL semantics including read/write intent, cursor activity, host variables, dynamic SQL flags, and uncertainty markers
   - Program calls (`CALL`, `CALLP`, `CALLB`, `CALLPRC`)
   - Copy/include directives (`/COPY`, `/INCLUDE`, `COPY`)
   - Embedded SQL blocks (`EXEC SQL` + statement content)
@@ -229,6 +230,8 @@ Generated files:
 `procedureAnalysis` exposes detected local procedures, subroutines, prototypes, and classified procedure call sites so internal, external, dynamic, and unresolved procedure calls are no longer conflated with program calls.
 
 `nativeFileUsage` exposes native IBM i file semantics including per-file read-only versus mutating usage, workstation and printer behavior, keyed/native I/O hints, procedure ownership, and detected record formats where feasible.
+
+`sql` now exposes structured embedded SQL semantics including statement intent, read/write behavior, host variables, cursor names/actions, dynamic SQL markers, and unresolved dependency hints.
 
 When `--optimize-context` is enabled, prompts are generated from `optimized-context.json` instead of the full `context.json`.
 
