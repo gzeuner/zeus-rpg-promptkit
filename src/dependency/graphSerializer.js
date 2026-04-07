@@ -64,6 +64,10 @@ The following diagram shows dependencies for program ${graph && graph.program ? 
 Tables: ${summary.tableCount || 0}
 Programs Called: ${summary.programCallCount || 0}
 Copy Members: ${summary.copyMemberCount || 0}
+Modules: ${summary.moduleCount || 0}
+Service Programs: ${summary.serviceProgramCount || 0}
+Binding Directories: ${summary.bindingDirectoryCount || 0}
+Bind Relationships: ${summary.bindEdgeCount || 0}
 
 \`\`\`mermaid
 ${renderMermaid(graph).trim()}
