@@ -43,6 +43,9 @@ test('resolveAnalyzeConfig merges profile settings with global optimizer and tes
     contextOptimizer: {
       softTokenLimit: 2000,
       maxProgramCalls: 15,
+      workflowTokenBudgets: {
+        documentation: 1800,
+      },
     },
     testData: {
       limit: 25,
@@ -54,6 +57,9 @@ test('resolveAnalyzeConfig merges profile settings with global optimizer and tes
       extensions: ['.rpgle', '.sqlrpgle'],
       contextOptimizer: {
         maxProgramCalls: 5,
+        workflowTokenBudgets: {
+          errorAnalysis: 900,
+        },
       },
       testData: {
         maskColumns: ['EMAIL', 'PHONE'],
@@ -68,6 +74,8 @@ test('resolveAnalyzeConfig merges profile settings with global optimizer and tes
     assert.deepEqual(config.extensions, ['.rpgle', '.sqlrpgle']);
     assert.equal(config.contextOptimizer.softTokenLimit, 2000);
     assert.equal(config.contextOptimizer.maxProgramCalls, 5);
+    assert.equal(config.contextOptimizer.workflowTokenBudgets.documentation, 1800);
+    assert.equal(config.contextOptimizer.workflowTokenBudgets.errorAnalysis, 900);
     assert.equal(config.testData.limit, 25);
     assert.deepEqual(config.testData.maskColumns, ['EMAIL', 'PHONE']);
   } finally {

@@ -182,6 +182,42 @@ function projectCopyMembers(context) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function projectProgramCallRelations(canonicalAnalysis, evidenceIndex) {
+  return asArray(canonicalAnalysis && canonicalAnalysis.relations)
+    .filter((relation) => relation.type === 'CALLS_PROGRAM')
+    .map((relation) => ({
+      name: String(relation.to || '').replace(/^PROGRAM:/, ''),
+      kind: relation.attributes && relation.attributes.callKind ? relation.attributes.callKind : 'PROGRAM',
+      evidenceRefs: evidenceRefsFor(evidenceIndex, relation.evidence),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function projectProcedureCalls(canonicalAnalysis, evidenceIndex) {
+  return asArray(canonicalAnalysis && canonicalAnalysis.relations)
+    .filter((relation) => relation.type === 'CALLS_PROCEDURE')
+    .map((relation) => ({
+      target: relation.attributes && relation.attributes.targetName ? relation.attributes.targetName : String(relation.to || ''),
+      resolution: relation.attributes && relation.attributes.resolution ? relation.attributes.resolution : 'UNKNOWN',
+      targetKind: relation.attributes && relation.attributes.targetKind ? relation.attributes.targetKind : 'UNKNOWN',
+      evidenceRefs: evidenceRefsFor(evidenceIndex, relation.evidence),
+    }))
+    .sort((a, b) => {
+      if (a.resolution !== b.resolution) return a.resolution.localeCompare(b.resolution);
+      return a.target.localeCompare(b.target);
+    });
+}
+
+function projectCopyMemberRelations(canonicalAnalysis, evidenceIndex) {
+  return asArray(canonicalAnalysis && canonicalAnalysis.relations)
+    .filter((relation) => relation.type === 'INCLUDES_COPY')
+    .map((relation) => ({
+      name: String(relation.to || '').replace(/^COPY_MEMBER:/, ''),
+      evidenceRefs: evidenceRefsFor(evidenceIndex, relation.evidence),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 function projectNativeFiles(context, canonicalAnalysis, evidenceIndex) {
   const nativeFileEntities = new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.nativeFiles)
     .map((entry) => [entry.name, entry]));
@@ -232,26 +268,40 @@ function projectBinding(context, canonicalAnalysis, evidenceIndex) {
   };
 }
 
-function stringifySqlStatement(statement) {
-  const flags = [];
-  if (statement.intent && statement.intent !== 'OTHER') flags.push(statement.intent);
-  if (statement.dynamic) flags.push('DYNAMIC');
-  if (statement.unresolved) flags.push('UNRESOLVED');
-  const tables = asArray(statement.tables).length > 0 ? ` tables: ${statement.tables.join(', ')}` : '';
-  return `[${statement.type}${flags.length ? `/${flags.join('/')}` : ''}] ${statement.text}${tables}`;
+function cloneEntityList(items, mapper) {
+  return asArray(items).map((entry) => (mapper ? mapper(entry) : { ...entry }));
 }
 
-function buildWorkflow(name, context, projection, selectedSqlStatements, evidenceHighlights) {
+function buildWorkflow(name, context, projection, payload = {}) {
   return {
     name,
     summary: context && context.summary ? context.summary.text : '',
-    tables: projection.entities.tables,
-    programCalls: projection.entities.programCalls,
-    copyMembers: projection.entities.copyMembers,
-    sqlStatements: selectedSqlStatements,
+    tables: cloneEntityList(payload.tables && payload.tables.length > 0 ? payload.tables : projection.entities.tables),
+    programCalls: cloneEntityList(payload.programCalls && payload.programCalls.length > 0 ? payload.programCalls : projection.entities.programCalls),
+    copyMembers: cloneEntityList(payload.copyMembers && payload.copyMembers.length > 0 ? payload.copyMembers : projection.entities.copyMembers),
+    sqlStatements: cloneEntityList(payload.sqlStatements),
+    nativeFiles: cloneEntityList(payload.nativeFiles && payload.nativeFiles.length > 0 ? payload.nativeFiles : projection.entities.nativeFiles),
     riskMarkers: projection.riskMarkers,
     uncertaintyMarkers: projection.uncertaintyMarkers,
-    evidenceHighlights,
+    tokenBudget: Number(payload.tokenBudget) || null,
+    estimatedTokens: Number(payload.estimatedTokens) || null,
+    evidencePacks: payload.evidencePacks && typeof payload.evidencePacks === 'object'
+      ? {
+        sql: cloneEntityList(payload.evidencePacks.sql),
+        calls: cloneEntityList(payload.evidencePacks.calls),
+        fileUsage: cloneEntityList(payload.evidencePacks.fileUsage),
+        conditionals: cloneEntityList(payload.evidencePacks.conditionals),
+        errorPaths: cloneEntityList(payload.evidencePacks.errorPaths),
+      }
+      : {
+        sql: [],
+        calls: [],
+        fileUsage: [],
+        conditionals: [],
+        errorPaths: [],
+      },
+    evidenceHighlights: cloneEntityList(payload.evidenceHighlights),
+    rankedEvidence: cloneEntityList(payload.rankedEvidence && payload.rankedEvidence.length > 0 ? payload.rankedEvidence : payload.evidenceHighlights),
     dependencyGraphSummary: {
       nodeCount: Number(context && context.graph && context.graph.nodeCount) || 0,
       edgeCount: Number(context && context.graph && context.graph.edgeCount) || 0,
@@ -292,6 +342,84 @@ function buildEvidenceHighlights(evidenceIndex, projection) {
   return selected;
 }
 
+function projectSqlSelection(optimizedContext, fallbackStatements) {
+  if (optimizedContext && optimizedContext.workflows && optimizedContext.workflows.documentation) {
+    return cloneEntityList(optimizedContext.workflows.documentation.sqlStatements).map((entry) => ({
+      id: entry.id,
+      type: entry.type,
+      intent: entry.intent || 'OTHER',
+      tables: asArray(entry.tables),
+      dynamic: Boolean(entry.dynamic),
+      unresolved: Boolean(entry.unresolved),
+      text: entry.text || entry.snippet || '',
+      evidenceRefs: asArray(entry.evidenceRefs),
+      hostVariables: asArray(entry.hostVariables),
+      uncertainty: asArray(entry.uncertainty),
+    }));
+  }
+
+  if (asArray(optimizedContext && optimizedContext.sqlStatements).length > 0) {
+    return asArray(optimizedContext.sqlStatements).map((entry) => ({
+      type: entry.type,
+      intent: entry.intent || 'OTHER',
+      tables: asArray(entry.tables),
+      dynamic: Boolean(entry.dynamic),
+      unresolved: Boolean(entry.unresolved),
+      text: entry.snippet || entry.text || '',
+    }));
+  }
+
+  return fallbackStatements.slice(0, 10).map((entry) => ({
+    type: entry.type,
+    intent: entry.intent,
+    tables: entry.tables,
+    dynamic: entry.dynamic,
+    unresolved: entry.unresolved,
+    text: entry.text,
+    evidenceRefs: entry.evidenceRefs,
+    hostVariables: entry.hostVariables,
+    uncertainty: entry.uncertainty,
+  }));
+}
+
+function buildWorkflowPayload(workflowName, optimizedContext, fallbackSqlStatements, fallbackEvidenceHighlights) {
+  const workflowKey = workflowName === 'error-analysis' ? 'errorAnalysis' : 'documentation';
+  const optimizedWorkflow = optimizedContext && optimizedContext.workflows
+    ? optimizedContext.workflows[workflowKey]
+    : null;
+
+  if (optimizedWorkflow) {
+    return {
+      ...optimizedWorkflow,
+      sqlStatements: cloneEntityList(optimizedWorkflow.sqlStatements),
+      evidenceHighlights: cloneEntityList(optimizedWorkflow.evidenceHighlights),
+      rankedEvidence: cloneEntityList(optimizedWorkflow.rankedEvidence),
+      tables: cloneEntityList(optimizedWorkflow.tables),
+      programCalls: cloneEntityList(optimizedWorkflow.programCalls),
+      copyMembers: cloneEntityList(optimizedWorkflow.copyMembers),
+      nativeFiles: cloneEntityList(optimizedWorkflow.nativeFiles),
+      evidencePacks: optimizedWorkflow.evidencePacks || {},
+    };
+  }
+
+  return {
+    sqlStatements: fallbackSqlStatements,
+    evidenceHighlights: fallbackEvidenceHighlights,
+    rankedEvidence: fallbackEvidenceHighlights,
+    tables: [],
+    programCalls: [],
+    copyMembers: [],
+    nativeFiles: [],
+    evidencePacks: {
+      sql: cloneEntityList(fallbackEvidenceHighlights.filter((entry) => entry.label && /SQL/i.test(entry.label))),
+      calls: [],
+      fileUsage: cloneEntityList(fallbackEvidenceHighlights.filter((entry) => entry.label && /FILE/i.test(entry.label))),
+      conditionals: [],
+      errorPaths: [],
+    },
+  };
+}
+
 function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedContext = null }) {
   if (!canonicalAnalysis || canonicalAnalysis.kind !== 'canonical-analysis') {
     throw new Error('AI knowledge projection requires canonical analysis input.');
@@ -299,23 +427,7 @@ function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedConte
 
   const evidenceIndex = createEvidenceIndex(canonicalAnalysis.sourceRoot, canonicalAnalysis);
   const sqlStatements = projectSqlStatements(canonicalAnalysis, evidenceIndex);
-  const selectedSqlStatements = asArray(optimizedContext && optimizedContext.sqlStatements).length > 0
-    ? asArray(optimizedContext.sqlStatements).map((entry) => ({
-      type: entry.type,
-      intent: entry.intent || 'OTHER',
-      tables: asArray(entry.tables),
-      dynamic: Boolean(entry.dynamic),
-      unresolved: Boolean(entry.unresolved),
-      text: entry.snippet || '',
-    }))
-    : sqlStatements.slice(0, 10).map((entry) => ({
-      type: entry.type,
-      intent: entry.intent,
-      tables: entry.tables,
-      dynamic: entry.dynamic,
-      unresolved: entry.unresolved,
-      text: entry.text,
-    }));
+  const selectedSqlStatements = projectSqlSelection(optimizedContext, sqlStatements);
 
   const projection = {
     schemaVersion: AI_KNOWLEDGE_PROJECTION_SCHEMA_VERSION,
@@ -338,8 +450,9 @@ function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedConte
     evidenceIndex,
     entities: {
       tables: projectTableDependencies(context, canonicalAnalysis, evidenceIndex),
-      programCalls: projectProgramCalls(context),
-      copyMembers: projectCopyMembers(context),
+      programCalls: projectProgramCallRelations(canonicalAnalysis, evidenceIndex),
+      procedureCalls: projectProcedureCalls(canonicalAnalysis, evidenceIndex),
+      copyMembers: projectCopyMemberRelations(canonicalAnalysis, evidenceIndex),
       sqlStatements,
       nativeFiles: projectNativeFiles(context, canonicalAnalysis, evidenceIndex),
       binding: projectBinding(context, canonicalAnalysis, evidenceIndex),
@@ -353,8 +466,18 @@ function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedConte
 
   projection.uncertaintyMarkers = collectUncertaintyMarkers(canonicalAnalysis, context);
   const evidenceHighlights = buildEvidenceHighlights(evidenceIndex, projection);
-  projection.workflows.documentation = buildWorkflow('documentation', context, projection, selectedSqlStatements, evidenceHighlights);
-  projection.workflows.errorAnalysis = buildWorkflow('error-analysis', context, projection, selectedSqlStatements, evidenceHighlights);
+  projection.workflows.documentation = buildWorkflow(
+    'documentation',
+    context,
+    projection,
+    buildWorkflowPayload('documentation', optimizedContext, selectedSqlStatements, evidenceHighlights),
+  );
+  projection.workflows.errorAnalysis = buildWorkflow(
+    'error-analysis',
+    context,
+    projection,
+    buildWorkflowPayload('error-analysis', optimizedContext, selectedSqlStatements, evidenceHighlights),
+  );
 
   return projection;
 }

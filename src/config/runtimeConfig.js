@@ -55,6 +55,15 @@ function validateContextOptimizerConfig(value, label) {
 
   for (const [key, fieldValue] of Object.entries(value)) {
     if (fieldValue === undefined || fieldValue === null) continue;
+    if (key === 'workflowTokenBudgets') {
+      if (!isPlainObject(fieldValue)) {
+        failValidation(`${label}.workflowTokenBudgets must be an object`);
+      }
+      for (const [workflowKey, workflowBudget] of Object.entries(fieldValue)) {
+        assertPositiveInteger(workflowBudget, `${label}.workflowTokenBudgets.${workflowKey}`);
+      }
+      continue;
+    }
     assertPositiveInteger(fieldValue, `${label}.${key}`);
   }
 }
@@ -259,6 +268,11 @@ function readContextOptimizerConfig(profiles, profile) {
     ...DEFAULT_CONTEXT_OPTIMIZER_OPTIONS,
     ...globalConfig,
     ...profileConfig,
+    workflowTokenBudgets: {
+      ...(DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.workflowTokenBudgets || {}),
+      ...((globalConfig && globalConfig.workflowTokenBudgets) || {}),
+      ...((profileConfig && profileConfig.workflowTokenBudgets) || {}),
+    },
   };
 }
 

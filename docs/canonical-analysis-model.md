@@ -158,6 +158,6 @@ This split keeps the semantic model stable while allowing prompt/report/viewer o
 
 - `context.json` remains the stable backward-compatible projection used by existing reports and prompt templates
 - `ai-knowledge.json` is the versioned prompt-ready AI projection derived from the canonical model
-- `optimized-context.json` remains a token-budgeted prompt projection
+- `optimized-context.json` remains a token-budgeted compatibility projection, now driven by salience-ranked workflow evidence packs
 - `canonical-analysis.json` is the new internal truth model for future typed analyzers and AI knowledge projection
 - if a future change requires breaking the canonical schema, `schemaVersion` must be incremented explicitly

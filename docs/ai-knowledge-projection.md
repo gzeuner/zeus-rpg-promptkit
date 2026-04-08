@@ -50,15 +50,28 @@ Current workflow blocks:
 Each workflow may include:
 
 - `summary`
+- `tokenBudget`
+- `estimatedTokens`
 - `tables`
 - `programCalls`
 - `copyMembers`
 - `sqlStatements`
+- `nativeFiles`
 - `riskMarkers`
 - `uncertaintyMarkers`
+- `evidencePacks`
 - `evidenceHighlights`
+- `rankedEvidence`
 - `dependencyGraphSummary`
 - `testData`
+
+`evidencePacks` currently groups ranked evidence into:
+
+- `sql`
+- `calls`
+- `fileUsage`
+- `conditionals`
+- `errorPaths`
 
 ## Versioning
 

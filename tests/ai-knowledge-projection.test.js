@@ -50,7 +50,15 @@ end-proc;
       notes: scanSummary.notes,
     });
     const context = buildContext({ canonicalAnalysis });
-    const optimizedContext = optimizeContext(context, { maxSQLStatements: 1, maxSourceSnippets: 2 });
+    const baseProjection = buildAiKnowledgeProjection({ canonicalAnalysis, context });
+    const optimizedContext = optimizeContext(context, {
+      maxSQLStatements: 1,
+      maxSourceSnippets: 2,
+      workflowTokenBudgets: {
+        documentation: 800,
+        errorAnalysis: 700,
+      },
+    }, baseProjection);
     const projection = buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedContext });
 
     assert.equal(projection.schemaVersion, AI_KNOWLEDGE_PROJECTION_SCHEMA_VERSION);
@@ -60,6 +68,8 @@ end-proc;
     assert.ok(projection.riskMarkers.includes('Dynamic SQL detected'));
     assert.ok(projection.uncertaintyMarkers.includes('DYNAMIC_SQL'));
     assert.equal(projection.workflows.documentation.sqlStatements.length, 1);
+    assert.ok(projection.workflows.documentation.tokenBudget >= 1);
+    assert.ok(Array.isArray(projection.workflows.documentation.evidencePacks.sql));
     assert.ok(projection.entities.sqlStatements.some((entry) => entry.dynamic === true));
     assert.ok(projection.entities.sqlStatements.some((entry) => entry.evidenceRefs.length > 0));
   } finally {
@@ -87,6 +97,8 @@ test('buildPrompt consumes ai-knowledge projection workflows', () => {
           riskMarkers: ['Dynamic SQL detected'],
           uncertaintyMarkers: ['DYNAMIC_SQL'],
           evidenceHighlights: [{
+            rank: 1,
+            score: 120,
             file: 'ORDERPGM.sqlrpgle',
             startLine: 4,
             label: 'SQL',
@@ -102,7 +114,7 @@ test('buildPrompt consumes ai-knowledge projection workflows', () => {
     assert.match(content, /Risk markers: Dynamic SQL detected\./);
     assert.match(content, /Uncertainty markers: DYNAMIC_SQL\./);
     assert.match(content, /Evidence Highlights/);
-    assert.match(content, /SQL @ ORDERPGM\.sqlrpgle:4/);
+    assert.match(content, /#1 SQL @ ORDERPGM\.sqlrpgle:4/);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
