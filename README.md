@@ -43,6 +43,8 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `src/report/architectureReport.js` - Architecture report generation
 - `src/report/jsonReport.js` - JSON report writer
 - `src/prompt/promptBuilder.js` - Prompt generation from templates
+- `src/prompt/promptRegistry.js` - Prompt contract metadata and workflow mapping
+- `src/prompt/promptEvaluationHarness.js` - Fixture-driven prompt contract evaluation
 - `src/prompt/templates/*.md` - Prompt templates
 - `java/Db2MetadataExporter.java` - DB2 table metadata exporter
 - `java/Db2TestDataExtractor.java` - DB2 sample row extractor
@@ -428,8 +430,19 @@ Available prompt types today:
 
 - `documentation`
 - `error-analysis`
+- `defect-analysis`
+- `modernization`
 
 The analyze pipeline loads templates from disk, resolves placeholders from the projected prompt context, and writes prompt files to `output/<program>/`.
+
+Prompt rendering is now contract-driven:
+
+- each template has registry metadata for version, workflow, required inputs, preferred output shape, and budget expectations
+- prompt applicability is validated against `ai-knowledge.json` before rendering
+- rendered prompts fail fast when the contract budget is exceeded
+- fixture-driven prompt regression tests check completeness, evidence preservation, and prompt size
+
+See `docs/prompt-contracts.md` for the contract model and fixture harness.
 
 Supported placeholders include:
 
