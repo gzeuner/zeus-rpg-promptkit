@@ -126,7 +126,9 @@ function buildTemplateDataFromProjection(aiProjection, templateName) {
     ? workflow.evidenceHighlights.map((entry) => {
       const location = entry.file ? `${entry.file}:${entry.startLine || 1}` : '';
       const snippet = entry.snippet ? ` ${entry.snippet.replace(/\s+/g, ' ').trim()}` : '';
-      return `${entry.label || 'Evidence'} @ ${location}${snippet}`;
+      const rank = Number(entry.rank) || 0;
+      const score = Number(entry.score) || 0;
+      return `#${rank || '?'} ${entry.label || 'Evidence'} @ ${location}${score ? ` [score ${score}]` : ''}${snippet}`;
     }).join('\n')
     : 'No source snippet available.';
   const summaryParts = [

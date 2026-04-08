@@ -110,11 +110,15 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
 
     const optimizedContext = readJson(path.join(programOutputDir, 'optimized-context.json'));
     assert.equal(optimizedContext.program, 'ORDERPGM');
+    assert.equal(optimizedContext.optimization.strategy, 'salience-ranked-evidence-packs');
+    assert.ok(optimizedContext.workflows.documentation.tokenBudget >= 1);
+    assert.ok(Array.isArray(optimizedContext.workflows.documentation.evidenceHighlights));
     const aiKnowledge = readJson(path.join(programOutputDir, 'ai-knowledge.json'));
     assert.equal(aiKnowledge.kind, 'ai-knowledge-projection');
     assert.equal(aiKnowledge.program, 'ORDERPGM');
     assert.ok(Array.isArray(aiKnowledge.evidenceIndex));
     assert.ok(aiKnowledge.workflows.documentation);
+    assert.ok(Array.isArray(aiKnowledge.workflows.documentation.evidencePacks.sql));
 
     const report = fs.readFileSync(path.join(programOutputDir, 'report.md'), 'utf8');
     assert.match(report, /## Native File I\/O/);
@@ -126,6 +130,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.match(prompt, /3 native files/);
     assert.match(prompt, /Risk markers:/);
     assert.match(prompt, /Evidence Highlights/);
+    assert.match(prompt, /#1 /);
     assert.match(prompt, /\[SELECT\/READ\]/);
     assert.match(prompt, /Representative sample rows are not available in this analysis run\./);
 

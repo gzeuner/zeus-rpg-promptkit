@@ -253,7 +253,7 @@ function buildContextStage(state) {
 }
 
 function optimizeContextStage(state) {
-  const { context, config, optimizeContextEnabled } = state;
+  const { canonicalAnalysis, context, config, optimizeContextEnabled } = state;
   const contextTokens = estimateTokensFromObject(context);
 
   if (!optimizeContextEnabled) {
@@ -278,7 +278,12 @@ function optimizeContextStage(state) {
     };
   }
 
-  const optimizedContext = optimizeContext(context, config.contextOptimizer);
+  const baseAiProjection = buildAiKnowledgeProjection({
+    canonicalAnalysis,
+    context,
+    optimizedContext: null,
+  });
+  const optimizedContext = optimizeContext(context, config.contextOptimizer, baseAiProjection);
   const optimizedTokens = estimateTokensFromObject(optimizedContext);
 
   return {

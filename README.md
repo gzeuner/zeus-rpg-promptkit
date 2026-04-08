@@ -240,7 +240,7 @@ Generated files:
 
 `bindingAnalysis` exposes module-level bind metadata including `BNDDIR` references, service-program hints, binder-source exports, imported procedure symbols, and unresolved bind diagnostics where explicit binding evidence is missing.
 
-When `--optimize-context` is enabled, the AI knowledge projection uses `optimized-context.json` as a selection helper, but prompt generation reads `ai-knowledge.json`.
+When `--optimize-context` is enabled, `optimized-context.json` becomes a salience-ranked workflow projection with token budgets, evidence packs, and ranked source references. The AI knowledge projection uses it as a selection helper, but prompt generation still reads `ai-knowledge.json`.
 
 The canonical schema and invariants are documented in `docs/canonical-analysis-model.md`.
 
@@ -622,7 +622,7 @@ A profile can define:
 - `db` (optional): `url`, `host`, `user`, `password`, `defaultSchema`, `defaultLibrary`
 - `testData` (optional): `limit`, `maskColumns`
 - `fetch` (optional): `host`, `user`, `password`, `sourceLib`, `ifsDir`, `out`, `files`, `members`, `replace`, `streamFileCcsid`, `transport`
-- `contextOptimizer` (optional): `maxTables`, `maxProgramCalls`, `maxCopyMembers`, `maxSQLStatements`, `maxSourceSnippets`, `maxSnippetLines`, `softTokenLimit`
+- `contextOptimizer` (optional): `maxTables`, `maxProgramCalls`, `maxCopyMembers`, `maxSQLStatements`, `maxSourceSnippets`, `maxSnippetLines`, `softTokenLimit`, `workflowTokenBudgets`
 
 Example:
 
@@ -635,7 +635,11 @@ Example:
     "maxSQLStatements": 10,
     "maxSourceSnippets": 20,
     "maxSnippetLines": 12,
-    "softTokenLimit": 3000
+    "softTokenLimit": 3000,
+    "workflowTokenBudgets": {
+      "documentation": 2200,
+      "errorAnalysis": 1600
+    }
   },
   "testData": {
     "limit": 50,
@@ -651,7 +655,10 @@ Example:
       "maxCopyMembers": 10,
       "maxSQLStatements": 10,
       "maxSourceSnippets": 20,
-      "maxSnippetLines": 12
+      "maxSnippetLines": 12,
+      "workflowTokenBudgets": {
+        "documentation": 1800
+      }
     }
   },
   "sample-fetch": {
@@ -677,9 +684,10 @@ Large RPG programs often exceed practical LLM context limits when full scan outp
 `--optimize-context` adds a deterministic reduction step:
 
 - keeps program metadata, dependency summary, tables, program calls, copy members, and SQL
-- prioritizes SQL and call/table signals
-- limits section sizes using configurable caps
-- extracts short evidence-based source snippets (default max: 12 lines)
+- ranks semantic evidence by salience instead of trimming lists alphabetically
+- builds workflow-specific evidence packs for SQL, calls, native file usage, conditionals, and error paths
+- enforces configurable token budgets per workflow through `workflowTokenBudgets.documentation` and `workflowTokenBudgets.errorAnalysis`
+- carries ranked file-and-line evidence references forward into `ai-knowledge.json` and the generated prompts
 
 Token estimation uses a lightweight heuristic:
 
