@@ -18,7 +18,7 @@ const { DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../ai/contextOptimizer');
 const { DEFAULT_SOURCE_FILES, DEFAULT_TRANSPORT } = require('../fetch/fetchService');
 const { DEFAULT_STREAM_FILE_CCSID } = require('../fetch/ifsExporter');
 
-const DEFAULT_EXTENSIONS = ['.rpg', '.rpgle', '.sqlrpgle', '.rpgile', '.clp', '.clle', '.dds', '.dspf', '.prtf', '.pf', '.lf'];
+const DEFAULT_EXTENSIONS = ['.rpg', '.rpgle', '.sqlrpgle', '.rpgile', '.bnd', '.binder', '.bndsrc', '.clp', '.clle', '.dds', '.dspf', '.prtf', '.pf', '.lf'];
 const ALLOWED_FETCH_TRANSPORTS = new Set(['auto', 'sftp', 'jt400', 'ftp']);
 
 function failValidation(message) {
@@ -55,6 +55,15 @@ function validateContextOptimizerConfig(value, label) {
 
   for (const [key, fieldValue] of Object.entries(value)) {
     if (fieldValue === undefined || fieldValue === null) continue;
+    if (key === 'workflowTokenBudgets') {
+      if (!isPlainObject(fieldValue)) {
+        failValidation(`${label}.workflowTokenBudgets must be an object`);
+      }
+      for (const [workflowKey, workflowBudget] of Object.entries(fieldValue)) {
+        assertPositiveInteger(workflowBudget, `${label}.workflowTokenBudgets.${workflowKey}`);
+      }
+      continue;
+    }
     assertPositiveInteger(fieldValue, `${label}.${key}`);
   }
 }
@@ -259,6 +268,11 @@ function readContextOptimizerConfig(profiles, profile) {
     ...DEFAULT_CONTEXT_OPTIMIZER_OPTIONS,
     ...globalConfig,
     ...profileConfig,
+    workflowTokenBudgets: {
+      ...(DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.workflowTokenBudgets || {}),
+      ...((globalConfig && globalConfig.workflowTokenBudgets) || {}),
+      ...((profileConfig && profileConfig.workflowTokenBudgets) || {}),
+    },
   };
 }
 

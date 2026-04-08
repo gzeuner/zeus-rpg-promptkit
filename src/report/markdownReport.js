@@ -93,6 +93,62 @@ function nativeFileUsageSection(nativeFileUsage) {
   return `## Native File I/O\n- Native Files: ${summary.fileCount || 0}\n- Read-Only Files: ${summary.readOnlyFileCount || 0}\n- Mutating Files: ${summary.mutatingFileCount || 0}\n- Interactive Files: ${summary.interactiveFileCount || 0}\n- Workstation Files: ${summary.workstationFileCount || 0}\n- Printer Files: ${summary.printerFileCount || 0}\n- Keyed Files: ${summary.keyedFileCount || 0}\n- Record Formats: ${summary.recordFormatCount || 0}\n\n${detailLines}\n`;
 }
 
+function sqlSection(sql) {
+  const summary = (sql && sql.summary) || {};
+  const statements = (sql && sql.statements) || [];
+
+  const detailLines = statements.length > 0
+    ? statements.map((statement) => {
+      const flags = [];
+      if (statement.intent && statement.intent !== 'OTHER') flags.push(statement.intent);
+      if (statement.dynamic) flags.push('DYNAMIC');
+      if (statement.unresolved) flags.push('UNRESOLVED');
+      const tables = (statement.tables || []).length > 0 ? ` tables: ${(statement.tables || []).join(', ')}` : '';
+      const hostVariables = (statement.hostVariables || []).length > 0 ? ` host vars: ${(statement.hostVariables || []).join(', ')}` : '';
+      const cursors = (statement.cursors || []).length > 0
+        ? ` cursors: ${(statement.cursors || []).map((cursor) => `${cursor.name}/${cursor.action}`).join(', ')}`
+        : '';
+      return `- [${statement.type}${flags.length ? `/${flags.join('/')}` : ''}] ${statement.text}${tables}${hostVariables}${cursors}`;
+    }).join('\n')
+    : '- None detected';
+
+  return `## SQL Statements\n- SQL Statements: ${summary.statementCount || 0}\n- Read Statements: ${summary.readStatementCount || 0}\n- Write Statements: ${summary.writeStatementCount || 0}\n- Dynamic Statements: ${summary.dynamicStatementCount || 0}\n- Unresolved Statements: ${summary.unresolvedStatementCount || 0}\n- Cursor Statements: ${summary.cursorStatementCount || 0}\n- Host Variables: ${summary.hostVariableCount || 0}\n- Cursors: ${summary.cursorCount || 0}\n\n${detailLines}\n`;
+}
+
+function bindingAnalysisSection(bindingAnalysis) {
+  const summary = (bindingAnalysis && bindingAnalysis.summary) || {};
+  const modules = (bindingAnalysis && bindingAnalysis.modules) || [];
+  const servicePrograms = (bindingAnalysis && bindingAnalysis.servicePrograms) || [];
+
+  const detailLines = modules.length > 0
+    ? modules.map((module) => {
+      const parts = [`${module.name} (${module.kind || 'MODULE'})`];
+      if ((module.bindingDirectories || []).length > 0) {
+        parts.push(`bnddir: ${module.bindingDirectories.join(', ')}`);
+      }
+      if ((module.servicePrograms || []).length > 0) {
+        parts.push(`srvpgm: ${module.servicePrograms.join(', ')}`);
+      }
+      if ((module.importedProcedures || []).length > 0) {
+        parts.push(`imports: ${module.importedProcedures.join(', ')}`);
+      }
+      if (module.unresolvedBindings) {
+        parts.push('UNRESOLVED');
+      }
+      return `- ${parts.join(' | ')}`;
+    }).join('\n')
+    : '- None detected';
+
+  const serviceProgramLines = servicePrograms.length > 0
+    ? servicePrograms.map((serviceProgram) => {
+      const exports = (serviceProgram.exports || []).map((entry) => `${entry.symbol}${entry.resolved ? '' : ' (unresolved)'}`).join(', ');
+      return `- ${serviceProgram.name}${serviceProgram.sourceKind ? ` [${serviceProgram.sourceKind}]` : ''}${exports ? ` exports: ${exports}` : ''}`;
+    }).join('\n')
+    : '- None detected';
+
+  return `## Binding Analysis\n- Modules: ${summary.moduleCount || 0}\n- NoMain Modules: ${summary.noMainModuleCount || 0}\n- Service Programs: ${summary.serviceProgramCount || 0}\n- Binder Sources: ${summary.binderSourceCount || 0}\n- Binding Directories: ${summary.bindingDirectoryCount || 0}\n- Bound Modules: ${summary.boundModuleCount || 0}\n- Unresolved Bindings: ${summary.unresolvedModuleCount || 0}\n- Exported Symbols: ${summary.exportCount || 0}\n\n### Modules\n${detailLines}\n\n### Service Programs\n${serviceProgramLines}\n`;
+}
+
 function generateMarkdownReport(context, tokenReport) {
   const summary = context.summary || {};
   const dependencies = context.dependencies || {};
@@ -100,6 +156,7 @@ function generateMarkdownReport(context, tokenReport) {
   const graph = context.graph || {};
   const crossProgramGraph = context.crossProgramGraph || {};
   const procedureAnalysis = context.procedureAnalysis || {};
+  const bindingAnalysis = context.bindingAnalysis || {};
   const nativeFileUsage = context.nativeFileUsage || {};
   const db2Metadata = context.db2Metadata || {};
   const testData = context.testData || {};
@@ -115,7 +172,7 @@ function generateMarkdownReport(context, tokenReport) {
     : `## Test Data Extract\nTest data extraction was skipped because ${testData.reason || 'no DB2 connection configuration was available'}.\n`;
   const procedureSection = `## Procedure Semantics\n- Procedures: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCount) || 0}\n- Prototypes: ${(procedureAnalysis.summary && procedureAnalysis.summary.prototypeCount) || 0}\n- Procedure Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCallCount) || 0}\n- Internal Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.internalCallCount) || 0}\n- External Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.externalCallCount) || 0}\n- Dynamic Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.dynamicCallCount) || 0}\n- Unresolved Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.unresolvedCallCount) || 0}\n`;
 
-  return `# Zeus RPG Analysis Report\n\n## Overview\n- Program: ${context.program}\n- Scanned At: ${context.scannedAt}\n- Source Root: ${context.sourceRoot}\n- Source File Count: ${summary.sourceFileCount || 0}\n- Table Count: ${summary.tableCount || 0}\n- Program Call Count: ${summary.programCallCount || 0}\n- Copy Member Count: ${summary.copyMemberCount || 0}\n- SQL Statement Count: ${summary.sqlStatementCount || 0}\n${summary.text ? `- Summary: ${summary.text}\n` : ''}\n${optimizationSection(tokenReport)}\n## Source Files\n${sectionList(context.sourceFiles)}\n\n## Tables\n${sectionList(dependencies.tables)}\n\n## Program Calls\n${sectionList(dependencies.programCalls)}\n\n## Copy Members\n${sectionList(dependencies.copyMembers)}\n\n${procedureSection}\n${nativeFileUsageSection(nativeFileUsage)}\n## SQL Statements\n${sectionList(sql.statements)}\n\n${db2Section}\n${testDataSection}\n## Dependency Graph\nDependency graph generated for ${context.program}.\n\n- Nodes: ${graph.nodeCount || 0}\n- Edges: ${graph.edgeCount || 0}\n- Tables: ${graph.tableCount || 0}\n- Programs Called: ${graph.programCallCount || 0}\n- Copy Members: ${graph.copyMemberCount || 0}\n\nSee files:\n- ${(graph.files && graph.files.json) || 'dependency-graph.json'}\n- ${(graph.files && graph.files.mermaid) || 'dependency-graph.mmd'}\n- ${(graph.files && graph.files.markdown) || 'dependency-graph.md'}\n\n## Cross Program Dependency Graph\nA recursive program dependency graph was generated for ${context.program}.\n\n- Programs discovered: ${crossProgramGraph.programCount || 0}\n- Unresolved program calls: ${unresolvedPrograms.length}\n- Unresolved list: ${unresolvedText}\n\nSee:\n- ${(crossProgramGraph.files && crossProgramGraph.files.json) || 'program-call-tree.json'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.mermaid) || 'program-call-tree.mmd'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.markdown) || 'program-call-tree.md'}\n\n## Impact Analysis\nImpact analysis can identify affected programs if a component changes.\n\nSee:\n- impact-analysis.json\n- impact-analysis.md\n\n## Interactive Architecture Viewer\nAn interactive architecture visualization has been generated.\n\nOpen:\n- architecture.html\n\nin your browser to explore program dependencies visually.\n\n## Architecture\n- See architecture-report.md for a full architecture overview.\n\n## Next Steps\n- Validate detected dependencies with the application design and naming standards.\n- Use canonical-analysis.json as the semantic source and context.json or optimized-context.json as prompt-ready projections.\n- Enrich with DB metadata and sample test data when available to improve table-level reasoning.\n- Create a portable bundle with \`zeus bundle --program ${context.program}\`.\n`;
+  return `# Zeus RPG Analysis Report\n\n## Overview\n- Program: ${context.program}\n- Scanned At: ${context.scannedAt}\n- Source Root: ${context.sourceRoot}\n- Source File Count: ${summary.sourceFileCount || 0}\n- Table Count: ${summary.tableCount || 0}\n- Program Call Count: ${summary.programCallCount || 0}\n- Copy Member Count: ${summary.copyMemberCount || 0}\n- SQL Statement Count: ${summary.sqlStatementCount || 0}\n${summary.text ? `- Summary: ${summary.text}\n` : ''}\n${optimizationSection(tokenReport)}\n## Source Files\n${sectionList(context.sourceFiles)}\n\n## Tables\n${sectionList(dependencies.tables)}\n\n## Program Calls\n${sectionList(dependencies.programCalls)}\n\n## Copy Members\n${sectionList(dependencies.copyMembers)}\n\n${procedureSection}\n${bindingAnalysisSection(bindingAnalysis)}\n${nativeFileUsageSection(nativeFileUsage)}\n${sqlSection(sql)}\n${db2Section}\n${testDataSection}\n## Dependency Graph\nDependency graph generated for ${context.program}.\n\n- Nodes: ${graph.nodeCount || 0}\n- Edges: ${graph.edgeCount || 0}\n- Tables: ${graph.tableCount || 0}\n- Programs Called: ${graph.programCallCount || 0}\n- Copy Members: ${graph.copyMemberCount || 0}\n- Modules: ${graph.moduleCount || 0}\n- Service Programs: ${graph.serviceProgramCount || 0}\n- Binding Directories: ${graph.bindingDirectoryCount || 0}\n- Bind Relationships: ${graph.bindEdgeCount || 0}\n\nSee files:\n- ${(graph.files && graph.files.json) || 'dependency-graph.json'}\n- ${(graph.files && graph.files.mermaid) || 'dependency-graph.mmd'}\n- ${(graph.files && graph.files.markdown) || 'dependency-graph.md'}\n\n## Cross Program Dependency Graph\nA recursive program dependency graph was generated for ${context.program}.\n\n- Programs discovered: ${crossProgramGraph.programCount || 0}\n- Unresolved program calls: ${unresolvedPrograms.length}\n- Unresolved list: ${unresolvedText}\n\nSee:\n- ${(crossProgramGraph.files && crossProgramGraph.files.json) || 'program-call-tree.json'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.mermaid) || 'program-call-tree.mmd'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.markdown) || 'program-call-tree.md'}\n\n## Impact Analysis\nImpact analysis can identify affected programs if a component changes.\n\nSee:\n- impact-analysis.json\n- impact-analysis.md\n\n## Interactive Architecture Viewer\nAn interactive architecture visualization has been generated.\n\nOpen:\n- architecture.html\n\nin your browser to explore program dependencies visually.\n\n## Architecture\n- See architecture-report.md for a full architecture overview.\n\n## Next Steps\n- Validate detected dependencies with the application design and naming standards.\n- Use canonical-analysis.json as the semantic source and context.json or optimized-context.json as prompt-ready projections.\n- Enrich with DB metadata and sample test data when available to improve table-level reasoning.\n- Create a portable bundle with \`zeus bundle --program ${context.program}\`.\n`;
 }
 
 module.exports = {

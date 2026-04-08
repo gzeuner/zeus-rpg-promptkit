@@ -99,6 +99,8 @@ test('buildCanonicalAnalysisModel creates a validated semantic core with provena
   assert.deepEqual(projectedContext.dependencies.programCalls.map((entry) => entry.name), ['INVPGM']);
   assert.equal(projectedContext.nativeFileUsage.summary.fileCount, 1);
   assert.equal(projectedContext.nativeFileUsage.summary.keyedFileCount, 1);
+  assert.equal(projectedContext.sql.summary.statementCount, 1);
+  assert.equal(projectedContext.sql.summary.readStatementCount, 1);
   assert.equal(projectedContext.sql.statements[0].evidence[0].file, 'ORDERPGM.rpgle');
 });
 
