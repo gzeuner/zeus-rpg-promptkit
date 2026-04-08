@@ -187,6 +187,7 @@ Generated files:
 - `canonical-analysis.json`
 - `context.json`
 - `optimized-context.json` (when `--optimize-context` is enabled)
+- `ai-knowledge.json`
 - `report.md`
 - `architecture-report.md`
 - `ai_prompt_documentation.md`
@@ -225,6 +226,8 @@ Generated files:
 - `aiContext`
 - `notes`
 
+`ai-knowledge.json` is a versioned prompt-ready projection derived from the canonical model. It preserves evidence references, risk markers, uncertainty markers, and workflow-specific sections for prompt generation.
+
 `canonical-analysis.json` is now the semantic source of truth for the analyze pipeline.
 
 `context.json` remains the backward-compatible AI-ready projection. Prompt generation and report generation still consume this projection today, and `graph` provides compact references to dependency graph artifacts.
@@ -237,7 +240,7 @@ Generated files:
 
 `bindingAnalysis` exposes module-level bind metadata including `BNDDIR` references, service-program hints, binder-source exports, imported procedure symbols, and unresolved bind diagnostics where explicit binding evidence is missing.
 
-When `--optimize-context` is enabled, prompts are generated from `optimized-context.json` instead of the full `context.json`.
+When `--optimize-context` is enabled, the AI knowledge projection uses `optimized-context.json` as a selection helper, but prompt generation reads `ai-knowledge.json`.
 
 The canonical schema and invariants are documented in `docs/canonical-analysis-model.md`.
 

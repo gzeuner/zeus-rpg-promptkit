@@ -26,6 +26,7 @@ const { generateMarkdownReport } = require('../report/markdownReport');
 const { writeJsonReport } = require('../report/jsonReport');
 const { generateArchitectureReport } = require('../report/architectureReport');
 const { optimizeContext, DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../ai/contextOptimizer');
+const { buildAiKnowledgeProjection } = require('../ai/knowledgeProjection');
 const { estimateTokensFromObject, computeReduction } = require('../ai/tokenEstimator');
 const { generateArchitectureViewer } = require('../viewer/architectureViewerGenerator');
 const { exportDb2Metadata } = require('../db2/metadataExportService');
@@ -429,11 +430,18 @@ function writeArtifactsStage(state) {
     optimizationReport,
   } = state;
 
+  const aiKnowledge = buildAiKnowledgeProjection({
+    canonicalAnalysis,
+    context,
+    optimizedContext,
+  });
+
   writeJsonReport(path.join(outputProgramDir, 'canonical-analysis.json'), canonicalAnalysis);
   writeJsonReport(path.join(outputProgramDir, 'context.json'), context);
   if (optimizedContext) {
     writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), optimizedContext);
   }
+  writeJsonReport(path.join(outputProgramDir, 'ai-knowledge.json'), aiKnowledge);
 
   const programCallTreeJsonPath = path.join(outputProgramDir, 'program-call-tree.json');
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.json'), renderJson(graph), 'utf8');
@@ -456,7 +464,7 @@ function writeArtifactsStage(state) {
     mermaidPath: path.join(outputProgramDir, 'dependency-graph.mmd'),
   });
   buildPrompts({
-    context: promptContext,
+    aiProjection: aiKnowledge,
     outputDir: outputProgramDir,
     sourceSnippet,
   });
@@ -469,6 +477,7 @@ function writeArtifactsStage(state) {
       'canonical-analysis.json',
       'context.json',
       ...(optimizedContext ? ['optimized-context.json'] : []),
+      'ai-knowledge.json',
       'dependency-graph.json',
       'dependency-graph.mmd',
       'dependency-graph.md',
@@ -482,11 +491,12 @@ function writeArtifactsStage(state) {
       'report.md',
     ],
     stageMetadata: {
-      fileCount: optimizedContext ? 14 : 13,
+      fileCount: optimizedContext ? 15 : 14,
       generatedFiles: [
         'canonical-analysis.json',
         'context.json',
         ...(optimizedContext ? ['optimized-context.json'] : []),
+        'ai-knowledge.json',
         'dependency-graph.json',
         'dependency-graph.mmd',
         'dependency-graph.md',

@@ -50,6 +50,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
       'canonical-analysis.json',
       'context.json',
       'optimized-context.json',
+      'ai-knowledge.json',
       'report.md',
       'architecture-report.md',
       'ai_prompt_documentation.md',
@@ -109,6 +110,11 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
 
     const optimizedContext = readJson(path.join(programOutputDir, 'optimized-context.json'));
     assert.equal(optimizedContext.program, 'ORDERPGM');
+    const aiKnowledge = readJson(path.join(programOutputDir, 'ai-knowledge.json'));
+    assert.equal(aiKnowledge.kind, 'ai-knowledge-projection');
+    assert.equal(aiKnowledge.program, 'ORDERPGM');
+    assert.ok(Array.isArray(aiKnowledge.evidenceIndex));
+    assert.ok(aiKnowledge.workflows.documentation);
 
     const report = fs.readFileSync(path.join(programOutputDir, 'report.md'), 'utf8');
     assert.match(report, /## Native File I\/O/);
@@ -118,6 +124,8 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
 
     const prompt = fs.readFileSync(path.join(programOutputDir, 'ai_prompt_documentation.md'), 'utf8');
     assert.match(prompt, /3 native files/);
+    assert.match(prompt, /Risk markers:/);
+    assert.match(prompt, /Evidence Highlights/);
     assert.match(prompt, /\[SELECT\/READ\]/);
     assert.match(prompt, /Representative sample rows are not available in this analysis run\./);
 
@@ -157,6 +165,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.equal(manifest.program, 'ORDERPGM');
     assert.ok(manifest.files.includes('canonical-analysis.json'));
     assert.ok(manifest.files.includes('context.json'));
+    assert.ok(manifest.files.includes('ai-knowledge.json'));
     assert.ok(manifest.files.includes('report.md'));
     assert.ok(manifest.files.includes('architecture.html'));
     assert.ok(Array.isArray(manifest.artifacts));
@@ -167,6 +176,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     const entryNames = zip.getEntries().map((entry) => entry.entryName).sort();
     assert.ok(entryNames.includes('canonical-analysis.json'));
     assert.ok(entryNames.includes('context.json'));
+    assert.ok(entryNames.includes('ai-knowledge.json'));
     assert.ok(entryNames.includes('report.md'));
     assert.ok(entryNames.includes('architecture.html'));
     assert.ok(entryNames.includes('manifest.json'));
