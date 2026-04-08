@@ -26,6 +26,7 @@ const { generateMarkdownReport } = require('../report/markdownReport');
 const { writeJsonReport } = require('../report/jsonReport');
 const { generateArchitectureReport } = require('../report/architectureReport');
 const { optimizeContext, DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../ai/contextOptimizer');
+const { buildAiKnowledgeProjection } = require('../ai/knowledgeProjection');
 const { estimateTokensFromObject, computeReduction } = require('../ai/tokenEstimator');
 const { generateArchitectureViewer } = require('../viewer/architectureViewerGenerator');
 const { exportDb2Metadata } = require('../db2/metadataExportService');
@@ -93,6 +94,15 @@ function collectAndScanStage(state) {
     }
   }
 
+  for (const diagnostic of scanSummary.diagnostics || []) {
+    stageDiagnostics.push({
+      severity: diagnostic.severity || 'warning',
+      code: diagnostic.code || 'SCAN_DIAGNOSTIC',
+      message: diagnostic.message || 'Scanner diagnostic',
+      details: diagnostic.details || {},
+    });
+  }
+
   if (sourceFiles.length === 0) {
     const warning = 'No source files found for provided sourceRoot/extensions.';
     notes.push(warning);
@@ -138,6 +148,9 @@ function collectAndScanStage(state) {
       procedureCalls: scanSummary.procedureCalls,
       nativeFiles: scanSummary.nativeFiles,
       nativeFileAccesses: scanSummary.nativeFileAccesses,
+      modules: scanSummary.modules,
+      bindingDirectories: scanSummary.bindingDirectories,
+      servicePrograms: scanSummary.servicePrograms,
     },
     stageMetadata: {
       sourceFileCount: sourceFiles.length,
@@ -156,6 +169,10 @@ function collectAndScanStage(state) {
       procedureCallCount: (scanSummary.procedureCalls || []).length,
       nativeFileCount: (scanSummary.nativeFiles || []).length,
       nativeFileAccessCount: (scanSummary.nativeFileAccesses || []).length,
+      moduleCount: (scanSummary.modules || []).length,
+      bindingDirectoryCount: (scanSummary.bindingDirectories || []).length,
+      serviceProgramCount: (scanSummary.servicePrograms || []).length,
+      diagnosticCount: (scanSummary.diagnostics || []).length,
       noteCount: notes.length,
     },
     stageDiagnostics,
@@ -236,7 +253,7 @@ function buildContextStage(state) {
 }
 
 function optimizeContextStage(state) {
-  const { context, config, optimizeContextEnabled } = state;
+  const { canonicalAnalysis, context, config, optimizeContextEnabled } = state;
   const contextTokens = estimateTokensFromObject(context);
 
   if (!optimizeContextEnabled) {
@@ -261,7 +278,12 @@ function optimizeContextStage(state) {
     };
   }
 
-  const optimizedContext = optimizeContext(context, config.contextOptimizer);
+  const baseAiProjection = buildAiKnowledgeProjection({
+    canonicalAnalysis,
+    context,
+    optimizedContext: null,
+  });
+  const optimizedContext = optimizeContext(context, config.contextOptimizer, baseAiProjection);
   const optimizedTokens = estimateTokensFromObject(optimizedContext);
 
   return {
@@ -413,11 +435,18 @@ function writeArtifactsStage(state) {
     optimizationReport,
   } = state;
 
+  const aiKnowledge = buildAiKnowledgeProjection({
+    canonicalAnalysis,
+    context,
+    optimizedContext,
+  });
+
   writeJsonReport(path.join(outputProgramDir, 'canonical-analysis.json'), canonicalAnalysis);
   writeJsonReport(path.join(outputProgramDir, 'context.json'), context);
   if (optimizedContext) {
     writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), optimizedContext);
   }
+  writeJsonReport(path.join(outputProgramDir, 'ai-knowledge.json'), aiKnowledge);
 
   const programCallTreeJsonPath = path.join(outputProgramDir, 'program-call-tree.json');
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.json'), renderJson(graph), 'utf8');
@@ -440,7 +469,7 @@ function writeArtifactsStage(state) {
     mermaidPath: path.join(outputProgramDir, 'dependency-graph.mmd'),
   });
   buildPrompts({
-    context: promptContext,
+    aiProjection: aiKnowledge,
     outputDir: outputProgramDir,
     sourceSnippet,
   });
@@ -453,6 +482,7 @@ function writeArtifactsStage(state) {
       'canonical-analysis.json',
       'context.json',
       ...(optimizedContext ? ['optimized-context.json'] : []),
+      'ai-knowledge.json',
       'dependency-graph.json',
       'dependency-graph.mmd',
       'dependency-graph.md',
@@ -466,11 +496,12 @@ function writeArtifactsStage(state) {
       'report.md',
     ],
     stageMetadata: {
-      fileCount: optimizedContext ? 14 : 13,
+      fileCount: optimizedContext ? 15 : 14,
       generatedFiles: [
         'canonical-analysis.json',
         'context.json',
         ...(optimizedContext ? ['optimized-context.json'] : []),
+        'ai-knowledge.json',
         'dependency-graph.json',
         'dependency-graph.mmd',
         'dependency-graph.md',

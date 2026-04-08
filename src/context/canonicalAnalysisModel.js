@@ -86,13 +86,50 @@ function dedupeByName(items, sourceRoot, withKind) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function inferSqlIntent(type) {
+  const normalizedType = normalizeName(type || 'OTHER') || 'OTHER';
+  if (['SELECT', 'FETCH', 'VALUES'].includes(normalizedType)) return 'READ';
+  if (['INSERT', 'UPDATE', 'DELETE', 'MERGE'].includes(normalizedType)) return 'WRITE';
+  if (['DECLARE_CURSOR', 'OPEN_CURSOR', 'CLOSE_CURSOR'].includes(normalizedType)) return 'CURSOR';
+  if (normalizedType === 'CALL') return 'CALL';
+  if (['COMMIT', 'ROLLBACK'].includes(normalizedType)) return 'TRANSACTION';
+  return 'OTHER';
+}
+
 function sortSqlStatements(statements, sourceRoot) {
   const normalized = (statements || []).map((statement) => {
     const evidence = normalizeEvidenceList(statement.evidence || [], sourceRoot);
+    const type = normalizeName(statement.type || 'OTHER') || 'OTHER';
+    const intent = normalizeName(statement.intent || inferSqlIntent(type)) || 'OTHER';
+    const readsData = typeof statement.readsData === 'boolean'
+      ? statement.readsData
+      : intent === 'READ';
+    const writesData = typeof statement.writesData === 'boolean'
+      ? statement.writesData
+      : intent === 'WRITE';
     return {
-      type: normalizeName(statement.type || 'OTHER') || 'OTHER',
+      type,
+      intent,
       text: String(statement.text || '').trim(),
       tables: uniqueSortedStrings((statement.tables || []).map((name) => normalizeName(name)).filter(Boolean)),
+      hostVariables: uniqueSortedStrings((statement.hostVariables || []).map((name) => normalizeName(name)).filter(Boolean)),
+      cursors: Array.from(new Map((statement.cursors || [])
+        .map((cursor) => {
+          const name = normalizeName(cursor && cursor.name);
+          const action = normalizeName(cursor && cursor.action);
+          return [`${name}:${action}`, { name, action }];
+        })
+        .filter((entry) => entry[1].name && entry[1].action))
+        .values())
+        .sort((a, b) => {
+          if (a.name !== b.name) return a.name.localeCompare(b.name);
+          return a.action.localeCompare(b.action);
+        }),
+      readsData: Boolean(readsData),
+      writesData: Boolean(writesData),
+      dynamic: Boolean(statement.dynamic),
+      unresolved: Boolean(statement.unresolved),
+      uncertainty: uniqueSortedStrings((statement.uncertainty || []).map((name) => normalizeName(name)).filter(Boolean)),
       evidence,
     };
   });
@@ -161,10 +198,94 @@ function defaultNativeFileUsage() {
   };
 }
 
+function defaultBindingAnalysis() {
+  return {
+    summary: {
+      moduleCount: 0,
+      noMainModuleCount: 0,
+      serviceProgramCount: 0,
+      binderSourceCount: 0,
+      bindingDirectoryCount: 0,
+      boundModuleCount: 0,
+      unresolvedModuleCount: 0,
+      exportCount: 0,
+    },
+    modules: [],
+    servicePrograms: [],
+    bindingDirectories: [],
+  };
+}
+
+function defaultSqlAnalysis() {
+  return {
+    summary: {
+      statementCount: 0,
+      readStatementCount: 0,
+      writeStatementCount: 0,
+      dynamicStatementCount: 0,
+      unresolvedStatementCount: 0,
+      cursorStatementCount: 0,
+      hostVariableCount: 0,
+      cursorCount: 0,
+    },
+    tableNames: [],
+    hostVariables: [],
+    cursors: [],
+  };
+}
+
+function summarizeSqlStatements(sqlStatements) {
+  const statements = sqlStatements || [];
+  const tableNames = uniqueSortedStrings(statements.flatMap((statement) => statement.tables || []).map((name) => normalizeName(name)));
+  const hostVariables = uniqueSortedStrings(statements.flatMap((statement) => statement.hostVariables || []).map((name) => normalizeName(name)));
+
+  const cursorMap = new Map();
+  for (const statement of statements) {
+    for (const cursor of statement.cursors || []) {
+      const name = normalizeName(cursor && cursor.name);
+      const action = normalizeName(cursor && cursor.action);
+      if (!name || !action) continue;
+      if (!cursorMap.has(name)) {
+        cursorMap.set(name, new Set());
+      }
+      cursorMap.get(name).add(action);
+    }
+  }
+
+  const cursors = Array.from(cursorMap.entries())
+    .map(([name, actions]) => ({
+      name,
+      actions: Array.from(actions).sort((a, b) => a.localeCompare(b)),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    summary: {
+      statementCount: statements.length,
+      readStatementCount: statements.filter((statement) => statement.readsData).length,
+      writeStatementCount: statements.filter((statement) => statement.writesData).length,
+      dynamicStatementCount: statements.filter((statement) => statement.dynamic).length,
+      unresolvedStatementCount: statements.filter((statement) => statement.unresolved).length,
+      cursorStatementCount: statements.filter((statement) => (statement.cursors || []).length > 0).length,
+      hostVariableCount: hostVariables.length,
+      cursorCount: cursors.length,
+    },
+    tableNames,
+    hostVariables,
+    cursors,
+  };
+}
+
 function buildRiskHints(dependencies, sql, procedureCalls, nativeFileUsage) {
   const hints = [];
   if ((sql.statements || []).length > 0) {
     hints.push('Embedded SQL detected');
+  }
+  if ((sql.statements || []).some((statement) => statement.dynamic)) {
+    hints.push('Dynamic SQL detected');
+  }
+  if ((sql.statements || []).some((statement) => statement.unresolved)) {
+    hints.push('Unresolved SQL dependencies detected');
   }
   if ((dependencies.programCalls || []).length > 0) {
     hints.push('External program calls detected');
@@ -186,6 +307,9 @@ function buildRiskHints(dependencies, sql, procedureCalls, nativeFileUsage) {
   }
   if (nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.interactiveFileCount > 0) {
     hints.push('Interactive workstation I/O detected');
+  }
+  if (dependencies && dependencies.bindingAnalysis && dependencies.bindingAnalysis.summary && dependencies.bindingAnalysis.summary.unresolvedModuleCount > 0) {
+    hints.push('Unresolved bind-time dependencies detected');
   }
   return hints;
 }
@@ -472,6 +596,113 @@ function normalizeNativeFileAccesses(nativeFileAccesses, sourceRoot) {
     });
 }
 
+function normalizeBindingDirectories(bindingDirectories, sourceRoot) {
+  return dedupeByName(bindingDirectories, sourceRoot, 'BINDING_DIRECTORY')
+    .map((item) => ({
+      ...item,
+      kind: 'BINDING_DIRECTORY',
+      id: createEntityId('BINDING_DIRECTORY', item.name),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function normalizeModules(modules, sourceRoot) {
+  return normalizeStructuredItems(
+    modules,
+    sourceRoot,
+    (item, rootDir) => ({
+      name: normalizeName(item.name),
+      kind: normalizeName(item.kind || 'PROGRAM_MODULE') || 'PROGRAM_MODULE',
+      ownerProgram: normalizeName(item.ownerProgram),
+      sourceFile: normalizeRelativePath(rootDir, item.sourceFile || ''),
+      bindingDirectories: uniqueSortedStrings(item.bindingDirectories || []),
+      servicePrograms: uniqueSortedStrings(item.servicePrograms || []),
+      importedProcedures: uniqueSortedStrings(item.importedProcedures || []),
+      evidence: normalizeEvidenceList(item.evidence || [], rootDir),
+    }),
+    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name].join('|'),
+  )
+    .map((item) => ({
+      ...item,
+      id: createEntityId('MODULE', `${item.ownerProgram}:${item.sourceFile}:${item.name}`),
+      evidenceCount: item.evidence.length,
+    }))
+    .sort((a, b) => {
+      if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
+      if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
+      return a.name.localeCompare(b.name);
+    });
+}
+
+function normalizeServicePrograms(servicePrograms, sourceRoot) {
+  const map = new Map();
+
+  for (const item of servicePrograms || []) {
+    if (!item || typeof item !== 'object') continue;
+    const name = normalizeName(item.name);
+    if (!name) continue;
+
+    const normalized = {
+      name,
+      sourceFile: item.sourceFile ? normalizeRelativePath(sourceRoot, item.sourceFile) : null,
+      sourceKind: normalizeName(item.sourceKind || 'HINT') || 'HINT',
+      exports: Array.from(new Map((item.exports || [])
+        .map((entry) => {
+          const symbol = normalizeName(entry && entry.symbol);
+          const signatureLevel = normalizeName(entry && entry.signatureLevel ? entry.signatureLevel : 'CURRENT') || 'CURRENT';
+          return [`${symbol}:${signatureLevel}`, { symbol, signatureLevel }];
+        })
+        .filter((entry) => entry[1].symbol))
+        .values())
+        .sort((a, b) => {
+          if (a.symbol !== b.symbol) return a.symbol.localeCompare(b.symbol);
+          return a.signatureLevel.localeCompare(b.signatureLevel);
+        }),
+      evidence: normalizeEvidenceList(item.evidence || [], sourceRoot),
+    };
+
+    if (!map.has(name)) {
+      map.set(name, {
+        ...normalized,
+        evidence: [],
+      });
+    }
+
+    const target = map.get(name);
+    if (!target.sourceFile && normalized.sourceFile) {
+      target.sourceFile = normalized.sourceFile;
+    }
+    if (target.sourceKind !== 'BINDER_SOURCE' && normalized.sourceKind === 'BINDER_SOURCE') {
+      target.sourceKind = 'BINDER_SOURCE';
+    }
+
+    const exportSet = new Map((target.exports || []).map((entry) => [`${entry.symbol}:${entry.signatureLevel}`, entry]));
+    for (const entry of normalized.exports || []) {
+      exportSet.set(`${entry.symbol}:${entry.signatureLevel}`, entry);
+    }
+    target.exports = Array.from(exportSet.values()).sort((a, b) => {
+      if (a.symbol !== b.symbol) return a.symbol.localeCompare(b.symbol);
+      return a.signatureLevel.localeCompare(b.signatureLevel);
+    });
+
+    for (const evidence of normalized.evidence || []) {
+      const serialized = JSON.stringify(evidence);
+      const exists = target.evidence.some((entry) => JSON.stringify(entry) === serialized);
+      if (!exists) {
+        target.evidence.push(evidence);
+      }
+    }
+  }
+
+  return Array.from(map.values())
+    .map((item) => ({
+      ...item,
+      id: createEntityId('SERVICE_PROGRAM', item.name),
+      evidenceCount: item.evidence.length,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 function summarizeNativeFileUsage(nativeFiles, nativeFileAccesses) {
   const files = new Map();
 
@@ -585,6 +816,51 @@ function summarizeNativeFileUsage(nativeFiles, nativeFileAccesses) {
   };
 }
 
+function summarizeBindingAnalysis(modules, servicePrograms, bindingDirectories, procedures) {
+  const exportedProcedureNames = new Set((procedures || []).filter((entry) => entry.exported).map((entry) => entry.name));
+  const moduleList = (modules || []).map((module) => ({
+    name: module.name,
+    kind: module.kind,
+    ownerProgram: module.ownerProgram,
+    sourceFile: module.sourceFile,
+    bindingDirectories: uniqueSortedStrings(module.bindingDirectories || []),
+    servicePrograms: uniqueSortedStrings(module.servicePrograms || []),
+    importedProcedures: uniqueSortedStrings(module.importedProcedures || []),
+    unresolvedBindings: Boolean((module.importedProcedures || []).length > 0
+      && (module.bindingDirectories || []).length === 0
+      && (module.servicePrograms || []).length === 0),
+  }));
+  const serviceProgramList = (servicePrograms || []).map((serviceProgram) => ({
+    name: serviceProgram.name,
+    sourceFile: serviceProgram.sourceFile || null,
+    sourceKind: serviceProgram.sourceKind || 'HINT',
+    exports: (serviceProgram.exports || []).map((entry) => ({
+      symbol: entry.symbol,
+      signatureLevel: entry.signatureLevel || 'CURRENT',
+      resolved: exportedProcedureNames.has(entry.symbol),
+    })),
+  }));
+  const bindingDirectoryList = (bindingDirectories || []).map((entry) => ({
+    name: entry.name,
+  })).sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    summary: {
+      moduleCount: moduleList.length,
+      noMainModuleCount: moduleList.filter((module) => module.kind === 'NOMAIN_MODULE').length,
+      serviceProgramCount: serviceProgramList.length,
+      binderSourceCount: serviceProgramList.filter((serviceProgram) => serviceProgram.sourceKind === 'BINDER_SOURCE').length,
+      bindingDirectoryCount: bindingDirectoryList.length,
+      boundModuleCount: moduleList.filter((module) => module.bindingDirectories.length > 0 || module.servicePrograms.length > 0).length,
+      unresolvedModuleCount: moduleList.filter((module) => module.unresolvedBindings).length,
+      exportCount: serviceProgramList.reduce((sum, serviceProgram) => sum + (serviceProgram.exports || []).length, 0),
+    },
+    modules: moduleList.sort((a, b) => a.name.localeCompare(b.name)),
+    servicePrograms: serviceProgramList.sort((a, b) => a.name.localeCompare(b.name)),
+    bindingDirectories: bindingDirectoryList,
+  };
+}
+
 function buildSqlEntities(sqlStatements) {
   return sqlStatements.map((statement, index) => ({
     ...statement,
@@ -688,6 +964,20 @@ function resolveCallTargetEntityId(call, procedures, prototypes, procedureRefere
   return reference ? reference.id : null;
 }
 
+function findPrototypeForModule(moduleEntity, symbolName, prototypes) {
+  const normalizedSymbol = normalizeName(symbolName);
+  return (prototypes || []).find((entry) => entry.ownerProgram === moduleEntity.ownerProgram
+    && entry.sourceFile === moduleEntity.sourceFile
+    && entry.name === normalizedSymbol)
+    || (prototypes || []).find((entry) => entry.ownerProgram === moduleEntity.ownerProgram && entry.name === normalizedSymbol)
+    || (prototypes || []).find((entry) => entry.name === normalizedSymbol);
+}
+
+function findExportedProcedure(symbolName, procedures) {
+  const normalizedSymbol = normalizeName(symbolName);
+  return (procedures || []).find((entry) => entry.name === normalizedSymbol && entry.exported);
+}
+
 function buildRelations(
   rootProgram,
   sourceFiles,
@@ -702,6 +992,9 @@ function buildRelations(
   nativeFiles,
   nativeFileAccesses,
   nativeFileUsage,
+  modules,
+  servicePrograms,
+  bindingDirectories,
 ) {
   const relations = [];
   const rootProgramId = createEntityId('PROGRAM', rootProgram);
@@ -796,6 +1089,73 @@ function buildRelations(
     });
   }
 
+  for (const moduleEntity of modules || []) {
+    relations.push({
+      id: createRelationId('HAS_MODULE', createEntityId('PROGRAM', moduleEntity.ownerProgram), moduleEntity.id),
+      type: 'HAS_MODULE',
+      from: createEntityId('PROGRAM', moduleEntity.ownerProgram),
+      to: moduleEntity.id,
+      evidence: moduleEntity.evidence || [],
+      attributes: {
+        moduleKind: moduleEntity.kind || 'PROGRAM_MODULE',
+        sourceFile: moduleEntity.sourceFile || '',
+      },
+    });
+
+    for (const bindingDirectory of moduleEntity.bindingDirectories || []) {
+      relations.push({
+        id: createRelationId('USES_BINDING_DIRECTORY', moduleEntity.id, createEntityId('BINDING_DIRECTORY', bindingDirectory)),
+        type: 'USES_BINDING_DIRECTORY',
+        from: moduleEntity.id,
+        to: createEntityId('BINDING_DIRECTORY', bindingDirectory),
+        evidence: moduleEntity.evidence || [],
+      });
+    }
+
+    for (const serviceProgramName of moduleEntity.servicePrograms || []) {
+      relations.push({
+        id: createRelationId('BINDS_SERVICE_PROGRAM', moduleEntity.id, createEntityId('SERVICE_PROGRAM', serviceProgramName)),
+        type: 'BINDS_SERVICE_PROGRAM',
+        from: moduleEntity.id,
+        to: createEntityId('SERVICE_PROGRAM', serviceProgramName),
+        evidence: moduleEntity.evidence || [],
+      });
+    }
+
+    for (const importedProcedure of moduleEntity.importedProcedures || []) {
+      const prototype = findPrototypeForModule(moduleEntity, importedProcedure, prototypes);
+      if (!prototype) continue;
+      relations.push({
+        id: createRelationId('IMPORTS_PROCEDURE', moduleEntity.id, prototype.id),
+        type: 'IMPORTS_PROCEDURE',
+        from: moduleEntity.id,
+        to: prototype.id,
+        evidence: prototype.evidence || moduleEntity.evidence || [],
+        attributes: {
+          importedName: importedProcedure,
+        },
+      });
+    }
+  }
+
+  for (const serviceProgram of servicePrograms || []) {
+    for (const exportedSymbol of serviceProgram.exports || []) {
+      const procedure = findExportedProcedure(exportedSymbol.symbol, procedures);
+      if (!procedure) continue;
+      relations.push({
+        id: createRelationId('EXPORTS_PROCEDURE', serviceProgram.id, procedure.id),
+        type: 'EXPORTS_PROCEDURE',
+        from: serviceProgram.id,
+        to: procedure.id,
+        evidence: serviceProgram.evidence || [],
+        attributes: {
+          symbol: exportedSymbol.symbol,
+          signatureLevel: exportedSymbol.signatureLevel || 'CURRENT',
+        },
+      });
+    }
+  }
+
   sqlStatements.forEach((statement) => {
     const statementId = statement.id;
     relations.push({
@@ -806,6 +1166,14 @@ function buildRelations(
       evidence: statement.evidence || [],
       attributes: {
         sqlType: statement.type,
+        intent: statement.intent || 'OTHER',
+        readsData: Boolean(statement.readsData),
+        writesData: Boolean(statement.writesData),
+        dynamic: Boolean(statement.dynamic),
+        unresolved: Boolean(statement.unresolved),
+        hostVariables: statement.hostVariables || [],
+        cursorNames: (statement.cursors || []).map((cursor) => cursor.name),
+        uncertainty: statement.uncertainty || [],
       },
     });
 
@@ -871,13 +1239,17 @@ function buildRelations(
   return relations.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, procedures, prototypes, procedureCalls, nativeFileUsage) {
+function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, sqlAnalysis, procedures, prototypes, procedureCalls, nativeFileUsage, bindingAnalysis) {
   const summary = {
     sourceFileCount: sourceFiles.length,
     tableCount: (dependencies.tables || []).length,
     programCallCount: (dependencies.programCalls || []).length,
     copyMemberCount: (dependencies.copyMembers || []).length,
     sqlStatementCount: sqlStatements.length,
+    readSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.readStatementCount) || 0,
+    writeSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.writeStatementCount) || 0,
+    dynamicSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.dynamicStatementCount) || 0,
+    unresolvedSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.unresolvedStatementCount) || 0,
     procedureCount: (procedures || []).length,
     prototypeCount: (prototypes || []).length,
     procedureCallCount: (procedureCalls || []).length,
@@ -889,8 +1261,12 @@ function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, pro
     mutatingNativeFileCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.mutatingFileCount) || 0,
     interactiveNativeFileCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.interactiveFileCount) || 0,
     recordFormatCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.recordFormatCount) || 0,
+    moduleCount: Number(bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.moduleCount) || 0,
+    serviceProgramCount: Number(bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.serviceProgramCount) || 0,
+    bindingDirectoryCount: Number(bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.bindingDirectoryCount) || 0,
+    unresolvedBindingCount: Number(bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.unresolvedModuleCount) || 0,
   };
-  summary.text = `Program ${normalizeName(rootProgram)} references ${summary.tableCount} tables, calls ${summary.programCallCount} programs, includes ${summary.copyMemberCount} copy members, contains ${summary.sqlStatementCount} SQL statements, exposes ${summary.procedureCount} procedures with ${summary.procedureCallCount} procedure call sites, and uses ${summary.nativeFileCount} native files (${summary.mutatingNativeFileCount} mutating, ${summary.interactiveNativeFileCount} interactive).`;
+  summary.text = `Program ${normalizeName(rootProgram)} references ${summary.tableCount} tables, calls ${summary.programCallCount} programs, includes ${summary.copyMemberCount} copy members, contains ${summary.sqlStatementCount} SQL statements (${summary.readSqlStatementCount} read, ${summary.writeSqlStatementCount} write, ${summary.dynamicSqlStatementCount} dynamic), exposes ${summary.procedureCount} procedures with ${summary.procedureCallCount} procedure call sites, uses ${summary.nativeFileCount} native files (${summary.mutatingNativeFileCount} mutating, ${summary.interactiveNativeFileCount} interactive), and models ${summary.moduleCount} modules, ${summary.serviceProgramCount} service programs, and ${summary.bindingDirectoryCount} binding directories (${summary.unresolvedBindingCount} unresolved bindings).`;
   return summary;
 }
 
@@ -955,9 +1331,13 @@ function buildCanonicalAnalysisModel({
   const procedureCalls = normalizeProcedureCalls(dependencies && dependencies.procedureCalls, normalizedSourceRoot);
   const nativeFiles = normalizeNativeFiles(dependencies && dependencies.nativeFiles, normalizedSourceRoot);
   const nativeFileAccesses = normalizeNativeFileAccesses(dependencies && dependencies.nativeFileAccesses, normalizedSourceRoot);
+  const modules = normalizeModules(dependencies && dependencies.modules, normalizedSourceRoot);
+  const bindingDirectories = normalizeBindingDirectories(dependencies && dependencies.bindingDirectories, normalizedSourceRoot);
+  const servicePrograms = normalizeServicePrograms(dependencies && dependencies.servicePrograms, normalizedSourceRoot);
   const nativeFileUsage = summarizeNativeFileUsage(nativeFiles, nativeFileAccesses);
-  const sqlTableNames = uniqueSortedStrings(sqlStatements.flatMap((statement) => statement.tables || []).map((name) => normalizeName(name)));
-  const mergedTables = mergeSqlTablesIntoDependencies(tables, sqlTableNames)
+  const sqlAnalysis = summarizeSqlStatements(sqlStatements);
+  const bindingAnalysis = summarizeBindingAnalysis(modules, servicePrograms, bindingDirectories, procedures);
+  const mergedTables = mergeSqlTablesIntoDependencies(tables, sqlAnalysis.tableNames)
     .map((table) => ({
       ...table,
       id: createEntityId('TABLE', table.name),
@@ -968,10 +1348,14 @@ function buildCanonicalAnalysisModel({
     tables: mergedTables,
     programCalls,
     copyMembers,
+    bindingAnalysis,
   };
   const sqlBlock = {
+    summary: sqlAnalysis.summary,
     statements: sqlStatements,
-    tableNames: sqlTableNames,
+    tableNames: sqlAnalysis.tableNames,
+    hostVariables: sqlAnalysis.hostVariables,
+    cursors: sqlAnalysis.cursors,
   };
 
   const model = {
@@ -996,6 +1380,9 @@ function buildCanonicalAnalysisModel({
       programs: buildProgramEntities(normalizedProgram, normalizedSourceFiles, programCalls, procedures, prototypes),
       tables: mergedTables,
       nativeFiles,
+      modules,
+      servicePrograms,
+      bindingDirectories,
       copyMembers,
       sqlStatements,
       procedures,
@@ -1016,15 +1403,19 @@ function buildCanonicalAnalysisModel({
       nativeFiles,
       nativeFileAccesses,
       nativeFileUsage,
+      modules,
+      servicePrograms,
+      bindingDirectories,
     ),
     enrichments: {
-      summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements, procedures, prototypes, procedureCalls, nativeFileUsage),
+      summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements, sqlAnalysis, procedures, prototypes, procedureCalls, nativeFileUsage, bindingAnalysis),
       aiContext: {
         programPurposeHint: '',
         primaryTables: dependencyBlock.tables.slice(0, 10).map((entry) => entry.name),
         primaryCalls: dependencyBlock.programCalls.slice(0, 10).map((entry) => entry.name),
         riskHints: buildRiskHints(dependencyBlock, sqlBlock, procedureCalls, nativeFileUsage),
       },
+      bindingAnalysis,
       nativeFileUsage,
       graph: defaultGraphSummary(),
       crossProgramGraph: defaultCrossProgramSummary(),
@@ -1056,6 +1447,7 @@ function enrichCanonicalAnalysisModel(model, updates = {}) {
       ...model.enrichments,
       ...(updates.summary ? { summary: mergeObject(model.enrichments.summary, updates.summary) } : {}),
       ...(updates.aiContext ? { aiContext: mergeObject(model.enrichments.aiContext, updates.aiContext) } : {}),
+      ...(updates.bindingAnalysis ? { bindingAnalysis: mergeObject(model.enrichments.bindingAnalysis, updates.bindingAnalysis) } : {}),
       ...(updates.nativeFileUsage ? { nativeFileUsage: mergeObject(model.enrichments.nativeFileUsage, updates.nativeFileUsage) } : {}),
       ...(updates.graph ? { graph: mergeObject(model.enrichments.graph, updates.graph) } : {}),
       ...(updates.crossProgramGraph ? { crossProgramGraph: mergeObject(model.enrichments.crossProgramGraph, updates.crossProgramGraph) } : {}),
@@ -1197,8 +1589,11 @@ module.exports = {
   assertCanonicalAnalysisModel,
   buildCanonicalAnalysisModel,
   defaultCrossProgramSummary,
+  defaultBindingAnalysis,
   defaultGraphSummary,
   defaultNativeFileUsage,
+  defaultSqlAnalysis,
   enrichCanonicalAnalysisModel,
+  summarizeSqlStatements,
   validateCanonicalAnalysisModel,
 };

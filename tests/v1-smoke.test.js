@@ -50,6 +50,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
       'canonical-analysis.json',
       'context.json',
       'optimized-context.json',
+      'ai-knowledge.json',
       'report.md',
       'architecture-report.md',
       'ai_prompt_documentation.md',
@@ -87,6 +88,9 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
       ['QRPGLESRC,ORDCOPY'],
     );
     assert.equal(context.sql.statements.length, 2);
+    assert.equal(context.sql.summary.readStatementCount, 1);
+    assert.equal(context.sql.summary.writeStatementCount, 1);
+    assert.equal(context.sql.summary.dynamicStatementCount, 0);
     assert.deepEqual(
       context.sql.statements.map((statement) => statement.tables.join(',')).sort(),
       ['CUSTOMER,ORDERS', 'INVOICE'],
@@ -106,14 +110,28 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
 
     const optimizedContext = readJson(path.join(programOutputDir, 'optimized-context.json'));
     assert.equal(optimizedContext.program, 'ORDERPGM');
+    assert.equal(optimizedContext.optimization.strategy, 'salience-ranked-evidence-packs');
+    assert.ok(optimizedContext.workflows.documentation.tokenBudget >= 1);
+    assert.ok(Array.isArray(optimizedContext.workflows.documentation.evidenceHighlights));
+    const aiKnowledge = readJson(path.join(programOutputDir, 'ai-knowledge.json'));
+    assert.equal(aiKnowledge.kind, 'ai-knowledge-projection');
+    assert.equal(aiKnowledge.program, 'ORDERPGM');
+    assert.ok(Array.isArray(aiKnowledge.evidenceIndex));
+    assert.ok(aiKnowledge.workflows.documentation);
+    assert.ok(Array.isArray(aiKnowledge.workflows.documentation.evidencePacks.sql));
 
     const report = fs.readFileSync(path.join(programOutputDir, 'report.md'), 'utf8');
     assert.match(report, /## Native File I\/O/);
+    assert.match(report, /Read Statements: 1/);
     assert.match(report, /## Test Data Extract/);
     assert.match(report, /Test data extraction was skipped because no DB2 connection configuration was available\./);
 
     const prompt = fs.readFileSync(path.join(programOutputDir, 'ai_prompt_documentation.md'), 'utf8');
     assert.match(prompt, /3 native files/);
+    assert.match(prompt, /Risk markers:/);
+    assert.match(prompt, /Evidence Highlights/);
+    assert.match(prompt, /#1 /);
+    assert.match(prompt, /\[SELECT\/READ\]/);
     assert.match(prompt, /Representative sample rows are not available in this analysis run\./);
 
     const graph = readJson(path.join(programOutputDir, 'program-call-tree.json'));
@@ -152,6 +170,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.equal(manifest.program, 'ORDERPGM');
     assert.ok(manifest.files.includes('canonical-analysis.json'));
     assert.ok(manifest.files.includes('context.json'));
+    assert.ok(manifest.files.includes('ai-knowledge.json'));
     assert.ok(manifest.files.includes('report.md'));
     assert.ok(manifest.files.includes('architecture.html'));
     assert.ok(Array.isArray(manifest.artifacts));
@@ -162,6 +181,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     const entryNames = zip.getEntries().map((entry) => entry.entryName).sort();
     assert.ok(entryNames.includes('canonical-analysis.json'));
     assert.ok(entryNames.includes('context.json'));
+    assert.ok(entryNames.includes('ai-knowledge.json'));
     assert.ok(entryNames.includes('report.md'));
     assert.ok(entryNames.includes('architecture.html'));
     assert.ok(entryNames.includes('manifest.json'));

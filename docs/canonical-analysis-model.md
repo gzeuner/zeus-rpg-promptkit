@@ -29,10 +29,16 @@ Top-level fields:
   - deduplicated table dependencies including SQL-only tables
 - `entities.nativeFiles`
   - deduplicated native file declarations with file kind, declared access, and keyed hints
+- `entities.modules`
+  - deduplicated module declarations with source file, module kind, bind directories, and imported procedure hints
+- `entities.servicePrograms`
+  - deduplicated service program references and binder-backed exports
+- `entities.bindingDirectories`
+  - deduplicated `BNDDIR` references discovered from source evidence
 - `entities.copyMembers`
   - deduplicated copy member dependencies
 - `entities.sqlStatements`
-  - normalized SQL statements with type, text, table names, and evidence
+  - normalized SQL statements with statement type, intent, read/write flags, dynamic/unresolved markers, host variables, cursor actions, table names, and evidence
 - `entities.procedures`
   - local free-form procedures and fixed-form subroutines with owner, source range, and export metadata
 - `entities.prototypes`
@@ -49,6 +55,11 @@ Top-level fields:
 - `INCLUDES_COPY`: root program to copy member
 - `OWNS_PROCEDURE`: program to local procedure or subroutine
 - `DECLARES_PROTOTYPE`: program to prototype
+- `HAS_MODULE`: program to module compiled from source
+- `USES_BINDING_DIRECTORY`: module to binding directory
+- `BINDS_SERVICE_PROGRAM`: module to service program hint or binder-backed service program
+- `IMPORTS_PROCEDURE`: module to imported prototype symbol
+- `EXPORTS_PROCEDURE`: service program to exported local procedure when binder exports can be resolved
 - `EXECUTES_SQL`: root program to SQL statement
 - `SQL_REFERENCES_TABLE`: SQL statement to referenced table
 - `CALLS_PROCEDURE`: procedure/program owner to a local procedure, prototype, or explicit unresolved/dynamic reference
@@ -95,8 +106,39 @@ Imported provenance currently carries:
 - `crossProgramGraph`
 - `sourceCatalog`
 - `nativeFileUsage`
+- `bindingAnalysis`
 - `db2Metadata`
 - `testData`
+
+## SQL Semantics
+
+Each SQL statement entity may include:
+
+- `type`: normalized statement type such as `SELECT`, `UPDATE`, `DECLARE_CURSOR`, `FETCH`, `PREPARE`, or `EXECUTE`
+- `intent`: coarse semantic category such as `READ`, `WRITE`, `CURSOR`, `CALL`, `TRANSACTION`, or `OTHER`
+- `readsData` / `writesData`: boolean access markers
+- `dynamic`: true when the statement uses dynamic SQL patterns such as `PREPARE`, `EXECUTE`, or `EXECUTE IMMEDIATE`
+- `unresolved`: true when the statement depends on runtime SQL text or unresolved table identity
+- `hostVariables`: normalized host variable names referenced by the statement
+- `cursors`: normalized cursor name/action pairs
+- `uncertainty`: explicit markers such as `DYNAMIC_SQL`, `UNRESOLVED_SQL`, or `UNRESOLVED_TABLES`
+
+`EXECUTES_SQL` relations mirror the key SQL access attributes so downstream projections can reason over SQL intent without reparsing statement text.
+
+## Binding Semantics
+
+Modules, service programs, and binding directories are modeled directly when source evidence exists.
+
+Current heuristics cover:
+
+- `ctl-opt` or fixed-form `H`-spec binding hints such as `BNDDIR(...)`, `BNDSRVPGM(...)`, and `NOMAIN`
+- binder source members that contain `STRPGMEXP`, `EXPORT SYMBOL`, and `ENDPGMEXP`
+- imported procedure symbols inferred from external prototypes
+
+Binding uncertainty is preserved through:
+
+- unresolved binding diagnostics when imported procedures lack explicit bind evidence
+- unresolved binder export diagnostics when exported symbols cannot be matched to a local exported procedure
 
 This split keeps the semantic model stable while allowing prompt/report/viewer outputs to evolve independently.
 
@@ -115,6 +157,7 @@ This split keeps the semantic model stable while allowing prompt/report/viewer o
 ## Compatibility Contract
 
 - `context.json` remains the stable backward-compatible projection used by existing reports and prompt templates
-- `optimized-context.json` remains a token-budgeted prompt projection
+- `ai-knowledge.json` is the versioned prompt-ready AI projection derived from the canonical model
+- `optimized-context.json` remains a token-budgeted compatibility projection, now driven by salience-ranked workflow evidence packs
 - `canonical-analysis.json` is the new internal truth model for future typed analyzers and AI knowledge projection
 - if a future change requires breaking the canonical schema, `schemaVersion` must be incremented explicitly

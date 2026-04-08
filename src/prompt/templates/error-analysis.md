@@ -23,8 +23,8 @@ Program: `{{program}}`
 ## Test Data
 {{testDataHint}}
 
-## Source Snippet
-```rpg
+## Evidence Highlights
+```text
 {{sourceSnippet}}
 ```
 

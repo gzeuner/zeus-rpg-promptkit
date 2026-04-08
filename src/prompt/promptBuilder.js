@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
+const { estimateTokens } = require('../ai/tokenEstimator');
+const { getPromptContract } = require('./promptRegistry');
 
 function loadTemplate(templateName) {
   const templatePath = path.join(__dirname, 'templates', `${templateName}.md`);
@@ -28,6 +30,10 @@ function sortByName(values) {
     const bn = String((b && b.name) || b || '').toUpperCase();
     return an.localeCompare(bn);
   });
+}
+
+function isAiProjection(value) {
+  return Boolean(value) && typeof value === 'object' && value.kind === 'ai-knowledge-projection';
 }
 
 function asBulletList(values, transform) {
@@ -53,6 +59,7 @@ function extractSections(context) {
   const tables = sortByName((context.dependencies && context.dependencies.tables) || context.tables || []);
   const programCalls = sortByName((context.dependencies && context.dependencies.programCalls) || context.calls || []);
   const copyMembers = sortByName((context.dependencies && context.dependencies.copyMembers) || context.copyMembers || []);
+  const nativeFiles = sortByName((context.nativeFileUsage && context.nativeFileUsage.files) || context.nativeFiles || []);
   const sqlStatements = [...(((context.sql && context.sql.statements) || context.sqlStatements || []) || [])]
     .sort((a, b) => {
       const at = String((a && a.type) || '').toUpperCase();
@@ -67,12 +74,123 @@ function extractSections(context) {
     tables,
     programCalls,
     copyMembers,
+    nativeFiles,
     sqlStatements,
   };
 }
 
-function buildTemplateData(context, sourceSnippet) {
-  const { tables, programCalls, copyMembers, sqlStatements } = extractSections(context);
+function formatSqlStatements(sqlStatements) {
+  return asBulletList(sqlStatements, (item) => {
+    const text = (item && (item.text || item.snippet)) || '';
+    if (item && item.type && text) {
+      const flags = [];
+      if (item.intent && item.intent !== 'OTHER') flags.push(item.intent);
+      if (item.dynamic) flags.push('DYNAMIC');
+      if (item.unresolved) flags.push('UNRESOLVED');
+      const tables = Array.isArray(item.tables) && item.tables.length > 0
+        ? ` tables: ${item.tables.join(', ')}`
+        : '';
+      return `[${item.type}${flags.length ? `/${flags.join('/')}` : ''}] ${text}${tables}`;
+    }
+    return item;
+  });
+}
+
+function formatEvidenceHighlights(workflow) {
+  return workflow && Array.isArray(workflow.evidenceHighlights) && workflow.evidenceHighlights.length > 0
+    ? workflow.evidenceHighlights.map((entry) => {
+      const location = entry.file ? `${entry.file}:${entry.startLine || 1}` : '';
+      const snippet = entry.snippet ? ` ${entry.snippet.replace(/\s+/g, ' ').trim()}` : '';
+      const rank = Number(entry.rank) || 0;
+      const score = Number(entry.score) || 0;
+      return `#${rank || '?'} ${entry.label || 'Evidence'} @ ${location}${score ? ` [score ${score}]` : ''}${snippet}`;
+    }).join('\n')
+    : 'No source snippet available.';
+}
+
+function formatEvidencePackSummary(workflow) {
+  const packs = workflow && workflow.evidencePacks ? workflow.evidencePacks : {};
+  const labels = [
+    ['sql', 'SQL'],
+    ['calls', 'Calls'],
+    ['fileUsage', 'File Usage'],
+    ['conditionals', 'Conditionals'],
+    ['errorPaths', 'Error Paths'],
+  ];
+  return labels.map(([key, label]) => `${label}: ${Array.isArray(packs[key]) ? packs[key].length : 0}`).join(', ');
+}
+
+function formatBudgetHint(contract, estimatedTokens) {
+  const budget = contract && contract.budget ? contract.budget : {};
+  if (!budget.maxTokens) return 'No contract budget defined.';
+  const targetText = budget.targetTokens ? `target ${budget.targetTokens}` : 'no target';
+  return `Prompt contract budget: ${targetText}, max ${budget.maxTokens}, current estimate ${estimatedTokens}.`;
+}
+
+function getPathValue(value, dottedPath) {
+  return String(dottedPath || '')
+    .split('.')
+    .filter(Boolean)
+    .reduce((current, segment) => {
+      if (current === undefined || current === null) return undefined;
+      return current[segment];
+    }, value);
+}
+
+function validateRequirement(input, requirement) {
+  const value = getPathValue(input, requirement.path);
+  if (requirement.equals !== undefined && value !== requirement.equals) {
+    return `Expected ${requirement.path} to equal ${JSON.stringify(requirement.equals)}.`;
+  }
+  if (requirement.type === 'string') {
+    if (typeof value !== 'string') {
+      return `Expected ${requirement.path} to be a string.`;
+    }
+    if (requirement.nonEmpty && String(value).trim().length === 0) {
+      return `Expected ${requirement.path} to be a non-empty string.`;
+    }
+  }
+  if (requirement.type === 'array') {
+    if (!Array.isArray(value)) {
+      return `Expected ${requirement.path} to be an array.`;
+    }
+    if (Number.isInteger(requirement.minItems) && value.length < requirement.minItems) {
+      return `Expected ${requirement.path} to contain at least ${requirement.minItems} item(s).`;
+    }
+  }
+  return null;
+}
+
+function validatePromptApplicability(templateName, input) {
+  const contract = getPromptContract(templateName);
+  if (!isAiProjection(input)) {
+    const failures = [];
+    if (!input || typeof input !== 'object') {
+      failures.push('Legacy prompt input must be an object.');
+    }
+    if (!input || typeof input.program !== 'string' || String(input.program).trim().length === 0) {
+      failures.push('Legacy prompt input must include a non-empty program.');
+    }
+    return {
+      applicable: failures.length === 0,
+      failures,
+      contract,
+    };
+  }
+
+  const failures = (contract.requiredInputs || [])
+    .map((requirement) => validateRequirement(input, requirement))
+    .filter(Boolean);
+
+  return {
+    applicable: failures.length === 0,
+    failures,
+    contract,
+  };
+}
+
+function buildTemplateData(context, sourceSnippet, contract) {
+  const { tables, programCalls, copyMembers, nativeFiles, sqlStatements } = extractSections(context);
   const summary = context.summary && context.summary.text
     ? context.summary.text
     : `Program ${context.program || ''} has ${tables.length} tables, ${programCalls.length} program calls, ${copyMembers.length} copy members, and ${sqlStatements.length} SQL statements.`;
@@ -82,6 +200,7 @@ function buildTemplateData(context, sourceSnippet) {
   const testDataHint = testData.status === 'exported'
     ? `Representative sample rows are available in ${testData.file || 'test-data.json'} and ${testData.markdownFile || 'test-data.md'} for ${testData.tableCount || 0} tables.`
     : 'Representative sample rows are not available in this analysis run.';
+  const promptEstimate = estimateTokens(summary);
 
   return {
     program: context.program || '',
@@ -89,39 +208,116 @@ function buildTemplateData(context, sourceSnippet) {
     tables: asBulletList(tables, (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
     programCalls: asBulletList(programCalls, (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
     copyMembers: asBulletList(copyMembers, (item) => item.name || item),
-    sqlStatements: asBulletList(sqlStatements, (item) => {
-      const text = (item && (item.text || item.snippet)) || '';
-      if (item && item.type && text) {
-        return `[${item.type}] ${text}`;
-      }
-      return item;
+    nativeFiles: asBulletList(nativeFiles, (item) => {
+      const flags = [];
+      if (item.mutating || (item.access && item.access.mutating)) flags.push('MUTATING');
+      if (item.interactive || (item.access && item.access.interactive)) flags.push('INTERACTIVE');
+      if (item.keyed) flags.push('KEYED');
+      return `${item.name || item}${flags.length ? ` (${flags.join(', ')})` : ''}`;
     }),
+    sqlStatements: formatSqlStatements(sqlStatements),
     dependencyGraphSummary,
     testDataHint,
     sourceSnippet: sourceSnippet || 'No source snippet available.',
+    riskMarkers: asBulletList((context.aiContext && context.aiContext.riskHints) || []),
+    uncertaintyMarkers: '- None detected',
+    evidencePackSummary: 'No evidence packs available.',
+    contractBudget: formatBudgetHint(contract, promptEstimate),
   };
 }
 
-function buildPrompt(templateName, context, outputPath, options = {}) {
-  const template = loadTemplate(templateName);
-  const data = buildTemplateData(context, options.sourceSnippet);
-  const resolved = renderTemplate(template, data);
-  const generatedAt = context.scannedAt || new Date().toISOString();
-  const content = `Generated by: zeus-rpg-promptkit\nProgram: ${context.program || ''}\nGenerated at: ${generatedAt}\n\n${resolved}`;
-  fs.writeFileSync(outputPath, content, 'utf8');
-  return content;
+function resolveWorkflow(aiProjection, contract) {
+  const workflowName = contract.workflow;
+  return aiProjection && aiProjection.workflows ? aiProjection.workflows[workflowName] : null;
 }
 
-function buildPrompts({ context, outputDir, sourceSnippet, templates }) {
+function buildTemplateDataFromProjection(aiProjection, contract) {
+  const workflow = resolveWorkflow(aiProjection, contract);
+  const graph = workflow && workflow.dependencyGraphSummary ? workflow.dependencyGraphSummary : {};
+  const testData = workflow && workflow.testData ? workflow.testData : {};
+  const dependencyGraphSummary = `Nodes: ${graph.nodeCount || 0}, Edges: ${graph.edgeCount || 0}`;
+  const testDataHint = testData.status === 'exported'
+    ? `Representative sample rows are available in ${testData.file || 'test-data.json'} and ${testData.markdownFile || 'test-data.md'} for ${testData.tableCount || 0} tables.`
+    : 'Representative sample rows are not available in this analysis run.';
+  const evidenceHighlights = formatEvidenceHighlights(workflow);
+  const summaryParts = [
+    workflow && workflow.summary ? workflow.summary : '',
+    workflow && Array.isArray(workflow.riskMarkers) && workflow.riskMarkers.length > 0
+      ? `Risk markers: ${workflow.riskMarkers.join(', ')}.`
+      : '',
+    workflow && Array.isArray(workflow.uncertaintyMarkers) && workflow.uncertaintyMarkers.length > 0
+      ? `Uncertainty markers: ${workflow.uncertaintyMarkers.join(', ')}.`
+      : '',
+  ].filter(Boolean);
+
+  return {
+    program: aiProjection.program || '',
+    summary: summaryParts.join(' '),
+    tables: asBulletList((workflow && workflow.tables) || [], (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
+    programCalls: asBulletList((workflow && workflow.programCalls) || [], (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
+    copyMembers: asBulletList((workflow && workflow.copyMembers) || [], (item) => item.name || item),
+    nativeFiles: asBulletList((workflow && workflow.nativeFiles) || [], (item) => {
+      const flags = [];
+      if (item.mutating) flags.push('MUTATING');
+      if (item.interactive) flags.push('INTERACTIVE');
+      if (item.keyed) flags.push('KEYED');
+      return `${item.name || item}${flags.length ? ` (${flags.join(', ')})` : ''}`;
+    }),
+    sqlStatements: formatSqlStatements((workflow && workflow.sqlStatements) || []),
+    dependencyGraphSummary,
+    testDataHint,
+    sourceSnippet: evidenceHighlights,
+    riskMarkers: asBulletList((workflow && workflow.riskMarkers) || []),
+    uncertaintyMarkers: asBulletList((workflow && workflow.uncertaintyMarkers) || []),
+    evidencePackSummary: formatEvidencePackSummary(workflow),
+    contractBudget: formatBudgetHint(contract, Number(workflow && workflow.estimatedTokens) || 0),
+  };
+}
+
+function renderPrompt(templateName, contextOrProjection, options = {}) {
+  const contract = getPromptContract(templateName);
+  const applicability = validatePromptApplicability(templateName, contextOrProjection);
+  if (!applicability.applicable) {
+    throw new Error(`Prompt contract validation failed for ${templateName}: ${applicability.failures.join(' ')}`);
+  }
+
+  const template = loadTemplate(contract.templateFile || templateName);
+  const data = isAiProjection(contextOrProjection)
+    ? buildTemplateDataFromProjection(contextOrProjection, contract)
+    : buildTemplateData(contextOrProjection, options.sourceSnippet, contract);
+  const resolved = renderTemplate(template, data);
+  const generatedAt = contextOrProjection.generatedAt || contextOrProjection.scannedAt || new Date().toISOString();
+  const content = `Generated by: zeus-rpg-promptkit\nProgram: ${contextOrProjection.program || ''}\nGenerated at: ${generatedAt}\nPrompt Contract: ${contract.name}@${contract.version}\n\n${resolved}`;
+  const estimatedTokens = estimateTokens(content);
+
+  if (contract.budget && contract.budget.maxTokens && estimatedTokens > contract.budget.maxTokens) {
+    throw new Error(`Prompt contract budget exceeded for ${templateName}: estimated ${estimatedTokens} tokens exceeds max ${contract.budget.maxTokens}.`);
+  }
+
+  return {
+    content,
+    estimatedTokens,
+    contract,
+  };
+}
+
+function buildPrompt(templateName, contextOrProjection, outputPath, options = {}) {
+  const rendered = renderPrompt(templateName, contextOrProjection, options);
+  fs.writeFileSync(outputPath, rendered.content, 'utf8');
+  return rendered.content;
+}
+
+function buildPrompts({ context, aiProjection, outputDir, sourceSnippet, templates }) {
   const selected = Array.isArray(templates) && templates.length > 0
     ? templates
     : ['documentation', 'error-analysis'];
   const outputs = {};
+  const input = aiProjection || context;
 
   for (const templateName of selected) {
-    const outputFileName = `ai_prompt_${templateName.replace(/-/g, '_')}.md`;
-    const outputPath = path.join(outputDir, outputFileName);
-    outputs[templateName] = buildPrompt(templateName, context, outputPath, { sourceSnippet });
+    const contract = getPromptContract(templateName);
+    const outputPath = path.join(outputDir, contract.outputFileName || `ai_prompt_${templateName.replace(/-/g, '_')}.md`);
+    outputs[templateName] = buildPrompt(templateName, input, outputPath, { sourceSnippet });
   }
 
   return outputs;
@@ -130,5 +326,6 @@ function buildPrompts({ context, outputDir, sourceSnippet, templates }) {
 module.exports = {
   buildPrompt,
   buildPrompts,
+  renderPrompt,
+  validatePromptApplicability,
 };
-

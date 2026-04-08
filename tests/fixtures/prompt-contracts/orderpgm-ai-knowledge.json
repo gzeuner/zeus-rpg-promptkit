@@ -1,0 +1,314 @@
+{
+  "input": {
+    "kind": "ai-knowledge-projection",
+    "schemaVersion": 1,
+    "generatedAt": "2026-04-08T12:00:00.000Z",
+    "program": "ORDERPGM",
+    "workflows": {
+      "documentation": {
+        "summary": "Program ORDERPGM reads order headers, updates native customer records, and calls downstream invoice processing. Risk markers: Dynamic SQL detected, Mutating native file I/O detected.",
+        "tables": [
+          { "name": "ORDERS", "kind": "TABLE" },
+          { "name": "CUSTOMER", "kind": "TABLE" }
+        ],
+        "programCalls": [
+          { "name": "INVPGM", "kind": "PROGRAM" }
+        ],
+        "copyMembers": [
+          { "name": "QRPGLESRC,ORDCOPY" }
+        ],
+        "sqlStatements": [
+          {
+            "id": "SQL:SELECT:1",
+            "type": "SELECT",
+            "intent": "READ",
+            "text": "select order_id from orders where status = :status",
+            "tables": ["ORDERS"],
+            "dynamic": false,
+            "unresolved": false,
+            "evidenceRefs": ["EV0001"]
+          },
+          {
+            "id": "SQL:PREPARE:2",
+            "type": "PREPARE",
+            "intent": "OTHER",
+            "text": "prepare S1 from :stmt",
+            "tables": [],
+            "dynamic": true,
+            "unresolved": true,
+            "evidenceRefs": ["EV0002"]
+          }
+        ],
+        "nativeFiles": [
+          {
+            "name": "CUSTFILE",
+            "kind": "DISK",
+            "keyed": true,
+            "mutating": true,
+            "interactive": false,
+            "recordFormats": ["CUSTFMT"],
+            "evidenceRefs": ["EV0003"]
+          }
+        ],
+        "riskMarkers": ["Dynamic SQL detected", "Mutating native file I/O detected"],
+        "uncertaintyMarkers": ["DYNAMIC_SQL"],
+        "tokenBudget": 1800,
+        "estimatedTokens": 980,
+        "evidencePacks": {
+          "sql": [
+            {
+              "rank": 1,
+              "score": 150,
+              "label": "PREPARE SQL",
+              "file": "ORDERPGM.sqlrpgle",
+              "startLine": 18,
+              "endLine": 18,
+              "snippet": "exec sql prepare S1 from :stmt;",
+              "ref": "EV0002",
+              "category": "sql"
+            }
+          ],
+          "calls": [
+            {
+              "rank": 2,
+              "score": 110,
+              "label": "Program Call INVPGM",
+              "file": "ORDERPGM.sqlrpgle",
+              "startLine": 26,
+              "endLine": 26,
+              "snippet": "callp INVPGM(orderId);",
+              "ref": "EV0004",
+              "category": "calls"
+            }
+          ],
+          "fileUsage": [
+            {
+              "rank": 3,
+              "score": 105,
+              "label": "Native File CUSTFILE",
+              "file": "ORDERPGM.sqlrpgle",
+              "startLine": 11,
+              "endLine": 11,
+              "snippet": "update CustFmt;",
+              "ref": "EV0003",
+              "category": "fileUsage"
+            }
+          ],
+          "conditionals": [
+            {
+              "rank": 4,
+              "score": 72,
+              "label": "Conditional Logic",
+              "file": "ORDERPGM.sqlrpgle",
+              "startLine": 20,
+              "endLine": 20,
+              "snippet": "if sqlcod <> 0;",
+              "ref": null,
+              "category": "conditionals"
+            }
+          ],
+          "errorPaths": [
+            {
+              "rank": 5,
+              "score": 90,
+              "label": "Error Path",
+              "file": "ORDERPGM.sqlrpgle",
+              "startLine": 21,
+              "endLine": 21,
+              "snippet": "rollback;",
+              "ref": null,
+              "category": "errorPaths"
+            }
+          ]
+        },
+        "evidenceHighlights": [
+          {
+            "rank": 1,
+            "score": 150,
+            "label": "PREPARE SQL",
+            "file": "ORDERPGM.sqlrpgle",
+            "startLine": 18,
+            "endLine": 18,
+            "snippet": "exec sql prepare S1 from :stmt;",
+            "ref": "EV0002",
+            "category": "sql"
+          },
+          {
+            "rank": 2,
+            "score": 110,
+            "label": "Program Call INVPGM",
+            "file": "ORDERPGM.sqlrpgle",
+            "startLine": 26,
+            "endLine": 26,
+            "snippet": "callp INVPGM(orderId);",
+            "ref": "EV0004",
+            "category": "calls"
+          }
+        ],
+        "rankedEvidence": [
+          {
+            "rank": 1,
+            "score": 150,
+            "label": "PREPARE SQL",
+            "file": "ORDERPGM.sqlrpgle",
+            "startLine": 18,
+            "endLine": 18,
+            "snippet": "exec sql prepare S1 from :stmt;",
+            "ref": "EV0002",
+            "category": "sql"
+          }
+        ],
+        "dependencyGraphSummary": { "nodeCount": 6, "edgeCount": 5 },
+        "testData": { "status": "skipped" }
+      },
+      "errorAnalysis": {
+        "summary": "Program ORDERPGM contains dynamic SQL, mutating native file updates, and rollback-driven error handling.",
+        "tables": [
+          { "name": "ORDERS", "kind": "TABLE" }
+        ],
+        "programCalls": [
+          { "name": "INVPGM", "kind": "PROGRAM" }
+        ],
+        "copyMembers": [],
+        "sqlStatements": [
+          {
+            "id": "SQL:PREPARE:2",
+            "type": "PREPARE",
+            "intent": "OTHER",
+            "text": "prepare S1 from :stmt",
+            "tables": [],
+            "dynamic": true,
+            "unresolved": true,
+            "evidenceRefs": ["EV0002"]
+          }
+        ],
+        "nativeFiles": [
+          {
+            "name": "CUSTFILE",
+            "kind": "DISK",
+            "keyed": true,
+            "mutating": true,
+            "interactive": false,
+            "recordFormats": ["CUSTFMT"],
+            "evidenceRefs": ["EV0003"]
+          }
+        ],
+        "riskMarkers": ["Dynamic SQL detected", "Mutating native file I/O detected"],
+        "uncertaintyMarkers": ["DYNAMIC_SQL"],
+        "tokenBudget": 1500,
+        "estimatedTokens": 870,
+        "evidencePacks": {
+          "sql": [
+            {
+              "rank": 1,
+              "score": 150,
+              "label": "PREPARE SQL",
+              "file": "ORDERPGM.sqlrpgle",
+              "startLine": 18,
+              "endLine": 18,
+              "snippet": "exec sql prepare S1 from :stmt;",
+              "ref": "EV0002",
+              "category": "sql"
+            }
+          ],
+          "calls": [],
+          "fileUsage": [
+            {
+              "rank": 2,
+              "score": 105,
+              "label": "Native File CUSTFILE",
+              "file": "ORDERPGM.sqlrpgle",
+              "startLine": 11,
+              "endLine": 11,
+              "snippet": "update CustFmt;",
+              "ref": "EV0003",
+              "category": "fileUsage"
+            }
+          ],
+          "conditionals": [],
+          "errorPaths": [
+            {
+              "rank": 3,
+              "score": 90,
+              "label": "Error Path",
+              "file": "ORDERPGM.sqlrpgle",
+              "startLine": 21,
+              "endLine": 21,
+              "snippet": "rollback;",
+              "ref": null,
+              "category": "errorPaths"
+            }
+          ]
+        },
+        "evidenceHighlights": [
+          {
+            "rank": 1,
+            "score": 150,
+            "label": "PREPARE SQL",
+            "file": "ORDERPGM.sqlrpgle",
+            "startLine": 18,
+            "endLine": 18,
+            "snippet": "exec sql prepare S1 from :stmt;",
+            "ref": "EV0002",
+            "category": "sql"
+          },
+          {
+            "rank": 2,
+            "score": 90,
+            "label": "Error Path",
+            "file": "ORDERPGM.sqlrpgle",
+            "startLine": 21,
+            "endLine": 21,
+            "snippet": "rollback;",
+            "ref": null,
+            "category": "errorPaths"
+          }
+        ],
+        "rankedEvidence": [
+          {
+            "rank": 1,
+            "score": 150,
+            "label": "PREPARE SQL",
+            "file": "ORDERPGM.sqlrpgle",
+            "startLine": 18,
+            "endLine": 18,
+            "snippet": "exec sql prepare S1 from :stmt;",
+            "ref": "EV0002",
+            "category": "sql"
+          }
+        ],
+        "dependencyGraphSummary": { "nodeCount": 6, "edgeCount": 5 },
+        "testData": { "status": "skipped" }
+      }
+    }
+  },
+  "evaluations": [
+    {
+      "template": "documentation",
+      "mustInclude": [
+        "Prompt Contract: documentation@1",
+        "Program: `ORDERPGM`",
+        "Program Documentation",
+        "PREPARE SQL @ ORDERPGM.sqlrpgle:18"
+      ]
+    },
+    {
+      "template": "defect-analysis",
+      "mustInclude": [
+        "Prompt Contract: defect-analysis@1",
+        "Program Defect Analysis",
+        "rollback;",
+        "Dynamic SQL detected"
+      ]
+    },
+    {
+      "template": "modernization",
+      "mustInclude": [
+        "Prompt Contract: modernization@1",
+        "Program Modernization Analysis",
+        "Native Files and Operational Boundaries",
+        "CUSTFILE (MUTATING, KEYED)"
+      ]
+    }
+  ]
+}

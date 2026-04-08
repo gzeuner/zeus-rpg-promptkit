@@ -12,6 +12,8 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - Detects common dependencies using practical heuristics:
   - F-spec and `dcl-f` table/file declarations
   - Native file I/O semantics including read/write/update/delete, workstation/printer behavior, and record-format hints
+  - Embedded SQL semantics including read/write intent, cursor activity, host variables, dynamic SQL flags, and uncertainty markers
+  - Module, service-program, binder-source, and binding-directory relationships where source evidence exists
   - Program calls (`CALL`, `CALLP`, `CALLB`, `CALLPRC`)
   - Copy/include directives (`/COPY`, `/INCLUDE`, `COPY`)
   - Embedded SQL blocks (`EXEC SQL` + statement content)
@@ -41,6 +43,8 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `src/report/architectureReport.js` - Architecture report generation
 - `src/report/jsonReport.js` - JSON report writer
 - `src/prompt/promptBuilder.js` - Prompt generation from templates
+- `src/prompt/promptRegistry.js` - Prompt contract metadata and workflow mapping
+- `src/prompt/promptEvaluationHarness.js` - Fixture-driven prompt contract evaluation
 - `src/prompt/templates/*.md` - Prompt templates
 - `java/Db2MetadataExporter.java` - DB2 table metadata exporter
 - `java/Db2TestDataExtractor.java` - DB2 sample row extractor
@@ -185,6 +189,7 @@ Generated files:
 - `canonical-analysis.json`
 - `context.json`
 - `optimized-context.json` (when `--optimize-context` is enabled)
+- `ai-knowledge.json`
 - `report.md`
 - `architecture-report.md`
 - `ai_prompt_documentation.md`
@@ -213,6 +218,7 @@ Generated files:
 - `summary`
 - `dependencies`
 - `procedureAnalysis`
+- `bindingAnalysis`
 - `nativeFileUsage`
 - `sql`
 - `graph`
@@ -222,6 +228,8 @@ Generated files:
 - `aiContext`
 - `notes`
 
+`ai-knowledge.json` is a versioned prompt-ready projection derived from the canonical model. It preserves evidence references, risk markers, uncertainty markers, and workflow-specific sections for prompt generation.
+
 `canonical-analysis.json` is now the semantic source of truth for the analyze pipeline.
 
 `context.json` remains the backward-compatible AI-ready projection. Prompt generation and report generation still consume this projection today, and `graph` provides compact references to dependency graph artifacts.
@@ -230,7 +238,11 @@ Generated files:
 
 `nativeFileUsage` exposes native IBM i file semantics including per-file read-only versus mutating usage, workstation and printer behavior, keyed/native I/O hints, procedure ownership, and detected record formats where feasible.
 
-When `--optimize-context` is enabled, prompts are generated from `optimized-context.json` instead of the full `context.json`.
+`sql` now exposes structured embedded SQL semantics including statement intent, read/write behavior, host variables, cursor names/actions, dynamic SQL markers, and unresolved dependency hints.
+
+`bindingAnalysis` exposes module-level bind metadata including `BNDDIR` references, service-program hints, binder-source exports, imported procedure symbols, and unresolved bind diagnostics where explicit binding evidence is missing.
+
+When `--optimize-context` is enabled, `optimized-context.json` becomes a salience-ranked workflow projection with token budgets, evidence packs, and ranked source references. The AI knowledge projection uses it as a selection helper, but prompt generation still reads `ai-knowledge.json`.
 
 The canonical schema and invariants are documented in `docs/canonical-analysis-model.md`.
 
@@ -418,8 +430,19 @@ Available prompt types today:
 
 - `documentation`
 - `error-analysis`
+- `defect-analysis`
+- `modernization`
 
 The analyze pipeline loads templates from disk, resolves placeholders from the projected prompt context, and writes prompt files to `output/<program>/`.
+
+Prompt rendering is now contract-driven:
+
+- each template has registry metadata for version, workflow, required inputs, preferred output shape, and budget expectations
+- prompt applicability is validated against `ai-knowledge.json` before rendering
+- rendered prompts fail fast when the contract budget is exceeded
+- fixture-driven prompt regression tests check completeness, evidence preservation, and prompt size
+
+See `docs/prompt-contracts.md` for the contract model and fixture harness.
 
 Supported placeholders include:
 
@@ -612,7 +635,7 @@ A profile can define:
 - `db` (optional): `url`, `host`, `user`, `password`, `defaultSchema`, `defaultLibrary`
 - `testData` (optional): `limit`, `maskColumns`
 - `fetch` (optional): `host`, `user`, `password`, `sourceLib`, `ifsDir`, `out`, `files`, `members`, `replace`, `streamFileCcsid`, `transport`
-- `contextOptimizer` (optional): `maxTables`, `maxProgramCalls`, `maxCopyMembers`, `maxSQLStatements`, `maxSourceSnippets`, `maxSnippetLines`, `softTokenLimit`
+- `contextOptimizer` (optional): `maxTables`, `maxProgramCalls`, `maxCopyMembers`, `maxSQLStatements`, `maxSourceSnippets`, `maxSnippetLines`, `softTokenLimit`, `workflowTokenBudgets`
 
 Example:
 
@@ -625,7 +648,11 @@ Example:
     "maxSQLStatements": 10,
     "maxSourceSnippets": 20,
     "maxSnippetLines": 12,
-    "softTokenLimit": 3000
+    "softTokenLimit": 3000,
+    "workflowTokenBudgets": {
+      "documentation": 2200,
+      "errorAnalysis": 1600
+    }
   },
   "testData": {
     "limit": 50,
@@ -641,7 +668,10 @@ Example:
       "maxCopyMembers": 10,
       "maxSQLStatements": 10,
       "maxSourceSnippets": 20,
-      "maxSnippetLines": 12
+      "maxSnippetLines": 12,
+      "workflowTokenBudgets": {
+        "documentation": 1800
+      }
     }
   },
   "sample-fetch": {
@@ -667,9 +697,10 @@ Large RPG programs often exceed practical LLM context limits when full scan outp
 `--optimize-context` adds a deterministic reduction step:
 
 - keeps program metadata, dependency summary, tables, program calls, copy members, and SQL
-- prioritizes SQL and call/table signals
-- limits section sizes using configurable caps
-- extracts short evidence-based source snippets (default max: 12 lines)
+- ranks semantic evidence by salience instead of trimming lists alphabetically
+- builds workflow-specific evidence packs for SQL, calls, native file usage, conditionals, and error paths
+- enforces configurable token budgets per workflow through `workflowTokenBudgets.documentation` and `workflowTokenBudgets.errorAnalysis`
+- carries ranked file-and-line evidence references forward into `ai-knowledge.json` and the generated prompts
 
 Token estimation uses a lightweight heuristic:
 
