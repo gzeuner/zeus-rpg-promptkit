@@ -144,6 +144,12 @@ Target outcome:
 - developers choose a task, not a pile of files
 - broad search and targeted diagnostics sit next to semantic analysis instead of outside it
 
+Current workflow packaging now includes:
+
+- guided analyze modes for architecture, documentation, defect/error analysis, modernization, and impact
+- named workflow presets for `architecture-review`, `modernization-review`, `onboarding`, and `dependency-risk`
+- workflow-tagged bundle manifests so shared archives can describe which preset produced them
+
 ### Track E: AI Knowledge Projection and Safe Sharing
 
 The AI layer must improve in two directions at once: better evidence and safer outputs.

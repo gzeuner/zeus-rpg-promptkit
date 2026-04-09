@@ -69,6 +69,14 @@ function runAnalyze(args) {
   const sourceRoot = path.resolve(process.cwd(), config.sourceRoot);
   const outputRoot = path.resolve(process.cwd(), config.outputRoot);
   const program = String(args.program).trim();
+  const workflowPreset = args['workflow-preset-settings'] && typeof args['workflow-preset-settings'] === 'object'
+    ? {
+      ...args['workflow-preset-settings'],
+      promptTemplates: [...(args['workflow-preset-settings'].promptTemplates || [])],
+      workflowKeys: [...(args['workflow-preset-settings'].workflowKeys || [])],
+      bundleArtifacts: [...(args['workflow-preset-settings'].bundleArtifacts || [])],
+    }
+    : null;
   let workflowModeSettings = null;
   if (args.mode) {
     try {
@@ -106,6 +114,9 @@ function runAnalyze(args) {
   if (guidedMode) {
     logVerbose(`Workflow mode: ${guidedMode.name}`);
     logVerbose(`Workflow prompt templates: ${promptTemplates.length > 0 ? promptTemplates.join(', ') : 'none'}`);
+  }
+  if (workflowPreset) {
+    logVerbose(`Workflow preset: ${workflowPreset.name}`);
   }
 
   if (!fs.existsSync(sourceRoot)) {
@@ -154,6 +165,7 @@ function runAnalyze(args) {
         testDataLimit,
         extensions: config.extensions,
         guidedMode,
+        workflowPreset,
       },
       result,
       previousManifest,
@@ -177,6 +189,7 @@ function runAnalyze(args) {
         testDataLimit,
         extensions: config.extensions,
         guidedMode,
+        workflowPreset,
       },
       error,
       previousManifest,
@@ -188,6 +201,9 @@ function runAnalyze(args) {
   console.log(`Analysis complete for program ${program}`);
   if (guidedMode) {
     console.log(`Guided mode: ${guidedMode.name}`);
+  }
+  if (workflowPreset) {
+    console.log(`Workflow preset: ${workflowPreset.name}`);
   }
   console.log(`Source files scanned: ${(result.scanSummary.sourceFiles || []).length}`);
   if (result.optimizationReport.enabled) {
