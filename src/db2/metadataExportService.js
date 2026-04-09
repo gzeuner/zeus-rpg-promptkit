@@ -20,6 +20,10 @@ const {
   buildJdbcUrl,
   isDbConfigured,
 } = require('./db2Config');
+const {
+  buildCompactDb2TableLink,
+  buildDb2SourceLinkage,
+} = require('./db2EvidenceLinker');
 
 const JSON_FILE = 'db2-metadata.json';
 const MARKDOWN_FILE = 'db2-metadata.md';
@@ -140,7 +144,37 @@ function renderMarkdown(program, tables) {
     lines.push(`## Table ${table.table}`);
     lines.push('');
     lines.push(`Schema: ${table.schema || '(unknown)'}`);
-    lines.push('');
+    if (table.sourceLink) {
+      lines.push(`Match Status: ${table.sourceLink.matchStatus}`);
+      lines.push('');
+      if ((table.sourceLink.sourceEvidence || []).length > 0) {
+        lines.push('Source Evidence:');
+        for (const evidence of table.sourceLink.sourceEvidence) {
+          lines.push(`- ${evidence.file}:${evidence.startLine || 1}`);
+        }
+        lines.push('');
+      }
+      if ((table.sourceLink.sqlReferences || []).length > 0) {
+        lines.push('Related SQL:');
+        for (const statement of table.sourceLink.sqlReferences) {
+          lines.push(`- ${statement.type}${statement.dynamic ? ' (dynamic)' : ''}${statement.unresolved ? ' (unresolved)' : ''}`);
+        }
+        lines.push('');
+      }
+      if ((table.sourceLink.nativeFiles || []).length > 0) {
+        lines.push('Related Native File Usage:');
+        for (const nativeFile of table.sourceLink.nativeFiles) {
+          const flags = [];
+          if (nativeFile.mutating) flags.push('MUTATING');
+          if (nativeFile.interactive) flags.push('INTERACTIVE');
+          if (nativeFile.keyed) flags.push('KEYED');
+          lines.push(`- ${nativeFile.name}${flags.length > 0 ? ` (${flags.join(', ')})` : ''}`);
+        }
+        lines.push('');
+      }
+    } else {
+      lines.push('');
+    }
     lines.push('| Column | Type | Length | Nullable | PK |');
     lines.push('| --- | --- | --- | --- | --- |');
     for (const column of table.columns || []) {
@@ -165,7 +199,7 @@ function writeOutputs(outputDir, payload, markdown) {
   fs.writeFileSync(path.join(outputDir, MARKDOWN_FILE), markdown, 'utf8');
 }
 
-function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose }) {
+function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose, canonicalAnalysis, context }) {
   const requestedTables = buildRequestedTableNames(dependencies);
   const defaultSchema = resolveDefaultSchema(dbConfig);
   const summary = {
@@ -197,9 +231,16 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
   }
 
   if (requestedTables.length === 0) {
+    const linkage = buildDb2SourceLinkage({
+      requestedTables,
+      exportedTables: [],
+      canonicalAnalysis,
+      context,
+    });
     const payload = {
       program: normalizeIdentifier(program),
       tables: [],
+      tableLinks: linkage.tableLinks,
     };
     writeOutputs(outputDir, payload, renderMarkdown(program, []));
     return {
@@ -210,8 +251,14 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
         markdownFile: MARKDOWN_FILE,
         tableCount: 0,
         requestedTableCount: 0,
+        resolvedTableCount: 0,
+        unresolvedTableCount: requestedTables.length,
+        ambiguousTableCount: 0,
+        tables: [],
       },
-      notes: [],
+      notes: linkage.unresolvedTables.length > 0
+        ? [`DB2 metadata lookup did not resolve tables: ${linkage.unresolvedTables.join(', ')}.`]
+        : [],
     };
   }
 
@@ -242,16 +289,33 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
 
     const parsed = parseJavaJson(result.stdout);
     const tables = dedupeTables(parsed.tables || []);
+    const linkage = buildDb2SourceLinkage({
+      requestedTables,
+      exportedTables: tables,
+      canonicalAnalysis,
+      context,
+    });
+    const linkedTables = tables.map((table) => {
+      const sourceLink = linkage.tableLinkByExactKey.get(`${normalizeIdentifier(table.schema)}|${normalizeIdentifier(table.table)}`) || null;
+      return {
+        ...table,
+        ...(sourceLink ? { sourceLink } : {}),
+      };
+    });
     const payload = {
       program: normalizeIdentifier(program),
-      tables,
+      tables: linkedTables,
+      tableLinks: linkage.tableLinks,
     };
-    writeOutputs(outputDir, payload, renderMarkdown(program, tables));
+    writeOutputs(outputDir, payload, renderMarkdown(program, linkedTables));
 
-    const unresolvedTables = requestedTables.filter((tableName) => !tables.some((table) => table.table === tableName));
+    const unresolvedTables = linkage.unresolvedTables;
     const notes = [];
     if (unresolvedTables.length > 0) {
       notes.push(`DB2 metadata lookup did not resolve tables: ${unresolvedTables.join(', ')}.`);
+    }
+    if (linkage.ambiguousTables.length > 0) {
+      notes.push(`DB2 metadata lookup matched multiple schemas for tables: ${linkage.ambiguousTables.map((entry) => `${entry.requestedName} (${entry.matchedSchemas.join(', ')})`).join('; ')}.`);
     }
 
     return {
@@ -262,9 +326,24 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
         markdownFile: MARKDOWN_FILE,
         tableCount: tables.length,
         requestedTableCount: requestedTables.length,
+        resolvedTableCount: linkage.tableLinks.filter((entry) => entry.matchStatus === 'resolved').length,
+        unresolvedTableCount: unresolvedTables.length,
+        ambiguousTableCount: linkage.ambiguousTables.length,
+        tables: linkedTables.map((table) => {
+          const sourceLink = linkage.tableLinkByExactKey.get(`${normalizeIdentifier(table.schema)}|${normalizeIdentifier(table.table)}`) || {
+            requestedName: normalizeIdentifier(table.table),
+            matchStatus: 'resolved',
+            sourceEvidence: [],
+            sqlReferences: [],
+            nativeFiles: [],
+          };
+          return buildCompactDb2TableLink(sourceLink, table);
+        }),
         ...(unresolvedTables.length > 0 ? { unresolvedTables } : {}),
+        ...(linkage.ambiguousTables.length > 0 ? { ambiguousTables: linkage.ambiguousTables } : {}),
       },
       notes,
+      diagnostics: linkage.diagnostics,
     };
   } catch (error) {
     return {

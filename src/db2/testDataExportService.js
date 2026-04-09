@@ -20,6 +20,10 @@ const {
   buildJdbcUrl,
   isDbConfigured,
 } = require('./db2Config');
+const {
+  buildCompactTestDataLink,
+  buildDb2SourceLinkage,
+} = require('./db2EvidenceLinker');
 
 const JSON_FILE = 'test-data.json';
 const MARKDOWN_FILE = 'test-data.md';
@@ -179,6 +183,17 @@ function renderTableMarkdown(table) {
   const lines = [`## Table ${table.table}`, ''];
   lines.push(`Schema: ${table.schema || '(unknown)'}`);
   lines.push('');
+  if (table.sourceLink) {
+    lines.push(`Match Status: ${table.sourceLink.matchStatus}`);
+    if ((table.sourceLink.sourceEvidence || []).length > 0) {
+      lines.push('');
+      lines.push('Source Evidence:');
+      for (const evidence of table.sourceLink.sourceEvidence) {
+        lines.push(`- ${evidence.file}:${evidence.startLine || 1}`);
+      }
+    }
+    lines.push('');
+  }
 
   if (table.status && table.status !== 'exported') {
     lines.push(`Status: ${table.status}`);
@@ -283,6 +298,8 @@ function exportTestData({
   dbConfig,
   outputDir,
   metadataPayload,
+  canonicalAnalysis,
+  context,
   testDataConfig,
   skipTestData = false,
   verbose = false,
@@ -324,6 +341,22 @@ function exportTestData({
     metadataPayload,
     defaultSchema,
   });
+  const metadataLinkage = metadataPayload && Array.isArray(metadataPayload.tableLinks)
+    ? {
+      tableLinks: metadataPayload.tableLinks,
+      tableLinkByExactKey: new Map(
+        metadataPayload.tableLinks.flatMap((link) => (link.matches || []).map((match) => [
+          `${normalizeIdentifier(match.schema)}|${normalizeIdentifier(match.table)}`,
+          link,
+        ])),
+      ),
+    }
+    : buildDb2SourceLinkage({
+      requestedTables: requestedTables.map((entry) => entry.table),
+      exportedTables: plan,
+      canonicalAnalysis,
+      context,
+    });
   const maskColumns = new Set(normalizeMaskColumns(testDataConfig));
   const notes = [];
   const tables = [];
@@ -372,6 +405,7 @@ function exportTestData({
         columns: [],
         rows: [],
         note: entry.note,
+        sourceLink: metadataLinkage.tableLinkByExactKey.get(`${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`) || null,
       });
       notes.push(`Skipped test data extraction for ${entry.table}: ${entry.note}`);
       continue;
@@ -406,6 +440,7 @@ function exportTestData({
         columns: [],
         rows: [],
         note: errorText,
+        sourceLink: metadataLinkage.tableLinkByExactKey.get(`${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`) || null,
       });
       notes.push(`Test data extraction failed for ${entry.schema}.${entry.table}: ${errorText}`);
       continue;
@@ -426,6 +461,9 @@ function exportTestData({
         rowCount: Number.isFinite(Number(parsed.rowCount)) ? Number(parsed.rowCount) : rows.length,
         columns,
         rows,
+        sourceLink: metadataLinkage.tableLinkByExactKey.get(
+          `${normalizeIdentifier(parsed.schema || entry.schema)}|${normalizeIdentifier(parsed.table || entry.table)}`,
+        ) || null,
       };
       if (primaryKeyColumns.length > 0) {
         tableEntry.note = `Rows ordered by primary key: ${primaryKeyColumns.join(', ')}.`;
@@ -440,6 +478,7 @@ function exportTestData({
         columns: [],
         rows: [],
         note: `Invalid helper output: ${error.message}`,
+        sourceLink: metadataLinkage.tableLinkByExactKey.get(`${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`) || null,
       });
       notes.push(`Test data extraction returned invalid output for ${entry.schema}.${entry.table}: ${error.message}`);
     }
@@ -464,6 +503,16 @@ function exportTestData({
       requestedTableCount: requestedTables.length,
       skippedTableCount: tables.filter((table) => table.status !== 'exported').length,
       rowLimit,
+      tables: tables.map((table) => {
+        const link = table.sourceLink || {
+          requestedName: normalizeIdentifier(table.table),
+          matchStatus: 'resolved',
+          sourceEvidence: [],
+          sqlReferences: [],
+          nativeFiles: [],
+        };
+        return buildCompactTestDataLink(link, table);
+      }),
     },
     notes: sortedNotes,
   };

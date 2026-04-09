@@ -268,6 +268,49 @@ function projectBinding(context, canonicalAnalysis, evidenceIndex) {
   };
 }
 
+function projectDb2Tables(context, evidenceIndex) {
+  return asArray(context && context.db2Metadata && context.db2Metadata.tables)
+    .map((entry) => ({
+      requestedName: entry.requestedName,
+      schema: entry.schema,
+      table: entry.table,
+      matchStatus: entry.matchStatus || 'resolved',
+      columnCount: Number(entry.columnCount) || 0,
+      foreignKeyCount: Number(entry.foreignKeyCount) || 0,
+      sourceEvidenceCount: Number(entry.sourceEvidenceCount) || 0,
+      sqlReferenceCount: Number(entry.sqlReferenceCount) || 0,
+      nativeFileCount: Number(entry.nativeFileCount) || 0,
+      evidenceRefs: evidenceRefsFor(evidenceIndex, entry.sourceEvidence),
+    }))
+    .sort((a, b) => {
+      if (a.table !== b.table) return a.table.localeCompare(b.table);
+      return a.schema.localeCompare(b.schema);
+    });
+}
+
+function projectWorkflowDb2Tables(projectionTables, workflow) {
+  const workflowTableNames = new Set(asArray(workflow && workflow.tables).map((entry) => normalizeName(entry && entry.name)));
+  const selected = asArray(projectionTables).filter((entry) => {
+    const requested = normalizeName(entry.requestedName || entry.table);
+    const exact = normalizeName(entry.table);
+    return workflowTableNames.has(requested) || workflowTableNames.has(exact);
+  });
+  return selected.length > 0 ? selected : asArray(projectionTables).slice(0, 5);
+}
+
+function projectWorkflowTestData(context, workflowDb2Tables) {
+  const testData = context && context.testData ? context.testData : { status: 'skipped' };
+  const workflowTableNames = new Set(asArray(workflowDb2Tables).map((entry) => normalizeName(entry.table)));
+  const tables = asArray(testData.tables)
+    .filter((entry) => workflowTableNames.size === 0 || workflowTableNames.has(normalizeName(entry.table)))
+    .slice(0, 5);
+
+  return {
+    ...testData,
+    tables,
+  };
+}
+
 function cloneEntityList(items, mapper) {
   return asArray(items).map((entry) => (mapper ? mapper(entry) : { ...entry }));
 }
@@ -281,6 +324,7 @@ function buildWorkflow(name, context, projection, payload = {}) {
     copyMembers: cloneEntityList(payload.copyMembers && payload.copyMembers.length > 0 ? payload.copyMembers : projection.entities.copyMembers),
     sqlStatements: cloneEntityList(payload.sqlStatements),
     nativeFiles: cloneEntityList(payload.nativeFiles && payload.nativeFiles.length > 0 ? payload.nativeFiles : projection.entities.nativeFiles),
+    db2Tables: cloneEntityList(payload.db2Tables && payload.db2Tables.length > 0 ? payload.db2Tables : projection.entities.db2Tables),
     riskMarkers: projection.riskMarkers,
     uncertaintyMarkers: projection.uncertaintyMarkers,
     tokenBudget: Number(payload.tokenBudget) || null,
@@ -306,7 +350,7 @@ function buildWorkflow(name, context, projection, payload = {}) {
       nodeCount: Number(context && context.graph && context.graph.nodeCount) || 0,
       edgeCount: Number(context && context.graph && context.graph.edgeCount) || 0,
     },
-    testData: context && context.testData ? context.testData : { status: 'skipped' },
+    testData: payload.testData || (context && context.testData ? context.testData : { status: 'skipped' }),
   };
 }
 
@@ -455,6 +499,7 @@ function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedConte
       copyMembers: projectCopyMemberRelations(canonicalAnalysis, evidenceIndex),
       sqlStatements,
       nativeFiles: projectNativeFiles(context, canonicalAnalysis, evidenceIndex),
+      db2Tables: projectDb2Tables(context, evidenceIndex),
       binding: projectBinding(context, canonicalAnalysis, evidenceIndex),
       modules: asArray(canonicalAnalysis.entities && canonicalAnalysis.entities.modules).map((entry) => ({
         name: entry.name,
@@ -466,17 +511,23 @@ function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedConte
 
   projection.uncertaintyMarkers = collectUncertaintyMarkers(canonicalAnalysis, context);
   const evidenceHighlights = buildEvidenceHighlights(evidenceIndex, projection);
+  const documentationPayload = buildWorkflowPayload('documentation', optimizedContext, selectedSqlStatements, evidenceHighlights);
+  documentationPayload.db2Tables = projectWorkflowDb2Tables(projection.entities.db2Tables, documentationPayload);
+  documentationPayload.testData = projectWorkflowTestData(context, documentationPayload.db2Tables);
   projection.workflows.documentation = buildWorkflow(
     'documentation',
     context,
     projection,
-    buildWorkflowPayload('documentation', optimizedContext, selectedSqlStatements, evidenceHighlights),
+    documentationPayload,
   );
+  const errorAnalysisPayload = buildWorkflowPayload('error-analysis', optimizedContext, selectedSqlStatements, evidenceHighlights);
+  errorAnalysisPayload.db2Tables = projectWorkflowDb2Tables(projection.entities.db2Tables, errorAnalysisPayload);
+  errorAnalysisPayload.testData = projectWorkflowTestData(context, errorAnalysisPayload.db2Tables);
   projection.workflows.errorAnalysis = buildWorkflow(
     'error-analysis',
     context,
     projection,
-    buildWorkflowPayload('error-analysis', optimizedContext, selectedSqlStatements, evidenceHighlights),
+    errorAnalysisPayload,
   );
 
   return projection;
