@@ -189,6 +189,7 @@ function buildAnalyzeRunManifest({
         testDataLimit: Number(context.testDataLimit) || null,
         extensions: Array.isArray(context.extensions) ? context.extensions : [],
         guidedMode: context.guidedMode || null,
+        workflowPreset: context.workflowPreset || null,
       },
       sourceSnapshot,
     },
