@@ -30,6 +30,9 @@ function runBundle(args) {
     includeJson: args['include-json'] === true,
     includeMd: args['include-md'] === true,
     includeHtml: args['include-html'] === true,
+    artifactPaths: Array.isArray(args['artifact-paths']) ? args['artifact-paths'] : null,
+    workflowPreset: args['workflow-preset-settings'] || null,
+    bundleFileName: args['bundle-file-name'] || null,
   });
 
   if (verbose) {
@@ -40,6 +43,7 @@ function runBundle(args) {
   console.log(`Bundle created for program ${result.program}`);
   console.log(`Files included: ${result.manifest.summary.totalFiles}`);
   console.log(`Bundle written to: ${result.zipPath}`);
+  return result;
 }
 
 module.exports = {

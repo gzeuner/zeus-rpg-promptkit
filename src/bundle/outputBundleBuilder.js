@@ -80,6 +80,16 @@ function mapBundleFiles(programOutputDir, fileNames, includeTypes) {
     }));
 }
 
+function collectExplicitBundleFiles(programOutputDir, includeTypes, artifactPaths) {
+  return mapBundleFiles(
+    programOutputDir,
+    Array.from(new Set((Array.isArray(artifactPaths) ? artifactPaths : [])
+      .map((entry) => String(entry || '').trim())
+      .filter(Boolean))),
+    includeTypes,
+  ).filter((file) => fs.existsSync(file.path));
+}
+
 function collectLegacyBundleFiles(programOutputDir, includeTypes) {
   return mapBundleFiles(
     programOutputDir,
@@ -143,7 +153,7 @@ function buildArtifactMetadata(files, analyzeManifest) {
   });
 }
 
-function buildManifest(program, files, analyzeManifest) {
+function buildManifest(program, files, analyzeManifest, workflowPreset) {
   const artifacts = buildArtifactMetadata(files, analyzeManifest);
   const manifest = {
     schemaVersion: BUNDLE_MANIFEST_SCHEMA_VERSION,
@@ -176,16 +186,45 @@ function buildManifest(program, files, analyzeManifest) {
     };
   }
 
+  const effectiveWorkflowPreset = workflowPreset
+    || (analyzeManifest
+      && analyzeManifest.inputs
+      && analyzeManifest.inputs.options
+      && analyzeManifest.inputs.options.workflowPreset
+      ? analyzeManifest.inputs.options.workflowPreset
+      : null);
+  if (effectiveWorkflowPreset) {
+    manifest.workflowPreset = {
+      name: effectiveWorkflowPreset.name || null,
+      title: effectiveWorkflowPreset.title || null,
+      description: effectiveWorkflowPreset.description || null,
+      analyzeMode: effectiveWorkflowPreset.analyzeMode || null,
+      promptTemplates: Array.isArray(effectiveWorkflowPreset.promptTemplates)
+        ? effectiveWorkflowPreset.promptTemplates
+        : [],
+      workflowKeys: Array.isArray(effectiveWorkflowPreset.workflowKeys)
+        ? effectiveWorkflowPreset.workflowKeys
+        : [],
+      bundleArtifacts: Array.isArray(effectiveWorkflowPreset.bundleArtifacts)
+        ? effectiveWorkflowPreset.bundleArtifacts
+        : [],
+    };
+  }
+
   return manifest;
 }
 
 function buildReadmeText(program, manifest) {
-  return [
+  const lines = [
     `Program: ${normalizeProgramName(program).toUpperCase()}`,
     'Created by: zeus-rpg-promptkit',
     'Contents: reports, prompts, graphs, metadata',
     `Files: ${manifest.summary.totalFiles}`,
-  ].join('\n');
+  ];
+  if (manifest.workflowPreset && manifest.workflowPreset.name) {
+    lines.push(`Workflow preset: ${manifest.workflowPreset.name}`);
+  }
+  return lines.join('\n');
 }
 
 function addZipEntry(zip, entryName, content) {
@@ -203,6 +242,9 @@ function buildOutputBundle({
   includeJson = false,
   includeMd = false,
   includeHtml = false,
+  artifactPaths = null,
+  workflowPreset = null,
+  bundleFileName = null,
 }) {
   const resolvedProgram = normalizeProgramName(program);
   if (!resolvedProgram) {
@@ -219,8 +261,10 @@ function buildOutputBundle({
 
   const includeTypes = resolveIncludeTypes({ includeJson, includeMd, includeHtml });
   const analyzeManifest = readAnalyzeRunManifest(programOutputDir);
-  const files = collectManifestBundleFiles(programOutputDir, includeTypes, analyzeManifest);
-  const manifest = buildManifest(resolvedProgram, files, analyzeManifest);
+  const files = Array.isArray(artifactPaths) && artifactPaths.length > 0
+    ? collectExplicitBundleFiles(programOutputDir, includeTypes, artifactPaths)
+    : collectManifestBundleFiles(programOutputDir, includeTypes, analyzeManifest);
+  const manifest = buildManifest(resolvedProgram, files, analyzeManifest, workflowPreset);
   const zip = new AdmZip();
 
   for (const file of files) {
@@ -233,7 +277,12 @@ function buildOutputBundle({
   fs.mkdirSync(resolvedBundleRoot, { recursive: true });
   fs.writeFileSync(path.join(programOutputDir, MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
-  const zipPath = path.join(resolvedBundleRoot, `${resolvedProgram}-analysis-bundle.zip`);
+  const zipPath = path.join(
+    resolvedBundleRoot,
+    bundleFileName && String(bundleFileName).trim()
+      ? String(bundleFileName).trim()
+      : `${resolvedProgram}-analysis-bundle.zip`,
+  );
   zip.writeZip(zipPath);
 
   return {
