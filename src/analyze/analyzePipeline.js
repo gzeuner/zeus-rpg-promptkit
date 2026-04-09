@@ -21,7 +21,7 @@ const {
   enrichCanonicalAnalysisModel,
 } = require('../context/canonicalAnalysisModel');
 const { buildContext } = require('../context/contextBuilder');
-const { buildPrompts } = require('../prompt/promptBuilder');
+const { buildPrompts, resolvePromptTemplates } = require('../prompt/promptBuilder');
 const { generateMarkdownReport } = require('../report/markdownReport');
 const { writeJsonReport } = require('../report/jsonReport');
 const { generateArchitectureReport } = require('../report/architectureReport');
@@ -43,6 +43,8 @@ const { pickSourceSnippet } = require('../cli/helpers/sourceSnippet');
 const { runStages } = require('./runStages');
 const { readImportManifest } = require('../fetch/importManifest');
 const { validateSourceFiles } = require('../source/sourceIntegrity');
+const { buildAnalysisIndex } = require('../workflow/analysisIndex');
+const { getPromptContract } = require('../prompt/promptRegistry');
 
 function resolvePromptContext(context, optimizedContext) {
   return optimizedContext || context;
@@ -433,7 +435,11 @@ function writeArtifactsStage(state) {
     promptContext,
     sourceSnippet,
     optimizationReport,
+    promptTemplates,
+    workflowMode,
+    workflowModeSettings,
   } = state;
+  const selectedPromptTemplates = resolvePromptTemplates(promptTemplates);
 
   const aiKnowledge = buildAiKnowledgeProjection({
     canonicalAnalysis,
@@ -472,48 +478,48 @@ function writeArtifactsStage(state) {
     aiProjection: aiKnowledge,
     outputDir: outputProgramDir,
     sourceSnippet,
+    templates: selectedPromptTemplates,
   });
   fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');
+
+  const generatedPromptFiles = selectedPromptTemplates.map((templateName) => getPromptContract(templateName).outputFileName);
+  const generatedFiles = [
+    'canonical-analysis.json',
+    'context.json',
+    ...(optimizedContext ? ['optimized-context.json'] : []),
+    'ai-knowledge.json',
+    'analysis-index.json',
+    'dependency-graph.json',
+    'dependency-graph.mmd',
+    'dependency-graph.md',
+    'program-call-tree.json',
+    'program-call-tree.mmd',
+    'program-call-tree.md',
+    'architecture.html',
+    'architecture-report.md',
+    ...generatedPromptFiles,
+    'report.md',
+  ];
+  const analysisIndex = buildAnalysisIndex({
+    canonicalAnalysis,
+    context,
+    aiKnowledge,
+    generatedFiles,
+    selectedMode: workflowMode,
+    derivedModeSettings: workflowModeSettings,
+  });
+  writeJsonReport(path.join(outputProgramDir, 'analysis-index.json'), analysisIndex);
 
   return {
     ...state,
     reportMarkdown,
-    generatedFiles: [
-      'canonical-analysis.json',
-      'context.json',
-      ...(optimizedContext ? ['optimized-context.json'] : []),
-      'ai-knowledge.json',
-      'dependency-graph.json',
-      'dependency-graph.mmd',
-      'dependency-graph.md',
-      'program-call-tree.json',
-      'program-call-tree.mmd',
-      'program-call-tree.md',
-      'architecture.html',
-      'architecture-report.md',
-      'ai_prompt_documentation.md',
-      'ai_prompt_error_analysis.md',
-      'report.md',
-    ],
+    analysisIndex,
+    generatedFiles,
     stageMetadata: {
-      fileCount: optimizedContext ? 15 : 14,
-      generatedFiles: [
-        'canonical-analysis.json',
-        'context.json',
-        ...(optimizedContext ? ['optimized-context.json'] : []),
-        'ai-knowledge.json',
-        'dependency-graph.json',
-        'dependency-graph.mmd',
-        'dependency-graph.md',
-        'program-call-tree.json',
-        'program-call-tree.mmd',
-        'program-call-tree.md',
-        'architecture.html',
-        'architecture-report.md',
-        'ai_prompt_documentation.md',
-        'ai_prompt_error_analysis.md',
-        'report.md',
-      ],
+      fileCount: generatedFiles.length,
+      generatedFiles,
+      workflowMode: workflowMode || null,
+      promptTemplateCount: selectedPromptTemplates.length,
     },
   };
 }

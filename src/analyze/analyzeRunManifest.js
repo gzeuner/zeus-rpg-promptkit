@@ -188,6 +188,7 @@ function buildAnalyzeRunManifest({
         skipTestData: Boolean(context.skipTestData),
         testDataLimit: Number(context.testDataLimit) || null,
         extensions: Array.isArray(context.extensions) ? context.extensions : [],
+        guidedMode: context.guidedMode || null,
       },
       sourceSnapshot,
     },

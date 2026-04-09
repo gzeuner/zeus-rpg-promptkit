@@ -21,7 +21,7 @@ const { runFetch } = require('../src/cli/commands/fetchCommand');
 
 function printHelp() {
   console.log('Usage:');
-  console.log('  zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--optimize-context] [--test-data-limit <n>] [--skip-test-data] [--verbose]');
+  console.log('  zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--optimize-context] [--test-data-limit <n>] [--skip-test-data] [--verbose]');
   console.log('  zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--profile <name>] [--verbose]');
   console.log('  zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--verbose]');
   console.log('  zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--profile <name>] [--verbose]');
