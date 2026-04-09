@@ -10,6 +10,7 @@ const { buildContext } = require('../src/context/contextBuilder');
 const { optimizeContext } = require('../src/ai/contextOptimizer');
 const { AI_KNOWLEDGE_PROJECTION_SCHEMA_VERSION, buildAiKnowledgeProjection } = require('../src/ai/knowledgeProjection');
 const { buildPrompt } = require('../src/prompt/promptBuilder');
+const { buildCompactDb2TableLink, buildCompactTestDataLink, buildDb2SourceLinkage } = require('../src/db2/db2EvidenceLinker');
 
 test('buildAiKnowledgeProjection emits a versioned prompt-ready projection with evidence and workflows', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-ai-projection-'));
@@ -115,6 +116,103 @@ test('buildPrompt consumes ai-knowledge projection workflows', () => {
     assert.match(content, /Uncertainty markers: DYNAMIC_SQL\./);
     assert.match(content, /Evidence Highlights/);
     assert.match(content, /#1 SQL @ ORDERPGM\.sqlrpgle:4/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('buildAiKnowledgeProjection carries DB2 metadata and test data links into workflow projections', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-ai-db2-projection-'));
+  const sourceFile = path.join(tempRoot, 'ORDERPGM.sqlrpgle');
+
+  fs.writeFileSync(sourceFile, `**FREE
+dcl-proc main;
+  exec sql
+    select ORDER_ID
+      from ORDERS;
+end-proc;
+`, 'utf8');
+
+  try {
+    const scanSummary = scanSourceFiles([sourceFile]);
+    const canonicalAnalysis = buildCanonicalAnalysisModel({
+      program: 'ORDERPGM',
+      sourceRoot: tempRoot,
+      sourceFiles: scanSummary.sourceFiles,
+      dependencies: {
+        tables: scanSummary.tables,
+        calls: scanSummary.calls,
+        copyMembers: scanSummary.copyMembers,
+        sqlStatements: scanSummary.sqlStatements,
+        procedures: scanSummary.procedures,
+        prototypes: scanSummary.prototypes,
+        procedureCalls: scanSummary.procedureCalls,
+        nativeFiles: scanSummary.nativeFiles,
+        nativeFileAccesses: scanSummary.nativeFileAccesses,
+        modules: scanSummary.modules,
+        bindingDirectories: scanSummary.bindingDirectories,
+        servicePrograms: scanSummary.servicePrograms,
+      },
+      notes: scanSummary.notes,
+    });
+    const context = buildContext({ canonicalAnalysis });
+    const linkage = buildDb2SourceLinkage({
+      requestedTables: ['ORDERS'],
+      exportedTables: [
+        {
+          schema: 'APP',
+          table: 'ORDERS',
+          columns: [{ name: 'ORDER_ID', type: 'DECIMAL' }],
+          foreignKeys: [],
+        },
+      ],
+      canonicalAnalysis,
+      context,
+    });
+    const tableLink = linkage.tableLinks[0];
+    context.db2Metadata = {
+      status: 'exported',
+      file: 'db2-metadata.json',
+      markdownFile: 'db2-metadata.md',
+      tableCount: 1,
+      requestedTableCount: 1,
+      resolvedTableCount: 1,
+      unresolvedTableCount: 0,
+      ambiguousTableCount: 0,
+      tables: [
+        buildCompactDb2TableLink(tableLink, {
+          schema: 'APP',
+          table: 'ORDERS',
+          columns: [{ name: 'ORDER_ID', type: 'DECIMAL' }],
+          foreignKeys: [],
+        }),
+      ],
+    };
+    context.testData = {
+      status: 'exported',
+      file: 'test-data.json',
+      markdownFile: 'test-data.md',
+      tableCount: 1,
+      requestedTableCount: 1,
+      skippedTableCount: 0,
+      rowLimit: 5,
+      tables: [
+        buildCompactTestDataLink(tableLink, {
+          schema: 'APP',
+          table: 'ORDERS',
+          status: 'exported',
+          rowCount: 2,
+        }),
+      ],
+    };
+
+    const projection = buildAiKnowledgeProjection({ canonicalAnalysis, context });
+
+    assert.equal(projection.entities.db2Tables.length, 1);
+    assert.equal(projection.entities.db2Tables[0].table, 'ORDERS');
+    assert.ok(projection.entities.db2Tables[0].evidenceRefs.length >= 1);
+    assert.equal(projection.workflows.documentation.db2Tables.length, 1);
+    assert.equal(projection.workflows.documentation.testData.tables.length, 1);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

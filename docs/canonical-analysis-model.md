@@ -110,6 +110,8 @@ Imported provenance currently carries:
 - `db2Metadata`
 - `testData`
 
+`db2Metadata` and `testData` remain compatibility enrichments rather than first-class semantic entities. When present, they should preserve explicit linkage back to canonical source evidence, SQL references, and native file usage so downstream AI/report projections can stay evidence-backed without reparsing DB2 artifacts.
+
 ## SQL Semantics
 
 Each SQL statement entity may include:
@@ -159,5 +161,6 @@ This split keeps the semantic model stable while allowing prompt/report/viewer o
 - `context.json` remains the stable backward-compatible projection used by existing reports and prompt templates
 - `ai-knowledge.json` is the versioned prompt-ready AI projection derived from the canonical model
 - `optimized-context.json` remains a token-budgeted compatibility projection, now driven by salience-ranked workflow evidence packs
+- DB2 metadata and test-data exports may extend compatibility projections with source-linked summaries, unresolved matches, and bounded evidence counts without changing the canonical entity graph
 - `canonical-analysis.json` is the new internal truth model for future typed analyzers and AI knowledge projection
 - if a future change requires breaking the canonical schema, `schemaVersion` must be incremented explicitly

@@ -336,6 +336,8 @@ function exportDb2Stage(state) {
     dbConfig: config.db,
     outputDir: outputProgramDir,
     verbose,
+    canonicalAnalysis,
+    context,
   });
 
   const nextCanonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
@@ -359,11 +361,19 @@ function exportDb2Stage(state) {
     promptContext: resolvePromptContext(nextContext, nextOptimizedContext),
     db2Export,
     stageMetadata: db2Export.summary,
-    stageDiagnostics: (db2Export.notes || []).map((message) => ({
-      severity: db2Export.summary.status === 'skipped' ? 'warning' : 'info',
-      code: db2Export.summary.status === 'skipped' ? 'DB2_EXPORT_SKIPPED' : 'DB2_EXPORT_NOTE',
-      message,
-    })),
+    stageDiagnostics: [
+      ...(db2Export.notes || []).map((message) => ({
+        severity: db2Export.summary.status === 'skipped' ? 'warning' : 'info',
+        code: db2Export.summary.status === 'skipped' ? 'DB2_EXPORT_SKIPPED' : 'DB2_EXPORT_NOTE',
+        message,
+      })),
+      ...((db2Export.diagnostics || []).map((entry) => ({
+        severity: entry.severity || 'warning',
+        code: entry.code || 'DB2_EXPORT_DIAGNOSTIC',
+        message: entry.message || 'DB2 export diagnostic',
+        details: entry.details || {},
+      }))),
+    ],
   };
 }
 
@@ -387,6 +397,8 @@ function exportTestDataStage(state) {
     dbConfig: config.db,
     outputDir: outputProgramDir,
     metadataPayload: db2Export.payload,
+    canonicalAnalysis,
+    context,
     testDataConfig: {
       ...config.testData,
       limit: testDataLimit,
