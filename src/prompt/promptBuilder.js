@@ -129,6 +129,21 @@ function formatBudgetHint(contract, estimatedTokens) {
   return `Prompt contract budget: ${targetText}, max ${budget.maxTokens}, current estimate ${estimatedTokens}.`;
 }
 
+function formatDb2Hint(db2Metadata, workflow) {
+  const workflowTables = workflow && Array.isArray(workflow.db2Tables) ? workflow.db2Tables : [];
+  if (workflowTables.length > 0) {
+    const unresolvedCount = workflowTables.filter((entry) => entry.matchStatus === 'unresolved').length;
+    const ambiguousCount = workflowTables.filter((entry) => entry.matchStatus === 'ambiguous').length;
+    return `DB2 schema context is available for ${workflowTables.length} workflow-relevant table${workflowTables.length === 1 ? '' : 's'}${unresolvedCount > 0 ? `; unresolved matches: ${unresolvedCount}` : ''}${ambiguousCount > 0 ? `; ambiguous matches: ${ambiguousCount}` : ''}.`;
+  }
+
+  if (db2Metadata && db2Metadata.status === 'exported') {
+    return `DB2 schema context is available for ${db2Metadata.tableCount || 0} table${(db2Metadata.tableCount || 0) === 1 ? '' : 's'}.`;
+  }
+
+  return '';
+}
+
 function getPathValue(value, dottedPath) {
   return String(dottedPath || '')
     .split('.')
@@ -203,10 +218,11 @@ function buildTemplateData(context, sourceSnippet, contract) {
     ? `Representative sample rows are available in ${testData.file || 'test-data.json'} and ${testData.markdownFile || 'test-data.md'} for ${testData.tableCount || 0} tables.`
     : 'Representative sample rows are not available in this analysis run.';
   const promptEstimate = estimateTokens(summary);
+  const db2Hint = formatDb2Hint(context.db2Metadata || {}, null);
 
   return {
     program: context.program || '',
-    summary,
+    summary: [summary, db2Hint].filter(Boolean).join(' '),
     tables: asBulletList(tables, (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
     programCalls: asBulletList(programCalls, (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
     copyMembers: asBulletList(copyMembers, (item) => item.name || item),
@@ -244,6 +260,7 @@ function buildTemplateDataFromProjection(aiProjection, contract) {
   const evidenceHighlights = formatEvidenceHighlights(workflow);
   const summaryParts = [
     workflow && workflow.summary ? workflow.summary : '',
+    formatDb2Hint(null, workflow),
     workflow && Array.isArray(workflow.riskMarkers) && workflow.riskMarkers.length > 0
       ? `Risk markers: ${workflow.riskMarkers.join(', ')}.`
       : '',

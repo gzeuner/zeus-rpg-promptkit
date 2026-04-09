@@ -500,6 +500,8 @@ Generated files in `output/<program>/` when export succeeds:
 
 `context.json` also includes a compact `db2Metadata` block with file references and exported table count.
 
+When DB2 metadata export succeeds, that compact summary also records source-linked table matches, unresolved or ambiguous catalog matches, and evidence counts that tie schema results back to SQL or native file usage.
+
 Required configuration:
 
 - `db.user`
@@ -563,6 +565,8 @@ Generated files in `output/<program>/` when extraction runs:
 - `test-data.md`
 
 `context.json` includes a compact `testData` block with file references, extracted table count, and row limit.
+
+When test data export succeeds, the compact `testData` summary also records which extracted tables were linked back to source evidence so prompts and reports can reason about sample rows together with SQL or native file usage.
 
 Optional masking is supported through profile configuration:
 

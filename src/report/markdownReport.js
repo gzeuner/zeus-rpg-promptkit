@@ -164,11 +164,23 @@ function generateMarkdownReport(context, tokenReport) {
   const unresolvedText = unresolvedPrograms.length > 0
     ? unresolvedPrograms.join(', ')
     : 'None';
+  const db2Resolved = Array.isArray(db2Metadata.tables)
+    ? db2Metadata.tables.filter((entry) => entry.matchStatus === 'resolved').length
+    : 0;
+  const db2Unresolved = Array.isArray(db2Metadata.tables)
+    ? db2Metadata.tables.filter((entry) => entry.matchStatus === 'unresolved').map((entry) => entry.requestedName || entry.table)
+    : [];
+  const db2Ambiguous = Array.isArray(db2Metadata.ambiguousTables)
+    ? db2Metadata.ambiguousTables.map((entry) => entry.requestedName || entry.table)
+    : [];
   const db2Section = db2Metadata.status === 'exported'
-    ? `## DB2 Metadata\nDB2 metadata was exported for ${db2Metadata.tableCount || 0} tables.\n\nSee:\n- ${db2Metadata.file || 'db2-metadata.json'}\n- ${db2Metadata.markdownFile || 'db2-metadata.md'}\n`
+    ? `## DB2 Metadata\nDB2 metadata was exported for ${db2Metadata.tableCount || 0} tables.\n\n- Resolved source-linked tables: ${db2Resolved}\n- Unresolved matches: ${db2Unresolved.length}\n- Ambiguous matches: ${db2Ambiguous.length}\n${db2Unresolved.length > 0 ? `- Unresolved table names: ${db2Unresolved.join(', ')}\n` : ''}${db2Ambiguous.length > 0 ? `- Ambiguous table names: ${db2Ambiguous.join(', ')}\n` : ''}\nSee:\n- ${db2Metadata.file || 'db2-metadata.json'}\n- ${db2Metadata.markdownFile || 'db2-metadata.md'}\n`
     : `## DB2 Metadata\nDB2 metadata export was skipped because ${db2Metadata.reason || 'no DB2 connection configuration was available'}.\n`;
+  const testDataLinked = Array.isArray(testData.tables)
+    ? testData.tables.filter((entry) => entry.sourceEvidenceCount > 0).length
+    : 0;
   const testDataSection = testData.status === 'exported'
-    ? `## Test Data Extract\nSample data was extracted for ${testData.tableCount || 0} tables.\n\n- Row Limit per Table: ${testData.rowLimit || 0}\n\nSee:\n- ${testData.file || 'test-data.json'}\n- ${testData.markdownFile || 'test-data.md'}\n`
+    ? `## Test Data Extract\nSample data was extracted for ${testData.tableCount || 0} tables.\n\n- Row Limit per Table: ${testData.rowLimit || 0}\n- Source-linked extracted tables: ${testDataLinked}\n\nSee:\n- ${testData.file || 'test-data.json'}\n- ${testData.markdownFile || 'test-data.md'}\n`
     : `## Test Data Extract\nTest data extraction was skipped because ${testData.reason || 'no DB2 connection configuration was available'}.\n`;
   const procedureSection = `## Procedure Semantics\n- Procedures: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCount) || 0}\n- Prototypes: ${(procedureAnalysis.summary && procedureAnalysis.summary.prototypeCount) || 0}\n- Procedure Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCallCount) || 0}\n- Internal Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.internalCallCount) || 0}\n- External Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.externalCallCount) || 0}\n- Dynamic Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.dynamicCallCount) || 0}\n- Unresolved Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.unresolvedCallCount) || 0}\n`;
 
