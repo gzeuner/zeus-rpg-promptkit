@@ -23,6 +23,7 @@ from datetime import datetime
 
 ROADMAP_PATH = os.environ.get("ROADMAP_PATH", "V2_ROADMAP.md").strip()
 CREATED_PATH = os.environ.get("CREATED_PATH", "CREATED_ISSUES.md").strip()
+ROADMAP_MODE = os.environ.get("ROADMAP_MODE", "auto").strip().lower()
 
 TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
 REPO_SLUG = os.environ.get("GITHUB_REPOSITORY", "").strip()  # owner/repo
@@ -186,24 +187,49 @@ def parse_roadmap_markdown_format(text: str):
     return issues
 
 
-def parse_roadmap():
+def parse_linked_issue_refs(text: str):
+    refs = []
+    seen = set()
+    pattern = re.compile(r"\[#(?P<number>\d+)\]\([^)]+/issues/\d+\)\s+(?P<title>[^\n]+)")
+    for m in pattern.finditer(text):
+        number = int(m.group("number"))
+        if number in seen:
+            continue
+        refs.append({"number": number, "title": m.group("title").strip()})
+        seen.add(number)
+    return refs
+
+
+def read_roadmap_text():
     if not os.path.exists(ROADMAP_PATH):
         raise SystemExit(f"ERROR: {ROADMAP_PATH} not found")
 
     text = _read_text_with_fallback(ROADMAP_PATH)
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    return text.replace("\r\n", "\n").replace("\r", "\n")
 
+
+def parse_roadmap_create_format(text: str):
     issues = parse_roadmap_markdown_format(text)
     if not issues:
         issues = parse_roadmap_title_labels_body_format(text)
-
-    if not issues:
-        raise SystemExit(
-            f"ERROR: No issue blocks parsed from {ROADMAP_PATH}. Supported formats:\n"
-            "1) Markdown style with '## Epic' + '## Issue Backlog'\n"
-            "2) Legacy TITLE/LABELS/BODY blocks."
-        )
     return issues
+
+
+def detect_roadmap_mode(text: str):
+    if ROADMAP_MODE in ("create", "sync-linked"):
+        return ROADMAP_MODE
+
+    if parse_roadmap_create_format(text):
+        return "create"
+    if parse_linked_issue_refs(text):
+        return "sync-linked"
+
+    raise SystemExit(
+        f"ERROR: Could not detect supported roadmap format in {ROADMAP_PATH}. Supported formats:\n"
+        "1) Markdown style with '## Epic' + '## Issue Backlog'\n"
+        "2) Legacy TITLE/LABELS/BODY blocks\n"
+        "3) Reference roadmap with GitHub issue links such as [#55](.../issues/55) Title"
+    )
 
 
 # -----------------------------
@@ -273,6 +299,17 @@ def find_issue_by_exact_title(title: str):
     return None
 
 
+def get_issue_by_number(issue_number: int):
+    status, resp = api_request("GET", f"/repos/{OWNER}/{REPO}/issues/{issue_number}")
+    if status == 404:
+        return None
+    if status != 200:
+        raise SystemExit(f"ERROR: failed to fetch issue #{issue_number} ({status}): {resp}")
+    if resp.get("pull_request"):
+        return None
+    return resp
+
+
 # -----------------------------
 # Output / summaries
 # -----------------------------
@@ -327,6 +364,127 @@ def write_step_summary_report(epic, created, updated, skipped):
     write_step_summary("\n".join(lines))
 
 
+def write_linked_issue_sync_report(repo_slug: str, checked, updated, mismatched, missing, non_open):
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%SZ")
+    lines = []
+    lines.append("# Roadmap Issue Sync Report\n")
+    lines.append(f"- Repository: `{repo_slug}`")
+    lines.append(f"- Run at (UTC): {now}")
+    lines.append(f"- Roadmap: `{ROADMAP_PATH}`")
+    lines.append(
+        f"- Mode: roadmap_mode=sync-linked, update_existing={str(UPDATE_EXISTING).lower()}, dry_run={str(DRY_RUN).lower()}\n"
+    )
+
+    def _section(title, arr, formatter):
+        lines.append(f"## {title}")
+        if not arr:
+            lines.append("- (none)\n")
+            return
+        for item in arr:
+            lines.append(formatter(item))
+        lines.append("")
+
+    _section("Current", checked, lambda x: f"- #{x['number']} {x['url']} - {x['title']}")
+    _section("Updated", updated, lambda x: f"- #{x['number']} {x['url']} - {x['title']}")
+    _section(
+        "Mismatched Titles",
+        mismatched,
+        lambda x: f"- #{x['number']} {x['url']} - roadmap: {x['roadmap_title']} | github: {x['github_title']}",
+    )
+    _section("Missing", missing, lambda x: f"- #{x['number']} - roadmap: {x['roadmap_title']}")
+    _section(
+        "Non-Open",
+        non_open,
+        lambda x: f"- #{x['number']} {x['url']} - state={x['state']} - {x['title']}",
+    )
+
+    with open(CREATED_PATH, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines).rstrip() + "\n")
+
+
+def write_step_summary_sync_report(checked, updated, mismatched, missing, non_open):
+    lines = []
+    lines.append("## Roadmap Issue Sync Report")
+    lines.append(f"Checked: {len(checked) + len(updated) + len(mismatched)}")
+    lines.append(f"Updated: {len(updated)}")
+    lines.append(f"Title drift: {len(mismatched)}")
+    lines.append(f"Missing: {len(missing)}")
+    lines.append(f"Non-open: {len(non_open)}")
+    if updated:
+        lines.append("\n### Updated")
+        for item in updated:
+            lines.append(f"- [#{item['number']}]({item['url']}) - {item['title']}")
+    if mismatched:
+        lines.append("\n### Title Drift")
+        for item in mismatched:
+            lines.append(
+                f"- [#{item['number']}]({item['url']}) - roadmap: {item['roadmap_title']} | github: {item['github_title']}"
+            )
+    if missing:
+        lines.append("\n### Missing")
+        for item in missing:
+            lines.append(f"- #{item['number']} - roadmap: {item['roadmap_title']}")
+    if non_open:
+        lines.append("\n### Non-Open")
+        for item in non_open:
+            lines.append(f"- [#{item['number']}]({item['url']}) - state={item['state']} - {item['title']}")
+    write_step_summary("\n".join(lines))
+
+
+def run_sync_linked_mode(text: str):
+    refs = parse_linked_issue_refs(text)
+    if not refs:
+        raise SystemExit(f"ERROR: No linked GitHub issues found in {ROADMAP_PATH}")
+
+    print("== Syncing linked roadmap issues ==")
+    print(f"Found {len(refs)} linked roadmap issues")
+
+    checked = []
+    updated = []
+    mismatched = []
+    missing = []
+    non_open = []
+
+    for ref in refs:
+        issue = get_issue_by_number(ref["number"])
+        if not issue:
+            print(f"Missing linked issue: #{ref['number']}")
+            missing.append({"number": ref["number"], "roadmap_title": ref["title"]})
+            continue
+
+        url = issue.get("html_url") or issue.get("url")
+        current_title = (issue.get("title") or "").strip()
+        desired_title = ref["title"].strip()
+        state = (issue.get("state") or "").upper()
+
+        if state != "OPEN":
+            print(f"Referenced issue is not open: #{ref['number']} ({state})")
+            non_open.append({"number": ref["number"], "title": current_title, "state": state, "url": url})
+
+        if _normalize_title(current_title) != _normalize_title(desired_title):
+            if UPDATE_EXISTING:
+                print(f"Updating title: #{ref['number']} {url}")
+                update_issue(ref["number"], desired_title, None, None)
+                updated.append({"number": ref["number"], "title": desired_title, "url": url})
+            else:
+                print(f"Title drift: #{ref['number']} {url}")
+                mismatched.append(
+                    {
+                        "number": ref["number"],
+                        "url": url,
+                        "roadmap_title": desired_title,
+                        "github_title": current_title,
+                    }
+                )
+        else:
+            print(f"Current: #{ref['number']} {url}")
+            checked.append({"number": ref["number"], "title": current_title, "url": url})
+
+    write_linked_issue_sync_report(REPO_SLUG, checked, updated, mismatched, missing, non_open)
+    write_step_summary_sync_report(checked, updated, mismatched, missing, non_open)
+    print("Done.")
+
+
 # -----------------------------
 # Main
 # -----------------------------
@@ -338,8 +496,21 @@ def main():
         raise SystemExit("ERROR: GITHUB_REPOSITORY missing or invalid (expected owner/repo)")
     OWNER, REPO = REPO_SLUG.split("/", 1)
 
-    print("== Parsing roadmap ==")
-    issues = parse_roadmap()
+    text = read_roadmap_text()
+    mode = detect_roadmap_mode(text)
+    print(f"== Roadmap mode: {mode} ==")
+
+    if mode == "sync-linked":
+        run_sync_linked_mode(text)
+        return
+
+    issues = parse_roadmap_create_format(text)
+    if not issues:
+        raise SystemExit(
+            f"ERROR: No issue blocks parsed from {ROADMAP_PATH}. Supported formats:\n"
+            "1) Markdown style with '## Epic' + '## Issue Backlog'\n"
+            "2) Legacy TITLE/LABELS/BODY blocks."
+        )
     print(f"Parsed {len(issues)} blocks from {ROADMAP_PATH}")
 
     epic = None
