@@ -16,6 +16,8 @@ const path = require('path');
 const { estimateTokens } = require('../ai/tokenEstimator');
 const { getPromptContract } = require('./promptRegistry');
 
+const DEFAULT_PROMPT_TEMPLATES = Object.freeze(['documentation', 'error-analysis']);
+
 function loadTemplate(templateName) {
   const templatePath = path.join(__dirname, 'templates', `${templateName}.md`);
   if (!fs.existsSync(templatePath)) {
@@ -308,9 +310,7 @@ function buildPrompt(templateName, contextOrProjection, outputPath, options = {}
 }
 
 function buildPrompts({ context, aiProjection, outputDir, sourceSnippet, templates }) {
-  const selected = Array.isArray(templates) && templates.length > 0
-    ? templates
-    : ['documentation', 'error-analysis'];
+  const selected = resolvePromptTemplates(templates);
   const outputs = {};
   const input = aiProjection || context;
 
@@ -323,9 +323,18 @@ function buildPrompts({ context, aiProjection, outputDir, sourceSnippet, templat
   return outputs;
 }
 
+function resolvePromptTemplates(templates) {
+  if (Array.isArray(templates)) {
+    return templates.map((entry) => String(entry || '').trim()).filter(Boolean);
+  }
+  return [...DEFAULT_PROMPT_TEMPLATES];
+}
+
 module.exports = {
+  DEFAULT_PROMPT_TEMPLATES,
   buildPrompt,
   buildPrompts,
   renderPrompt,
+  resolvePromptTemplates,
   validatePromptApplicability,
 };
