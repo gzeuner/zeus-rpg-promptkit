@@ -1,18 +1,22 @@
-name: Create Issues from V2_ROADMAP
+name: Sync Issues from V2_ROADMAP
 
 on:
   workflow_dispatch:
     inputs:
+      roadmap_mode:
+        description: "auto, create, or sync-linked"
+        required: false
+        default: "auto"
       allow_duplicates:
         description: "Allow creating a new epic even if an epic with same title already exists"
         required: false
         default: "false"
       update_existing:
-        description: "Update labels/body of existing issues to match roadmap"
+        description: "Update GitHub issues to match the roadmap format in use"
         required: false
         default: "false"
       dry_run:
-        description: "Dry run (no API writes); useful for testing parsing"
+        description: "Dry run (no API writes); useful for parsing and drift checks"
         required: false
         default: "false"
       roadmap_path:
@@ -38,11 +42,12 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Create issues from roadmap
+      - name: Sync issues from roadmap
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_API_URL: https://api.github.com
+          ROADMAP_MODE: ${{ github.event.inputs.roadmap_mode }}
           ALLOW_DUPLICATES: ${{ github.event.inputs.allow_duplicates }}
           UPDATE_EXISTING: ${{ github.event.inputs.update_existing }}
           DRY_RUN: ${{ github.event.inputs.dry_run }}
