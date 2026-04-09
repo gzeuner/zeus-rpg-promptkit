@@ -92,3 +92,68 @@ test('buildOutputBundle prefers analyze-run-manifest artifacts over directory sc
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
+
+test('buildOutputBundle can package explicit workflow preset artifacts with preset metadata', () => {
+  const { tempRoot, outputRoot, bundleRoot, programOutputDir } = createTempBundleProject();
+
+  try {
+    fs.writeFileSync(path.join(programOutputDir, 'analysis-index.json'), '{"kind":"analysis-task-index"}\n', 'utf8');
+    fs.writeFileSync(path.join(programOutputDir, 'report.md'), '# Report\n', 'utf8');
+    fs.writeFileSync(path.join(programOutputDir, 'context.json'), '{"program":"ORDERPGM"}\n', 'utf8');
+    fs.writeFileSync(path.join(programOutputDir, 'analyze-run-manifest.json'), `${JSON.stringify({
+      run: {
+        status: 'succeeded',
+        completedAt: '2026-04-09T10:00:00.000Z',
+      },
+      inputs: {
+        options: {
+          workflowPreset: {
+            name: 'onboarding',
+            title: 'Onboarding',
+            analyzeMode: 'documentation',
+            promptTemplates: ['documentation'],
+            workflowKeys: ['documentation'],
+            bundleArtifacts: ['analyze-run-manifest.json', 'analysis-index.json', 'report.md'],
+          },
+        },
+        sourceSnapshot: {
+          fingerprint: 'wf-123',
+        },
+      },
+      artifacts: [
+        { path: 'analysis-index.json', kind: 'json', sizeBytes: 32, sha256: 'a' },
+        { path: 'report.md', kind: 'markdown', sizeBytes: 9, sha256: 'b' },
+        { path: 'context.json', kind: 'json', sizeBytes: 24, sha256: 'c' },
+      ],
+    }, null, 2)}\n`, 'utf8');
+
+    const result = buildOutputBundle({
+      program: 'ORDERPGM',
+      sourceOutputRoot: outputRoot,
+      bundleOutputRoot: bundleRoot,
+      artifactPaths: ['analyze-run-manifest.json', 'analysis-index.json', 'report.md'],
+      bundleFileName: 'ORDERPGM-onboarding-bundle.zip',
+    });
+
+    assert.deepEqual(result.manifest.files, [
+      'analysis-index.json',
+      'analyze-run-manifest.json',
+      'report.md',
+    ]);
+    assert.equal(result.manifest.workflowPreset.name, 'onboarding');
+    assert.deepEqual(result.manifest.workflowPreset.promptTemplates, ['documentation']);
+    assert.equal(path.basename(result.zipPath), 'ORDERPGM-onboarding-bundle.zip');
+
+    const zip = new AdmZip(result.zipPath);
+    const entryNames = zip.getEntries().map((entry) => entry.entryName).sort();
+    assert.deepEqual(entryNames, [
+      'README.txt',
+      'analysis-index.json',
+      'analyze-run-manifest.json',
+      'manifest.json',
+      'report.md',
+    ]);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});

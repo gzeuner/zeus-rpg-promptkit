@@ -97,6 +97,12 @@ Command syntax:
 zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--mode <name>] [--list-modes] [--optimize-context] [--test-data-limit <n>] [--skip-test-data] [--verbose]
 ```
 
+Workflow command syntax:
+
+```bash
+zeus workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--list-presets] [--test-data-limit <n>] [--skip-test-data] [--verbose]
+```
+
 Guided analyze modes:
 
 - use `--list-modes` to inspect supported workflow presets
@@ -107,6 +113,15 @@ Guided analyze modes:
 - use `--mode impact` to highlight dependency artifacts and the next `zeus impact` step
 
 When a guided mode is selected, Zeus records the mode and derived behavior in `analyze-run-manifest.json`, writes `analysis-index.json`, and may auto-enable context optimization for prompt-heavy workflows.
+
+Named workflow presets build on top of those guided modes and package a shareable bundle in one step:
+
+- `architecture-review`
+- `modernization-review`
+- `onboarding`
+- `dependency-risk`
+
+Use `zeus workflow --list-presets` to inspect the available presets and `zeus workflow --preset modernization-review ...` to run analyze plus bundle with one command.
 
 Bundle command syntax:
 
@@ -202,6 +217,7 @@ Generated files:
 - `optimized-context.json` (when `--optimize-context` is enabled)
 - `ai-knowledge.json`
 - `analysis-index.json`
+- `workflow-run-manifest.json` (when `zeus workflow` is executed)
 - `report.md`
 - `architecture-report.md`
 - `ai_prompt_documentation.md`
@@ -245,6 +261,8 @@ Generated files:
 `ai-knowledge.json` is a versioned prompt-ready projection derived from the canonical model. It preserves evidence references, risk markers, uncertainty markers, and workflow-specific sections for prompt generation.
 
 `analysis-index.json` is a deterministic task-oriented index that maps common workflows to the relevant artifacts, prompt contracts, and recommended next actions.
+
+`workflow-run-manifest.json` records which named workflow preset produced the run, which guided analyze mode it resolved to, and which bundle was emitted for sharing.
 
 `canonical-analysis.json` is now the semantic source of truth for the analyze pipeline.
 
@@ -632,6 +650,7 @@ Both bundle manifest files are versioned and include:
 - included file list
 - artifact entries with `path`, `kind`, `sizeBytes`, and `sha256` when available
 - analyze-run linkage metadata when the bundle was created from an analyze manifest
+- workflow preset metadata when the bundle was created from `zeus workflow` or an analyze run tagged with a workflow preset
 
 Examples:
 
@@ -639,6 +658,7 @@ Examples:
 zeus bundle --program ORDERPGM
 zeus bundle --program ORDERPGM --output ./bundles --include-json
 zeus bundle --program ORDERPGM --source-output-root ./output --verbose
+zeus workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM
 ```
 
 Produces:
