@@ -51,6 +51,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
       'context.json',
       'optimized-context.json',
       'ai-knowledge.json',
+      'analysis-index.json',
       'report.md',
       'architecture-report.md',
       'ai_prompt_documentation.md',
@@ -119,6 +120,13 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.ok(Array.isArray(aiKnowledge.evidenceIndex));
     assert.ok(aiKnowledge.workflows.documentation);
     assert.ok(Array.isArray(aiKnowledge.workflows.documentation.evidencePacks.sql));
+    const analysisIndex = readJson(path.join(programOutputDir, 'analysis-index.json'));
+    assert.equal(analysisIndex.kind, 'analysis-task-index');
+    assert.equal(analysisIndex.program, 'ORDERPGM');
+    assert.equal(analysisIndex.selectedMode, null);
+    assert.ok(Array.isArray(analysisIndex.guidedModes));
+    assert.ok(analysisIndex.tasks.some((task) => task.id === 'modernization'));
+    assert.ok(analysisIndex.tasks.some((task) => task.id === 'impact'));
 
     const report = fs.readFileSync(path.join(programOutputDir, 'report.md'), 'utf8');
     assert.match(report, /## Native File I\/O/);
@@ -146,9 +154,11 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.equal(analyzeManifest.summary.stageCount, 6);
     assert.ok(analyzeManifest.summary.generatedArtifactCount >= 13);
     assert.equal(analyzeManifest.inputs.sourceSnapshot.fileCount, 2);
+    assert.equal(analyzeManifest.inputs.options.guidedMode, null);
     assert.ok(analyzeManifest.stages.some((stage) => stage.id === 'collect-scan'));
     assert.ok(analyzeManifest.stages.some((stage) => stage.id === 'write-artifacts'));
     assert.ok(analyzeManifest.artifacts.some((artifact) => artifact.path === 'context.json'));
+    assert.ok(analyzeManifest.artifacts.some((artifact) => artifact.path === 'analysis-index.json'));
     assert.equal(analyzeManifest.comparison, null);
 
     runCli([
@@ -171,6 +181,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.ok(manifest.files.includes('canonical-analysis.json'));
     assert.ok(manifest.files.includes('context.json'));
     assert.ok(manifest.files.includes('ai-knowledge.json'));
+    assert.ok(manifest.files.includes('analysis-index.json'));
     assert.ok(manifest.files.includes('report.md'));
     assert.ok(manifest.files.includes('architecture.html'));
     assert.ok(Array.isArray(manifest.artifacts));
@@ -182,6 +193,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.ok(entryNames.includes('canonical-analysis.json'));
     assert.ok(entryNames.includes('context.json'));
     assert.ok(entryNames.includes('ai-knowledge.json'));
+    assert.ok(entryNames.includes('analysis-index.json'));
     assert.ok(entryNames.includes('report.md'));
     assert.ok(entryNames.includes('architecture.html'));
     assert.ok(entryNames.includes('manifest.json'));

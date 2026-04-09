@@ -17,6 +17,8 @@ Each prompt template stores:
 
 The registry lives in `src/prompt/promptRegistry.js`.
 
+Guided analyze modes should reuse this registry-backed metadata instead of defining a parallel prompt-selection table. Task-oriented CLI modes may choose a subset of templates, but contract validation and budget enforcement still flow through the same prompt contracts.
+
 ## Validation
 
 Before a prompt is rendered, Zeus validates that the selected `ai-knowledge.json` workflow provides the required inputs for the template.

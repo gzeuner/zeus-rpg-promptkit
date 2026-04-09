@@ -21,6 +21,8 @@ const {
   readAnalyzeRunManifest,
   writeAnalyzeRunManifest,
 } = require('../../analyze/analyzeRunManifest');
+const { listWorkflowModes, resolveWorkflowModeSettings } = require('../../workflow/workflowModeRegistry');
+const { resolvePromptTemplates } = require('../../prompt/promptBuilder');
 
 function parsePositiveInteger(value, fallback) {
   if (value === undefined || value === null || value === true) return fallback;
@@ -29,9 +31,23 @@ function parsePositiveInteger(value, fallback) {
   return parsed;
 }
 
+function printWorkflowModes() {
+  console.log('Supported analyze workflow modes:');
+  for (const mode of listWorkflowModes()) {
+    const templates = resolvePromptTemplates(mode.promptTemplates);
+    console.log(`- ${mode.name}: ${mode.description}`);
+    console.log(`  auto-optimize-context: ${mode.autoOptimizeContext ? 'yes' : 'no'}`);
+    console.log(`  prompt templates: ${templates.length > 0 ? templates.join(', ') : 'none'}`);
+  }
+}
+
 function runAnalyze(args) {
   const verbose = Boolean(args.verbose);
-  const optimizeContextEnabled = Boolean(args['optimize-context']);
+
+  if (args['list-modes']) {
+    printWorkflowModes();
+    return;
+  }
 
   const logVerbose = (message) => {
     if (verbose) {
@@ -53,6 +69,26 @@ function runAnalyze(args) {
   const sourceRoot = path.resolve(process.cwd(), config.sourceRoot);
   const outputRoot = path.resolve(process.cwd(), config.outputRoot);
   const program = String(args.program).trim();
+  let workflowModeSettings = null;
+  if (args.mode) {
+    try {
+      workflowModeSettings = resolveWorkflowModeSettings(args.mode);
+    } catch (error) {
+      console.error(`${error.message}. Use --list-modes to inspect supported workflow modes.`);
+      process.exit(2);
+    }
+  }
+  const optimizeContextEnabled = Boolean(args['optimize-context'])
+    || Boolean(workflowModeSettings && workflowModeSettings.autoOptimizeContext);
+  const guidedMode = workflowModeSettings
+    ? {
+      ...workflowModeSettings,
+      effectiveOptimizeContext: optimizeContextEnabled,
+    }
+    : null;
+  const promptTemplates = workflowModeSettings
+    ? resolvePromptTemplates(workflowModeSettings.promptTemplates)
+    : resolvePromptTemplates();
   const testDataLimit = parsePositiveInteger(args['test-data-limit'], Number(config.testData.limit) || DEFAULT_TEST_DATA_LIMIT);
   const skipTestData = Boolean(args['skip-test-data']);
 
@@ -67,6 +103,10 @@ function runAnalyze(args) {
   logVerbose(`Extensions: ${config.extensions.join(', ')}`);
   logVerbose(`Context optimization: ${optimizeContextEnabled ? 'enabled' : 'disabled'}`);
   logVerbose(`Test data extraction: ${skipTestData ? 'disabled' : `enabled (limit ${testDataLimit})`}`);
+  if (guidedMode) {
+    logVerbose(`Workflow mode: ${guidedMode.name}`);
+    logVerbose(`Workflow prompt templates: ${promptTemplates.length > 0 ? promptTemplates.join(', ') : 'none'}`);
+  }
 
   if (!fs.existsSync(sourceRoot)) {
     console.error(`Source directory not found: ${sourceRoot}. Provide a valid --source path.`);
@@ -92,6 +132,9 @@ function runAnalyze(args) {
       skipTestData,
       verbose,
       optimizeContextEnabled,
+      workflowMode: guidedMode ? guidedMode.name : null,
+      workflowModeSettings: guidedMode,
+      promptTemplates,
       logVerbose,
     });
     const durationMs = Number((process.hrtime.bigint() - startedNs) / 1000000n);
@@ -110,6 +153,7 @@ function runAnalyze(args) {
         skipTestData,
         testDataLimit,
         extensions: config.extensions,
+        guidedMode,
       },
       result,
       previousManifest,
@@ -132,6 +176,7 @@ function runAnalyze(args) {
         skipTestData,
         testDataLimit,
         extensions: config.extensions,
+        guidedMode,
       },
       error,
       previousManifest,
@@ -141,6 +186,9 @@ function runAnalyze(args) {
   }
 
   console.log(`Analysis complete for program ${program}`);
+  if (guidedMode) {
+    console.log(`Guided mode: ${guidedMode.name}`);
+  }
   console.log(`Source files scanned: ${(result.scanSummary.sourceFiles || []).length}`);
   if (result.optimizationReport.enabled) {
     console.log(`Context tokens: ${result.optimizationReport.contextTokens}`);
