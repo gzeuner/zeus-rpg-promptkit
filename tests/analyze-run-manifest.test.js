@@ -46,6 +46,11 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
         skipTestData: false,
         testDataLimit: 25,
         extensions: ['.rpgle'],
+        guidedMode: {
+          name: 'modernization',
+          promptTemplates: ['documentation', 'modernization'],
+          effectiveOptimizeContext: true,
+        },
       },
       result: {
         sourceFiles: [sourceFile],
@@ -93,6 +98,8 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
     assert.equal(manifest.inputs.sourceSnapshot.fileCount, 1);
     assert.equal(manifest.summary.generatedArtifactCount, 2);
     assert.equal(manifest.summary.warningCount, 1);
+    assert.equal(manifest.inputs.options.guidedMode.name, 'modernization');
+    assert.deepEqual(manifest.inputs.options.guidedMode.promptTemplates, ['documentation', 'modernization']);
     assert.equal(manifest.artifacts.length, 2);
     assert.equal(manifest.artifacts[0].exists, true);
     assert.ok(typeof manifest.artifacts[0].sha256 === 'string' && manifest.artifacts[0].sha256.length > 0);
@@ -124,6 +131,11 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
         skipTestData: true,
         testDataLimit: 10,
         extensions: ['.rpgle'],
+        guidedMode: {
+          name: 'impact',
+          promptTemplates: [],
+          effectiveOptimizeContext: false,
+        },
       },
       error: {
         message: 'boom',
@@ -152,6 +164,7 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
     assert.equal(manifest.summary.failedStageCount, 1);
     assert.equal(manifest.summary.errorCount, 1);
     assert.equal(manifest.diagnostics.length, 1);
+    assert.equal(manifest.inputs.options.guidedMode.name, 'impact');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

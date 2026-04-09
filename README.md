@@ -94,8 +94,19 @@ npm test
 Command syntax:
 
 ```bash
-zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--optimize-context] [--test-data-limit <n>] [--skip-test-data] [--verbose]
+zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--mode <name>] [--list-modes] [--optimize-context] [--test-data-limit <n>] [--skip-test-data] [--verbose]
 ```
+
+Guided analyze modes:
+
+- use `--list-modes` to inspect supported workflow presets
+- use `--mode architecture` for structure, graph, and architecture-report oriented review
+- use `--mode documentation` for documentation-first prompt packaging
+- use `--mode error-analysis` or `--mode defect-analysis` for failure-oriented evidence packaging
+- use `--mode modernization` for modernization prompt generation and extraction-boundary review
+- use `--mode impact` to highlight dependency artifacts and the next `zeus impact` step
+
+When a guided mode is selected, Zeus records the mode and derived behavior in `analyze-run-manifest.json`, writes `analysis-index.json`, and may auto-enable context optimization for prompt-heavy workflows.
 
 Bundle command syntax:
 
@@ -190,10 +201,13 @@ Generated files:
 - `context.json`
 - `optimized-context.json` (when `--optimize-context` is enabled)
 - `ai-knowledge.json`
+- `analysis-index.json`
 - `report.md`
 - `architecture-report.md`
 - `ai_prompt_documentation.md`
 - `ai_prompt_error_analysis.md`
+- `ai_prompt_defect_analysis.md` (when `--mode defect-analysis` is selected)
+- `ai_prompt_modernization.md` (when `--mode modernization` is selected)
 - `dependency-graph.json`
 - `dependency-graph.mmd`
 - `dependency-graph.md`
@@ -229,6 +243,8 @@ Generated files:
 - `notes`
 
 `ai-knowledge.json` is a versioned prompt-ready projection derived from the canonical model. It preserves evidence references, risk markers, uncertainty markers, and workflow-specific sections for prompt generation.
+
+`analysis-index.json` is a deterministic task-oriented index that maps common workflows to the relevant artifacts, prompt contracts, and recommended next actions.
 
 `canonical-analysis.json` is now the semantic source of truth for the analyze pipeline.
 
@@ -432,6 +448,8 @@ Available prompt types today:
 - `error-analysis`
 - `defect-analysis`
 - `modernization`
+
+Guided analyze modes reuse these prompt contracts instead of inventing a separate prompt-selection system.
 
 The analyze pipeline loads templates from disk, resolves placeholders from the projected prompt context, and writes prompt files to `output/<program>/`.
 
