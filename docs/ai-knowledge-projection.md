@@ -30,6 +30,7 @@ Current `entities` blocks include:
 - `copyMembers`
 - `sqlStatements`
 - `nativeFiles`
+- `db2Tables`
 - `binding`
 - `modules`
 
@@ -39,6 +40,15 @@ Each section is prompt-oriented and may carry:
 - semantic flags
 - `evidenceRefs` into `evidenceIndex`
 - uncertainty markers where relevant
+
+`db2Tables` is a prompt-facing projection of the compact `context.db2Metadata.tables` summary. It keeps DB2 catalog rows tied to source-backed evidence with:
+
+- `requestedName`
+- `schema`
+- `table`
+- `matchStatus`
+- structural counts such as `columnCount` and `foreignKeyCount`
+- evidence-backed `evidenceRefs`
 
 ## Workflow Sections
 
@@ -57,6 +67,7 @@ Each workflow may include:
 - `copyMembers`
 - `sqlStatements`
 - `nativeFiles`
+- `db2Tables`
 - `riskMarkers`
 - `uncertaintyMarkers`
 - `evidencePacks`
@@ -64,6 +75,10 @@ Each workflow may include:
 - `rankedEvidence`
 - `dependencyGraphSummary`
 - `testData`
+
+Workflow `db2Tables` is selected from the projected DB2 table set using the workflow's semantic table focus rather than a second ranking system.
+
+Workflow `testData` remains the compact compatibility summary from `context.json`, but when DB2 linkage is available Zeus narrows `testData.tables` to source-relevant DB2 tables for that workflow. This keeps sample rows available to prompts without flooding the workflow payload.
 
 `evidencePacks` currently groups ranked evidence into:
 
