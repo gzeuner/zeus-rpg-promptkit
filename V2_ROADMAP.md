@@ -149,6 +149,7 @@ Current workflow packaging now includes:
 - guided analyze modes for architecture, documentation, defect/error analysis, modernization, and impact
 - named workflow presets for `architecture-review`, `modernization-review`, `onboarding`, and `dependency-risk`
 - workflow-tagged bundle manifests so shared archives can describe which preset produced them
+- review-oriented metadata on modes and presets so manifests, analysis indexes, and shared bundle README files identify intended audience, key questions, expected decisions, interpretation guidance, and recommended outputs
 
 ### Track E: AI Knowledge Projection and Safe Sharing
 

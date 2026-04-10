@@ -450,6 +450,7 @@ function writeArtifactsStage(state) {
     promptTemplates,
     workflowMode,
     workflowModeSettings,
+    workflowPreset,
   } = state;
   const selectedPromptTemplates = resolvePromptTemplates(promptTemplates);
 
@@ -519,6 +520,7 @@ function writeArtifactsStage(state) {
     generatedFiles,
     selectedMode: workflowMode,
     derivedModeSettings: workflowModeSettings,
+    selectedPreset: workflowPreset,
   });
   writeJsonReport(path.join(outputProgramDir, 'analysis-index.json'), analysisIndex);
 
@@ -531,6 +533,7 @@ function writeArtifactsStage(state) {
       fileCount: generatedFiles.length,
       generatedFiles,
       workflowMode: workflowMode || null,
+      workflowPreset: workflowPreset ? workflowPreset.name : null,
       promptTemplateCount: selectedPromptTemplates.length,
     },
   };

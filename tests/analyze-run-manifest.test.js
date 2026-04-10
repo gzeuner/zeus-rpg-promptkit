@@ -50,6 +50,34 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
           name: 'modernization',
           promptTemplates: ['documentation', 'modernization'],
           effectiveOptimizeContext: true,
+          reviewWorkflow: {
+            intendedAudience: ['Modernization leads'],
+            keyQuestionsAnswered: ['Which change boundaries look safest to extract or rewrite first?'],
+            expectedDecisions: ['Choose a pilot modernization target.'],
+            interpretationGuidance: ['Validate proposed seams against semantic evidence.'],
+            requiredInputs: ['Canonical analysis and modernization prompts.'],
+            recommendedOutputs: [
+              { path: 'ai_prompt_modernization.md', purpose: 'Modernization review prompt.' },
+            ],
+          },
+        },
+        workflowPreset: {
+          name: 'modernization-review',
+          title: 'Modernization Review',
+          analyzeMode: 'modernization',
+          promptTemplates: ['documentation', 'modernization'],
+          workflowKeys: ['documentation'],
+          bundleArtifacts: ['analyze-run-manifest.json', 'ai_prompt_modernization.md'],
+          reviewWorkflow: {
+            intendedAudience: ['Modernization leads'],
+            keyQuestionsAnswered: ['Which outputs should be shared for modernization readiness?'],
+            expectedDecisions: ['Choose whether to proceed with a pilot change.'],
+            interpretationGuidance: ['Treat unresolved calls as blockers.'],
+            requiredInputs: ['Shareable bundle artifacts.'],
+            recommendedOutputs: [
+              { path: 'ai_prompt_modernization.md', purpose: 'Primary modernization bundle output.' },
+            ],
+          },
         },
       },
       result: {
@@ -100,6 +128,9 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
     assert.equal(manifest.summary.warningCount, 1);
     assert.equal(manifest.inputs.options.guidedMode.name, 'modernization');
     assert.deepEqual(manifest.inputs.options.guidedMode.promptTemplates, ['documentation', 'modernization']);
+    assert.match(manifest.inputs.options.guidedMode.reviewWorkflow.intendedAudience.join('\n'), /Modernization leads/);
+    assert.equal(manifest.inputs.options.workflowPreset.name, 'modernization-review');
+    assert.match(manifest.inputs.options.workflowPreset.reviewWorkflow.expectedDecisions.join('\n'), /pilot change/i);
     assert.equal(manifest.artifacts.length, 2);
     assert.equal(manifest.artifacts[0].exists, true);
     assert.ok(typeof manifest.artifacts[0].sha256 === 'string' && manifest.artifacts[0].sha256.length > 0);
@@ -135,6 +166,16 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
           name: 'impact',
           promptTemplates: [],
           effectiveOptimizeContext: false,
+          reviewWorkflow: {
+            intendedAudience: ['Release coordinators'],
+            keyQuestionsAnswered: ['Which artifacts should be reviewed before impact analysis?'],
+            expectedDecisions: ['Choose the impact target.'],
+            interpretationGuidance: ['Use this workflow before zeus impact.'],
+            requiredInputs: ['Dependency graph artifacts.'],
+            recommendedOutputs: [
+              { path: 'dependency-graph.json', purpose: 'Impact follow-up graph.' },
+            ],
+          },
         },
       },
       error: {
@@ -165,6 +206,7 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
     assert.equal(manifest.summary.errorCount, 1);
     assert.equal(manifest.diagnostics.length, 1);
     assert.equal(manifest.inputs.options.guidedMode.name, 'impact');
+    assert.match(manifest.inputs.options.guidedMode.reviewWorkflow.expectedDecisions.join('\n'), /impact target/i);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
