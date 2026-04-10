@@ -114,6 +114,16 @@ test('buildOutputBundle can package explicit workflow preset artifacts with pres
             promptTemplates: ['documentation'],
             workflowKeys: ['documentation'],
             bundleArtifacts: ['analyze-run-manifest.json', 'analysis-index.json', 'report.md'],
+            reviewWorkflow: {
+              intendedAudience: ['New engineers'],
+              keyQuestionsAnswered: ['Which artifacts explain the program quickly?'],
+              expectedDecisions: ['Decide whether deeper architecture review is needed.'],
+              interpretationGuidance: ['Start with report.md before deeper review.'],
+              requiredInputs: ['Prompt-ready documentation artifacts.'],
+              recommendedOutputs: [
+                { path: 'report.md', purpose: 'Quick orientation summary.' },
+              ],
+            },
           },
         },
         sourceSnapshot: {
@@ -142,6 +152,7 @@ test('buildOutputBundle can package explicit workflow preset artifacts with pres
     ]);
     assert.equal(result.manifest.workflowPreset.name, 'onboarding');
     assert.deepEqual(result.manifest.workflowPreset.promptTemplates, ['documentation']);
+    assert.match(result.manifest.workflowPreset.reviewWorkflow.intendedAudience.join('\n'), /New engineers/);
     assert.equal(path.basename(result.zipPath), 'ORDERPGM-onboarding-bundle.zip');
 
     const zip = new AdmZip(result.zipPath);
@@ -153,6 +164,10 @@ test('buildOutputBundle can package explicit workflow preset artifacts with pres
       'manifest.json',
       'report.md',
     ]);
+    const readme = zip.readAsText('README.txt');
+    assert.match(readme, /Workflow preset: onboarding/);
+    assert.match(readme, /Expected decisions:/);
+    assert.match(readme, /report\.md: Quick orientation summary\./);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

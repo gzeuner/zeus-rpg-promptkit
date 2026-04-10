@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const { getPromptContract } = require('../prompt/promptRegistry');
 const { resolvePromptTemplates } = require('../prompt/promptBuilder');
+const { cloneReviewWorkflow, freezeReviewWorkflow } = require('./reviewWorkflowMetadata');
 
 const WORKFLOW_MODE_REGISTRY = Object.freeze({
   architecture: Object.freeze({
@@ -29,6 +30,37 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
       'program-call-tree.md',
       'ai_prompt_documentation.md',
     ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'IBM i architects',
+        'Platform maintainers',
+        'Engineers reviewing structural boundaries before change',
+      ],
+      keyQuestionsAnswered: [
+        'What are the dominant program, table, and copy-member dependencies?',
+        'Which unresolved edges or ambiguous calls still weaken the architecture picture?',
+        'Which artifacts should anchor a structure-first architecture review?',
+      ],
+      expectedDecisions: [
+        'Choose the next subsystem or dependency path for deeper review.',
+        'Decide whether the current architecture evidence is sufficient for planned change work.',
+      ],
+      interpretationGuidance: [
+        'Use architecture-report.md together with dependency and call-tree artifacts; summaries alone can hide structural context.',
+        'Treat unresolved calls or ambiguous source resolution as follow-up work before making strong architecture claims.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and selected root program.',
+        'Canonical semantic analysis, AI knowledge projection, and dependency graph artifacts.',
+        'The documentation prompt contract for architecture-facing narrative output.',
+      ],
+      recommendedOutputs: [
+        { path: 'architecture-report.md', purpose: 'Narrative architecture summary for review and sharing.' },
+        { path: 'dependency-graph.md', purpose: 'Single-program dependency structure for quick inspection.' },
+        { path: 'program-call-tree.md', purpose: 'Cross-program call chain view for boundary tracing.' },
+        { path: 'ai_prompt_documentation.md', purpose: 'AI-assisted architecture walkthrough grounded in the workflow evidence.' },
+      ],
+    }),
   }),
   documentation: Object.freeze({
     name: 'documentation',
@@ -42,6 +74,36 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
       'report.md',
       'ai_prompt_documentation.md',
     ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'New engineers',
+        'Technical writers',
+        'Maintainers assembling onboarding or system orientation notes',
+      ],
+      keyQuestionsAnswered: [
+        'What does the program do at a high level?',
+        'Which tables, calls, and source-backed evidence matter most for onboarding?',
+        'Which generated artifacts are most useful for documentation handoff?',
+      ],
+      expectedDecisions: [
+        'Decide whether the generated documentation is sufficient for onboarding or needs deeper analysis.',
+        'Choose the next artifact or subsystem to document in more detail.',
+      ],
+      interpretationGuidance: [
+        'Prefer ai_prompt_documentation.md for narrative synthesis and use report.md or ai-knowledge.json to verify claims.',
+        'Treat missing evidence highlights as a sign that the workflow is broad orientation, not a complete design review.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and selected root program.',
+        'Prompt-ready AI knowledge projection with documentation workflow evidence.',
+        'Report and prompt artifacts for narrative handoff.',
+      ],
+      recommendedOutputs: [
+        { path: 'report.md', purpose: 'Broad run summary with source-backed counts and notes.' },
+        { path: 'ai_prompt_documentation.md', purpose: 'Documentation-first prompt for onboarding or explanation.' },
+        { path: 'ai-knowledge.json', purpose: 'Prompt-ready evidence projection for follow-up AI tasks.' },
+      ],
+    }),
   }),
   'error-analysis': Object.freeze({
     name: 'error-analysis',
@@ -55,6 +117,36 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
       'report.md',
       'ai_prompt_error_analysis.md',
     ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'Incident responders',
+        'Support engineers',
+        'Developers triaging risky runtime behavior',
+      ],
+      keyQuestionsAnswered: [
+        'Where are the highest-risk SQL, error-path, and evidence hotspots?',
+        'Which uncertainty markers or weak handling paths need manual validation first?',
+        'Which artifacts best support troubleshooting discussion?',
+      ],
+      expectedDecisions: [
+        'Choose the highest-priority failure hypothesis to verify.',
+        'Decide whether additional runtime evidence or DB2 context is needed before root-cause work.',
+      ],
+      interpretationGuidance: [
+        'Start with the highest-ranked evidence highlights, then validate against canonical-analysis.json before concluding root cause.',
+        'Treat dynamic or unresolved SQL markers as risk multipliers until verified against source or catalog evidence.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and selected root program.',
+        'AI knowledge projection with errorAnalysis workflow evidence.',
+        'Risk markers, SQL semantics, and ranked evidence highlights.',
+      ],
+      recommendedOutputs: [
+        { path: 'ai_prompt_error_analysis.md', purpose: 'Prompt for structured troubleshooting and risk review.' },
+        { path: 'report.md', purpose: 'Human-readable summary of analysis notes and operational risk signals.' },
+        { path: 'ai-knowledge.json', purpose: 'Workflow-specific evidence used by error analysis prompts.' },
+      ],
+    }),
   }),
   'defect-analysis': Object.freeze({
     name: 'defect-analysis',
@@ -69,6 +161,36 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
       'ai_prompt_error_analysis.md',
       'ai_prompt_defect_analysis.md',
     ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'Developers preparing a dependency or defect risk review',
+        'Release owners',
+        'Technical leads validating blast radius before change',
+      ],
+      keyQuestionsAnswered: [
+        'Which defects or dependency paths are most likely to cause downstream impact?',
+        'What source-backed evidence supports each risk hypothesis?',
+        'Which artifacts should be shared with reviewers before a change decision?',
+      ],
+      expectedDecisions: [
+        'Decide whether the change can proceed with current controls or needs more investigation.',
+        'Choose the next verification step for the highest-risk dependency or defect path.',
+      ],
+      interpretationGuidance: [
+        'Use error-analysis and defect-analysis prompts together; one surfaces risk signals and the other organizes decision-oriented hypotheses.',
+        'Treat program-call and table dependencies as review inputs, not proof of production impact, until source evidence is checked.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and selected root program.',
+        'AI knowledge projection with risk markers, SQL semantics, and ranked evidence.',
+        'Dependency graph and program-call-tree artifacts for blast-radius review.',
+      ],
+      recommendedOutputs: [
+        { path: 'ai_prompt_error_analysis.md', purpose: 'Evidence-oriented risk prompt for suspicious behavior and hotspots.' },
+        { path: 'ai_prompt_defect_analysis.md', purpose: 'Decision-oriented defect and dependency risk prompt.' },
+        { path: 'report.md', purpose: 'Human-readable summary to pair with prompt conclusions.' },
+      ],
+    }),
   }),
   modernization: Object.freeze({
     name: 'modernization',
@@ -83,6 +205,37 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
       'ai_prompt_documentation.md',
       'ai_prompt_modernization.md',
     ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'Modernization leads',
+        'IBM i architects',
+        'Engineers planning extraction or refactoring work',
+      ],
+      keyQuestionsAnswered: [
+        'Which change boundaries look safest to extract or rewrite first?',
+        'What dependencies, native I/O patterns, or SQL semantics block clean modernization?',
+        'Which artifacts best support a modernization readiness review?',
+      ],
+      expectedDecisions: [
+        'Choose a pilot extraction candidate or defer until prerequisites are addressed.',
+        'Decide which blockers require architecture, data, or integration follow-up before modernization work begins.',
+      ],
+      interpretationGuidance: [
+        'Use ai_prompt_modernization.md for synthesis, then validate proposed seams against architecture-report.md and canonical-analysis.json.',
+        'Treat unresolved calls, dynamic SQL, and mutating native file usage as modernization blockers until reviewed explicitly.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and selected root program.',
+        'Canonical semantic analysis, AI knowledge projection, and modernization prompt contract.',
+        'Architecture and dependency artifacts that expose extraction boundaries and risky integrations.',
+      ],
+      recommendedOutputs: [
+        { path: 'ai_prompt_modernization.md', purpose: 'Opinionated modernization review prompt with blockers and candidates.' },
+        { path: 'architecture-report.md', purpose: 'Architecture narrative for reviewing seams and dependencies.' },
+        { path: 'canonical-analysis.json', purpose: 'Semantic source of truth for validating modernization claims.' },
+        { path: 'ai_prompt_documentation.md', purpose: 'Supporting documentation prompt for reviewer context.' },
+      ],
+    }),
   }),
   impact: Object.freeze({
     name: 'impact',
@@ -97,6 +250,35 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
       'program-call-tree.json',
       'architecture-report.md',
     ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'Maintainers estimating blast radius',
+        'Release coordinators',
+        'Engineers preparing follow-up impact analysis',
+      ],
+      keyQuestionsAnswered: [
+        'Which generated artifacts should be reviewed before running a reverse dependency check?',
+        'What structural signals define the likely blast radius for a target change?',
+      ],
+      expectedDecisions: [
+        'Choose the impact target and next investigation command.',
+        'Decide whether the available graph evidence is sufficient for a change review.',
+      ],
+      interpretationGuidance: [
+        'Use this workflow as prework for zeus impact, not as a replacement for target-specific blast-radius analysis.',
+        'Prefer program-call-tree.json and dependency-graph.json when choosing the target for reverse lookup.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and selected root program.',
+        'Dependency graph and cross-program graph artifacts.',
+        'Canonical analysis and architecture report for context before reverse impact review.',
+      ],
+      recommendedOutputs: [
+        { path: 'dependency-graph.json', purpose: 'Machine-readable dependency structure for impact follow-up.' },
+        { path: 'program-call-tree.json', purpose: 'Cross-program graph used by zeus impact.' },
+        { path: 'architecture-report.md', purpose: 'Narrative context before selecting an impact target.' },
+      ],
+    }),
   }),
 });
 
@@ -136,6 +318,7 @@ function resolveWorkflowModeSettings(modeName) {
     promptTemplates,
     workflowKeys,
     primaryArtifacts: [...mode.primaryArtifacts],
+    reviewWorkflow: cloneReviewWorkflow(mode.reviewWorkflow),
   };
 }
 

@@ -124,9 +124,12 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.equal(analysisIndex.kind, 'analysis-task-index');
     assert.equal(analysisIndex.program, 'ORDERPGM');
     assert.equal(analysisIndex.selectedMode, null);
+    assert.equal(analysisIndex.selectedPreset, null);
+    assert.equal(analysisIndex.summary.selectedPresetCount, 0);
     assert.ok(Array.isArray(analysisIndex.guidedModes));
     assert.ok(analysisIndex.tasks.some((task) => task.id === 'modernization'));
     assert.ok(analysisIndex.tasks.some((task) => task.id === 'impact'));
+    assert.ok(analysisIndex.tasks.every((task) => task.reviewWorkflow));
 
     const report = fs.readFileSync(path.join(programOutputDir, 'report.md'), 'utf8');
     assert.match(report, /## Native File I\/O/);
