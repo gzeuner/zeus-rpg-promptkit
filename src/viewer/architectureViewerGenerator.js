@@ -299,4 +299,5 @@ function generateArchitectureViewer({ graphPath, outputPath }) {
 
 module.exports = {
   generateArchitectureViewer,
+  renderHtml,
 };

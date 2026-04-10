@@ -185,6 +185,7 @@ function buildAnalyzeRunManifest({
       outputRoot: context.outputRoot,
       options: {
         optimizeContextEnabled: Boolean(context.optimizeContextEnabled),
+        safeSharingEnabled: Boolean(context.safeSharingEnabled),
         skipTestData: Boolean(context.skipTestData),
         testDataLimit: Number(context.testDataLimit) || null,
         extensions: Array.isArray(context.extensions) ? context.extensions : [],

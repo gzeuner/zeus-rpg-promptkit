@@ -126,7 +126,7 @@ function renderLength(column) {
   return String(column.length);
 }
 
-function renderMarkdown(program, tables) {
+function renderDb2MetadataMarkdown(program, tables) {
   const lines = [
     '# DB2 Metadata',
     '',
@@ -242,7 +242,7 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
       tables: [],
       tableLinks: linkage.tableLinks,
     };
-    writeOutputs(outputDir, payload, renderMarkdown(program, []));
+    writeOutputs(outputDir, payload, renderDb2MetadataMarkdown(program, []));
     return {
       payload,
       summary: {
@@ -307,7 +307,7 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
       tables: linkedTables,
       tableLinks: linkage.tableLinks,
     };
-    writeOutputs(outputDir, payload, renderMarkdown(program, linkedTables));
+    writeOutputs(outputDir, payload, renderDb2MetadataMarkdown(program, linkedTables));
 
     const unresolvedTables = linkage.unresolvedTables;
     const notes = [];
@@ -358,4 +358,5 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
 
 module.exports = {
   exportDb2Metadata,
+  renderDb2MetadataMarkdown,
 };

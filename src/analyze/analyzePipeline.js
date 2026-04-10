@@ -496,6 +496,18 @@ function writeArtifactsStage(state) {
   fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');
 
   const generatedPromptFiles = selectedPromptTemplates.map((templateName) => getPromptContract(templateName).outputFileName);
+  const generatedDb2Files = context.db2Metadata && context.db2Metadata.status === 'exported'
+    ? [
+      context.db2Metadata.file || 'db2-metadata.json',
+      context.db2Metadata.markdownFile || 'db2-metadata.md',
+    ]
+    : [];
+  const generatedTestDataFiles = context.testData && context.testData.status === 'exported'
+    ? [
+      context.testData.file || 'test-data.json',
+      context.testData.markdownFile || 'test-data.md',
+    ]
+    : [];
   const generatedFiles = [
     'canonical-analysis.json',
     'context.json',
@@ -510,6 +522,8 @@ function writeArtifactsStage(state) {
     'program-call-tree.md',
     'architecture.html',
     'architecture-report.md',
+    ...generatedDb2Files,
+    ...generatedTestDataFiles,
     ...generatedPromptFiles,
     'report.md',
   ];
