@@ -11,27 +11,21 @@ const { optimizeContext } = require('../src/ai/contextOptimizer');
 const { AI_KNOWLEDGE_PROJECTION_SCHEMA_VERSION, buildAiKnowledgeProjection } = require('../src/ai/knowledgeProjection');
 const { buildPrompt } = require('../src/prompt/promptBuilder');
 const { buildCompactDb2TableLink, buildCompactTestDataLink, buildDb2SourceLinkage } = require('../src/db2/db2EvidenceLinker');
+const { readSanitizedFixtureJson, readSanitizedFixtureText } = require('./helpers/fixtureCorpus');
+
+const db2Fixture = readSanitizedFixtureJson('db2', 'catalog-linkage.json');
+const sqlAnalysisSource = readSanitizedFixtureText('source', 'sql-analysis', 'PROGRAM_001.sqlrpgle');
 
 test('buildAiKnowledgeProjection emits a versioned prompt-ready projection with evidence and workflows', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-ai-projection-'));
-  const sourceFile = path.join(tempRoot, 'ORDERPGM.sqlrpgle');
+  const sourceFile = path.join(tempRoot, 'PROGRAM_001.sqlrpgle');
 
-  fs.writeFileSync(sourceFile, `**FREE
-dcl-s stmt varchar(500);
-dcl-proc main;
-  exec sql
-    select ORDER_ID
-      from ORDERS;
-
-  exec sql
-    prepare S1 from :stmt;
-end-proc;
-`, 'utf8');
+  fs.writeFileSync(sourceFile, sqlAnalysisSource, 'utf8');
 
   try {
     const scanSummary = scanSourceFiles([sourceFile]);
     const canonicalAnalysis = buildCanonicalAnalysisModel({
-      program: 'ORDERPGM',
+      program: 'PROGRAM_001',
       sourceRoot: tempRoot,
       sourceFiles: scanSummary.sourceFiles,
       dependencies: {
@@ -64,7 +58,7 @@ end-proc;
 
     assert.equal(projection.schemaVersion, AI_KNOWLEDGE_PROJECTION_SCHEMA_VERSION);
     assert.equal(projection.kind, 'ai-knowledge-projection');
-    assert.equal(projection.program, 'ORDERPGM');
+    assert.equal(projection.program, 'PROGRAM_001');
     assert.ok(projection.evidenceIndex.length >= 2);
     assert.ok(projection.riskMarkers.includes('Dynamic SQL detected'));
     assert.ok(projection.uncertaintyMarkers.includes('DYNAMIC_SQL'));
@@ -123,20 +117,14 @@ test('buildPrompt consumes ai-knowledge projection workflows', () => {
 
 test('buildAiKnowledgeProjection carries DB2 metadata and test data links into workflow projections', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-ai-db2-projection-'));
-  const sourceFile = path.join(tempRoot, 'ORDERPGM.sqlrpgle');
+  const sourceFile = path.join(tempRoot, 'PROGRAM_001.sqlrpgle');
 
-  fs.writeFileSync(sourceFile, `**FREE
-dcl-proc main;
-  exec sql
-    select ORDER_ID
-      from ORDERS;
-end-proc;
-`, 'utf8');
+  fs.writeFileSync(sourceFile, sqlAnalysisSource, 'utf8');
 
   try {
     const scanSummary = scanSourceFiles([sourceFile]);
     const canonicalAnalysis = buildCanonicalAnalysisModel({
-      program: 'ORDERPGM',
+      program: 'PROGRAM_001',
       sourceRoot: tempRoot,
       sourceFiles: scanSummary.sourceFiles,
       dependencies: {
@@ -157,15 +145,8 @@ end-proc;
     });
     const context = buildContext({ canonicalAnalysis });
     const linkage = buildDb2SourceLinkage({
-      requestedTables: ['ORDERS'],
-      exportedTables: [
-        {
-          schema: 'APP',
-          table: 'ORDERS',
-          columns: [{ name: 'ORDER_ID', type: 'DECIMAL' }],
-          foreignKeys: [],
-        },
-      ],
+      requestedTables: ['TABLE_001'],
+      exportedTables: [db2Fixture.exportedTables[0]],
       canonicalAnalysis,
       context,
     });
@@ -181,9 +162,9 @@ end-proc;
       ambiguousTableCount: 0,
       tables: [
         buildCompactDb2TableLink(tableLink, {
-          schema: 'APP',
-          table: 'ORDERS',
-          columns: [{ name: 'ORDER_ID', type: 'DECIMAL' }],
+          schema: 'SCHEMA_001',
+          table: 'TABLE_001',
+          columns: [{ name: 'COLUMN_001', type: 'DECIMAL' }],
           foreignKeys: [],
         }),
       ],
@@ -198,8 +179,8 @@ end-proc;
       rowLimit: 5,
       tables: [
         buildCompactTestDataLink(tableLink, {
-          schema: 'APP',
-          table: 'ORDERS',
+          schema: 'SCHEMA_001',
+          table: 'TABLE_001',
           status: 'exported',
           rowCount: 2,
         }),
@@ -209,7 +190,7 @@ end-proc;
     const projection = buildAiKnowledgeProjection({ canonicalAnalysis, context });
 
     assert.equal(projection.entities.db2Tables.length, 1);
-    assert.equal(projection.entities.db2Tables[0].table, 'ORDERS');
+    assert.equal(projection.entities.db2Tables[0].table, 'TABLE_001');
     assert.ok(projection.entities.db2Tables[0].evidenceRefs.length >= 1);
     assert.equal(projection.workflows.documentation.db2Tables.length, 1);
     assert.equal(projection.workflows.documentation.testData.tables.length, 1);
