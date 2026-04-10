@@ -1,0 +1,13 @@
+{
+  "kind": "sanitized-fixture-review-checklist",
+  "schemaVersion": 1,
+  "reviewedAt": "2026-04-10T00:00:00.000Z",
+  "rulesVersion": 1,
+  "expectations": [
+    "Use only placeholder-style program, table, file, schema, and value identifiers.",
+    "Do not copy customer names, production libraries, host names, email addresses, or extracted business data into fixtures.",
+    "Prefer deterministic placeholders such as PROGRAM_001, TABLE_001, FIXLIB, SOURCE_FILE_001.sqlrpgle, and VALUE_001.",
+    "Keep fixture examples technically realistic but operationally synthetic.",
+    "Run the fixture sanitization regression test before merging fixture changes."
+  ]
+}

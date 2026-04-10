@@ -1,0 +1,21 @@
+{
+  "requestedTables": ["TABLE_001", "TABLE_404"],
+  "exportedTables": [
+    {
+      "schema": "SCHEMA_001",
+      "table": "TABLE_001",
+      "columns": [
+        { "name": "COLUMN_001", "type": "DECIMAL" }
+      ],
+      "foreignKeys": []
+    },
+    {
+      "schema": "SCHEMA_002",
+      "table": "TABLE_001",
+      "columns": [
+        { "name": "COLUMN_001", "type": "DECIMAL" }
+      ],
+      "foreignKeys": []
+    }
+  ]
+}

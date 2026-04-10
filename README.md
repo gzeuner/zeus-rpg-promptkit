@@ -798,6 +798,7 @@ zeus bundle --program ORDERPGM --source-output-root ./output --safe-sharing
 ```
 
 See [docs/safe-sharing.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/safe-sharing.md) for the safe-sharing rules for reports, prompts, bundles, fixtures, and issue text.
+See [docs/fixture-sanitization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/fixture-sanitization.md) for the shared sanitized fixture corpus rules and review checklist.
 
 ## Notes
 

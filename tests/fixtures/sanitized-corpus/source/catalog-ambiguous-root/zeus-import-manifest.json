@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "zeus-rpg-promptkit",
+    "command": "fetch"
+  },
+  "fetchedAt": "2026-04-10T00:00:00.000Z",
+  "remote": {
+    "host": "fixture.example.com",
+    "sourceLib": "FIXLIB",
+    "ifsDir": "/tmp/zeus_fixture/exported_source"
+  },
+  "localDestination": "./fixture-root",
+  "transportRequested": "sftp",
+  "transportUsed": "sftp",
+  "streamFileCcsid": 1208,
+  "encodingPolicy": "UTF-8 stream files (CCSID 1208)",
+  "summary": {
+    "fileCount": 2
+  },
+  "files": [
+    {
+      "sourceLib": "FIXLIB",
+      "sourceFile": "QRPGLESRC",
+      "member": "PROGRAM_010",
+      "localPath": "QRPGLESRC/PROGRAM_010.rpgle"
+    },
+    {
+      "sourceLib": "FIXLIB",
+      "sourceFile": "QCLLESRC",
+      "member": "PROGRAM_010",
+      "localPath": "QCLLESRC/PROGRAM_010.clle"
+    }
+  ]
+}

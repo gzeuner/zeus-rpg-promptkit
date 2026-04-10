@@ -1,0 +1,31 @@
+{
+  "defaultUtf8": {
+    "sourceLib": "FIXLIB",
+    "sourceFile": "QRPGLESRC",
+    "member": "PROGRAM_001",
+    "ifsDir": "/tmp/zeus_fixture/exported_source",
+    "replace": true,
+    "expectedRemotePath": "/tmp/zeus_fixture/exported_source/QRPGLESRC/PROGRAM_001.rpgle",
+    "expectedCcsid": 1208
+  },
+  "explicitCcsid": {
+    "sourceLib": "FIXLIB",
+    "sourceFile": "QCLLESRC",
+    "member": "COMMAND_001",
+    "ifsDir": "/tmp/zeus_fixture/exported_source",
+    "replace": false,
+    "streamFileCcsid": 1252,
+    "expectedSuffix": "COMMAND_001.clle",
+    "expectedCcsid": 1252
+  },
+  "jdbcFallback": {
+    "positive": {
+      "messages": ["CPDA08C Datenbankdatei hat CCSID 65535."],
+      "stderr": ""
+    },
+    "negative": {
+      "messages": ["CPF0000 A generic failure occurred."],
+      "stderr": ""
+    }
+  }
+}
