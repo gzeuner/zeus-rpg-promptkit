@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
+const { cloneReviewWorkflow } = require('./reviewWorkflowMetadata');
 
 const WORKFLOW_RUN_MANIFEST_FILE = 'workflow-run-manifest.json';
 const WORKFLOW_RUN_MANIFEST_SCHEMA_VERSION = 1;
@@ -31,6 +32,7 @@ function buildWorkflowRunManifest({ preset, analyzeManifest, bundleManifest, bun
       promptTemplates: [...(preset.promptTemplates || [])],
       workflowKeys: [...(preset.workflowKeys || [])],
       bundleArtifacts: [...(preset.bundleArtifacts || [])],
+      reviewWorkflow: cloneReviewWorkflow(preset.reviewWorkflow),
     } : null,
     analyzeRun: analyzeManifest ? {
       manifestFile: 'analyze-run-manifest.json',

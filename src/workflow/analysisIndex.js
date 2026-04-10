@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const { getPromptContract } = require('../prompt/promptRegistry');
 const { validatePromptApplicability } = require('../prompt/promptBuilder');
 const { listWorkflowModes, normalizeWorkflowModeName } = require('./workflowModeRegistry');
+const { cloneReviewWorkflow } = require('./reviewWorkflowMetadata');
 
 const ANALYSIS_INDEX_SCHEMA_VERSION = 1;
 
@@ -151,6 +152,7 @@ function buildTask(mode, aiKnowledge, context, generatedFiles, selectedMode) {
     autoOptimizeContext: Boolean(mode.autoOptimizeContext),
     prompts: promptEntries,
     artifacts: buildArtifactRefs(mode.primaryArtifacts, generatedFiles),
+    reviewWorkflow: cloneReviewWorkflow(mode.reviewWorkflow),
     evidenceSummary: buildEvidenceSummary(mode, aiKnowledge, context),
     nextActions: buildNextActions(mode, context && context.program),
   };
@@ -163,8 +165,32 @@ function buildGuidedModeSummary(modes, selectedMode) {
     description: mode.description,
     autoOptimizeContext: Boolean(mode.autoOptimizeContext),
     promptTemplates: [...mode.promptTemplates],
+    reviewWorkflow: cloneReviewWorkflow(mode.reviewWorkflow),
     selected: normalizeWorkflowModeName(selectedMode) === mode.name,
   }));
+}
+
+function buildSelectedPresetSummary(selectedPreset) {
+  if (!selectedPreset || typeof selectedPreset !== 'object') {
+    return null;
+  }
+
+  return {
+    name: selectedPreset.name || null,
+    title: selectedPreset.title || null,
+    description: selectedPreset.description || null,
+    analyzeMode: selectedPreset.analyzeMode || null,
+    promptTemplates: Array.isArray(selectedPreset.promptTemplates)
+      ? [...selectedPreset.promptTemplates]
+      : [],
+    workflowKeys: Array.isArray(selectedPreset.workflowKeys)
+      ? [...selectedPreset.workflowKeys]
+      : [],
+    bundleArtifacts: Array.isArray(selectedPreset.bundleArtifacts)
+      ? [...selectedPreset.bundleArtifacts]
+      : [],
+    reviewWorkflow: cloneReviewWorkflow(selectedPreset.reviewWorkflow),
+  };
 }
 
 function buildAnalysisIndex({
@@ -174,9 +200,11 @@ function buildAnalysisIndex({
   generatedFiles,
   selectedMode = null,
   derivedModeSettings = null,
+  selectedPreset = null,
 }) {
   const modes = listWorkflowModes();
   const tasks = modes.map((mode) => buildTask(mode, aiKnowledge, context, generatedFiles, selectedMode));
+  const selectedPresetSummary = buildSelectedPresetSummary(selectedPreset);
 
   return {
     schemaVersion: ANALYSIS_INDEX_SCHEMA_VERSION,
@@ -186,11 +214,13 @@ function buildAnalysisIndex({
     sourceRoot: canonicalAnalysis.sourceRoot,
     selectedMode: selectedMode ? normalizeWorkflowModeName(selectedMode) : null,
     derivedModeSettings: derivedModeSettings || null,
+    selectedPreset: selectedPresetSummary,
     summary: {
       taskCount: tasks.length,
       selectedTaskCount: tasks.filter((task) => task.selected).length,
       generatedArtifactCount: uniqueSortedStrings(generatedFiles).length,
       applicablePromptCount: tasks.reduce((count, task) => count + task.prompts.filter((prompt) => prompt.applicable).length, 0),
+      selectedPresetCount: selectedPresetSummary ? 1 : 0,
     },
     guidedModes: buildGuidedModeSummary(modes, selectedMode),
     tasks,

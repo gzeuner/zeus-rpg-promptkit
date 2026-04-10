@@ -123,6 +123,16 @@ Named workflow presets build on top of those guided modes and package a shareabl
 
 Use `zeus workflow --list-presets` to inspect the available presets and `zeus workflow --preset modernization-review ...` to run analyze plus bundle with one command.
 
+Guided modes and workflow presets now also expose opinionated review metadata:
+
+- intended audience
+- key questions answered
+- expected decisions
+- interpretation guidance
+- recommended outputs for sharing
+
+`zeus analyze --list-modes` and `zeus workflow --list-presets` print the audience and decision framing so users can choose a workflow by review intent, not only by file list.
+
 Bundle command syntax:
 
 ```bash
@@ -260,9 +270,9 @@ Generated files:
 
 `ai-knowledge.json` is a versioned prompt-ready projection derived from the canonical model. It preserves evidence references, risk markers, uncertainty markers, and workflow-specific sections for prompt generation.
 
-`analysis-index.json` is a deterministic task-oriented index that maps common workflows to the relevant artifacts, prompt contracts, and recommended next actions.
+`analysis-index.json` is a deterministic task-oriented index that maps common workflows to the relevant artifacts, prompt contracts, intended audience, expected decisions, interpretation guidance, and recommended next actions.
 
-`workflow-run-manifest.json` records which named workflow preset produced the run, which guided analyze mode it resolved to, and which bundle was emitted for sharing.
+`workflow-run-manifest.json` records which named workflow preset produced the run, which guided analyze mode it resolved to, which review metadata shaped the run, and which bundle was emitted for sharing.
 
 `canonical-analysis.json` is now the semantic source of truth for the analyze pipeline.
 
@@ -639,7 +649,7 @@ If any include filter is passed, only the selected file types are packaged.
 The ZIP also contains:
 
 - `manifest.json` with the included file list and summary counts
-- `README.txt` with a short bundle description
+- `README.txt` with a short bundle description, intended audience, expected decisions, interpretation guidance, and recommended outputs for the selected workflow preset
 
 `zeus bundle` also writes `bundle-manifest.json` to `output/<program>/` for local reference.
 
@@ -650,7 +660,7 @@ Both bundle manifest files are versioned and include:
 - included file list
 - artifact entries with `path`, `kind`, `sizeBytes`, and `sha256` when available
 - analyze-run linkage metadata when the bundle was created from an analyze manifest
-- workflow preset metadata when the bundle was created from `zeus workflow` or an analyze run tagged with a workflow preset
+- workflow preset metadata, including intended audience, key questions answered, expected decisions, interpretation guidance, and recommended outputs, when the bundle was created from `zeus workflow` or an analyze run tagged with a workflow preset
 
 Examples:
 

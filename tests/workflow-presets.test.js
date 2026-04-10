@@ -29,6 +29,8 @@ test('workflow --list-presets exposes named guided workflow bundles', () => {
   assert.match(output, /- modernization-review:/);
   assert.match(output, /- onboarding:/);
   assert.match(output, /- dependency-risk:/);
+  assert.match(output, /intended audience:/);
+  assert.match(output, /expected decisions:/);
 });
 
 test('workflow preset runs analyze plus bundle and records preset metadata in manifests', () => {
@@ -56,6 +58,7 @@ test('workflow preset runs analyze plus bundle and records preset metadata in ma
 
     const programOutputDir = path.join(outputRoot, 'ORDERPGM');
     const analyzeManifest = readJson(path.join(programOutputDir, 'analyze-run-manifest.json'));
+    const analysisIndex = readJson(path.join(programOutputDir, 'analysis-index.json'));
     const workflowManifest = readJson(path.join(programOutputDir, 'workflow-run-manifest.json'));
     const bundleManifest = readJson(path.join(programOutputDir, 'bundle-manifest.json'));
     const bundlePath = path.join(bundleRoot, 'ORDERPGM-modernization-review-bundle.zip');
@@ -66,14 +69,24 @@ test('workflow preset runs analyze plus bundle and records preset metadata in ma
       analyzeManifest.inputs.options.workflowPreset.promptTemplates,
       ['documentation', 'modernization'],
     );
+    assert.match(
+      analyzeManifest.inputs.options.workflowPreset.reviewWorkflow.expectedDecisions.join('\n'),
+      /pilot modernization target/i,
+    );
+
+    assert.equal(analysisIndex.selectedPreset.name, 'modernization-review');
+    assert.equal(analysisIndex.selectedPreset.analyzeMode, 'modernization');
+    assert.match(analysisIndex.selectedPreset.reviewWorkflow.intendedAudience.join('\n'), /Modernization leads/);
 
     assert.equal(workflowManifest.kind, 'workflow-run-manifest');
     assert.equal(workflowManifest.preset.name, 'modernization-review');
     assert.equal(workflowManifest.preset.analyzeMode, 'modernization');
+    assert.match(workflowManifest.preset.reviewWorkflow.keyQuestionsAnswered.join('\n'), /modernization candidates/i);
     assert.equal(workflowManifest.bundle.zipPath, 'ORDERPGM-modernization-review-bundle.zip');
 
     assert.equal(bundleManifest.workflowPreset.name, 'modernization-review');
     assert.equal(bundleManifest.workflowPreset.analyzeMode, 'modernization');
+    assert.match(bundleManifest.workflowPreset.reviewWorkflow.expectedDecisions.join('\n'), /pilot modernization target/i);
     assert.ok(bundleManifest.files.includes('ai_prompt_modernization.md'));
     assert.ok(bundleManifest.files.includes('architecture-report.md'));
     assert.equal(bundleManifest.files.includes('context.json'), false);
@@ -84,6 +97,10 @@ test('workflow preset runs analyze plus bundle and records preset metadata in ma
     assert.ok(entryNames.includes('ai_prompt_modernization.md'));
     assert.ok(entryNames.includes('architecture-report.md'));
     assert.equal(entryNames.includes('context.json'), false);
+    const readme = zip.readAsText('README.txt');
+    assert.match(readme, /Workflow preset: modernization-review/);
+    assert.match(readme, /Expected decisions:/);
+    assert.match(readme, /ai_prompt_modernization\.md:/);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

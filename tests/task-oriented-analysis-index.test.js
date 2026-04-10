@@ -27,6 +27,8 @@ test('analyze --list-modes exposes guided workflow presets', () => {
   assert.match(output, /- architecture:/);
   assert.match(output, /- modernization:/);
   assert.match(output, /- impact:/);
+  assert.match(output, /intended audience:/);
+  assert.match(output, /expected decisions:/);
 });
 
 test('guided analyze mode writes task index, selected mode metadata, and mode-specific prompts', () => {
@@ -58,17 +60,24 @@ test('guided analyze mode writes task index, selected mode metadata, and mode-sp
 
     const analysisIndex = readJson(path.join(programOutputDir, 'analysis-index.json'));
     assert.equal(analysisIndex.selectedMode, 'modernization');
+    assert.equal(analysisIndex.selectedPreset, null);
     assert.equal(analysisIndex.summary.selectedTaskCount, 1);
+    assert.equal(analysisIndex.summary.selectedPresetCount, 0);
     assert.ok(analysisIndex.guidedModes.some((entry) => entry.name === 'modernization' && entry.selected === true));
     const modernizationTask = analysisIndex.tasks.find((entry) => entry.id === 'modernization');
     assert.ok(modernizationTask);
     assert.equal(modernizationTask.selected, true);
     assert.ok(modernizationTask.prompts.some((entry) => entry.name === 'modernization' && entry.generated === true));
+    assert.ok(Array.isArray(modernizationTask.reviewWorkflow.intendedAudience));
+    assert.match(modernizationTask.reviewWorkflow.intendedAudience.join('\n'), /Modernization leads/);
+    assert.match(modernizationTask.reviewWorkflow.keyQuestionsAnswered.join('\n'), /extract or rewrite first/i);
+    assert.ok(Array.isArray(analysisIndex.derivedModeSettings.reviewWorkflow.expectedDecisions));
 
     const manifest = readJson(path.join(programOutputDir, 'analyze-run-manifest.json'));
     assert.equal(manifest.inputs.options.guidedMode.name, 'modernization');
     assert.deepEqual(manifest.inputs.options.guidedMode.promptTemplates, ['documentation', 'modernization']);
     assert.equal(manifest.inputs.options.guidedMode.effectiveOptimizeContext, true);
+    assert.match(manifest.inputs.options.guidedMode.reviewWorkflow.expectedDecisions.join('\n'), /pilot extraction candidate/i);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

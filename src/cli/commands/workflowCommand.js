@@ -27,6 +27,10 @@ function printWorkflowPresets() {
     console.log(`  analyze mode: ${settings.analyzeMode}`);
     console.log(`  prompt templates: ${settings.promptTemplates.length > 0 ? settings.promptTemplates.join(', ') : 'none'}`);
     console.log(`  bundle artifacts: ${settings.bundleArtifacts.length}`);
+    if (settings.reviewWorkflow) {
+      console.log(`  intended audience: ${(settings.reviewWorkflow.intendedAudience || []).join('; ') || 'n/a'}`);
+      console.log(`  expected decisions: ${(settings.reviewWorkflow.expectedDecisions || []).join('; ') || 'n/a'}`);
+    }
   }
 }
 
