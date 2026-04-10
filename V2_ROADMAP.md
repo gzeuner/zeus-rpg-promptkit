@@ -150,6 +150,7 @@ Current workflow packaging now includes:
 - named workflow presets for `architecture-review`, `modernization-review`, `onboarding`, and `dependency-risk`
 - workflow-tagged bundle manifests so shared archives can describe which preset produced them
 - review-oriented metadata on modes and presets so manifests, analysis indexes, and shared bundle README files identify intended audience, key questions, expected decisions, interpretation guidance, and recommended outputs
+- opt-in `--safe-sharing` outputs and bundles that preserve workflow structure while redacting identifiers, source paths, and extracted values with stable placeholders
 
 ### Track E: AI Knowledge Projection and Safe Sharing
 

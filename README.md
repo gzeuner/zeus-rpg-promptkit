@@ -94,13 +94,13 @@ npm test
 Command syntax:
 
 ```bash
-zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--mode <name>] [--list-modes] [--optimize-context] [--test-data-limit <n>] [--skip-test-data] [--verbose]
+zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--mode <name>] [--list-modes] [--optimize-context] [--safe-sharing] [--test-data-limit <n>] [--skip-test-data] [--verbose]
 ```
 
 Workflow command syntax:
 
 ```bash
-zeus workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--list-presets] [--test-data-limit <n>] [--skip-test-data] [--verbose]
+zeus workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--list-presets] [--safe-sharing] [--test-data-limit <n>] [--skip-test-data] [--verbose]
 ```
 
 Guided analyze modes:
@@ -113,6 +113,8 @@ Guided analyze modes:
 - use `--mode impact` to highlight dependency artifacts and the next `zeus impact` step
 
 When a guided mode is selected, Zeus records the mode and derived behavior in `analyze-run-manifest.json`, writes `analysis-index.json`, and may auto-enable context optimization for prompt-heavy workflows.
+
+Use `--safe-sharing` when you need a redacted sharing packet. Zeus writes a parallel `safe-sharing/` artifact set with deterministic placeholders for identifiers, source paths, and extracted values.
 
 Named workflow presets build on top of those guided modes and package a shareable bundle in one step:
 
@@ -136,7 +138,7 @@ Guided modes and workflow presets now also expose opinionated review metadata:
 Bundle command syntax:
 
 ```bash
-zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--profile <name>] [--verbose]
+zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--profile <name>] [--verbose]
 ```
 
 Impact command syntax:
@@ -228,6 +230,7 @@ Generated files:
 - `ai-knowledge.json`
 - `analysis-index.json`
 - `workflow-run-manifest.json` (when `zeus workflow` is executed)
+- `safe-sharing/redaction-manifest.json` (when `--safe-sharing` is enabled)
 - `report.md`
 - `architecture-report.md`
 - `ai_prompt_documentation.md`
@@ -248,6 +251,12 @@ Generated files:
 - `impact-analysis.json` (when `zeus impact` is executed)
 - `impact-analysis.md` (when `zeus impact` is executed)
 - `architecture.html`
+
+When `--safe-sharing` is enabled, Zeus also writes a parallel redacted artifact set under:
+
+`output/<program>/safe-sharing/`
+
+The safe-sharing directory reuses the same artifact filenames where possible, but replaces business-specific identifiers, source paths, and extracted values with deterministic placeholders such as `PROGRAM_001`, `TABLE_001`, `SCHEMA_001`, `SOURCE_FILE_001.rpgle`, and `VALUE_001`.
 
 `context.json` contains top-level keys:
 
@@ -273,6 +282,8 @@ Generated files:
 `analysis-index.json` is a deterministic task-oriented index that maps common workflows to the relevant artifacts, prompt contracts, intended audience, expected decisions, interpretation guidance, and recommended next actions.
 
 `workflow-run-manifest.json` records which named workflow preset produced the run, which guided analyze mode it resolved to, which review metadata shaped the run, and which bundle was emitted for sharing.
+
+`safe-sharing/redaction-manifest.json` records which artifacts were redacted, which placeholder categories were used, and which safe-sharing files were written. Reverse mappings are intentionally not exported.
 
 `canonical-analysis.json` is now the semantic source of truth for the analyze pipeline.
 
@@ -632,6 +643,10 @@ Default bundle location:
 
 - `bundles/<program>-analysis-bundle.zip`
 
+When `--safe-sharing` is used, the default bundle location becomes:
+
+- `bundles/<program>-safe-sharing-bundle.zip`
+
 Included by default:
 
 - all `.json` files in `output/<program>/`
@@ -651,6 +666,8 @@ The ZIP also contains:
 - `manifest.json` with the included file list and summary counts
 - `README.txt` with a short bundle description, intended audience, expected decisions, interpretation guidance, and recommended outputs for the selected workflow preset
 
+When `--safe-sharing` is enabled, Zeus packages only the redacted `safe-sharing/` artifacts and records the redaction manifest path in the bundle metadata and README.
+
 `zeus bundle` also writes `bundle-manifest.json` to `output/<program>/` for local reference.
 
 Both bundle manifest files are versioned and include:
@@ -661,6 +678,7 @@ Both bundle manifest files are versioned and include:
 - artifact entries with `path`, `kind`, `sizeBytes`, and `sha256` when available
 - analyze-run linkage metadata when the bundle was created from an analyze manifest
 - workflow preset metadata, including intended audience, key questions answered, expected decisions, interpretation guidance, and recommended outputs, when the bundle was created from `zeus workflow` or an analyze run tagged with a workflow preset
+- safe-sharing metadata when the bundle contains only redacted artifacts
 
 Examples:
 
@@ -668,6 +686,7 @@ Examples:
 zeus bundle --program ORDERPGM
 zeus bundle --program ORDERPGM --output ./bundles --include-json
 zeus bundle --program ORDERPGM --source-output-root ./output --verbose
+zeus bundle --program ORDERPGM --source-output-root ./output --safe-sharing
 zeus workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM
 ```
 
@@ -770,6 +789,15 @@ Example:
 ```bash
 zeus analyze --source ./rpg_sources --program ORDERPGM --optimize-context
 ```
+
+Safe-sharing example:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --safe-sharing
+zeus bundle --program ORDERPGM --source-output-root ./output --safe-sharing
+```
+
+See [docs/safe-sharing.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/safe-sharing.md) for the safe-sharing rules for reports, prompts, bundles, fixtures, and issue text.
 
 ## Notes
 

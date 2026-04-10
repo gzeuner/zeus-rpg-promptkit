@@ -39,6 +39,9 @@ function buildWorkflowRunManifest({ preset, analyzeManifest, bundleManifest, bun
       status: analyzeManifest.run ? analyzeManifest.run.status : null,
       completedAt: analyzeManifest.run ? analyzeManifest.run.completedAt : null,
       generatedArtifactCount: analyzeManifest.summary ? analyzeManifest.summary.generatedArtifactCount : 0,
+      safeSharingEnabled: analyzeManifest.inputs && analyzeManifest.inputs.options
+        ? Boolean(analyzeManifest.inputs.options.safeSharingEnabled)
+        : false,
       guidedMode: analyzeManifest.inputs && analyzeManifest.inputs.options
         ? analyzeManifest.inputs.options.guidedMode
         : null,
