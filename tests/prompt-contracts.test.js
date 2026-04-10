@@ -1,12 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('path');
 
 const { renderPrompt, validatePromptApplicability } = require('../src/prompt/promptBuilder');
 const { listPromptContracts, getPromptContract } = require('../src/prompt/promptRegistry');
 const { evaluatePromptFixture, loadPromptEvaluationFixture } = require('../src/prompt/promptEvaluationHarness');
+const { resolveSanitizedFixturePath } = require('./helpers/fixtureCorpus');
 
-const fixturePath = path.join(__dirname, 'fixtures', 'prompt-contracts', 'orderpgm-ai-knowledge.json');
+const fixturePath = resolveSanitizedFixturePath('prompt', 'workflow-ai-knowledge.json');
 
 test('prompt registry exposes contract metadata for supported templates', () => {
   const contracts = listPromptContracts();

@@ -7,53 +7,33 @@ const {
   buildRemoteTargetPath,
   shouldUseJdbcFallback,
 } = require('../src/fetch/ifsExporter');
+const { readSanitizedFixtureJson } = require('./helpers/fixtureCorpus');
+
+const ifsFixtures = readSanitizedFixtureJson('ifs', 'export-cases.json');
 
 test('buildCopyCommand uses UTF-8 stream file CCSID by default', () => {
-  const command = buildCopyCommand({
-    sourceLib: 'SOURCEN',
-    sourceFile: 'QRPGLESRC',
-    member: 'ORDERPGM',
-    ifsDir: '/home/zeus/rpg_sources',
-    replace: true,
-  });
+  const command = buildCopyCommand(ifsFixtures.defaultUtf8);
 
-  assert.match(command, /STMFCODPAG\(1208\)/);
-  assert.equal(DEFAULT_STREAM_FILE_CCSID, 1208);
+  assert.match(command, new RegExp(`STMFCODPAG\\(${ifsFixtures.defaultUtf8.expectedCcsid}\\)`));
+  assert.equal(DEFAULT_STREAM_FILE_CCSID, ifsFixtures.defaultUtf8.expectedCcsid);
 });
 
 test('buildCopyCommand allows an explicit stream file CCSID override', () => {
-  const command = buildCopyCommand({
-    sourceLib: 'SOURCEN',
-    sourceFile: 'QCLLESRC',
-    member: 'RUNJOB',
-    ifsDir: '/home/zeus/rpg_sources',
-    replace: false,
-    streamFileCcsid: 1252,
-  });
+  const command = buildCopyCommand(ifsFixtures.explicitCcsid);
 
   assert.match(command, /STMFOPT\(\*NONE\)/);
-  assert.match(command, /STMFCODPAG\(1252\)/);
-  assert.match(command, /RUNJOB\.clle/);
+  assert.match(command, new RegExp(`STMFCODPAG\\(${ifsFixtures.explicitCcsid.expectedCcsid}\\)`));
+  assert.match(command, new RegExp(`${ifsFixtures.explicitCcsid.expectedSuffix.replace('.', '\\.')}`));
 });
 
 test('buildRemoteTargetPath resolves the remote IFS stream file path', () => {
-  const targetPath = buildRemoteTargetPath({
-    sourceFile: 'QRPGLESRC',
-    member: 'ORDERPGM',
-    ifsDir: '/home/zeus/rpg_sources',
-  });
+  const targetPath = buildRemoteTargetPath(ifsFixtures.defaultUtf8);
 
-  assert.equal(targetPath, '/home/zeus/rpg_sources/QRPGLESRC/ORDERPGM.rpgle');
+  assert.equal(targetPath, ifsFixtures.defaultUtf8.expectedRemotePath);
 });
 
 test('shouldUseJdbcFallback detects CCSID 65535 export failures', () => {
-  assert.equal(shouldUseJdbcFallback({
-    messages: ['CPDA08C Datenbankdatei hat CCSID 65535.'],
-    stderr: '',
-  }), true);
+  assert.equal(shouldUseJdbcFallback(ifsFixtures.jdbcFallback.positive), true);
 
-  assert.equal(shouldUseJdbcFallback({
-    messages: ['CPF0000 Something else happened.'],
-    stderr: '',
-  }), false);
+  assert.equal(shouldUseJdbcFallback(ifsFixtures.jdbcFallback.negative), false);
 });
