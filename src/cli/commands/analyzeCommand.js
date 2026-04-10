@@ -21,6 +21,7 @@ const {
   readAnalyzeRunManifest,
   writeAnalyzeRunManifest,
 } = require('../../analyze/analyzeRunManifest');
+const { buildSafeSharingArtifacts } = require('../../sharing/safeSharingArtifactBuilder');
 const { listWorkflowModes, resolveWorkflowModeSettings } = require('../../workflow/workflowModeRegistry');
 const { resolvePromptTemplates } = require('../../prompt/promptBuilder');
 
@@ -103,6 +104,7 @@ function runAnalyze(args) {
     : resolvePromptTemplates();
   const testDataLimit = parsePositiveInteger(args['test-data-limit'], Number(config.testData.limit) || DEFAULT_TEST_DATA_LIMIT);
   const skipTestData = Boolean(args['skip-test-data']);
+  const safeSharingEnabled = Boolean(args['safe-sharing']);
 
   if (testDataLimit === null) {
     console.error('Invalid option: --test-data-limit must be a positive integer');
@@ -114,6 +116,7 @@ function runAnalyze(args) {
   logVerbose(`Output root: ${outputRoot}`);
   logVerbose(`Extensions: ${config.extensions.join(', ')}`);
   logVerbose(`Context optimization: ${optimizeContextEnabled ? 'enabled' : 'disabled'}`);
+  logVerbose(`Safe sharing: ${safeSharingEnabled ? 'enabled' : 'disabled'}`);
   logVerbose(`Test data extraction: ${skipTestData ? 'disabled' : `enabled (limit ${testDataLimit})`}`);
   if (guidedMode) {
     logVerbose(`Workflow mode: ${guidedMode.name}`);
@@ -166,6 +169,7 @@ function runAnalyze(args) {
         completedAt: new Date().toISOString(),
         durationMs,
         optimizeContextEnabled,
+        safeSharingEnabled,
         skipTestData,
         testDataLimit,
         extensions: config.extensions,
@@ -176,6 +180,12 @@ function runAnalyze(args) {
       previousManifest,
     });
     writeAnalyzeRunManifest(outputProgramDir, manifest);
+    if (safeSharingEnabled) {
+      buildSafeSharingArtifacts({
+        outputProgramDir,
+        analyzeManifest: manifest,
+      });
+    }
   } catch (error) {
     const durationMs = Number((process.hrtime.bigint() - startedNs) / 1000000n);
     const manifest = buildAnalyzeRunManifest({
@@ -190,6 +200,7 @@ function runAnalyze(args) {
         completedAt: new Date().toISOString(),
         durationMs,
         optimizeContextEnabled,
+        safeSharingEnabled,
         skipTestData,
         testDataLimit,
         extensions: config.extensions,
@@ -209,6 +220,9 @@ function runAnalyze(args) {
   }
   if (workflowPreset) {
     console.log(`Workflow preset: ${workflowPreset.name}`);
+  }
+  if (safeSharingEnabled) {
+    console.log(`Safe-sharing artifacts: ${path.join(outputProgramDir, 'safe-sharing')}`);
   }
   console.log(`Source files scanned: ${(result.scanSummary.sourceFiles || []).length}`);
   if (result.optimizationReport.enabled) {

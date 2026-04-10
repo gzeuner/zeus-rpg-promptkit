@@ -20,6 +20,11 @@ const {
   readAnalyzeRunManifest,
 } = require('../analyze/analyzeRunManifest');
 const { cloneReviewWorkflow } = require('../workflow/reviewWorkflowMetadata');
+const {
+  SAFE_SHARING_DIR,
+  REDACTION_MANIFEST_FILE,
+  buildSafeArtifactPath,
+} = require('../sharing/safeSharingArtifactBuilder');
 
 const MANIFEST_FILE = 'bundle-manifest.json';
 const ZIP_MANIFEST_FILE = 'manifest.json';
@@ -101,6 +106,21 @@ function collectLegacyBundleFiles(programOutputDir, includeTypes) {
   );
 }
 
+function collectSafeSharingBundleFiles(programOutputDir, includeTypes) {
+  const safeSharingDir = path.join(programOutputDir, SAFE_SHARING_DIR);
+  if (!fs.existsSync(safeSharingDir)) {
+    throw new Error(`Safe-sharing artifacts not found: ${safeSharingDir}. Run analyze --safe-sharing first.`);
+  }
+
+  return mapBundleFiles(
+    programOutputDir,
+    fs.readdirSync(safeSharingDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => path.posix.join(SAFE_SHARING_DIR, entry.name)),
+    includeTypes,
+  );
+}
+
 function collectManifestBundleFiles(programOutputDir, includeTypes, analyzeManifest) {
   if (!analyzeManifest || !Array.isArray(analyzeManifest.artifacts)) {
     return collectLegacyBundleFiles(programOutputDir, includeTypes);
@@ -154,7 +174,7 @@ function buildArtifactMetadata(files, analyzeManifest) {
   });
 }
 
-function buildManifest(program, files, analyzeManifest, workflowPreset) {
+function buildManifest(program, files, analyzeManifest, workflowPreset, safeSharingEnabled) {
   const artifacts = buildArtifactMetadata(files, analyzeManifest);
   const manifest = {
     schemaVersion: BUNDLE_MANIFEST_SCHEMA_VERSION,
@@ -169,6 +189,11 @@ function buildManifest(program, files, analyzeManifest, workflowPreset) {
     summary: {
       ...buildSummary(files),
       totalSizeBytes: artifacts.reduce((sum, artifact) => sum + artifact.sizeBytes, 0),
+    },
+    safeSharing: {
+      enabled: Boolean(safeSharingEnabled),
+      sourceDir: safeSharingEnabled ? SAFE_SHARING_DIR : null,
+      redactionManifestFile: safeSharingEnabled ? path.posix.join(SAFE_SHARING_DIR, REDACTION_MANIFEST_FILE) : null,
     },
   };
 
@@ -226,6 +251,10 @@ function buildReadmeText(program, manifest) {
   if (manifest.workflowPreset && manifest.workflowPreset.name) {
     lines.push(`Workflow preset: ${manifest.workflowPreset.name}`);
   }
+  if (manifest.safeSharing && manifest.safeSharing.enabled) {
+    lines.push('Safe sharing: enabled');
+    lines.push(`Redaction manifest: ${manifest.safeSharing.redactionManifestFile}`);
+  }
   if (manifest.workflowPreset && manifest.workflowPreset.reviewWorkflow) {
     const reviewWorkflow = manifest.workflowPreset.reviewWorkflow;
     if (reviewWorkflow.intendedAudience.length > 0) {
@@ -274,6 +303,7 @@ function buildOutputBundle({
   includeJson = false,
   includeMd = false,
   includeHtml = false,
+  safeSharingEnabled = false,
   artifactPaths = null,
   workflowPreset = null,
   bundleFileName = null,
@@ -293,10 +323,15 @@ function buildOutputBundle({
 
   const includeTypes = resolveIncludeTypes({ includeJson, includeMd, includeHtml });
   const analyzeManifest = readAnalyzeRunManifest(programOutputDir);
-  const files = Array.isArray(artifactPaths) && artifactPaths.length > 0
-    ? collectExplicitBundleFiles(programOutputDir, includeTypes, artifactPaths)
-    : collectManifestBundleFiles(programOutputDir, includeTypes, analyzeManifest);
-  const manifest = buildManifest(resolvedProgram, files, analyzeManifest, workflowPreset);
+  const selectedArtifactPaths = safeSharingEnabled && Array.isArray(artifactPaths) && artifactPaths.length > 0
+    ? artifactPaths.map((artifactPath) => buildSafeArtifactPath(artifactPath))
+    : artifactPaths;
+  const files = Array.isArray(selectedArtifactPaths) && selectedArtifactPaths.length > 0
+    ? collectExplicitBundleFiles(programOutputDir, includeTypes, selectedArtifactPaths)
+    : safeSharingEnabled
+      ? collectSafeSharingBundleFiles(programOutputDir, includeTypes)
+      : collectManifestBundleFiles(programOutputDir, includeTypes, analyzeManifest);
+  const manifest = buildManifest(resolvedProgram, files, analyzeManifest, workflowPreset, safeSharingEnabled);
   const zip = new AdmZip();
 
   for (const file of files) {
@@ -313,7 +348,7 @@ function buildOutputBundle({
     resolvedBundleRoot,
     bundleFileName && String(bundleFileName).trim()
       ? String(bundleFileName).trim()
-      : `${resolvedProgram}-analysis-bundle.zip`,
+      : `${resolvedProgram}${safeSharingEnabled ? '-safe-sharing' : '-analysis'}-bundle.zip`,
   );
   zip.writeZip(zipPath);
 

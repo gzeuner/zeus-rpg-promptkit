@@ -245,7 +245,7 @@ function renderTableMarkdown(table) {
   return lines;
 }
 
-function renderMarkdown(program, rowLimit, tables, notes) {
+function renderTestDataMarkdown(program, rowLimit, tables, notes) {
   const lines = [
     '# Test Data Extract',
     '',
@@ -368,7 +368,7 @@ function exportTestData({
       tables: [],
       notes,
     };
-    writeOutputs(outputDir, payload, renderMarkdown(program, rowLimit, [], notes));
+    writeOutputs(outputDir, payload, renderTestDataMarkdown(program, rowLimit, [], notes));
     return {
       payload,
       summary: {
@@ -491,7 +491,7 @@ function exportTestData({
     tables,
     notes: sortedNotes,
   };
-  writeOutputs(outputDir, payload, renderMarkdown(program, rowLimit, tables, sortedNotes));
+  writeOutputs(outputDir, payload, renderTestDataMarkdown(program, rowLimit, tables, sortedNotes));
 
   return {
     payload,
@@ -521,4 +521,5 @@ function exportTestData({
 module.exports = {
   exportTestData,
   DEFAULT_TEST_DATA_LIMIT,
+  renderTestDataMarkdown,
 };

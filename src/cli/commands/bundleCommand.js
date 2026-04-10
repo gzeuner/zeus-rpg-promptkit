@@ -30,6 +30,7 @@ function runBundle(args) {
     includeJson: args['include-json'] === true,
     includeMd: args['include-md'] === true,
     includeHtml: args['include-html'] === true,
+    safeSharingEnabled: Boolean(args['safe-sharing']),
     artifactPaths: Array.isArray(args['artifact-paths']) ? args['artifact-paths'] : null,
     workflowPreset: args['workflow-preset-settings'] || null,
     bundleFileName: args['bundle-file-name'] || null,
@@ -41,6 +42,9 @@ function runBundle(args) {
   }
 
   console.log(`Bundle created for program ${result.program}`);
+  if (result.manifest.safeSharing && result.manifest.safeSharing.enabled) {
+    console.log('Safe-sharing bundle: enabled');
+  }
   console.log(`Files included: ${result.manifest.summary.totalFiles}`);
   console.log(`Bundle written to: ${result.zipPath}`);
   return result;
