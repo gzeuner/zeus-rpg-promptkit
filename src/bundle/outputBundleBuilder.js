@@ -19,6 +19,7 @@ const {
   ANALYZE_RUN_MANIFEST_FILE,
   readAnalyzeRunManifest,
 } = require('../analyze/analyzeRunManifest');
+const { cloneReviewWorkflow } = require('../workflow/reviewWorkflowMetadata');
 
 const MANIFEST_FILE = 'bundle-manifest.json';
 const ZIP_MANIFEST_FILE = 'manifest.json';
@@ -208,6 +209,7 @@ function buildManifest(program, files, analyzeManifest, workflowPreset) {
       bundleArtifacts: Array.isArray(effectiveWorkflowPreset.bundleArtifacts)
         ? effectiveWorkflowPreset.bundleArtifacts
         : [],
+      reviewWorkflow: cloneReviewWorkflow(effectiveWorkflowPreset.reviewWorkflow),
     };
   }
 
@@ -223,6 +225,36 @@ function buildReadmeText(program, manifest) {
   ];
   if (manifest.workflowPreset && manifest.workflowPreset.name) {
     lines.push(`Workflow preset: ${manifest.workflowPreset.name}`);
+  }
+  if (manifest.workflowPreset && manifest.workflowPreset.reviewWorkflow) {
+    const reviewWorkflow = manifest.workflowPreset.reviewWorkflow;
+    if (reviewWorkflow.intendedAudience.length > 0) {
+      lines.push(`Intended audience: ${reviewWorkflow.intendedAudience.join('; ')}`);
+    }
+    if (reviewWorkflow.keyQuestionsAnswered.length > 0) {
+      lines.push('Key questions answered:');
+      for (const question of reviewWorkflow.keyQuestionsAnswered) {
+        lines.push(`- ${question}`);
+      }
+    }
+    if (reviewWorkflow.expectedDecisions.length > 0) {
+      lines.push('Expected decisions:');
+      for (const decision of reviewWorkflow.expectedDecisions) {
+        lines.push(`- ${decision}`);
+      }
+    }
+    if (reviewWorkflow.interpretationGuidance.length > 0) {
+      lines.push('Interpretation guidance:');
+      for (const guidance of reviewWorkflow.interpretationGuidance) {
+        lines.push(`- ${guidance}`);
+      }
+    }
+    if (reviewWorkflow.recommendedOutputs.length > 0) {
+      lines.push('Recommended outputs:');
+      for (const output of reviewWorkflow.recommendedOutputs) {
+        lines.push(`- ${output.path}: ${output.purpose}`);
+      }
+    }
   }
   return lines.join('\n');
 }

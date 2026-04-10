@@ -38,6 +38,10 @@ function printWorkflowModes() {
     console.log(`- ${mode.name}: ${mode.description}`);
     console.log(`  auto-optimize-context: ${mode.autoOptimizeContext ? 'yes' : 'no'}`);
     console.log(`  prompt templates: ${templates.length > 0 ? templates.join(', ') : 'none'}`);
+    if (mode.reviewWorkflow) {
+      console.log(`  intended audience: ${(mode.reviewWorkflow.intendedAudience || []).join('; ') || 'n/a'}`);
+      console.log(`  expected decisions: ${(mode.reviewWorkflow.expectedDecisions || []).join('; ') || 'n/a'}`);
+    }
   }
 }
 
@@ -146,6 +150,7 @@ function runAnalyze(args) {
       workflowMode: guidedMode ? guidedMode.name : null,
       workflowModeSettings: guidedMode,
       promptTemplates,
+      workflowPreset,
       logVerbose,
     });
     const durationMs = Number((process.hrtime.bigint() - startedNs) / 1000000n);
