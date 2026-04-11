@@ -15,6 +15,7 @@ const path = require('path');
 const { generateImpactAnalysis, normalizeId } = require('../../impact/impactAnalyzer');
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
 const { findImpactGraph } = require('../helpers/impactGraphResolver');
+const { normalizeReproducibilitySettings } = require('../../reproducibility/reproducibility');
 
 function runImpact(args) {
   const verbose = Boolean(args.verbose);
@@ -46,6 +47,7 @@ function runImpact(args) {
     target: args.target,
     jsonOutputPath: path.join(resolved.outputProgramDir, 'impact-analysis.json'),
     markdownOutputPath: path.join(resolved.outputProgramDir, 'impact-analysis.md'),
+    reproducibility: normalizeReproducibilitySettings(Boolean(args.reproducible)),
   });
 
   console.log(`Impact analysis complete for target ${result.target}`);
