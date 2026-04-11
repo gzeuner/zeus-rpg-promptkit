@@ -45,6 +45,12 @@ const { readImportManifest } = require('../fetch/importManifest');
 const { validateSourceFiles } = require('../source/sourceIntegrity');
 const { buildAnalysisIndex } = require('../workflow/analysisIndex');
 const { getPromptContract } = require('../prompt/promptRegistry');
+const {
+  buildReproduciblePathReplacements,
+  normalizeReproducibilitySettings,
+  replaceExactStringsDeep,
+  resolveTimestamp,
+} = require('../reproducibility/reproducibility');
 
 function resolvePromptContext(context, optimizedContext) {
   return optimizedContext || context;
@@ -199,6 +205,7 @@ function buildContextStage(state) {
     dependencies,
     notes,
     importManifest: state.importManifest,
+    generatedAt: resolveTimestamp(state.reproducibility),
   });
   let context = buildContext({ canonicalAnalysis });
 
@@ -451,7 +458,9 @@ function writeArtifactsStage(state) {
     workflowMode,
     workflowModeSettings,
     workflowPreset,
+    reproducibility,
   } = state;
+  const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
   const selectedPromptTemplates = resolvePromptTemplates(promptTemplates);
 
   const aiKnowledge = buildAiKnowledgeProjection({
@@ -459,41 +468,6 @@ function writeArtifactsStage(state) {
     context,
     optimizedContext,
   });
-
-  writeJsonReport(path.join(outputProgramDir, 'canonical-analysis.json'), canonicalAnalysis);
-  writeJsonReport(path.join(outputProgramDir, 'context.json'), context);
-  if (optimizedContext) {
-    writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), optimizedContext);
-  }
-  writeJsonReport(path.join(outputProgramDir, 'ai-knowledge.json'), aiKnowledge);
-
-  const programCallTreeJsonPath = path.join(outputProgramDir, 'program-call-tree.json');
-  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.json'), renderJson(graph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.mmd'), renderMermaid(graph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph), 'utf8');
-  fs.writeFileSync(programCallTreeJsonPath, renderJson(crossProgramGraph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.mmd'), renderMermaid(crossProgramGraph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.md'), renderCrossProgramMarkdown(crossProgramGraph), 'utf8');
-  generateArchitectureViewer({
-    graphPath: programCallTreeJsonPath,
-    outputPath: path.join(outputProgramDir, 'architecture.html'),
-  });
-
-  const reportMarkdown = generateMarkdownReport(context, optimizationReport);
-  generateArchitectureReport({
-    contextPath: path.join(outputProgramDir, 'context.json'),
-    graphPath: path.join(outputProgramDir, 'dependency-graph.json'),
-    outputPath: path.join(outputProgramDir, 'architecture-report.md'),
-    optimizedContextPath: optimizedContext ? path.join(outputProgramDir, 'optimized-context.json') : null,
-    mermaidPath: path.join(outputProgramDir, 'dependency-graph.mmd'),
-  });
-  buildPrompts({
-    aiProjection: aiKnowledge,
-    outputDir: outputProgramDir,
-    sourceSnippet,
-    templates: selectedPromptTemplates,
-  });
-  fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');
 
   const generatedPromptFiles = selectedPromptTemplates.map((templateName) => getPromptContract(templateName).outputFileName);
   const generatedDb2Files = context.db2Metadata && context.db2Metadata.status === 'exported'
@@ -536,12 +510,71 @@ function writeArtifactsStage(state) {
     derivedModeSettings: workflowModeSettings,
     selectedPreset: workflowPreset,
   });
-  writeJsonReport(path.join(outputProgramDir, 'analysis-index.json'), analysisIndex);
+  const pathReplacements = reproducibilitySettings.enabled
+    ? buildReproduciblePathReplacements({
+      cwd: process.cwd(),
+      sourceRoot: state.sourceRoot,
+      outputRoot: state.outputRoot,
+      outputProgramDir,
+      program: state.program,
+    })
+    : null;
+  const writtenCanonicalAnalysis = reproducibilitySettings.enabled
+    ? replaceExactStringsDeep(canonicalAnalysis, pathReplacements)
+    : canonicalAnalysis;
+  const writtenContext = reproducibilitySettings.enabled
+    ? replaceExactStringsDeep(context, pathReplacements)
+    : context;
+  const writtenOptimizedContext = reproducibilitySettings.enabled && optimizedContext
+    ? replaceExactStringsDeep(optimizedContext, pathReplacements)
+    : optimizedContext;
+  const writtenAiKnowledge = reproducibilitySettings.enabled
+    ? replaceExactStringsDeep(aiKnowledge, pathReplacements)
+    : aiKnowledge;
+  const writtenAnalysisIndex = reproducibilitySettings.enabled
+    ? replaceExactStringsDeep(analysisIndex, pathReplacements)
+    : analysisIndex;
+
+  writeJsonReport(path.join(outputProgramDir, 'canonical-analysis.json'), writtenCanonicalAnalysis);
+  writeJsonReport(path.join(outputProgramDir, 'context.json'), writtenContext);
+  if (writtenOptimizedContext) {
+    writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), writtenOptimizedContext);
+  }
+  writeJsonReport(path.join(outputProgramDir, 'ai-knowledge.json'), writtenAiKnowledge);
+
+  const programCallTreeJsonPath = path.join(outputProgramDir, 'program-call-tree.json');
+  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.json'), renderJson(graph), 'utf8');
+  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.mmd'), renderMermaid(graph), 'utf8');
+  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph), 'utf8');
+  fs.writeFileSync(programCallTreeJsonPath, renderJson(crossProgramGraph), 'utf8');
+  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.mmd'), renderMermaid(crossProgramGraph), 'utf8');
+  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.md'), renderCrossProgramMarkdown(crossProgramGraph), 'utf8');
+  generateArchitectureViewer({
+    graphPath: programCallTreeJsonPath,
+    outputPath: path.join(outputProgramDir, 'architecture.html'),
+  });
+
+  const reportMarkdown = generateMarkdownReport(writtenContext, optimizationReport);
+  generateArchitectureReport({
+    contextPath: path.join(outputProgramDir, 'context.json'),
+    graphPath: path.join(outputProgramDir, 'dependency-graph.json'),
+    outputPath: path.join(outputProgramDir, 'architecture-report.md'),
+    optimizedContextPath: writtenOptimizedContext ? path.join(outputProgramDir, 'optimized-context.json') : null,
+    mermaidPath: path.join(outputProgramDir, 'dependency-graph.mmd'),
+  });
+  buildPrompts({
+    aiProjection: writtenAiKnowledge,
+    outputDir: outputProgramDir,
+    sourceSnippet,
+    templates: selectedPromptTemplates,
+  });
+  fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');
+  writeJsonReport(path.join(outputProgramDir, 'analysis-index.json'), writtenAnalysisIndex);
 
   return {
     ...state,
     reportMarkdown,
-    analysisIndex,
+    analysisIndex: writtenAnalysisIndex,
     generatedFiles,
     stageMetadata: {
       fileCount: generatedFiles.length,

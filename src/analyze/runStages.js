@@ -11,6 +11,12 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
+const {
+  normalizeReproducibilitySettings,
+  resolveDurationMs,
+  resolveTimestamp,
+} = require('../reproducibility/reproducibility');
+
 function normalizeStageMetadata(metadata) {
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
     return {};
@@ -49,17 +55,18 @@ function runStages(stages, initialState) {
       throw new Error('Invalid analyze stage: missing run function');
     }
 
-    const startedAt = new Date().toISOString();
+    const reproducibility = normalizeReproducibilitySettings(state.reproducibility);
+    const startedAt = resolveTimestamp(reproducibility);
     const startedNs = process.hrtime.bigint();
 
     try {
       const result = stage.run(state);
-      const durationMs = Number((process.hrtime.bigint() - startedNs) / 1000000n);
+      const durationMs = resolveDurationMs(reproducibility, Number((process.hrtime.bigint() - startedNs) / 1000000n));
       const stageReport = {
         id: stage.id || 'anonymous-stage',
         status: 'completed',
         startedAt,
-        completedAt: new Date().toISOString(),
+        completedAt: resolveTimestamp(reproducibility),
         durationMs,
         metadata: normalizeStageMetadata(result && result.stageMetadata),
         diagnostics: normalizeStageDiagnostics(result && result.stageDiagnostics),
@@ -73,12 +80,12 @@ function runStages(stages, initialState) {
       const stageReports = [...(state.stageReports || []), stageReport];
       return finalizeStageState(nextState, stageReport, stageReports);
     } catch (error) {
-      const durationMs = Number((process.hrtime.bigint() - startedNs) / 1000000n);
+      const durationMs = resolveDurationMs(reproducibility, Number((process.hrtime.bigint() - startedNs) / 1000000n));
       const stageReport = {
         id: stage.id || 'anonymous-stage',
         status: 'failed',
         startedAt,
-        completedAt: new Date().toISOString(),
+        completedAt: resolveTimestamp(reproducibility),
         durationMs,
         metadata: {},
         diagnostics: [{

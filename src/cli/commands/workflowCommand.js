@@ -18,6 +18,7 @@ const { runBundle } = require('./bundleCommand');
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
 const { resolveWorkflowPresetSettings, listWorkflowPresets } = require('../../workflow/workflowPresetRegistry');
 const { buildWorkflowRunManifest, writeWorkflowRunManifest } = require('../../workflow/workflowRunManifest');
+const { normalizeReproducibilitySettings } = require('../../reproducibility/reproducibility');
 
 function printWorkflowPresets() {
   console.log('Supported workflow presets:');
@@ -61,6 +62,7 @@ function runWorkflow(args) {
   delete analyzeArgs.preset;
   delete analyzeArgs['list-presets'];
   delete analyzeArgs['bundle-output'];
+  const reproducibility = normalizeReproducibilitySettings(Boolean(args.reproducible));
 
   runAnalyze(analyzeArgs);
 
@@ -76,6 +78,7 @@ function runWorkflow(args) {
     'artifact-paths': preset.bundleArtifacts,
     'bundle-file-name': `${String(args.program || '').trim()}-${preset.bundleFileName}`,
     'workflow-preset-settings': preset,
+    reproducible: reproducibility.enabled,
     verbose: args.verbose,
   });
 
@@ -84,6 +87,7 @@ function runWorkflow(args) {
     analyzeManifest,
     bundleManifest: bundleResult.manifest,
     bundlePath: bundleResult.zipPath,
+    reproducibility,
   });
   writeWorkflowRunManifest(outputProgramDir, workflowManifest);
 
