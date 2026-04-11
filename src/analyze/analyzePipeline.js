@@ -144,6 +144,7 @@ function collectAndScanStage(state) {
     sourceFiles,
     scannableSourceFiles: validation.validFiles,
     importManifest: importManifestResult.manifest,
+    importManifestPath: importManifestResult.manifestPath,
     scanSummary,
     notes,
     dependencies: {

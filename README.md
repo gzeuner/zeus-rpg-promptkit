@@ -173,7 +173,8 @@ Default behavior:
 - `zeus fetch` exports source members as UTF-8 stream files using IBM i CCSID `1208`
 - this keeps downloaded RPG, CL, and DDS sources readable in common Windows editors and terminals without manual conversion
 - the Windows-readable local source contract is transport-independent across `sftp`, `jt400`, and `ftp`, but it is only guaranteed for `CCSID 1208`
-- `zeus fetch` writes `zeus-import-manifest.json` into the local source root to persist remote identity, transport, checksum, and validation details for imported members
+- `zeus fetch` writes `zeus-import-manifest.json` into the local source root to persist source member origin, member path, transport, checksum, encoding policy, normalization policy, and validation details for imported members
+- `analyze-run-manifest.json` and `bundle-manifest.json` reuse that provenance summary so downstream review flows can reference imported-member identity without re-deriving it from file names
 
 Imported source validation:
 
@@ -803,6 +804,7 @@ zeus bundle --program ORDERPGM --source-output-root ./output --safe-sharing
 See [docs/safe-sharing.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/safe-sharing.md) for the safe-sharing rules for reports, prompts, bundles, fixtures, and issue text.
 See [docs/fixture-sanitization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/fixture-sanitization.md) for the shared sanitized fixture corpus rules and review checklist.
 See [docs/reproducible-output-mode.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/reproducible-output-mode.md) for the reproducible output contract and stable-timestamp mode.
+See [docs/import-manifest-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/import-manifest-contract.md) for the public fetch provenance manifest contract.
 
 ## Notes
 
@@ -813,6 +815,7 @@ IBM i source export note:
 - fetched source members are exported as UTF-8 stream files (`CCSID 1208`) by default
 - analyzer components read local sources as UTF-8, so keeping fetch output on that contract avoids broken umlauts and Windows-side mojibake
 - non-default `--streamfile-ccsid` values remain best-effort; the guaranteed Windows-readable contract is documented in [docs/fetch-encoding-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/fetch-encoding-contract.md)
+- imported-member provenance and export diagnostics are documented in [docs/import-manifest-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/import-manifest-contract.md)
 
 ## License
 

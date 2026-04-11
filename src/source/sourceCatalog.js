@@ -12,7 +12,12 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
-const { readImportManifest } = require('../fetch/importManifest');
+const {
+  getImportManifestEntryExport,
+  getImportManifestEntryOrigin,
+  getImportManifestEntryValidation,
+  readImportManifest,
+} = require('../fetch/importManifest');
 const { normalizeRelativePath } = require('./sourceIntegrity');
 
 function normalizeName(value) {
@@ -83,14 +88,24 @@ function buildSourceCatalog({
   for (const filePath of toSortedUniquePaths(sourceFiles)) {
     const relativePath = normalizeRelativePath(resolvedRoot, filePath);
     const manifestEntry = manifestEntryMap.get(relativePath) || null;
+    const manifestOrigin = manifestEntry ? getImportManifestEntryOrigin(manifestEntry) : null;
+    const manifestExport = manifestEntry ? getImportManifestEntryExport(manifestEntry, importManifestResult.manifest) : null;
+    const manifestValidation = manifestEntry ? getImportManifestEntryValidation(manifestEntry) : null;
     const entry = {
       path: path.resolve(filePath),
       relativePath,
-      memberName: normalizeName(manifestEntry && manifestEntry.member ? manifestEntry.member : inferMemberName(filePath)),
-      sourceLib: normalizeName(manifestEntry && manifestEntry.sourceLib ? manifestEntry.sourceLib : ''),
-      sourceFile: normalizeName(manifestEntry && manifestEntry.sourceFile ? manifestEntry.sourceFile : inferSourceFile(relativePath)),
-      sourceType: normalizeName(manifestEntry && manifestEntry.sourceType ? manifestEntry.sourceType : inferSourceType(filePath)),
+      memberName: normalizeName(manifestOrigin && manifestOrigin.member ? manifestOrigin.member : inferMemberName(filePath)),
+      sourceLib: normalizeName(manifestOrigin && manifestOrigin.sourceLib ? manifestOrigin.sourceLib : ''),
+      sourceFile: normalizeName(manifestOrigin && manifestOrigin.sourceFile ? manifestOrigin.sourceFile : inferSourceFile(relativePath)),
+      sourceType: normalizeName(manifestOrigin && manifestOrigin.sourceType ? manifestOrigin.sourceType : inferSourceType(filePath)),
       provenance: manifestEntry ? 'IMPORT_MANIFEST' : 'LOCAL',
+      provenanceDetails: manifestEntry ? {
+        memberPath: manifestOrigin.memberPath || '',
+        remotePath: manifestOrigin.remotePath || '',
+        localPath: manifestOrigin.localPath || relativePath,
+        exportStatus: manifestExport.status || null,
+        validationStatus: manifestValidation.status || null,
+      } : null,
     };
     entry.identity = buildIdentity(entry);
 
