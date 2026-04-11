@@ -134,6 +134,8 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
     assert.equal(manifest.artifacts.length, 2);
     assert.equal(manifest.artifacts[0].exists, true);
     assert.ok(typeof manifest.artifacts[0].sha256 === 'string' && manifest.artifacts[0].sha256.length > 0);
+    assert.equal(manifest.reproducibility.enabled, false);
+    assert.ok(typeof manifest.reproducibility.contentFingerprint === 'string');
     assert.equal(manifest.comparison.previousRunStatus, 'succeeded');
     assert.equal(manifest.comparison.sourceFingerprintChanged, true);
     assert.deepEqual(manifest.comparison.addedArtifacts, ['report.md']);
@@ -205,6 +207,7 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
     assert.equal(manifest.summary.failedStageCount, 1);
     assert.equal(manifest.summary.errorCount, 1);
     assert.equal(manifest.diagnostics.length, 1);
+    assert.equal(manifest.reproducibility.enabled, false);
     assert.equal(manifest.inputs.options.guidedMode.name, 'impact');
     assert.match(manifest.inputs.options.guidedMode.reviewWorkflow.expectedDecisions.join('\n'), /impact target/i);
   } finally {

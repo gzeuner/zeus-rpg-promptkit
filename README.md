@@ -94,13 +94,13 @@ npm test
 Command syntax:
 
 ```bash
-zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--mode <name>] [--list-modes] [--optimize-context] [--safe-sharing] [--test-data-limit <n>] [--skip-test-data] [--verbose]
+zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--mode <name>] [--list-modes] [--optimize-context] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]
 ```
 
 Workflow command syntax:
 
 ```bash
-zeus workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--list-presets] [--safe-sharing] [--test-data-limit <n>] [--skip-test-data] [--verbose]
+zeus workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]
 ```
 
 Guided analyze modes:
@@ -115,6 +115,7 @@ Guided analyze modes:
 When a guided mode is selected, Zeus records the mode and derived behavior in `analyze-run-manifest.json`, writes `analysis-index.json`, and may auto-enable context optimization for prompt-heavy workflows.
 
 Use `--safe-sharing` when you need a redacted sharing packet. Zeus writes a parallel `safe-sharing/` artifact set with deterministic placeholders for identifiers, source paths, and extracted values.
+Use `--reproducible` when you need stable timestamps and content fingerprints for repeated analyze, impact, workflow, and bundle runs.
 
 Named workflow presets build on top of those guided modes and package a shareable bundle in one step:
 
@@ -138,13 +139,13 @@ Guided modes and workflow presets now also expose opinionated review metadata:
 Bundle command syntax:
 
 ```bash
-zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--profile <name>] [--verbose]
+zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible] [--profile <name>] [--verbose]
 ```
 
 Impact command syntax:
 
 ```bash
-zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--verbose]
+zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose]
 ```
 
 Fetch source syntax:
@@ -285,6 +286,7 @@ The safe-sharing directory reuses the same artifact filenames where possible, bu
 `workflow-run-manifest.json` records which named workflow preset produced the run, which guided analyze mode it resolved to, which review metadata shaped the run, and which bundle was emitted for sharing.
 
 `safe-sharing/redaction-manifest.json` records which artifacts were redacted, which placeholder categories were used, and which safe-sharing files were written. Reverse mappings are intentionally not exported.
+Analyze, bundle, workflow, and impact outputs also record reproducibility metadata when repeated-run verification is required.
 
 `canonical-analysis.json` is now the semantic source of truth for the analyze pipeline.
 
@@ -800,6 +802,7 @@ zeus bundle --program ORDERPGM --source-output-root ./output --safe-sharing
 
 See [docs/safe-sharing.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/safe-sharing.md) for the safe-sharing rules for reports, prompts, bundles, fixtures, and issue text.
 See [docs/fixture-sanitization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/fixture-sanitization.md) for the shared sanitized fixture corpus rules and review checklist.
+See [docs/reproducible-output-mode.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/reproducible-output-mode.md) for the reproducible output contract and stable-timestamp mode.
 
 ## Notes
 

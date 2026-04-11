@@ -12,6 +12,11 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
+const {
+  buildReproducibilityMetadata,
+  hashNormalizedValue,
+  normalizeReproducibilitySettings,
+} = require('../reproducibility/reproducibility');
 
 function normalizeId(value) {
   return String(value || '').trim().toUpperCase();
@@ -184,9 +189,23 @@ function generateImpactAnalysis({
   target,
   jsonOutputPath,
   markdownOutputPath,
+  reproducibility = null,
 }) {
   const graph = loadGraph(graphPath);
+  const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
   const result = analyzeImpactFromGraph(graph, target);
+  result.reproducibility = buildReproducibilityMetadata(
+    reproducibilitySettings,
+    hashNormalizedValue({
+      target: result.target,
+      type: result.type,
+      directPrograms: result.directPrograms || [],
+      indirectPrograms: result.indirectPrograms || [],
+      directCallers: result.directCallers || [],
+      indirectCallers: result.indirectCallers || [],
+      totalAffectedPrograms: result.totalAffectedPrograms || 0,
+    }),
+  );
 
   fs.writeFileSync(jsonOutputPath, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
   fs.writeFileSync(markdownOutputPath, renderImpactMarkdown(result), 'utf8');

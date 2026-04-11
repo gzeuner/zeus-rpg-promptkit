@@ -24,6 +24,11 @@ const {
 const { buildSafeSharingArtifacts } = require('../../sharing/safeSharingArtifactBuilder');
 const { listWorkflowModes, resolveWorkflowModeSettings } = require('../../workflow/workflowModeRegistry');
 const { resolvePromptTemplates } = require('../../prompt/promptBuilder');
+const {
+  normalizeReproducibilitySettings,
+  resolveDurationMs,
+  resolveTimestamp,
+} = require('../../reproducibility/reproducibility');
 
 function parsePositiveInteger(value, fallback) {
   if (value === undefined || value === null || value === true) return fallback;
@@ -105,6 +110,7 @@ function runAnalyze(args) {
   const testDataLimit = parsePositiveInteger(args['test-data-limit'], Number(config.testData.limit) || DEFAULT_TEST_DATA_LIMIT);
   const skipTestData = Boolean(args['skip-test-data']);
   const safeSharingEnabled = Boolean(args['safe-sharing']);
+  const reproducibility = normalizeReproducibilitySettings(Boolean(args.reproducible));
 
   if (testDataLimit === null) {
     console.error('Invalid option: --test-data-limit must be a positive integer');
@@ -117,6 +123,7 @@ function runAnalyze(args) {
   logVerbose(`Extensions: ${config.extensions.join(', ')}`);
   logVerbose(`Context optimization: ${optimizeContextEnabled ? 'enabled' : 'disabled'}`);
   logVerbose(`Safe sharing: ${safeSharingEnabled ? 'enabled' : 'disabled'}`);
+  logVerbose(`Reproducible mode: ${reproducibility.enabled ? 'enabled' : 'disabled'}`);
   logVerbose(`Test data extraction: ${skipTestData ? 'disabled' : `enabled (limit ${testDataLimit})`}`);
   if (guidedMode) {
     logVerbose(`Workflow mode: ${guidedMode.name}`);
@@ -135,7 +142,7 @@ function runAnalyze(args) {
   fs.mkdirSync(outputProgramDir, { recursive: true });
   logVerbose(`Writing output to ${outputProgramDir}`);
   const previousManifest = readAnalyzeRunManifest(outputProgramDir);
-  const startedAt = new Date().toISOString();
+  const startedAt = resolveTimestamp(reproducibility);
   const startedNs = process.hrtime.bigint();
 
   let result;
@@ -154,9 +161,10 @@ function runAnalyze(args) {
       workflowModeSettings: guidedMode,
       promptTemplates,
       workflowPreset,
+      reproducibility,
       logVerbose,
     });
-    const durationMs = Number((process.hrtime.bigint() - startedNs) / 1000000n);
+    const durationMs = resolveDurationMs(reproducibility, Number((process.hrtime.bigint() - startedNs) / 1000000n));
     const manifest = buildAnalyzeRunManifest({
       status: 'succeeded',
       context: {
@@ -166,13 +174,14 @@ function runAnalyze(args) {
         outputProgramDir,
         cwd: process.cwd(),
         startedAt,
-        completedAt: new Date().toISOString(),
+        completedAt: resolveTimestamp(reproducibility),
         durationMs,
         optimizeContextEnabled,
         safeSharingEnabled,
         skipTestData,
         testDataLimit,
         extensions: config.extensions,
+        reproducibility,
         guidedMode,
         workflowPreset,
       },
@@ -184,10 +193,11 @@ function runAnalyze(args) {
       buildSafeSharingArtifacts({
         outputProgramDir,
         analyzeManifest: manifest,
+        reproducibility,
       });
     }
   } catch (error) {
-    const durationMs = Number((process.hrtime.bigint() - startedNs) / 1000000n);
+    const durationMs = resolveDurationMs(reproducibility, Number((process.hrtime.bigint() - startedNs) / 1000000n));
     const manifest = buildAnalyzeRunManifest({
       status: 'failed',
       context: {
@@ -197,13 +207,14 @@ function runAnalyze(args) {
         outputProgramDir,
         cwd: process.cwd(),
         startedAt,
-        completedAt: new Date().toISOString(),
+        completedAt: resolveTimestamp(reproducibility),
         durationMs,
         optimizeContextEnabled,
         safeSharingEnabled,
         skipTestData,
         testDataLimit,
         extensions: config.extensions,
+        reproducibility,
         guidedMode,
         workflowPreset,
       },

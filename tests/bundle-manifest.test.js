@@ -63,6 +63,7 @@ test('buildOutputBundle prefers analyze-run-manifest artifacts over directory sc
     assert.equal(result.manifest.analyzeRun.status, 'succeeded');
     assert.equal(result.manifest.analyzeRun.schemaVersion, null);
     assert.equal(result.manifest.analyzeRun.sourceFingerprint, 'abc123');
+    assert.equal(result.manifest.reproducibility.enabled, false);
     assert.equal(result.manifest.summary.totalFiles, 3);
     assert.ok(result.manifest.summary.totalSizeBytes > 0);
     assert.deepEqual(
@@ -150,6 +151,7 @@ test('buildOutputBundle can package explicit workflow preset artifacts with pres
       'analyze-run-manifest.json',
       'report.md',
     ]);
+    assert.equal(result.manifest.reproducibility.enabled, false);
     assert.equal(result.manifest.workflowPreset.name, 'onboarding');
     assert.deepEqual(result.manifest.workflowPreset.promptTemplates, ['documentation']);
     assert.match(result.manifest.workflowPreset.reviewWorkflow.intendedAudience.join('\n'), /New engineers/);
