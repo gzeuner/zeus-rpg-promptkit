@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const { buildOutputBundle } = require('../../bundle/outputBundleBuilder');
 const { resolveBundleConfig } = require('../../config/runtimeConfig');
+const { normalizeReproducibilitySettings } = require('../../reproducibility/reproducibility');
 
 function runBundle(args) {
   const verbose = Boolean(args.verbose);
@@ -31,6 +32,7 @@ function runBundle(args) {
     includeMd: args['include-md'] === true,
     includeHtml: args['include-html'] === true,
     safeSharingEnabled: Boolean(args['safe-sharing']),
+    reproducibility: normalizeReproducibilitySettings(Boolean(args.reproducible)),
     artifactPaths: Array.isArray(args['artifact-paths']) ? args['artifact-paths'] : null,
     workflowPreset: args['workflow-preset-settings'] || null,
     bundleFileName: args['bundle-file-name'] || null,

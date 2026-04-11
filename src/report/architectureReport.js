@@ -260,7 +260,7 @@ function renderMermaidBlock(graph, fallbackText) {
 
 function renderArchitectureReport({ context, graph, optimizedContext, mermaidText }) {
   const program = String((context && context.program) || 'UNKNOWN');
-  const generatedAt = new Date().toISOString();
+  const generatedAt = (context && context.scannedAt) || new Date().toISOString();
   const tables = collectTables(context);
   const calls = collectProgramCalls(context);
   const copyMembers = collectCopyMembers(context);

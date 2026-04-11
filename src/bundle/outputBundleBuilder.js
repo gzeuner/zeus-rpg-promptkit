@@ -25,6 +25,12 @@ const {
   REDACTION_MANIFEST_FILE,
   buildSafeArtifactPath,
 } = require('../sharing/safeSharingArtifactBuilder');
+const {
+  buildReproducibilityMetadata,
+  hashNormalizedValue,
+  normalizeReproducibilitySettings,
+  resolveTimestamp,
+} = require('../reproducibility/reproducibility');
 
 const MANIFEST_FILE = 'bundle-manifest.json';
 const ZIP_MANIFEST_FILE = 'manifest.json';
@@ -174,7 +180,8 @@ function buildArtifactMetadata(files, analyzeManifest) {
   });
 }
 
-function buildManifest(program, files, analyzeManifest, workflowPreset, safeSharingEnabled) {
+function buildManifest(program, files, analyzeManifest, workflowPreset, safeSharingEnabled, reproducibility) {
+  const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
   const artifacts = buildArtifactMetadata(files, analyzeManifest);
   const manifest = {
     schemaVersion: BUNDLE_MANIFEST_SCHEMA_VERSION,
@@ -183,7 +190,7 @@ function buildManifest(program, files, analyzeManifest, workflowPreset, safeShar
       command: 'bundle',
     },
     program: normalizeProgramName(program).toUpperCase(),
-    generatedAt: new Date().toISOString(),
+    generatedAt: resolveTimestamp(reproducibilitySettings),
     files: files.map((file) => file.name),
     artifacts,
     summary: {
@@ -237,6 +244,24 @@ function buildManifest(program, files, analyzeManifest, workflowPreset, safeShar
       reviewWorkflow: cloneReviewWorkflow(effectiveWorkflowPreset.reviewWorkflow),
     };
   }
+
+  manifest.reproducibility = buildReproducibilityMetadata(
+    reproducibilitySettings,
+    hashNormalizedValue({
+      program: manifest.program,
+      files: manifest.files,
+      artifacts: manifest.artifacts.map((artifact) => ({
+        path: artifact.path,
+        kind: artifact.kind,
+        sizeBytes: artifact.sizeBytes,
+        sha256: artifact.sha256,
+      })),
+      summary: manifest.summary,
+      safeSharing: manifest.safeSharing,
+      analyzeRun: manifest.analyzeRun,
+      workflowPreset: manifest.workflowPreset,
+    }),
+  );
 
   return manifest;
 }
@@ -307,6 +332,7 @@ function buildOutputBundle({
   artifactPaths = null,
   workflowPreset = null,
   bundleFileName = null,
+  reproducibility = null,
 }) {
   const resolvedProgram = normalizeProgramName(program);
   if (!resolvedProgram) {
@@ -331,7 +357,14 @@ function buildOutputBundle({
     : safeSharingEnabled
       ? collectSafeSharingBundleFiles(programOutputDir, includeTypes)
       : collectManifestBundleFiles(programOutputDir, includeTypes, analyzeManifest);
-  const manifest = buildManifest(resolvedProgram, files, analyzeManifest, workflowPreset, safeSharingEnabled);
+  const manifest = buildManifest(
+    resolvedProgram,
+    files,
+    analyzeManifest,
+    workflowPreset,
+    safeSharingEnabled,
+    reproducibility,
+  );
   const zip = new AdmZip();
 
   for (const file of files) {

@@ -22,6 +22,10 @@ const { renderHtml } = require('../viewer/architectureViewerGenerator');
 const { renderDb2MetadataMarkdown } = require('../db2/metadataExportService');
 const { renderTestDataMarkdown } = require('../db2/testDataExportService');
 const { readAnalyzeRunManifest } = require('../analyze/analyzeRunManifest');
+const {
+  normalizeReproducibilitySettings,
+  resolveTimestamp,
+} = require('../reproducibility/reproducibility');
 
 const SAFE_SHARING_DIR = 'safe-sharing';
 const REDACTION_MANIFEST_FILE = 'redaction-manifest.json';
@@ -679,7 +683,7 @@ function buildGeneratedArtifactSet(context) {
   const redactionManifest = {
     schemaVersion: REDACTION_MANIFEST_SCHEMA_VERSION,
     kind: 'safe-sharing-redaction-manifest',
-    generatedAt: new Date().toISOString(),
+    generatedAt: resolveTimestamp(context.reproducibility),
     sourceArtifactCount: context.sourceArtifactPaths.length,
     redactedArtifactCount: generated.length,
     sourceArtifacts: [...context.sourceArtifactPaths],
@@ -708,9 +712,16 @@ function buildSafeSharingArtifacts({ outputProgramDir, analyzeManifest = null })
 
   const sourceArtifactPaths = collectSourceArtifactPaths(resolvedManifest);
   const context = buildArtifactContext(outputProgramDir, sourceArtifactPaths);
+  const reproducibility = normalizeReproducibilitySettings(
+    context.analyzeManifest
+    && context.analyzeManifest.inputs
+    && context.analyzeManifest.inputs.options
+    && context.analyzeManifest.inputs.options.reproducibleEnabled,
+  );
   return buildGeneratedArtifactSet({
     ...context,
     outputProgramDir,
+    reproducibility,
   });
 }
 

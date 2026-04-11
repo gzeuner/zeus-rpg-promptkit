@@ -14,15 +14,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 const { cloneReviewWorkflow } = require('./reviewWorkflowMetadata');
+const {
+  buildReproducibilityMetadata,
+  hashNormalizedValue,
+  normalizeReproducibilitySettings,
+  resolveTimestamp,
+} = require('../reproducibility/reproducibility');
 
 const WORKFLOW_RUN_MANIFEST_FILE = 'workflow-run-manifest.json';
 const WORKFLOW_RUN_MANIFEST_SCHEMA_VERSION = 1;
 
-function buildWorkflowRunManifest({ preset, analyzeManifest, bundleManifest, bundlePath }) {
-  return {
+function buildWorkflowRunManifest({ preset, analyzeManifest, bundleManifest, bundlePath, reproducibility = null }) {
+  const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
+  const manifest = {
     schemaVersion: WORKFLOW_RUN_MANIFEST_SCHEMA_VERSION,
     kind: 'workflow-run-manifest',
-    generatedAt: new Date().toISOString(),
+    generatedAt: resolveTimestamp(reproducibilitySettings),
     program: analyzeManifest && analyzeManifest.inputs ? analyzeManifest.inputs.program : null,
     preset: preset ? {
       name: preset.name,
@@ -53,6 +60,17 @@ function buildWorkflowRunManifest({ preset, analyzeManifest, bundleManifest, bun
       totalSizeBytes: bundleManifest.summary ? bundleManifest.summary.totalSizeBytes : 0,
     } : null,
   };
+
+  manifest.reproducibility = buildReproducibilityMetadata(
+    reproducibilitySettings,
+    hashNormalizedValue({
+      program: manifest.program,
+      preset: manifest.preset,
+      analyzeRun: manifest.analyzeRun,
+      bundle: manifest.bundle,
+    }),
+  );
+  return manifest;
 }
 
 function writeWorkflowRunManifest(outputProgramDir, manifest) {

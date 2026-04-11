@@ -14,6 +14,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const {
+  buildReproducibilityMetadata,
+  buildReproduciblePathReplacements,
+  hashNormalizedValue,
+  normalizeReproducibilitySettings,
+  replaceExactStringsDeep,
+} = require('../reproducibility/reproducibility');
 
 const ANALYZE_RUN_MANIFEST_FILE = 'analyze-run-manifest.json';
 const MANIFEST_SCHEMA_VERSION = 1;
@@ -71,7 +78,8 @@ function buildArtifacts(outputProgramDir, generatedFiles) {
   });
 }
 
-function buildSourceSnapshot(sourceRoot, sourceFiles) {
+function buildSourceSnapshot(sourceRoot, sourceFiles, reproducibility) {
+  const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
   const normalizedRoot = sourceRoot ? path.resolve(sourceRoot) : '';
   const files = Array.isArray(sourceFiles) ? sourceFiles : [];
   const entries = files
@@ -80,18 +88,28 @@ function buildSourceSnapshot(sourceRoot, sourceFiles) {
       const absolutePath = path.resolve(filePath);
       const stats = fs.existsSync(absolutePath) ? fs.statSync(absolutePath) : null;
       const relativePath = normalizedRoot ? path.relative(normalizedRoot, absolutePath) : path.basename(absolutePath);
+      const sha256 = stats ? hashContent(fs.readFileSync(absolutePath)) : null;
       return {
         path: relativePath.split(path.sep).join('/'),
         sizeBytes: stats ? stats.size : 0,
-        mtimeMs: stats ? Math.trunc(stats.mtimeMs) : 0,
+        mtimeMs: reproducibilitySettings.enabled ? null : (stats ? Math.trunc(stats.mtimeMs) : 0),
+        sha256,
       };
     })
     .sort((a, b) => a.path.localeCompare(b.path));
 
+  const contentFingerprint = hashContent(entries
+    .map((entry) => `${entry.path}|${entry.sizeBytes}|${entry.sha256 || ''}`)
+    .join('\n'));
+  const fingerprint = reproducibilitySettings.enabled
+    ? contentFingerprint
+    : hashContent(entries.map((entry) => `${entry.path}|${entry.sizeBytes}|${entry.mtimeMs}`).join('\n'));
+
   return {
     root: normalizedRoot,
     fileCount: entries.length,
-    fingerprint: hashContent(entries.map((entry) => `${entry.path}|${entry.sizeBytes}|${entry.mtimeMs}`).join('\n')),
+    fingerprint,
+    contentFingerprint,
     files: entries,
   };
 }
@@ -109,7 +127,12 @@ function buildSummary(stageReports, diagnostics, artifacts, sourceSnapshot) {
   };
 }
 
-function buildComparison(previousManifest, currentManifest) {
+function buildComparison(previousManifest, currentManifest, reproducibility) {
+  const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
+  if (reproducibilitySettings.enabled) {
+    return null;
+  }
+
   if (!previousManifest || typeof previousManifest !== 'object') {
     return null;
   }
@@ -146,6 +169,7 @@ function buildAnalyzeRunManifest({
   error = null,
   previousManifest = null,
 }) {
+  const reproducibility = normalizeReproducibilitySettings(context.reproducibility);
   const stageReports = Array.isArray(result && result.stageReports)
     ? result.stageReports
     : Array.isArray(error && error.stageReports) ? error.stageReports : [];
@@ -153,6 +177,7 @@ function buildAnalyzeRunManifest({
   const sourceSnapshot = buildSourceSnapshot(
     context.sourceRoot,
     result && Array.isArray(result.sourceFiles) ? result.sourceFiles : [],
+    reproducibility,
   );
   const artifacts = buildArtifacts(
     context.outputProgramDir,
@@ -172,6 +197,7 @@ function buildAnalyzeRunManifest({
       durationMs: context.durationMs,
       cwd: context.cwd,
       outputDir: context.outputProgramDir,
+      reproducible: reproducibility.enabled,
       ...(error ? {
         failure: {
           message: error.message,
@@ -189,6 +215,7 @@ function buildAnalyzeRunManifest({
         skipTestData: Boolean(context.skipTestData),
         testDataLimit: Number(context.testDataLimit) || null,
         extensions: Array.isArray(context.extensions) ? context.extensions : [],
+        reproducibleEnabled: reproducibility.enabled,
         guidedMode: context.guidedMode || null,
         workflowPreset: context.workflowPreset || null,
       },
@@ -208,8 +235,54 @@ function buildAnalyzeRunManifest({
     artifacts,
   };
 
-  manifest.comparison = buildComparison(previousManifest, manifest);
-  return manifest;
+  const pathReplacements = reproducibility.enabled
+    ? buildReproduciblePathReplacements({
+      cwd: context.cwd,
+      sourceRoot: context.sourceRoot,
+      outputRoot: context.outputRoot,
+      outputProgramDir: context.outputProgramDir,
+      program: context.program,
+    })
+    : null;
+  const fingerprintSource = {
+    tool: manifest.tool,
+    status: manifest.run.status,
+    inputs: manifest.inputs,
+    summary: manifest.summary,
+    diagnostics: manifest.diagnostics,
+    stages: manifest.stages.map((stage) => ({
+      id: stage.id,
+      status: stage.status,
+      metadata: stage.metadata,
+      diagnostics: stage.diagnostics,
+    })),
+    artifacts: manifest.artifacts.map((artifact) => ({
+      path: artifact.path,
+      kind: artifact.kind,
+      exists: artifact.exists,
+      sizeBytes: artifact.sizeBytes,
+      sha256: artifact.sha256,
+    })),
+  };
+  const contentFingerprint = hashNormalizedValue(
+    reproducibility.enabled
+      ? replaceExactStringsDeep(fingerprintSource, pathReplacements)
+      : fingerprintSource,
+  );
+  manifest.reproducibility = buildReproducibilityMetadata(reproducibility, contentFingerprint, {
+    runtimeMetadataSuppressed: reproducibility.enabled,
+    comparisonSuppressed: reproducibility.enabled,
+  });
+  manifest.comparison = buildComparison(previousManifest, manifest, reproducibility);
+
+  if (!reproducibility.enabled) {
+    return manifest;
+  }
+
+  return replaceExactStringsDeep(
+    manifest,
+    pathReplacements,
+  );
 }
 
 function readAnalyzeRunManifest(outputProgramDir) {
