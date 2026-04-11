@@ -171,6 +171,7 @@ Default behavior:
 
 - `zeus fetch` exports source members as UTF-8 stream files using IBM i CCSID `1208`
 - this keeps downloaded RPG, CL, and DDS sources readable in common Windows editors and terminals without manual conversion
+- the Windows-readable local source contract is transport-independent across `sftp`, `jt400`, and `ftp`, but it is only guaranteed for `CCSID 1208`
 - `zeus fetch` writes `zeus-import-manifest.json` into the local source root to persist remote identity, transport, checksum, and validation details for imported members
 
 Imported source validation:
@@ -808,6 +809,7 @@ IBM i source export note:
 
 - fetched source members are exported as UTF-8 stream files (`CCSID 1208`) by default
 - analyzer components read local sources as UTF-8, so keeping fetch output on that contract avoids broken umlauts and Windows-side mojibake
+- non-default `--streamfile-ccsid` values remain best-effort; the guaranteed Windows-readable contract is documented in [docs/fetch-encoding-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/fetch-encoding-contract.md)
 
 ## License
 
