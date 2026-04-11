@@ -64,19 +64,56 @@ test('buildCanonicalAnalysisModel creates a validated semantic core with provena
     },
     notes: ['Scanner note'],
     importManifest: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       fetchedAt: '2026-03-20T10:00:00.000Z',
+      transportRequested: 'sftp',
       transportUsed: 'sftp',
+      streamFileCcsid: 1208,
+      encodingPolicy: 'UTF-8 stream files (CCSID 1208)',
+      normalizationPolicy: {
+        contentBytes: 'preserve',
+        lineEndings: 'preserve',
+        localPathFormat: 'relative-forward-slash',
+        checksumAlgorithm: 'sha256',
+      },
       summary: {
         fileCount: 1,
+        exportedFileCount: 1,
+        failedFileCount: 0,
+        invalidFileCount: 0,
       },
       files: [{
         localPath: 'ORDERPGM.rpgle',
-        sourceLib: 'APPLIB',
-        sourceFile: 'QRPGLESRC',
-        member: 'ORDERPGM',
-        remotePath: '/QSYS.LIB/APPLIB.LIB/QRPGLESRC.FILE/ORDERPGM.MBR',
-        sha256: 'abc123',
+        origin: {
+          sourceLib: 'APPLIB',
+          sourceFile: 'QRPGLESRC',
+          member: 'ORDERPGM',
+          memberPath: '/QSYS.LIB/APPLIB.LIB/QRPGLESRC.FILE/ORDERPGM.MBR',
+          remotePath: '/tmp/export/QRPGLESRC/ORDERPGM.rpgle',
+          localPath: 'ORDERPGM.rpgle',
+          sourceType: 'RPGLE',
+        },
+        export: {
+          status: 'exported',
+          transportRequested: 'sftp',
+          transportUsed: 'sftp',
+          streamFileCcsid: 1208,
+          encodingPolicy: 'UTF-8 stream files (CCSID 1208)',
+          normalizationPolicy: {
+            contentBytes: 'preserve',
+            lineEndings: 'preserve',
+            localPathFormat: 'relative-forward-slash',
+            checksumAlgorithm: 'sha256',
+          },
+        },
+        validation: {
+          exists: true,
+          sha256: 'abc123',
+          status: 'ok',
+          utf8Valid: true,
+          newlineStyle: 'LF',
+          messages: [],
+        },
       }],
     },
   });
@@ -86,6 +123,10 @@ test('buildCanonicalAnalysisModel creates a validated semantic core with provena
   assert.equal(canonicalAnalysis.sourceFiles[0].path, 'ORDERPGM.rpgle');
   assert.equal(canonicalAnalysis.sourceFiles[0].provenance.origin, 'imported');
   assert.equal(canonicalAnalysis.sourceFiles[0].provenance.import.member, 'ORDERPGM');
+  assert.equal(canonicalAnalysis.sourceFiles[0].provenance.import.memberPath, '/QSYS.LIB/APPLIB.LIB/QRPGLESRC.FILE/ORDERPGM.MBR');
+  assert.equal(canonicalAnalysis.sourceFiles[0].provenance.import.validationStatus, 'ok');
+  assert.equal(canonicalAnalysis.provenance.importManifest.failedFileCount, 0);
+  assert.equal(canonicalAnalysis.provenance.importManifest.traceableFileCount, 1);
   assert.ok(canonicalAnalysis.entities.programs.some((entry) => entry.id === 'PROGRAM:ORDERPGM' && entry.role === 'ROOT'));
   assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'USES_TABLE' && entry.to === 'TABLE:ORDERS'));
   assert.ok(canonicalAnalysis.entities.nativeFiles.some((entry) => entry.id === 'NATIVE_FILE:ORDERS'));

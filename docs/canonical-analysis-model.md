@@ -91,10 +91,32 @@ Imported provenance currently carries:
 - `sourceLib`
 - `sourceFile`
 - `member`
+- `memberPath`
 - `remotePath`
+- `localPath`
+- `sourceType`
 - `sha256`
+- `transportRequested`
 - `transportUsed`
 - `fetchedAt`
+- `encodingPolicy`
+- `normalizationPolicy`
+- `exportStatus`
+- `validationStatus`
+
+Top-level `provenance.importManifest` also summarizes the import contract when present, including:
+
+- `schemaVersion`
+- `transportRequested`
+- `transportUsed`
+- `streamFileCcsid`
+- `encodingPolicy`
+- `normalizationPolicy`
+- `fileCount`
+- `exportedFileCount`
+- `failedFileCount`
+- `invalidFileCount`
+- `traceableFileCount`
 
 ## Enrichments
 

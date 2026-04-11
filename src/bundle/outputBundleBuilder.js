@@ -217,6 +217,20 @@ function buildManifest(program, files, analyzeManifest, workflowPreset, safeShar
         : null,
       artifactCount: Array.isArray(analyzeManifest.artifacts) ? analyzeManifest.artifacts.length : 0,
     };
+    manifest.sourceProvenance = analyzeManifest.inputs && analyzeManifest.inputs.importManifest
+      ? {
+        manifestFile: analyzeManifest.inputs.importManifest.manifestFile || null,
+        schemaVersion: analyzeManifest.inputs.importManifest.schemaVersion || null,
+        fetchedAt: analyzeManifest.inputs.importManifest.fetchedAt || null,
+        sourceLib: analyzeManifest.inputs.importManifest.sourceLib || null,
+        transportUsed: analyzeManifest.inputs.importManifest.transportUsed || null,
+        encodingPolicy: analyzeManifest.inputs.importManifest.encodingPolicy || null,
+        fileCount: Number(analyzeManifest.inputs.importManifest.fileCount) || 0,
+        exportedFileCount: Number(analyzeManifest.inputs.importManifest.exportedFileCount) || 0,
+        failedFileCount: Number(analyzeManifest.inputs.importManifest.failedFileCount) || 0,
+        traceableFileCount: Number(analyzeManifest.inputs.importManifest.traceableFileCount) || 0,
+      }
+      : null;
   }
 
   const effectiveWorkflowPreset = workflowPreset
@@ -259,6 +273,7 @@ function buildManifest(program, files, analyzeManifest, workflowPreset, safeShar
       summary: manifest.summary,
       safeSharing: manifest.safeSharing,
       analyzeRun: manifest.analyzeRun,
+      sourceProvenance: manifest.sourceProvenance,
       workflowPreset: manifest.workflowPreset,
     }),
   );
@@ -279,6 +294,16 @@ function buildReadmeText(program, manifest) {
   if (manifest.safeSharing && manifest.safeSharing.enabled) {
     lines.push('Safe sharing: enabled');
     lines.push(`Redaction manifest: ${manifest.safeSharing.redactionManifestFile}`);
+  }
+  if (manifest.sourceProvenance) {
+    lines.push(`Source provenance manifest: ${manifest.sourceProvenance.manifestFile || 'zeus-import-manifest.json'}`);
+    lines.push(`Imported members: ${manifest.sourceProvenance.exportedFileCount}/${manifest.sourceProvenance.fileCount}`);
+    if (manifest.sourceProvenance.sourceLib) {
+      lines.push(`Source library: ${manifest.sourceProvenance.sourceLib}`);
+    }
+    if (manifest.sourceProvenance.transportUsed) {
+      lines.push(`Import transport: ${manifest.sourceProvenance.transportUsed}`);
+    }
   }
   if (manifest.workflowPreset && manifest.workflowPreset.reviewWorkflow) {
     const reviewWorkflow = manifest.workflowPreset.reviewWorkflow;

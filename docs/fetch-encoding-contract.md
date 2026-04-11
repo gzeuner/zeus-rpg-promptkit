@@ -20,10 +20,16 @@ When `zeus fetch` runs with the default `--streamfile-ccsid 1208`, Zeus guarante
 - `transportUsed`
 - `streamFileCcsid`
 - `encodingPolicy`
+- `normalizationPolicy`
+- per-file `origin.memberPath`
+- per-file `export.status`
+- per-file `export.transportUsed`
 - per-file `utf8Valid`
 - per-file `newlineStyle`
 - per-file `validationStatus`
 - per-file `validationMessages`
+
+See [docs/import-manifest-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/import-manifest-contract.md) for the full public fetch manifest schema.
 
 ## Failure Semantics
 

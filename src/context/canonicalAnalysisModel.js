@@ -12,6 +12,12 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
+const {
+  getImportManifestEntryExport,
+  getImportManifestEntryOrigin,
+  getImportManifestEntryValidation,
+  summarizeImportManifest,
+} = require('../fetch/importManifest');
 const { normalizeRelativePath } = require('../source/sourceIntegrity');
 
 const CANONICAL_ANALYSIS_SCHEMA_VERSION = 1;
@@ -321,7 +327,8 @@ function createManifestIndex(importManifest) {
   }
 
   for (const entry of importManifest.files) {
-    const localPath = String(entry && entry.localPath ? entry.localPath : '').trim().replace(/\\/g, '/');
+    const origin = getImportManifestEntryOrigin(entry);
+    const localPath = String(origin.localPath || '').trim().replace(/\\/g, '/');
     if (localPath) {
       map.set(localPath, entry);
     }
@@ -339,6 +346,9 @@ function normalizeSourceFiles(sourceFiles, sourceRoot, importManifest) {
         ? normalizeRelativePath(sourceRoot, absolutePath)
         : absolutePath;
       const manifestEntry = manifestIndex.get(relPath) || null;
+      const manifestOrigin = manifestEntry ? getImportManifestEntryOrigin(manifestEntry) : null;
+      const manifestExport = manifestEntry ? getImportManifestEntryExport(manifestEntry, importManifest) : null;
+      const manifestValidation = manifestEntry ? getImportManifestEntryValidation(manifestEntry) : null;
 
       return {
         id: `FILE:${relPath}`,
@@ -348,13 +358,21 @@ function normalizeSourceFiles(sourceFiles, sourceRoot, importManifest) {
         provenance: {
           origin: manifestEntry ? 'imported' : 'local',
           import: manifestEntry ? {
-            sourceLib: normalizeName(manifestEntry.sourceLib),
-            sourceFile: normalizeName(manifestEntry.sourceFile),
-            member: normalizeName(manifestEntry.member),
-            remotePath: manifestEntry.remotePath || '',
-            sha256: manifestEntry.sha256 || null,
-            transportUsed: importManifest && importManifest.transportUsed ? String(importManifest.transportUsed) : null,
+            sourceLib: normalizeName(manifestOrigin.sourceLib),
+            sourceFile: normalizeName(manifestOrigin.sourceFile),
+            member: normalizeName(manifestOrigin.member),
+            memberPath: manifestOrigin.memberPath || '',
+            remotePath: manifestOrigin.remotePath || '',
+            localPath: manifestOrigin.localPath || relPath || absolutePath,
+            sourceType: normalizeName(manifestOrigin.sourceType),
+            sha256: manifestValidation.sha256 || null,
+            transportRequested: manifestExport.transportRequested || null,
+            transportUsed: manifestExport.transportUsed || null,
             fetchedAt: importManifest && importManifest.fetchedAt ? importManifest.fetchedAt : null,
+            encodingPolicy: manifestExport.encodingPolicy || null,
+            normalizationPolicy: manifestExport.normalizationPolicy || null,
+            exportStatus: manifestExport.status || null,
+            validationStatus: manifestValidation.status || null,
           } : null,
         },
       };
@@ -1343,6 +1361,7 @@ function buildCanonicalAnalysisModel({
       id: createEntityId('TABLE', table.name),
     }));
   const procedureReferences = buildProcedureReferenceEntities(procedureCalls);
+  const importManifestSummary = summarizeImportManifest(importManifest);
 
   const dependencyBlock = {
     tables: mergedTables,
@@ -1365,14 +1384,20 @@ function buildCanonicalAnalysisModel({
     rootProgram: normalizedProgram,
     sourceRoot: normalizedSourceRoot,
     provenance: {
-      importManifest: importManifest ? {
-        file: 'zeus-import-manifest.json',
-        schemaVersion: Number(importManifest.schemaVersion) || null,
-        fetchedAt: importManifest.fetchedAt || null,
-        transportUsed: importManifest.transportUsed || null,
-        fileCount: importManifest.summary && Number.isFinite(Number(importManifest.summary.fileCount))
-          ? Number(importManifest.summary.fileCount)
-          : Array.isArray(importManifest.files) ? importManifest.files.length : 0,
+      importManifest: importManifestSummary ? {
+        file: importManifestSummary.manifestFile,
+        schemaVersion: importManifestSummary.schemaVersion,
+        fetchedAt: importManifestSummary.fetchedAt,
+        transportRequested: importManifestSummary.transportRequested,
+        transportUsed: importManifestSummary.transportUsed,
+        streamFileCcsid: importManifestSummary.streamFileCcsid,
+        encodingPolicy: importManifestSummary.encodingPolicy,
+        normalizationPolicy: importManifestSummary.normalizationPolicy,
+        fileCount: importManifestSummary.fileCount,
+        exportedFileCount: importManifestSummary.exportedFileCount,
+        failedFileCount: importManifestSummary.failedFileCount,
+        invalidFileCount: importManifestSummary.invalidFileCount,
+        traceableFileCount: importManifestSummary.traceableFileCount,
       } : null,
     },
     sourceFiles: normalizedSourceFiles,

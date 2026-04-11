@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { summarizeImportManifest } = require('../fetch/importManifest');
 const {
   buildReproducibilityMetadata,
   buildReproduciblePathReplacements,
@@ -179,6 +180,12 @@ function buildAnalyzeRunManifest({
     result && Array.isArray(result.sourceFiles) ? result.sourceFiles : [],
     reproducibility,
   );
+  const importManifestSummary = summarizeImportManifest(
+    result && result.importManifest ? result.importManifest : null,
+    {
+      manifestPath: result && result.importManifestPath ? result.importManifestPath : null,
+    },
+  );
   const artifacts = buildArtifacts(
     context.outputProgramDir,
     result && Array.isArray(result.generatedFiles) ? result.generatedFiles : null,
@@ -220,6 +227,7 @@ function buildAnalyzeRunManifest({
         workflowPreset: context.workflowPreset || null,
       },
       sourceSnapshot,
+      importManifest: importManifestSummary,
     },
     summary: buildSummary(stageReports, diagnostics, artifacts, sourceSnapshot),
     diagnostics,
