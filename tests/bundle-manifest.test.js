@@ -37,6 +37,18 @@ test('buildOutputBundle prefers analyze-run-manifest artifacts over directory sc
         completedAt: '2026-03-16T10:00:00.000Z',
       },
       inputs: {
+        importManifest: {
+          manifestFile: 'zeus-import-manifest.json',
+          schemaVersion: 2,
+          fetchedAt: '2026-03-16T09:58:00.000Z',
+          sourceLib: 'APPLIB',
+          transportUsed: 'sftp',
+          encodingPolicy: 'UTF-8 stream files (CCSID 1208)',
+          fileCount: 1,
+          exportedFileCount: 1,
+          failedFileCount: 0,
+          traceableFileCount: 1,
+        },
         sourceSnapshot: {
           fingerprint: 'abc123',
         },
@@ -63,6 +75,9 @@ test('buildOutputBundle prefers analyze-run-manifest artifacts over directory sc
     assert.equal(result.manifest.analyzeRun.status, 'succeeded');
     assert.equal(result.manifest.analyzeRun.schemaVersion, null);
     assert.equal(result.manifest.analyzeRun.sourceFingerprint, 'abc123');
+    assert.equal(result.manifest.sourceProvenance.schemaVersion, 2);
+    assert.equal(result.manifest.sourceProvenance.sourceLib, 'APPLIB');
+    assert.equal(result.manifest.sourceProvenance.traceableFileCount, 1);
     assert.equal(result.manifest.reproducibility.enabled, false);
     assert.equal(result.manifest.summary.totalFiles, 3);
     assert.ok(result.manifest.summary.totalSizeBytes > 0);
@@ -107,6 +122,17 @@ test('buildOutputBundle can package explicit workflow preset artifacts with pres
         completedAt: '2026-04-09T10:00:00.000Z',
       },
       inputs: {
+        importManifest: {
+          manifestFile: 'zeus-import-manifest.json',
+          schemaVersion: 2,
+          sourceLib: 'APPLIB',
+          transportUsed: 'sftp',
+          encodingPolicy: 'UTF-8 stream files (CCSID 1208)',
+          fileCount: 3,
+          exportedFileCount: 3,
+          failedFileCount: 0,
+          traceableFileCount: 3,
+        },
         options: {
           workflowPreset: {
             name: 'onboarding',
@@ -153,6 +179,7 @@ test('buildOutputBundle can package explicit workflow preset artifacts with pres
     ]);
     assert.equal(result.manifest.reproducibility.enabled, false);
     assert.equal(result.manifest.workflowPreset.name, 'onboarding');
+    assert.equal(result.manifest.sourceProvenance.fileCount, 3);
     assert.deepEqual(result.manifest.workflowPreset.promptTemplates, ['documentation']);
     assert.match(result.manifest.workflowPreset.reviewWorkflow.intendedAudience.join('\n'), /New engineers/);
     assert.equal(path.basename(result.zipPath), 'ORDERPGM-onboarding-bundle.zip');
@@ -168,6 +195,7 @@ test('buildOutputBundle can package explicit workflow preset artifacts with pres
     ]);
     const readme = zip.readAsText('README.txt');
     assert.match(readme, /Workflow preset: onboarding/);
+    assert.match(readme, /Source provenance manifest: zeus-import-manifest\.json/);
     assert.match(readme, /Expected decisions:/);
     assert.match(readme, /report\.md: Quick orientation summary\./);
   } finally {

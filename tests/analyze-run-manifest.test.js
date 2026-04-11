@@ -82,6 +82,42 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
       },
       result: {
         sourceFiles: [sourceFile],
+        importManifest: {
+          schemaVersion: 2,
+          fetchedAt: '2026-03-15T08:59:00.000Z',
+          remote: {
+            sourceLib: 'APPLIB',
+          },
+          transportRequested: 'sftp',
+          transportUsed: 'sftp',
+          streamFileCcsid: 1208,
+          encodingPolicy: 'UTF-8 stream files (CCSID 1208)',
+          normalizationPolicy: {
+            contentBytes: 'preserve',
+            lineEndings: 'preserve',
+            localPathFormat: 'relative-forward-slash',
+            checksumAlgorithm: 'sha256',
+          },
+          summary: {
+            fileCount: 1,
+            exportedFileCount: 1,
+            failedFileCount: 0,
+            invalidFileCount: 0,
+            warningCount: 0,
+          },
+          files: [{
+            origin: {
+              sourceLib: 'APPLIB',
+              sourceFile: 'QRPGLESRC',
+              member: 'ORDERPGM',
+              localPath: 'ORDERPGM.rpgle',
+            },
+            export: {
+              status: 'exported',
+            },
+          }],
+        },
+        importManifestPath: path.join(sourceRoot, 'zeus-import-manifest.json'),
         generatedFiles: ['context.json', 'report.md'],
         stageReports: [{
           id: 'collect-scan',
@@ -126,6 +162,9 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
     assert.equal(manifest.inputs.sourceSnapshot.fileCount, 1);
     assert.equal(manifest.summary.generatedArtifactCount, 2);
     assert.equal(manifest.summary.warningCount, 1);
+    assert.equal(manifest.inputs.importManifest.schemaVersion, 2);
+    assert.equal(manifest.inputs.importManifest.sourceLib, 'APPLIB');
+    assert.equal(manifest.inputs.importManifest.traceableFileCount, 1);
     assert.equal(manifest.inputs.options.guidedMode.name, 'modernization');
     assert.deepEqual(manifest.inputs.options.guidedMode.promptTemplates, ['documentation', 'modernization']);
     assert.match(manifest.inputs.options.guidedMode.reviewWorkflow.intendedAudience.join('\n'), /Modernization leads/);
