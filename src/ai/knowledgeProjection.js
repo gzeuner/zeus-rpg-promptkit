@@ -293,6 +293,59 @@ function projectDb2Tables(context, evidenceIndex) {
     });
 }
 
+function projectIfsPaths(context, evidenceIndex) {
+  return asArray(context && context.ifsPaths && context.ifsPaths.paths)
+    .map((entry) => ({
+      path: entry.path,
+      family: entry.family,
+      evidenceRefs: evidenceRefsFor(evidenceIndex, entry.evidence),
+    }))
+    .sort((a, b) => {
+      if (a.family !== b.family) return a.family.localeCompare(b.family);
+      return a.path.localeCompare(b.path);
+    });
+}
+
+function projectSearchFindings(context) {
+  return asArray(context && context.searchResults && context.searchResults.matches)
+    .slice(0, 25)
+    .map((entry) => ({
+      term: entry.term,
+      sourcePath: entry.sourcePath,
+      sourceCategory: entry.sourceCategory,
+      sourceType: entry.sourceType,
+      line: Number(entry.line) || 1,
+      context: entry.context,
+    }))
+    .sort((a, b) => {
+      if (a.term !== b.term) return a.term.localeCompare(b.term);
+      if (a.sourceCategory !== b.sourceCategory) return a.sourceCategory.localeCompare(b.sourceCategory);
+      if (a.sourcePath !== b.sourcePath) return a.sourcePath.localeCompare(b.sourcePath);
+      return a.line - b.line;
+    });
+}
+
+function projectDiagnosticPacks(context) {
+  return asArray(context && context.diagnosticPacks && context.diagnosticPacks.packs)
+    .map((entry) => ({
+      name: entry.name,
+      title: entry.title,
+      summary: entry.summary || {},
+      highlights: asArray(entry.steps)
+        .filter((step) => step.status === 'failed' || step.status === 'succeeded')
+        .slice(0, 5)
+        .map((step) => ({
+          id: step.id,
+          title: step.title,
+          kind: step.kind,
+          status: step.status,
+          reason: step.reason || null,
+          outputSummary: step.outputSummary || {},
+        })),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 function projectWorkflowDb2Tables(projectionTables, workflow) {
   const workflowTableNames = new Set(asArray(workflow && workflow.tables).map((entry) => normalizeName(entry && entry.name)));
   const selected = asArray(projectionTables).filter((entry) => {
@@ -330,6 +383,9 @@ function buildWorkflow(name, context, projection, payload = {}) {
     sqlStatements: cloneEntityList(payload.sqlStatements),
     nativeFiles: cloneEntityList(payload.nativeFiles && payload.nativeFiles.length > 0 ? payload.nativeFiles : projection.entities.nativeFiles),
     db2Tables: cloneEntityList(payload.db2Tables && payload.db2Tables.length > 0 ? payload.db2Tables : projection.entities.db2Tables),
+    ifsPaths: cloneEntityList(payload.ifsPaths && payload.ifsPaths.length > 0 ? payload.ifsPaths : projection.entities.ifsPaths),
+    searchFindings: cloneEntityList(payload.searchFindings && payload.searchFindings.length > 0 ? payload.searchFindings : projection.entities.searchFindings),
+    diagnosticPacks: cloneEntityList(payload.diagnosticPacks && payload.diagnosticPacks.length > 0 ? payload.diagnosticPacks : projection.entities.diagnosticPacks),
     riskMarkers: projection.riskMarkers,
     uncertaintyMarkers: projection.uncertaintyMarkers,
     tokenBudget: Number(payload.tokenBudget) || null,
@@ -505,6 +561,9 @@ function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedConte
       sqlStatements,
       nativeFiles: projectNativeFiles(context, canonicalAnalysis, evidenceIndex),
       db2Tables: projectDb2Tables(context, evidenceIndex),
+      ifsPaths: projectIfsPaths(context, evidenceIndex),
+      searchFindings: projectSearchFindings(context),
+      diagnosticPacks: projectDiagnosticPacks(context),
       binding: projectBinding(context, canonicalAnalysis, evidenceIndex),
       modules: asArray(canonicalAnalysis.entities && canonicalAnalysis.entities.modules).map((entry) => ({
         name: entry.name,
