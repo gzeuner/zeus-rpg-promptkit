@@ -172,6 +172,11 @@ function validateAnalyzeConfig(config) {
   }
   assertOptionalString(config.outputRoot, 'analyze.outputRoot');
   assertStringArray(config.extensions, 'analyze.extensions');
+  if (config.ibmi !== null && config.ibmi !== undefined) {
+    assertOptionalString(config.ibmi.host, 'analyze.ibmi.host');
+    assertOptionalString(config.ibmi.user, 'analyze.ibmi.user');
+    assertOptionalString(config.ibmi.password, 'analyze.ibmi.password');
+  }
   if (config.contextOptimizer) {
     validateContextOptimizerConfig(config.contextOptimizer, 'analyze.contextOptimizer');
   }
@@ -308,6 +313,7 @@ function applyDbEnvOverrides(dbConfig, env) {
 function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
   const profiles = loadProfiles({ cwd });
   const profile = resolveProfile(profiles, args.profile);
+  const fetchProfile = profile ? (profile.fetch || {}) : {};
 
   const extensions = args.extensions
     ? parseCsv(args.extensions, DEFAULT_EXTENSIONS)
@@ -318,6 +324,11 @@ function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } =
     outputRoot: args.out || args.output || (profile && profile.outputRoot) || 'output',
     extensions,
     db: applyDbEnvOverrides((profile && profile.db) || null, env),
+    ibmi: {
+      host: args.host || env.ZEUS_FETCH_HOST || fetchProfile.host || null,
+      user: args.user || env.ZEUS_FETCH_USER || fetchProfile.user || null,
+      password: args.password || env.ZEUS_FETCH_PASSWORD || fetchProfile.password || null,
+    },
     contextOptimizer: readContextOptimizerConfig(profiles, profile),
     testData: readTestDataConfig(profiles, profile),
   };

@@ -45,6 +45,9 @@ const { readImportManifest } = require('../fetch/importManifest');
 const { validateSourceFiles } = require('../source/sourceIntegrity');
 const { buildAnalysisIndex } = require('../workflow/analysisIndex');
 const { getPromptContract } = require('../prompt/promptRegistry');
+const { scanIfsPaths, renderIfsPathMarkdown } = require('../investigation/ifsPathScanner');
+const { runFullTextSearch, renderFullTextSearchMarkdown } = require('../investigation/fullTextSearch');
+const { runDiagnosticPacks, renderDiagnosticPackMarkdown } = require('../investigation/diagnosticPackRunner');
 const {
   buildReproduciblePathReplacements,
   normalizeReproducibilitySettings,
@@ -54,6 +57,11 @@ const {
 
 function resolvePromptContext(context, optimizedContext) {
   return optimizedContext || context;
+}
+
+function buildSourceFileMetadataMap(canonicalAnalysis) {
+  return new Map((canonicalAnalysis && canonicalAnalysis.sourceFiles ? canonicalAnalysis.sourceFiles : [])
+    .map((entry) => [entry.path, entry]));
 }
 
 function collectAndScanStage(state) {
@@ -288,6 +296,65 @@ function buildContextStage(state) {
   };
 }
 
+function investigateSourcesStage(state) {
+  const {
+    canonicalAnalysis,
+    context,
+    optimizedContext,
+    normalizedSourceTextByRelativePath,
+    scanIfsPathsEnabled,
+    searchTerms,
+    searchIgnorePatterns,
+    searchMaxResults,
+  } = state;
+  const sourceFileMetadata = buildSourceFileMetadataMap(canonicalAnalysis);
+  const ifsPathReport = scanIfsPaths(normalizedSourceTextByRelativePath, {
+    enabled: scanIfsPathsEnabled,
+  });
+  const searchResults = runFullTextSearch(normalizedSourceTextByRelativePath, sourceFileMetadata, {
+    terms: searchTerms,
+    ignorePatterns: searchIgnorePatterns,
+    maxResults: searchMaxResults,
+  });
+
+  const nextCanonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
+    ifsPaths: ifsPathReport,
+    searchResults,
+  });
+  const nextContext = buildContext({ canonicalAnalysis: nextCanonicalAnalysis });
+  const nextOptimizedContext = optimizedContext
+    ? {
+      ...optimizedContext,
+      ifsPaths: ifsPathReport,
+      searchResults,
+      notes: nextContext.notes,
+    }
+    : null;
+
+  return {
+    ...state,
+    canonicalAnalysis: nextCanonicalAnalysis,
+    context: nextContext,
+    optimizedContext: nextOptimizedContext,
+    promptContext: resolvePromptContext(nextContext, nextOptimizedContext),
+    ifsPathReport,
+    searchResults,
+    stageMetadata: {
+      ifsPathScanEnabled: Boolean(scanIfsPathsEnabled),
+      ifsPathCount: Number(ifsPathReport.summary.uniquePathCount) || 0,
+      searchEnabled: Boolean((searchTerms || []).length > 0),
+      searchTermCount: (searchResults.terms || []).length,
+      searchMatchCount: Number(searchResults.summary.matchCount) || 0,
+      searchTruncated: Boolean(searchResults.summary.truncated),
+    },
+    stageDiagnostics: (searchResults.notes || []).map((message) => ({
+      severity: 'warning',
+      code: 'SEARCH_RESULT_LIMIT',
+      message,
+    })),
+  };
+}
+
 function optimizeContextStage(state) {
   const { canonicalAnalysis, context, config, optimizeContextEnabled } = state;
   const contextTokens = estimateTokensFromObject(context);
@@ -470,6 +537,63 @@ function exportTestDataStage(state) {
   };
 }
 
+function runDiagnosticPacksStage(state) {
+  const {
+    canonicalAnalysis,
+    context,
+    optimizedContext,
+    diagnosticPacks,
+    diagnosticParameterString,
+    config,
+    ibmiConfig,
+    reproducibility,
+    verbose,
+  } = state;
+  const diagnosticResult = runDiagnosticPacks({
+    packNames: diagnosticPacks,
+    parameterString: diagnosticParameterString,
+    dbConfig: config.db,
+    ibmiConfig,
+    reproducibility,
+    verbose,
+    executors: state.diagnosticExecutors || null,
+  });
+
+  const nextCanonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
+    diagnosticPacks: diagnosticResult.report,
+    notes: diagnosticResult.notes || [],
+  });
+  const nextContext = buildContext({ canonicalAnalysis: nextCanonicalAnalysis });
+  const nextOptimizedContext = optimizedContext
+    ? {
+      ...optimizedContext,
+      diagnosticPacks: diagnosticResult.report,
+      notes: nextContext.notes,
+    }
+    : null;
+
+  return {
+    ...state,
+    canonicalAnalysis: nextCanonicalAnalysis,
+    context: nextContext,
+    optimizedContext: nextOptimizedContext,
+    promptContext: resolvePromptContext(nextContext, nextOptimizedContext),
+    diagnosticPackReport: diagnosticResult.report,
+    diagnosticPackManifest: diagnosticResult.manifest,
+    stageMetadata: {
+      enabled: Boolean((diagnosticPacks || []).length > 0),
+      packCount: Number(diagnosticResult.report.summary.packCount) || 0,
+      failedPackCount: Number(diagnosticResult.report.summary.failedPackCount) || 0,
+      stepCount: Number(diagnosticResult.report.summary.stepCount) || 0,
+    },
+    stageDiagnostics: (diagnosticResult.notes || []).map((message) => ({
+      severity: 'warning',
+      code: 'DIAGNOSTIC_PACK_NOTE',
+      message,
+    })),
+  };
+}
+
 function writeArtifactsStage(state) {
   const {
     canonicalAnalysis,
@@ -487,6 +611,10 @@ function writeArtifactsStage(state) {
     workflowPreset,
     reproducibility,
     normalizedSourceTextByRelativePath,
+    ifsPathReport,
+    searchResults,
+    diagnosticPackReport,
+    diagnosticPackManifest,
   } = state;
   const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
   const selectedPromptTemplates = resolvePromptTemplates(promptTemplates);
@@ -511,6 +639,20 @@ function writeArtifactsStage(state) {
       context.testData.markdownFile || 'test-data.md',
     ]
     : [];
+  const generatedInvestigationFiles = [];
+  if (ifsPathReport && ifsPathReport.enabled) {
+    generatedInvestigationFiles.push('ifs-paths.json', 'ifs-paths.md');
+  }
+  if (searchResults && searchResults.enabled) {
+    generatedInvestigationFiles.push('search-results.json', 'search-results.md');
+  }
+  if (diagnosticPackReport && diagnosticPackReport.enabled) {
+    generatedInvestigationFiles.push(
+      'diagnostic-query-packs.json',
+      'diagnostic-query-packs.md',
+      'diagnostic-query-pack-manifest.json',
+    );
+  }
   const generatedFiles = [
     'canonical-analysis.json',
     'context.json',
@@ -527,6 +669,7 @@ function writeArtifactsStage(state) {
     'architecture-report.md',
     ...generatedDb2Files,
     ...generatedTestDataFiles,
+    ...generatedInvestigationFiles,
     ...generatedPromptFiles,
     'report.md',
   ];
@@ -570,6 +713,23 @@ function writeArtifactsStage(state) {
     writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), writtenOptimizedContext);
   }
   writeJsonReport(path.join(outputProgramDir, 'ai-knowledge.json'), writtenAiKnowledge);
+  if (ifsPathReport && ifsPathReport.enabled) {
+    writeJsonReport(path.join(outputProgramDir, 'ifs-paths.json'), ifsPathReport);
+    fs.writeFileSync(path.join(outputProgramDir, 'ifs-paths.md'), renderIfsPathMarkdown(ifsPathReport), 'utf8');
+  }
+  if (searchResults && searchResults.enabled) {
+    writeJsonReport(path.join(outputProgramDir, 'search-results.json'), searchResults);
+    fs.writeFileSync(path.join(outputProgramDir, 'search-results.md'), renderFullTextSearchMarkdown(searchResults), 'utf8');
+  }
+  if (diagnosticPackReport && diagnosticPackReport.enabled) {
+    writeJsonReport(path.join(outputProgramDir, 'diagnostic-query-packs.json'), diagnosticPackReport);
+    writeJsonReport(path.join(outputProgramDir, 'diagnostic-query-pack-manifest.json'), diagnosticPackManifest);
+    fs.writeFileSync(
+      path.join(outputProgramDir, 'diagnostic-query-packs.md'),
+      renderDiagnosticPackMarkdown(diagnosticPackReport),
+      'utf8',
+    );
+  }
 
   const programCallTreeJsonPath = path.join(outputProgramDir, 'program-call-tree.json');
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.json'), renderJson(graph), 'utf8');
@@ -619,9 +779,11 @@ function runAnalyzePipeline(initialState) {
   return runStages([
     { id: 'collect-scan', run: collectAndScanStage },
     { id: 'build-context', run: buildContextStage },
+    { id: 'investigate-sources', run: investigateSourcesStage },
     { id: 'optimize-context', run: optimizeContextStage },
     { id: 'export-db2', run: exportDb2Stage },
     { id: 'export-test-data', run: exportTestDataStage },
+    { id: 'run-diagnostic-packs', run: runDiagnosticPacksStage },
     { id: 'write-artifacts', run: writeArtifactsStage },
   ], initialState);
 }

@@ -24,6 +24,7 @@ const {
 const { buildSafeSharingArtifacts } = require('../../sharing/safeSharingArtifactBuilder');
 const { listWorkflowModes, resolveWorkflowModeSettings } = require('../../workflow/workflowModeRegistry');
 const { resolvePromptTemplates } = require('../../prompt/promptBuilder');
+const { listDiagnosticPacks } = require('../../investigation/diagnosticPackRegistry');
 const {
   normalizeReproducibilitySettings,
   resolveDurationMs,
@@ -35,6 +36,17 @@ function parsePositiveInteger(value, fallback) {
   const parsed = Number.parseInt(String(value).trim(), 10);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return parsed;
+}
+
+function parseCsv(value) {
+  if (value === undefined || value === null || value === true) {
+    return [];
+  }
+  return Array.from(new Set(String(value)
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b));
 }
 
 function printWorkflowModes() {
@@ -51,11 +63,24 @@ function printWorkflowModes() {
   }
 }
 
+function printDiagnosticPacks() {
+  console.log('Supported diagnostic packs:');
+  for (const pack of listDiagnosticPacks()) {
+    console.log(`- ${pack.name}: ${pack.description}`);
+    console.log(`  parameters: ${pack.parameters.map((parameter) => `${parameter.name}${parameter.required ? ' (required)' : ''}`).join(', ')}`);
+    console.log(`  steps: ${(pack.steps || []).length}`);
+  }
+}
+
 function runAnalyze(args) {
   const verbose = Boolean(args.verbose);
 
   if (args['list-modes']) {
     printWorkflowModes();
+    return;
+  }
+  if (args['list-diagnostic-packs']) {
+    printDiagnosticPacks();
     return;
   }
 
@@ -108,12 +133,22 @@ function runAnalyze(args) {
     ? resolvePromptTemplates(workflowModeSettings.promptTemplates)
     : resolvePromptTemplates();
   const testDataLimit = parsePositiveInteger(args['test-data-limit'], Number(config.testData.limit) || DEFAULT_TEST_DATA_LIMIT);
+  const searchMaxResults = parsePositiveInteger(args['search-max-results'], 200);
   const skipTestData = Boolean(args['skip-test-data']);
   const safeSharingEnabled = Boolean(args['safe-sharing']);
+  const scanIfsPathsEnabled = Boolean(args['scan-ifs-paths']);
+  const searchTerms = parseCsv(args['search-terms']);
+  const searchIgnorePatterns = parseCsv(args['search-ignore']);
+  const diagnosticPacks = parseCsv(args['diagnostic-packs']);
+  const diagnosticParameterString = typeof args['diagnostic-params'] === 'string' ? args['diagnostic-params'] : '';
   const reproducibility = normalizeReproducibilitySettings(Boolean(args.reproducible));
 
   if (testDataLimit === null) {
     console.error('Invalid option: --test-data-limit must be a positive integer');
+    process.exit(2);
+  }
+  if (searchMaxResults === null) {
+    console.error('Invalid option: --search-max-results must be a positive integer');
     process.exit(2);
   }
 
@@ -125,6 +160,9 @@ function runAnalyze(args) {
   logVerbose(`Safe sharing: ${safeSharingEnabled ? 'enabled' : 'disabled'}`);
   logVerbose(`Reproducible mode: ${reproducibility.enabled ? 'enabled' : 'disabled'}`);
   logVerbose(`Test data extraction: ${skipTestData ? 'disabled' : `enabled (limit ${testDataLimit})`}`);
+  logVerbose(`IFS path scan: ${scanIfsPathsEnabled ? 'enabled' : 'disabled'}`);
+  logVerbose(`Search terms: ${searchTerms.length > 0 ? searchTerms.join(', ') : 'none'}`);
+  logVerbose(`Diagnostic packs: ${diagnosticPacks.length > 0 ? diagnosticPacks.join(', ') : 'none'}`);
   if (guidedMode) {
     logVerbose(`Workflow mode: ${guidedMode.name}`);
     logVerbose(`Workflow prompt templates: ${promptTemplates.length > 0 ? promptTemplates.join(', ') : 'none'}`);
@@ -161,6 +199,13 @@ function runAnalyze(args) {
       workflowModeSettings: guidedMode,
       promptTemplates,
       workflowPreset,
+      scanIfsPathsEnabled,
+      searchTerms,
+      searchIgnorePatterns,
+      searchMaxResults,
+      diagnosticPacks,
+      diagnosticParameterString,
+      ibmiConfig: config.ibmi,
       reproducibility,
       logVerbose,
     });
@@ -184,6 +229,14 @@ function runAnalyze(args) {
         reproducibility,
         guidedMode,
         workflowPreset,
+        investigation: {
+          scanIfsPathsEnabled,
+          searchTerms,
+          searchIgnorePatterns,
+          searchMaxResults,
+          diagnosticPacks,
+          diagnosticParameterString,
+        },
       },
       result,
       previousManifest,
@@ -217,6 +270,14 @@ function runAnalyze(args) {
         reproducibility,
         guidedMode,
         workflowPreset,
+        investigation: {
+          scanIfsPathsEnabled,
+          searchTerms,
+          searchIgnorePatterns,
+          searchMaxResults,
+          diagnosticPacks,
+          diagnosticParameterString,
+        },
       },
       error,
       previousManifest,
@@ -234,6 +295,12 @@ function runAnalyze(args) {
   }
   if (safeSharingEnabled) {
     console.log(`Safe-sharing artifacts: ${path.join(outputProgramDir, 'safe-sharing')}`);
+  }
+  if (searchTerms.length > 0) {
+    console.log(`Search terms: ${searchTerms.join(', ')}`);
+  }
+  if (diagnosticPacks.length > 0) {
+    console.log(`Diagnostic packs: ${diagnosticPacks.join(', ')}`);
   }
   console.log(`Source files scanned: ${(result.scanSummary.sourceFiles || []).length}`);
   if (result.optimizationReport.enabled) {

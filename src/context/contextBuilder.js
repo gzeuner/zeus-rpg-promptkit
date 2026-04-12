@@ -16,8 +16,11 @@ const {
   buildCanonicalAnalysisModel,
   defaultBindingAnalysis,
   defaultCrossProgramSummary,
+  defaultDiagnosticPackReport,
   defaultGraphSummary,
+  defaultIfsPathReport,
   defaultNativeFileUsage,
+  defaultSearchResults,
   defaultSqlAnalysis,
   summarizeSqlStatements,
 } = require('./canonicalAnalysisModel');
@@ -204,6 +207,15 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
         objectUsages: [],
         ddsFiles: [],
       },
+    ifsPaths: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.ifsPaths
+      ? canonicalAnalysis.enrichments.ifsPaths
+      : defaultIfsPathReport(),
+    searchResults: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.searchResults
+      ? canonicalAnalysis.enrichments.searchResults
+      : defaultSearchResults(),
+    diagnosticPacks: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.diagnosticPacks
+      ? canonicalAnalysis.enrichments.diagnosticPacks
+      : defaultDiagnosticPackReport(),
     db2Metadata: canonicalAnalysis.enrichments ? canonicalAnalysis.enrichments.db2Metadata : null,
     testData: canonicalAnalysis.enrichments ? canonicalAnalysis.enrichments.testData : null,
     aiContext: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.aiContext

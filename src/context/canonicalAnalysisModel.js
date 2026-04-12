@@ -1350,6 +1350,53 @@ function defaultSourceTypeAnalysis() {
   };
 }
 
+function defaultIfsPathReport() {
+  return {
+    enabled: false,
+    summary: {
+      uniquePathCount: 0,
+      evidenceCount: 0,
+      fileCount: 0,
+      familyCounts: {},
+    },
+    paths: [],
+    notes: [],
+  };
+}
+
+function defaultSearchResults() {
+  return {
+    enabled: false,
+    terms: [],
+    ignorePatterns: [],
+    summary: {
+      termCount: 0,
+      scannedFileCount: 0,
+      ignoredFileCount: 0,
+      matchCount: 0,
+      truncated: false,
+      categoryCounts: {},
+    },
+    matches: [],
+    notes: [],
+  };
+}
+
+function defaultDiagnosticPackReport() {
+  return {
+    enabled: false,
+    packs: [],
+    summary: {
+      packCount: 0,
+      succeededPackCount: 0,
+      failedPackCount: 0,
+      skippedPackCount: 0,
+      stepCount: 0,
+    },
+    notes: [],
+  };
+}
+
 function buildCanonicalAnalysisModel({
   program,
   sourceRoot,
@@ -1478,6 +1525,9 @@ function buildCanonicalAnalysisModel({
       sourceNormalization: defaultSourceNormalization(),
       sourceTypeAnalysis: defaultSourceTypeAnalysis(),
       sourceCatalog: null,
+      ifsPaths: defaultIfsPathReport(),
+      searchResults: defaultSearchResults(),
+      diagnosticPacks: defaultDiagnosticPackReport(),
       db2Metadata: null,
       testData: null,
     },
@@ -1512,6 +1562,9 @@ function enrichCanonicalAnalysisModel(model, updates = {}) {
       ...(updates.sourceNormalization ? { sourceNormalization: mergeObject(model.enrichments.sourceNormalization, updates.sourceNormalization) } : {}),
       ...(updates.sourceTypeAnalysis ? { sourceTypeAnalysis: mergeObject(model.enrichments.sourceTypeAnalysis, updates.sourceTypeAnalysis) } : {}),
       ...(updates.sourceCatalog !== undefined ? { sourceCatalog: updates.sourceCatalog } : {}),
+      ...(updates.ifsPaths !== undefined ? { ifsPaths: mergeObject(model.enrichments.ifsPaths, updates.ifsPaths) } : {}),
+      ...(updates.searchResults !== undefined ? { searchResults: mergeObject(model.enrichments.searchResults, updates.searchResults) } : {}),
+      ...(updates.diagnosticPacks !== undefined ? { diagnosticPacks: mergeObject(model.enrichments.diagnosticPacks, updates.diagnosticPacks) } : {}),
       ...(updates.db2Metadata !== undefined ? { db2Metadata: updates.db2Metadata } : {}),
       ...(updates.testData !== undefined ? { testData: updates.testData } : {}),
     },
@@ -1651,7 +1704,10 @@ module.exports = {
   defaultCrossProgramSummary,
   defaultBindingAnalysis,
   defaultGraphSummary,
+  defaultIfsPathReport,
+  defaultDiagnosticPackReport,
   defaultNativeFileUsage,
+  defaultSearchResults,
   defaultSqlAnalysis,
   enrichCanonicalAnalysisModel,
   summarizeSqlStatements,
