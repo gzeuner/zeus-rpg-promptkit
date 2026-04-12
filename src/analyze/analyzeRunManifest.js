@@ -225,6 +225,18 @@ function buildAnalyzeRunManifest({
         reproducibleEnabled: reproducibility.enabled,
         guidedMode: context.guidedMode || null,
         workflowPreset: context.workflowPreset || null,
+        investigation: context.investigation && typeof context.investigation === 'object'
+          ? {
+            scanIfsPathsEnabled: Boolean(context.investigation.scanIfsPathsEnabled),
+            searchTerms: Array.isArray(context.investigation.searchTerms) ? context.investigation.searchTerms : [],
+            searchIgnorePatterns: Array.isArray(context.investigation.searchIgnorePatterns) ? context.investigation.searchIgnorePatterns : [],
+            searchMaxResults: Number(context.investigation.searchMaxResults) || 0,
+            diagnosticPacks: Array.isArray(context.investigation.diagnosticPacks) ? context.investigation.diagnosticPacks : [],
+            diagnosticParameterString: typeof context.investigation.diagnosticParameterString === 'string'
+              ? context.investigation.diagnosticParameterString
+              : '',
+          }
+          : null,
       },
       sourceSnapshot,
       importManifest: importManifestSummary,
