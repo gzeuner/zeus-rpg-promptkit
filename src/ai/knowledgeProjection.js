@@ -38,12 +38,17 @@ function toRelativeEvidenceKey(evidence) {
   ].join('|');
 }
 
-function loadSnippet(sourceRoot, evidence, maxSnippetLines = 6) {
+function loadSnippet(sourceRoot, evidence, maxSnippetLines = 6, sourceTextByRelativePath = null) {
   if (!evidence || !evidence.file) return '';
-  const resolved = path.resolve(sourceRoot || process.cwd(), evidence.file);
-  if (!fs.existsSync(resolved)) return '';
-
-  const content = fs.readFileSync(resolved, 'utf8');
+  const relativePath = String(evidence.file || '').replace(/\\/g, '/');
+  let content = null;
+  if (sourceTextByRelativePath instanceof Map && sourceTextByRelativePath.has(relativePath)) {
+    content = sourceTextByRelativePath.get(relativePath);
+  } else {
+    const resolved = path.resolve(sourceRoot || process.cwd(), relativePath);
+    if (!fs.existsSync(resolved)) return '';
+    content = fs.readFileSync(resolved, 'utf8');
+  }
   const lines = content.split(/\r?\n/);
   const startLine = Math.max(1, Number(evidence.startLine || evidence.line || 1));
   const evidenceEndLine = Math.max(startLine, Number(evidence.endLine || evidence.line || startLine));
@@ -51,7 +56,7 @@ function loadSnippet(sourceRoot, evidence, maxSnippetLines = 6) {
   return lines.slice(startLine - 1, endLine).join('\n').trim();
 }
 
-function createEvidenceIndex(sourceRoot, canonicalAnalysis) {
+function createEvidenceIndex(sourceRoot, canonicalAnalysis, sourceTextByRelativePath = null) {
   const evidenceMap = new Map();
   let sequence = 1;
 
@@ -69,7 +74,7 @@ function createEvidenceIndex(sourceRoot, canonicalAnalysis) {
         startLine: Number(evidence.startLine || evidence.line || 0) || undefined,
         endLine: Number(evidence.endLine || evidence.line || evidence.startLine || 0) || undefined,
         rawText: String(evidence.text || '').trim(),
-        snippet: loadSnippet(sourceRoot, evidence),
+        snippet: loadSnippet(sourceRoot, evidence, 6, sourceTextByRelativePath),
       });
       sequence += 1;
     }
@@ -464,12 +469,12 @@ function buildWorkflowPayload(workflowName, optimizedContext, fallbackSqlStateme
   };
 }
 
-function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedContext = null }) {
+function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedContext = null, sourceTextByRelativePath = null }) {
   if (!canonicalAnalysis || canonicalAnalysis.kind !== 'canonical-analysis') {
     throw new Error('AI knowledge projection requires canonical analysis input.');
   }
 
-  const evidenceIndex = createEvidenceIndex(canonicalAnalysis.sourceRoot, canonicalAnalysis);
+  const evidenceIndex = createEvidenceIndex(canonicalAnalysis.sourceRoot, canonicalAnalysis, sourceTextByRelativePath);
   const sqlStatements = projectSqlStatements(canonicalAnalysis, evidenceIndex);
   const selectedSqlStatements = projectSqlSelection(optimizedContext, sqlStatements);
 

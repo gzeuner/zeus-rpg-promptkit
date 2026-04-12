@@ -355,6 +355,13 @@ function normalizeSourceFiles(sourceFiles, sourceRoot, importManifest) {
         path: relPath || absolutePath,
         sizeBytes: Number(entry && entry.sizeBytes ? entry.sizeBytes : 0),
         lines: Number(entry && entry.lines ? entry.lines : 0),
+        sourceType: normalizeName(entry && entry.sourceType ? entry.sourceType : (manifestOrigin && manifestOrigin.sourceType ? manifestOrigin.sourceType : '')),
+        normalization: {
+          detectedEncoding: entry && entry.detectedEncoding ? String(entry.detectedEncoding) : null,
+          newlineStyle: entry && entry.newlineStyle ? String(entry.newlineStyle) : null,
+          normalizedNewlineStyle: entry && entry.normalizedNewlineStyle ? String(entry.normalizedNewlineStyle) : null,
+          status: entry && entry.normalizationStatus ? String(entry.normalizationStatus) : null,
+        },
         provenance: {
           origin: manifestEntry ? 'imported' : 'local',
           import: manifestEntry ? {
@@ -1319,6 +1326,30 @@ function defaultCrossProgramSummary() {
   };
 }
 
+function defaultSourceNormalization() {
+  return {
+    fileCount: 0,
+    convertedEncodingCount: 0,
+    normalizedFileCount: 0,
+    bomRemovedCount: 0,
+    normalizedLineEndingCount: 0,
+    invalidFileCount: 0,
+    warningCount: 0,
+  };
+}
+
+function defaultSourceTypeAnalysis() {
+  return {
+    summary: {
+      byType: {},
+      byFamily: {},
+    },
+    commands: [],
+    objectUsages: [],
+    ddsFiles: [],
+  };
+}
+
 function buildCanonicalAnalysisModel({
   program,
   sourceRoot,
@@ -1444,6 +1475,8 @@ function buildCanonicalAnalysisModel({
       nativeFileUsage,
       graph: defaultGraphSummary(),
       crossProgramGraph: defaultCrossProgramSummary(),
+      sourceNormalization: defaultSourceNormalization(),
+      sourceTypeAnalysis: defaultSourceTypeAnalysis(),
       sourceCatalog: null,
       db2Metadata: null,
       testData: null,
@@ -1476,6 +1509,8 @@ function enrichCanonicalAnalysisModel(model, updates = {}) {
       ...(updates.nativeFileUsage ? { nativeFileUsage: mergeObject(model.enrichments.nativeFileUsage, updates.nativeFileUsage) } : {}),
       ...(updates.graph ? { graph: mergeObject(model.enrichments.graph, updates.graph) } : {}),
       ...(updates.crossProgramGraph ? { crossProgramGraph: mergeObject(model.enrichments.crossProgramGraph, updates.crossProgramGraph) } : {}),
+      ...(updates.sourceNormalization ? { sourceNormalization: mergeObject(model.enrichments.sourceNormalization, updates.sourceNormalization) } : {}),
+      ...(updates.sourceTypeAnalysis ? { sourceTypeAnalysis: mergeObject(model.enrichments.sourceTypeAnalysis, updates.sourceTypeAnalysis) } : {}),
       ...(updates.sourceCatalog !== undefined ? { sourceCatalog: updates.sourceCatalog } : {}),
       ...(updates.db2Metadata !== undefined ? { db2Metadata: updates.db2Metadata } : {}),
       ...(updates.testData !== undefined ? { testData: updates.testData } : {}),
