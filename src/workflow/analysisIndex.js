@@ -132,6 +132,16 @@ function buildNextActions(mode, program) {
         'Open ai_prompt_modernization.md to review candidates, blockers, and suggested first steps.',
         'Use architecture-report.md and canonical-analysis.json to validate extraction boundaries and integration risks.',
       ];
+    case 'refactoring':
+      return [
+        'Open ai_prompt_refactoring_plan.md for the smallest safe change slices and validation steps.',
+        'Use ai_prompt_architecture_review.md and dependency-graph.md to confirm the proposed scope is actually isolated.',
+      ];
+    case 'test-generation':
+      return [
+        'Open ai_prompt_test_generation.md to review scenarios, fixture hints, and assertion ideas.',
+        'Cross-check the suggested tests against report.md and ai_prompt_documentation.md before implementing them.',
+      ];
     case 'impact':
       return [
         `Run zeus impact --target <name> --program ${programName} to compute reverse dependency blast radius.`,

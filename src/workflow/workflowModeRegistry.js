@@ -20,7 +20,7 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
     name: 'architecture',
     title: 'Architecture Review',
     description: 'Focus on dependency structure, semantic relationships, and architecture-facing documentation artifacts.',
-    promptTemplates: Object.freeze(['documentation']),
+    promptTemplates: Object.freeze(['documentation', 'architecture-review']),
     autoOptimizeContext: true,
     primaryArtifacts: Object.freeze([
       'analysis-index.json',
@@ -29,6 +29,7 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
       'dependency-graph.md',
       'program-call-tree.md',
       'ai_prompt_documentation.md',
+      'ai_prompt_architecture_review.md',
     ]),
     reviewWorkflow: freezeReviewWorkflow({
       intendedAudience: [
@@ -196,13 +197,14 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
     name: 'modernization',
     title: 'Modernization',
     description: 'Highlight extraction boundaries, change blockers, and evidence-backed modernization candidates.',
-    promptTemplates: Object.freeze(['documentation', 'modernization']),
+    promptTemplates: Object.freeze(['documentation', 'architecture-review', 'modernization']),
     autoOptimizeContext: true,
     primaryArtifacts: Object.freeze([
       'analysis-index.json',
       'canonical-analysis.json',
       'architecture-report.md',
       'ai_prompt_documentation.md',
+      'ai_prompt_architecture_review.md',
       'ai_prompt_modernization.md',
     ]),
     reviewWorkflow: freezeReviewWorkflow({
@@ -234,6 +236,95 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
         { path: 'architecture-report.md', purpose: 'Architecture narrative for reviewing seams and dependencies.' },
         { path: 'canonical-analysis.json', purpose: 'Semantic source of truth for validating modernization claims.' },
         { path: 'ai_prompt_documentation.md', purpose: 'Supporting documentation prompt for reviewer context.' },
+      ],
+    }),
+  }),
+  refactoring: Object.freeze({
+    name: 'refactoring',
+    title: 'Refactoring',
+    description: 'Focus on small safe change seams, dependency-aware sequencing, and verification guidance.',
+    promptTemplates: Object.freeze(['architecture-review', 'refactoring-plan']),
+    autoOptimizeContext: true,
+    primaryArtifacts: Object.freeze([
+      'analysis-index.json',
+      'canonical-analysis.json',
+      'architecture-report.md',
+      'dependency-graph.md',
+      'ai_prompt_architecture_review.md',
+      'ai_prompt_refactoring_plan.md',
+    ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'Developers planning local improvements',
+        'Technical leads sequencing safer refactors',
+        'Reviewers validating change boundaries before implementation',
+      ],
+      keyQuestionsAnswered: [
+        'Which refactoring candidates are small enough to execute safely now?',
+        'Which dependencies or IBM i behaviors constrain sequencing?',
+        'Which evidence should reviewers inspect before approving the first change?',
+      ],
+      expectedDecisions: [
+        'Choose the first refactoring slice and the verification plan around it.',
+        'Decide whether blockers require more architecture or runtime investigation first.',
+      ],
+      interpretationGuidance: [
+        'Prefer ai_prompt_refactoring_plan.md for sequencing guidance and ai_prompt_architecture_review.md for boundary validation.',
+        'Treat mutating file I/O, unresolved calls, and dynamic SQL as indicators that refactoring scope should stay narrow until validated.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and selected root program.',
+        'Canonical semantic analysis, architecture evidence, and dependency graph artifacts.',
+        'Refactoring and architecture prompt packs grounded in the same shared context model.',
+      ],
+      recommendedOutputs: [
+        { path: 'ai_prompt_refactoring_plan.md', purpose: 'Primary refactoring plan with sequencing and validation guidance.' },
+        { path: 'ai_prompt_architecture_review.md', purpose: 'Supporting architecture prompt for boundary checks.' },
+        { path: 'dependency-graph.md', purpose: 'Readable dependency structure used to limit change scope.' },
+      ],
+    }),
+  }),
+  'test-generation': Object.freeze({
+    name: 'test-generation',
+    title: 'Test Generation',
+    description: 'Package scenario, data-setup, and assertion guidance for evidence-backed test planning.',
+    promptTemplates: Object.freeze(['documentation', 'test-generation']),
+    autoOptimizeContext: true,
+    primaryArtifacts: Object.freeze([
+      'analysis-index.json',
+      'ai-knowledge.json',
+      'report.md',
+      'ai_prompt_documentation.md',
+      'ai_prompt_test_generation.md',
+    ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'Developers expanding regression coverage',
+        'QA engineers translating IBM i behavior into test scenarios',
+        'Reviewers planning fixtures and assertions before implementation',
+      ],
+      keyQuestionsAnswered: [
+        'Which scenarios and edge cases deserve the first automated tests?',
+        'Which dependencies, tables, or SQL paths drive fixture needs?',
+        'Which generated artifacts best support evidence-backed test planning?',
+      ],
+      expectedDecisions: [
+        'Choose the first test scenarios and fixture boundaries to implement.',
+        'Decide whether additional data or diagnostic evidence is needed before writing tests.',
+      ],
+      interpretationGuidance: [
+        'Use ai_prompt_test_generation.md for scenario design and ai_prompt_documentation.md for broader program context.',
+        'Treat test-data and diagnostic-pack outputs as setup hints, not proof that runtime behavior is fully covered.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and selected root program.',
+        'Prompt-ready AI knowledge projection with tables, SQL, evidence highlights, and optional diagnostic outputs.',
+        'Documentation and test-generation prompt packs that consume the shared context model.',
+      ],
+      recommendedOutputs: [
+        { path: 'ai_prompt_test_generation.md', purpose: 'Primary test-generation prompt with scenarios, fixtures, and assertions.' },
+        { path: 'ai_prompt_documentation.md', purpose: 'Supporting documentation prompt for system context.' },
+        { path: 'report.md', purpose: 'Human-readable summary for manual validation of the proposed tests.' },
       ],
     }),
   }),

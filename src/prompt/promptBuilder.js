@@ -144,6 +144,21 @@ function formatDb2Hint(db2Metadata, workflow) {
   return '';
 }
 
+function formatIfsPaths(ifsPaths) {
+  return asBulletList((ifsPaths || []).slice(0, 10), (entry) => `${entry.path} (${entry.family || 'IFS'})`);
+}
+
+function formatSearchResults(searchFindings) {
+  return asBulletList((searchFindings || []).slice(0, 10), (entry) => `[${entry.term}] ${entry.sourcePath}:${entry.line} ${entry.context}`);
+}
+
+function formatDiagnosticFindings(diagnosticPacks) {
+  return asBulletList((diagnosticPacks || []).slice(0, 8), (entry) => {
+    const summary = entry.summary || {};
+    return `${entry.name}: ${summary.succeededStepCount || 0} succeeded, ${summary.failedStepCount || 0} failed, ${summary.skippedStepCount || 0} skipped`;
+  });
+}
+
 function getPathValue(value, dottedPath) {
   return String(dottedPath || '')
     .split('.')
@@ -241,6 +256,9 @@ function buildTemplateData(context, sourceSnippet, contract) {
     uncertaintyMarkers: '- None detected',
     evidencePackSummary: 'No evidence packs available.',
     contractBudget: formatBudgetHint(contract, promptEstimate),
+    ifsPaths: formatIfsPaths((context.ifsPaths && context.ifsPaths.paths) || []),
+    searchResults: formatSearchResults((context.searchResults && context.searchResults.matches) || []),
+    diagnosticFindings: formatDiagnosticFindings((context.diagnosticPacks && context.diagnosticPacks.packs) || []),
   };
 }
 
@@ -290,6 +308,9 @@ function buildTemplateDataFromProjection(aiProjection, contract) {
     uncertaintyMarkers: asBulletList((workflow && workflow.uncertaintyMarkers) || []),
     evidencePackSummary: formatEvidencePackSummary(workflow),
     contractBudget: formatBudgetHint(contract, Number(workflow && workflow.estimatedTokens) || 0),
+    ifsPaths: formatIfsPaths(workflow && workflow.ifsPaths),
+    searchResults: formatSearchResults(workflow && workflow.searchFindings),
+    diagnosticFindings: formatDiagnosticFindings(workflow && workflow.diagnosticPacks),
   };
 }
 
