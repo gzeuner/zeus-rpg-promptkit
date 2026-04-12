@@ -58,3 +58,11 @@ Current fixture coverage includes:
 - `documentation`
 - `defect-analysis`
 - `modernization`
+
+Specialized prompt packs now also include:
+
+- `architecture-review`
+- `refactoring-plan`
+- `test-generation`
+
+These prompt packs still consume the same shared AI knowledge projection and can be selected through guided analyze modes or workflow presets instead of a second prompt-selection system.

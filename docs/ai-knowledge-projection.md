@@ -31,6 +31,9 @@ Current `entities` blocks include:
 - `sqlStatements`
 - `nativeFiles`
 - `db2Tables`
+- `ifsPaths`
+- `searchFindings`
+- `diagnosticPacks`
 - `binding`
 - `modules`
 
@@ -75,10 +78,15 @@ Each workflow may include:
 - `rankedEvidence`
 - `dependencyGraphSummary`
 - `testData`
+- `ifsPaths`
+- `searchFindings`
+- `diagnosticPacks`
 
 Workflow `db2Tables` is selected from the projected DB2 table set using the workflow's semantic table focus rather than a second ranking system.
 
 Workflow `testData` remains the compact compatibility summary from `context.json`, but when DB2 linkage is available Zeus narrows `testData.tables` to source-relevant DB2 tables for that workflow. This keeps sample rows available to prompts without flooding the workflow payload.
+
+Workflow `ifsPaths`, `searchFindings`, and `diagnosticPacks` are included only when those optional investigation features are present. This keeps prompt noise controlled while still making search and diagnostic evidence available to specialized prompt packs.
 
 `evidencePacks` currently groups ranked evidence into:
 

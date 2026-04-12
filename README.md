@@ -11,6 +11,9 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - Writes a fetch import manifest and validates imported source files before scanning
 - Normalizes supported BOM-marked local sources into a consistent analyze-time text contract
 - Classifies RPG, CL, and DDS sources before scanner dispatch
+- Optionally scans sources and imported artifacts for likely IFS path usage with evidence-backed outputs
+- Optionally runs full-text search workflows for configurable terms across local and imported analysis inputs
+- Optionally executes structured read-only diagnostic query packs for table, program, and object investigation
 - Detects common dependencies using practical heuristics:
   - F-spec and `dcl-f` table/file declarations
   - CL command, `CALL PGM`, and object/file usage hints
@@ -101,7 +104,7 @@ npm test
 Command syntax:
 
 ```bash
-zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--mode <name>] [--list-modes] [--optimize-context] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]
+zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms <csv>] [--search-ignore <csv>] [--search-max-results <n>] [--diagnostic-packs <csv>] [--diagnostic-params <k=v,...>] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]
 ```
 
 Workflow command syntax:
@@ -117,6 +120,8 @@ Guided analyze modes:
 - use `--mode documentation` for documentation-first prompt packaging
 - use `--mode error-analysis` or `--mode defect-analysis` for failure-oriented evidence packaging
 - use `--mode modernization` for modernization prompt generation and extraction-boundary review
+- use `--mode refactoring` for dependency-aware refactoring guidance
+- use `--mode test-generation` for evidence-backed scenario and fixture planning
 - use `--mode impact` to highlight dependency artifacts and the next `zeus impact` step
 
 When a guided mode is selected, Zeus records the mode and derived behavior in `analyze-run-manifest.json`, writes `analysis-index.json`, and may auto-enable context optimization for prompt-heavy workflows.
@@ -130,6 +135,8 @@ Named workflow presets build on top of those guided modes and package a shareabl
 - `modernization-review`
 - `onboarding`
 - `dependency-risk`
+- `refactoring-review`
+- `test-generation-review`
 
 Use `zeus workflow --list-presets` to inspect the available presets and `zeus workflow --preset modernization-review ...` to run analyze plus bundle with one command.
 
@@ -142,6 +149,13 @@ Guided modes and workflow presets now also expose opinionated review metadata:
 - recommended outputs for sharing
 
 `zeus analyze --list-modes` and `zeus workflow --list-presets` print the audience and decision framing so users can choose a workflow by review intent, not only by file list.
+
+Investigation options extend the same analyze pipeline and output contract:
+
+- `--scan-ifs-paths` writes `ifs-paths.json` and `ifs-paths.md`
+- `--search-terms ORDERS,INVPGM` writes `search-results.json` and `search-results.md`
+- `--diagnostic-packs table-investigation --diagnostic-params table=ORDERS` writes `diagnostic-query-packs.json`, `diagnostic-query-packs.md`, and `diagnostic-query-pack-manifest.json`
+- `--list-diagnostic-packs` prints the bundled starter packs and their parameters
 
 Bundle command syntax:
 
@@ -247,13 +261,23 @@ Generated files:
 - `ai-knowledge.json`
 - `analysis-index.json`
 - `workflow-run-manifest.json` (when `zeus workflow` is executed)
+- `ifs-paths.json` (when `--scan-ifs-paths` is enabled)
+- `ifs-paths.md` (when `--scan-ifs-paths` is enabled)
+- `search-results.json` (when `--search-terms` is used)
+- `search-results.md` (when `--search-terms` is used)
+- `diagnostic-query-packs.json` (when `--diagnostic-packs` is used)
+- `diagnostic-query-packs.md` (when `--diagnostic-packs` is used)
+- `diagnostic-query-pack-manifest.json` (when `--diagnostic-packs` is used)
 - `safe-sharing/redaction-manifest.json` (when `--safe-sharing` is enabled)
 - `report.md`
 - `architecture-report.md`
 - `ai_prompt_documentation.md`
 - `ai_prompt_error_analysis.md`
 - `ai_prompt_defect_analysis.md` (when `--mode defect-analysis` is selected)
+- `ai_prompt_architecture_review.md` (when `architecture`, `modernization`, or `refactoring` modes are selected)
 - `ai_prompt_modernization.md` (when `--mode modernization` is selected)
+- `ai_prompt_refactoring_plan.md` (when `--mode refactoring` is selected)
+- `ai_prompt_test_generation.md` (when `--mode test-generation` is selected)
 - `dependency-graph.json`
 - `dependency-graph.mmd`
 - `dependency-graph.md`
@@ -289,6 +313,9 @@ The safe-sharing directory reuses the same artifact filenames where possible, bu
 - `sql`
 - `graph`
 - `crossProgramGraph`
+- `ifsPaths`
+- `searchResults`
+- `diagnosticPacks`
 - `db2Metadata`
 - `testData`
 - `aiContext`
@@ -323,6 +350,9 @@ The canonical schema and invariants are documented in `docs/canonical-analysis-m
 
 - `Overview`
 - `Source Files`
+- `IFS Path Usage`
+- `Full-Text Search`
+- `Diagnostic Query Packs`
 - `Tables`
 - `Program Calls`
 - `Procedure Semantics`
@@ -505,6 +535,9 @@ Available prompt types today:
 - `error-analysis`
 - `defect-analysis`
 - `modernization`
+- `architecture-review`
+- `refactoring-plan`
+- `test-generation`
 
 Guided analyze modes reuse these prompt contracts instead of inventing a separate prompt-selection system.
 
@@ -529,6 +562,9 @@ Supported placeholders include:
 - `{{sqlStatements}}`
 - `{{dependencyGraphSummary}}`
 - `{{sourceSnippet}}`
+- `{{ifsPaths}}`
+- `{{searchResults}}`
+- `{{diagnosticFindings}}`
 
 To add a new template:
 
@@ -649,6 +685,15 @@ Example:
 
 ```bash
 zeus analyze --source ./rpg_sources --program ORDERPGM --test-data-limit 25
+```
+
+Investigation examples:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --scan-ifs-paths
+zeus analyze --source ./rpg_sources --program ORDERPGM --search-terms ORDERS,INVPGM --search-ignore archive/,old/
+zeus analyze --source ./rpg_sources --program ORDERPGM --diagnostic-packs table-investigation --diagnostic-params table=ORDERS
+zeus analyze --list-diagnostic-packs
 ```
 
 ## Output Bundle Packaging
@@ -820,6 +865,7 @@ See [docs/fixture-sanitization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/do
 See [docs/reproducible-output-mode.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/reproducible-output-mode.md) for the reproducible output contract and stable-timestamp mode.
 See [docs/import-manifest-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/import-manifest-contract.md) for the public fetch provenance manifest contract.
 See [docs/source-ingest-normalization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/source-ingest-normalization.md) for the analyze-time normalization contract and current CL/DDS scanner depth.
+See [docs/investigation-workflows.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/investigation-workflows.md) for the new IFS-path, full-text search, diagnostic-pack, and prompt-pack workflow additions.
 
 ## Notes
 
