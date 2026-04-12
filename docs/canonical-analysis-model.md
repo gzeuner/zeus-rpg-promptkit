@@ -137,6 +137,9 @@ Top-level `provenance.importManifest` also summarizes the import contract when p
 - `crossProgramGraph`
 - `sourceNormalization`
 - `sourceTypeAnalysis`
+- `ifsPaths`
+- `searchResults`
+- `diagnosticPacks`
 - `sourceCatalog`
 - `nativeFileUsage`
 - `bindingAnalysis`
@@ -144,6 +147,8 @@ Top-level `provenance.importManifest` also summarizes the import contract when p
 - `testData`
 
 `db2Metadata` and `testData` remain compatibility enrichments rather than first-class semantic entities. When present, they should preserve explicit linkage back to canonical source evidence, SQL references, and native file usage so downstream AI/report projections can stay evidence-backed without reparsing DB2 artifacts.
+
+`ifsPaths`, `searchResults`, and `diagnosticPacks` are also compatibility enrichments. They extend investigation and prompt workflows without changing the canonical entity graph, and they should remain deterministic, evidence-backed, and safe to bundle or redact.
 
 ## SQL Semantics
 
