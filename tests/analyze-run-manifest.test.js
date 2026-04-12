@@ -48,7 +48,7 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
         extensions: ['.rpgle'],
         guidedMode: {
           name: 'modernization',
-          promptTemplates: ['documentation', 'modernization'],
+          promptTemplates: ['documentation', 'architecture-review', 'modernization'],
           effectiveOptimizeContext: true,
           reviewWorkflow: {
             intendedAudience: ['Modernization leads'],
@@ -65,7 +65,7 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
           name: 'modernization-review',
           title: 'Modernization Review',
           analyzeMode: 'modernization',
-          promptTemplates: ['documentation', 'modernization'],
+          promptTemplates: ['documentation', 'architecture-review', 'modernization'],
           workflowKeys: ['documentation'],
           bundleArtifacts: ['analyze-run-manifest.json', 'ai_prompt_modernization.md'],
           reviewWorkflow: {
@@ -78,6 +78,14 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
               { path: 'ai_prompt_modernization.md', purpose: 'Primary modernization bundle output.' },
             ],
           },
+        },
+        investigation: {
+          scanIfsPathsEnabled: true,
+          searchTerms: ['ORDERS'],
+          searchIgnorePatterns: ['legacy/'],
+          searchMaxResults: 25,
+          diagnosticPacks: ['table-investigation'],
+          diagnosticParameterString: 'table=ORDERS',
         },
       },
       result: {
@@ -166,10 +174,13 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
     assert.equal(manifest.inputs.importManifest.sourceLib, 'APPLIB');
     assert.equal(manifest.inputs.importManifest.traceableFileCount, 1);
     assert.equal(manifest.inputs.options.guidedMode.name, 'modernization');
-    assert.deepEqual(manifest.inputs.options.guidedMode.promptTemplates, ['documentation', 'modernization']);
+    assert.deepEqual(manifest.inputs.options.guidedMode.promptTemplates, ['documentation', 'architecture-review', 'modernization']);
     assert.match(manifest.inputs.options.guidedMode.reviewWorkflow.intendedAudience.join('\n'), /Modernization leads/);
     assert.equal(manifest.inputs.options.workflowPreset.name, 'modernization-review');
     assert.match(manifest.inputs.options.workflowPreset.reviewWorkflow.expectedDecisions.join('\n'), /pilot change/i);
+    assert.equal(manifest.inputs.options.investigation.scanIfsPathsEnabled, true);
+    assert.deepEqual(manifest.inputs.options.investigation.searchTerms, ['ORDERS']);
+    assert.deepEqual(manifest.inputs.options.investigation.diagnosticPacks, ['table-investigation']);
     assert.equal(manifest.artifacts.length, 2);
     assert.equal(manifest.artifacts[0].exists, true);
     assert.ok(typeof manifest.artifacts[0].sha256 === 'string' && manifest.artifacts[0].sha256.length > 0);

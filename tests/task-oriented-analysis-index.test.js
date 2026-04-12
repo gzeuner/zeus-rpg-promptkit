@@ -26,6 +26,8 @@ test('analyze --list-modes exposes guided workflow presets', () => {
   assert.match(output, /Supported analyze workflow modes:/);
   assert.match(output, /- architecture:/);
   assert.match(output, /- modernization:/);
+  assert.match(output, /- refactoring:/);
+  assert.match(output, /- test-generation:/);
   assert.match(output, /- impact:/);
   assert.match(output, /intended audience:/);
   assert.match(output, /expected decisions:/);
@@ -55,6 +57,7 @@ test('guided analyze mode writes task index, selected mode metadata, and mode-sp
     assert.equal(fs.existsSync(path.join(programOutputDir, 'optimized-context.json')), true);
     assert.equal(fs.existsSync(path.join(programOutputDir, 'analysis-index.json')), true);
     assert.equal(fs.existsSync(path.join(programOutputDir, 'ai_prompt_documentation.md')), true);
+    assert.equal(fs.existsSync(path.join(programOutputDir, 'ai_prompt_architecture_review.md')), true);
     assert.equal(fs.existsSync(path.join(programOutputDir, 'ai_prompt_modernization.md')), true);
     assert.equal(fs.existsSync(path.join(programOutputDir, 'ai_prompt_error_analysis.md')), false);
 
@@ -75,7 +78,7 @@ test('guided analyze mode writes task index, selected mode metadata, and mode-sp
 
     const manifest = readJson(path.join(programOutputDir, 'analyze-run-manifest.json'));
     assert.equal(manifest.inputs.options.guidedMode.name, 'modernization');
-    assert.deepEqual(manifest.inputs.options.guidedMode.promptTemplates, ['documentation', 'modernization']);
+    assert.deepEqual(manifest.inputs.options.guidedMode.promptTemplates, ['documentation', 'architecture-review', 'modernization']);
     assert.equal(manifest.inputs.options.guidedMode.effectiveOptimizeContext, true);
     assert.match(manifest.inputs.options.guidedMode.reviewWorkflow.expectedDecisions.join('\n'), /pilot extraction candidate/i);
   } finally {
