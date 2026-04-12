@@ -83,8 +83,17 @@ Each `sourceFiles[]` entry contains:
 - `path`: source-root-relative path
 - `sizeBytes`
 - `lines`
+- `sourceType`
+- `normalization`
 - `provenance.origin`: `local` or `imported`
 - `provenance.import`: populated when the source file came from `zeus-import-manifest.json`
+
+`normalization` currently carries analyze-time ingest metadata such as:
+
+- `detectedEncoding`
+- `newlineStyle`
+- `normalizedNewlineStyle`
+- `status`
 
 Imported provenance currently carries:
 
@@ -126,6 +135,8 @@ Top-level `provenance.importManifest` also summarizes the import contract when p
 - `aiContext`
 - `graph`
 - `crossProgramGraph`
+- `sourceNormalization`
+- `sourceTypeAnalysis`
 - `sourceCatalog`
 - `nativeFileUsage`
 - `bindingAnalysis`

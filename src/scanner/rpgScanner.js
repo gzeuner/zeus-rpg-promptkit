@@ -13,6 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
+const { scanClFile } = require('./clScanner');
+const { scanDdsFile } = require('./ddsScanner');
+const {
+  classifySourceFile,
+  normalizeSourceType,
+  sourceTypeFamily,
+  summarizeSourceTypes,
+} = require('../source/sourceType');
 
 const NATIVE_IO_OPCODES = new Set([
   'CHAIN',
@@ -1638,9 +1646,35 @@ function scanContent(filePath, content) {
   };
 }
 
-function scanRpgFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  return scanContent(filePath, content);
+function scanRpgFile(filePath, options = {}) {
+  const content = options.content !== undefined ? String(options.content) : fs.readFileSync(filePath, 'utf8');
+  const result = scanContent(filePath, content);
+  result.sourceFile.sourceType = normalizeSourceType(options.sourceType || classifySourceFile(filePath));
+  return result;
+}
+
+function scanStructuredSourceFile(filePath, options = {}) {
+  const sourceType = normalizeSourceType(options.sourceType || classifySourceFile(filePath));
+  const family = sourceTypeFamily(sourceType);
+
+  if (family === 'CL') {
+    return scanClFile(filePath, {
+      content: options.content,
+      sourceType,
+    });
+  }
+
+  if (family === 'DDS') {
+    return scanDdsFile(filePath, {
+      content: options.content,
+      sourceType,
+    });
+  }
+
+  return scanRpgFile(filePath, {
+    content: options.content,
+    sourceType,
+  });
 }
 
 function mergeEntities(targetMap, entities, withKind) {
@@ -1772,9 +1806,35 @@ function scanSourceFiles(filePaths, options = {}) {
 
   for (const filePath of filePaths || []) {
     try {
+      const sourceMetadata = options.sourceMetadataByPath instanceof Map
+        ? (options.sourceMetadataByPath.get(path.resolve(String(filePath || ''))) || null)
+        : null;
+      const scanFn = (resolvedPath) => scanStructuredSourceFile(resolvedPath, {
+        content: sourceMetadata && typeof sourceMetadata.normalizedText === 'string'
+          ? sourceMetadata.normalizedText
+          : undefined,
+        sourceType: sourceMetadata && sourceMetadata.sourceType
+          ? sourceMetadata.sourceType
+          : undefined,
+      });
       const result = scanCache && typeof scanCache.getOrScan === 'function'
-        ? scanCache.getOrScan(filePath, scanRpgFile)
-        : scanRpgFile(filePath);
+        ? scanCache.getOrScan(filePath, scanFn)
+        : scanFn(filePath);
+      if (sourceMetadata) {
+        result.sourceFile = {
+          ...result.sourceFile,
+          path: result.sourceFile && result.sourceFile.path ? result.sourceFile.path : sourceMetadata.path,
+          sizeBytes: Number(sourceMetadata.sizeBytes) || result.sourceFile.sizeBytes || 0,
+          lines: typeof sourceMetadata.normalizedText === 'string'
+            ? sourceMetadata.normalizedText.split('\n').length
+            : result.sourceFile.lines,
+          sourceType: sourceMetadata.sourceType || result.sourceFile.sourceType || classifySourceFile(filePath),
+          detectedEncoding: sourceMetadata.detectedEncoding || null,
+          normalizationStatus: sourceMetadata.normalizationStatus || 'ok',
+          newlineStyle: sourceMetadata.newlineStyle || 'UNKNOWN',
+          normalizedNewlineStyle: sourceMetadata.normalizedNewlineStyle || 'UNKNOWN',
+        };
+      }
       scanResults.push(result);
     } catch (error) {
       notes.push(`Skipped file ${filePath}: ${error.message}`);
@@ -1885,6 +1945,48 @@ function scanSourceFiles(filePaths, options = {}) {
     notes.push(diagnostic.message);
   }
 
+  const commands = mergeStructuredItems(
+    scanResults,
+    'commands',
+    (item) => [
+      item.command || item.name,
+      item.text || '',
+      item.evidence && item.evidence[0] && item.evidence[0].file,
+      item.evidence && item.evidence[0] && item.evidence[0].line,
+    ].join('|'),
+  ).sort((a, b) => {
+    if (String(a.command || a.name) !== String(b.command || b.name)) {
+      return String(a.command || a.name).localeCompare(String(b.command || b.name));
+    }
+    return String(a.text || '').localeCompare(String(b.text || ''));
+  });
+  const objectUsages = mergeStructuredItems(
+    scanResults,
+    'objectUsages',
+    (item) => [
+      item.objectType,
+      item.name,
+      item.command,
+      item.evidence && item.evidence[0] && item.evidence[0].file,
+      item.evidence && item.evidence[0] && item.evidence[0].line,
+    ].join('|'),
+  ).sort((a, b) => {
+    if (String(a.objectType || '') !== String(b.objectType || '')) return String(a.objectType || '').localeCompare(String(b.objectType || ''));
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  });
+  const ddsFiles = mergeStructuredItems(
+    scanResults,
+    'ddsFiles',
+    (item) => item.name,
+    (target, item) => {
+      target.kind = target.kind || item.kind || 'DISK';
+      target.sourceType = target.sourceType || item.sourceType || 'DDS';
+      target.recordFormats = uniqueSortedStrings([...(target.recordFormats || []), ...(item.recordFormats || [])]);
+      target.referencedFiles = uniqueSortedStrings([...(target.referencedFiles || []), ...(item.referencedFiles || [])]);
+    },
+  ).sort((a, b) => a.name.localeCompare(b.name));
+  const sourceTypeSummary = summarizeSourceTypes(sourceFiles);
+
   return {
     sourceFiles,
     tables: Array.from(tablesMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
@@ -1949,6 +2051,16 @@ function scanSourceFiles(filePaths, options = {}) {
     servicePrograms,
     diagnostics,
     notes,
+    commands,
+    objectUsages,
+    ddsFiles,
+    sourceTypeSummary,
+    sourceTypeAnalysis: {
+      summary: sourceTypeSummary,
+      commands,
+      objectUsages,
+      ddsFiles,
+    },
   };
 }
 
