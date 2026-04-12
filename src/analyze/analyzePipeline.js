@@ -70,7 +70,16 @@ function collectAndScanStage(state) {
   });
   logVerbose(`Validated scannable source files: ${validation.validFiles.length}`);
 
-  const scanSummary = scanSourceFiles(validation.validFiles, { scanCache });
+  const sourceMetadataByPath = new Map(validation.results.map((result) => [result.path, result]));
+  const normalizedSourceTextByRelativePath = new Map(
+    validation.results
+      .filter((result) => typeof result.normalizedText === 'string')
+      .map((result) => [result.relativePath, result.normalizedText]),
+  );
+  const scanSummary = scanSourceFiles(validation.validFiles, {
+    scanCache,
+    sourceMetadataByPath,
+  });
   const notes = [
     ...(scanSummary.notes || []),
     ...validation.results.flatMap((result) => result.issues.map((issue) => issue.message)),
@@ -143,6 +152,9 @@ function collectAndScanStage(state) {
     scanCache,
     sourceFiles,
     scannableSourceFiles: validation.validFiles,
+    sourceMetadataByPath,
+    normalizedSourceTextByRelativePath,
+    sourceNormalizationSummary: validation.normalizationSummary,
     importManifest: importManifestResult.manifest,
     importManifestPath: importManifestResult.manifestPath,
     scanSummary,
@@ -181,6 +193,11 @@ function collectAndScanStage(state) {
       moduleCount: (scanSummary.modules || []).length,
       bindingDirectoryCount: (scanSummary.bindingDirectories || []).length,
       serviceProgramCount: (scanSummary.servicePrograms || []).length,
+      commandCount: (scanSummary.commands || []).length,
+      objectUsageCount: (scanSummary.objectUsages || []).length,
+      ddsFileCount: (scanSummary.ddsFiles || []).length,
+      sourceTypeSummary: scanSummary.sourceTypeSummary || { byType: {}, byFamily: {} },
+      sourceNormalization: validation.normalizationSummary,
       diagnosticCount: (scanSummary.diagnostics || []).length,
       noteCount: notes.length,
     },
@@ -197,6 +214,9 @@ function buildContextStage(state) {
     dependencies,
     notes,
     scanCache,
+    sourceMetadataByPath,
+    normalizedSourceTextByRelativePath,
+    sourceNormalizationSummary,
   } = state;
 
   let canonicalAnalysis = buildCanonicalAnalysisModel({
@@ -217,6 +237,7 @@ function buildContextStage(state) {
     sourceRoot,
     importManifest: state.importManifest,
     scanCache,
+    sourceMetadataByPath,
   });
 
   canonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
@@ -235,10 +256,15 @@ function buildContextStage(state) {
       },
     },
     sourceCatalog: crossProgramGraph.sourceCatalog,
+    sourceNormalization: sourceNormalizationSummary || null,
+    sourceTypeAnalysis: scanSummary.sourceTypeAnalysis || null,
   });
   context = buildContext({ canonicalAnalysis });
 
-  const sourceSnippet = pickSourceSnippet(scanSummary.sourceFiles, program);
+  const sourceSnippet = pickSourceSnippet(scanSummary.sourceFiles, program, {
+    normalizedSourceTextByRelativePath,
+    sourceRoot,
+  });
 
   return {
     ...state,
@@ -460,6 +486,7 @@ function writeArtifactsStage(state) {
     workflowModeSettings,
     workflowPreset,
     reproducibility,
+    normalizedSourceTextByRelativePath,
   } = state;
   const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
   const selectedPromptTemplates = resolvePromptTemplates(promptTemplates);
@@ -468,6 +495,7 @@ function writeArtifactsStage(state) {
     canonicalAnalysis,
     context,
     optimizedContext,
+    sourceTextByRelativePath: normalizedSourceTextByRelativePath,
   });
 
   const generatedPromptFiles = selectedPromptTemplates.map((templateName) => getPromptContract(templateName).outputFileName);

@@ -80,6 +80,8 @@ function analyzeImpactFromGraph(graph, targetInput) {
   const nodes = Array.isArray(graph.nodes) ? graph.nodes : [];
   const edges = Array.isArray(graph.edges) ? graph.edges : [];
   const nodeTypeMap = buildNodeTypeMap(nodes);
+  const ambiguousPrograms = sortUnique(graph.ambiguousPrograms || []);
+  const unresolvedPrograms = sortUnique(graph.unresolvedPrograms || []);
   const type = nodeTypeMap.get(target);
   if (!type) {
     throw new Error(`Target "${target}" not found in graph nodes.`);
@@ -130,6 +132,12 @@ function analyzeImpactFromGraph(graph, targetInput) {
       directPrograms,
       indirectPrograms,
       totalAffectedPrograms,
+      ambiguity: {
+        targetAmbiguous: ambiguousPrograms.includes(target),
+        targetUnresolved: unresolvedPrograms.includes(target),
+        ambiguousPrograms,
+        unresolvedPrograms,
+      },
     };
   }
 
@@ -143,6 +151,12 @@ function analyzeImpactFromGraph(graph, targetInput) {
       directCallers,
       indirectCallers,
       totalAffectedPrograms: sortUnique([...directCallers, ...indirectCallers]).length,
+      ambiguity: {
+        targetAmbiguous: ambiguousPrograms.includes(target),
+        targetUnresolved: unresolvedPrograms.includes(target),
+        ambiguousPrograms,
+        unresolvedPrograms,
+      },
     };
   }
 
@@ -152,6 +166,12 @@ function analyzeImpactFromGraph(graph, targetInput) {
     directPrograms: [],
     indirectPrograms: [],
     totalAffectedPrograms: 0,
+    ambiguity: {
+      targetAmbiguous: ambiguousPrograms.includes(target),
+      targetUnresolved: unresolvedPrograms.includes(target),
+      ambiguousPrograms,
+      unresolvedPrograms,
+    },
   };
 }
 
@@ -181,6 +201,13 @@ ${toMarkdownList(directItems)}
 ${toMarkdownList(indirectItems)}
 
 Total affected programs: ${result.totalAffectedPrograms || 0}
+
+## Resolution Diagnostics
+
+- Target ambiguous: ${result.ambiguity && result.ambiguity.targetAmbiguous ? 'yes' : 'no'}
+- Target unresolved: ${result.ambiguity && result.ambiguity.targetUnresolved ? 'yes' : 'no'}
+- Ambiguous programs in graph: ${result.ambiguity && result.ambiguity.ambiguousPrograms && result.ambiguity.ambiguousPrograms.length > 0 ? result.ambiguity.ambiguousPrograms.join(', ') : 'None'}
+- Unresolved programs in graph: ${result.ambiguity && result.ambiguity.unresolvedPrograms && result.ambiguity.unresolvedPrograms.length > 0 ? result.ambiguity.unresolvedPrograms.join(', ') : 'None'}
 `;
 }
 
@@ -204,6 +231,12 @@ function generateImpactAnalysis({
       directCallers: result.directCallers || [],
       indirectCallers: result.indirectCallers || [],
       totalAffectedPrograms: result.totalAffectedPrograms || 0,
+      ambiguity: result.ambiguity || {
+        targetAmbiguous: false,
+        targetUnresolved: false,
+        ambiguousPrograms: [],
+        unresolvedPrograms: [],
+      },
     }),
   );
 

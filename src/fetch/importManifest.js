@@ -250,7 +250,11 @@ function buildImportManifest({
     exportRecords
       .map((record) => record.localPath)
       .filter(Boolean),
-    { rootDir: localDestination },
+    {
+      rootDir: localDestination,
+      strictUtf8Only: true,
+      normalizeText: false,
+    },
   );
   const validationByPath = new Map(validation.results.map((result) => [result.path, result]));
 
