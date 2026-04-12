@@ -6,11 +6,15 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 
 ## Features
 
-- Scans RPG source files from a configurable root directory
+- Scans RPG, CL, and DDS source files from a configurable root directory
 - Exports IBM i source members to Windows-readable UTF-8 stream files by default during `zeus fetch`
 - Writes a fetch import manifest and validates imported source files before scanning
+- Normalizes supported BOM-marked local sources into a consistent analyze-time text contract
+- Classifies RPG, CL, and DDS sources before scanner dispatch
 - Detects common dependencies using practical heuristics:
   - F-spec and `dcl-f` table/file declarations
+  - CL command, `CALL PGM`, and object/file usage hints
+  - DDS record formats and referenced file hints
   - Native file I/O semantics including read/write/update/delete, workstation/printer behavior, and record-format hints
   - Embedded SQL semantics including read/write intent, cursor activity, host variables, dynamic SQL flags, and uncertainty markers
   - Module, service-program, binder-source, and binding-directory relationships where source evidence exists
@@ -30,7 +34,10 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `cli/zeus.js` - CLI entry point
 - `src/collector/sourceCollector.js` - Source file discovery
 - `src/scanner/rpgScanner.js` - RPG heuristics scanner
+- `src/scanner/clScanner.js` - CL command and object-usage scanner
+- `src/scanner/ddsScanner.js` - DDS metadata and file-reference scanner
 - `src/scanner/dependencyScanner.js` - Aggregated dependency extraction
+- `src/source/sourceType.js` - Source-type classification helpers
 - `src/context/canonicalAnalysisModel.js` - Canonical semantic analysis model builder and validator
 - `src/context/contextBuilder.js` - Backward-compatible `context.json` projection builder
 - `src/dependency/dependencyGraphBuilder.js` - Deterministic dependency graph model builder
@@ -181,6 +188,13 @@ Imported source validation:
 - when `zeus-import-manifest.json` is present, `zeus analyze` validates imported files before scanning
 - invalid UTF-8 sources are skipped with explicit diagnostics instead of being scanned implicitly
 - checksum drift and newline problems are surfaced as warnings in the analyze stage metadata and notes
+
+Analyze-time source ingest:
+
+- BOM-marked UTF-8 and UTF-16 inputs are normalized in memory before scanning
+- line endings are normalized to a clean LF analysis contract for scanner, snippet, and prompt flows
+- unsupported encodings fail with explicit per-file diagnostics instead of silent parser errors
+- CL and DDS files are scanned with dedicated heuristics instead of being pushed through RPG-only logic
 
 ### Basic analyze
 
@@ -805,6 +819,7 @@ See [docs/safe-sharing.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/safe-
 See [docs/fixture-sanitization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/fixture-sanitization.md) for the shared sanitized fixture corpus rules and review checklist.
 See [docs/reproducible-output-mode.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/reproducible-output-mode.md) for the reproducible output contract and stable-timestamp mode.
 See [docs/import-manifest-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/import-manifest-contract.md) for the public fetch provenance manifest contract.
+See [docs/source-ingest-normalization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/source-ingest-normalization.md) for the analyze-time normalization contract and current CL/DDS scanner depth.
 
 ## Notes
 
@@ -816,6 +831,7 @@ IBM i source export note:
 - analyzer components read local sources as UTF-8, so keeping fetch output on that contract avoids broken umlauts and Windows-side mojibake
 - non-default `--streamfile-ccsid` values remain best-effort; the guaranteed Windows-readable contract is documented in [docs/fetch-encoding-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/fetch-encoding-contract.md)
 - imported-member provenance and export diagnostics are documented in [docs/import-manifest-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/import-manifest-contract.md)
+- analyze-time source normalization and CL/DDS scan depth are documented in [docs/source-ingest-normalization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/source-ingest-normalization.md)
 
 ## License
 

@@ -159,6 +159,8 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
       path: entry.path,
       sizeBytes: Number(entry.sizeBytes) || 0,
       lines: Number(entry.lines) || 0,
+      sourceType: entry.sourceType || '',
+      normalization: entry.normalization || null,
     })),
     summary: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.summary
       ? canonicalAnalysis.enrichments.summary
@@ -183,6 +185,25 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
     crossProgramGraph: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.crossProgramGraph
       ? canonicalAnalysis.enrichments.crossProgramGraph
       : defaultCrossProgramSummary(),
+    sourceNormalization: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.sourceNormalization
+      ? canonicalAnalysis.enrichments.sourceNormalization
+      : {
+        fileCount: 0,
+        convertedEncodingCount: 0,
+        normalizedFileCount: 0,
+        bomRemovedCount: 0,
+        normalizedLineEndingCount: 0,
+        invalidFileCount: 0,
+        warningCount: 0,
+      },
+    sourceTypeAnalysis: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.sourceTypeAnalysis
+      ? canonicalAnalysis.enrichments.sourceTypeAnalysis
+      : {
+        summary: { byType: {}, byFamily: {} },
+        commands: [],
+        objectUsages: [],
+        ddsFiles: [],
+      },
     db2Metadata: canonicalAnalysis.enrichments ? canonicalAnalysis.enrichments.db2Metadata : null,
     testData: canonicalAnalysis.enrichments ? canonicalAnalysis.enrichments.testData : null,
     aiContext: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.aiContext
