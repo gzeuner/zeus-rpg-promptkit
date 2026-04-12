@@ -116,6 +116,81 @@ const PROMPT_REGISTRY = Object.freeze({
       maxTokens: 2400,
     }),
   }),
+  'architecture-review': Object.freeze({
+    name: 'architecture-review',
+    version: 1,
+    templateFile: 'architecture-review',
+    workflow: 'documentation',
+    outputFileName: 'ai_prompt_architecture_review.md',
+    requiredInputs: Object.freeze([
+      Object.freeze({ path: 'kind', equals: 'ai-knowledge-projection' }),
+      Object.freeze({ path: 'program', type: 'string', nonEmpty: true }),
+      Object.freeze({ path: 'workflows.documentation.summary', type: 'string', nonEmpty: true }),
+      Object.freeze({ path: 'workflows.documentation.programCalls', type: 'array' }),
+      Object.freeze({ path: 'workflows.documentation.tables', type: 'array' }),
+      Object.freeze({ path: 'workflows.documentation.evidenceHighlights', type: 'array' }),
+    ]),
+    preferredOutputShape: Object.freeze([
+      'Structural boundaries and primary dependencies',
+      'Operational hotspots and IBM i constraints',
+      'Architecture risks and unresolved edges',
+      'Recommended follow-up investigation',
+    ]),
+    budget: Object.freeze({
+      targetTokens: 1500,
+      maxTokens: 2300,
+    }),
+  }),
+  'refactoring-plan': Object.freeze({
+    name: 'refactoring-plan',
+    version: 1,
+    templateFile: 'refactoring-plan',
+    workflow: 'documentation',
+    outputFileName: 'ai_prompt_refactoring_plan.md',
+    requiredInputs: Object.freeze([
+      Object.freeze({ path: 'kind', equals: 'ai-knowledge-projection' }),
+      Object.freeze({ path: 'program', type: 'string', nonEmpty: true }),
+      Object.freeze({ path: 'workflows.documentation.summary', type: 'string', nonEmpty: true }),
+      Object.freeze({ path: 'workflows.documentation.tables', type: 'array' }),
+      Object.freeze({ path: 'workflows.documentation.programCalls', type: 'array' }),
+      Object.freeze({ path: 'workflows.documentation.nativeFiles', type: 'array' }),
+    ]),
+    preferredOutputShape: Object.freeze([
+      'Small safe refactoring candidates',
+      'Dependency-aware sequencing',
+      'High-risk blockers and validation checks',
+      'Concrete next change step',
+    ]),
+    budget: Object.freeze({
+      targetTokens: 1500,
+      maxTokens: 2400,
+    }),
+  }),
+  'test-generation': Object.freeze({
+    name: 'test-generation',
+    version: 1,
+    templateFile: 'test-generation',
+    workflow: 'documentation',
+    outputFileName: 'ai_prompt_test_generation.md',
+    requiredInputs: Object.freeze([
+      Object.freeze({ path: 'kind', equals: 'ai-knowledge-projection' }),
+      Object.freeze({ path: 'program', type: 'string', nonEmpty: true }),
+      Object.freeze({ path: 'workflows.documentation.summary', type: 'string', nonEmpty: true }),
+      Object.freeze({ path: 'workflows.documentation.sqlStatements', type: 'array' }),
+      Object.freeze({ path: 'workflows.documentation.tables', type: 'array' }),
+      Object.freeze({ path: 'workflows.documentation.evidenceHighlights', type: 'array' }),
+    ]),
+    preferredOutputShape: Object.freeze([
+      'Test scenarios and coverage priorities',
+      'Data and dependency setup hints',
+      'Edge cases and failure paths',
+      'Suggested assertions and fixtures',
+    ]),
+    budget: Object.freeze({
+      targetTokens: 1500,
+      maxTokens: 2400,
+    }),
+  }),
 });
 
 function getPromptContract(templateName) {

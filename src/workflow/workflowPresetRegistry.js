@@ -30,6 +30,7 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
       'program-call-tree.md',
       'architecture.html',
       'ai_prompt_documentation.md',
+      'ai_prompt_architecture_review.md',
     ]),
     reviewWorkflow: freezeReviewWorkflow({
       intendedAudience: [
@@ -61,6 +62,7 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
         { path: 'program-call-tree.md', purpose: 'Readable cross-program dependency path summary.' },
         { path: 'architecture.html', purpose: 'Interactive graph view for live review sessions.' },
         { path: 'ai_prompt_documentation.md', purpose: 'AI-assisted explanation of the architecture packet.' },
+        { path: 'ai_prompt_architecture_review.md', purpose: 'Architecture-specific prompt for structural review and follow-up questions.' },
       ],
     }),
   }),
@@ -78,6 +80,7 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
       'report.md',
       'program-call-tree.md',
       'ai_prompt_documentation.md',
+      'ai_prompt_architecture_review.md',
       'ai_prompt_modernization.md',
     ]),
     reviewWorkflow: freezeReviewWorkflow({
@@ -109,6 +112,7 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
         { path: 'architecture-report.md', purpose: 'Narrative architecture evidence for modernization discussions.' },
         { path: 'program-call-tree.md', purpose: 'Call-chain context for change-boundary reasoning.' },
         { path: 'ai_prompt_documentation.md', purpose: 'Supporting documentation prompt for reviewer orientation.' },
+        { path: 'ai_prompt_architecture_review.md', purpose: 'Supporting architecture prompt for reviewing structural blockers and seams.' },
       ],
     }),
   }),
@@ -204,6 +208,96 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
         { path: 'ai_prompt_error_analysis.md', purpose: 'Supporting risk evidence prompt for suspicious SQL and error paths.' },
         { path: 'dependency-graph.md', purpose: 'Readable dependency structure for review discussion.' },
         { path: 'program-call-tree.md', purpose: 'Readable cross-program blast-radius context.' },
+      ],
+    }),
+  }),
+  'refactoring-review': Object.freeze({
+    name: 'refactoring-review',
+    title: 'Refactoring Review',
+    description: 'Bundle architecture and refactoring prompts with dependency evidence for small-scope change planning.',
+    analyzeMode: 'refactoring',
+    bundleArtifacts: Object.freeze([
+      'analyze-run-manifest.json',
+      'analysis-index.json',
+      'canonical-analysis.json',
+      'ai-knowledge.json',
+      'architecture-report.md',
+      'dependency-graph.md',
+      'ai_prompt_architecture_review.md',
+      'ai_prompt_refactoring_plan.md',
+    ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'Developers planning low-risk refactors',
+        'Technical leads reviewing sequencing and blockers',
+        'Reviewers validating the first change slice before implementation',
+      ],
+      keyQuestionsAnswered: [
+        'Which refactoring slice is small enough to start now?',
+        'Which dependencies or IBM i behaviors constrain sequencing?',
+        'Which outputs should be shared before approving the first change?',
+      ],
+      expectedDecisions: [
+        'Choose the first refactoring slice and its validation plan.',
+        'Decide whether more investigation is needed before changing code.',
+      ],
+      interpretationGuidance: [
+        'Use ai_prompt_refactoring_plan.md for change sequencing and ai_prompt_architecture_review.md for boundary checks.',
+        'Keep scope narrow when unresolved calls, dynamic SQL, or mutating file I/O remain in the evidence set.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and root program selection.',
+        'Canonical analysis, dependency artifacts, and the refactoring-focused prompt packs.',
+        'A shareable bundle that keeps architecture context and refactoring guidance together.',
+      ],
+      recommendedOutputs: [
+        { path: 'ai_prompt_refactoring_plan.md', purpose: 'Primary refactoring guidance with sequencing and safety checks.' },
+        { path: 'ai_prompt_architecture_review.md', purpose: 'Supporting architecture prompt for boundary validation.' },
+        { path: 'dependency-graph.md', purpose: 'Readable dependency map used to constrain change scope.' },
+      ],
+    }),
+  }),
+  'test-generation-review': Object.freeze({
+    name: 'test-generation-review',
+    title: 'Test Generation Review',
+    description: 'Bundle documentation and test-generation prompts with evidence for scenario and fixture planning.',
+    analyzeMode: 'test-generation',
+    bundleArtifacts: Object.freeze([
+      'analyze-run-manifest.json',
+      'analysis-index.json',
+      'ai-knowledge.json',
+      'report.md',
+      'ai_prompt_documentation.md',
+      'ai_prompt_test_generation.md',
+    ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'Developers adding regression coverage',
+        'QA engineers translating IBM i logic into tests',
+        'Reviewers planning fixtures and assertion strategy',
+      ],
+      keyQuestionsAnswered: [
+        'Which scenarios deserve the first automated tests?',
+        'Which tables, SQL paths, or dependencies shape fixture design?',
+        'Which outputs make the test-planning packet shareable?',
+      ],
+      expectedDecisions: [
+        'Choose the first test scenarios and fixture boundaries to implement.',
+        'Decide whether more runtime or catalog evidence is needed before writing tests.',
+      ],
+      interpretationGuidance: [
+        'Use ai_prompt_test_generation.md for scenarios and assertions, then confirm assumptions against report.md and ai_prompt_documentation.md.',
+        'Treat extracted sample rows and diagnostic outputs as setup hints, not complete runtime coverage.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and root program selection.',
+        'Prompt-ready AI knowledge projection with tables, SQL, and evidence highlights.',
+        'A shareable bundle targeted at test-scenario and fixture planning.',
+      ],
+      recommendedOutputs: [
+        { path: 'ai_prompt_test_generation.md', purpose: 'Primary prompt for scenario, fixture, and assertion planning.' },
+        { path: 'ai_prompt_documentation.md', purpose: 'Supporting prompt for program context and flow.' },
+        { path: 'report.md', purpose: 'Human-readable summary for validating proposed coverage.' },
       ],
     }),
   }),
