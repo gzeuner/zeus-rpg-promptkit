@@ -154,11 +154,14 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.equal(analyzeManifest.tool.command, 'analyze');
     assert.equal(analyzeManifest.run.status, 'succeeded');
     assert.equal(analyzeManifest.inputs.program, 'ORDERPGM');
-    assert.equal(analyzeManifest.summary.stageCount, 6);
+    assert.equal(analyzeManifest.summary.stageCount, 8);
     assert.ok(analyzeManifest.summary.generatedArtifactCount >= 13);
     assert.equal(analyzeManifest.inputs.sourceSnapshot.fileCount, 2);
     assert.equal(analyzeManifest.inputs.options.guidedMode, null);
+    assert.equal(analyzeManifest.inputs.options.investigation.scanIfsPathsEnabled, false);
     assert.ok(analyzeManifest.stages.some((stage) => stage.id === 'collect-scan'));
+    assert.ok(analyzeManifest.stages.some((stage) => stage.id === 'investigate-sources'));
+    assert.ok(analyzeManifest.stages.some((stage) => stage.id === 'run-diagnostic-packs'));
     assert.ok(analyzeManifest.stages.some((stage) => stage.id === 'write-artifacts'));
     assert.ok(analyzeManifest.artifacts.some((artifact) => artifact.path === 'context.json'));
     assert.ok(analyzeManifest.artifacts.some((artifact) => artifact.path === 'analysis-index.json'));

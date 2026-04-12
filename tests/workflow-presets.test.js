@@ -29,6 +29,8 @@ test('workflow --list-presets exposes named guided workflow bundles', () => {
   assert.match(output, /- modernization-review:/);
   assert.match(output, /- onboarding:/);
   assert.match(output, /- dependency-risk:/);
+  assert.match(output, /- refactoring-review:/);
+  assert.match(output, /- test-generation-review:/);
   assert.match(output, /intended audience:/);
   assert.match(output, /expected decisions:/);
 });
@@ -67,7 +69,7 @@ test('workflow preset runs analyze plus bundle and records preset metadata in ma
     assert.equal(analyzeManifest.inputs.options.workflowPreset.name, 'modernization-review');
     assert.deepEqual(
       analyzeManifest.inputs.options.workflowPreset.promptTemplates,
-      ['documentation', 'modernization'],
+      ['documentation', 'architecture-review', 'modernization'],
     );
     assert.match(
       analyzeManifest.inputs.options.workflowPreset.reviewWorkflow.expectedDecisions.join('\n'),
@@ -88,18 +90,21 @@ test('workflow preset runs analyze plus bundle and records preset metadata in ma
     assert.equal(bundleManifest.workflowPreset.analyzeMode, 'modernization');
     assert.match(bundleManifest.workflowPreset.reviewWorkflow.expectedDecisions.join('\n'), /pilot modernization target/i);
     assert.ok(bundleManifest.files.includes('ai_prompt_modernization.md'));
+    assert.ok(bundleManifest.files.includes('ai_prompt_architecture_review.md'));
     assert.ok(bundleManifest.files.includes('architecture-report.md'));
     assert.equal(bundleManifest.files.includes('context.json'), false);
     assert.equal(fs.existsSync(bundlePath), true);
 
     const zip = new AdmZip(bundlePath);
     const entryNames = zip.getEntries().map((entry) => entry.entryName).sort();
+    assert.ok(entryNames.includes('ai_prompt_architecture_review.md'));
     assert.ok(entryNames.includes('ai_prompt_modernization.md'));
     assert.ok(entryNames.includes('architecture-report.md'));
     assert.equal(entryNames.includes('context.json'), false);
     const readme = zip.readAsText('README.txt');
     assert.match(readme, /Workflow preset: modernization-review/);
     assert.match(readme, /Expected decisions:/);
+    assert.match(readme, /ai_prompt_architecture_review\.md:/);
     assert.match(readme, /ai_prompt_modernization\.md:/);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
