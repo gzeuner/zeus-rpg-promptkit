@@ -1,73 +1,209 @@
 # Zeus RPG PromptKit
 
-Zeus RPG PromptKit is a Node.js CLI that prepares structured context bundles and AI-ready prompts for analyzing IBM i (AS/400) RPG programs.
+Zeus RPG PromptKit is an evidence-first analysis toolkit for IBM i source estates. It helps teams fetch, normalize, analyze, enrich, and package RPG-centric legacy systems into artifacts that are useful for developers, architects, QA, modernization initiatives, and AI-assisted workflows.
 
-It helps teams quickly produce consistent analysis artifacts from legacy RPG source code, including dependencies, SQL usage, and documentation prompts.
+It does **not** generate business code and it does **not** depend on any specific AI provider. Instead, it prepares structured, inspectable context so humans and AI tools can work from the same grounded evidence.
 
-## Features
+## Why this exists
 
-- Scans RPG, CL, and DDS source files from a configurable root directory
-- Exports IBM i source members to Windows-readable UTF-8 stream files by default during `zeus fetch`
-- Writes a fetch import manifest and validates imported source files before scanning
-- Normalizes supported BOM-marked local sources into a consistent analyze-time text contract
-- Classifies RPG, CL, and DDS sources before scanner dispatch
-- Optionally scans sources and imported artifacts for likely IFS path usage with evidence-backed outputs
-- Optionally runs full-text search workflows for configurable terms across local and imported analysis inputs
-- Optionally executes structured read-only diagnostic query packs for table, program, and object investigation
-- Detects common dependencies using practical heuristics:
-  - F-spec and `dcl-f` table/file declarations
-  - CL command, `CALL PGM`, and object/file usage hints
-  - DDS record formats and referenced file hints
-  - Native file I/O semantics including read/write/update/delete, workstation/printer behavior, and record-format hints
-  - Embedded SQL semantics including read/write intent, cursor activity, host variables, dynamic SQL flags, and uncertainty markers
-  - Module, service-program, binder-source, and binding-directory relationships where source evidence exists
-  - Program calls (`CALL`, `CALLP`, `CALLB`, `CALLPRC`)
-  - Copy/include directives (`/COPY`, `/INCLUDE`, `COPY`)
-  - Embedded SQL blocks (`EXEC SQL` + statement content)
-- Builds a normalized analysis context JSON
-- Generates a Markdown report with key sections
-- Generates an automatic architecture report with dependency and data-flow overview
-- Performs reverse dependency impact analysis for tables and programs
-- Generates AI prompt files from reusable templates
-- Supports profile-based configuration (`--profile`)
-- Includes Java helpers (`JT400/JDBC compatible`) for DB2 metadata export and test data extraction
+Legacy IBM i systems usually spread knowledge across RPG, SQLRPGLE, CL, DDS, binder source, DB2 metadata, and tribal memory. Zeus RPG PromptKit turns that scattered estate into a repeatable workflow:
 
-## Project Structure
+- acquire IBM i sources into a local, UTF-8-friendly workspace
+- scan and classify source semantics across multiple IBM i file types
+- build a canonical dependency and evidence model
+- enrich source findings with DB2 catalog metadata and optional governed sample data
+- generate reports, graphs, prompt packs, and review bundles
 
-- `cli/zeus.js` - CLI entry point
-- `src/collector/sourceCollector.js` - Source file discovery
-- `src/scanner/rpgScanner.js` - RPG heuristics scanner
-- `src/scanner/clScanner.js` - CL command and object-usage scanner
-- `src/scanner/ddsScanner.js` - DDS metadata and file-reference scanner
-- `src/scanner/dependencyScanner.js` - Aggregated dependency extraction
-- `src/source/sourceType.js` - Source-type classification helpers
-- `src/context/canonicalAnalysisModel.js` - Canonical semantic analysis model builder and validator
-- `src/context/contextBuilder.js` - Backward-compatible `context.json` projection builder
-- `src/dependency/dependencyGraphBuilder.js` - Deterministic dependency graph model builder
-- `src/dependency/crossProgramGraphBuilder.js` - Recursive multi-program dependency graph builder
-- `src/analyze/stageRegistry.js` - Registry-backed analyzer stage and lifecycle hook wiring
-- `src/dependency/programSourceResolver.js` - Local program name to source file resolver
-- `src/dependency/graphSerializer.js` - Dependency graph serializers (JSON/Mermaid/Markdown wrapper)
-- `src/viewer/architectureViewerGenerator.js` - Generates interactive `architecture.html` from `program-call-tree.json`
-- `src/impact/impactAnalyzer.js` - Computes reverse dependency impact from `program-call-tree.json`
-- `src/report/markdownReport.js` - Markdown report generation
-- `src/report/architectureReport.js` - Architecture report generation
-- `src/report/jsonReport.js` - JSON report writer
-- `src/prompt/promptBuilder.js` - Prompt generation from templates
-- `src/prompt/promptRegistry.js` - Prompt contract metadata and workflow mapping
-- `src/prompt/promptEvaluationHarness.js` - Fixture-driven prompt contract evaluation
-- `src/prompt/templates/*.md` - Prompt templates
-- `java/Db2MetadataExporter.java` - DB2 table metadata exporter
-- `java/Db2TestDataExtractor.java` - DB2 sample row extractor
-- `config/profiles.example.json` - Example profiles
+The result is a workflow that is much better for:
+
+- understanding unfamiliar programs
+- impact analysis before changes
+- documentation and onboarding
+- test creation, extension, and repair
+- architecture review
+- modernization planning
+- safe artifact sharing with internal or external reviewers
+
+## Core idea
+
+Think of Zeus RPG PromptKit as an **evidence-preparation layer**.
+
+It prepares high-quality analysis artifacts that can be consumed by:
+
+- a developer in VS Code
+- GitHub Copilot Chat
+- a browser-based AI chat
+- a local or remote LLM CLI
+- a reviewer using Markdown, JSON, HTML, or the built-in local UI
+
+That means the tool is valuable even if you never use an AI API at all.
+
+## What it does
+
+### Source acquisition and provenance
+
+- exports IBM i source members from QSYS source files to IFS stream files
+- downloads them locally using `sftp`, `jt400`, `ftp`, or `auto`
+- defaults to UTF-8 stream file export via CCSID `1208`
+- writes `zeus-import-manifest.json` with provenance, transport, checksums, and validation details
+
+### Source normalization and integrity checks
+
+- validates imported files before scanning
+- supports UTF-8 directly
+- normalizes BOM-marked UTF-8 and UTF-16 local sources into the analyze-time UTF-8 contract
+- normalizes line endings for scanner and prompt workflows
+- records invalid UTF-8, checksum drift, and newline issues as explicit diagnostics
+
+### Multi-language IBM i source analysis
+
+Zeus scans more than RPG.
+
+It supports practical analysis across:
+
+- RPG / RPGLE / SQLRPGLE
+- CL / CLLE
+- DDS
+- binder source
+
+Detected semantics include:
+
+- program calls
+- procedure calls and prototypes
+- copy/include dependencies
+- embedded SQL statements and intent classification
+- host variables and cursor usage
+- native file I/O behavior
+- CL object and file references
+- DDS file kinds, record formats, and references
+- binding directories, service-program hints, and binder exports
+
+### Dependency and impact analysis
+
+- builds deterministic dependency graphs
+- builds cross-program call trees
+- resolves local source members recursively
+- tracks unresolved and ambiguous references explicitly
+- computes reverse impact analysis for tables and programs
+
+### DB2 metadata enrichment
+
+- exports schema metadata for detected tables
+- captures columns, keys, foreign keys, descriptions, triggers, derived objects, and row-count hints
+- links DB2 findings back to source evidence
+- resolves certain external IBM i objects beyond what source alone can prove
+
+### Governed test-data extraction
+
+- exports bounded sample rows for detected tables
+- supports allowlists, denylists, and masking policies
+- ties sample data back to source-linked table evidence
+- keeps the workflow read-only and review-oriented
+
+### Prompt and context preparation
+
+- builds canonical and reduced context artifacts
+- creates workflow-specific AI prompt files
+- supports context optimization and token budgeting
+- preserves evidence references and uncertainty markers
+
+### Investigation and review support
+
+- scans for likely IFS path usage
+- supports full-text search workflows
+- runs structured read-only diagnostic packs
+- renders graphs as Markdown, Mermaid, JSON, and HTML
+- serves completed runs via a local browser UI
+
+### Packaging and safe sharing
+
+- creates portable ZIP bundles
+- supports reproducible output mode
+- supports safe-sharing mode with deterministic redaction placeholders
+- records bundle and redaction manifests for traceability
+
+## Who it is for
+
+Zeus RPG PromptKit is especially useful for:
+
+- IBM i developers onboarding into old systems
+- architects reviewing dependencies and system shape
+- QA/test engineers deriving scenarios from legacy behavior
+- modernization teams identifying extraction seams and blockers
+- reviewers performing impact analysis before risky changes
+- teams who want AI help without throwing raw source dumps at a model
+
+## What it is not
+
+Zeus RPG PromptKit is **not**:
+
+- an RPG compiler
+- a runtime debugger
+- a code generator
+- an AI provider integration
+- a replacement for human review
+
+It is a context and evidence toolkit. Its job is to make analysis more structured, reproducible, and verifiable.
+
+---
+
+## Architecture at a glance
+
+### Node.js CLI
+
+Main entry point:
+
+- `cli/zeus.js`
+
+Primary commands:
+
+- `zeus fetch`
+- `zeus analyze`
+- `zeus workflow`
+- `zeus bundle`
+- `zeus impact`
+- `zeus serve`
+
+### Java helpers
+
+The toolkit uses on-demand Java helpers for IBM i and DB2-specific tasks such as:
+
+- `IbmiCommandRunner`
+- `IbmiMemberLister`
+- `IbmiIfsDownloader`
+- `IbmiSourceMemberExporter`
+- `Db2MetadataExporter`
+- `Db2ExternalObjectResolver`
+- `Db2TestDataExtractor`
+- `Db2DiagnosticQueryRunner`
+
+These are invoked through the runtime bridge in `src/java/javaRuntime.js`.
+
+### Analysis pipeline
+
+The analyze workflow is stage-based and registry-driven. In broad terms it does this:
+
+1. collect and validate source files
+2. classify and scan source semantics
+3. build canonical and developer-facing projections
+4. optionally run investigations
+5. optionally optimize context
+6. optionally export DB2 metadata
+7. optionally extract governed test data
+8. optionally emit diagnostics
+9. write reports, graphs, prompts, and manifests
+
+This design keeps the core pipeline reusable for CLI, workflows, bundles, and the local UI.
+
+---
 
 ## Requirements
 
 - Node.js 20+
-- Java 11+ (for DB2 helpers)
-- Optional: DB2/JT400 JDBC driver for metadata export and test data extraction
-- IBM i SSH/SFTP enabled for `zeus fetch`
-- `java/lib/jt400.jar` available for local Java helper compilation and runtime
+- Java 11+
+- optional: `java/lib/jt400.jar` for IBM i / DB2 helper workflows
+- optional: IBM i SSH/SFTP enabled for `zeus fetch`
+- optional: DB2/JT400 JDBC driver access for metadata export and test data extraction
 
 ## Installation
 
@@ -81,68 +217,105 @@ For local command usage:
 npm link
 ```
 
-Then run:
+Then:
 
 ```bash
 zeus analyze --source ./rpg --program ORDERPGM
 ```
 
-Without `npm link`, run directly:
+Without `npm link`:
 
 ```bash
 node cli/zeus.js analyze --source ./rpg --program ORDERPGM
 npm run analyze -- --source ./rpg --program ORDERPGM
 ```
 
-Run the default CI-oriented test flow with:
+Run tests:
 
 ```bash
 npm test
-```
-
-Additional test tiers:
-
-```bash
-npm run test:contract
-npm run test:smoke
 npm run test:unit
+npm run test:smoke
+npm run test:contract
 npm run test:corpus
 npm run test:benchmark
 ```
 
-`npm run test:corpus` validates the curated sanitized scanner corpus described in `docs/scanner-corpus.md` so scanner heuristics can be regression-tested against deterministic source fixtures.
+---
 
-## Usage
+## Quick start
 
-Command syntax:
-
-```bash
-zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms <csv>] [--search-ignore <csv>] [--search-max-results <n>] [--diagnostic-packs <csv>] [--diagnostic-params <k=v,...>] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]
-```
-
-Workflow command syntax:
+### 1. Analyze a local source tree
 
 ```bash
-zeus workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]
+zeus analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
 ```
 
-Guided analyze modes:
+This is the best first step when the source is already available locally.
 
-- use `--list-modes` to inspect supported workflow presets
-- use `--mode architecture` for structure, graph, and architecture-report oriented review
-- use `--mode documentation` for documentation-first prompt packaging
-- use `--mode error-analysis` or `--mode defect-analysis` for failure-oriented evidence packaging
-- use `--mode modernization` for modernization prompt generation and extraction-boundary review
-- use `--mode refactoring` for dependency-aware refactoring guidance
-- use `--mode test-generation` for evidence-backed scenario and fixture planning
-- use `--mode impact` to highlight dependency artifacts and the next `zeus impact` step
+### 2. Fetch from IBM i, then analyze
 
-When a guided mode is selected, Zeus records the mode and derived behavior in `analyze-run-manifest.json`, writes `analysis-index.json`, and may auto-enable context optimization for prompt-heavy workflows.
+```bash
+zeus fetch --host myibmi.example.com --user MYUSER --password MYPASSWORD --source-lib SOURCEN --ifs-dir /home/zeus/rpg_sources --out ./rpg_sources --transport auto
+zeus analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
+```
 
-Use `--safe-sharing` when you need a redacted sharing packet. Zeus writes a parallel `safe-sharing/` artifact set with deterministic placeholders for identifiers, source paths, and extracted values.
-Use `--reproducible` when you need stable timestamps and content fingerprints for repeated analyze, impact, workflow, and bundle runs.
+Use this when your source still lives on IBM i and you want a local, UTF-8-friendly mirror first.
 
-Named workflow presets build on top of those guided modes and package a shareable bundle in one step:
+### 3. Run a bundled workflow preset
+
+```bash
+zeus workflow --preset onboarding --source ./rpg_sources --program ORDERPGM --out ./output --bundle-output ./bundles
+```
+
+Use workflow presets when you want a more opinionated, ready-to-share artifact set.
+
+### 4. Inspect results in a browser
+
+```bash
+zeus serve --source-output-root ./output
+```
+
+Use this when you or other reviewers prefer a local UI over reading raw files.
+
+---
+
+## CLI overview
+
+### Analyze
+
+```bash
+zeus analyze --source <path> --program <name> [options]
+```
+
+Important options include:
+
+- `--profile <name>`
+- `--out <path>`
+- `--extensions .rpgle,.sqlrpgle,.rpg`
+- `--mode <name>`
+- `--list-modes`
+- `--optimize-context`
+- `--scan-ifs-paths`
+- `--search-terms <csv>`
+- `--search-ignore <csv>`
+- `--search-max-results <n>`
+- `--diagnostic-packs <csv>`
+- `--diagnostic-params <k=v,...>`
+- `--safe-sharing`
+- `--emit-diagnostics`
+- `--reproducible`
+- `--test-data-limit <n>`
+- `--skip-test-data`
+- `--verbose`
+
+### Workflow
+
+```bash
+zeus workflow --preset <name> --source <path> --program <name> [options]
+```
+
+Typical presets include:
 
 - `architecture-review`
 - `modernization-review`
@@ -151,386 +324,573 @@ Named workflow presets build on top of those guided modes and package a shareabl
 - `refactoring-review`
 - `test-generation-review`
 
-Use `zeus workflow --list-presets` to inspect the available presets and `zeus workflow --preset modernization-review ...` to run analyze plus bundle with one command.
-
-Guided modes and workflow presets now also expose opinionated review metadata:
-
-- intended audience
-- key questions answered
-- expected decisions
-- interpretation guidance
-- recommended outputs for sharing
-
-`zeus analyze --list-modes` and `zeus workflow --list-presets` print the audience and decision framing so users can choose a workflow by review intent, not only by file list.
-
-Investigation options extend the same analyze pipeline and output contract:
-
-- `--scan-ifs-paths` writes `ifs-paths.json` and `ifs-paths.md`
-- `--search-terms ORDERS,INVPGM` writes `search-results.json` and `search-results.md`
-- `--diagnostic-packs table-investigation --diagnostic-params table=ORDERS` writes `diagnostic-query-packs.json`, `diagnostic-query-packs.md`, and `diagnostic-query-pack-manifest.json`
-- `--list-diagnostic-packs` prints the bundled starter packs and their parameters
-- `--emit-diagnostics` writes `analysis-diagnostics.json` with machine-readable stage timings, warnings, cache status, and diagnostics
-
-Analyze now runs through a split runtime contract:
-
-- `runAnalyzeCore(...)` executes semantic analysis without writing reports, prompts, or viewer files
-- core analyze stages are registered through a deterministic stage registry so new internal stages can be added without rewriting CLI control flow
-- the CLI applies an explicit artifact-writer adapter afterwards so future UI/API layers can reuse the same core result contract
-- source scans are cached by content hash and tool version under `output/.zeus-cache/source-scans/`
-- DB2 metadata and test-data artifacts are reused through `analysis-cache.json` when inputs are unchanged
-- cross-program traversal now applies explicit safety limits for depth, program count, nodes, edges, scanned files, and per-program outgoing calls
-- when those limits are reached, Zeus keeps the run successful but records truncation and limit diagnostics in `context.json`, `report.md`, and the analyze manifest instead of silently over-walking large trees
-- stage definitions, stage metadata, and stage diagnostics are recorded in `analysis-diagnostics.json` and `analyze-run-manifest.json`
-
-Bundle command syntax:
+### Bundle
 
 ```bash
-zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible] [--profile <name>] [--verbose]
+zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible]
 ```
 
-Impact command syntax:
+### Impact
 
 ```bash
-zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose]
+zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible]
 ```
 
-Local UI shell syntax:
+### Serve
 
 ```bash
-zeus serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]
+zeus serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>]
 ```
 
-Fetch source syntax:
+### Fetch
 
 ```bash
-zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--profile <name>] [--verbose]
+zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [options]
 ```
 
-Download transport option:
+Transport:
 
 ```bash
 --transport auto|sftp|jt400|ftp
 ```
 
-Default is `auto` and tries in order: `sftp -> jt400 -> ftp`.
-
-Fetch encoding option:
+Encoding:
 
 ```bash
 --streamfile-ccsid 1208
 ```
 
-Default behavior:
+---
 
-- `zeus fetch` exports source members as UTF-8 stream files using IBM i CCSID `1208`
-- this keeps downloaded RPG, CL, and DDS sources readable in common Windows editors and terminals without manual conversion
-- the Windows-readable local source contract is transport-independent across `sftp`, `jt400`, and `ftp`, but it is only guaranteed for `CCSID 1208`
-- `zeus fetch` writes `zeus-import-manifest.json` into the local source root to persist source member origin, member path, transport, checksum, encoding policy, normalization policy, and validation details for imported members
-- `analyze-run-manifest.json` and `bundle-manifest.json` reuse that provenance summary so downstream review flows can reference imported-member identity without re-deriving it from file names
+## Recommended ways to use it
 
-Imported source validation:
+## Scenario A: Understand a legacy RPG program
 
-- when `zeus-import-manifest.json` is present, `zeus analyze` validates imported files before scanning
-- invalid UTF-8 sources are skipped with explicit diagnostics instead of being scanned implicitly
-- checksum drift and newline problems are surfaced as warnings in the analyze stage metadata and notes
+**Goal:** understand what a program does, what it depends on, and where the evidence is.
 
-Analyze-time source ingest:
-
-- BOM-marked UTF-8 and UTF-16 inputs are normalized in memory before scanning
-- line endings are normalized to a clean LF analysis contract for scanner, snippet, and prompt flows
-- unsupported encodings fail with explicit per-file diagnostics instead of silent parser errors
-- CL and DDS files are scanned with dedicated heuristics instead of being pushed through RPG-only logic
-
-### Basic analyze
+Run:
 
 ```bash
-node cli/zeus.js analyze --source ./rpg --program ORDERPGM
+zeus analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
 ```
 
-### Basic analyze with context optimization
+Start with:
 
-```bash
-node cli/zeus.js analyze --source ./rpg --program ORDERPGM --optimize-context
-```
-
-### Analyze using profile
-
-```bash
-node cli/zeus.js analyze --profile default --program ORDERPGM
-```
-
-### Override profile output location
-
-```bash
-node cli/zeus.js analyze --profile default --program ORDERPGM --out ./output
-```
-
-### Fetch IBM i source to local folder
-
-```bash
-node cli/zeus.js fetch --host myibmi.example.com --user MYUSER --password MYPASSWORD --source-lib SOURCEN --ifs-dir /home/zeus/rpg_sources --out ./rpg_sources --members ORDERPGM
-```
-
-### Typical pipeline
-
-```bash
-node cli/zeus.js fetch --host myibmi.example.com --user MYUSER --password MYPASSWORD --source-lib SOURCEN --ifs-dir /home/zeus/rpg_sources --out ./rpg_sources
-node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM
-```
-
-## Output Contract
-
-The command writes files into:
-
-`output/<program>/`
-
-Generated files:
-
-- `canonical-analysis.json`
-- `context.json`
-- `optimized-context.json` (when `--optimize-context` is enabled)
-- `ai-knowledge.json`
-- `analysis-index.json`
-- `analyze-run-manifest.json`
-- `workflow-run-manifest.json` (when `zeus workflow` is executed)
-- `ifs-paths.json` (when `--scan-ifs-paths` is enabled)
-- `ifs-paths.md` (when `--scan-ifs-paths` is enabled)
-- `search-results.json` (when `--search-terms` is used)
-- `search-results.md` (when `--search-terms` is used)
-- `diagnostic-query-packs.json` (when `--diagnostic-packs` is used)
-- `diagnostic-query-packs.md` (when `--diagnostic-packs` is used)
-- `diagnostic-query-pack-manifest.json` (when `--diagnostic-packs` is used)
-- `analysis-diagnostics.json` (when `--emit-diagnostics` is enabled)
-- `safe-sharing/redaction-manifest.json` (when `--safe-sharing` is enabled)
 - `report.md`
 - `architecture-report.md`
 - `ai_prompt_documentation.md`
+
+Verify with:
+
+- `context.json`
+- `canonical-analysis.json`
+
+Best pattern:
+
+1. orient yourself with the Markdown summaries
+2. inspect the call tree if the program orchestrates many others
+3. use the generated prompt with Copilot, ChatGPT, or a CLI model
+4. verify important claims back against canonical artifacts
+
+## Scenario B: Impact analysis before a change
+
+**Goal:** estimate blast radius before touching a program or table.
+
+Run:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --out ./output
+zeus impact --program ORDERPGM --target INVPGM --out ./output
+zeus impact --program ORDERPGM --target ORDERS --out ./output
+```
+
+Use:
+
+- `program-call-tree.md`
+- `impact-analysis.md`
+- `db2-metadata.md` when data shape matters
+
+Best pattern:
+
+- never ignore unresolved or ambiguous references
+- treat unresolved calls as real confidence gaps
+- use impact results to guide regression test scope
+
+## Scenario C: Documentation generation
+
+**Goal:** create technical documentation grounded in source evidence.
+
+Run:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --mode documentation --out ./output
+```
+
+Or:
+
+```bash
+zeus workflow --preset onboarding --source ./rpg_sources --program ORDERPGM --out ./output --bundle-output ./bundles
+```
+
+Use:
+
+- `ai_prompt_documentation.md`
+- `report.md`
+- `architecture-report.md`
+
+Best pattern:
+
+- generate from structured artifacts, not raw source dumps
+- require explicit uncertainty callouts
+- verify every important statement against the canonical model
+
+## Scenario D: Preparing modernization
+
+**Goal:** identify extraction seams, blockers, and sequencing.
+
+Run:
+
+```bash
+zeus workflow --preset modernization-review --source ./rpg_sources --program ORDERPGM --out ./output --bundle-output ./bundles
+```
+
+Use:
+
+- `ai_prompt_modernization.md`
+- `ai_prompt_architecture_review.md`
+- `architecture-report.md`
+- `program-call-tree.md`
+- `canonical-analysis.json`
+
+Best pattern:
+
+- treat dynamic SQL, unresolved calls, and mutating native I/O as modernization risks until reviewed
+- use bundles for cross-team review instead of giant raw output folders
+
+## Scenario E: Test creation
+
+**Goal:** derive initial regression scenarios from source and DB2 evidence.
+
+Run:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --profile sample-db2 --mode test-generation --out ./output --test-data-limit 25
+```
+
+Use:
+
+- `ai_prompt_test_generation.md`
+- `db2-metadata.md`
+- `test-data.md`
+- `context.json`
+
+Best pattern:
+
+- use sample rows as fixture inspiration, not production truth
+- include metadata whenever keys, nullability, or triggers affect expected behavior
+
+## Scenario F: Test extension
+
+**Goal:** expand coverage after code changes or after discovering missed risk.
+
+Run:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --profile sample-db2 --mode test-generation --out ./output --test-data-limit 25 --emit-diagnostics
+```
+
+Use:
+
+- `analysis-diagnostics.json`
+- `db2-metadata.json`
+- `test-data.json`
+- `analyze-run-manifest.json`
+
+Best pattern:
+
+- extend tests around risky branches, write SQL, external calls, triggers, and FK-sensitive updates first
+
+## Scenario G: Test repair
+
+**Goal:** repair brittle tests after source, data-shape, or dependency changes.
+
+Run:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --profile sample-db2 --mode refactoring --out ./output --test-data-limit 25
+```
+
+Use:
+
+- `ai_prompt_refactoring_plan.md`
+- `ai_prompt_test_generation.md`
+- `db2-metadata.md`
+- `test-data.md`
+- `dependency-graph.md`
+
+Best pattern:
+
+- preserve scenario intent, not brittle fixture structure
+- repair fixtures before assertions when data shape changed
+- repair doubles and call-path assumptions when dependency structure changed
+
+## Scenario H: Browser-first or safe-sharing review
+
+### Local browser review
+
+```bash
+zeus serve --source-output-root ./output
+```
+
+Best for:
+
+- non-terminal users
+- walkthroughs
+- local inspection of prompts, graphs, DB2 metadata, and manifests
+
+### Safe sharing
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --out ./output --safe-sharing
+zeus bundle --program ORDERPGM --source-output-root ./output --output ./bundles --safe-sharing
+```
+
+Best for:
+
+- external AI tools
+- vendor review
+- internal review where real identifiers should not leave the core team
+
+---
+
+## Working with AI without AI APIs
+
+One of the strongest things about Zeus RPG PromptKit is that it works perfectly well **without** direct model-provider integration.
+
+### VS Code + GitHub Copilot
+
+Recommended approach:
+
+1. run analysis locally
+2. open the output directory in the workspace
+3. start with `report.md`, `architecture-report.md`, and the relevant `ai_prompt_*.md`
+4. keep `canonical-analysis.json` or `db2-metadata.json` nearby for fact-checking
+
+Typical flow:
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
+zeus serve --source-output-root ./output
+```
+
+Use cases:
+
+- `ai_prompt_documentation.md` for program understanding
+- `ai_prompt_architecture_review.md` for design review
+- `ai_prompt_test_generation.md` for test planning
+
+Best practice:
+
+- paste the prompt artifact first
+- add supporting artifacts only as needed
+- anchor Copilot back to canonical artifacts if it starts freewheeling
+
+### CLI-based AI workflows
+
+Any model CLI that can read stdin or files can consume Zeus artifacts.
+
+Example:
+
+```bash
+cat ./output/ORDERPGM/ai_prompt_documentation.md | your-llm-cli
+cat ./output/ORDERPGM/ai_prompt_test_generation.md | your-llm-cli
+```
+
+Best practice:
+
+- use the generated prompt as the base input
+- add `context.json` or `db2-metadata.json` only when needed
+- treat `canonical-analysis.json` as the verification layer, not the first thing you send
+
+### Browser-based AI chats
+
+Recommended pattern:
+
+1. start with one prompt artifact
+2. add one supporting artifact if needed
+3. ask for an evidence-backed answer
+4. verify against local JSON and Markdown artifacts
+
+Best practice:
+
+- do **not** paste an entire output directory into a browser chat
+- use the prompt artifacts as the primary entry point
+- split large analyses into several smaller review steps
+
+---
+
+## Output artifacts
+
+All analysis output is written under:
+
+```text
+output/<program>/
+```
+
+### Core artifacts
+
+- `canonical-analysis.json` — semantic source of truth
+- `context.json` — developer-facing projection
+- `optimized-context.json` — reduced, salience-ranked projection when enabled
+- `ai-knowledge.json` — prompt-ready evidence projection
+- `analysis-index.json` — workflow/task-oriented artifact index
+- `analyze-run-manifest.json` — run traceability, stages, options, diagnostics, inventory
+
+### Human-readable reports
+
+- `report.md`
+- `architecture-report.md`
+
+### Graph and dependency artifacts
+
+- `dependency-graph.json`
+- `dependency-graph.mmd`
+- `dependency-graph.md`
+- `program-call-tree.json`
+- `program-call-tree.mmd`
+- `program-call-tree.md`
+- `impact-analysis.json`
+- `impact-analysis.md`
+
+### Prompt artifacts
+
+Examples:
+
+- `ai_prompt_documentation.md`
 - `ai_prompt_error_analysis.md`
-- `ai_prompt_defect_analysis.md` (when `--mode defect-analysis` is selected)
-- `ai_prompt_architecture_review.md` (when `architecture`, `modernization`, or `refactoring` modes are selected)
-- `ai_prompt_modernization.md` (when `--mode modernization` is selected)
-- `ai_prompt_refactoring_plan.md` (when `--mode refactoring` is selected)
-- `ai_prompt_test_generation.md` (when `--mode test-generation` is selected)
-- `dependency-graph.json`
-- `dependency-graph.mmd`
-- `dependency-graph.md`
-- `program-call-tree.json`
-- `program-call-tree.mmd`
-- `program-call-tree.md`
-- `db2-metadata.json` (when DB2 metadata export succeeds)
-- `db2-metadata.md` (when DB2 metadata export succeeds)
-- `test-data.json` (when test data extraction runs)
-- `test-data.md` (when test data extraction runs)
-- `bundle-manifest.json` (when `zeus bundle` is executed)
-- `impact-analysis.json` (when `zeus impact` is executed)
-- `impact-analysis.md` (when `zeus impact` is executed)
+- `ai_prompt_defect_analysis.md`
+- `ai_prompt_architecture_review.md`
+- `ai_prompt_modernization.md`
+- `ai_prompt_refactoring_plan.md`
+- `ai_prompt_test_generation.md`
+
+### DB2 and test-data artifacts
+
+- `db2-metadata.json`
+- `db2-metadata.md`
+- `test-data.json`
+- `test-data.md`
+
+### Investigation artifacts
+
+- `ifs-paths.json`
+- `ifs-paths.md`
+- `search-results.json`
+- `search-results.md`
+- `diagnostic-query-packs.json`
+- `diagnostic-query-packs.md`
+- `diagnostic-query-pack-manifest.json`
+
+### Visualization and UI artifacts
+
 - `architecture.html`
+- local UI exposed through `zeus serve`
 
-When `--safe-sharing` is enabled, Zeus also writes a parallel redacted artifact set under:
+### Governance and packaging artifacts
 
-`output/<program>/safe-sharing/`
+- `bundle-manifest.json`
+- `workflow-run-manifest.json`
+- `safe-sharing/redaction-manifest.json`
 
-The safe-sharing directory reuses the same artifact filenames where possible, but replaces business-specific identifiers, source paths, and extracted values with deterministic placeholders such as `PROGRAM_001`, `TABLE_001`, `SCHEMA_001`, `SOURCE_FILE_001.rpgle`, and `VALUE_001`.
+---
 
-`context.json` contains top-level keys:
+## How to read the artifacts
 
-- `program`
-- `scannedAt`
+If you are new to the output, use this sequence:
+
+### For understanding
+
+1. `report.md`
+2. `architecture-report.md`
+3. `program-call-tree.md`
+4. `ai_prompt_documentation.md`
+5. `context.json`
+6. `canonical-analysis.json`
+
+### For impact review
+
+1. `program-call-tree.md`
+2. `impact-analysis.md`
+3. `db2-metadata.md`
+4. `canonical-analysis.json`
+
+### For testing
+
+1. `ai_prompt_test_generation.md`
+2. `db2-metadata.md`
+3. `test-data.md`
+4. `context.json`
+
+### For modernization
+
+1. `architecture-report.md`
+2. `program-call-tree.md`
+3. `ai_prompt_modernization.md`
+4. `ai_prompt_architecture_review.md`
+5. `canonical-analysis.json`
+
+---
+
+## Investigation features
+
+Zeus is not just a parser. It can also support directed investigation.
+
+### IFS path scanning
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --scan-ifs-paths
+```
+
+Writes:
+
+- `ifs-paths.json`
+- `ifs-paths.md`
+
+### Full-text search
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --search-terms ORDERS,INVPGM --search-ignore archive/,old/
+```
+
+Writes:
+
+- `search-results.json`
+- `search-results.md`
+
+### Diagnostic packs
+
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --diagnostic-packs table-investigation --diagnostic-params table=ORDERS
+zeus analyze --list-diagnostic-packs
+```
+
+Writes:
+
+- `diagnostic-query-packs.json`
+- `diagnostic-query-packs.md`
+- `diagnostic-query-pack-manifest.json`
+
+These are useful when static source evidence alone is not enough.
+
+---
+
+## Profiles and configuration
+
+Profiles are loaded from:
+
+- `config/profiles.json` when present
+- otherwise `config/profiles.example.json`
+
+Profiles can define:
+
 - `sourceRoot`
-- `sourceFiles`
-- `summary`
-- `dependencies`
-- `procedureAnalysis`
-- `bindingAnalysis`
-- `nativeFileUsage`
-- `sql`
-- `graph`
-- `crossProgramGraph`
-- `ifsPaths`
-- `searchResults`
-- `diagnosticPacks`
-- `analysisCache`
-- `db2Metadata`
+- `outputRoot`
+- `extensions`
+- `extends`
+- `analysisLimits`
+- `db`
 - `testData`
-- `aiContext`
-- `notes`
+- `fetch`
+- `contextOptimizer`
 
-`ai-knowledge.json` is a versioned prompt-ready projection derived from the canonical model. It preserves evidence references, risk markers, uncertainty markers, and workflow-specific sections for prompt generation.
+They support inheritance and `${env:VAR_NAME}` placeholders so secrets do not need to live in committed config.
 
-`analysis-index.json` is a deterministic task-oriented index that maps common workflows to the relevant artifacts, prompt contracts, intended audience, expected decisions, interpretation guidance, and recommended next actions.
+### Example profile skeleton
 
-`workflow-run-manifest.json` records which named workflow preset produced the run, which guided analyze mode it resolved to, which review metadata shaped the run, and which bundle was emitted for sharing.
-
-`safe-sharing/redaction-manifest.json` records which artifacts were redacted, which placeholder categories were used, and which safe-sharing files were written. Reverse mappings are intentionally not exported.
-Analyze, bundle, workflow, and impact outputs also record reproducibility metadata when repeated-run verification is required.
-`analyze-run-manifest.json` and `analysis-diagnostics.json` now also record cache status, stage timings, warnings, generated artifact inventory, configured analysis limits, and applied test-data policy in machine-readable form.
-
-`canonical-analysis.json` is now the semantic source of truth for the analyze pipeline.
-
-`context.json` remains the backward-compatible AI-ready projection. Prompt generation and report generation still consume this projection today, and `graph` provides compact references to dependency graph artifacts.
-
-`procedureAnalysis` exposes detected local procedures, subroutines, prototypes, and classified procedure call sites so internal, external, dynamic, and unresolved procedure calls are no longer conflated with program calls.
-
-`nativeFileUsage` exposes native IBM i file semantics including per-file read-only versus mutating usage, workstation and printer behavior, keyed/native I/O hints, procedure ownership, and detected record formats where feasible.
-
-`sql` now exposes structured embedded SQL semantics including statement intent, read/write behavior, host variables, cursor names/actions, dynamic SQL markers, and unresolved dependency hints.
-
-`bindingAnalysis` exposes module-level bind metadata including `BNDDIR` references, service-program hints, binder-source exports, imported procedure symbols, and unresolved bind diagnostics where explicit binding evidence is missing.
-
-When `--optimize-context` is enabled, `optimized-context.json` becomes a salience-ranked workflow projection with token budgets, evidence packs, and ranked source references. The AI knowledge projection uses it as a selection helper, but prompt generation still reads `ai-knowledge.json`.
-
-The canonical schema and invariants are documented in `docs/canonical-analysis-model.md`.
-
-`report.md` includes sections:
-
-- `Overview`
-- `Source Files`
-- `IFS Path Usage`
-- `Full-Text Search`
-- `Diagnostic Query Packs`
-- `Analysis Cache`
-- `Tables`
-- `Program Calls`
-- `Procedure Semantics`
-- `Native File I/O`
-- `Copy Members`
-- `SQL Statements`
-- `DB2 Metadata`
-- `Test Data Extract`
-- `Dependency Graph`
-- `Cross Program Dependency Graph`
-- `Impact Analysis`
-- `Interactive Architecture Viewer`
-- `Architecture`
-- `Next Steps`
-
-## Dependency Graph
-
-Purpose:
-
-- provide a deterministic central dependency model for reports and AI prompts
-- represent `program -> program calls`, `program -> tables`, and `program -> copy members`
-- keep output stable (uppercase identifiers, alphabetical ordering, deduplicated nodes/edges)
-
-Generated files in `output/<program>/`:
-
-- `dependency-graph.json`
-- `dependency-graph.mmd`
-- `dependency-graph.md`
-
-Mermaid rendering:
-
-- GitHub renders Mermaid code blocks directly in Markdown views
-- VSCode renders Mermaid in Markdown preview when Mermaid support is enabled
-
-Example:
-
-```bash
-zeus analyze --source ./rpg_sources --program ORDERPGM
+```json
+{
+  "default": {
+    "sourceRoot": "./rpg",
+    "outputRoot": "./output",
+    "extensions": [".rpgle", ".rpg", ".sqlrpgle", ".rpgleinc"]
+  },
+  "sample-db2": {
+    "extends": "default",
+    "db": {
+      "host": "myibmi.example.com",
+      "user": "${env:ZEUS_DB_USER}",
+      "password": "${env:ZEUS_DB_PASSWORD}",
+      "defaultSchema": "MYLIB"
+    },
+    "testData": {
+      "limit": 50,
+      "maskColumns": ["NAME", "EMAIL", "PHONE"]
+    }
+  }
+}
 ```
 
-Outputs:
+---
 
-- `output/ORDERPGM/dependency-graph.json`
-- `output/ORDERPGM/dependency-graph.mmd`
-- `output/ORDERPGM/dependency-graph.md`
+## Best practices
 
-## Cross-Program Dependency Graph
+### 1. Keep provenance intact
 
-Purpose:
+If you use `zeus fetch`, keep `zeus-import-manifest.json` with the fetched source set. It is the traceability bridge between IBM i and local analysis.
 
-- recursively follow local program calls starting from the analyzed root program
-- build a multi-program call chain view for architecture analysis
-- list unresolved called programs when local source files are not available
+### 2. Normalize encoding early
 
-Generated files in `output/<program>/`:
+Use UTF-8 export with CCSID `1208` unless you have a very specific reason not to. Encoding issues quietly poison downstream analysis quality.
 
-- `program-call-tree.json`
-- `program-call-tree.mmd`
-- `program-call-tree.md`
+### 3. Start with the right artifact
 
-Scope and limitation:
+Do not open with giant raw source dumps if a prompt artifact or architecture report already exists. Zeus is strongest when you use its structured outputs as intended.
 
-- recursion follows only source members that exist locally under `--source`
-- unresolved calls are tracked in the graph summary and Markdown wrapper
-- recursion is loop-safe via a visited program set
+### 4. Use DB2 enrichment when data behavior matters
 
-Example:
+If the task depends on table shape, FK relationships, triggers, or nullability, include DB2 metadata. Otherwise you are reviewing only half the story.
 
-```bash
-zeus analyze --source ./rpg_sources --program ORDERPGM
-```
+### 5. Treat unresolved references seriously
 
-Produces:
+Unresolved or ambiguous programs, procedures, and SQL are not cosmetic warnings. They are real uncertainty markers and should stay visible in reviews.
 
-- `output/ORDERPGM/program-call-tree.json`
-- `output/ORDERPGM/program-call-tree.mmd`
-- `output/ORDERPGM/program-call-tree.md`
+### 6. Keep AI grounded
 
-## Interactive Architecture Viewer
+Use generated prompt files first. Add support artifacts selectively. Verify conclusions against `canonical-analysis.json`, `db2-metadata.json`, or graph artifacts.
 
-Each analyze run now also generates:
+### 7. Use safe-sharing when needed
 
-- `output/<program>/architecture.html`
+If artifacts leave the team or go into external AI chats, prefer `--safe-sharing` and bundle the redacted output rather than the raw run.
 
-Purpose:
+### 8. Use workflow presets for repeatable review packets
 
-- browser-based interactive visualization of the cross-program dependency graph
-- single self-contained HTML file (no local server required)
-- graph data sourced from `program-call-tree.json`
+Presets are a strong fit when teams repeatedly do the same kind of review, such as onboarding, architecture review, modernization review, or dependency-risk review.
 
-Rendering details:
+---
 
-- visualization library: bundled `vis-network` pinned from the project lockfile and inlined into the generated HTML
-- no external `<script src=...>` dependency at runtime
-- node type colors:
-  - `PROGRAM` -> blue
-  - `TABLE` -> green
-  - `COPY` -> orange
-- hierarchical top-down layout (`UD`) to keep the root program at the top
+## Anti-patterns
 
-Portability details:
+Avoid these:
 
-- works offline after the output folder or bundle is copied elsewhere
-- stays version-stable because the bundled viewer bytes come from the pinned dependency version, not a CDN
-- safe-sharing artifacts reuse the same self-contained viewer strategy
+- sending raw source dumps to AI without Zeus artifacts
+- skipping DB2 enrichment when schema behavior matters
+- ignoring unresolved references because “the rest looks clean”
+- mixing encodings in one source tree and assuming results are still trustworthy
+- treating sample test data as full production truth
+- treating AI output as authoritative without checking canonical artifacts
+- bundling everything by default when a focused preset would reduce noise
 
-Interactions:
+---
 
-- zoom and pan
-- draggable nodes
-- hover highlighting
-- click node to highlight connected edges
-- double-click node to focus/center it
+## Local UI
 
-Example:
+Start the local UI:
 
 ```bash
-zeus analyze --source ./rpg_sources --program ORDERPGM
+zeus serve --source-output-root ./output --port 4782
 ```
 
-Output:
-
-- `output/ORDERPGM/architecture.html`
-
-## Local UI Shell
-
-Zeus now also includes a first local-only UI shell over the existing output contract.
-
-Purpose:
-
-- browse completed analysis runs without reparsing artifacts in the browser
-- expose a stable read-only internal API for future richer UI work
-- keep CLI workflows and UI workflows on the same manifest and artifact model
-
-Current behavior:
-
-- `zeus serve --source-output-root ./output` starts a loopback-only HTTP server
-- the HTML shell at `/` uses the JSON API instead of reading files directly
-- the shell lists runs, shows manifest-derived summary metadata, and exposes focused views for graph exploration, DB2/test-data browsing, prompt comparison, and artifact preview
-- prompt and artifact content is fetched lazily on selection so larger runs do not require eager browser-side loading
-
-Current API endpoints:
+Current API endpoints include:
 
 - `GET /api/health`
 - `GET /api/runs`
@@ -539,512 +899,135 @@ Current API endpoints:
 - `GET /api/runs/:program/artifacts/content?path=...`
 - `GET /runs/:program/artifacts/raw?path=...`
 
-Example:
+This is useful for teams who want the analysis output accessible in a browser without re-parsing files client-side.
+
+---
+
+## Example review flows
+
+### Flow 1: “I just inherited this RPG program. Help.”
+
+Use:
 
 ```bash
-zeus serve --source-output-root ./output --port 4782
+zeus analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
 ```
 
-Open the printed local URL in a browser to inspect available runs.
+Then read:
 
-## Impact Analysis
+- `report.md`
+- `architecture-report.md`
+- `ai_prompt_documentation.md`
 
-Purpose:
+### Flow 2: “We need to change a table. What breaks?”
 
-- provide reverse dependency lookup using `program-call-tree.json` as source of truth
-- identify direct and indirect affected programs for a table or called program
-- keep results deterministic (uppercase IDs, deduplicated, sorted)
-
-Usage:
+Use:
 
 ```bash
-zeus impact --target ORDERS
-zeus impact --target INVOICEPGM --program ORDERPGM
+zeus analyze --source ./rpg_sources --program ORDERPGM --out ./output
+zeus impact --program ORDERPGM --target ORDERS --out ./output
 ```
 
-Generated files:
+Then read:
 
-- `output/<program>/impact-analysis.json`
-- `output/<program>/impact-analysis.md`
-
-Example interpretation:
-
-- Programs affected by table `ORDERS` may include:
-  - `ORDERPGM`
-  - `INVOICEPGM`
-
-## Architecture Report
-
-Each analyze run now generates `architecture-report.md` in `output/<program>/`.
-
-Purpose:
-
-- automatic architecture documentation for legacy IBM i RPG programs
-- quick overview of program interactions with tables, called programs, copy members, and SQL activity
-- embedded Mermaid dependency view based on generated graph artifacts
-
-How it works:
-
-- uses `context.json` as the primary structured source
-- derives that file from `canonical-analysis.json` to keep existing output contracts stable
-- reuses `dependency-graph.json` and `dependency-graph.mmd` (no duplicate dependency logic)
-- optionally includes SQL examples from `optimized-context.json` when available
-
-Example:
-
-```bash
-zeus analyze --source ./rpg_sources --program ORDERPGM
-```
-
-Produces:
-
-- `output/ORDERPGM/architecture-report.md`
-
-## AI Prompt Templates
-
-Prompt templates are stored in:
-
-- `src/prompt/templates/`
-
-Available prompt types today:
-
-- `documentation`
-- `error-analysis`
-- `defect-analysis`
-- `modernization`
-- `architecture-review`
-- `refactoring-plan`
-- `test-generation`
-
-Guided analyze modes reuse these prompt contracts instead of inventing a separate prompt-selection system.
-
-The analyze pipeline loads templates from disk, resolves placeholders from the projected prompt context, and writes prompt files to `output/<program>/`.
-
-Prompt rendering is now contract-driven:
-
-- each template has registry metadata for version, workflow, required inputs, preferred output shape, and budget expectations
-- prompt applicability is validated against `ai-knowledge.json` before rendering
-- rendered prompts fail fast when the contract budget is exceeded
-- fixture-driven prompt regression tests check completeness, evidence preservation, and prompt size
-
-See `docs/prompt-contracts.md` for the contract model and fixture harness.
-
-Supported placeholders include:
-
-- `{{program}}`
-- `{{summary}}`
-- `{{tables}}`
-- `{{programCalls}}`
-- `{{copyMembers}}`
-- `{{sqlStatements}}`
-- `{{dependencyGraphSummary}}`
-- `{{sourceSnippet}}`
-- `{{ifsPaths}}`
-- `{{searchResults}}`
-- `{{diagnosticFindings}}`
-
-To add a new template:
-
-1. Create `src/prompt/templates/<name>.md`
-2. Call `buildPrompt("<name>", context, outputPath)` or include the name in `buildPrompts(...)`
-
-## DB2 Metadata Export
-
-`zeus analyze` now attempts DB2 metadata export automatically after dependency/context analysis and before report and prompt generation.
-
-Exported metadata includes:
-
-- SQL name and system name
-- schema or library
-- object type and descriptive text
-- estimated row count when catalog statistics are available
-- column names
-- column types
-- length, precision, and scale when JDBC metadata provides them
-- nullable flag
-- primary key flag
-- imported foreign keys, including delete and update rules when available
-- trigger metadata and derived-object relationships when IBM i catalog views are available
-- catalog-resolved external program, service-program, and module classifications for unresolved calls when available
-
-Generated files in `output/<program>/` when export succeeds:
-
-- `db2-metadata.json`
+- `program-call-tree.md`
+- `impact-analysis.md`
 - `db2-metadata.md`
 
-`context.json` also includes a compact `db2Metadata` block with file references and exported table count.
+### Flow 3: “We want a shareable modernization packet.”
 
-When DB2 metadata export succeeds, that compact summary also records source-linked table matches, unresolved or ambiguous catalog matches, and evidence counts that tie schema results back to SQL or native file usage.
-Program-call and procedure-call projections also carry `resolutionSource` metadata so downstream reports and prompts can distinguish source-resolved references from catalog-resolved external objects.
-
-Required configuration:
-
-- `db.user`
-- `db.password`
-- either `db.url` or `db.host`
-- optional `db.defaultSchema` or `db.defaultLibrary`
-- `java/lib/jt400.jar` present in the project
-
-Example profile:
-
-```json
-{
-  "sample-db2": {
-    "sourceRoot": "./rpg",
-    "outputRoot": "./output",
-    "db": {
-      "host": "myibmi.example.com",
-      "user": "MYUSER",
-      "password": "MYPASSWORD",
-      "defaultSchema": "MYLIB"
-    }
-  }
-}
-```
-
-Behavior:
-
-- if DB2 configuration is available, export runs automatically during `analyze`
-- if DB2 configuration or Java/JT400 prerequisites are missing, analysis still succeeds
-- `report.md` records whether metadata export ran or was skipped
-- unresolved table lookups are added as notes in `context.json`
-
-The Java helper can still be executed directly:
+Use:
 
 ```bash
-javac -cp java/lib/jt400.jar -d java/bin java/Db2MetadataExporter.java
-java -cp "java/lib/jt400.jar;java/bin" Db2MetadataExporter "jdbc:as400://host;naming=system;libraries=MYLIB" MYUSER MYPASSWORD MYLIB "ORDHDR,ORDDTL"
+zeus workflow --preset modernization-review --source ./rpg_sources --program ORDERPGM --out ./output --bundle-output ./bundles
 ```
 
-## Test Data Extractor
+Then share:
 
-`zeus analyze` now attempts DB2 test data extraction automatically after DB2 metadata export and before report and prompt generation.
+- the bundle ZIP
+- or a safe-sharing bundle if identifiers must be redacted
 
-Purpose:
+### Flow 4: “We need better regression tests.”
 
-- export representative sample rows for detected DB2 tables
-- make reports and prompts more concrete without dumping full tables
-- keep extraction bounded and read-only
+Use:
 
-Behavior:
+```bash
+zeus analyze --source ./rpg_sources --program ORDERPGM --profile sample-db2 --mode test-generation --out ./output --test-data-limit 25
+```
 
-- default limit is `50` rows per table
-- override with `--test-data-limit <n>`
-- skip explicitly with `--skip-test-data`
-- if DB2 configuration is missing, `analyze` still succeeds and `report.md` records the skip
-- if one table extraction fails, the remaining tables are still processed
+Then use:
 
-Generated files in `output/<program>/` when extraction runs:
-
-- `test-data.json`
+- `ai_prompt_test_generation.md`
+- `db2-metadata.md`
 - `test-data.md`
 
-`context.json` includes a compact `testData` block with file references, extracted table count, and row limit.
+---
 
-When test data export succeeds, the compact `testData` summary also records which extracted tables were linked back to source evidence so prompts and reports can reason about sample rows together with SQL or native file usage.
+## Project structure
 
-Governance can be configured through the active profile:
+### Main entry points and notable modules
 
-```json
-{
-  "testData": {
-    "limit": 50,
-    "maskColumns": ["NAME", "EMAIL", "PHONE"],
-    "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
-    "denyTables": ["MYLIB.AUDITLOG"],
-    "maskRules": [
-      {
-        "schema": "MYLIB",
-        "table": "CUSTOMERS",
-        "columns": ["PHONE"],
-        "value": "MASKED_PHONE"
-      }
-    ]
-  }
-}
-```
+- `cli/zeus.js` — CLI entry point
+- `src/collector/sourceCollector.js` — source file discovery
+- `src/scanner/rpgScanner.js` — RPG heuristics scanner
+- `src/scanner/clScanner.js` — CL scanner
+- `src/scanner/ddsScanner.js` — DDS scanner
+- `src/scanner/dependencyScanner.js` — aggregated dependency extraction
+- `src/source/sourceType.js` — source-type classification
+- `src/context/canonicalAnalysisModel.js` — canonical model builder
+- `src/context/contextBuilder.js` — backward-compatible context projection
+- `src/dependency/dependencyGraphBuilder.js` — deterministic dependency graph builder
+- `src/dependency/crossProgramGraphBuilder.js` — recursive call graph builder
+- `src/dependency/programSourceResolver.js` — source member resolution
+- `src/report/markdownReport.js` — report generation
+- `src/report/architectureReport.js` — architecture report generation
+- `src/prompt/promptBuilder.js` — prompt rendering
+- `src/prompt/promptRegistry.js` — prompt contract metadata
+- `src/viewer/architectureViewerGenerator.js` — interactive HTML viewer
+- `src/impact/impactAnalyzer.js` — reverse dependency impact analysis
+- `src/analyze/stageRegistry.js` — stage pipeline registry
+- `java/Db2MetadataExporter.java` — DB2 metadata export
+- `java/Db2TestDataExtractor.java` — DB2 sample row extraction
+- `config/profiles.example.json` — example profile config
 
-Policy behavior:
+---
 
-- `maskColumns` applies a global column mask across eligible tables
-- `allowTables` restricts extraction to an explicit allowlist when present
-- `denyTables` blocks specific tables even if they were otherwise detected or allowlisted
-- `maskRules` apply scoped per-table or per-schema overrides and optional replacement values
+## Documentation pointers
 
-Masked columns are written as `MASKED` unless a rule-specific replacement value is configured.
-The resulting policy decisions are recorded in `test-data.json`, `test-data.md`, `context.json`, `report.md`, and `analyze-run-manifest.json` so skipped and exported tables can be audited later without re-deriving policy from config files.
+See the project docs for deeper contracts and implementation details, including:
 
-Safety constraints:
+- canonical analysis model
+- prompt contracts
+- safe sharing
+- fixture sanitization
+- reproducible output mode
+- import manifest contract
+- source ingest normalization
+- analyzer stage pipeline
+- investigation workflows
+- local UI shell
+- viewer asset strategy
 
-- read-only JDBC queries only
-- no unlimited extraction
-- no full table dumps
-- no write-back operations
+If you keep those docs in the repository, prefer relative links from this README so the project remains portable across machines and operating systems.
 
-Example:
-
-```bash
-zeus analyze --source ./rpg_sources --program ORDERPGM --test-data-limit 25
-```
-
-Investigation examples:
-
-```bash
-zeus analyze --source ./rpg_sources --program ORDERPGM --scan-ifs-paths
-zeus analyze --source ./rpg_sources --program ORDERPGM --search-terms ORDERS,INVPGM --search-ignore archive/,old/
-zeus analyze --source ./rpg_sources --program ORDERPGM --diagnostic-packs table-investigation --diagnostic-params table=ORDERS
-zeus analyze --list-diagnostic-packs
-```
-
-## Output Bundle Packaging
-
-`zeus bundle` packages generated artifacts from a single `output/<program>/` folder into one portable ZIP archive.
-
-When `analyze-run-manifest.json` is present, `zeus bundle` uses it as the source of truth for artifact selection and metadata. This keeps analyze and bundle aligned on one deterministic output contract, which is the same direction needed for future workflow presets and a local UI/API layer.
-
-Default bundle location:
-
-- `bundles/<program>-analysis-bundle.zip`
-
-When `--safe-sharing` is used, the default bundle location becomes:
-
-- `bundles/<program>-safe-sharing-bundle.zip`
-
-Included by default:
-
-- all `.json` files in `output/<program>/`
-- all `.md` files in `output/<program>/`
-- all `.html` files in `output/<program>/`
-
-Use include filters to restrict the archive:
-
-- `--include-json`
-- `--include-md`
-- `--include-html`
-
-If any include filter is passed, only the selected file types are packaged.
-
-The ZIP also contains:
-
-- `manifest.json` with the included file list and summary counts
-- `README.txt` with a short bundle description, intended audience, expected decisions, interpretation guidance, and recommended outputs for the selected workflow preset
-
-When `--safe-sharing` is enabled, Zeus packages only the redacted `safe-sharing/` artifacts and records the redaction manifest path in the bundle metadata and README.
-
-`zeus bundle` also writes `bundle-manifest.json` to `output/<program>/` for local reference.
-
-Both bundle manifest files are versioned and include:
-
-- `schemaVersion`
-- tool/command metadata
-- included file list
-- artifact entries with `path`, `kind`, `sizeBytes`, and `sha256` when available
-- analyze-run linkage metadata when the bundle was created from an analyze manifest
-- workflow preset metadata, including intended audience, key questions answered, expected decisions, interpretation guidance, and recommended outputs, when the bundle was created from `zeus workflow` or an analyze run tagged with a workflow preset
-- safe-sharing metadata when the bundle contains only redacted artifacts
-
-Examples:
-
-```bash
-zeus bundle --program ORDERPGM
-zeus bundle --program ORDERPGM --output ./bundles --include-json
-zeus bundle --program ORDERPGM --source-output-root ./output --verbose
-zeus bundle --program ORDERPGM --source-output-root ./output --safe-sharing
-zeus workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM
-```
-
-Produces:
-
-- `bundles/ORDERPGM-analysis-bundle.zip`
-
-## Configuration Profiles
-
-Profiles are loaded from `config/profiles.json` when present, otherwise from `config/profiles.example.json`.
-
-A profile can define:
-
-- `sourceRoot`
-- `outputRoot`
-- `extensions`
-- `extends` (optional): inherit from one or more other profiles
-- `analysisLimits` (optional): `maxProgramDepth`, `maxPrograms`, `maxNodes`, `maxEdges`, `maxScannedFiles`, `maxProgramCallsPerProgram`
-- `db` (optional): `url`, `host`, `user`, `password`, `defaultSchema`, `defaultLibrary`
-- `testData` (optional): `limit`, `maskColumns`, `allowTables`, `denyTables`, `maskRules`
-- `fetch` (optional): `host`, `user`, `password`, `sourceLib`, `ifsDir`, `out`, `files`, `members`, `replace`, `streamFileCcsid`, `transport`
-- `contextOptimizer` (optional): `maxTables`, `maxProgramCalls`, `maxCopyMembers`, `maxSQLStatements`, `maxSourceSnippets`, `maxSnippetLines`, `softTokenLimit`, `workflowTokenBudgets`
-
-Profiles merge from top-level defaults into the selected profile, and `extends` lets one profile build on another without copying the full contract. String placeholders in the form `${env:VAR_NAME}` are resolved from the process environment during load, which keeps credentials and other secrets out of committed profile files.
-
-Example:
-
-```json
-{
-  "contextOptimizer": {
-    "maxTables": 20,
-    "maxProgramCalls": 20,
-    "maxCopyMembers": 10,
-    "maxSQLStatements": 10,
-    "maxSourceSnippets": 20,
-    "maxSnippetLines": 12,
-    "softTokenLimit": 3000,
-    "workflowTokenBudgets": {
-      "documentation": 2200,
-      "errorAnalysis": 1600
-    }
-  },
-  "analysisLimits": {
-    "maxProgramDepth": 25,
-    "maxPrograms": 500,
-    "maxNodes": 5000,
-    "maxEdges": 4000,
-    "maxScannedFiles": 500,
-    "maxProgramCallsPerProgram": 200
-  },
-  "testData": {
-    "limit": 50,
-    "maskColumns": ["NAME", "EMAIL", "PHONE"],
-    "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
-    "denyTables": ["MYLIB.AUDITLOG"],
-    "maskRules": [
-      {
-        "table": "CUSTOMERS",
-        "columns": ["PHONE"],
-        "value": "MASKED_PHONE"
-      }
-    ]
-  },
-  "default": {
-    "sourceRoot": "./rpg",
-    "outputRoot": "./output",
-    "extensions": [".rpgle", ".rpg", ".sqlrpgle", ".rpgleinc"],
-    "analysisLimits": {
-      "maxProgramDepth": 15,
-      "maxPrograms": 250
-    },
-    "contextOptimizer": {
-      "maxTables": 20,
-      "maxProgramCalls": 20,
-      "maxCopyMembers": 10,
-      "maxSQLStatements": 10,
-      "maxSourceSnippets": 20,
-      "maxSnippetLines": 12,
-      "workflowTokenBudgets": {
-        "documentation": 1800
-      }
-    }
-  },
-  "modernization-large": {
-    "extends": "default",
-    "outputRoot": "./output-modernization",
-    "analysisLimits": {
-      "maxProgramDepth": 40,
-      "maxPrograms": 1000
-    }
-  },
-  "sample-db2": {
-    "sourceRoot": "./rpg",
-    "outputRoot": "./output",
-    "extensions": [".rpgle", ".rpg"],
-    "db": {
-      "host": "myibmi.example.com",
-      "url": "jdbc:as400://myibmi.example.com;naming=system;libraries=MYLIB",
-      "user": "${env:ZEUS_DB_USER}",
-      "password": "${env:ZEUS_DB_PASSWORD}",
-      "defaultSchema": "MYLIB"
-    },
-    "testData": {
-      "limit": 50,
-      "maskColumns": ["NAME", "EMAIL", "PHONE"],
-      "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
-      "denyTables": ["MYLIB.AUDITLOG"],
-      "maskRules": [
-        {
-          "schema": "MYLIB",
-          "table": "CUSTOMERS",
-          "columns": ["PHONE"],
-          "value": "MASKED_PHONE"
-        }
-      ]
-    }
-  },
-  "sample-fetch": {
-    "fetch": {
-      "host": "myibmi.example.com",
-      "user": "MYUSER",
-      "password": "MYPASSWORD",
-      "sourceLib": "SOURCEN",
-      "ifsDir": "/home/zeus/rpg_sources",
-      "out": "./rpg_sources",
-      "files": ["QRPGLESRC", "QSQLRPGLESRC", "QCLLESRC"],
-      "streamFileCcsid": 1208,
-      "replace": true,
-      "transport": "auto"
-    }
-  }
-}
-```
-
-## AI Context Optimization
-
-Large RPG programs often exceed practical LLM context limits when full scan output is passed directly to prompts.  
-`--optimize-context` adds a deterministic reduction step:
-
-- keeps program metadata, dependency summary, tables, program calls, copy members, and SQL
-- ranks semantic evidence by salience instead of trimming lists alphabetically
-- builds workflow-specific evidence packs for SQL, calls, native file usage, conditionals, and error paths
-- enforces configurable token budgets per workflow through `workflowTokenBudgets.documentation` and `workflowTokenBudgets.errorAnalysis`
-- carries ranked file-and-line evidence references forward into `ai-knowledge.json` and the generated prompts
-
-Token estimation uses a lightweight heuristic:
-
-- `estimatedTokens ~= characters / 4`
-
-During `analyze`, CLI output and `report.md` include:
-
-- context token estimate
-- optimized token estimate (when enabled)
-- percentage reduction
-- optional warning if optimized context exceeds `softTokenLimit`
-
-Example:
-
-```bash
-zeus analyze --source ./rpg_sources --program ORDERPGM --optimize-context
-```
-
-Safe-sharing example:
-
-```bash
-zeus analyze --source ./rpg_sources --program ORDERPGM --safe-sharing
-zeus bundle --program ORDERPGM --source-output-root ./output --safe-sharing
-```
-
-See [docs/safe-sharing.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/safe-sharing.md) for the safe-sharing rules for reports, prompts, bundles, fixtures, and issue text.
-See [docs/fixture-sanitization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/fixture-sanitization.md) for the shared sanitized fixture corpus rules and review checklist.
-See [docs/reproducible-output-mode.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/reproducible-output-mode.md) for the reproducible output contract and stable-timestamp mode.
-See [docs/import-manifest-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/import-manifest-contract.md) for the public fetch provenance manifest contract.
-See [docs/source-ingest-normalization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/source-ingest-normalization.md) for the analyze-time normalization contract and current CL/DDS scanner depth.
-See [docs/investigation-workflows.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/investigation-workflows.md) for the new IFS-path, full-text search, diagnostic-pack, and prompt-pack workflow additions.
-See [docs/analyzer-stage-pipeline.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/analyzer-stage-pipeline.md) for the registry-backed analyze stage contract and plugin seam.
-See [docs/local-ui-shell.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/local-ui-shell.md) for the read-only local UI shell and API contract.
-See [docs/viewer-asset-strategy.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/viewer-asset-strategy.md) for the offline viewer packaging strategy and licensing note.
+---
 
 ## Notes
 
-This initial version is intentionally lightweight and heuristic-driven. It is designed to be easy to read, easy to extend, and safe to evolve toward deeper RPG/SQL parsing in future iterations.
+This project is intentionally practical and heuristic-driven. The goal is not theoretical perfection; the goal is to produce useful, auditable analysis artifacts that are easy to review, easy to extend, and safe to evolve.
 
-IBM i source export note:
+The strongest usage pattern is simple:
 
-- fetched source members are exported as UTF-8 stream files (`CCSID 1208`) by default
-- analyzer components read local sources as UTF-8, so keeping fetch output on that contract avoids broken umlauts and Windows-side mojibake
-- non-default `--streamfile-ccsid` values remain best-effort; the guaranteed Windows-readable contract is documented in [docs/fetch-encoding-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/fetch-encoding-contract.md)
-- imported-member provenance and export diagnostics are documented in [docs/import-manifest-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/import-manifest-contract.md)
-- analyze-time source normalization and CL/DDS scan depth are documented in [docs/source-ingest-normalization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/source-ingest-normalization.md)
+1. get the source into a trustworthy local form
+2. analyze it into structured evidence
+3. enrich only as needed
+4. use focused artifacts for the review at hand
+5. verify conclusions before acting on them
+
+That is where Zeus RPG PromptKit shines.
 
 ## License
 
 This project is licensed under the Apache License 2.0.
 
-You may use, modify, and distribute this software in accordance with the terms of the Apache License.
-
-See the LICENSE file for details.
+See the `LICENSE` file for details.
