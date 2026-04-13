@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "scanner-corpus",
+  "name": "core-patterns",
+  "cases": [
+    {
+      "id": "free-form-rpg",
+      "title": "Free-form RPG detects tables, calls, and copy members",
+      "files": ["core-patterns/freeform-order.rpgle"],
+      "expected": {
+        "sourceTypes": ["RPGLE"],
+        "tables": ["ORDERS"],
+        "calls": ["INVPGM"],
+        "copyMembers": ["QRPGLESRC,ORDCOPY"]
+      }
+    },
+    {
+      "id": "fixed-form-rpg",
+      "title": "Fixed-form RPG detects F-spec table usage",
+      "files": ["core-patterns/fixedform-order.rpg"],
+      "expected": {
+        "sourceTypes": ["RPG"],
+        "tables": ["ORDERS"]
+      }
+    },
+    {
+      "id": "sqlrpgle",
+      "title": "SQLRPGLE detects SQL table references",
+      "files": ["core-patterns/sql-order.sqlrpgle"],
+      "expected": {
+        "sourceTypes": ["SQLRPGLE"],
+        "tables": ["CUSTOMERS"],
+        "sqlTables": ["CUSTOMERS"]
+      }
+    },
+    {
+      "id": "ile-binding",
+      "title": "ILE patterns detect modules, service programs, and binding directories",
+      "files": [
+        "core-patterns/ordmod.rpgle",
+        "core-patterns/ordersrv.bnd"
+      ],
+      "expected": {
+        "sourceTypes": ["BND", "RPGLE"],
+        "modules": ["ORDMOD"],
+        "servicePrograms": ["ORDERSRV"],
+        "bindingDirectories": ["APPBNDDIR"],
+        "prototypes": ["PROCESSORDER"],
+        "procedures": ["LOCALEXPORT"]
+      }
+    }
+  ]
+}
