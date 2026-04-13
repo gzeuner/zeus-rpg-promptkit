@@ -19,6 +19,7 @@ const { runImpact } = require('../src/cli/commands/impactCommand');
 const { runBundle } = require('../src/cli/commands/bundleCommand');
 const { runFetch } = require('../src/cli/commands/fetchCommand');
 const { runWorkflow } = require('../src/cli/commands/workflowCommand');
+const { runServe } = require('../src/cli/commands/serveCommand');
 
 function printHelp() {
   console.log('Usage:');
@@ -27,6 +28,7 @@ function printHelp() {
   console.log('  zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible] [--profile <name>] [--verbose]');
   console.log('  zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose]');
   console.log('  zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--profile <name>] [--verbose]');
+  console.log('  zeus serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
 }
 
 function parseArgs(argv) {
@@ -76,6 +78,11 @@ async function main() {
 
   if (command === 'fetch') {
     await runFetch(args);
+    return;
+  }
+
+  if (command === 'serve') {
+    await runServe(args);
     return;
   }
 

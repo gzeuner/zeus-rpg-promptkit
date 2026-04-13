@@ -194,6 +194,12 @@ Impact command syntax:
 zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose]
 ```
 
+Local UI shell syntax:
+
+```bash
+zeus serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]
+```
+
 Fetch source syntax:
 
 ```bash
@@ -506,6 +512,38 @@ zeus analyze --source ./rpg_sources --program ORDERPGM
 Output:
 
 - `output/ORDERPGM/architecture.html`
+
+## Local UI Shell
+
+Zeus now also includes a first local-only UI shell over the existing output contract.
+
+Purpose:
+
+- browse completed analysis runs without reparsing artifacts in the browser
+- expose a stable read-only internal API for future richer UI work
+- keep CLI workflows and UI workflows on the same manifest and artifact model
+
+Current behavior:
+
+- `zeus serve --source-output-root ./output` starts a loopback-only HTTP server
+- the HTML shell at `/` uses the JSON API instead of reading files directly
+- the shell lists runs, shows manifest-derived summary metadata, and previews JSON, Markdown, and HTML artifacts on demand
+
+Current API endpoints:
+
+- `GET /api/health`
+- `GET /api/runs`
+- `GET /api/runs/:program`
+- `GET /api/runs/:program/artifacts/content?path=...`
+- `GET /runs/:program/artifacts/raw?path=...`
+
+Example:
+
+```bash
+zeus serve --source-output-root ./output --port 4782
+```
+
+Open the printed local URL in a browser to inspect available runs.
 
 ## Impact Analysis
 
@@ -986,6 +1024,7 @@ See [docs/import-manifest-contract.md](/c:/Java/workspace-java/zeus-rpg-promptki
 See [docs/source-ingest-normalization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/source-ingest-normalization.md) for the analyze-time normalization contract and current CL/DDS scanner depth.
 See [docs/investigation-workflows.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/investigation-workflows.md) for the new IFS-path, full-text search, diagnostic-pack, and prompt-pack workflow additions.
 See [docs/analyzer-stage-pipeline.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/analyzer-stage-pipeline.md) for the registry-backed analyze stage contract and plugin seam.
+See [docs/local-ui-shell.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/local-ui-shell.md) for the read-only local UI shell and API contract.
 See [docs/viewer-asset-strategy.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/viewer-asset-strategy.md) for the offline viewer packaging strategy and licensing note.
 
 ## Notes
