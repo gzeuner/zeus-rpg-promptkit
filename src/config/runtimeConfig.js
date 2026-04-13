@@ -17,9 +17,11 @@ const { DEFAULT_TEST_DATA_LIMIT } = require('../db2/testDataExportService');
 const { DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../ai/contextOptimizer');
 const { DEFAULT_SOURCE_FILES, DEFAULT_TRANSPORT } = require('../fetch/fetchService');
 const { DEFAULT_STREAM_FILE_CCSID } = require('../fetch/ifsExporter');
+const { DEFAULT_ANALYSIS_LIMITS } = require('../analyze/analysisLimits');
 
 const DEFAULT_EXTENSIONS = ['.rpg', '.rpgle', '.sqlrpgle', '.rpgile', '.bnd', '.binder', '.bndsrc', '.clp', '.clle', '.dds', '.dspf', '.prtf', '.pf', '.lf'];
 const ALLOWED_FETCH_TRANSPORTS = new Set(['auto', 'sftp', 'jt400', 'ftp']);
+const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits']);
 
 function failValidation(message) {
   throw new Error(`Invalid configuration: ${message}`);
@@ -42,10 +44,29 @@ function assertStringArray(value, label) {
   }
 }
 
+function assertOptionalStringOrStringArray(value, label) {
+  if (value === undefined || value === null) return;
+  if (typeof value === 'string') return;
+  assertStringArray(value, label);
+}
+
 function assertPositiveInteger(value, label) {
   if (!Number.isInteger(value) || value <= 0) {
     failValidation(`${label} must be a positive integer`);
   }
+}
+
+function normalizeExtendsList(value) {
+  if (value === undefined || value === null) {
+    return [];
+  }
+  if (typeof value === 'string') {
+    return [value];
+  }
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return [];
 }
 
 function validateContextOptimizerConfig(value, label) {
@@ -68,6 +89,36 @@ function validateContextOptimizerConfig(value, label) {
   }
 }
 
+function validateAnalysisLimitsConfig(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+
+  for (const [key, fieldValue] of Object.entries(value)) {
+    if (fieldValue === undefined || fieldValue === null) continue;
+    assertPositiveInteger(fieldValue, `${label}.${key}`);
+  }
+}
+
+function validateMaskRule(rule, label) {
+  if (!isPlainObject(rule)) {
+    failValidation(`${label} must be an object`);
+  }
+  assertOptionalString(rule.schema, `${label}.schema`);
+  assertOptionalString(rule.table, `${label}.table`);
+  if (rule.columns !== undefined) {
+    assertStringArray(rule.columns, `${label}.columns`);
+  }
+  assertOptionalString(rule.value, `${label}.value`);
+
+  if (!rule.table && !rule.schema) {
+    failValidation(`${label} must define at least one of .table or .schema`);
+  }
+  if (!Array.isArray(rule.columns) || rule.columns.length === 0) {
+    failValidation(`${label}.columns must be a non-empty array of strings`);
+  }
+}
+
 function validateTestDataConfig(value, label) {
   if (!isPlainObject(value)) {
     failValidation(`${label} must be an object`);
@@ -77,6 +128,18 @@ function validateTestDataConfig(value, label) {
   }
   if (value.maskColumns !== undefined) {
     assertStringArray(value.maskColumns, `${label}.maskColumns`);
+  }
+  if (value.allowTables !== undefined) {
+    assertStringArray(value.allowTables, `${label}.allowTables`);
+  }
+  if (value.denyTables !== undefined) {
+    assertStringArray(value.denyTables, `${label}.denyTables`);
+  }
+  if (value.maskRules !== undefined) {
+    if (!Array.isArray(value.maskRules)) {
+      failValidation(`${label}.maskRules must be an array`);
+    }
+    value.maskRules.forEach((rule, index) => validateMaskRule(rule, `${label}.maskRules[${index}]`));
   }
 }
 
@@ -129,6 +192,7 @@ function validateNamedProfile(profile, label) {
   if (!isPlainObject(profile)) {
     failValidation(`${label} must be an object`);
   }
+  assertOptionalStringOrStringArray(profile.extends, `${label}.extends`);
   assertOptionalString(profile.sourceRoot, `${label}.sourceRoot`);
   assertOptionalString(profile.outputRoot, `${label}.outputRoot`);
   if (profile.extensions !== undefined) {
@@ -136,6 +200,9 @@ function validateNamedProfile(profile, label) {
   }
   if (profile.contextOptimizer !== undefined) {
     validateContextOptimizerConfig(profile.contextOptimizer, `${label}.contextOptimizer`);
+  }
+  if (profile.analysisLimits !== undefined) {
+    validateAnalysisLimitsConfig(profile.analysisLimits, `${label}.analysisLimits`);
   }
   if (profile.testData !== undefined) {
     validateTestDataConfig(profile.testData, `${label}.testData`);
@@ -159,9 +226,12 @@ function validateProfiles(profiles) {
   if (profiles.testData !== undefined) {
     validateTestDataConfig(profiles.testData, 'testData');
   }
+  if (profiles.analysisLimits !== undefined) {
+    validateAnalysisLimitsConfig(profiles.analysisLimits, 'analysisLimits');
+  }
 
   for (const [key, value] of Object.entries(profiles)) {
-    if (key === 'contextOptimizer' || key === 'testData') continue;
+    if (GLOBAL_PROFILE_KEYS.has(key)) continue;
     validateNamedProfile(value, `profile "${key}"`);
   }
 }
@@ -179,6 +249,9 @@ function validateAnalyzeConfig(config) {
   }
   if (config.contextOptimizer) {
     validateContextOptimizerConfig(config.contextOptimizer, 'analyze.contextOptimizer');
+  }
+  if (config.analysisLimits) {
+    validateAnalysisLimitsConfig(config.analysisLimits, 'analyze.analysisLimits');
   }
   if (config.testData) {
     validateTestDataConfig(config.testData, 'analyze.testData');
@@ -231,6 +304,53 @@ function parseCsv(value, fallback, transform = (item) => item) {
     .filter(Boolean);
 }
 
+function mergeConfigLayers(baseValue, overrideValue) {
+  if (overrideValue === undefined) {
+    if (Array.isArray(baseValue)) return [...baseValue];
+    if (isPlainObject(baseValue)) {
+      return Object.fromEntries(Object.entries(baseValue).map(([key, value]) => [key, mergeConfigLayers(value, undefined)]));
+    }
+    return baseValue;
+  }
+
+  if (Array.isArray(overrideValue)) {
+    return [...overrideValue];
+  }
+
+  if (isPlainObject(baseValue) && isPlainObject(overrideValue)) {
+    const keys = new Set([...Object.keys(baseValue), ...Object.keys(overrideValue)]);
+    const merged = {};
+    for (const key of keys) {
+      merged[key] = mergeConfigLayers(baseValue[key], overrideValue[key]);
+    }
+    return merged;
+  }
+
+  if (isPlainObject(overrideValue)) {
+    return Object.fromEntries(Object.entries(overrideValue).map(([key, value]) => [key, mergeConfigLayers(undefined, value)]));
+  }
+
+  return overrideValue;
+}
+
+function resolveEnvPlaceholdersDeep(value, env) {
+  if (typeof value === 'string') {
+    return value.replace(/\$\{env:([A-Z0-9_]+)\}/gi, (_, key) => {
+      const envValue = env[key];
+      return envValue === undefined || envValue === null ? '' : String(envValue);
+    });
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => resolveEnvPlaceholdersDeep(entry, env));
+  }
+  if (isPlainObject(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, resolveEnvPlaceholdersDeep(entry, env)]),
+    );
+  }
+  return value;
+}
+
 function loadProfiles({ cwd = process.cwd(), fsModule = fs } = {}) {
   const configDir = path.resolve(cwd, 'config');
   const preferredPath = path.join(configDir, 'profiles.json');
@@ -248,25 +368,40 @@ function loadProfiles({ cwd = process.cwd(), fsModule = fs } = {}) {
   return profiles;
 }
 
-function resolveProfile(profiles, profileName) {
+function resolveProfile(profiles, profileName, options = {}) {
+  const { env = process.env, stack = [] } = options;
   if (!profileName) {
     return null;
   }
 
+  if (stack.includes(profileName)) {
+    throw new Error(`Profile "${profileName}" has a cyclic inheritance chain: ${[...stack, profileName].join(' -> ')}`);
+  }
+
   const profile = profiles[profileName];
-  if (!profile) {
+  if (!profile || GLOBAL_PROFILE_KEYS.has(profileName)) {
     throw new Error(`Profile "${profileName}" not found in config/profiles.json or config/profiles.example.json`);
   }
 
-  return profile;
+  const parents = normalizeExtendsList(profile.extends);
+  const inherited = parents.reduce((merged, parentName) => mergeConfigLayers(
+    merged,
+    resolveProfile(profiles, parentName, {
+      env,
+      stack: [...stack, profileName],
+    }),
+  ), {});
+  const resolved = mergeConfigLayers(inherited, profile);
+  delete resolved.extends;
+  return resolveEnvPlaceholdersDeep(resolved, env);
 }
 
-function readContextOptimizerConfig(profiles, profile) {
+function readContextOptimizerConfig(profiles, profile, env) {
   const globalConfig = profiles && typeof profiles.contextOptimizer === 'object'
-    ? profiles.contextOptimizer
+    ? resolveEnvPlaceholdersDeep(profiles.contextOptimizer, env)
     : {};
   const profileConfig = profile && typeof profile.contextOptimizer === 'object'
-    ? profile.contextOptimizer
+    ? resolveEnvPlaceholdersDeep(profile.contextOptimizer, env)
     : {};
 
   return {
@@ -281,17 +416,35 @@ function readContextOptimizerConfig(profiles, profile) {
   };
 }
 
-function readTestDataConfig(profiles, profile) {
+function readAnalysisLimitConfig(profiles, profile, env) {
+  const globalConfig = profiles && typeof profiles.analysisLimits === 'object'
+    ? resolveEnvPlaceholdersDeep(profiles.analysisLimits, env)
+    : {};
+  const profileConfig = profile && typeof profile.analysisLimits === 'object'
+    ? resolveEnvPlaceholdersDeep(profile.analysisLimits, env)
+    : {};
+
+  return {
+    ...DEFAULT_ANALYSIS_LIMITS,
+    ...globalConfig,
+    ...profileConfig,
+  };
+}
+
+function readTestDataConfig(profiles, profile, env) {
   const globalConfig = profiles && typeof profiles.testData === 'object'
-    ? profiles.testData
+    ? resolveEnvPlaceholdersDeep(profiles.testData, env)
     : {};
   const profileConfig = profile && typeof profile.testData === 'object'
-    ? profile.testData
+    ? resolveEnvPlaceholdersDeep(profile.testData, env)
     : {};
 
   return {
     limit: DEFAULT_TEST_DATA_LIMIT,
     maskColumns: [],
+    allowTables: [],
+    denyTables: [],
+    maskRules: [],
     ...globalConfig,
     ...profileConfig,
   };
@@ -312,7 +465,7 @@ function applyDbEnvOverrides(dbConfig, env) {
 
 function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
   const profiles = loadProfiles({ cwd });
-  const profile = resolveProfile(profiles, args.profile);
+  const profile = resolveProfile(profiles, args.profile, { env });
   const fetchProfile = profile ? (profile.fetch || {}) : {};
 
   const extensions = args.extensions
@@ -323,14 +476,18 @@ function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } =
     sourceRoot: args.source || (profile && profile.sourceRoot),
     outputRoot: args.out || args.output || (profile && profile.outputRoot) || 'output',
     extensions,
-    db: applyDbEnvOverrides((profile && profile.db) || null, env),
+    db: applyDbEnvOverrides(
+      profile && profile.db ? resolveEnvPlaceholdersDeep(profile.db, env) : null,
+      env,
+    ),
     ibmi: {
       host: args.host || env.ZEUS_FETCH_HOST || fetchProfile.host || null,
       user: args.user || env.ZEUS_FETCH_USER || fetchProfile.user || null,
       password: args.password || env.ZEUS_FETCH_PASSWORD || fetchProfile.password || null,
     },
-    contextOptimizer: readContextOptimizerConfig(profiles, profile),
-    testData: readTestDataConfig(profiles, profile),
+    contextOptimizer: readContextOptimizerConfig(profiles, profile, env),
+    analysisLimits: readAnalysisLimitConfig(profiles, profile, env),
+    testData: readTestDataConfig(profiles, profile, env),
   };
   validateAnalyzeConfig(resolved);
   return resolved;
@@ -338,8 +495,8 @@ function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } =
 
 function resolveFetchConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
   const profiles = loadProfiles({ cwd });
-  const profile = resolveProfile(profiles, args.profile);
-  const fetchProfile = profile ? (profile.fetch || profile) : {};
+  const profile = resolveProfile(profiles, args.profile, { env });
+  const fetchProfile = profile ? resolveEnvPlaceholdersDeep(profile.fetch || profile, env) : {};
 
   const resolved = {
     host: args.host || env.ZEUS_FETCH_HOST || fetchProfile.host,
@@ -369,9 +526,9 @@ function resolveFetchConfig(args, { cwd = process.cwd(), env = process.env } = {
   return resolved;
 }
 
-function resolveBundleConfig(args, { cwd = process.cwd() } = {}) {
+function resolveBundleConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
   const profiles = loadProfiles({ cwd });
-  const profile = resolveProfile(profiles, args.profile);
+  const profile = resolveProfile(profiles, args.profile, { env });
 
   const resolved = {
     sourceOutputRoot: args['source-output-root'] || (profile && profile.outputRoot) || 'output',
@@ -384,9 +541,11 @@ function resolveBundleConfig(args, { cwd = process.cwd() } = {}) {
 module.exports = {
   DEFAULT_EXTENSIONS,
   ALLOWED_FETCH_TRANSPORTS,
+  DEFAULT_ANALYSIS_LIMITS,
   loadProfiles,
   resolveAnalyzeConfig,
-  resolveFetchConfig,
   resolveBundleConfig,
+  resolveFetchConfig,
+  resolveProfile,
   validateProfiles,
 };
