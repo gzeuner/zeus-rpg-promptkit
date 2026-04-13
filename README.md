@@ -93,10 +93,19 @@ node cli/zeus.js analyze --source ./rpg --program ORDERPGM
 npm run analyze -- --source ./rpg --program ORDERPGM
 ```
 
-Run the smoke tests with:
+Run the default CI-oriented test flow with:
 
 ```bash
 npm test
+```
+
+Additional test tiers:
+
+```bash
+npm run test:contract
+npm run test:smoke
+npm run test:unit
+npm run test:benchmark
 ```
 
 ## Usage
@@ -104,7 +113,7 @@ npm test
 Command syntax:
 
 ```bash
-zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms <csv>] [--search-ignore <csv>] [--search-max-results <n>] [--diagnostic-packs <csv>] [--diagnostic-params <k=v,...>] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]
+zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.sqlrpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms <csv>] [--search-ignore <csv>] [--search-max-results <n>] [--diagnostic-packs <csv>] [--diagnostic-params <k=v,...>] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]
 ```
 
 Workflow command syntax:
@@ -156,6 +165,14 @@ Investigation options extend the same analyze pipeline and output contract:
 - `--search-terms ORDERS,INVPGM` writes `search-results.json` and `search-results.md`
 - `--diagnostic-packs table-investigation --diagnostic-params table=ORDERS` writes `diagnostic-query-packs.json`, `diagnostic-query-packs.md`, and `diagnostic-query-pack-manifest.json`
 - `--list-diagnostic-packs` prints the bundled starter packs and their parameters
+- `--emit-diagnostics` writes `analysis-diagnostics.json` with machine-readable stage timings, warnings, cache status, and diagnostics
+
+Analyze now runs through a split runtime contract:
+
+- `runAnalyzeCore(...)` executes semantic analysis without writing reports, prompts, or viewer files
+- the CLI applies an explicit artifact-writer adapter afterwards so future UI/API layers can reuse the same core result contract
+- source scans are cached by content hash and tool version under `output/.zeus-cache/source-scans/`
+- DB2 metadata and test-data artifacts are reused through `analysis-cache.json` when inputs are unchanged
 
 Bundle command syntax:
 
@@ -268,6 +285,7 @@ Generated files:
 - `diagnostic-query-packs.json` (when `--diagnostic-packs` is used)
 - `diagnostic-query-packs.md` (when `--diagnostic-packs` is used)
 - `diagnostic-query-pack-manifest.json` (when `--diagnostic-packs` is used)
+- `analysis-diagnostics.json` (when `--emit-diagnostics` is enabled)
 - `safe-sharing/redaction-manifest.json` (when `--safe-sharing` is enabled)
 - `report.md`
 - `architecture-report.md`
@@ -316,6 +334,7 @@ The safe-sharing directory reuses the same artifact filenames where possible, bu
 - `ifsPaths`
 - `searchResults`
 - `diagnosticPacks`
+- `analysisCache`
 - `db2Metadata`
 - `testData`
 - `aiContext`
@@ -329,6 +348,7 @@ The safe-sharing directory reuses the same artifact filenames where possible, bu
 
 `safe-sharing/redaction-manifest.json` records which artifacts were redacted, which placeholder categories were used, and which safe-sharing files were written. Reverse mappings are intentionally not exported.
 Analyze, bundle, workflow, and impact outputs also record reproducibility metadata when repeated-run verification is required.
+`analyze-run-manifest.json` and `analysis-diagnostics.json` now also record cache status, stage timings, warnings, and generated artifact inventory in machine-readable form.
 
 `canonical-analysis.json` is now the semantic source of truth for the analyze pipeline.
 
@@ -353,6 +373,7 @@ The canonical schema and invariants are documented in `docs/canonical-analysis-m
 - `IFS Path Usage`
 - `Full-Text Search`
 - `Diagnostic Query Packs`
+- `Analysis Cache`
 - `Tables`
 - `Program Calls`
 - `Procedure Semantics`
