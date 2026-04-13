@@ -908,6 +908,9 @@ function buildProgramEntities(rootProgram, sourceFiles, programCalls, procedures
     role: programName === normalizeName(rootProgram)
       ? 'ROOT'
       : sourcePrograms.has(programName) || ownerPrograms.has(programName) ? 'SCANNED' : 'CALLED',
+    resolutionSource: programName === normalizeName(rootProgram) || sourcePrograms.has(programName) || ownerPrograms.has(programName)
+      ? 'SOURCE'
+      : 'UNRESOLVED',
   }));
 }
 
@@ -1482,6 +1485,7 @@ function buildCanonicalAnalysisModel({
     entities: {
       programs: buildProgramEntities(normalizedProgram, normalizedSourceFiles, programCalls, procedures, prototypes),
       tables: mergedTables,
+      db2Triggers: [],
       nativeFiles,
       modules,
       servicePrograms,
@@ -1491,6 +1495,7 @@ function buildCanonicalAnalysisModel({
       procedures,
       prototypes,
       procedureReferences,
+      externalObjects: [],
     },
     relations: buildRelations(
       normalizedProgram,
@@ -1547,10 +1552,66 @@ function mergeObject(baseValue, patchValue) {
   };
 }
 
+function mergeEntityCollections(baseEntities, updates) {
+  if (!updates || typeof updates !== 'object') {
+    return baseEntities;
+  }
+
+  const next = {
+    ...baseEntities,
+  };
+
+  for (const [collectionName, patchCollection] of Object.entries(updates)) {
+    if (!Array.isArray(patchCollection) || patchCollection.length === 0) {
+      continue;
+    }
+
+    const merged = new Map(
+      (Array.isArray(baseEntities && baseEntities[collectionName]) ? baseEntities[collectionName] : [])
+        .filter((entry) => entry && entry.id)
+        .map((entry) => [entry.id, entry]),
+    );
+
+    for (const entry of patchCollection) {
+      if (!entry || !entry.id) continue;
+      merged.set(entry.id, entry);
+    }
+
+    next[collectionName] = Array.from(merged.values()).sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+  }
+
+  return next;
+}
+
+function mergeRelations(baseRelations, patchRelations) {
+  if (!Array.isArray(patchRelations) || patchRelations.length === 0) {
+    return baseRelations;
+  }
+
+  const merged = new Map(
+    (Array.isArray(baseRelations) ? baseRelations : [])
+      .filter((entry) => entry && entry.id)
+      .map((entry) => [entry.id, entry]),
+  );
+
+  for (const relation of patchRelations) {
+    if (!relation || !relation.id) continue;
+    merged.set(relation.id, relation);
+  }
+
+  return Array.from(merged.values()).sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+}
+
 function enrichCanonicalAnalysisModel(model, updates = {}) {
   assertCanonicalAnalysisModel(model);
   const next = {
     ...model,
+    entities: updates.entities
+      ? mergeEntityCollections(model.entities, updates.entities)
+      : model.entities,
+    relations: updates.relations
+      ? mergeRelations(model.relations, updates.relations)
+      : model.relations,
     enrichments: {
       ...model.enrichments,
       ...(updates.summary ? { summary: mergeObject(model.enrichments.summary, updates.summary) } : {}),

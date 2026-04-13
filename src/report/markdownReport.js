@@ -31,11 +31,17 @@ function sectionList(values) {
       }
 
       if (value.name && value.kind) {
-        return `- ${value.name} (${value.kind})`;
+        const extras = [];
+        if (value.resolutionSource && value.resolutionSource !== 'SOURCE') extras.push(value.resolutionSource);
+        if (value.catalogObjectType) extras.push(value.catalogObjectType);
+        return `- ${value.name} (${[value.kind, ...extras].filter(Boolean).join(', ')})`;
       }
 
       if (value.name) {
-        return `- ${value.name}`;
+        const extras = [];
+        if (value.resolutionSource && value.resolutionSource !== 'SOURCE') extras.push(value.resolutionSource);
+        if (value.catalogObjectType) extras.push(value.catalogObjectType);
+        return `- ${value.name}${extras.length ? ` (${extras.join(', ')})` : ''}`;
       }
 
       if (value.text && value.type) {
@@ -246,8 +252,14 @@ function generateMarkdownReport(context, tokenReport) {
   const db2Ambiguous = Array.isArray(db2Metadata.ambiguousTables)
     ? db2Metadata.ambiguousTables.map((entry) => entry.requestedName || entry.table)
     : [];
+  const db2TriggerCount = Number(db2Metadata.triggerCount) || 0;
+  const db2DerivedObjectCount = Number(db2Metadata.derivedObjectCount) || 0;
+  const db2ExternalObjectCount = Number(db2Metadata.externalObjectCount) || 0;
+  const db2CatalogResolvedProgramCount = Number(db2Metadata.catalogResolvedProgramCount) || 0;
+  const db2CatalogResolvedProcedureCount = Number(db2Metadata.catalogResolvedProcedureCount) || 0;
+  const db2FallbackLookupCount = Number(db2Metadata.fallbackLookupCount) || 0;
   const db2Section = db2Metadata.status === 'exported'
-    ? `## DB2 Metadata\nDB2 metadata was exported for ${db2Metadata.tableCount || 0} tables.\n\n- Resolved source-linked tables: ${db2Resolved}\n- Unresolved matches: ${db2Unresolved.length}\n- Ambiguous matches: ${db2Ambiguous.length}\n${db2Unresolved.length > 0 ? `- Unresolved table names: ${db2Unresolved.join(', ')}\n` : ''}${db2Ambiguous.length > 0 ? `- Ambiguous table names: ${db2Ambiguous.join(', ')}\n` : ''}\nSee:\n- ${db2Metadata.file || 'db2-metadata.json'}\n- ${db2Metadata.markdownFile || 'db2-metadata.md'}\n`
+    ? `## DB2 Metadata\nDB2 metadata was exported for ${db2Metadata.tableCount || 0} tables.\n\n- Resolved source-linked tables: ${db2Resolved}\n- Unresolved matches: ${db2Unresolved.length}\n- Ambiguous matches: ${db2Ambiguous.length}\n- Trigger count: ${db2TriggerCount}\n- Derived object count: ${db2DerivedObjectCount}\n- Catalog-resolved external objects: ${db2ExternalObjectCount}\n- Catalog-resolved program calls: ${db2CatalogResolvedProgramCount}\n- Catalog-resolved procedure references: ${db2CatalogResolvedProcedureCount}\n- Catalog fallback lookups: ${db2FallbackLookupCount}\n${db2Unresolved.length > 0 ? `- Unresolved table names: ${db2Unresolved.join(', ')}\n` : ''}${db2Ambiguous.length > 0 ? `- Ambiguous table names: ${db2Ambiguous.join(', ')}\n` : ''}\nSee:\n- ${db2Metadata.file || 'db2-metadata.json'}\n- ${db2Metadata.markdownFile || 'db2-metadata.md'}\n`
     : `## DB2 Metadata\nDB2 metadata export was skipped because ${db2Metadata.reason || 'no DB2 connection configuration was available'}.\n`;
   const testDataLinked = Array.isArray(testData.tables)
     ? testData.tables.filter((entry) => entry.sourceEvidenceCount > 0).length
@@ -255,7 +267,7 @@ function generateMarkdownReport(context, tokenReport) {
   const testDataSection = testData.status === 'exported'
     ? `## Test Data Extract\nSample data was extracted for ${testData.tableCount || 0} tables.\n\n- Row Limit per Table: ${testData.rowLimit || 0}\n- Source-linked extracted tables: ${testDataLinked}\n\nSee:\n- ${testData.file || 'test-data.json'}\n- ${testData.markdownFile || 'test-data.md'}\n`
     : `## Test Data Extract\nTest data extraction was skipped because ${testData.reason || 'no DB2 connection configuration was available'}.\n`;
-  const procedureSection = `## Procedure Semantics\n- Procedures: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCount) || 0}\n- Prototypes: ${(procedureAnalysis.summary && procedureAnalysis.summary.prototypeCount) || 0}\n- Procedure Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCallCount) || 0}\n- Internal Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.internalCallCount) || 0}\n- External Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.externalCallCount) || 0}\n- Dynamic Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.dynamicCallCount) || 0}\n- Unresolved Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.unresolvedCallCount) || 0}\n`;
+  const procedureSection = `## Procedure Semantics\n- Procedures: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCount) || 0}\n- Prototypes: ${(procedureAnalysis.summary && procedureAnalysis.summary.prototypeCount) || 0}\n- Procedure Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCallCount) || 0}\n- Internal Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.internalCallCount) || 0}\n- External Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.externalCallCount) || 0}\n- Dynamic Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.dynamicCallCount) || 0}\n- Unresolved Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.unresolvedCallCount) || 0}\n- Catalog-Resolved Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.catalogResolvedCallCount) || 0}\n`;
 
   return `# Zeus RPG Analysis Report\n\n## Overview\n- Program: ${context.program}\n- Scanned At: ${context.scannedAt}\n- Source Root: ${context.sourceRoot}\n- Source File Count: ${summary.sourceFileCount || 0}\n- Table Count: ${summary.tableCount || 0}\n- Program Call Count: ${summary.programCallCount || 0}\n- Copy Member Count: ${summary.copyMemberCount || 0}\n- SQL Statement Count: ${summary.sqlStatementCount || 0}\n${summary.text ? `- Summary: ${summary.text}\n` : ''}\n${optimizationSection(tokenReport)}\n## Source Files\n${sectionList(context.sourceFiles)}\n\n${sourceNormalizationSection(sourceNormalization)}\n${sourceTypeAnalysisSection(sourceTypeAnalysis)}\n${ifsPathSection(ifsPaths)}\n${searchResultsSection(searchResults)}\n${diagnosticPackSection(diagnosticPacks)}\n## Tables\n${sectionList(dependencies.tables)}\n\n## Program Calls\n${sectionList(dependencies.programCalls)}\n\n## Copy Members\n${sectionList(dependencies.copyMembers)}\n\n${procedureSection}\n${bindingAnalysisSection(bindingAnalysis)}\n${nativeFileUsageSection(nativeFileUsage)}\n${sqlSection(sql)}\n${db2Section}\n${testDataSection}\n## Dependency Graph\nDependency graph generated for ${context.program}.\n\n- Nodes: ${graph.nodeCount || 0}\n- Edges: ${graph.edgeCount || 0}\n- Tables: ${graph.tableCount || 0}\n- Programs Called: ${graph.programCallCount || 0}\n- Copy Members: ${graph.copyMemberCount || 0}\n- Modules: ${graph.moduleCount || 0}\n- Service Programs: ${graph.serviceProgramCount || 0}\n- Binding Directories: ${graph.bindingDirectoryCount || 0}\n- Bind Relationships: ${graph.bindEdgeCount || 0}\n\nSee files:\n- ${(graph.files && graph.files.json) || 'dependency-graph.json'}\n- ${(graph.files && graph.files.mermaid) || 'dependency-graph.mmd'}\n- ${(graph.files && graph.files.markdown) || 'dependency-graph.md'}\n\n## Cross Program Dependency Graph\nA recursive program dependency graph was generated for ${context.program}.\n\n- Programs discovered: ${crossProgramGraph.programCount || 0}\n- Ambiguous program calls: ${ambiguousPrograms.length}\n- Ambiguous list: ${ambiguousText}\n- Unresolved program calls: ${unresolvedPrograms.length}\n- Unresolved list: ${unresolvedText}\n\nSee:\n- ${(crossProgramGraph.files && crossProgramGraph.files.json) || 'program-call-tree.json'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.mermaid) || 'program-call-tree.mmd'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.markdown) || 'program-call-tree.md'}\n\n## Impact Analysis\nImpact analysis can identify affected programs if a component changes.\n\nSee:\n- impact-analysis.json\n- impact-analysis.md\n\n## Interactive Architecture Viewer\nAn interactive architecture visualization has been generated.\n\nOpen:\n- architecture.html\n\nin your browser to explore program dependencies visually.\n\n## Architecture\n- See architecture-report.md for a full architecture overview.\n\n## Next Steps\n- Validate detected dependencies with the application design and naming standards.\n- Use canonical-analysis.json as the semantic source and context.json or optimized-context.json as prompt-ready projections.\n- Enrich with DB metadata, search results, and sample test data when available to improve reasoning.\n- Create a portable bundle with \`zeus bundle --program ${context.program}\`.\n`;
 }

@@ -577,14 +577,18 @@ To add a new template:
 
 Exported metadata includes:
 
-- table name
+- SQL name and system name
 - schema or library
+- object type and descriptive text
+- estimated row count when catalog statistics are available
 - column names
 - column types
 - length, precision, and scale when JDBC metadata provides them
 - nullable flag
 - primary key flag
-- imported foreign keys when available
+- imported foreign keys, including delete and update rules when available
+- trigger metadata and derived-object relationships when IBM i catalog views are available
+- catalog-resolved external program, service-program, and module classifications for unresolved calls when available
 
 Generated files in `output/<program>/` when export succeeds:
 
@@ -594,6 +598,7 @@ Generated files in `output/<program>/` when export succeeds:
 `context.json` also includes a compact `db2Metadata` block with file references and exported table count.
 
 When DB2 metadata export succeeds, that compact summary also records source-linked table matches, unresolved or ambiguous catalog matches, and evidence counts that tie schema results back to SQL or native file usage.
+Program-call and procedure-call projections also carry `resolutionSource` metadata so downstream reports and prompts can distinguish source-resolved references from catalog-resolved external objects.
 
 Required configuration:
 
