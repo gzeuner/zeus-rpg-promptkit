@@ -47,6 +47,7 @@ test('analyze --safe-sharing writes redacted variants with stable placeholders',
     assert.equal(fs.existsSync(path.join(safeDir, 'context.json')), true);
     assert.equal(fs.existsSync(path.join(safeDir, 'ai-knowledge.json')), true);
     assert.equal(fs.existsSync(path.join(safeDir, 'report.md')), true);
+    assert.equal(fs.existsSync(path.join(safeDir, 'architecture.html')), true);
     assert.equal(fs.existsSync(path.join(safeDir, 'ai_prompt_documentation.md')), true);
     assert.equal(fs.existsSync(path.join(safeDir, 'ai_prompt_modernization.md')), true);
     assert.equal(fs.existsSync(path.join(safeDir, 'analyze-run-manifest.json')), true);
@@ -56,6 +57,7 @@ test('analyze --safe-sharing writes redacted variants with stable placeholders',
     const safeManifest = readJson(path.join(safeDir, 'redaction-manifest.json'));
     const safeReport = fs.readFileSync(path.join(safeDir, 'report.md'), 'utf8');
     const safePrompt = fs.readFileSync(path.join(safeDir, 'ai_prompt_modernization.md'), 'utf8');
+    const safeViewer = fs.readFileSync(path.join(safeDir, 'architecture.html'), 'utf8');
 
     assert.equal(safeContext.program, 'PROGRAM_001');
     assert.ok(safeContext.dependencies.tables.every((entry) => /^TABLE_\d{3}$/.test(entry.name)));
@@ -69,6 +71,8 @@ test('analyze --safe-sharing writes redacted variants with stable placeholders',
     assert.ok(safeManifest.summary.placeholderCounts.TABLE >= 1);
     assert.ok(safeManifest.summary.placeholderCounts.VALUE >= 1);
     assert.ok(safeManifest.redactedArtifacts.includes('safe-sharing/report.md'));
+    assert.equal(/<script[^>]+src=/i.test(safeViewer), false);
+    assert.doesNotMatch(safeViewer, /unpkg\.com\/vis-network/);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

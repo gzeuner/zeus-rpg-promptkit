@@ -11,9 +11,13 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
+const crypto = require('crypto');
 const fs = require('fs');
+const path = require('path');
 
-const VIS_NETWORK_CDN = 'https://unpkg.com/vis-network/standalone/umd/vis-network.min.js';
+const VIS_NETWORK_ASSET = 'standalone/umd/vis-network.min.js';
+
+let cachedViewerAsset = null;
 
 function readGraph(graphPath) {
   if (!graphPath || !fs.existsSync(graphPath)) {
@@ -25,6 +29,41 @@ function readGraph(graphPath) {
 
 function escapeInlineJson(value) {
   return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
+function escapeInlineScript(source) {
+  return String(source || '').replace(/<\/script/gi, '<\\/script');
+}
+
+function loadViewerAsset() {
+  if (cachedViewerAsset) {
+    return cachedViewerAsset;
+  }
+
+  const packageJsonPath = require.resolve('vis-network/package.json');
+  const packageDir = path.dirname(packageJsonPath);
+  const assetPath = path.join(packageDir, ...VIS_NETWORK_ASSET.split('/'));
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const source = fs.readFileSync(assetPath, 'utf8');
+
+  cachedViewerAsset = {
+    source,
+    metadata: {
+      packageName: packageJson.name,
+      version: packageJson.version,
+      license: packageJson.license || null,
+      asset: `vis-network/${VIS_NETWORK_ASSET}`,
+      sourceMode: 'bundled-inline',
+      sha256: crypto.createHash('sha256').update(source).digest('hex'),
+    },
+  };
+  return cachedViewerAsset;
+}
+
+function getArchitectureViewerAssetMetadata() {
+  return {
+    ...loadViewerAsset().metadata,
+  };
 }
 
 function renderSummary(graph) {
@@ -47,14 +86,17 @@ function renderHtml(graph) {
   const unresolvedSection = unresolvedPrograms.length > 0
     ? `<div class="unresolved"><strong>Unresolved Programs:</strong> ${unresolvedPrograms.join(', ')}</div>`
     : '';
+  const viewerAsset = loadViewerAsset();
+  const assetComment = `${viewerAsset.metadata.packageName}@${viewerAsset.metadata.version} | ${viewerAsset.metadata.asset} | ${viewerAsset.metadata.license || 'license-unknown'}`;
 
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="zeus-viewer-library" content="${viewerAsset.metadata.packageName}@${viewerAsset.metadata.version}">
   <title>Architecture Viewer</title>
-  <script src="${VIS_NETWORK_CDN}"></script>
+  <!-- Bundled viewer asset: ${assetComment} -->
   <style>
     body {
       margin: 0;
@@ -81,13 +123,18 @@ function renderHtml(graph) {
       color: #64748b;
       margin-bottom: 8px;
     }
+    .asset {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
     .unresolved {
       font-size: 13px;
       color: #9f1239;
       margin: 6px 0;
     }
     #network {
-      height: calc(100vh - 126px);
+      height: calc(100vh - 144px);
       min-height: 540px;
       margin: 14px;
       border: 1px solid #d6dde8;
@@ -101,9 +148,11 @@ function renderHtml(graph) {
     <h1>Architecture Viewer</h1>
     <div class="summary">${renderSummary(graph)}</div>
     <div class="help">Mouse wheel: zoom | Drag canvas: pan | Drag nodes: reposition | Click node: highlight connected edges | Double-click node: center</div>
+    <div class="asset">Bundled asset: ${viewerAsset.metadata.packageName} ${viewerAsset.metadata.version}</div>
     ${unresolvedSection}
   </header>
   <div id="network"></div>
+  <script>${escapeInlineScript(viewerAsset.source)}</script>
   <script>
     const graphData = ${escapeInlineJson(graph)};
 
@@ -299,5 +348,6 @@ function generateArchitectureViewer({ graphPath, outputPath }) {
 
 module.exports = {
   generateArchitectureViewer,
+  getArchitectureViewerAssetMetadata,
   renderHtml,
 };
