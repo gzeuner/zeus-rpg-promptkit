@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const { scanSourceFiles } = require('../scanner/rpgScanner');
 const { buildSourceIndex, normalizeProgramName, resolveProgram } = require('./programSourceResolver');
+const { normalizeAnalysisLimits } = require('../analyze/analysisLimits');
 
 function asName(entry) {
   if (!entry) return '';
@@ -59,12 +60,14 @@ function buildCrossProgramGraph({
   importManifest,
   scanCache,
   sourceMetadataByPath,
+  limits,
 }) {
   const root = normalizeProgramName(rootProgram);
   if (!root) {
     throw new Error('Cross-program graph generation requires rootProgram');
   }
 
+  const analysisLimits = normalizeAnalysisLimits(limits);
   const sourceIndex = buildSourceIndex(sourceFiles || [], {
     sourceRoot,
     importManifest,
@@ -74,48 +77,117 @@ function buildCrossProgramGraph({
   const unresolvedPrograms = new Set();
   const ambiguousPrograms = new Set();
   const notes = [];
+  const diagnostics = [];
+  const limitState = {
+    maxProgramDepth: false,
+    maxPrograms: false,
+    maxNodes: false,
+    maxEdges: false,
+    maxScannedFiles: false,
+    maxProgramCallsPerProgram: false,
+  };
 
   const nodeSet = new Set();
   const edgeSet = new Set();
   const nodes = [];
   const edges = [];
 
+  function recordLimit(code, message, details = {}) {
+    if (diagnostics.some((entry) => entry.code === code)) {
+      return;
+    }
+    diagnostics.push({
+      severity: 'warning',
+      code,
+      message,
+      details,
+    });
+    notes.push(message);
+  }
+
   function addNode(id, type, label) {
     const normalizedId = normalizeProgramName(id);
     const normalizedType = normalizeProgramName(type);
     const normalizedLabel = normalizeProgramName(label || id);
-    if (!normalizedId || !normalizedType) return;
+    if (!normalizedId || !normalizedType) return false;
 
     const key = `${normalizedId}|${normalizedType}`;
-    if (nodeSet.has(key)) return;
+    if (nodeSet.has(key)) return true;
+    if (nodes.length >= analysisLimits.maxNodes) {
+      limitState.maxNodes = true;
+      recordLimit(
+        'CROSS_PROGRAM_MAX_NODES_REACHED',
+        `Cross-program graph stopped adding nodes after reaching the configured node limit (${analysisLimits.maxNodes}).`,
+        { maxNodes: analysisLimits.maxNodes },
+      );
+      return false;
+    }
     nodeSet.add(key);
     nodes.push({
       id: normalizedId,
       type: normalizedType,
       label: normalizedLabel,
     });
+    return true;
   }
 
   function addEdge(from, to, type) {
     const normalizedFrom = normalizeProgramName(from);
     const normalizedTo = normalizeProgramName(to);
     const normalizedType = normalizeProgramName(type);
-    if (!normalizedFrom || !normalizedTo || !normalizedType) return;
+    if (!normalizedFrom || !normalizedTo || !normalizedType) return false;
 
     const key = `${normalizedFrom}|${normalizedTo}|${normalizedType}`;
-    if (edgeSet.has(key)) return;
+    if (edgeSet.has(key)) return true;
+    if (edges.length >= analysisLimits.maxEdges) {
+      limitState.maxEdges = true;
+      recordLimit(
+        'CROSS_PROGRAM_MAX_EDGES_REACHED',
+        `Cross-program graph stopped adding edges after reaching the configured edge limit (${analysisLimits.maxEdges}).`,
+        { maxEdges: analysisLimits.maxEdges },
+      );
+      return false;
+    }
     edgeSet.add(key);
     edges.push({
       from: normalizedFrom,
       to: normalizedTo,
       type: normalizedType,
     });
+    return true;
   }
 
-  function walkProgram(programName) {
+  function canDescendToProgram(programName, depth) {
+    if (depth > analysisLimits.maxProgramDepth) {
+      limitState.maxProgramDepth = true;
+      recordLimit(
+        'CROSS_PROGRAM_MAX_DEPTH_REACHED',
+        `Cross-program graph stopped recursion after reaching the configured depth limit (${analysisLimits.maxProgramDepth}).`,
+        { maxProgramDepth: analysisLimits.maxProgramDepth, program: programName },
+      );
+      return false;
+    }
+
+    if (!visitedPrograms.has(programName) && visitedPrograms.size >= analysisLimits.maxPrograms) {
+      limitState.maxPrograms = true;
+      recordLimit(
+        'CROSS_PROGRAM_MAX_PROGRAMS_REACHED',
+        `Cross-program graph stopped recursion after reaching the configured program limit (${analysisLimits.maxPrograms}).`,
+        { maxPrograms: analysisLimits.maxPrograms, program: programName },
+      );
+      unresolvedPrograms.add(programName);
+      return false;
+    }
+
+    return true;
+  }
+
+  function walkProgram(programName, depth = 0) {
     const currentProgram = normalizeProgramName(programName);
     if (!currentProgram) return;
     if (visitedPrograms.has(currentProgram)) return;
+    if (!canDescendToProgram(currentProgram, depth)) return;
+
     visitedPrograms.add(currentProgram);
     addNode(currentProgram, 'PROGRAM', currentProgram);
 
@@ -130,6 +202,16 @@ function buildCrossProgramGraph({
       if (currentProgram !== root) {
         unresolvedPrograms.add(currentProgram);
       }
+      return;
+    }
+
+    if (!scannedFiles.has(resolved.path) && scannedFiles.size >= analysisLimits.maxScannedFiles) {
+      limitState.maxScannedFiles = true;
+      recordLimit(
+        'CROSS_PROGRAM_MAX_SCANNED_FILES_REACHED',
+        `Cross-program graph stopped scanning additional source files after reaching the configured file limit (${analysisLimits.maxScannedFiles}).`,
+        { maxScannedFiles: analysisLimits.maxScannedFiles, file: resolved.relativePath || resolved.path },
+      );
       return;
     }
 
@@ -150,13 +232,21 @@ function buildCrossProgramGraph({
       tableNames.add(sqlTable);
     }
     for (const tableName of Array.from(tableNames).sort((a, b) => a.localeCompare(b))) {
-      addNode(tableName, 'TABLE', tableName);
-      addEdge(currentProgram, tableName, 'USES_TABLE');
+      if (!addNode(tableName, 'TABLE', tableName)) {
+        break;
+      }
+      if (!addEdge(currentProgram, tableName, 'USES_TABLE')) {
+        break;
+      }
     }
 
     for (const copyName of (scanResult.copyMembers || []).map((copy) => asName(copy)).filter(Boolean).sort((a, b) => a.localeCompare(b))) {
-      addNode(copyName, 'COPY', copyName);
-      addEdge(currentProgram, copyName, 'INCLUDES_COPY');
+      if (!addNode(copyName, 'COPY', copyName)) {
+        break;
+      }
+      if (!addEdge(currentProgram, copyName, 'INCLUDES_COPY')) {
+        break;
+      }
     }
 
     const calledPrograms = (scanResult.calls || [])
@@ -164,9 +254,26 @@ function buildCrossProgramGraph({
       .filter((name) => Boolean(name) && isStaticProgramIdentifier(name))
       .sort((a, b) => a.localeCompare(b));
 
-    for (const calledProgram of calledPrograms) {
-      addNode(calledProgram, 'PROGRAM', calledProgram);
-      addEdge(currentProgram, calledProgram, 'CALLS_PROGRAM');
+    if (calledPrograms.length > analysisLimits.maxProgramCallsPerProgram) {
+      limitState.maxProgramCallsPerProgram = true;
+      recordLimit(
+        'CROSS_PROGRAM_MAX_CALLS_PER_PROGRAM_REACHED',
+        `Cross-program graph truncated outgoing calls for ${currentProgram} after reaching the configured per-program call limit (${analysisLimits.maxProgramCallsPerProgram}).`,
+        {
+          program: currentProgram,
+          maxProgramCallsPerProgram: analysisLimits.maxProgramCallsPerProgram,
+          detectedCallCount: calledPrograms.length,
+        },
+      );
+    }
+
+    for (const calledProgram of calledPrograms.slice(0, analysisLimits.maxProgramCallsPerProgram)) {
+      if (!addNode(calledProgram, 'PROGRAM', calledProgram)) {
+        break;
+      }
+      if (!addEdge(currentProgram, calledProgram, 'CALLS_PROGRAM')) {
+        break;
+      }
 
       const calledResolved = resolveProgram(calledProgram, sourceIndex);
       if (!calledResolved || !calledResolved.path) {
@@ -179,24 +286,30 @@ function buildCrossProgramGraph({
         }
         continue;
       }
-      walkProgram(calledProgram);
+      walkProgram(calledProgram, depth + 1);
     }
   }
 
-  walkProgram(root);
+  walkProgram(root, 0);
 
   const sortedNodes = sortNodes(nodes);
   const sortedEdges = sortEdges(edges);
   const unresolved = Array.from(unresolvedPrograms).sort((a, b) => a.localeCompare(b));
   const ambiguous = Array.from(ambiguousPrograms).sort((a, b) => a.localeCompare(b));
+  const truncated = Object.values(limitState).some(Boolean);
 
   const summary = {
     programCount: sortedNodes.filter((node) => node.type === 'PROGRAM').length,
     tableCount: sortedNodes.filter((node) => node.type === 'TABLE').length,
     copyMemberCount: sortedNodes.filter((node) => node.type === 'COPY').length,
+    scannedFileCount: scannedFiles.size,
     edgeCount: sortedEdges.length,
     ambiguousPrograms: ambiguous,
     unresolvedPrograms: unresolved,
+    truncated,
+    limitDiagnosticsCount: diagnostics.length,
+    limitsConfigured: analysisLimits,
+    limitsReached: limitState,
   };
 
   return {
@@ -207,6 +320,7 @@ function buildCrossProgramGraph({
     sourceCatalog: sourceIndex.summary,
     ambiguousPrograms: ambiguous,
     unresolvedPrograms: unresolved,
+    diagnostics,
     notes: Array.from(new Set(notes)).sort((a, b) => a.localeCompare(b)),
   };
 }

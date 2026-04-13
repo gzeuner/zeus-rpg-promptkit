@@ -8,9 +8,26 @@
     "maxSnippetLines": 12,
     "softTokenLimit": 3000
   },
+  "analysisLimits": {
+    "maxProgramDepth": 25,
+    "maxPrograms": 500,
+    "maxNodes": 5000,
+    "maxEdges": 4000,
+    "maxScannedFiles": 500,
+    "maxProgramCallsPerProgram": 200
+  },
   "testData": {
     "limit": 50,
-    "maskColumns": ["NAME", "EMAIL", "PHONE"]
+    "maskColumns": ["NAME", "EMAIL", "PHONE"],
+    "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
+    "denyTables": ["MYLIB.AUDITLOG"],
+    "maskRules": [
+      {
+        "table": "CUSTOMERS",
+        "columns": ["PHONE"],
+        "value": "MASKED_PHONE"
+      }
+    ]
   },
   "default": {
     "sourceRoot": "./rpg",
@@ -23,6 +40,18 @@
       "maxSQLStatements": 10,
       "maxSourceSnippets": 20,
       "maxSnippetLines": 12
+    },
+    "analysisLimits": {
+      "maxProgramDepth": 15,
+      "maxPrograms": 250
+    }
+  },
+  "modernization-large": {
+    "extends": "default",
+    "outputRoot": "./output-modernization",
+    "analysisLimits": {
+      "maxProgramDepth": 40,
+      "maxPrograms": 1000
     }
   },
   "sample-db2": {
@@ -38,7 +67,17 @@
     },
     "testData": {
       "limit": 50,
-      "maskColumns": ["NAME", "EMAIL", "PHONE"]
+      "maskColumns": ["NAME", "EMAIL", "PHONE"],
+      "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
+      "denyTables": ["MYLIB.AUDITLOG"],
+      "maskRules": [
+        {
+          "schema": "MYLIB",
+          "table": "CUSTOMERS",
+          "columns": ["PHONE"],
+          "value": "MASKED_PHONE"
+        }
+      ]
     }
   },
   "sample-fetch": {

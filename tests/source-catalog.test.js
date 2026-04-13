@@ -62,3 +62,42 @@ test('cross-program graph leaves ambiguous duplicate members unresolved with exp
 
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
+
+test('cross-program graph records explicit diagnostics when large-tree safety limits are reached', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-cross-program-limits-'));
+  const sourceRoot = path.join(tempRoot, 'src');
+  fs.mkdirSync(sourceRoot, { recursive: true });
+
+  fs.writeFileSync(path.join(sourceRoot, 'ROOTPGM.rpgle'), '**FREE\nCALL SUBPGM001;\nCALL SUBPGM002;\nCALL SUBPGM003;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceRoot, 'SUBPGM001.rpgle'), '**FREE\nCALL SUBPGM010;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceRoot, 'SUBPGM002.rpgle'), '**FREE\nCALL SUBPGM020;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceRoot, 'SUBPGM003.rpgle'), '**FREE\nCALL SUBPGM030;\n', 'utf8');
+
+  const graph = buildCrossProgramGraph({
+    rootProgram: 'ROOTPGM',
+    sourceRoot,
+    sourceFiles: [
+      path.join(sourceRoot, 'ROOTPGM.rpgle'),
+      path.join(sourceRoot, 'SUBPGM001.rpgle'),
+      path.join(sourceRoot, 'SUBPGM002.rpgle'),
+      path.join(sourceRoot, 'SUBPGM003.rpgle'),
+    ],
+    limits: {
+      maxProgramDepth: 0,
+      maxPrograms: 10,
+      maxNodes: 20,
+      maxEdges: 20,
+      maxScannedFiles: 10,
+      maxProgramCallsPerProgram: 2,
+    },
+  });
+
+  assert.equal(graph.summary.truncated, true);
+  assert.equal(graph.summary.limitsReached.maxProgramDepth, true);
+  assert.equal(graph.summary.limitsReached.maxProgramCallsPerProgram, true);
+  assert.ok(graph.diagnostics.some((entry) => entry.code === 'CROSS_PROGRAM_MAX_DEPTH_REACHED'));
+  assert.ok(graph.diagnostics.some((entry) => entry.code === 'CROSS_PROGRAM_MAX_CALLS_PER_PROGRAM_REACHED'));
+  assert.ok(graph.notes.some((note) => note.includes('configured depth limit')));
+
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+});
