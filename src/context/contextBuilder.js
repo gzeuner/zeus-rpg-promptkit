@@ -16,6 +16,7 @@ const {
   buildCanonicalAnalysisModel,
   defaultBindingAnalysis,
   defaultCrossProgramSummary,
+  defaultAnalysisCache,
   defaultDiagnosticPackReport,
   defaultGraphSummary,
   defaultIfsPathReport,
@@ -235,6 +236,9 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
     diagnosticPacks: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.diagnosticPacks
       ? canonicalAnalysis.enrichments.diagnosticPacks
       : defaultDiagnosticPackReport(),
+    analysisCache: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.analysisCache
+      ? canonicalAnalysis.enrichments.analysisCache
+      : defaultAnalysisCache(),
     db2Metadata: canonicalAnalysis.enrichments ? canonicalAnalysis.enrichments.db2Metadata : null,
     testData: canonicalAnalysis.enrichments ? canonicalAnalysis.enrichments.testData : null,
     aiContext: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.aiContext

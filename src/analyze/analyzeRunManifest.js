@@ -219,6 +219,7 @@ function buildAnalyzeRunManifest({
       options: {
         optimizeContextEnabled: Boolean(context.optimizeContextEnabled),
         safeSharingEnabled: Boolean(context.safeSharingEnabled),
+        emitDiagnosticsEnabled: Boolean(context.emitDiagnosticsEnabled),
         skipTestData: Boolean(context.skipTestData),
         testDataLimit: Number(context.testDataLimit) || null,
         extensions: Array.isArray(context.extensions) ? context.extensions : [],
@@ -242,6 +243,7 @@ function buildAnalyzeRunManifest({
       importManifest: importManifestSummary,
     },
     summary: buildSummary(stageReports, diagnostics, artifacts, sourceSnapshot),
+    cacheStatus: result && result.cacheStatus ? result.cacheStatus : null,
     diagnostics,
     stages: stageReports.map((stage) => ({
       id: stage.id,

@@ -1400,6 +1400,31 @@ function defaultDiagnosticPackReport() {
   };
 }
 
+function defaultAnalysisCache() {
+  return {
+    enabled: false,
+    sourceScan: {
+      requests: 0,
+      hits: 0,
+      memoryHits: 0,
+      persistentHits: 0,
+      misses: 0,
+      invalidations: 0,
+      writes: 0,
+    },
+    db2Metadata: {
+      status: 'disabled',
+      hits: 0,
+      misses: 0,
+    },
+    testData: {
+      status: 'disabled',
+      hits: 0,
+      misses: 0,
+    },
+  };
+}
+
 function buildCanonicalAnalysisModel({
   program,
   sourceRoot,
@@ -1533,6 +1558,7 @@ function buildCanonicalAnalysisModel({
       ifsPaths: defaultIfsPathReport(),
       searchResults: defaultSearchResults(),
       diagnosticPacks: defaultDiagnosticPackReport(),
+      analysisCache: defaultAnalysisCache(),
       db2Metadata: null,
       testData: null,
     },
@@ -1626,6 +1652,7 @@ function enrichCanonicalAnalysisModel(model, updates = {}) {
       ...(updates.ifsPaths !== undefined ? { ifsPaths: mergeObject(model.enrichments.ifsPaths, updates.ifsPaths) } : {}),
       ...(updates.searchResults !== undefined ? { searchResults: mergeObject(model.enrichments.searchResults, updates.searchResults) } : {}),
       ...(updates.diagnosticPacks !== undefined ? { diagnosticPacks: mergeObject(model.enrichments.diagnosticPacks, updates.diagnosticPacks) } : {}),
+      ...(updates.analysisCache !== undefined ? { analysisCache: mergeObject(model.enrichments.analysisCache, updates.analysisCache) } : {}),
       ...(updates.db2Metadata !== undefined ? { db2Metadata: updates.db2Metadata } : {}),
       ...(updates.testData !== undefined ? { testData: updates.testData } : {}),
     },
@@ -1767,6 +1794,7 @@ module.exports = {
   defaultGraphSummary,
   defaultIfsPathReport,
   defaultDiagnosticPackReport,
+  defaultAnalysisCache,
   defaultNativeFileUsage,
   defaultSearchResults,
   defaultSqlAnalysis,
