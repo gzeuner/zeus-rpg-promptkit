@@ -27,10 +27,12 @@ Current `entities` blocks include:
 
 - `tables`
 - `programCalls`
+- `procedureCalls`
 - `copyMembers`
 - `sqlStatements`
 - `nativeFiles`
 - `db2Tables`
+- `externalObjects`
 - `ifsPaths`
 - `searchFindings`
 - `diagnosticPacks`
@@ -47,11 +49,23 @@ Each section is prompt-oriented and may carry:
 `db2Tables` is a prompt-facing projection of the compact `context.db2Metadata.tables` summary. It keeps DB2 catalog rows tied to source-backed evidence with:
 
 - `requestedName`
+- `displayName`
 - `schema`
 - `table`
+- `systemSchema`
+- `systemName`
 - `matchStatus`
+- `matchedBy`
+- `lookupStrategy`
+- `objectType`
+- `estimatedRowCount`
 - structural counts such as `columnCount` and `foreignKeyCount`
+- review counts such as `triggerCount` and `derivedObjectCount`
 - evidence-backed `evidenceRefs`
+
+`programCalls` and `procedureCalls` also carry `resolutionSource` plus catalog classification fields when Zeus resolved an external reference through IBM i object metadata rather than local source.
+
+`externalObjects` is the prompt-facing projection of catalog-resolved IBM i programs, service programs, modules, or related objects that were linked to unresolved source references.
 
 ## Workflow Sections
 

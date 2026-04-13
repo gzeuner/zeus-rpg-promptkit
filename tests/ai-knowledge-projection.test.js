@@ -86,7 +86,8 @@ test('buildPrompt consumes ai-knowledge projection workflows', () => {
         documentation: {
           summary: 'Program ORDERPGM reads ORDERS.',
           tables: [{ name: 'ORDERS', kind: 'TABLE' }],
-          programCalls: [{ name: 'INVPGM', kind: 'PROGRAM' }],
+          programCalls: [{ name: 'INVPGM', kind: 'PROGRAM', resolutionSource: 'CATALOG', catalogObjectType: '*PGM' }],
+          procedureCalls: [{ target: 'POSTINV', resolutionSource: 'CATALOG', catalogObjectType: '*SRVPGM' }],
           copyMembers: [],
           sqlStatements: [{ type: 'SELECT', intent: 'READ', tables: ['ORDERS'], text: 'select * from orders' }],
           riskMarkers: ['Dynamic SQL detected'],
@@ -106,6 +107,7 @@ test('buildPrompt consumes ai-knowledge projection workflows', () => {
     };
 
     const content = buildPrompt('documentation', projection, outputPath);
+    assert.match(content, /catalog-resolved rather than source-resolved/i);
     assert.match(content, /Risk markers: Dynamic SQL detected\./);
     assert.match(content, /Uncertainty markers: DYNAMIC_SQL\./);
     assert.match(content, /Evidence Highlights/);
@@ -161,12 +163,23 @@ test('buildAiKnowledgeProjection carries DB2 metadata and test data links into w
       unresolvedTableCount: 0,
       ambiguousTableCount: 0,
       tables: [
-        buildCompactDb2TableLink(tableLink, {
+        {
+          ...buildCompactDb2TableLink(tableLink, {
+            schema: 'SCHEMA_001',
+            table: 'TABLE_001',
+            systemSchema: 'SCHEMA_001',
+            systemName: 'TABLE001',
+            objectType: 'TABLE',
+            textDescription: 'Primary customer table',
+            estimatedRowCount: 25,
+            columns: [{ name: 'COLUMN_001', type: 'DECIMAL' }],
+            foreignKeys: [],
+            triggers: [{ name: 'TRG_001' }],
+            derivedObjects: [{ name: 'VIEW_001' }],
+          }),
           schema: 'SCHEMA_001',
           table: 'TABLE_001',
-          columns: [{ name: 'COLUMN_001', type: 'DECIMAL' }],
-          foreignKeys: [],
-        }),
+        },
       ],
     };
     context.testData = {
@@ -191,6 +204,9 @@ test('buildAiKnowledgeProjection carries DB2 metadata and test data links into w
 
     assert.equal(projection.entities.db2Tables.length, 1);
     assert.equal(projection.entities.db2Tables[0].table, 'TABLE_001');
+    assert.equal(projection.entities.db2Tables[0].systemName, 'TABLE001');
+    assert.equal(projection.entities.db2Tables[0].triggerCount, 1);
+    assert.equal(projection.entities.db2Tables[0].derivedObjectCount, 1);
     assert.ok(projection.entities.db2Tables[0].evidenceRefs.length >= 1);
     assert.equal(projection.workflows.documentation.db2Tables.length, 1);
     assert.equal(projection.workflows.documentation.testData.tables.length, 1);

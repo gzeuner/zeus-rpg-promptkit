@@ -22,7 +22,9 @@ const {
 } = require('./db2Config');
 const {
   buildCompactTestDataLink,
+  buildDb2TableLookupIndex,
   buildDb2SourceLinkage,
+  normalizeCatalogTable,
 } = require('./db2EvidenceLinker');
 
 const JSON_FILE = 'test-data.json';
@@ -102,34 +104,76 @@ function buildRequestedTables(dependencies) {
 function buildExtractionPlan({ requestedTables, metadataPayload, defaultSchema }) {
   const plan = new Map();
   const metadataTables = (metadataPayload && Array.isArray(metadataPayload.tables) ? metadataPayload.tables : [])
-    .map((table) => ({
-      schema: normalizeIdentifier(table && table.schema),
-      table: normalizeIdentifier(table && table.table),
+    .map((table) => normalizeCatalogTable({
+      ...table,
       columns: Array.isArray(table && table.columns) ? table.columns : [],
     }));
+  const lookupIndex = buildDb2TableLookupIndex(metadataTables);
 
   for (const table of metadataTables) {
-    if (!table.table) continue;
+    if (!table.table && !table.systemName) continue;
     const key = `${table.schema}|${table.table}`;
     plan.set(key, {
       schema: table.schema,
       table: table.table,
+      systemSchema: table.systemSchema,
+      systemName: table.systemName,
       columns: table.columns,
       status: 'pending',
     });
   }
 
   for (const requestedTable of requestedTables) {
+    const requestedAliases = [
+      requestedTable.schema && requestedTable.table ? `${requestedTable.schema}.${requestedTable.table}` : '',
+      requestedTable.schema && requestedTable.table ? `${requestedTable.schema}/${requestedTable.table}` : '',
+      requestedTable.table,
+    ].filter(Boolean).map((value) => normalizeIdentifier(value));
+    const matches = Array.from(new Map(
+      requestedAliases.flatMap((alias) => (lookupIndex.aliasIndex.get(alias) || []))
+        .map((entry) => [`${entry.schema}|${entry.table}|${entry.systemSchema}|${entry.systemName}`, entry]),
+    ).values());
+
+    if (matches.length === 1) {
+      const match = matches[0];
+      const key = `${match.schema}|${match.table}`;
+      if (!plan.has(key)) {
+        plan.set(key, {
+          schema: match.schema,
+          table: match.table,
+          systemSchema: match.systemSchema,
+          systemName: match.systemName,
+          columns: match.columns || [],
+          status: 'pending',
+        });
+      }
+      continue;
+    }
+
+    if (matches.length > 1) {
+      plan.set(`${requestedTable.schema || ''}|${requestedTable.table}`, {
+        schema: '',
+        table: requestedTable.table,
+        systemSchema: '',
+        systemName: requestedTable.table,
+        columns: [],
+        status: 'skipped',
+        note: `Skipped because ${requestedTable.table} matched multiple DB2 catalog objects.`,
+      });
+      continue;
+    }
+
     const schema = requestedTable.schema || defaultSchema;
     const key = `${schema}|${requestedTable.table}`;
     if (plan.has(key)) {
       continue;
     }
-
     if (!schema) {
       plan.set(`|${requestedTable.table}`, {
         schema: '',
         table: requestedTable.table,
+        systemSchema: '',
+        systemName: requestedTable.table,
         columns: [],
         status: 'skipped',
         note: 'Skipped because no schema was detected and no default schema/library is configured.',
@@ -140,6 +184,8 @@ function buildExtractionPlan({ requestedTables, metadataPayload, defaultSchema }
     plan.set(key, {
       schema,
       table: requestedTable.table,
+      systemSchema: schema,
+      systemName: requestedTable.table,
       columns: [],
       status: 'pending',
     });
@@ -519,6 +565,7 @@ function exportTestData({
 }
 
 module.exports = {
+  buildExtractionPlan,
   exportTestData,
   DEFAULT_TEST_DATA_LIMIT,
   renderTestDataMarkdown,
