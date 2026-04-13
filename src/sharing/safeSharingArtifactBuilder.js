@@ -256,14 +256,20 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
         '.rootProgram',
         '.program',
         '.ownerProgram',
+        '.catalogSystemName',
+        '.catalogSqlName',
       ])
       || isPathFragment(pathValue, [
         '.entities.programs.[].name',
+        '.entities.externalObjects.[].name',
         '.dependencies.programCalls.[].name',
         '.programCalls.[].name',
         '.unresolvedPrograms.[]',
         '.ambiguousPrograms.[]',
         '.primaryCalls.[]',
+        '.externalObjects.[].requestedName',
+        '.externalObjects.[].sqlName',
+        '.externalObjects.[].systemName',
       ])
     ) {
       registerCategoryValue('PROGRAM', value);
@@ -277,12 +283,18 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
         '.sqlStatements.[].tables.[',
         '.sql.statements.[].tables.[',
         '.db2Metadata.tables.[].requestedName',
+        '.db2Metadata.tables.[].displayName',
         '.db2Metadata.tables.[].table',
+        '.db2Metadata.tables.[].systemName',
         '.db2Tables.[].requestedName',
+        '.db2Tables.[].displayName',
         '.db2Tables.[].table',
+        '.db2Tables.[].systemName',
         '.testData.tables.[].table',
+        '.testData.tables.[].systemName',
         '.tableLinks.[].requestedName',
         '.matches.[].table',
+        '.matches.[].systemName',
         '.unresolvedTables.[]',
       ])
     ) {
@@ -377,7 +389,7 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
     }
 
     if (
-      pathEndsWith(pathValue, ['.schema', '.referencesSchema'])
+      pathEndsWith(pathValue, ['.schema', '.referencesSchema', '.systemSchema', '.library', '.catalogLibrary', '.catalogSchema', '.programLibrary'])
       || isPathFragment(pathValue, ['.matchedSchemas.[]'])
     ) {
       registerCategoryValue('SCHEMA', value);

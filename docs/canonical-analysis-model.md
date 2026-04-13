@@ -25,8 +25,12 @@ Top-level fields:
 - `entities.programs`
   - includes the root program plus scanned/called program owners discovered by the analyzer
   - `role` is `ROOT`, `SCANNED`, or `CALLED`
+  - called-program entities may now also carry `resolutionSource` and catalog classification when an unresolved external call is resolved through IBM i object metadata
 - `entities.tables`
   - deduplicated table dependencies including SQL-only tables
+  - source-backed table entities may now also carry `db2Identity` with SQL/system names, object type, descriptive text, row estimates, lookup strategy, and match status
+- `entities.db2Triggers`
+  - trigger entities resolved from IBM i catalog metadata for source-linked tables
 - `entities.nativeFiles`
   - deduplicated native file declarations with file kind, declared access, and keyed hints
 - `entities.modules`
@@ -45,6 +49,8 @@ Top-level fields:
   - declared prototypes with import/export hints and external names when present
 - `entities.procedureReferences`
   - synthetic targets for dynamic and unresolved procedure calls
+- `entities.externalObjects`
+  - catalog-resolved IBM i programs, service programs, modules, or related external objects linked to unresolved source references
 
 ## Relation Types
 
@@ -64,6 +70,10 @@ Top-level fields:
 - `SQL_REFERENCES_TABLE`: SQL statement to referenced table
 - `CALLS_PROCEDURE`: procedure/program owner to a local procedure, prototype, or explicit unresolved/dynamic reference
 - `ACCESSES_NATIVE_FILE`: procedure/program owner to a native file access site with opcode, access kind, and record-format hints
+- `HAS_TRIGGER`: table to DB2 trigger metadata resolved from IBM i catalogs
+- `DERIVES_OBJECT`: base table to derived DB2 object such as a view or logical file
+- `REFERENCES_TABLE`: DB2 foreign-key relation with delete/update rules when available
+- `RESOLVES_TO_EXTERNAL_OBJECT`: unresolved program/prototype/procedure-reference target to a catalog-resolved IBM i object
 
 ## Evidence Schema
 
@@ -146,7 +156,7 @@ Top-level `provenance.importManifest` also summarizes the import contract when p
 - `db2Metadata`
 - `testData`
 
-`db2Metadata` and `testData` remain compatibility enrichments rather than first-class semantic entities. When present, they should preserve explicit linkage back to canonical source evidence, SQL references, and native file usage so downstream AI/report projections can stay evidence-backed without reparsing DB2 artifacts.
+`db2Metadata` and `testData` remain compatibility enrichments for sharing and backward-compatible projections, but DB2 catalog enrichment now also patches canonical table identity, trigger entities, foreign-key relations, derived-object relations, and external-object resolution metadata directly into the semantic graph. Compatibility summaries should still preserve explicit linkage back to canonical source evidence, SQL references, and native file usage so downstream AI/report projections can stay evidence-backed without reparsing DB2 artifacts.
 
 `ifsPaths`, `searchResults`, and `diagnosticPacks` are also compatibility enrichments. They extend investigation and prompt workflows without changing the canonical entity graph, and they should remain deterministic, evidence-backed, and safe to bundle or redact.
 
@@ -199,6 +209,6 @@ This split keeps the semantic model stable while allowing prompt/report/viewer o
 - `context.json` remains the stable backward-compatible projection used by existing reports and prompt templates
 - `ai-knowledge.json` is the versioned prompt-ready AI projection derived from the canonical model
 - `optimized-context.json` remains a token-budgeted compatibility projection, now driven by salience-ranked workflow evidence packs
-- DB2 metadata and test-data exports may extend compatibility projections with source-linked summaries, unresolved matches, and bounded evidence counts without changing the canonical entity graph
+- DB2 metadata and test-data exports may extend compatibility projections with source-linked summaries, unresolved matches, catalog-resolved external objects, and bounded evidence counts while the canonical entity graph carries the first-class DB2 relations
 - `canonical-analysis.json` is the new internal truth model for future typed analyzers and AI knowledge projection
 - if a future change requires breaking the canonical schema, `schemaVersion` must be incremented explicitly

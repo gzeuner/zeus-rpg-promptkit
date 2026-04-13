@@ -188,25 +188,43 @@ function projectCopyMembers(context) {
 }
 
 function projectProgramCallRelations(canonicalAnalysis, evidenceIndex) {
+  const programEntitiesByName = new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.programs)
+    .map((entry) => [entry.name, entry]));
   return asArray(canonicalAnalysis && canonicalAnalysis.relations)
     .filter((relation) => relation.type === 'CALLS_PROGRAM')
     .map((relation) => ({
       name: String(relation.to || '').replace(/^PROGRAM:/, ''),
       kind: relation.attributes && relation.attributes.callKind ? relation.attributes.callKind : 'PROGRAM',
+      resolutionSource: (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {}).resolutionSource || 'UNRESOLVED',
+      catalogObjectType: (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {}).catalogObjectType || null,
+      catalogLibrary: (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {}).catalogLibrary || null,
+      catalogSchema: (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {}).catalogSchema || null,
       evidenceRefs: evidenceRefsFor(evidenceIndex, relation.evidence),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function projectProcedureCalls(canonicalAnalysis, evidenceIndex) {
+  const targetEntities = new Map([
+    ...asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.prototypes).map((entry) => [entry.id, entry]),
+    ...asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.procedureReferences).map((entry) => [entry.id, entry]),
+    ...asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.procedures).map((entry) => [entry.id, entry]),
+  ]);
   return asArray(canonicalAnalysis && canonicalAnalysis.relations)
     .filter((relation) => relation.type === 'CALLS_PROCEDURE')
-    .map((relation) => ({
-      target: relation.attributes && relation.attributes.targetName ? relation.attributes.targetName : String(relation.to || ''),
-      resolution: relation.attributes && relation.attributes.resolution ? relation.attributes.resolution : 'UNKNOWN',
-      targetKind: relation.attributes && relation.attributes.targetKind ? relation.attributes.targetKind : 'UNKNOWN',
-      evidenceRefs: evidenceRefsFor(evidenceIndex, relation.evidence),
-    }))
+    .map((relation) => {
+      const targetEntity = targetEntities.get(String(relation.to || ''));
+      return {
+        target: relation.attributes && relation.attributes.targetName ? relation.attributes.targetName : String(relation.to || ''),
+        resolution: relation.attributes && relation.attributes.resolution ? relation.attributes.resolution : 'UNKNOWN',
+        targetKind: relation.attributes && relation.attributes.targetKind ? relation.attributes.targetKind : 'UNKNOWN',
+        resolutionSource: targetEntity && targetEntity.resolutionSource ? targetEntity.resolutionSource : 'SOURCE',
+        catalogObjectType: targetEntity && targetEntity.catalogObjectType ? targetEntity.catalogObjectType : null,
+        catalogLibrary: targetEntity && targetEntity.catalogLibrary ? targetEntity.catalogLibrary : null,
+        catalogSchema: targetEntity && targetEntity.catalogSchema ? targetEntity.catalogSchema : null,
+        evidenceRefs: evidenceRefsFor(evidenceIndex, relation.evidence),
+      };
+    })
     .sort((a, b) => {
       if (a.resolution !== b.resolution) return a.resolution.localeCompare(b.resolution);
       return a.target.localeCompare(b.target);
@@ -277,11 +295,21 @@ function projectDb2Tables(context, evidenceIndex) {
   return asArray(context && context.db2Metadata && context.db2Metadata.tables)
     .map((entry) => ({
       requestedName: entry.requestedName,
+      displayName: entry.displayName || entry.table || entry.systemName,
       schema: entry.schema,
       table: entry.table,
+      systemSchema: entry.systemSchema || null,
+      systemName: entry.systemName || null,
       matchStatus: entry.matchStatus || 'resolved',
+      matchedBy: entry.matchedBy || null,
+      lookupStrategy: entry.lookupStrategy || null,
+      objectType: entry.objectType || 'TABLE',
+      textDescription: entry.textDescription || null,
+      estimatedRowCount: Number.isFinite(Number(entry.estimatedRowCount)) ? Number(entry.estimatedRowCount) : null,
       columnCount: Number(entry.columnCount) || 0,
       foreignKeyCount: Number(entry.foreignKeyCount) || 0,
+      triggerCount: Number(entry.triggerCount) || 0,
+      derivedObjectCount: Number(entry.derivedObjectCount) || 0,
       sourceEvidenceCount: Number(entry.sourceEvidenceCount) || 0,
       sqlReferenceCount: Number(entry.sqlReferenceCount) || 0,
       nativeFileCount: Number(entry.nativeFileCount) || 0,
@@ -290,6 +318,27 @@ function projectDb2Tables(context, evidenceIndex) {
     .sort((a, b) => {
       if (a.table !== b.table) return a.table.localeCompare(b.table);
       return a.schema.localeCompare(b.schema);
+    });
+}
+
+function projectExternalObjects(canonicalAnalysis) {
+  return asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.externalObjects)
+    .map((entry) => ({
+      name: entry.name,
+      requestedName: entry.requestedName || entry.name,
+      schema: entry.schema || null,
+      library: entry.library || null,
+      sqlName: entry.sqlName || null,
+      systemName: entry.systemName || null,
+      objectType: entry.objectType || 'OBJECT',
+      sqlObjectType: entry.sqlObjectType || null,
+      textDescription: entry.textDescription || null,
+      evidenceSource: entry.evidenceSource || 'OBJECT_STATISTICS',
+      matchedBy: entry.matchedBy || null,
+    }))
+    .sort((a, b) => {
+      if (a.requestedName !== b.requestedName) return a.requestedName.localeCompare(b.requestedName);
+      return a.name.localeCompare(b.name);
     });
 }
 
@@ -379,10 +428,12 @@ function buildWorkflow(name, context, projection, payload = {}) {
     summary: context && context.summary ? context.summary.text : '',
     tables: cloneEntityList(payload.tables && payload.tables.length > 0 ? payload.tables : projection.entities.tables),
     programCalls: cloneEntityList(payload.programCalls && payload.programCalls.length > 0 ? payload.programCalls : projection.entities.programCalls),
+    procedureCalls: cloneEntityList(payload.procedureCalls && payload.procedureCalls.length > 0 ? payload.procedureCalls : projection.entities.procedureCalls),
     copyMembers: cloneEntityList(payload.copyMembers && payload.copyMembers.length > 0 ? payload.copyMembers : projection.entities.copyMembers),
     sqlStatements: cloneEntityList(payload.sqlStatements),
     nativeFiles: cloneEntityList(payload.nativeFiles && payload.nativeFiles.length > 0 ? payload.nativeFiles : projection.entities.nativeFiles),
     db2Tables: cloneEntityList(payload.db2Tables && payload.db2Tables.length > 0 ? payload.db2Tables : projection.entities.db2Tables),
+    externalObjects: cloneEntityList(payload.externalObjects && payload.externalObjects.length > 0 ? payload.externalObjects : projection.entities.externalObjects),
     ifsPaths: cloneEntityList(payload.ifsPaths && payload.ifsPaths.length > 0 ? payload.ifsPaths : projection.entities.ifsPaths),
     searchFindings: cloneEntityList(payload.searchFindings && payload.searchFindings.length > 0 ? payload.searchFindings : projection.entities.searchFindings),
     diagnosticPacks: cloneEntityList(payload.diagnosticPacks && payload.diagnosticPacks.length > 0 ? payload.diagnosticPacks : projection.entities.diagnosticPacks),
@@ -561,6 +612,7 @@ function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedConte
       sqlStatements,
       nativeFiles: projectNativeFiles(context, canonicalAnalysis, evidenceIndex),
       db2Tables: projectDb2Tables(context, evidenceIndex),
+      externalObjects: projectExternalObjects(canonicalAnalysis),
       ifsPaths: projectIfsPaths(context, evidenceIndex),
       searchFindings: projectSearchFindings(context),
       diagnosticPacks: projectDiagnosticPacks(context),

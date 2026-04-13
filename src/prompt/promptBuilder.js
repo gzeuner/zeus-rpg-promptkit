@@ -159,6 +159,20 @@ function formatDiagnosticFindings(diagnosticPacks) {
   });
 }
 
+function formatProgramCalls(programCalls) {
+  return asBulletList(programCalls, (item) => {
+    const flags = [];
+    if (item.kind) flags.push(item.kind);
+    if (item.resolutionSource && item.resolutionSource !== 'SOURCE') {
+      flags.push(item.resolutionSource);
+    }
+    if (item.catalogObjectType) {
+      flags.push(item.catalogObjectType);
+    }
+    return `${item.name || item}${flags.length ? ` (${flags.join(', ')})` : ''}`;
+  });
+}
+
 function getPathValue(value, dottedPath) {
   return String(dottedPath || '')
     .split('.')
@@ -239,7 +253,7 @@ function buildTemplateData(context, sourceSnippet, contract) {
     program: context.program || '',
     summary: [summary, db2Hint].filter(Boolean).join(' '),
     tables: asBulletList(tables, (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
-    programCalls: asBulletList(programCalls, (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
+    programCalls: formatProgramCalls(programCalls),
     copyMembers: asBulletList(copyMembers, (item) => item.name || item),
     nativeFiles: asBulletList(nativeFiles, (item) => {
       const flags = [];
@@ -279,6 +293,12 @@ function buildTemplateDataFromProjection(aiProjection, contract) {
   const summaryParts = [
     workflow && workflow.summary ? workflow.summary : '',
     formatDb2Hint(null, workflow),
+    workflow && Array.isArray(workflow.programCalls) && workflow.programCalls.some((entry) => entry.resolutionSource === 'CATALOG')
+      ? `Some external program calls are catalog-resolved rather than source-resolved.`
+      : '',
+    workflow && Array.isArray(workflow.procedureCalls) && workflow.procedureCalls.some((entry) => entry.resolutionSource === 'CATALOG')
+      ? `Some external procedure references are catalog-resolved rather than source-resolved.`
+      : '',
     workflow && Array.isArray(workflow.riskMarkers) && workflow.riskMarkers.length > 0
       ? `Risk markers: ${workflow.riskMarkers.join(', ')}.`
       : '',
@@ -291,7 +311,7 @@ function buildTemplateDataFromProjection(aiProjection, contract) {
     program: aiProjection.program || '',
     summary: summaryParts.join(' '),
     tables: asBulletList((workflow && workflow.tables) || [], (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
-    programCalls: asBulletList((workflow && workflow.programCalls) || [], (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
+    programCalls: formatProgramCalls((workflow && workflow.programCalls) || []),
     copyMembers: asBulletList((workflow && workflow.copyMembers) || [], (item) => item.name || item),
     nativeFiles: asBulletList((workflow && workflow.nativeFiles) || [], (item) => {
       const flags = [];

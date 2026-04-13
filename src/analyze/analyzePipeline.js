@@ -442,6 +442,8 @@ function exportDb2Stage(state) {
   });
 
   const nextCanonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
+    entities: db2Export.canonicalUpdates && db2Export.canonicalUpdates.entities ? db2Export.canonicalUpdates.entities : undefined,
+    relations: db2Export.canonicalUpdates && db2Export.canonicalUpdates.relations ? db2Export.canonicalUpdates.relations : undefined,
     db2Metadata: db2Export.summary,
     notes: db2Export.notes || [],
   });
