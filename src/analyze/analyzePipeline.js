@@ -292,6 +292,7 @@ function buildContextStage(state) {
   const {
     program,
     sourceRoot,
+    config,
     scannableSourceFiles,
     scanSummary,
     dependencies,
@@ -322,6 +323,7 @@ function buildContextStage(state) {
     importManifest: state.importManifest,
     scanCache,
     sourceMetadataByPath,
+    limits: config.analysisLimits,
   });
 
   canonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
@@ -370,6 +372,7 @@ function buildContextStage(state) {
       scanCache: scanCache ? scanCache.getStats() : null,
       sourceSnippetFound: Boolean(sourceSnippet),
     },
+    stageDiagnostics: crossProgramGraph.diagnostics || [],
   };
 }
 

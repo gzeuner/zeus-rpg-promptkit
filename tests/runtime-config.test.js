@@ -6,8 +6,10 @@ const path = require('path');
 
 const {
   ALLOWED_FETCH_TRANSPORTS,
+  DEFAULT_ANALYSIS_LIMITS,
   loadProfiles,
   resolveAnalyzeConfig,
+  resolveProfile,
   resolveFetchConfig,
   resolveBundleConfig,
 } = require('../src/config/runtimeConfig');
@@ -40,6 +42,10 @@ test('loadProfiles falls back to profiles.example.json', () => {
 
 test('resolveAnalyzeConfig merges profile settings with global optimizer and test data defaults', () => {
   const tempRoot = createTempProject({
+    analysisLimits: {
+      maxProgramDepth: 12,
+      maxPrograms: 80,
+    },
     contextOptimizer: {
       softTokenLimit: 2000,
       maxProgramCalls: 15,
@@ -64,6 +70,9 @@ test('resolveAnalyzeConfig merges profile settings with global optimizer and tes
       testData: {
         maskColumns: ['EMAIL', 'PHONE'],
       },
+      analysisLimits: {
+        maxPrograms: 40,
+      },
     },
   });
 
@@ -78,6 +87,58 @@ test('resolveAnalyzeConfig merges profile settings with global optimizer and tes
     assert.equal(config.contextOptimizer.workflowTokenBudgets.errorAnalysis, 900);
     assert.equal(config.testData.limit, 25);
     assert.deepEqual(config.testData.maskColumns, ['EMAIL', 'PHONE']);
+    assert.equal(config.analysisLimits.maxProgramDepth, 12);
+    assert.equal(config.analysisLimits.maxPrograms, 40);
+    assert.equal(config.analysisLimits.maxNodes, DEFAULT_ANALYSIS_LIMITS.maxNodes);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveProfile supports inheritance and env placeholder expansion for secrets', () => {
+  const tempRoot = createTempProject({
+    parent: {
+      sourceRoot: './src',
+      db: {
+        host: 'ibmi.example.com',
+        user: 'ZEUS',
+      },
+      testData: {
+        allowTables: ['APP.CUSTOMERS'],
+        maskColumns: ['EMAIL'],
+      },
+    },
+    child: {
+      extends: 'parent',
+      db: {
+        password: '${env:ZEUS_DB_PASSWORD}',
+      },
+      testData: {
+        denyTables: ['APP.AUDITLOG'],
+        maskRules: [{
+          table: 'CUSTOMERS',
+          columns: ['PHONE'],
+          value: 'MASKED_PHONE',
+        }],
+      },
+    },
+  });
+
+  try {
+    const profile = resolveProfile(loadProfiles({ cwd: tempRoot }), 'child', {
+      env: {
+        ZEUS_DB_PASSWORD: 'super-secret',
+      },
+    });
+
+    assert.equal(profile.sourceRoot, './src');
+    assert.equal(profile.db.host, 'ibmi.example.com');
+    assert.equal(profile.db.user, 'ZEUS');
+    assert.equal(profile.db.password, 'super-secret');
+    assert.deepEqual(profile.testData.allowTables, ['APP.CUSTOMERS']);
+    assert.deepEqual(profile.testData.denyTables, ['APP.AUDITLOG']);
+    assert.deepEqual(profile.testData.maskColumns, ['EMAIL']);
+    assert.equal(profile.testData.maskRules[0].value, 'MASKED_PHONE');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -189,6 +250,43 @@ test('loadProfiles rejects invalid profile structure', () => {
     assert.throws(
       () => loadProfiles({ cwd: tempRoot }),
       /Invalid configuration: profile "broken"\.extensions must be an array of strings/,
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('loadProfiles rejects invalid test-data policy shape', () => {
+  const tempRoot = createTempProject({
+    broken: {
+      testData: {
+        maskRules: [{
+          columns: [],
+        }],
+      },
+    },
+  });
+
+  try {
+    assert.throws(
+      () => loadProfiles({ cwd: tempRoot }),
+      /Invalid configuration: profile "broken"\.testData\.maskRules\[0\] must define at least one of \.table or \.schema/,
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveProfile rejects cyclic inheritance chains', () => {
+  const tempRoot = createTempProject({
+    a: { extends: 'b' },
+    b: { extends: 'a' },
+  });
+
+  try {
+    assert.throws(
+      () => resolveProfile(loadProfiles({ cwd: tempRoot }), 'a', { env: {} }),
+      /cyclic inheritance chain/i,
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

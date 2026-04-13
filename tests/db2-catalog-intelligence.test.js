@@ -8,7 +8,11 @@ const { buildCanonicalAnalysisModel } = require('../src/context/canonicalAnalysi
 const { buildContext } = require('../src/context/contextBuilder');
 const { buildDb2SourceLinkage } = require('../src/db2/db2EvidenceLinker');
 const { buildDb2CatalogSemanticUpdates } = require('../src/db2/catalogSemanticModel');
-const { buildExtractionPlan } = require('../src/db2/testDataExportService');
+const {
+  buildExtractionPlan,
+  buildTestDataPolicy,
+  resolveMaskingPlanForTable,
+} = require('../src/db2/testDataExportService');
 
 function createCanonicalFixture(tempRoot) {
   const sourceFile = path.join(tempRoot, 'ORDERPGM.rpgle');
@@ -136,6 +140,70 @@ test('DB2 test-data extraction plan matches metadata by dual name and skips ambi
   const skippedEntry = ambiguousPlan.find((entry) => entry.table === 'CUSTPF' && entry.status === 'skipped');
   assert.ok(skippedEntry);
   assert.match(skippedEntry.note, /matched multiple DB2 catalog objects/i);
+});
+
+test('DB2 test-data extraction plan applies allowlists and denylists before extraction', () => {
+  const metadataPayload = {
+    tables: [
+      {
+        schema: 'APP',
+        table: 'CUSTOMERS',
+        systemSchema: 'APP',
+        systemName: 'CUSTPF',
+        columns: [{ name: 'CUSTNO', primaryKey: true }],
+      },
+      {
+        schema: 'APP',
+        table: 'AUDITLOG',
+        systemSchema: 'APP',
+        systemName: 'AUDITPF',
+        columns: [{ name: 'AUDITNO', primaryKey: true }],
+      },
+    ],
+  };
+  const policy = buildTestDataPolicy({
+    allowTables: ['APP.CUSTOMERS', 'APP.AUDITLOG'],
+    denyTables: ['APP.AUDITLOG'],
+  });
+
+  const plan = buildExtractionPlan({
+    requestedTables: [{ schema: 'APP', table: 'CUSTOMERS' }, { schema: 'APP', table: 'AUDITLOG' }],
+    metadataPayload,
+    defaultSchema: 'APP',
+    policy,
+  });
+
+  const customers = plan.find((entry) => entry.table === 'CUSTOMERS');
+  const auditLog = plan.find((entry) => entry.table === 'AUDITLOG');
+  assert.equal(customers.status, 'pending');
+  assert.equal(customers.policyDecision.eligibility, 'eligible');
+  assert.equal(auditLog.status, 'skipped');
+  assert.equal(auditLog.policyDecision.eligibility, 'denied');
+  assert.match(auditLog.note, /denylist/i);
+});
+
+test('DB2 test-data masking plan merges global and table-specific masking rules', () => {
+  const policy = buildTestDataPolicy({
+    maskColumns: ['EMAIL'],
+    maskRules: [{
+      schema: 'APP',
+      table: 'CUSTOMERS',
+      columns: ['PHONE'],
+      value: 'MASKED_PHONE',
+    }],
+  });
+
+  const maskingPlan = resolveMaskingPlanForTable({
+    schema: 'APP',
+    table: 'CUSTOMERS',
+    systemSchema: 'APP',
+    systemName: 'CUSTPF',
+  }, policy);
+
+  assert.deepEqual(maskingPlan.maskedColumns, ['EMAIL', 'PHONE']);
+  assert.equal(maskingPlan.maskedColumnValues.get('EMAIL').value, 'MASKED');
+  assert.equal(maskingPlan.maskedColumnValues.get('PHONE').value, 'MASKED_PHONE');
+  assert.equal(maskingPlan.matchedRules.length, 1);
 });
 
 test('DB2 catalog semantic updates attach table identity, trigger relations, FK rules, and external object resolution', () => {

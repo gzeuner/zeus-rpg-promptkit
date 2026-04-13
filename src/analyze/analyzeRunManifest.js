@@ -222,6 +222,12 @@ function buildAnalyzeRunManifest({
         emitDiagnosticsEnabled: Boolean(context.emitDiagnosticsEnabled),
         skipTestData: Boolean(context.skipTestData),
         testDataLimit: Number(context.testDataLimit) || null,
+        analysisLimits: context.analysisLimits && typeof context.analysisLimits === 'object'
+          ? context.analysisLimits
+          : null,
+        testDataPolicy: context.testDataPolicy && typeof context.testDataPolicy === 'object'
+          ? context.testDataPolicy
+          : null,
         extensions: Array.isArray(context.extensions) ? context.extensions : [],
         reproducibleEnabled: reproducibility.enabled,
         guidedMode: context.guidedMode || null,
