@@ -109,6 +109,26 @@ function buildTestDataCacheKey({ program, metadataPayload, dbConfig, testDataCon
     maskColumns: Array.isArray(testDataConfig && testDataConfig.maskColumns)
       ? testDataConfig.maskColumns.map((entry) => String(entry || '').trim().toUpperCase()).sort((a, b) => a.localeCompare(b))
       : [],
+    allowTables: Array.isArray(testDataConfig && testDataConfig.allowTables)
+      ? testDataConfig.allowTables.map((entry) => String(entry || '').trim().toUpperCase()).sort((a, b) => a.localeCompare(b))
+      : [],
+    denyTables: Array.isArray(testDataConfig && testDataConfig.denyTables)
+      ? testDataConfig.denyTables.map((entry) => String(entry || '').trim().toUpperCase()).sort((a, b) => a.localeCompare(b))
+      : [],
+    maskRules: Array.isArray(testDataConfig && testDataConfig.maskRules)
+      ? testDataConfig.maskRules.map((entry) => ({
+        schema: String(entry && entry.schema || '').trim().toUpperCase(),
+        table: String(entry && entry.table || '').trim().toUpperCase(),
+        columns: Array.isArray(entry && entry.columns)
+          ? entry.columns.map((column) => String(column || '').trim().toUpperCase()).sort((a, b) => a.localeCompare(b))
+          : [],
+        value: String(entry && entry.value || '').trim(),
+      })).sort((a, b) => {
+        if (a.table !== b.table) return a.table.localeCompare(b.table);
+        if (a.schema !== b.schema) return a.schema.localeCompare(b.schema);
+        return a.value.localeCompare(b.value);
+      })
+      : [],
     db: normalizeDbFingerprint(dbConfig),
   });
 }
