@@ -18,7 +18,10 @@ const { generateMarkdownReport } = require('../report/markdownReport');
 const { writeJsonReport } = require('../report/jsonReport');
 const { generateArchitectureReport } = require('../report/architectureReport');
 const { buildAiKnowledgeProjection } = require('../ai/knowledgeProjection');
-const { generateArchitectureViewer } = require('../viewer/architectureViewerGenerator');
+const {
+  generateArchitectureViewer,
+  getArchitectureViewerAssetMetadata,
+} = require('../viewer/architectureViewerGenerator');
 const { buildAnalysisIndex } = require('../workflow/analysisIndex');
 const { getPromptContract } = require('../prompt/promptRegistry');
 const { renderIfsPathMarkdown } = require('../investigation/ifsPathScanner');
@@ -50,6 +53,7 @@ function buildAnalysisDiagnostics(state) {
       id: stage.id,
       status: stage.status,
       durationMs: stage.durationMs,
+      definition: stage.definition || null,
       metadata: stage.metadata || {},
       diagnostics: stage.diagnostics || [],
     })) : [],
@@ -136,6 +140,7 @@ function writeAnalyzeArtifacts(state) {
     'report.md',
     ...(emitDiagnostics ? ['analysis-diagnostics.json'] : []),
   ];
+  const viewerAssetMetadata = getArchitectureViewerAssetMetadata();
   const analysisIndex = buildAnalysisIndex({
     canonicalAnalysis,
     context,
@@ -242,6 +247,7 @@ function writeAnalyzeArtifacts(state) {
       workflowPreset: workflowPreset ? workflowPreset.name : null,
       promptTemplateCount: selectedPromptTemplates.length,
       diagnosticsFileWritten: Boolean(emitDiagnostics),
+      viewerAsset: viewerAssetMetadata,
     },
   };
 }

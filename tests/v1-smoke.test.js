@@ -149,6 +149,10 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     const graph = readJson(path.join(programOutputDir, 'program-call-tree.json'));
     assert.equal(graph.summary.programCount, 2);
     assert.equal(graph.summary.tableCount, 3);
+    const architectureViewer = fs.readFileSync(path.join(programOutputDir, 'architecture.html'), 'utf8');
+    assert.equal(/<script[^>]+src=/i.test(architectureViewer), false);
+    assert.doesNotMatch(architectureViewer, /unpkg\.com\/vis-network/);
+    assert.match(architectureViewer, /Bundled asset: vis-network /);
 
     const analyzeManifest = readJson(path.join(programOutputDir, 'analyze-run-manifest.json'));
     assert.equal(analyzeManifest.schemaVersion, 1);
@@ -167,6 +171,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.ok(analyzeManifest.stages.some((stage) => stage.id === 'investigate-sources'));
     assert.ok(analyzeManifest.stages.some((stage) => stage.id === 'run-diagnostic-packs'));
     assert.ok(analyzeManifest.stages.some((stage) => stage.id === 'write-artifacts'));
+    assert.ok(analyzeManifest.stages.every((stage) => Object.prototype.hasOwnProperty.call(stage, 'definition')));
     assert.ok(analyzeManifest.artifacts.some((artifact) => artifact.path === 'context.json'));
     assert.ok(analyzeManifest.artifacts.some((artifact) => artifact.path === 'analysis-index.json'));
     assert.equal(analyzeManifest.comparison, null);
