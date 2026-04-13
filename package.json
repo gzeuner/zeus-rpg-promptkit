@@ -14,7 +14,7 @@
     "lint": "echo \"No lint configured\"",
     "test": "npm run test:ci && npm run test:unit",
     "test:ci": "npm run test:contract && npm run test:smoke",
-    "test:unit": "npm run test:corpus && node --test tests/analyze-stages.test.js tests/source-scan-cache.test.js tests/analyze-runtime-contract.test.js tests/analyze-governance-config.test.js tests/binding-semantics.test.js tests/source-normalization.test.js tests/source-integrity.test.js tests/source-type-scanners.test.js tests/db2-catalog-intelligence.test.js tests/impact-ambiguity.test.js tests/investigation-workflows.test.js tests/runtime-config.test.js tests/source-catalog.test.js",
+    "test:unit": "npm run test:corpus && node --test tests/analyze-stages.test.js tests/analyze-stage-registry.test.js tests/architecture-viewer.test.js tests/local-ui-server.test.js tests/source-scan-cache.test.js tests/analyze-runtime-contract.test.js tests/analyze-governance-config.test.js tests/binding-semantics.test.js tests/source-normalization.test.js tests/source-integrity.test.js tests/source-type-scanners.test.js tests/db2-catalog-intelligence.test.js tests/impact-ambiguity.test.js tests/investigation-workflows.test.js tests/runtime-config.test.js tests/source-catalog.test.js",
     "test:contract": "node --test tests/analyze-run-manifest.test.js tests/bundle-manifest.test.js tests/fetch-readability-contract.test.js tests/ai-knowledge-projection.test.js tests/task-oriented-analysis-index.test.js tests/workflow-presets.test.js",
     "test:smoke": "node --test tests/v1-smoke.test.js tests/safe-sharing.test.js tests/reproducible-output.test.js",
     "test:corpus": "node --test tests/scanner-corpus.test.js",
@@ -23,7 +23,8 @@
   "dependencies": {
     "adm-zip": "^0.5.16",
     "basic-ftp": "^5.0.5",
-    "ssh2-sftp-client": "^11.0.0"
+    "ssh2-sftp-client": "^11.0.0",
+    "vis-network": "10.0.2"
   },
   "engines": {
     "node": ">=20"

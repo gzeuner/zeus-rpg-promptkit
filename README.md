@@ -45,6 +45,7 @@ It helps teams quickly produce consistent analysis artifacts from legacy RPG sou
 - `src/context/contextBuilder.js` - Backward-compatible `context.json` projection builder
 - `src/dependency/dependencyGraphBuilder.js` - Deterministic dependency graph model builder
 - `src/dependency/crossProgramGraphBuilder.js` - Recursive multi-program dependency graph builder
+- `src/analyze/stageRegistry.js` - Registry-backed analyzer stage and lifecycle hook wiring
 - `src/dependency/programSourceResolver.js` - Local program name to source file resolver
 - `src/dependency/graphSerializer.js` - Dependency graph serializers (JSON/Mermaid/Markdown wrapper)
 - `src/viewer/architectureViewerGenerator.js` - Generates interactive `architecture.html` from `program-call-tree.json`
@@ -173,11 +174,13 @@ Investigation options extend the same analyze pipeline and output contract:
 Analyze now runs through a split runtime contract:
 
 - `runAnalyzeCore(...)` executes semantic analysis without writing reports, prompts, or viewer files
+- core analyze stages are registered through a deterministic stage registry so new internal stages can be added without rewriting CLI control flow
 - the CLI applies an explicit artifact-writer adapter afterwards so future UI/API layers can reuse the same core result contract
 - source scans are cached by content hash and tool version under `output/.zeus-cache/source-scans/`
 - DB2 metadata and test-data artifacts are reused through `analysis-cache.json` when inputs are unchanged
 - cross-program traversal now applies explicit safety limits for depth, program count, nodes, edges, scanned files, and per-program outgoing calls
 - when those limits are reached, Zeus keeps the run successful but records truncation and limit diagnostics in `context.json`, `report.md`, and the analyze manifest instead of silently over-walking large trees
+- stage definitions, stage metadata, and stage diagnostics are recorded in `analysis-diagnostics.json` and `analyze-run-manifest.json`
 
 Bundle command syntax:
 
@@ -189,6 +192,12 @@ Impact command syntax:
 
 ```bash
 zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose]
+```
+
+Local UI shell syntax:
+
+```bash
+zeus serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]
 ```
 
 Fetch source syntax:
@@ -472,12 +481,19 @@ Purpose:
 
 Rendering details:
 
-- visualization library: `vis-network` loaded via CDN
+- visualization library: bundled `vis-network` pinned from the project lockfile and inlined into the generated HTML
+- no external `<script src=...>` dependency at runtime
 - node type colors:
   - `PROGRAM` -> blue
   - `TABLE` -> green
   - `COPY` -> orange
 - hierarchical top-down layout (`UD`) to keep the root program at the top
+
+Portability details:
+
+- works offline after the output folder or bundle is copied elsewhere
+- stays version-stable because the bundled viewer bytes come from the pinned dependency version, not a CDN
+- safe-sharing artifacts reuse the same self-contained viewer strategy
 
 Interactions:
 
@@ -496,6 +512,38 @@ zeus analyze --source ./rpg_sources --program ORDERPGM
 Output:
 
 - `output/ORDERPGM/architecture.html`
+
+## Local UI Shell
+
+Zeus now also includes a first local-only UI shell over the existing output contract.
+
+Purpose:
+
+- browse completed analysis runs without reparsing artifacts in the browser
+- expose a stable read-only internal API for future richer UI work
+- keep CLI workflows and UI workflows on the same manifest and artifact model
+
+Current behavior:
+
+- `zeus serve --source-output-root ./output` starts a loopback-only HTTP server
+- the HTML shell at `/` uses the JSON API instead of reading files directly
+- the shell lists runs, shows manifest-derived summary metadata, and previews JSON, Markdown, and HTML artifacts on demand
+
+Current API endpoints:
+
+- `GET /api/health`
+- `GET /api/runs`
+- `GET /api/runs/:program`
+- `GET /api/runs/:program/artifacts/content?path=...`
+- `GET /runs/:program/artifacts/raw?path=...`
+
+Example:
+
+```bash
+zeus serve --source-output-root ./output --port 4782
+```
+
+Open the printed local URL in a browser to inspect available runs.
 
 ## Impact Analysis
 
@@ -975,6 +1023,9 @@ See [docs/reproducible-output-mode.md](/c:/Java/workspace-java/zeus-rpg-promptki
 See [docs/import-manifest-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/import-manifest-contract.md) for the public fetch provenance manifest contract.
 See [docs/source-ingest-normalization.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/source-ingest-normalization.md) for the analyze-time normalization contract and current CL/DDS scanner depth.
 See [docs/investigation-workflows.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/investigation-workflows.md) for the new IFS-path, full-text search, diagnostic-pack, and prompt-pack workflow additions.
+See [docs/analyzer-stage-pipeline.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/analyzer-stage-pipeline.md) for the registry-backed analyze stage contract and plugin seam.
+See [docs/local-ui-shell.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/local-ui-shell.md) for the read-only local UI shell and API contract.
+See [docs/viewer-asset-strategy.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/viewer-asset-strategy.md) for the offline viewer packaging strategy and licensing note.
 
 ## Notes
 

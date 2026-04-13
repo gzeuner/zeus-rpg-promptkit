@@ -257,6 +257,7 @@ function buildAnalyzeRunManifest({
       startedAt: stage.startedAt,
       completedAt: stage.completedAt,
       durationMs: stage.durationMs,
+      definition: stage.definition || null,
       metadata: stage.metadata || {},
       diagnostics: stage.diagnostics || [],
     })),
@@ -281,6 +282,7 @@ function buildAnalyzeRunManifest({
     stages: manifest.stages.map((stage) => ({
       id: stage.id,
       status: stage.status,
+      definition: stage.definition,
       metadata: stage.metadata,
       diagnostics: stage.diagnostics,
     })),
