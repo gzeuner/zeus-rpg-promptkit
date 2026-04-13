@@ -51,6 +51,12 @@ function projectDependencies(canonicalAnalysis) {
         name: entry.name,
         kind: entry.kind || 'PROGRAM',
         evidenceCount: Number(entry.evidenceCount) || 0,
+        resolutionSource: entry.resolutionSource || 'UNRESOLVED',
+        catalogObjectType: entry.catalogObjectType || null,
+        catalogLibrary: entry.catalogLibrary || null,
+        catalogSchema: entry.catalogSchema || null,
+        catalogSystemName: entry.catalogSystemName || null,
+        catalogSqlName: entry.catalogSqlName || null,
       }))),
     copyMembers: sortByName((entities.copyMembers || []).map((entry) => ({
       name: entry.name,
@@ -62,6 +68,11 @@ function projectDependencies(canonicalAnalysis) {
 function projectProcedureAnalysis(canonicalAnalysis) {
   const entities = canonicalAnalysis.entities || {};
   const relations = canonicalAnalysis.relations || [];
+  const procedureTargetById = new Map([
+    ...(entities.prototypes || []).map((entry) => [entry.id, entry]),
+    ...(entities.procedureReferences || []).map((entry) => [entry.id, entry]),
+    ...(entities.procedures || []).map((entry) => [entry.id, entry]),
+  ]);
   const procedures = sortByName((entities.procedures || []).map((entry) => ({
     name: entry.name,
     kind: entry.kind,
@@ -90,12 +101,19 @@ function projectProcedureAnalysis(canonicalAnalysis) {
       const from = String(entry.from || '');
       const to = String(entry.to || '');
       const caller = from.split(':').slice(-1)[0] || from;
+      const targetEntity = procedureTargetById.get(to);
       return {
         caller,
         target: String(entry.attributes && entry.attributes.targetName ? entry.attributes.targetName : (to.split(':').slice(-1)[0] || to)),
         resolution: entry.attributes && entry.attributes.resolution ? entry.attributes.resolution : 'UNKNOWN',
         targetKind: entry.attributes && entry.attributes.targetKind ? entry.attributes.targetKind : '',
         evidenceCount: Array.isArray(entry.evidence) ? entry.evidence.length : 0,
+        resolutionSource: targetEntity && targetEntity.resolutionSource ? targetEntity.resolutionSource : 'SOURCE',
+        catalogObjectType: targetEntity && targetEntity.catalogObjectType ? targetEntity.catalogObjectType : null,
+        catalogLibrary: targetEntity && targetEntity.catalogLibrary ? targetEntity.catalogLibrary : null,
+        catalogSchema: targetEntity && targetEntity.catalogSchema ? targetEntity.catalogSchema : null,
+        catalogSystemName: targetEntity && targetEntity.catalogSystemName ? targetEntity.catalogSystemName : null,
+        catalogSqlName: targetEntity && targetEntity.catalogSqlName ? targetEntity.catalogSqlName : null,
       };
     })
     .sort((a, b) => {
@@ -113,6 +131,7 @@ function projectProcedureAnalysis(canonicalAnalysis) {
       externalCallCount: calls.filter((entry) => entry.resolution === 'EXTERNAL').length,
       dynamicCallCount: calls.filter((entry) => entry.resolution === 'DYNAMIC').length,
       unresolvedCallCount: calls.filter((entry) => entry.resolution === 'UNRESOLVED').length,
+      catalogResolvedCallCount: calls.filter((entry) => entry.resolutionSource === 'CATALOG').length,
     },
     procedures,
     prototypes,
