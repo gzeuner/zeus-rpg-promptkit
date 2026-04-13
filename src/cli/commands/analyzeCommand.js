@@ -15,7 +15,10 @@ const fs = require('fs');
 const path = require('path');
 const { DEFAULT_TEST_DATA_LIMIT } = require('../../db2/testDataExportService');
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
-const { runAnalyzePipeline } = require('../../analyze/analyzePipeline');
+const {
+  runAnalyzeArtifactAdapter,
+  runAnalyzeCore,
+} = require('../../analyze/analyzePipeline');
 const {
   buildAnalyzeRunManifest,
   readAnalyzeRunManifest,
@@ -136,6 +139,7 @@ function runAnalyze(args) {
   const searchMaxResults = parsePositiveInteger(args['search-max-results'], 200);
   const skipTestData = Boolean(args['skip-test-data']);
   const safeSharingEnabled = Boolean(args['safe-sharing']);
+  const emitDiagnostics = Boolean(args['emit-diagnostics']);
   const scanIfsPathsEnabled = Boolean(args['scan-ifs-paths']);
   const searchTerms = parseCsv(args['search-terms']);
   const searchIgnorePatterns = parseCsv(args['search-ignore']);
@@ -158,6 +162,7 @@ function runAnalyze(args) {
   logVerbose(`Extensions: ${config.extensions.join(', ')}`);
   logVerbose(`Context optimization: ${optimizeContextEnabled ? 'enabled' : 'disabled'}`);
   logVerbose(`Safe sharing: ${safeSharingEnabled ? 'enabled' : 'disabled'}`);
+  logVerbose(`Structured diagnostics: ${emitDiagnostics ? 'enabled' : 'disabled'}`);
   logVerbose(`Reproducible mode: ${reproducibility.enabled ? 'enabled' : 'disabled'}`);
   logVerbose(`Test data extraction: ${skipTestData ? 'disabled' : `enabled (limit ${testDataLimit})`}`);
   logVerbose(`IFS path scan: ${scanIfsPathsEnabled ? 'enabled' : 'disabled'}`);
@@ -185,7 +190,7 @@ function runAnalyze(args) {
 
   let result;
   try {
-    result = runAnalyzePipeline({
+    const coreResult = runAnalyzeCore({
       program,
       sourceRoot,
       outputRoot,
@@ -209,6 +214,10 @@ function runAnalyze(args) {
       reproducibility,
       logVerbose,
     });
+    result = runAnalyzeArtifactAdapter({
+      ...coreResult,
+      emitDiagnostics,
+    });
     const durationMs = resolveDurationMs(reproducibility, Number((process.hrtime.bigint() - startedNs) / 1000000n));
     const manifest = buildAnalyzeRunManifest({
       status: 'succeeded',
@@ -223,6 +232,7 @@ function runAnalyze(args) {
         durationMs,
         optimizeContextEnabled,
         safeSharingEnabled,
+        emitDiagnosticsEnabled: emitDiagnostics,
         skipTestData,
         testDataLimit,
         extensions: config.extensions,
@@ -264,6 +274,7 @@ function runAnalyze(args) {
         durationMs,
         optimizeContextEnabled,
         safeSharingEnabled,
+        emitDiagnosticsEnabled: emitDiagnostics,
         skipTestData,
         testDataLimit,
         extensions: config.extensions,
@@ -303,6 +314,15 @@ function runAnalyze(args) {
     console.log(`Diagnostic packs: ${diagnosticPacks.join(', ')}`);
   }
   console.log(`Source files scanned: ${(result.scanSummary.sourceFiles || []).length}`);
+  if (result.cacheStatus && result.cacheStatus.sourceScan) {
+    console.log(`Source scan cache: ${result.cacheStatus.sourceScan.hits || 0} hits, ${result.cacheStatus.sourceScan.misses || 0} misses`);
+  }
+  if (result.cacheStatus && result.cacheStatus.db2Metadata && result.cacheStatus.db2Metadata.status !== 'disabled') {
+    console.log(`DB2 metadata cache: ${result.cacheStatus.db2Metadata.status}`);
+  }
+  if (result.cacheStatus && result.cacheStatus.testData && result.cacheStatus.testData.status !== 'disabled') {
+    console.log(`Test data cache: ${result.cacheStatus.testData.status}`);
+  }
   if (result.optimizationReport.enabled) {
     console.log(`Context tokens: ${result.optimizationReport.contextTokens}`);
     console.log(`Optimized tokens: ${result.optimizationReport.optimizedTokens}`);
@@ -312,6 +332,9 @@ function runAnalyze(args) {
     }
   } else {
     console.log(`Context tokens: ${result.optimizationReport.contextTokens}`);
+  }
+  if (emitDiagnostics) {
+    console.log(`Diagnostics written to: ${path.join(outputProgramDir, 'analysis-diagnostics.json')}`);
   }
   console.log(`Output written to: ${outputProgramDir}`);
 }

@@ -327,6 +327,15 @@ function renderDb2MetadataMarkdown(program, tables, externalObjects, notes) {
   return `${lines.join('\n')}\n`;
 }
 
+function buildDb2MetadataCanonicalUpdatesFromPayload({ canonicalAnalysis, payload }) {
+  return buildDb2CatalogSemanticUpdates({
+    canonicalAnalysis,
+    tableLinks: Array.isArray(payload && payload.tableLinks) ? payload.tableLinks : [],
+    exportedTables: Array.isArray(payload && payload.tables) ? payload.tables : [],
+    externalObjects: Array.isArray(payload && payload.externalObjects) ? payload.externalObjects : [],
+  });
+}
+
 function writeOutputs(outputDir, payload, markdown) {
   fs.writeFileSync(path.join(outputDir, JSON_FILE), `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   fs.writeFileSync(path.join(outputDir, MARKDOWN_FILE), markdown, 'utf8');
@@ -569,6 +578,7 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
 }
 
 module.exports = {
+  buildDb2MetadataCanonicalUpdatesFromPayload,
   exportDb2Metadata,
   renderDb2MetadataMarkdown,
 };
