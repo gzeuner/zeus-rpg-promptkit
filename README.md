@@ -527,13 +527,15 @@ Current behavior:
 
 - `zeus serve --source-output-root ./output` starts a loopback-only HTTP server
 - the HTML shell at `/` uses the JSON API instead of reading files directly
-- the shell lists runs, shows manifest-derived summary metadata, and previews JSON, Markdown, and HTML artifacts on demand
+- the shell lists runs, shows manifest-derived summary metadata, and exposes focused views for graph exploration, DB2/test-data browsing, prompt comparison, and artifact preview
+- prompt and artifact content is fetched lazily on selection so larger runs do not require eager browser-side loading
 
 Current API endpoints:
 
 - `GET /api/health`
 - `GET /api/runs`
 - `GET /api/runs/:program`
+- `GET /api/runs/:program/views`
 - `GET /api/runs/:program/artifacts/content?path=...`
 - `GET /runs/:program/artifacts/raw?path=...`
 

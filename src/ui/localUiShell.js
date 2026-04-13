@@ -13,478 +13,63 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 function renderLocalUiShell() {
   return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Zeus Local UI</title>
-  <style>
-    :root {
-      --bg: #f3efe5;
-      --panel: #fffaf0;
-      --panel-strong: #f9f1de;
-      --text: #1f2933;
-      --muted: #5c6b73;
-      --line: #d4c3a3;
-      --accent: #8a4b08;
-      --accent-soft: #edd7b5;
-      --success: #166534;
-      --danger: #991b1b;
-      --shadow: 0 18px 40px rgba(73, 52, 18, 0.12);
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at top left, rgba(138, 75, 8, 0.14), transparent 34%),
-        linear-gradient(180deg, #fcf8ef 0%, var(--bg) 100%);
-      color: var(--text);
-      font-family: Georgia, "Times New Roman", serif;
-    }
-    .app {
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      min-height: 100vh;
-    }
-    aside {
-      border-right: 1px solid var(--line);
-      background: rgba(255, 250, 240, 0.88);
-      backdrop-filter: blur(6px);
-      padding: 24px 20px;
-    }
-    main {
-      padding: 24px;
-      display: grid;
-      grid-template-rows: auto auto 1fr;
-      gap: 18px;
-    }
-    h1, h2, h3 { margin: 0; font-weight: 700; }
-    h1 { font-size: 28px; letter-spacing: 0.02em; }
-    h2 { font-size: 19px; }
-    h3 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-    p { margin: 0; color: var(--muted); }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      box-shadow: var(--shadow);
-    }
-    .hero {
-      padding: 22px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 20px;
-    }
-    .hero-meta {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: var(--panel-strong);
-      font-size: 12px;
-      color: var(--accent);
-    }
-    .stack {
-      display: grid;
-      gap: 14px;
-    }
-    .run-list {
-      margin-top: 18px;
-      display: grid;
-      gap: 10px;
-    }
-    .run-item {
-      border: 1px solid var(--line);
-      background: white;
-      border-radius: 14px;
-      padding: 14px 16px;
-      cursor: pointer;
-      transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
-    }
-    .run-item:hover {
-      transform: translateY(-1px);
-      border-color: var(--accent);
-      box-shadow: 0 10px 24px rgba(138, 75, 8, 0.08);
-    }
-    .run-item.active {
-      background: linear-gradient(135deg, #fff5df, #fffaf0);
-      border-color: var(--accent);
-    }
-    .run-item strong { display: block; font-size: 16px; }
-    .run-item small { color: var(--muted); display: block; margin-top: 4px; }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-    }
-    .metric {
-      padding: 16px 18px;
-    }
-    .metric strong {
-      display: block;
-      font-size: 26px;
-      color: var(--accent);
-      margin-top: 8px;
-    }
-    .workspace {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 18px;
-      min-height: 0;
-    }
-    .artifact-list {
-      padding: 18px;
-      display: grid;
-      gap: 10px;
-      align-content: start;
-      max-height: calc(100vh - 248px);
-      overflow: auto;
-    }
-    .artifact-button {
-      width: 100%;
-      text-align: left;
-      border: 1px solid var(--line);
-      background: white;
-      border-radius: 12px;
-      padding: 12px 13px;
-      cursor: pointer;
-    }
-    .artifact-button.active {
-      border-color: var(--accent);
-      background: #fff1d6;
-    }
-    .artifact-button strong {
-      display: block;
-      font-size: 14px;
-      overflow-wrap: anywhere;
-    }
-    .artifact-button span {
-      display: block;
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-    .preview {
-      padding: 18px;
-      display: grid;
-      grid-template-rows: auto 1fr;
-      min-height: 0;
-    }
-    .preview-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-    .preview-body {
-      min-height: 420px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: #fffdf7;
-      overflow: hidden;
-    }
-    .preview-text {
-      margin: 0;
-      padding: 16px;
-      height: 100%;
-      overflow: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-family: "Cascadia Code", Consolas, monospace;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .preview-frame {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      background: white;
-    }
-    .empty {
-      padding: 28px;
-      color: var(--muted);
-      border: 1px dashed var(--line);
-      border-radius: 16px;
-      background: rgba(255, 250, 240, 0.8);
-    }
-    a.link {
-      color: var(--accent);
-      text-decoration: none;
-      font-size: 13px;
-    }
-    a.link:hover {
-      text-decoration: underline;
-    }
-    @media (max-width: 980px) {
-      .app { grid-template-columns: 1fr; }
-      aside { border-right: 0; border-bottom: 1px solid var(--line); }
-      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .workspace { grid-template-columns: 1fr; }
-      .artifact-list { max-height: none; }
-    }
-  </style>
-</head>
-<body>
-  <div class="app">
-    <aside>
-      <div class="stack">
-        <div>
-          <h1>Zeus Local UI</h1>
-          <p>Read-only shell over the analyze output contract.</p>
-        </div>
-        <div class="pill">Local-only API</div>
-      </div>
-      <div id="run-list" class="run-list"></div>
-    </aside>
-    <main>
-      <section class="panel hero">
-        <div class="stack">
-          <h2 id="hero-title">Analysis Runs</h2>
-          <p id="hero-subtitle">Select a run to inspect manifests and artifact previews.</p>
-        </div>
-        <div class="hero-meta" id="hero-meta"></div>
-      </section>
-      <section class="grid" id="metric-grid"></section>
-      <section class="workspace">
-        <div class="panel artifact-list" id="artifact-list"></div>
-        <div class="panel preview">
-          <div class="preview-header">
-            <div class="stack">
-              <h2 id="preview-title">Artifact Preview</h2>
-              <p id="preview-subtitle">Choose an artifact from the run.</p>
-            </div>
-            <a id="preview-link" class="link" href="#" target="_blank" rel="noreferrer" hidden>Open Raw</a>
-          </div>
-          <div class="preview-body" id="preview-body">
-            <div class="empty">No artifact selected.</div>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-  <script>
-    const state = {
-      runs: [],
-      runDetail: null,
-      selectedProgram: null,
-      selectedArtifactPath: null,
-    };
-
-    const preferredArtifacts = [
-      'report.md',
-      'architecture.html',
-      'analysis-index.json',
-      'context.json',
-      'ai_prompt_documentation.md',
-      'safe-sharing/report.md'
-    ];
-
-    function byId(id) {
-      return document.getElementById(id);
-    }
-
-    function escapeHtml(value) {
-      return String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    }
-
-    function formatDate(value) {
-      if (!value) return 'n/a';
-      const date = new Date(value);
-      return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-    }
-
-    function chooseDefaultArtifact(detail) {
-      const artifacts = detail && Array.isArray(detail.artifacts) ? detail.artifacts : [];
-      for (const candidate of preferredArtifacts) {
-        const match = artifacts.find((artifact) => artifact.path === candidate);
-        if (match) return match.path;
-      }
-      return artifacts.length > 0 ? artifacts[0].path : null;
-    }
-
-    async function fetchJson(url) {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      return response.json();
-    }
-
-    function renderRunList() {
-      const container = byId('run-list');
-      if (state.runs.length === 0) {
-        container.innerHTML = '<div class="empty">No analysis runs were found in the configured output root.</div>';
-        return;
-      }
-
-      container.innerHTML = state.runs.map((run) => {
-        const activeClass = run.program === state.selectedProgram ? ' active' : '';
-        const mode = run.workflowPreset || run.workflowMode || 'standard';
-        return '<button class="run-item' + activeClass + '" data-program="' + escapeHtml(run.program) + '">' +
-          '<strong>' + escapeHtml(run.program) + '</strong>' +
-          '<small>Status: ' + escapeHtml(run.status || 'unknown') + '</small>' +
-          '<small>Workflow: ' + escapeHtml(mode) + '</small>' +
-          '<small>Completed: ' + escapeHtml(formatDate(run.completedAt)) + '</small>' +
-          '</button>';
-      }).join('');
-
-      for (const button of container.querySelectorAll('.run-item')) {
-        button.addEventListener('click', () => {
-          selectRun(button.getAttribute('data-program'));
-        });
-      }
-    }
-
-    function renderHero(detail) {
-      if (!detail) {
-        byId('hero-title').textContent = 'Analysis Runs';
-        byId('hero-subtitle').textContent = 'Select a run to inspect manifests and artifact previews.';
-        byId('hero-meta').innerHTML = '';
-        return;
-      }
-
-      const summary = detail.summary;
-      byId('hero-title').textContent = summary.program;
-      byId('hero-subtitle').textContent = 'Manifest-driven local view over the run artifacts.';
-
-      const pills = [
-        'Status: ' + (summary.status || 'unknown'),
-        'Mode: ' + (summary.workflowPreset || summary.workflowMode || 'standard'),
-        'Artifacts: ' + summary.artifactCount,
-        summary.safeSharingEnabled ? 'Safe sharing available' : 'Safe sharing not generated'
-      ];
-
-      byId('hero-meta').innerHTML = pills.map((item) => '<div class="pill">' + escapeHtml(item) + '</div>').join('');
-    }
-
-    function renderMetrics(detail) {
-      const container = byId('metric-grid');
-      if (!detail) {
-        container.innerHTML = '';
-        return;
-      }
-
-      const analyze = detail.analyzeManifest;
-      const metrics = [
-        ['Completed', formatDate(detail.summary.completedAt)],
-        ['Stages', String(analyze.summary.stageCount || 0)],
-        ['Diagnostics', String(analyze.summary.diagnosticCount || 0)],
-        ['Source Files', String(analyze.inputs.sourceSnapshot.fileCount || 0)]
-      ];
-
-      container.innerHTML = metrics.map(([label, value]) => (
-        '<div class="panel metric"><h3>' + escapeHtml(label) + '</h3><strong>' + escapeHtml(value) + '</strong></div>'
-      )).join('');
-    }
-
-    function renderArtifacts(detail) {
-      const container = byId('artifact-list');
-      if (!detail || !Array.isArray(detail.artifacts) || detail.artifacts.length === 0) {
-        container.innerHTML = '<div class="empty">This run has no previewable artifacts.</div>';
-        return;
-      }
-
-      container.innerHTML = detail.artifacts.map((artifact) => {
-        const activeClass = artifact.path === state.selectedArtifactPath ? ' active' : '';
-        return '<button class="artifact-button' + activeClass + '" data-path="' + escapeHtml(artifact.path) + '">' +
-          '<strong>' + escapeHtml(artifact.path) + '</strong>' +
-          '<span>' + escapeHtml(artifact.kind) + ' • ' + escapeHtml(String(artifact.sizeBytes)) + ' bytes</span>' +
-        '</button>';
-      }).join('');
-
-      for (const button of container.querySelectorAll('.artifact-button')) {
-        button.addEventListener('click', () => {
-          selectArtifact(button.getAttribute('data-path'));
-        });
-      }
-    }
-
-    async function renderArtifactPreview() {
-      const previewBody = byId('preview-body');
-      const previewTitle = byId('preview-title');
-      const previewSubtitle = byId('preview-subtitle');
-      const previewLink = byId('preview-link');
-
-      if (!state.runDetail || !state.selectedArtifactPath) {
-        previewTitle.textContent = 'Artifact Preview';
-        previewSubtitle.textContent = 'Choose an artifact from the run.';
-        previewBody.innerHTML = '<div class="empty">No artifact selected.</div>';
-        previewLink.hidden = true;
-        return;
-      }
-
-      const artifact = state.runDetail.artifacts.find((entry) => entry.path === state.selectedArtifactPath);
-      if (!artifact) {
-        previewBody.innerHTML = '<div class="empty">The selected artifact is no longer available.</div>';
-        previewLink.hidden = true;
-        return;
-      }
-
-      previewTitle.textContent = artifact.path;
-      previewSubtitle.textContent = artifact.kind + ' preview';
-      const rawUrl = '/runs/' + encodeURIComponent(state.selectedProgram) + '/artifacts/raw?path=' + encodeURIComponent(artifact.path);
-      previewLink.href = rawUrl;
-      previewLink.hidden = false;
-
-      if (artifact.kind === 'html') {
-        previewBody.innerHTML = '<iframe class="preview-frame" src="' + rawUrl + '"></iframe>';
-        return;
-      }
-
-      previewBody.innerHTML = '<pre class="preview-text">Loading...</pre>';
-      const payload = await fetchJson('/api/runs/' + encodeURIComponent(state.selectedProgram) + '/artifacts/content?path=' + encodeURIComponent(artifact.path));
-      const content = artifact.kind === 'json'
-        ? JSON.stringify(JSON.parse(payload.content), null, 2)
-        : payload.content;
-      previewBody.innerHTML = '<pre class="preview-text">' + escapeHtml(content) + '</pre>';
-    }
-
-    async function selectArtifact(artifactPath) {
-      state.selectedArtifactPath = artifactPath;
-      renderArtifacts(state.runDetail);
-      await renderArtifactPreview();
-    }
-
-    async function selectRun(program) {
-      state.selectedProgram = program;
-      renderRunList();
-      state.runDetail = await fetchJson('/api/runs/' + encodeURIComponent(program));
-      renderHero(state.runDetail);
-      renderMetrics(state.runDetail);
-      renderArtifacts(state.runDetail);
-      state.selectedArtifactPath = chooseDefaultArtifact(state.runDetail);
-      renderArtifacts(state.runDetail);
-      await renderArtifactPreview();
-    }
-
-    async function boot() {
-      state.runs = await fetchJson('/api/runs');
-      renderRunList();
-      if (state.runs.length > 0) {
-        await selectRun(state.runs[0].program);
-      }
-    }
-
-    boot().catch((error) => {
-      byId('preview-body').innerHTML = '<div class="empty">' + escapeHtml(error.message || String(error)) + '</div>';
-    });
-  </script>
-</body>
-</html>`;
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zeus Local UI</title>
+<style>
+body{margin:0;font-family:Georgia,serif;background:#f6f1e6;color:#1f2933}*{box-sizing:border-box}
+.app{display:grid;grid-template-columns:300px 1fr;min-height:100vh}.panel{background:#fffaf0;border:1px solid #d4c3a3;border-radius:14px}
+aside{padding:18px;border-right:1px solid #d4c3a3;background:#fffaf0}.main{padding:18px;display:grid;gap:14px;min-height:100vh}
+.list,.tabs,.chips{display:flex;flex-wrap:wrap;gap:8px}.stack{display:grid;gap:12px}.run-list,.item-list{display:grid;gap:8px;max-height:70vh;overflow:auto}
+button,.chip,a.btn,select,input{font:inherit}.run,.item,.tab,.btn{border:1px solid #d4c3a3;background:#fff;padding:10px 12px;border-radius:12px;cursor:pointer;text-decoration:none;color:#8a4b08}
+.active{background:#fff0cf;border-color:#8a4b08}.hero{padding:18px;display:flex;justify-content:space-between;gap:12px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.metric{padding:14px}.metric strong{display:block;font-size:24px;color:#8a4b08}.view{display:none}.view.active{display:grid}.two{grid-template-columns:300px 1fr;gap:14px}.three{grid-template-columns:260px 1fr 1fr;gap:14px}
+.sub{padding:14px;display:grid;gap:10px;align-content:start}.preview{border:1px solid #d4c3a3;border-radius:12px;background:#fffdf7;min-height:340px;overflow:auto}
+pre{margin:0;padding:14px;white-space:pre-wrap;word-break:break-word;font-family:Consolas,monospace;font-size:12px;line-height:1.45}
+.empty{padding:18px;color:#5c6b73;border:1px dashed #d4c3a3;border-radius:12px}.tokens{display:flex;flex-wrap:wrap;gap:6px}.token{padding:6px 9px;border:1px solid #d4c3a3;border-radius:999px;background:#fff}
+iframe{width:100%;height:420px;border:0;background:#fff}@media(max-width:1100px){.app{grid-template-columns:1fr}.metrics,.two,.three{grid-template-columns:1fr}}
+</style></head><body>
+<div class="app">
+<aside><div class="stack"><div><h1>Zeus Local UI</h1><p>Focused read-only views.</p></div><div class="token">Local-only API</div></div><div id="runs" class="run-list"></div></aside>
+<div class="main">
+<div class="panel hero"><div class="stack"><h2 id="title">Analysis Runs</h2><p id="subtitle">Select a run.</p></div><div id="chips" class="chips"></div></div>
+<div id="metrics" class="metrics"></div>
+<div id="tabs" class="panel tabs" style="padding:10px"></div>
+<div id="graph" class="panel view two"></div>
+<div id="db2" class="panel view two"></div>
+<div id="prompts" class="panel view three"></div>
+<div id="artifacts" class="panel view two"></div>
+</div></div>
+<script>
+const s={runs:[],detail:null,program:null,tab:'graph',artifact:null,node:null,table:null,left:null,right:null,cache:new Map()};
+const tabs=[['graph','Graph'],['db2','DB2/Test Data'],['prompts','Prompt Compare'],['artifacts','Artifacts']];
+const pref=['report.md','architecture.html','analysis-index.json','context.json','ai_prompt_documentation.md'];
+const q=(id)=>document.getElementById(id);
+const esc=(v)=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt=(v)=>{if(!v)return'n/a';const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleString();};
+async function getJson(u){const r=await fetch(u);if(!r.ok)throw new Error(await r.text());return r.json();}
+async function getArtifact(p){const k=s.program+':'+p;if(s.cache.has(k))return s.cache.get(k);const v=await getJson('/api/runs/'+encodeURIComponent(s.program)+'/artifacts/content?path='+encodeURIComponent(p));s.cache.set(k,v);return v;}
+function runDefaultArtifact(){const a=s.detail&&s.detail.artifacts||[];for(const p of pref){const m=a.find(x=>x.path===p);if(m)return m.path;}return a[0]&&a[0].path||null;}
+function renderRuns(){const root=q('runs');if(!s.runs.length){root.innerHTML='<div class="empty">No runs.</div>';return;}root.innerHTML=s.runs.map(r=>'<button class="run'+(r.program===s.program?' active':'')+'" data-run="'+esc(r.program)+'"><strong>'+esc(r.program)+'</strong><div>'+esc(r.workflowPreset||r.workflowMode||'standard')+'</div><div>'+esc(fmt(r.completedAt))+'</div></button>').join('');for(const b of root.querySelectorAll('[data-run]'))b.onclick=()=>selectRun(b.dataset.run);}
+function renderHero(){if(!s.detail){q('title').textContent='Analysis Runs';q('subtitle').textContent='Select a run.';q('chips').innerHTML='';return;}const x=s.detail.summary;q('title').textContent=x.program;q('subtitle').textContent='Focused explorer over graph, DB2, prompts, and artifacts.';q('chips').innerHTML=['Status: '+(x.status||'unknown'),'Mode: '+(x.workflowPreset||x.workflowMode||'standard'),'Artifacts: '+x.artifactCount,x.safeSharingEnabled?'Safe sharing':'No safe sharing'].map(v=>'<div class="token">'+esc(v)+'</div>').join('');}
+function renderMetrics(){const root=q('metrics');if(!s.detail){root.innerHTML='';return;}const a=s.detail.analyzeManifest,v=s.detail.views;const m=[['Completed',fmt(s.detail.summary.completedAt)],['Stages',a.summary.stageCount||0],['Graph Nodes',v.summary.graphNodeCount||0],['Prompt Packs',v.summary.promptCount||0]];root.innerHTML=m.map(([k,v])=>'<div class="panel metric"><div>'+esc(k)+'</div><strong>'+esc(String(v))+'</strong></div>').join('');}
+function renderTabs(){q('tabs').innerHTML=tabs.map(([id,label])=>'<button class="tab'+(s.tab===id?' active':'')+'" data-tab="'+id+'">'+label+'</button>').join('');for(const b of q('tabs').querySelectorAll('[data-tab]'))b.onclick=()=>selectTab(b.dataset.tab);}
+function linkArtifacts(paths){return !paths||!paths.length?'<div class="empty">No related artifacts.</div>':'<div class="chips">'+paths.map(p=>'<button class="btn" data-art="'+esc(p)+'">'+esc(p)+'</button>').join('')+'</div>';}
+function linkPrompts(paths){return !paths||!paths.length?'<div class="empty">No related prompts.</div>':'<div class="chips">'+paths.map(p=>'<button class="btn" data-prompt="'+esc(p)+'">'+esc(p)+'</button>').join('')+'</div>';}
+function linkNodes(paths){return !paths||!paths.length?'<div class="empty">No connected nodes.</div>':'<div class="chips">'+paths.map(p=>'<button class="btn" data-node="'+esc(p)+'">'+esc(p)+'</button>').join('')+'</div>';}
+function bindCross(root){for(const b of root.querySelectorAll('[data-art]'))b.onclick=()=>{s.artifact=b.dataset.art;s.tab='artifacts';render();};for(const b of root.querySelectorAll('[data-prompt]'))b.onclick=()=>{s.left=b.dataset.prompt;if(!s.right)s.right=b.dataset.prompt;s.tab='prompts';render();};for(const b of root.querySelectorAll('[data-node]'))b.onclick=()=>{s.node=b.dataset.node;s.tab='graph';render();};}
+function renderGraph(){const root=q('graph');root.classList.toggle('active',s.tab==='graph');if(s.tab!=='graph')return;if(!s.detail||!s.detail.views.graph.available){root.innerHTML='<div class="sub"><div class="empty">No graph available.</div></div>';return;}const g=s.detail.views.graph;const f=(q('graphFilter')&&q('graphFilter').value||'').toLowerCase();const nodes=g.nodes.filter(n=>!f||n.id.toLowerCase().includes(f)||n.type.toLowerCase().includes(f));const sel=g.nodes.find(n=>n.id===s.node)||nodes[0]||null;root.innerHTML='<div class="sub"><h2>Graph Explorer</h2><p>Click nodes to follow related artifacts and prompts.</p><input id="graphFilter" placeholder="Filter nodes"><div class="item-list">'+nodes.map(n=>'<button class="item'+(sel&&sel.id===n.id?' active':'')+'" data-nid="'+esc(n.id)+'"><strong>'+esc(n.id)+'</strong><div>'+esc(n.type)+' • in '+esc(String(n.incomingCount))+' • out '+esc(String(n.outgoingCount))+'</div></button>').join('')+'</div></div><div class="sub">'+(sel?'<h2>'+esc(sel.id)+'</h2><div class="tokens"><div class="token">'+esc(sel.type)+'</div><div class="token">Connected '+esc(String(sel.connectedNodeIds.length))+'</div></div><h3>Connected Nodes</h3>'+linkNodes(sel.connectedNodeIds)+'<h3>Related Artifacts</h3>'+linkArtifacts(sel.relatedArtifactPaths)+'<h3>Related Prompts</h3>'+linkPrompts(sel.relatedPromptPaths)+(g.viewerArtifact?'<a class="btn" target="_blank" rel="noreferrer" href="/runs/'+encodeURIComponent(s.program)+'/artifacts/raw?path='+encodeURIComponent(g.viewerArtifact)+'">Open Architecture Viewer</a>':''):'<div class="empty">No nodes matched.</div>')+'</div>';q('graphFilter').value=f;q('graphFilter').oninput=()=>renderGraph();for(const b of root.querySelectorAll('[data-nid]'))b.onclick=()=>{s.node=b.dataset.nid;renderGraph();};bindCross(root);}
+function renderDb2(){const root=q('db2');root.classList.toggle('active',s.tab==='db2');if(s.tab!=='db2')return;if(!s.detail){root.innerHTML='<div class="sub"><div class="empty">No run selected.</div></div>';return;}const d=s.detail.views.db2;if(!d.metadataAvailable&&!d.testDataAvailable){root.innerHTML='<div class="sub"><div class="empty">No DB2 metadata or test data.</div></div>';return;}const f=(q('db2Filter')&&q('db2Filter').value||'').toLowerCase();const tables=d.tables.filter(t=>!f||t.qualifiedName.toLowerCase().includes(f));const sel=d.tables.find(t=>t.id===s.table)||tables[0]||null;root.innerHTML='<div class="sub"><h2>DB2/Test Data</h2><div class="tokens"><div class="token">Metadata '+esc(String(d.metadataSummary&&d.metadataSummary.tableCount||0))+'</div><div class="token">Samples '+esc(String(d.testDataSummary&&d.testDataSummary.tableCount||0))+'</div><div class="token">Masked '+esc(String(d.testDataSummary&&d.testDataSummary.policySummary&&d.testDataSummary.policySummary.maskedTableCount||0))+'</div></div><input id="db2Filter" placeholder="Filter tables"><div class="item-list">'+tables.map(t=>'<button class="item'+(sel&&sel.id===t.id?' active':'')+'" data-tid="'+esc(t.id)+'"><strong>'+esc(t.qualifiedName||t.table)+'</strong><div>rows '+esc(String(t.sampleRowCount||0))+' • masks '+esc(String(t.maskedColumnCount||0))+'</div></button>').join('')+'</div></div><div class="sub">'+(sel?'<h2>'+esc(sel.qualifiedName||sel.table)+'</h2><div class="tokens"><div class="token">match '+esc(sel.matchStatus||'unknown')+'</div><div class="token">policy '+esc(sel.policyEligibility||'not-exported')+'</div><div class="token">evidence '+esc(String(sel.sourceEvidenceCount||0))+'</div></div><h3>Artifacts</h3>'+linkArtifacts(sel.relatedArtifactPaths)+'<h3>Prompts</h3>'+linkPrompts(sel.relatedPromptPaths):'<div class="empty">No tables matched.</div>')+'</div>';q('db2Filter').value=f;q('db2Filter').oninput=()=>renderDb2();for(const b of root.querySelectorAll('[data-tid]'))b.onclick=()=>{s.table=b.dataset.tid;renderDb2();};bindCross(root);}
+async function renderPromptPreview(id,path){const root=q(id);if(!path){root.innerHTML='<div class="empty">Choose a prompt.</div>';return;}root.innerHTML='<pre>Loading...</pre>';const p=await getArtifact(path);root.innerHTML='<pre>'+esc(p.content)+'</pre>';}
+async function renderPrompts(){const root=q('prompts');root.classList.toggle('active',s.tab==='prompts');if(s.tab!=='prompts')return;if(!s.detail||!s.detail.views.prompts.artifacts.length){root.innerHTML='<div class="sub"><div class="empty">No prompt artifacts.</div></div>';return;}const ps=s.detail.views.prompts.artifacts;if(!s.left)s.left=ps[0].path;if(!s.right)s.right=(ps[1]&&ps[1].path)||ps[0].path;root.innerHTML='<div class="sub"><h2>Prompt Compare</h2><p>Compare prompt packs side by side.</p><div class="item-list">'+ps.map(p=>'<button class="item" data-pick="'+esc(p.path)+'"><strong>'+esc(p.title)+'</strong><div>'+esc(p.path)+'</div></button>').join('')+'</div></div><div class="sub"><h3>Left Prompt</h3><select id="leftSel">'+ps.map(p=>'<option value="'+esc(p.path)+'"'+(p.path===s.left?' selected':'')+'>'+esc(p.title)+'</option>').join('')+'</select><div id="leftPrev" class="preview"></div></div><div class="sub"><h3>Right Prompt</h3><select id="rightSel">'+ps.map(p=>'<option value="'+esc(p.path)+'"'+(p.path===s.right?' selected':'')+'>'+esc(p.title)+'</option>').join('')+'</select><div id="rightPrev" class="preview"></div></div>';for(const b of root.querySelectorAll('[data-pick]'))b.onclick=()=>{s.left=b.dataset.pick;renderPrompts();};q('leftSel').onchange=(e)=>{s.left=e.target.value;renderPrompts();};q('rightSel').onchange=(e)=>{s.right=e.target.value;renderPrompts();};await Promise.all([renderPromptPreview('leftPrev',s.left),renderPromptPreview('rightPrev',s.right)]);}
+function renderArtifacts(){const root=q('artifacts');root.classList.toggle('active',s.tab==='artifacts');if(s.tab!=='artifacts')return;if(!s.detail||!s.detail.artifacts.length){root.innerHTML='<div class="sub"><div class="empty">No artifacts.</div></div>';return;}root.innerHTML='<div class="sub"><h2>Artifact Explorer</h2><p>Artifacts are fetched only when selected.</p><div class="item-list">'+s.detail.artifacts.map(a=>'<button class="item'+(a.path===s.artifact?' active':'')+'" data-aid="'+esc(a.path)+'"><strong>'+esc(a.path)+'</strong><div>'+esc(a.kind)+' • '+esc(String(a.sizeBytes))+' bytes</div></button>').join('')+'</div></div><div class="sub"><div class="stack"><h2 id="aTitle">Artifact Preview</h2><p id="aSub">Choose an artifact.</p></div><a id="aRaw" class="btn" target="_blank" rel="noreferrer" hidden>Open Raw</a><div id="aPrev" class="preview"><div class="empty">No artifact selected.</div></div></div>';for(const b of root.querySelectorAll('[data-aid]'))b.onclick=()=>{s.artifact=b.dataset.aid;renderArtifacts();renderArtifactPreview();};}
+async function renderArtifactPreview(){if(s.tab!=='artifacts')return;const root=q('aPrev'),title=q('aTitle'),sub=q('aSub'),raw=q('aRaw');if(!s.artifact){title.textContent='Artifact Preview';sub.textContent='Choose an artifact.';root.innerHTML='<div class="empty">No artifact selected.</div>';raw.hidden=true;return;}const art=s.detail.artifacts.find(a=>a.path===s.artifact);if(!art){root.innerHTML='<div class="empty">Artifact not found.</div>';raw.hidden=true;return;}title.textContent=art.path;sub.textContent=art.kind+' preview';const rawUrl='/runs/'+encodeURIComponent(s.program)+'/artifacts/raw?path='+encodeURIComponent(art.path);raw.href=rawUrl;raw.hidden=false;if(art.kind==='html'){root.innerHTML='<iframe src="'+rawUrl+'"></iframe>';return;}root.innerHTML='<pre>Loading...</pre>';const p=await getArtifact(art.path);const c=art.kind==='json'?JSON.stringify(JSON.parse(p.content),null,2):p.content;root.innerHTML='<pre>'+esc(c)+'</pre>';}
+async function selectTab(tab){s.tab=tab;await render();}
+async function render(){renderTabs();renderGraph();renderDb2();await renderPrompts();renderArtifacts();await renderArtifactPreview();}
+async function selectRun(program){s.program=program;s.cache.clear();renderRuns();s.detail=await getJson('/api/runs/'+encodeURIComponent(program));s.artifact=runDefaultArtifact();s.node=s.detail.views.graph.nodes[0]&&s.detail.views.graph.nodes[0].id||null;s.table=s.detail.views.db2.tables[0]&&s.detail.views.db2.tables[0].id||null;const ps=s.detail.views.prompts.artifacts;s.left=ps[0]&&ps[0].path||null;s.right=ps[1]&&ps[1].path||s.left;renderHero();renderMetrics();await render();}
+async function boot(){s.runs=await getJson('/api/runs');renderRuns();renderTabs();if(s.runs.length)await selectRun(s.runs[0].program);}
+boot().catch((e)=>{q('artifacts').classList.add('active');q('artifacts').innerHTML='<div class="sub"><div class="empty">'+esc(e.message||String(e))+'</div></div>';});
+</script></body></html>`;
 }
 
 module.exports = {
