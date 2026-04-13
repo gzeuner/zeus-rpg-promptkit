@@ -30,13 +30,15 @@ test('source scan cache reuses unchanged file scans and invalidates on file chan
   cache.getOrScan(sourceFile, scanFn);
   cache.getOrScan(sourceFile, scanFn);
   assert.equal(scanCount, 1);
-  assert.deepEqual(cache.getStats(), {
-    requests: 2,
-    hits: 1,
-    misses: 1,
-    invalidations: 0,
-    entryCount: 1,
-  });
+  assert.equal(cache.getStats().requests, 2);
+  assert.equal(cache.getStats().hits, 1);
+  assert.equal(cache.getStats().memoryHits, 1);
+  assert.equal(cache.getStats().persistentHits, 0);
+  assert.equal(cache.getStats().misses, 1);
+  assert.equal(cache.getStats().invalidations, 0);
+  assert.equal(cache.getStats().writes, 0);
+  assert.equal(cache.getStats().entryCount, 1);
+  assert.equal(cache.getStats().cacheDir, null);
 
   const futureTime = new Date(Date.now() + 2000);
   fs.writeFileSync(sourceFile, '**FREE\nCALL INVPGM;\nCALL SUBPGM;\n', 'utf8');
@@ -44,13 +46,53 @@ test('source scan cache reuses unchanged file scans and invalidates on file chan
   cache.getOrScan(sourceFile, scanFn);
 
   assert.equal(scanCount, 2);
-  assert.deepEqual(cache.getStats(), {
-    requests: 3,
-    hits: 1,
-    misses: 2,
-    invalidations: 1,
-    entryCount: 1,
+  assert.equal(cache.getStats().requests, 3);
+  assert.equal(cache.getStats().hits, 1);
+  assert.equal(cache.getStats().memoryHits, 1);
+  assert.equal(cache.getStats().persistentHits, 0);
+  assert.equal(cache.getStats().misses, 2);
+  assert.equal(cache.getStats().invalidations, 1);
+  assert.equal(cache.getStats().writes, 0);
+  assert.equal(cache.getStats().entryCount, 2);
+
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+});
+
+test('source scan cache reuses persisted entries across cache instances', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-scan-cache-persisted-'));
+  const cacheDir = path.join(tempRoot, '.cache');
+  const sourceFile = path.join(tempRoot, 'ORDERPGM.rpgle');
+  fs.writeFileSync(sourceFile, '**FREE\nCALL INVPGM;\n', 'utf8');
+
+  let firstScanCount = 0;
+  const firstCache = createSourceScanCache({ cacheDir });
+  firstCache.getOrScan(sourceFile, (filePath) => {
+    firstScanCount += 1;
+    return {
+      sourceFile: { path: filePath, sizeBytes: fs.statSync(filePath).size, lines: 2 },
+      tables: [],
+      calls: [],
+      copyMembers: [],
+      sqlStatements: [],
+      notes: [],
+    };
   });
+
+  let secondScanCount = 0;
+  const secondCache = createSourceScanCache({ cacheDir });
+  secondCache.getOrScan(sourceFile, () => {
+    secondScanCount += 1;
+    throw new Error('expected persistent cache hit');
+  });
+
+  assert.equal(firstScanCount, 1);
+  assert.equal(secondScanCount, 0);
+  assert.equal(secondCache.getStats().hits, 1);
+  assert.equal(secondCache.getStats().memoryHits, 0);
+  assert.equal(secondCache.getStats().persistentHits, 1);
+  assert.equal(secondCache.getStats().misses, 0);
+  assert.equal(secondCache.getStats().writes, 0);
+  assert.equal(secondCache.getStats().cacheDir, cacheDir);
 
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
@@ -92,7 +134,9 @@ test('analyze pipeline reuses scan results during cross-program graph traversal'
   assert.ok(buildContextStage);
   assert.equal(collectStage.metadata.scanCache.misses, 2);
   assert.equal(collectStage.metadata.scanCache.hits, 0);
+  assert.equal(collectStage.metadata.scanCache.writes, 2);
   assert.ok(buildContextStage.metadata.scanCache.hits >= 2);
+  assert.ok(buildContextStage.metadata.scanCache.memoryHits >= 2);
   assert.equal(buildContextStage.metadata.scanCache.entryCount, 2);
 
   fs.rmSync(tempRoot, { recursive: true, force: true });

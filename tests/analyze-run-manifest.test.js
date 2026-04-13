@@ -43,6 +43,7 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
         completedAt: '2026-03-16T10:00:02.000Z',
         durationMs: 2000,
         optimizeContextEnabled: true,
+        emitDiagnosticsEnabled: true,
         skipTestData: false,
         testDataLimit: 25,
         extensions: ['.rpgle'],
@@ -127,6 +128,13 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
         },
         importManifestPath: path.join(sourceRoot, 'zeus-import-manifest.json'),
         generatedFiles: ['context.json', 'report.md'],
+        cacheStatus: {
+          enabled: true,
+          sourceScan: {
+            hits: 3,
+            misses: 1,
+          },
+        },
         stageReports: [{
           id: 'collect-scan',
           status: 'completed',
@@ -168,6 +176,7 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
     assert.equal(manifest.run.status, 'succeeded');
     assert.equal(manifest.run.durationMs, 2000);
     assert.equal(manifest.inputs.sourceSnapshot.fileCount, 1);
+    assert.equal(manifest.inputs.options.emitDiagnosticsEnabled, true);
     assert.equal(manifest.summary.generatedArtifactCount, 2);
     assert.equal(manifest.summary.warningCount, 1);
     assert.equal(manifest.inputs.importManifest.schemaVersion, 2);
@@ -185,6 +194,7 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
     assert.equal(manifest.artifacts[0].exists, true);
     assert.ok(typeof manifest.artifacts[0].sha256 === 'string' && manifest.artifacts[0].sha256.length > 0);
     assert.equal(manifest.reproducibility.enabled, false);
+    assert.equal(manifest.cacheStatus.sourceScan.hits, 3);
     assert.ok(typeof manifest.reproducibility.contentFingerprint === 'string');
     assert.equal(manifest.comparison.previousRunStatus, 'succeeded');
     assert.equal(manifest.comparison.sourceFingerprintChanged, true);
@@ -211,6 +221,7 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
         completedAt: '2026-03-16T10:00:01.000Z',
         durationMs: 1000,
         optimizeContextEnabled: false,
+        emitDiagnosticsEnabled: false,
         skipTestData: true,
         testDataLimit: 10,
         extensions: ['.rpgle'],
@@ -258,6 +269,7 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
     assert.equal(manifest.summary.errorCount, 1);
     assert.equal(manifest.diagnostics.length, 1);
     assert.equal(manifest.reproducibility.enabled, false);
+    assert.equal(manifest.inputs.options.emitDiagnosticsEnabled, false);
     assert.equal(manifest.inputs.options.guidedMode.name, 'impact');
     assert.match(manifest.inputs.options.guidedMode.reviewWorkflow.expectedDecisions.join('\n'), /impact target/i);
   } finally {
