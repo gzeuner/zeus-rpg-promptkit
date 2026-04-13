@@ -46,6 +46,16 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
         emitDiagnosticsEnabled: true,
         skipTestData: false,
         testDataLimit: 25,
+        analysisLimits: {
+          maxProgramDepth: 12,
+          maxPrograms: 80,
+        },
+        testDataPolicy: {
+          allowTables: ['APP.CUSTOMERS'],
+          denyTables: ['APP.AUDITLOG'],
+          maskColumns: ['EMAIL'],
+          maskRules: [{ table: 'CUSTOMERS', columns: ['PHONE'], value: 'MASKED_PHONE' }],
+        },
         extensions: ['.rpgle'],
         guidedMode: {
           name: 'modernization',
@@ -177,6 +187,8 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
     assert.equal(manifest.run.durationMs, 2000);
     assert.equal(manifest.inputs.sourceSnapshot.fileCount, 1);
     assert.equal(manifest.inputs.options.emitDiagnosticsEnabled, true);
+    assert.equal(manifest.inputs.options.analysisLimits.maxProgramDepth, 12);
+    assert.deepEqual(manifest.inputs.options.testDataPolicy.allowTables, ['APP.CUSTOMERS']);
     assert.equal(manifest.summary.generatedArtifactCount, 2);
     assert.equal(manifest.summary.warningCount, 1);
     assert.equal(manifest.inputs.importManifest.schemaVersion, 2);
@@ -224,6 +236,15 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
         emitDiagnosticsEnabled: false,
         skipTestData: true,
         testDataLimit: 10,
+        analysisLimits: {
+          maxProgramDepth: 10,
+        },
+        testDataPolicy: {
+          allowTables: [],
+          denyTables: [],
+          maskColumns: [],
+          maskRules: [],
+        },
         extensions: ['.rpgle'],
         guidedMode: {
           name: 'impact',
