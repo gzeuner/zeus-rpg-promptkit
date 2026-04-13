@@ -165,6 +165,7 @@ function runAnalyze(args) {
   logVerbose(`Structured diagnostics: ${emitDiagnostics ? 'enabled' : 'disabled'}`);
   logVerbose(`Reproducible mode: ${reproducibility.enabled ? 'enabled' : 'disabled'}`);
   logVerbose(`Test data extraction: ${skipTestData ? 'disabled' : `enabled (limit ${testDataLimit})`}`);
+  logVerbose(`Analysis limits: depth ${config.analysisLimits.maxProgramDepth}, programs ${config.analysisLimits.maxPrograms}, nodes ${config.analysisLimits.maxNodes}, edges ${config.analysisLimits.maxEdges}`);
   logVerbose(`IFS path scan: ${scanIfsPathsEnabled ? 'enabled' : 'disabled'}`);
   logVerbose(`Search terms: ${searchTerms.length > 0 ? searchTerms.join(', ') : 'none'}`);
   logVerbose(`Diagnostic packs: ${diagnosticPacks.length > 0 ? diagnosticPacks.join(', ') : 'none'}`);
@@ -235,6 +236,8 @@ function runAnalyze(args) {
         emitDiagnosticsEnabled: emitDiagnostics,
         skipTestData,
         testDataLimit,
+        analysisLimits: config.analysisLimits,
+        testDataPolicy: config.testData,
         extensions: config.extensions,
         reproducibility,
         guidedMode,
@@ -277,6 +280,8 @@ function runAnalyze(args) {
         emitDiagnosticsEnabled: emitDiagnostics,
         skipTestData,
         testDataLimit,
+        analysisLimits: config.analysisLimits,
+        testDataPolicy: config.testData,
         extensions: config.extensions,
         reproducibility,
         guidedMode,
