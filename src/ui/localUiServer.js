@@ -106,6 +106,11 @@ function createLocalUiRequestHandler({ outputRoot }) {
         return;
       }
 
+      if (segments[0] === 'api' && segments[1] === 'runs' && segments[3] === 'views' && segments.length === 4) {
+        sendJson(response, 200, readAnalysisRun(resolvedOutputRoot, segments[2]).views);
+        return;
+      }
+
       if (segments[0] === 'api' && segments[1] === 'runs' && segments[3] === 'artifacts' && segments[4] === 'content') {
         const artifactPath = url.searchParams.get('path');
         const artifact = readArtifactContent(resolvedOutputRoot, segments[2], artifactPath);
