@@ -11,49 +11,43 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
-const fs = require('fs');
-const path = require('path');
 const { collectSourceFiles } = require('../collector/sourceCollector');
 const { scanSourceFiles } = require('../scanner/rpgScanner');
-const { createSourceScanCache } = require('../scanner/sourceScanCache');
+const {
+  createSourceScanCache,
+  resolveDefaultSourceScanCacheDir,
+} = require('../scanner/sourceScanCache');
 const {
   buildCanonicalAnalysisModel,
+  defaultAnalysisCache,
   enrichCanonicalAnalysisModel,
 } = require('../context/canonicalAnalysisModel');
 const { buildContext } = require('../context/contextBuilder');
-const { buildPrompts, resolvePromptTemplates } = require('../prompt/promptBuilder');
-const { generateMarkdownReport } = require('../report/markdownReport');
-const { writeJsonReport } = require('../report/jsonReport');
-const { generateArchitectureReport } = require('../report/architectureReport');
 const { optimizeContext, DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../ai/contextOptimizer');
 const { buildAiKnowledgeProjection } = require('../ai/knowledgeProjection');
 const { estimateTokensFromObject, computeReduction } = require('../ai/tokenEstimator');
-const { generateArchitectureViewer } = require('../viewer/architectureViewerGenerator');
-const { exportDb2Metadata } = require('../db2/metadataExportService');
+const { exportDb2Metadata, buildDb2MetadataCanonicalUpdatesFromPayload } = require('../db2/metadataExportService');
 const { exportTestData } = require('../db2/testDataExportService');
 const { buildDependencyGraph, buildGraphSummary } = require('../dependency/dependencyGraphBuilder');
 const { buildCrossProgramGraph } = require('../dependency/crossProgramGraphBuilder');
-const {
-  renderJson,
-  renderMermaid,
-  renderMarkdown,
-  renderCrossProgramMarkdown,
-} = require('../dependency/graphSerializer');
 const { pickSourceSnippet } = require('../cli/helpers/sourceSnippet');
 const { runStages } = require('./runStages');
+const { writeAnalyzeArtifacts } = require('./analyzeArtifactWriter');
 const { readImportManifest } = require('../fetch/importManifest');
 const { validateSourceFiles } = require('../source/sourceIntegrity');
-const { buildAnalysisIndex } = require('../workflow/analysisIndex');
-const { getPromptContract } = require('../prompt/promptRegistry');
-const { scanIfsPaths, renderIfsPathMarkdown } = require('../investigation/ifsPathScanner');
-const { runFullTextSearch, renderFullTextSearchMarkdown } = require('../investigation/fullTextSearch');
-const { runDiagnosticPacks, renderDiagnosticPackMarkdown } = require('../investigation/diagnosticPackRunner');
+const { scanIfsPaths } = require('../investigation/ifsPathScanner');
+const { runFullTextSearch } = require('../investigation/fullTextSearch');
+const { runDiagnosticPacks } = require('../investigation/diagnosticPackRunner');
 const {
-  buildReproduciblePathReplacements,
-  normalizeReproducibilitySettings,
-  replaceExactStringsDeep,
-  resolveTimestamp,
-} = require('../reproducibility/reproducibility');
+  ANALYSIS_ARTIFACT_CACHE_FILE,
+  buildDb2MetadataCacheKey,
+  buildTestDataCacheKey,
+  readAnalysisArtifactCache,
+  readCachedArtifact,
+  storeCachedArtifact,
+  writeAnalysisArtifactCache,
+} = require('./analysisArtifactCache');
+const { resolveTimestamp } = require('../reproducibility/reproducibility');
 
 function resolvePromptContext(context, optimizedContext) {
   return optimizedContext || context;
@@ -64,9 +58,81 @@ function buildSourceFileMetadataMap(canonicalAnalysis) {
     .map((entry) => [entry.path, entry]));
 }
 
+function mergeObject(baseValue, patchValue) {
+  const base = baseValue && typeof baseValue === 'object' && !Array.isArray(baseValue) ? baseValue : {};
+  const patch = patchValue && typeof patchValue === 'object' && !Array.isArray(patchValue) ? patchValue : {};
+  return {
+    ...base,
+    ...patch,
+  };
+}
+
+function mergeAnalysisCache(baseValue, patchValue) {
+  const base = mergeObject(defaultAnalysisCache(), baseValue);
+  const patch = patchValue && typeof patchValue === 'object' ? patchValue : {};
+  return {
+    ...base,
+    ...patch,
+    sourceScan: mergeObject(base.sourceScan, patch.sourceScan),
+    db2Metadata: mergeObject(base.db2Metadata, patch.db2Metadata),
+    testData: mergeObject(base.testData, patch.testData),
+  };
+}
+
+function createEmptyAnalysisArtifactCache() {
+  return {
+    schemaVersion: 1,
+    kind: 'analysis-artifact-cache',
+    artifacts: {},
+  };
+}
+
+function ensureAnalysisArtifactCache(state) {
+  if (state.analysisArtifactCache) {
+    return state.analysisArtifactCache;
+  }
+  if (!state.outputProgramDir) {
+    return createEmptyAnalysisArtifactCache();
+  }
+  return readAnalysisArtifactCache(state.outputProgramDir);
+}
+
+function updateOptimizedContext(optimizedContext, context, patch = {}) {
+  if (!optimizedContext) {
+    return null;
+  }
+
+  return {
+    ...optimizedContext,
+    analysisCache: context.analysisCache,
+    ifsPaths: context.ifsPaths,
+    searchResults: context.searchResults,
+    diagnosticPacks: context.diagnosticPacks,
+    db2Metadata: context.db2Metadata,
+    testData: context.testData,
+    notes: context.notes,
+    ...patch,
+  };
+}
+
+function buildScanCacheOptions(state) {
+  const options = {
+    ...(state.scanCacheOptions || {}),
+  };
+
+  if (state.scanCacheDir !== undefined) {
+    options.cacheDir = state.scanCacheDir;
+  } else if (options.cacheDir === undefined) {
+    options.cacheDir = resolveDefaultSourceScanCacheDir(state.outputRoot);
+  }
+
+  return options;
+}
+
 function collectAndScanStage(state) {
   const { sourceRoot, config, logVerbose } = state;
-  const scanCache = state.scanCache || createSourceScanCache();
+  const scanCache = state.scanCache || createSourceScanCache(buildScanCacheOptions(state));
+  const analysisArtifactCache = ensureAnalysisArtifactCache(state);
   const sourceFiles = collectSourceFiles(sourceRoot, config.extensions);
   logVerbose(`Collected source files: ${sourceFiles.length}`);
 
@@ -155,8 +221,16 @@ function collectAndScanStage(state) {
     });
   }
 
+  const cacheStatus = mergeAnalysisCache(state.cacheStatus, {
+    enabled: Boolean(scanCache.getStats().cacheDir || state.outputProgramDir),
+    artifactManifestFile: state.outputProgramDir ? ANALYSIS_ARTIFACT_CACHE_FILE : null,
+    sourceScan: scanCache.getStats(),
+  });
+
   return {
     ...state,
+    analysisArtifactCache,
+    cacheStatus,
     scanCache,
     sourceFiles,
     scannableSourceFiles: validation.validFiles,
@@ -187,7 +261,8 @@ function collectAndScanStage(state) {
       invalidSourceFileCount: validation.invalidCount,
       sourceValidationWarningCount: validation.warningCount,
       importManifestFound: Boolean(importManifestResult.manifest),
-      scanCache: scanCache.getStats(),
+      scanCache: cacheStatus.sourceScan,
+      analysisArtifactCacheEntries: Object.keys(analysisArtifactCache.artifacts || {}).length,
       scannedFileCount: (scanSummary.sourceFiles || []).length,
       tableCount: (scanSummary.tables || []).length,
       programCallCount: (scanSummary.calls || []).length,
@@ -225,6 +300,7 @@ function buildContextStage(state) {
     sourceMetadataByPath,
     normalizedSourceTextByRelativePath,
     sourceNormalizationSummary,
+    cacheStatus,
   } = state;
 
   let canonicalAnalysis = buildCanonicalAnalysisModel({
@@ -266,6 +342,7 @@ function buildContextStage(state) {
     sourceCatalog: crossProgramGraph.sourceCatalog,
     sourceNormalization: sourceNormalizationSummary || null,
     sourceTypeAnalysis: scanSummary.sourceTypeAnalysis || null,
+    analysisCache: cacheStatus || defaultAnalysisCache(),
   });
   context = buildContext({ canonicalAnalysis });
 
@@ -322,14 +399,10 @@ function investigateSourcesStage(state) {
     searchResults,
   });
   const nextContext = buildContext({ canonicalAnalysis: nextCanonicalAnalysis });
-  const nextOptimizedContext = optimizedContext
-    ? {
-      ...optimizedContext,
-      ifsPaths: ifsPathReport,
-      searchResults,
-      notes: nextContext.notes,
-    }
-    : null;
+  const nextOptimizedContext = updateOptimizedContext(optimizedContext, nextContext, {
+    ifsPaths: ifsPathReport,
+    searchResults,
+  });
 
   return {
     ...state,
@@ -431,39 +504,119 @@ function exportDb2Stage(state) {
     outputProgramDir,
     verbose,
   } = state;
-  const db2Export = exportDb2Metadata({
-    program,
-    dependencies: context.dependencies,
-    dbConfig: config.db,
-    outputDir: outputProgramDir,
-    verbose,
-    canonicalAnalysis,
-    context,
-  });
+  const analysisArtifactCache = ensureAnalysisArtifactCache(state);
+  const currentCacheStatus = mergeAnalysisCache(state.cacheStatus);
+  const currentDb2Cache = mergeObject(currentCacheStatus.db2Metadata, {});
+  const currentDb2Hits = Number(currentDb2Cache.hits) || 0;
+  const currentDb2Misses = Number(currentDb2Cache.misses) || 0;
+  const cacheKey = outputProgramDir
+    ? buildDb2MetadataCacheKey({
+      program,
+      dependencies: context.dependencies,
+      dbConfig: config.db,
+    })
+    : null;
+  const cachedArtifact = cacheKey && outputProgramDir
+    ? readCachedArtifact(outputProgramDir, analysisArtifactCache, 'db2Metadata', cacheKey)
+    : null;
 
+  let nextAnalysisArtifactCache = analysisArtifactCache;
+  let db2Export;
+  let db2CacheMetadata;
+
+  if (cachedArtifact) {
+    db2Export = {
+      payload: cachedArtifact.payload,
+      summary: {
+        ...(cachedArtifact.summary || {}),
+        cacheStatus: 'hit',
+      },
+      notes: Array.isArray(cachedArtifact.payload.notes) ? cachedArtifact.payload.notes : [],
+      diagnostics: [],
+      canonicalUpdates: buildDb2MetadataCanonicalUpdatesFromPayload({
+        canonicalAnalysis,
+        payload: cachedArtifact.payload,
+      }),
+    };
+    db2CacheMetadata = {
+      ...currentDb2Cache,
+      status: 'hit',
+      hits: currentDb2Hits + 1,
+      misses: currentDb2Misses,
+      cacheKey,
+      payloadFile: cachedArtifact.payloadFile,
+      markdownFile: cachedArtifact.markdownFile,
+      manifestFile: ANALYSIS_ARTIFACT_CACHE_FILE,
+    };
+  } else {
+    db2Export = exportDb2Metadata({
+      program,
+      dependencies: context.dependencies,
+      dbConfig: config.db,
+      outputDir: outputProgramDir,
+      verbose,
+      canonicalAnalysis,
+      context,
+    });
+
+    const exported = db2Export.summary && db2Export.summary.status === 'exported';
+    if (exported && outputProgramDir && cacheKey && db2Export.payload) {
+      nextAnalysisArtifactCache = storeCachedArtifact(
+        analysisArtifactCache,
+        'db2Metadata',
+        cacheKey,
+        db2Export.summary,
+        db2Export.summary.file || 'db2-metadata.json',
+        db2Export.summary.markdownFile || 'db2-metadata.md',
+      );
+      writeAnalysisArtifactCache(outputProgramDir, nextAnalysisArtifactCache);
+    }
+
+    db2CacheMetadata = {
+      ...currentDb2Cache,
+      status: exported ? 'miss' : (currentDb2Cache.status || 'skipped'),
+      hits: currentDb2Hits,
+      misses: exported ? currentDb2Misses + 1 : currentDb2Misses,
+      cacheKey: exported ? cacheKey : null,
+      payloadFile: exported ? (db2Export.summary.file || 'db2-metadata.json') : null,
+      markdownFile: exported ? (db2Export.summary.markdownFile || 'db2-metadata.md') : null,
+      manifestFile: outputProgramDir ? ANALYSIS_ARTIFACT_CACHE_FILE : null,
+      reason: exported ? null : (db2Export.summary ? db2Export.summary.reason || null : null),
+    };
+    db2Export.summary = {
+      ...(db2Export.summary || {}),
+      cacheStatus: db2CacheMetadata.status,
+    };
+  }
+
+  const nextCacheStatus = mergeAnalysisCache(currentCacheStatus, {
+    db2Metadata: db2CacheMetadata,
+  });
   const nextCanonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
     entities: db2Export.canonicalUpdates && db2Export.canonicalUpdates.entities ? db2Export.canonicalUpdates.entities : undefined,
     relations: db2Export.canonicalUpdates && db2Export.canonicalUpdates.relations ? db2Export.canonicalUpdates.relations : undefined,
     db2Metadata: db2Export.summary,
+    analysisCache: nextCacheStatus,
     notes: db2Export.notes || [],
   });
   const nextContext = buildContext({ canonicalAnalysis: nextCanonicalAnalysis });
-  const nextOptimizedContext = optimizedContext
-    ? {
-      ...optimizedContext,
-      db2Metadata: db2Export.summary,
-      notes: nextContext.notes,
-    }
-    : null;
+  const nextOptimizedContext = updateOptimizedContext(optimizedContext, nextContext, {
+    db2Metadata: db2Export.summary,
+  });
 
   return {
     ...state,
+    analysisArtifactCache: nextAnalysisArtifactCache,
+    cacheStatus: nextCacheStatus,
     canonicalAnalysis: nextCanonicalAnalysis,
     context: nextContext,
     optimizedContext: nextOptimizedContext,
     promptContext: resolvePromptContext(nextContext, nextOptimizedContext),
     db2Export,
-    stageMetadata: db2Export.summary,
+    stageMetadata: {
+      ...db2Export.summary,
+      cache: db2CacheMetadata,
+    },
     stageDiagnostics: [
       ...(db2Export.notes || []).map((message) => ({
         severity: db2Export.summary.status === 'skipped' ? 'warning' : 'info',
@@ -493,44 +646,120 @@ function exportTestDataStage(state) {
     verbose,
     db2Export,
   } = state;
+  const analysisArtifactCache = ensureAnalysisArtifactCache(state);
+  const currentCacheStatus = mergeAnalysisCache(state.cacheStatus);
+  const currentTestDataCache = mergeObject(currentCacheStatus.testData, {});
+  const currentTestDataHits = Number(currentTestDataCache.hits) || 0;
+  const currentTestDataMisses = Number(currentTestDataCache.misses) || 0;
+  const testDataConfig = {
+    ...config.testData,
+    limit: testDataLimit,
+  };
+  const cacheKey = outputProgramDir
+    ? buildTestDataCacheKey({
+      program,
+      metadataPayload: db2Export && db2Export.payload ? db2Export.payload : null,
+      dbConfig: config.db,
+      testDataConfig,
+    })
+    : null;
+  const cachedArtifact = cacheKey && outputProgramDir
+    ? readCachedArtifact(outputProgramDir, analysisArtifactCache, 'testData', cacheKey)
+    : null;
 
-  const testDataExport = exportTestData({
-    program,
-    dependencies: context.dependencies,
-    dbConfig: config.db,
-    outputDir: outputProgramDir,
-    metadataPayload: db2Export.payload,
-    canonicalAnalysis,
-    context,
-    testDataConfig: {
-      ...config.testData,
-      limit: testDataLimit,
-    },
-    skipTestData,
-    verbose,
+  let nextAnalysisArtifactCache = analysisArtifactCache;
+  let testDataExport;
+  let testDataCacheMetadata;
+
+  if (cachedArtifact) {
+    testDataExport = {
+      payload: cachedArtifact.payload,
+      summary: {
+        ...(cachedArtifact.summary || {}),
+        cacheStatus: 'hit',
+      },
+      notes: Array.isArray(cachedArtifact.payload.notes) ? cachedArtifact.payload.notes : [],
+    };
+    testDataCacheMetadata = {
+      ...currentTestDataCache,
+      status: 'hit',
+      hits: currentTestDataHits + 1,
+      misses: currentTestDataMisses,
+      cacheKey,
+      payloadFile: cachedArtifact.payloadFile,
+      markdownFile: cachedArtifact.markdownFile,
+      manifestFile: ANALYSIS_ARTIFACT_CACHE_FILE,
+    };
+  } else {
+    testDataExport = exportTestData({
+      program,
+      dependencies: context.dependencies,
+      dbConfig: config.db,
+      outputDir: outputProgramDir,
+      metadataPayload: db2Export ? db2Export.payload : null,
+      canonicalAnalysis,
+      context,
+      testDataConfig,
+      skipTestData,
+      verbose,
+    });
+
+    const exported = testDataExport.summary && testDataExport.summary.status === 'exported';
+    if (exported && outputProgramDir && cacheKey && testDataExport.payload) {
+      nextAnalysisArtifactCache = storeCachedArtifact(
+        analysisArtifactCache,
+        'testData',
+        cacheKey,
+        testDataExport.summary,
+        testDataExport.summary.file || 'test-data.json',
+        testDataExport.summary.markdownFile || 'test-data.md',
+      );
+      writeAnalysisArtifactCache(outputProgramDir, nextAnalysisArtifactCache);
+    }
+
+    testDataCacheMetadata = {
+      ...currentTestDataCache,
+      status: exported ? 'miss' : (currentTestDataCache.status || 'skipped'),
+      hits: currentTestDataHits,
+      misses: exported ? currentTestDataMisses + 1 : currentTestDataMisses,
+      cacheKey: exported ? cacheKey : null,
+      payloadFile: exported ? (testDataExport.summary.file || 'test-data.json') : null,
+      markdownFile: exported ? (testDataExport.summary.markdownFile || 'test-data.md') : null,
+      manifestFile: outputProgramDir ? ANALYSIS_ARTIFACT_CACHE_FILE : null,
+      reason: exported ? null : (testDataExport.summary ? testDataExport.summary.reason || null : null),
+    };
+    testDataExport.summary = {
+      ...(testDataExport.summary || {}),
+      cacheStatus: testDataCacheMetadata.status,
+    };
+  }
+
+  const nextCacheStatus = mergeAnalysisCache(currentCacheStatus, {
+    testData: testDataCacheMetadata,
   });
-
   const nextCanonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
     testData: testDataExport.summary,
+    analysisCache: nextCacheStatus,
     notes: testDataExport.notes || [],
   });
   const nextContext = buildContext({ canonicalAnalysis: nextCanonicalAnalysis });
-  const nextOptimizedContext = optimizedContext
-    ? {
-      ...optimizedContext,
-      testData: testDataExport.summary,
-      notes: nextContext.notes,
-    }
-    : null;
+  const nextOptimizedContext = updateOptimizedContext(optimizedContext, nextContext, {
+    testData: testDataExport.summary,
+  });
 
   return {
     ...state,
+    analysisArtifactCache: nextAnalysisArtifactCache,
+    cacheStatus: nextCacheStatus,
     canonicalAnalysis: nextCanonicalAnalysis,
     context: nextContext,
     optimizedContext: nextOptimizedContext,
     promptContext: resolvePromptContext(nextContext, nextOptimizedContext),
     testDataExport,
-    stageMetadata: testDataExport.summary,
+    stageMetadata: {
+      ...testDataExport.summary,
+      cache: testDataCacheMetadata,
+    },
     stageDiagnostics: (testDataExport.notes || []).map((message) => ({
       severity: testDataExport.summary.status === 'skipped' ? 'warning' : 'info',
       code: testDataExport.summary.status === 'skipped' ? 'TEST_DATA_SKIPPED' : 'TEST_DATA_NOTE',
@@ -566,13 +795,9 @@ function runDiagnosticPacksStage(state) {
     notes: diagnosticResult.notes || [],
   });
   const nextContext = buildContext({ canonicalAnalysis: nextCanonicalAnalysis });
-  const nextOptimizedContext = optimizedContext
-    ? {
-      ...optimizedContext,
-      diagnosticPacks: diagnosticResult.report,
-      notes: nextContext.notes,
-    }
-    : null;
+  const nextOptimizedContext = updateOptimizedContext(optimizedContext, nextContext, {
+    diagnosticPacks: diagnosticResult.report,
+  });
 
   return {
     ...state,
@@ -596,189 +821,8 @@ function runDiagnosticPacksStage(state) {
   };
 }
 
-function writeArtifactsStage(state) {
-  const {
-    canonicalAnalysis,
-    context,
-    optimizedContext,
-    graph,
-    crossProgramGraph,
-    outputProgramDir,
-    promptContext,
-    sourceSnippet,
-    optimizationReport,
-    promptTemplates,
-    workflowMode,
-    workflowModeSettings,
-    workflowPreset,
-    reproducibility,
-    normalizedSourceTextByRelativePath,
-    ifsPathReport,
-    searchResults,
-    diagnosticPackReport,
-    diagnosticPackManifest,
-  } = state;
-  const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
-  const selectedPromptTemplates = resolvePromptTemplates(promptTemplates);
-
-  const aiKnowledge = buildAiKnowledgeProjection({
-    canonicalAnalysis,
-    context,
-    optimizedContext,
-    sourceTextByRelativePath: normalizedSourceTextByRelativePath,
-  });
-
-  const generatedPromptFiles = selectedPromptTemplates.map((templateName) => getPromptContract(templateName).outputFileName);
-  const generatedDb2Files = context.db2Metadata && context.db2Metadata.status === 'exported'
-    ? [
-      context.db2Metadata.file || 'db2-metadata.json',
-      context.db2Metadata.markdownFile || 'db2-metadata.md',
-    ]
-    : [];
-  const generatedTestDataFiles = context.testData && context.testData.status === 'exported'
-    ? [
-      context.testData.file || 'test-data.json',
-      context.testData.markdownFile || 'test-data.md',
-    ]
-    : [];
-  const generatedInvestigationFiles = [];
-  if (ifsPathReport && ifsPathReport.enabled) {
-    generatedInvestigationFiles.push('ifs-paths.json', 'ifs-paths.md');
-  }
-  if (searchResults && searchResults.enabled) {
-    generatedInvestigationFiles.push('search-results.json', 'search-results.md');
-  }
-  if (diagnosticPackReport && diagnosticPackReport.enabled) {
-    generatedInvestigationFiles.push(
-      'diagnostic-query-packs.json',
-      'diagnostic-query-packs.md',
-      'diagnostic-query-pack-manifest.json',
-    );
-  }
-  const generatedFiles = [
-    'canonical-analysis.json',
-    'context.json',
-    ...(optimizedContext ? ['optimized-context.json'] : []),
-    'ai-knowledge.json',
-    'analysis-index.json',
-    'dependency-graph.json',
-    'dependency-graph.mmd',
-    'dependency-graph.md',
-    'program-call-tree.json',
-    'program-call-tree.mmd',
-    'program-call-tree.md',
-    'architecture.html',
-    'architecture-report.md',
-    ...generatedDb2Files,
-    ...generatedTestDataFiles,
-    ...generatedInvestigationFiles,
-    ...generatedPromptFiles,
-    'report.md',
-  ];
-  const analysisIndex = buildAnalysisIndex({
-    canonicalAnalysis,
-    context,
-    aiKnowledge,
-    generatedFiles,
-    selectedMode: workflowMode,
-    derivedModeSettings: workflowModeSettings,
-    selectedPreset: workflowPreset,
-  });
-  const pathReplacements = reproducibilitySettings.enabled
-    ? buildReproduciblePathReplacements({
-      cwd: process.cwd(),
-      sourceRoot: state.sourceRoot,
-      outputRoot: state.outputRoot,
-      outputProgramDir,
-      program: state.program,
-    })
-    : null;
-  const writtenCanonicalAnalysis = reproducibilitySettings.enabled
-    ? replaceExactStringsDeep(canonicalAnalysis, pathReplacements)
-    : canonicalAnalysis;
-  const writtenContext = reproducibilitySettings.enabled
-    ? replaceExactStringsDeep(context, pathReplacements)
-    : context;
-  const writtenOptimizedContext = reproducibilitySettings.enabled && optimizedContext
-    ? replaceExactStringsDeep(optimizedContext, pathReplacements)
-    : optimizedContext;
-  const writtenAiKnowledge = reproducibilitySettings.enabled
-    ? replaceExactStringsDeep(aiKnowledge, pathReplacements)
-    : aiKnowledge;
-  const writtenAnalysisIndex = reproducibilitySettings.enabled
-    ? replaceExactStringsDeep(analysisIndex, pathReplacements)
-    : analysisIndex;
-
-  writeJsonReport(path.join(outputProgramDir, 'canonical-analysis.json'), writtenCanonicalAnalysis);
-  writeJsonReport(path.join(outputProgramDir, 'context.json'), writtenContext);
-  if (writtenOptimizedContext) {
-    writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), writtenOptimizedContext);
-  }
-  writeJsonReport(path.join(outputProgramDir, 'ai-knowledge.json'), writtenAiKnowledge);
-  if (ifsPathReport && ifsPathReport.enabled) {
-    writeJsonReport(path.join(outputProgramDir, 'ifs-paths.json'), ifsPathReport);
-    fs.writeFileSync(path.join(outputProgramDir, 'ifs-paths.md'), renderIfsPathMarkdown(ifsPathReport), 'utf8');
-  }
-  if (searchResults && searchResults.enabled) {
-    writeJsonReport(path.join(outputProgramDir, 'search-results.json'), searchResults);
-    fs.writeFileSync(path.join(outputProgramDir, 'search-results.md'), renderFullTextSearchMarkdown(searchResults), 'utf8');
-  }
-  if (diagnosticPackReport && diagnosticPackReport.enabled) {
-    writeJsonReport(path.join(outputProgramDir, 'diagnostic-query-packs.json'), diagnosticPackReport);
-    writeJsonReport(path.join(outputProgramDir, 'diagnostic-query-pack-manifest.json'), diagnosticPackManifest);
-    fs.writeFileSync(
-      path.join(outputProgramDir, 'diagnostic-query-packs.md'),
-      renderDiagnosticPackMarkdown(diagnosticPackReport),
-      'utf8',
-    );
-  }
-
-  const programCallTreeJsonPath = path.join(outputProgramDir, 'program-call-tree.json');
-  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.json'), renderJson(graph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.mmd'), renderMermaid(graph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph), 'utf8');
-  fs.writeFileSync(programCallTreeJsonPath, renderJson(crossProgramGraph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.mmd'), renderMermaid(crossProgramGraph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.md'), renderCrossProgramMarkdown(crossProgramGraph), 'utf8');
-  generateArchitectureViewer({
-    graphPath: programCallTreeJsonPath,
-    outputPath: path.join(outputProgramDir, 'architecture.html'),
-  });
-
-  const reportMarkdown = generateMarkdownReport(writtenContext, optimizationReport);
-  generateArchitectureReport({
-    contextPath: path.join(outputProgramDir, 'context.json'),
-    graphPath: path.join(outputProgramDir, 'dependency-graph.json'),
-    outputPath: path.join(outputProgramDir, 'architecture-report.md'),
-    optimizedContextPath: writtenOptimizedContext ? path.join(outputProgramDir, 'optimized-context.json') : null,
-    mermaidPath: path.join(outputProgramDir, 'dependency-graph.mmd'),
-  });
-  buildPrompts({
-    aiProjection: writtenAiKnowledge,
-    outputDir: outputProgramDir,
-    sourceSnippet,
-    templates: selectedPromptTemplates,
-  });
-  fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');
-  writeJsonReport(path.join(outputProgramDir, 'analysis-index.json'), writtenAnalysisIndex);
-
-  return {
-    ...state,
-    reportMarkdown,
-    analysisIndex: writtenAnalysisIndex,
-    generatedFiles,
-    stageMetadata: {
-      fileCount: generatedFiles.length,
-      generatedFiles,
-      workflowMode: workflowMode || null,
-      workflowPreset: workflowPreset ? workflowPreset.name : null,
-      promptTemplateCount: selectedPromptTemplates.length,
-    },
-  };
-}
-
-function runAnalyzePipeline(initialState) {
-  return runStages([
+function getAnalyzeCoreStages() {
+  return [
     { id: 'collect-scan', run: collectAndScanStage },
     { id: 'build-context', run: buildContextStage },
     { id: 'investigate-sources', run: investigateSourcesStage },
@@ -786,10 +830,26 @@ function runAnalyzePipeline(initialState) {
     { id: 'export-db2', run: exportDb2Stage },
     { id: 'export-test-data', run: exportTestDataStage },
     { id: 'run-diagnostic-packs', run: runDiagnosticPacksStage },
-    { id: 'write-artifacts', run: writeArtifactsStage },
+  ];
+}
+
+function runAnalyzeCore(initialState) {
+  return runStages(getAnalyzeCoreStages(), initialState);
+}
+
+function runAnalyzeArtifactAdapter(initialState) {
+  return runStages([
+    { id: 'write-artifacts', run: writeAnalyzeArtifacts },
   ], initialState);
 }
 
+function runAnalyzePipeline(initialState) {
+  return runAnalyzeArtifactAdapter(runAnalyzeCore(initialState));
+}
+
 module.exports = {
+  getAnalyzeCoreStages,
+  runAnalyzeArtifactAdapter,
+  runAnalyzeCore,
   runAnalyzePipeline,
 };

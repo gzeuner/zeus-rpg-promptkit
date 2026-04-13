@@ -12,7 +12,12 @@
     "impact": "node ./cli/zeus.js impact",
     "fetch": "node ./cli/zeus.js fetch",
     "lint": "echo \"No lint configured\"",
-    "test": "node --test"
+    "test": "npm run test:ci && npm run test:unit",
+    "test:ci": "npm run test:contract && npm run test:smoke",
+    "test:unit": "node --test tests/analyze-stages.test.js tests/source-scan-cache.test.js tests/analyze-runtime-contract.test.js tests/binding-semantics.test.js tests/source-normalization.test.js tests/source-integrity.test.js tests/source-type-scanners.test.js tests/db2-catalog-intelligence.test.js tests/impact-ambiguity.test.js tests/investigation-workflows.test.js",
+    "test:contract": "node --test tests/analyze-run-manifest.test.js tests/bundle-manifest.test.js tests/fetch-readability-contract.test.js tests/ai-knowledge-projection.test.js tests/task-oriented-analysis-index.test.js tests/workflow-presets.test.js",
+    "test:smoke": "node --test tests/v1-smoke.test.js tests/safe-sharing.test.js tests/reproducible-output.test.js",
+    "test:benchmark": "node --test tests/analyze-benchmark.test.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",

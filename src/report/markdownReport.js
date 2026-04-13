@@ -219,6 +219,34 @@ function diagnosticPackSection(diagnosticPacks) {
   return `## Diagnostic Query Packs\n- Packs: ${summary.packCount || 0}\n- Steps: ${summary.stepCount || 0}\n- Failed Packs: ${summary.failedPackCount || 0}\n- Skipped Packs: ${summary.skippedPackCount || 0}\n\n${detailLines}\n`;
 }
 
+function analysisCacheSection(analysisCache) {
+  const summary = analysisCache || {};
+  const sourceScan = summary.sourceScan || {};
+  const db2Metadata = summary.db2Metadata || {};
+  const testData = summary.testData || {};
+  const lines = [
+    '## Analysis Cache',
+    `- Enabled: ${summary.enabled ? 'true' : 'false'}`,
+    `- Source Scan Hits: ${sourceScan.hits || 0}`,
+    `- Source Scan Memory Hits: ${sourceScan.memoryHits || 0}`,
+    `- Source Scan Persistent Hits: ${sourceScan.persistentHits || 0}`,
+    `- Source Scan Misses: ${sourceScan.misses || 0}`,
+    `- Source Scan Invalidations: ${sourceScan.invalidations || 0}`,
+    `- Source Scan Writes: ${sourceScan.writes || 0}`,
+    `- DB2 Metadata Cache: ${db2Metadata.status || 'disabled'}`,
+    `- Test Data Cache: ${testData.status || 'disabled'}`,
+  ];
+
+  if (sourceScan.cacheDir) {
+    lines.push(`- Source Scan Cache Dir: ${sourceScan.cacheDir}`);
+  }
+  if (summary.artifactManifestFile) {
+    lines.push(`- Artifact Cache Manifest: ${summary.artifactManifestFile}`);
+  }
+
+  return `${lines.join('\n')}\n`;
+}
+
 function generateMarkdownReport(context, tokenReport) {
   const summary = context.summary || {};
   const dependencies = context.dependencies || {};
@@ -233,6 +261,7 @@ function generateMarkdownReport(context, tokenReport) {
   const ifsPaths = context.ifsPaths || {};
   const searchResults = context.searchResults || {};
   const diagnosticPacks = context.diagnosticPacks || {};
+  const analysisCache = context.analysisCache || {};
   const db2Metadata = context.db2Metadata || {};
   const testData = context.testData || {};
   const unresolvedPrograms = crossProgramGraph.unresolvedPrograms || [];
@@ -269,7 +298,7 @@ function generateMarkdownReport(context, tokenReport) {
     : `## Test Data Extract\nTest data extraction was skipped because ${testData.reason || 'no DB2 connection configuration was available'}.\n`;
   const procedureSection = `## Procedure Semantics\n- Procedures: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCount) || 0}\n- Prototypes: ${(procedureAnalysis.summary && procedureAnalysis.summary.prototypeCount) || 0}\n- Procedure Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCallCount) || 0}\n- Internal Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.internalCallCount) || 0}\n- External Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.externalCallCount) || 0}\n- Dynamic Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.dynamicCallCount) || 0}\n- Unresolved Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.unresolvedCallCount) || 0}\n- Catalog-Resolved Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.catalogResolvedCallCount) || 0}\n`;
 
-  return `# Zeus RPG Analysis Report\n\n## Overview\n- Program: ${context.program}\n- Scanned At: ${context.scannedAt}\n- Source Root: ${context.sourceRoot}\n- Source File Count: ${summary.sourceFileCount || 0}\n- Table Count: ${summary.tableCount || 0}\n- Program Call Count: ${summary.programCallCount || 0}\n- Copy Member Count: ${summary.copyMemberCount || 0}\n- SQL Statement Count: ${summary.sqlStatementCount || 0}\n${summary.text ? `- Summary: ${summary.text}\n` : ''}\n${optimizationSection(tokenReport)}\n## Source Files\n${sectionList(context.sourceFiles)}\n\n${sourceNormalizationSection(sourceNormalization)}\n${sourceTypeAnalysisSection(sourceTypeAnalysis)}\n${ifsPathSection(ifsPaths)}\n${searchResultsSection(searchResults)}\n${diagnosticPackSection(diagnosticPacks)}\n## Tables\n${sectionList(dependencies.tables)}\n\n## Program Calls\n${sectionList(dependencies.programCalls)}\n\n## Copy Members\n${sectionList(dependencies.copyMembers)}\n\n${procedureSection}\n${bindingAnalysisSection(bindingAnalysis)}\n${nativeFileUsageSection(nativeFileUsage)}\n${sqlSection(sql)}\n${db2Section}\n${testDataSection}\n## Dependency Graph\nDependency graph generated for ${context.program}.\n\n- Nodes: ${graph.nodeCount || 0}\n- Edges: ${graph.edgeCount || 0}\n- Tables: ${graph.tableCount || 0}\n- Programs Called: ${graph.programCallCount || 0}\n- Copy Members: ${graph.copyMemberCount || 0}\n- Modules: ${graph.moduleCount || 0}\n- Service Programs: ${graph.serviceProgramCount || 0}\n- Binding Directories: ${graph.bindingDirectoryCount || 0}\n- Bind Relationships: ${graph.bindEdgeCount || 0}\n\nSee files:\n- ${(graph.files && graph.files.json) || 'dependency-graph.json'}\n- ${(graph.files && graph.files.mermaid) || 'dependency-graph.mmd'}\n- ${(graph.files && graph.files.markdown) || 'dependency-graph.md'}\n\n## Cross Program Dependency Graph\nA recursive program dependency graph was generated for ${context.program}.\n\n- Programs discovered: ${crossProgramGraph.programCount || 0}\n- Ambiguous program calls: ${ambiguousPrograms.length}\n- Ambiguous list: ${ambiguousText}\n- Unresolved program calls: ${unresolvedPrograms.length}\n- Unresolved list: ${unresolvedText}\n\nSee:\n- ${(crossProgramGraph.files && crossProgramGraph.files.json) || 'program-call-tree.json'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.mermaid) || 'program-call-tree.mmd'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.markdown) || 'program-call-tree.md'}\n\n## Impact Analysis\nImpact analysis can identify affected programs if a component changes.\n\nSee:\n- impact-analysis.json\n- impact-analysis.md\n\n## Interactive Architecture Viewer\nAn interactive architecture visualization has been generated.\n\nOpen:\n- architecture.html\n\nin your browser to explore program dependencies visually.\n\n## Architecture\n- See architecture-report.md for a full architecture overview.\n\n## Next Steps\n- Validate detected dependencies with the application design and naming standards.\n- Use canonical-analysis.json as the semantic source and context.json or optimized-context.json as prompt-ready projections.\n- Enrich with DB metadata, search results, and sample test data when available to improve reasoning.\n- Create a portable bundle with \`zeus bundle --program ${context.program}\`.\n`;
+  return `# Zeus RPG Analysis Report\n\n## Overview\n- Program: ${context.program}\n- Scanned At: ${context.scannedAt}\n- Source Root: ${context.sourceRoot}\n- Source File Count: ${summary.sourceFileCount || 0}\n- Table Count: ${summary.tableCount || 0}\n- Program Call Count: ${summary.programCallCount || 0}\n- Copy Member Count: ${summary.copyMemberCount || 0}\n- SQL Statement Count: ${summary.sqlStatementCount || 0}\n${summary.text ? `- Summary: ${summary.text}\n` : ''}\n${optimizationSection(tokenReport)}\n## Source Files\n${sectionList(context.sourceFiles)}\n\n${sourceNormalizationSection(sourceNormalization)}\n${sourceTypeAnalysisSection(sourceTypeAnalysis)}\n${ifsPathSection(ifsPaths)}\n${searchResultsSection(searchResults)}\n${diagnosticPackSection(diagnosticPacks)}\n${analysisCacheSection(analysisCache)}\n## Tables\n${sectionList(dependencies.tables)}\n\n## Program Calls\n${sectionList(dependencies.programCalls)}\n\n## Copy Members\n${sectionList(dependencies.copyMembers)}\n\n${procedureSection}\n${bindingAnalysisSection(bindingAnalysis)}\n${nativeFileUsageSection(nativeFileUsage)}\n${sqlSection(sql)}\n${db2Section}\n${testDataSection}\n## Dependency Graph\nDependency graph generated for ${context.program}.\n\n- Nodes: ${graph.nodeCount || 0}\n- Edges: ${graph.edgeCount || 0}\n- Tables: ${graph.tableCount || 0}\n- Programs Called: ${graph.programCallCount || 0}\n- Copy Members: ${graph.copyMemberCount || 0}\n- Modules: ${graph.moduleCount || 0}\n- Service Programs: ${graph.serviceProgramCount || 0}\n- Binding Directories: ${graph.bindingDirectoryCount || 0}\n- Bind Relationships: ${graph.bindEdgeCount || 0}\n\nSee files:\n- ${(graph.files && graph.files.json) || 'dependency-graph.json'}\n- ${(graph.files && graph.files.mermaid) || 'dependency-graph.mmd'}\n- ${(graph.files && graph.files.markdown) || 'dependency-graph.md'}\n\n## Cross Program Dependency Graph\nA recursive program dependency graph was generated for ${context.program}.\n\n- Programs discovered: ${crossProgramGraph.programCount || 0}\n- Ambiguous program calls: ${ambiguousPrograms.length}\n- Ambiguous list: ${ambiguousText}\n- Unresolved program calls: ${unresolvedPrograms.length}\n- Unresolved list: ${unresolvedText}\n\nSee:\n- ${(crossProgramGraph.files && crossProgramGraph.files.json) || 'program-call-tree.json'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.mermaid) || 'program-call-tree.mmd'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.markdown) || 'program-call-tree.md'}\n\n## Impact Analysis\nImpact analysis can identify affected programs if a component changes.\n\nSee:\n- impact-analysis.json\n- impact-analysis.md\n\n## Interactive Architecture Viewer\nAn interactive architecture visualization has been generated.\n\nOpen:\n- architecture.html\n\nin your browser to explore program dependencies visually.\n\n## Architecture\n- See architecture-report.md for a full architecture overview.\n\n## Next Steps\n- Validate detected dependencies with the application design and naming standards.\n- Use canonical-analysis.json as the semantic source and context.json or optimized-context.json as prompt-ready projections.\n- Enrich with DB metadata, search results, and sample test data when available to improve reasoning.\n- Create a portable bundle with \`zeus bundle --program ${context.program}\`.\n`;
 }
 
 module.exports = {

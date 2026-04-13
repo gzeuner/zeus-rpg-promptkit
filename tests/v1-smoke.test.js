@@ -132,6 +132,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.ok(analysisIndex.tasks.every((task) => task.reviewWorkflow));
 
     const report = fs.readFileSync(path.join(programOutputDir, 'report.md'), 'utf8');
+    assert.match(report, /## Analysis Cache/);
     assert.match(report, /## Native File I\/O/);
     assert.match(report, /Read Statements: 1/);
     assert.match(report, /## Test Data Extract/);
@@ -156,6 +157,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
     assert.equal(analyzeManifest.inputs.program, 'ORDERPGM');
     assert.equal(analyzeManifest.summary.stageCount, 8);
     assert.ok(analyzeManifest.summary.generatedArtifactCount >= 13);
+    assert.equal(analyzeManifest.cacheStatus.sourceScan.misses, 2);
     assert.equal(analyzeManifest.inputs.sourceSnapshot.fileCount, 2);
     assert.equal(analyzeManifest.inputs.options.guidedMode, null);
     assert.equal(analyzeManifest.inputs.options.investigation.scanIfsPathsEnabled, false);
