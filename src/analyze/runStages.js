@@ -40,6 +40,84 @@ function normalizeStageDiagnostics(diagnostics) {
     .filter((entry) => entry.message);
 }
 
+function normalizeStageDefinition(stage) {
+  if (!stage || typeof stage !== 'object') {
+    return null;
+  }
+
+  const pluginName = stage.pluginName ? String(stage.pluginName).trim() : '';
+  const title = stage.title ? String(stage.title).trim() : '';
+  const description = stage.description ? String(stage.description).trim() : '';
+  const category = stage.category ? String(stage.category).trim() : '';
+  const registrationOrder = Number.isInteger(stage.registrationOrder) ? stage.registrationOrder : null;
+  const before = Array.isArray(stage.before) ? stage.before.map((entry) => String(entry).trim()).filter(Boolean) : [];
+  const after = Array.isArray(stage.after) ? stage.after.map((entry) => String(entry).trim()).filter(Boolean) : [];
+
+  if (!pluginName && !title && !description && !category && registrationOrder === null && before.length === 0 && after.length === 0) {
+    return null;
+  }
+
+  return {
+    pluginName: pluginName || 'core',
+    title: title || null,
+    description: description || null,
+    category: category || null,
+    registrationOrder,
+    before,
+    after,
+  };
+}
+
+function normalizeLifecycleHooks(lifecycleHooks) {
+  if (!Array.isArray(lifecycleHooks)) {
+    return [];
+  }
+
+  return lifecycleHooks
+    .filter((entry) => entry && typeof entry === 'object')
+    .map((entry) => ({
+      beforeStage: typeof entry.beforeStage === 'function' ? entry.beforeStage : null,
+      afterStage: typeof entry.afterStage === 'function' ? entry.afterStage : null,
+      onStageError: typeof entry.onStageError === 'function' ? entry.onStageError : null,
+      pluginName: entry.pluginName ? String(entry.pluginName).trim() : 'core',
+    }))
+    .filter((entry) => entry.beforeStage || entry.afterStage || entry.onStageError);
+}
+
+function buildStageLifecycleHandlers(stage, lifecycleHooks) {
+  const beforeHandlers = lifecycleHooks
+    .map((entry) => entry.beforeStage)
+    .filter(Boolean);
+  const afterHandlers = lifecycleHooks
+    .map((entry) => entry.afterStage)
+    .filter(Boolean);
+  const errorHandlers = lifecycleHooks
+    .map((entry) => entry.onStageError)
+    .filter(Boolean);
+
+  if (typeof stage.beforeRun === 'function') {
+    beforeHandlers.push((payload) => stage.beforeRun(payload));
+  }
+  if (typeof stage.afterRun === 'function') {
+    afterHandlers.push((payload) => stage.afterRun(payload));
+  }
+  if (typeof stage.onError === 'function') {
+    errorHandlers.push((payload) => stage.onError(payload));
+  }
+
+  return {
+    beforeHandlers,
+    afterHandlers,
+    errorHandlers,
+  };
+}
+
+function invokeLifecycleHandlers(handlers, payload) {
+  for (const handler of handlers) {
+    handler(payload);
+  }
+}
+
 function finalizeStageState(state, stageReport, stageReports) {
   return {
     ...state,
@@ -49,7 +127,8 @@ function finalizeStageState(state, stageReport, stageReports) {
   };
 }
 
-function runStages(stages, initialState) {
+function runStages(stages, initialState, options = {}) {
+  const lifecycleHooks = normalizeLifecycleHooks(options.lifecycleHooks);
   return stages.reduce((state, stage) => {
     if (!stage || typeof stage.run !== 'function') {
       throw new Error('Invalid analyze stage: missing run function');
@@ -58,8 +137,13 @@ function runStages(stages, initialState) {
     const reproducibility = normalizeReproducibilitySettings(state.reproducibility);
     const startedAt = resolveTimestamp(reproducibility);
     const startedNs = process.hrtime.bigint();
+    const { beforeHandlers, afterHandlers, errorHandlers } = buildStageLifecycleHandlers(stage, lifecycleHooks);
 
     try {
+      invokeLifecycleHandlers(beforeHandlers, {
+        stage,
+        state,
+      });
       const result = stage.run(state);
       const durationMs = resolveDurationMs(reproducibility, Number((process.hrtime.bigint() - startedNs) / 1000000n));
       const stageReport = {
@@ -70,12 +154,20 @@ function runStages(stages, initialState) {
         durationMs,
         metadata: normalizeStageMetadata(result && result.stageMetadata),
         diagnostics: normalizeStageDiagnostics(result && result.stageDiagnostics),
+        definition: normalizeStageDefinition(stage),
       };
       const nextState = {
         ...(result || {}),
       };
       delete nextState.stageMetadata;
       delete nextState.stageDiagnostics;
+
+      invokeLifecycleHandlers(afterHandlers, {
+        stage,
+        state,
+        nextState,
+        stageReport,
+      });
 
       const stageReports = [...(state.stageReports || []), stageReport];
       return finalizeStageState(nextState, stageReport, stageReports);
@@ -93,7 +185,14 @@ function runStages(stages, initialState) {
           code: 'STAGE_FAILED',
           message: error.message,
         }],
+        definition: normalizeStageDefinition(stage),
       };
+      invokeLifecycleHandlers(errorHandlers, {
+        stage,
+        state,
+        error,
+        stageReport,
+      });
       error.stageId = stageReport.id;
       error.stageReports = [...(state.stageReports || []), stageReport];
       throw error;

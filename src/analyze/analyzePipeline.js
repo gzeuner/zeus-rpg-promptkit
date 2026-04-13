@@ -48,6 +48,7 @@ const {
   writeAnalysisArtifactCache,
 } = require('./analysisArtifactCache');
 const { resolveTimestamp } = require('../reproducibility/reproducibility');
+const { createAnalyzeStageRegistry } = require('./stageRegistry');
 
 function resolvePromptContext(context, optimizedContext) {
   return optimizedContext || context;
@@ -824,20 +825,93 @@ function runDiagnosticPacksStage(state) {
   };
 }
 
-function getAnalyzeCoreStages() {
-  return [
-    { id: 'collect-scan', run: collectAndScanStage },
-    { id: 'build-context', run: buildContextStage },
-    { id: 'investigate-sources', run: investigateSourcesStage },
-    { id: 'optimize-context', run: optimizeContextStage },
-    { id: 'export-db2', run: exportDb2Stage },
-    { id: 'export-test-data', run: exportTestDataStage },
-    { id: 'run-diagnostic-packs', run: runDiagnosticPacksStage },
-  ];
+function registerCoreAnalyzeStages(registry) {
+  registry.registerStage({
+    id: 'collect-scan',
+    title: 'Collect and scan source files',
+    description: 'Discovers source files, validates encodings, and runs the base scanner suite.',
+    category: 'scan',
+    run: collectAndScanStage,
+  });
+  registry.registerStage({
+    id: 'build-context',
+    title: 'Build semantic context',
+    description: 'Builds canonical/context projections and the dependency graphs.',
+    category: 'analysis',
+    after: 'collect-scan',
+    run: buildContextStage,
+  });
+  registry.registerStage({
+    id: 'investigate-sources',
+    title: 'Run source investigations',
+    description: 'Applies optional IFS-path, full-text search, and similar source investigations.',
+    category: 'investigation',
+    after: 'build-context',
+    run: investigateSourcesStage,
+  });
+  registry.registerStage({
+    id: 'optimize-context',
+    title: 'Optimize prompt context',
+    description: 'Builds the salience-ranked optimized context projection when enabled.',
+    category: 'optimization',
+    after: 'investigate-sources',
+    run: optimizeContextStage,
+  });
+  registry.registerStage({
+    id: 'export-db2',
+    title: 'Export DB2 metadata',
+    description: 'Exports DB2 metadata and folds linked evidence back into semantic analysis.',
+    category: 'db2',
+    after: 'optimize-context',
+    run: exportDb2Stage,
+  });
+  registry.registerStage({
+    id: 'export-test-data',
+    title: 'Export governed test data',
+    description: 'Exports bounded DB2 sample rows with configured masking and governance policy.',
+    category: 'db2',
+    after: 'export-db2',
+    run: exportTestDataStage,
+  });
+  registry.registerStage({
+    id: 'run-diagnostic-packs',
+    title: 'Run diagnostic packs',
+    description: 'Executes optional read-only investigation packs after the main semantic pipeline.',
+    category: 'investigation',
+    after: 'export-test-data',
+    run: runDiagnosticPacksStage,
+  });
+
+  return registry;
+}
+
+function buildAnalyzeStageRegistry(options = {}) {
+  const registry = createAnalyzeStageRegistry();
+  registerCoreAnalyzeStages(registry);
+
+  const plugins = Array.isArray(options.plugins) ? options.plugins : [];
+  for (const plugin of plugins) {
+    registry.use(plugin);
+  }
+
+  return registry;
+}
+
+function getAnalyzeCoreStages(options = {}) {
+  return buildAnalyzeStageRegistry(options).resolveStages();
 }
 
 function runAnalyzeCore(initialState) {
-  return runStages(getAnalyzeCoreStages(), initialState);
+  const stageRegistry = initialState && initialState.stageRegistry && typeof initialState.stageRegistry.resolveStages === 'function'
+    ? initialState.stageRegistry
+    : buildAnalyzeStageRegistry({
+      plugins: initialState && Array.isArray(initialState.analyzePlugins) ? initialState.analyzePlugins : [],
+    });
+  return runStages(stageRegistry.resolveStages(), initialState, {
+    lifecycleHooks: typeof stageRegistry.resolveLifecycleHooks === 'function'
+      ? stageRegistry.resolveLifecycleHooks()
+      : [],
+  });
 }
 
 function runAnalyzeArtifactAdapter(initialState) {
@@ -851,7 +925,9 @@ function runAnalyzePipeline(initialState) {
 }
 
 module.exports = {
+  buildAnalyzeStageRegistry,
   getAnalyzeCoreStages,
+  registerCoreAnalyzeStages,
   runAnalyzeArtifactAdapter,
   runAnalyzeCore,
   runAnalyzePipeline,
