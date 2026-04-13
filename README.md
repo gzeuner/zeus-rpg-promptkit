@@ -105,8 +105,11 @@ Additional test tiers:
 npm run test:contract
 npm run test:smoke
 npm run test:unit
+npm run test:corpus
 npm run test:benchmark
 ```
+
+`npm run test:corpus` validates the curated sanitized scanner corpus described in `docs/scanner-corpus.md` so scanner heuristics can be regression-tested against deterministic source fixtures.
 
 ## Usage
 
@@ -173,6 +176,8 @@ Analyze now runs through a split runtime contract:
 - the CLI applies an explicit artifact-writer adapter afterwards so future UI/API layers can reuse the same core result contract
 - source scans are cached by content hash and tool version under `output/.zeus-cache/source-scans/`
 - DB2 metadata and test-data artifacts are reused through `analysis-cache.json` when inputs are unchanged
+- cross-program traversal now applies explicit safety limits for depth, program count, nodes, edges, scanned files, and per-program outgoing calls
+- when those limits are reached, Zeus keeps the run successful but records truncation and limit diagnostics in `context.json`, `report.md`, and the analyze manifest instead of silently over-walking large trees
 
 Bundle command syntax:
 
@@ -277,6 +282,7 @@ Generated files:
 - `optimized-context.json` (when `--optimize-context` is enabled)
 - `ai-knowledge.json`
 - `analysis-index.json`
+- `analyze-run-manifest.json`
 - `workflow-run-manifest.json` (when `zeus workflow` is executed)
 - `ifs-paths.json` (when `--scan-ifs-paths` is enabled)
 - `ifs-paths.md` (when `--scan-ifs-paths` is enabled)
@@ -348,7 +354,7 @@ The safe-sharing directory reuses the same artifact filenames where possible, bu
 
 `safe-sharing/redaction-manifest.json` records which artifacts were redacted, which placeholder categories were used, and which safe-sharing files were written. Reverse mappings are intentionally not exported.
 Analyze, bundle, workflow, and impact outputs also record reproducibility metadata when repeated-run verification is required.
-`analyze-run-manifest.json` and `analysis-diagnostics.json` now also record cache status, stage timings, warnings, and generated artifact inventory in machine-readable form.
+`analyze-run-manifest.json` and `analysis-diagnostics.json` now also record cache status, stage timings, warnings, generated artifact inventory, configured analysis limits, and applied test-data policy in machine-readable form.
 
 `canonical-analysis.json` is now the semantic source of truth for the analyze pipeline.
 
@@ -687,18 +693,36 @@ Generated files in `output/<program>/` when extraction runs:
 
 When test data export succeeds, the compact `testData` summary also records which extracted tables were linked back to source evidence so prompts and reports can reason about sample rows together with SQL or native file usage.
 
-Optional masking is supported through profile configuration:
+Governance can be configured through the active profile:
 
 ```json
 {
   "testData": {
     "limit": 50,
-    "maskColumns": ["NAME", "EMAIL", "PHONE"]
+    "maskColumns": ["NAME", "EMAIL", "PHONE"],
+    "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
+    "denyTables": ["MYLIB.AUDITLOG"],
+    "maskRules": [
+      {
+        "schema": "MYLIB",
+        "table": "CUSTOMERS",
+        "columns": ["PHONE"],
+        "value": "MASKED_PHONE"
+      }
+    ]
   }
 }
 ```
 
-Masked columns are written as `MASKED` in the exported rows.
+Policy behavior:
+
+- `maskColumns` applies a global column mask across eligible tables
+- `allowTables` restricts extraction to an explicit allowlist when present
+- `denyTables` blocks specific tables even if they were otherwise detected or allowlisted
+- `maskRules` apply scoped per-table or per-schema overrides and optional replacement values
+
+Masked columns are written as `MASKED` unless a rule-specific replacement value is configured.
+The resulting policy decisions are recorded in `test-data.json`, `test-data.md`, `context.json`, `report.md`, and `analyze-run-manifest.json` so skipped and exported tables can be audited later without re-deriving policy from config files.
 
 Safety constraints:
 
@@ -792,10 +816,14 @@ A profile can define:
 - `sourceRoot`
 - `outputRoot`
 - `extensions`
+- `extends` (optional): inherit from one or more other profiles
+- `analysisLimits` (optional): `maxProgramDepth`, `maxPrograms`, `maxNodes`, `maxEdges`, `maxScannedFiles`, `maxProgramCallsPerProgram`
 - `db` (optional): `url`, `host`, `user`, `password`, `defaultSchema`, `defaultLibrary`
-- `testData` (optional): `limit`, `maskColumns`
+- `testData` (optional): `limit`, `maskColumns`, `allowTables`, `denyTables`, `maskRules`
 - `fetch` (optional): `host`, `user`, `password`, `sourceLib`, `ifsDir`, `out`, `files`, `members`, `replace`, `streamFileCcsid`, `transport`
 - `contextOptimizer` (optional): `maxTables`, `maxProgramCalls`, `maxCopyMembers`, `maxSQLStatements`, `maxSourceSnippets`, `maxSnippetLines`, `softTokenLimit`, `workflowTokenBudgets`
+
+Profiles merge from top-level defaults into the selected profile, and `extends` lets one profile build on another without copying the full contract. String placeholders in the form `${env:VAR_NAME}` are resolved from the process environment during load, which keeps credentials and other secrets out of committed profile files.
 
 Example:
 
@@ -814,14 +842,35 @@ Example:
       "errorAnalysis": 1600
     }
   },
+  "analysisLimits": {
+    "maxProgramDepth": 25,
+    "maxPrograms": 500,
+    "maxNodes": 5000,
+    "maxEdges": 4000,
+    "maxScannedFiles": 500,
+    "maxProgramCallsPerProgram": 200
+  },
   "testData": {
     "limit": 50,
-    "maskColumns": ["NAME", "EMAIL", "PHONE"]
+    "maskColumns": ["NAME", "EMAIL", "PHONE"],
+    "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
+    "denyTables": ["MYLIB.AUDITLOG"],
+    "maskRules": [
+      {
+        "table": "CUSTOMERS",
+        "columns": ["PHONE"],
+        "value": "MASKED_PHONE"
+      }
+    ]
   },
   "default": {
     "sourceRoot": "./rpg",
     "outputRoot": "./output",
-    "extensions": [".rpgle", ".rpg"],
+    "extensions": [".rpgle", ".rpg", ".sqlrpgle", ".rpgleinc"],
+    "analysisLimits": {
+      "maxProgramDepth": 15,
+      "maxPrograms": 250
+    },
     "contextOptimizer": {
       "maxTables": 20,
       "maxProgramCalls": 20,
@@ -832,6 +881,40 @@ Example:
       "workflowTokenBudgets": {
         "documentation": 1800
       }
+    }
+  },
+  "modernization-large": {
+    "extends": "default",
+    "outputRoot": "./output-modernization",
+    "analysisLimits": {
+      "maxProgramDepth": 40,
+      "maxPrograms": 1000
+    }
+  },
+  "sample-db2": {
+    "sourceRoot": "./rpg",
+    "outputRoot": "./output",
+    "extensions": [".rpgle", ".rpg"],
+    "db": {
+      "host": "myibmi.example.com",
+      "url": "jdbc:as400://myibmi.example.com;naming=system;libraries=MYLIB",
+      "user": "${env:ZEUS_DB_USER}",
+      "password": "${env:ZEUS_DB_PASSWORD}",
+      "defaultSchema": "MYLIB"
+    },
+    "testData": {
+      "limit": 50,
+      "maskColumns": ["NAME", "EMAIL", "PHONE"],
+      "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
+      "denyTables": ["MYLIB.AUDITLOG"],
+      "maskRules": [
+        {
+          "schema": "MYLIB",
+          "table": "CUSTOMERS",
+          "columns": ["PHONE"],
+          "value": "MASKED_PHONE"
+        }
+      ]
     }
   },
   "sample-fetch": {
