@@ -58,6 +58,11 @@
     "sourceRoot": "./rpg",
     "outputRoot": "./output",
     "extensions": [".rpgle", ".rpg"],
+    "tokenBudget": {
+      "documentation": 4000,
+      "error-analysis": 4000,
+      "defect-analysis": 4000
+    },
     "db": {
       "host": "myibmi.example.com",
       "url": "jdbc:as400://myibmi.example.com;naming=system;libraries=MYLIB",
@@ -92,6 +97,10 @@
       "streamFileCcsid": 1208,
       "replace": true,
       "transport": "auto"
+    },
+    "workCopy": {
+      "root": "source/",
+      "extension": "txt"
     }
   }
 }

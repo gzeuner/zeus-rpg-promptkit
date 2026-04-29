@@ -15,6 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const { estimateTokens } = require('../ai/tokenEstimator');
 const { getPromptContract } = require('./promptRegistry');
+const { DEFAULT_TOKEN_BUDGET } = require('../config/runtimeConfig');
 
 const DEFAULT_PROMPT_TEMPLATES = Object.freeze(['documentation', 'error-analysis']);
 
@@ -127,6 +128,40 @@ function formatBudgetHint(contract, estimatedTokens) {
   if (!budget.maxTokens) return 'No contract budget defined.';
   const targetText = budget.targetTokens ? `target ${budget.targetTokens}` : 'no target';
   return `Prompt contract budget: ${targetText}, max ${budget.maxTokens}, current estimate ${estimatedTokens}.`;
+}
+
+function resolveTokenBudgetKey(templateName) {
+  const normalized = String(templateName || '').trim().toLowerCase();
+  if (normalized === 'error-analysis') {
+    return 'errorAnalysis';
+  }
+  if (normalized === 'defect-analysis') {
+    return 'defectAnalysis';
+  }
+  return normalized;
+}
+
+function applyTokenBudgetOverride(contract, tokenBudgets) {
+  const budgets = tokenBudgets && typeof tokenBudgets === 'object' ? tokenBudgets : {};
+  const override = Number(budgets[resolveTokenBudgetKey(contract.name)]);
+
+  if (!Number.isFinite(override) || override <= 0) {
+    return {
+      ...contract,
+      budget: {
+        ...(contract.budget || {}),
+        maxTokens: Number(contract && contract.budget && contract.budget.maxTokens) || DEFAULT_TOKEN_BUDGET,
+      },
+    };
+  }
+
+  return {
+    ...contract,
+    budget: {
+      ...(contract.budget || {}),
+      maxTokens: override,
+    },
+  };
 }
 
 function formatDb2Hint(db2Metadata, workflow) {
@@ -335,7 +370,7 @@ function buildTemplateDataFromProjection(aiProjection, contract) {
 }
 
 function renderPrompt(templateName, contextOrProjection, options = {}) {
-  const contract = getPromptContract(templateName);
+  const contract = applyTokenBudgetOverride(getPromptContract(templateName), options.tokenBudgets);
   const applicability = validatePromptApplicability(templateName, contextOrProjection);
   if (!applicability.applicable) {
     throw new Error(`Prompt contract validation failed for ${templateName}: ${applicability.failures.join(' ')}`);
@@ -367,7 +402,14 @@ function buildPrompt(templateName, contextOrProjection, outputPath, options = {}
   return rendered.content;
 }
 
-function buildPrompts({ context, aiProjection, outputDir, sourceSnippet, templates }) {
+function buildPrompts({
+  context,
+  aiProjection,
+  outputDir,
+  sourceSnippet,
+  templates,
+  tokenBudgets,
+}) {
   const selected = resolvePromptTemplates(templates);
   const outputs = {};
   const input = aiProjection || context;
@@ -375,7 +417,10 @@ function buildPrompts({ context, aiProjection, outputDir, sourceSnippet, templat
   for (const templateName of selected) {
     const contract = getPromptContract(templateName);
     const outputPath = path.join(outputDir, contract.outputFileName || `ai_prompt_${templateName.replace(/-/g, '_')}.md`);
-    outputs[templateName] = buildPrompt(templateName, input, outputPath, { sourceSnippet });
+    outputs[templateName] = buildPrompt(templateName, input, outputPath, {
+      sourceSnippet,
+      tokenBudgets,
+    });
   }
 
   return outputs;
@@ -392,7 +437,9 @@ module.exports = {
   DEFAULT_PROMPT_TEMPLATES,
   buildPrompt,
   buildPrompts,
+  applyTokenBudgetOverride,
   renderPrompt,
+  resolveTokenBudgetKey,
   resolvePromptTemplates,
   validatePromptApplicability,
 };
