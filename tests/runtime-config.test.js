@@ -7,9 +7,14 @@ const path = require('path');
 const {
   ALLOWED_FETCH_TRANSPORTS,
   DEFAULT_ANALYSIS_LIMITS,
+  DEFAULT_WORK_COPY,
+  getProfilesMetadata,
   loadProfiles,
+  readTokenBudgetConfig,
+  readWorkCopyConfig,
   resolveAnalyzeConfig,
   resolveProfile,
+  resolveProfilesConfigPaths,
   resolveFetchConfig,
   resolveBundleConfig,
 } = require('../src/config/runtimeConfig');
@@ -38,6 +43,46 @@ test('loadProfiles falls back to profiles.example.json', () => {
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
+});
+
+test('loadProfiles resolves config directory from --config before cwd/config', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-runtime-config-cli-'));
+  const defaultConfigDir = path.join(tempRoot, 'config');
+  const customConfigDir = path.join(tempRoot, 'custom-config');
+  fs.mkdirSync(defaultConfigDir, { recursive: true });
+  fs.mkdirSync(customConfigDir, { recursive: true });
+  fs.writeFileSync(path.join(defaultConfigDir, 'profiles.example.json'), `${JSON.stringify({
+    default: { sourceRoot: './default' },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(customConfigDir, 'profiles.json'), `${JSON.stringify({
+    custom: { sourceRoot: './custom' },
+  }, null, 2)}\n`);
+
+  try {
+    const profiles = loadProfiles({
+      cwd: tempRoot,
+      args: {
+        config: './custom-config',
+      },
+    });
+    const metadata = getProfilesMetadata(profiles);
+    assert.equal(profiles.custom.sourceRoot, './custom');
+    assert.equal(metadata.profilePath, path.join(customConfigDir, 'profiles.json'));
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveProfilesConfigPaths honors ZEUS_CONFIG_DIR when --config is absent', () => {
+  const resolved = resolveProfilesConfigPaths({
+    cwd: 'C:/workspace/project',
+    env: {
+      ZEUS_CONFIG_DIR: './profiles-dir',
+    },
+  });
+
+  assert.equal(resolved.source, 'env');
+  assert.equal(resolved.preferredPath.endsWith(path.join('profiles-dir', 'profiles.json')), true);
 });
 
 test('resolveAnalyzeConfig merges profile settings with global optimizer and test data defaults', () => {
@@ -142,6 +187,47 @@ test('resolveProfile supports inheritance and env placeholder expansion for secr
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
+});
+
+test('resolveAnalyzeConfig exposes profile token budgets and work-copy defaults', () => {
+  const tempRoot = createTempProject({
+    sample: {
+      tokenBudget: {
+        documentation: 4000,
+        'error-analysis': 4100,
+        'defect-analysis': 4200,
+      },
+      workCopy: {
+        root: './workspace-source',
+        extension: 'suffixed',
+      },
+    },
+  });
+
+  try {
+    const profiles = loadProfiles({ cwd: tempRoot });
+    const profile = resolveProfile(profiles, 'sample', { env: {} });
+    const config = resolveAnalyzeConfig({ profile: 'sample' }, { cwd: tempRoot, env: {} });
+
+    assert.deepEqual(readTokenBudgetConfig(profile, {}), {
+      documentation: 4000,
+      errorAnalysis: 4100,
+      defectAnalysis: 4200,
+    });
+    assert.deepEqual(readWorkCopyConfig(profile, {}), {
+      root: './workspace-source',
+      extension: 'suffixed',
+    });
+    assert.equal(config.tokenBudget.documentation, 4000);
+    assert.equal(config.tokenBudget.errorAnalysis, 4100);
+    assert.equal(config.tokenBudget.defectAnalysis, 4200);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('readWorkCopyConfig falls back to project defaults', () => {
+  assert.deepEqual(readWorkCopyConfig(null, {}), DEFAULT_WORK_COPY);
 });
 
 test('resolveAnalyzeConfig applies environment overrides for DB credentials', () => {
@@ -249,7 +335,7 @@ test('loadProfiles rejects invalid profile structure', () => {
   try {
     assert.throws(
       () => loadProfiles({ cwd: tempRoot }),
-      /Invalid configuration: profile "broken"\.extensions must be an array of strings/,
+      /Failed to load profiles from .*Invalid configuration: profile "broken"\.extensions must be an array of strings/,
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -270,7 +356,7 @@ test('loadProfiles rejects invalid test-data policy shape', () => {
   try {
     assert.throws(
       () => loadProfiles({ cwd: tempRoot }),
-      /Invalid configuration: profile "broken"\.testData\.maskRules\[0\] must define at least one of \.table or \.schema/,
+      /Failed to load profiles from .*Invalid configuration: profile "broken"\.testData\.maskRules\[0\] must define at least one of \.table or \.schema/,
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

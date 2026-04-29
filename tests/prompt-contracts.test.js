@@ -56,6 +56,18 @@ test('renderPrompt enforces contract budget expectations', () => {
   );
 });
 
+test('renderPrompt honors token budget overrides from profile config', () => {
+  const fixture = loadPromptEvaluationFixture(fixturePath);
+  const oversized = JSON.parse(JSON.stringify(fixture.input));
+  oversized.workflows.documentation.summary = 'X'.repeat(30000);
+
+  assert.doesNotThrow(() => renderPrompt('documentation', oversized, {
+    tokenBudgets: {
+      documentation: 8000,
+    },
+  }));
+});
+
 test('fixture-driven prompt evaluation preserves completeness, evidence, and size', () => {
   const results = evaluatePromptFixture(fixturePath);
   assert.equal(results.length, 3);

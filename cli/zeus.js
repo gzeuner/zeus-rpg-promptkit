@@ -20,15 +20,21 @@ const { runBundle } = require('../src/cli/commands/bundleCommand');
 const { runFetch } = require('../src/cli/commands/fetchCommand');
 const { runWorkflow } = require('../src/cli/commands/workflowCommand');
 const { runServe } = require('../src/cli/commands/serveCommand');
+const { runDoctor } = require('../src/cli/commands/doctorCommand');
+const { runQueryTable } = require('../src/cli/commands/queryTableCommand');
+const { runCopyToWorkspace } = require('../src/cli/commands/copyToWorkspaceCommand');
 
 function printHelp() {
   console.log('Usage:');
-  console.log('  zeus analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]');
-  console.log('  zeus workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]');
-  console.log('  zeus bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible] [--profile <name>] [--verbose]');
-  console.log('  zeus impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose]');
-  console.log('  zeus fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--profile <name>] [--verbose]');
-  console.log('  zeus serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
+  console.log('  zeus [--config <path>] analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]');
+  console.log('  zeus [--config <path>] workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]');
+  console.log('  zeus [--config <path>] bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible] [--profile <name>] [--verbose]');
+  console.log('  zeus [--config <path>] impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose]');
+  console.log('  zeus [--config <path>] fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--profile <name>] [--verbose]');
+  console.log('  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
+  console.log('  zeus [--config <path>] doctor --profile <name>');
+  console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>]');
+  console.log('  zeus [--config <path>] copy-to-workspace --profile <name> [--members <M1,M2,...>] [--force]');
 }
 
 function parseArgs(argv) {
@@ -46,6 +52,33 @@ function parseArgs(argv) {
   return args;
 }
 
+function splitCommandArgs(argv) {
+  let commandIndex = -1;
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (!token.startsWith('--')) {
+      commandIndex = i;
+      break;
+    }
+    if (token === '--config' && argv[i + 1] && !argv[i + 1].startsWith('--')) {
+      i += 1;
+    }
+  }
+
+  if (commandIndex === -1) {
+    return {
+      command: null,
+      args: parseArgs(argv),
+    };
+  }
+
+  return {
+    command: argv[commandIndex],
+    args: parseArgs([...argv.slice(0, commandIndex), ...argv.slice(commandIndex + 1)]),
+  };
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   if (argv.length === 0) {
@@ -53,8 +86,11 @@ async function main() {
     process.exit(1);
   }
 
-  const command = argv[0];
-  const args = parseArgs(argv.slice(1));
+  const { command, args } = splitCommandArgs(argv);
+  if (!command) {
+    printHelp();
+    process.exit(1);
+  }
 
   if (command === 'analyze') {
     runAnalyze(args);
@@ -83,6 +119,21 @@ async function main() {
 
   if (command === 'serve') {
     await runServe(args);
+    return;
+  }
+
+  if (command === 'doctor') {
+    await runDoctor(args);
+    return;
+  }
+
+  if (command === 'query-table') {
+    await runQueryTable(args);
+    return;
+  }
+
+  if (command === 'copy-to-workspace') {
+    await runCopyToWorkspace(args);
     return;
   }
 

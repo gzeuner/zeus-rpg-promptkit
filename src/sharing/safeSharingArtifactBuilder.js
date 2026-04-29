@@ -142,6 +142,15 @@ function resolvePromptTemplatesFromManifest(analyzeManifest) {
   return resolvePromptTemplates(selected.length > 0 ? selected : null);
 }
 
+function resolveTokenBudgetsFromManifest(analyzeManifest) {
+  const options = analyzeManifest && analyzeManifest.inputs && analyzeManifest.inputs.options
+    ? analyzeManifest.inputs.options
+    : {};
+  return options.tokenBudget && typeof options.tokenBudget === 'object'
+    ? options.tokenBudget
+    : null;
+}
+
 function buildArtifactContext(outputProgramDir, sourceArtifactPaths) {
   const canonicalAnalysis = readJsonIfExists(path.join(outputProgramDir, 'canonical-analysis.json'));
   const context = readJsonIfExists(path.join(outputProgramDir, 'context.json'));
@@ -640,10 +649,12 @@ function buildGeneratedArtifactSet(context) {
   }
   if (redactedAiKnowledge) {
     const promptTemplates = resolvePromptTemplatesFromManifest(context.analyzeManifest);
+    const tokenBudgets = resolveTokenBudgetsFromManifest(context.analyzeManifest);
     buildPrompts({
       aiProjection: redactedAiKnowledge,
       outputDir: safeDir,
       templates: promptTemplates,
+      tokenBudgets,
     });
     for (const templateName of promptTemplates) {
       generated.push(buildSafeArtifactPath(getPromptContract(templateName).outputFileName));
