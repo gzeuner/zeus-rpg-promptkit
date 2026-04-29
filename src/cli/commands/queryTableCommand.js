@@ -14,13 +14,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const {
   resolveAnalyzeConfig,
 } = require('../../config/runtimeConfig');
-const { resolveDefaultSchema, isDbConfigured } = require('../../db2/db2Config');
+const { isDbConfigured } = require('../../db2/db2Config');
 const {
   escapeSqlLiteral,
-  runReadOnlyDb2Query,
+  executeReadOnlyDb2QueryWithFallback,
   validateSqlIdentifier,
 } = require('../../db2/readOnlyQueryService');
 const { renderAsciiTable } = require('../helpers/asciiTable');
+const { discoverSchema } = require('../../db2/schemaDiscovery');
 
 function validateFilterPattern(value) {
   const normalized = String(value || '').trim().toUpperCase();
@@ -47,7 +48,7 @@ function buildQueryTableQueries({ schema, table, filter }) {
   }
 
   return {
-    tableInfo: `SELECT TABLE_SCHEMA, TABLE_NAME, ROW_COUNT
+    tableInfo: `SELECT TABLE_SCHEMA, TABLE_NAME
 FROM QSYS2.SYSTABLES
 WHERE ${whereClauses.join(' AND ')}
 ORDER BY TABLE_SCHEMA, TABLE_NAME`,
@@ -77,21 +78,65 @@ async function runQueryTable(args) {
   const table = validateSqlIdentifier(args.table, '--table');
   const schema = args.schema
     ? validateSqlIdentifier(args.schema, '--schema')
-    : resolveDefaultSchema(config.db);
+    : null;
   const filter = args.filter ? validateFilterPattern(args.filter) : '';
-  const queries = buildQueryTableQueries({ schema, table, filter });
-  const tableInfo = runReadOnlyDb2Query({
+  const discovered = !schema ? discoverSchema(config.db, table) : null;
+  const effectiveSchema = schema || (discovered && discovered.TABLE_SCHEMA ? String(discovered.TABLE_SCHEMA).trim().toUpperCase() : '');
+  const queries = buildQueryTableQueries({ schema: effectiveSchema, table, filter });
+  const tableInfo = executeReadOnlyDb2QueryWithFallback({
     dbConfig: config.db,
     query: queries.tableInfo,
     maxRows: 50,
+    context: {
+      table,
+      schema: effectiveSchema,
+    },
+    retryHandlers: {
+      SQL0204: ({ context }) => {
+        const fallbackSchema = discoverSchema(config.db, context.table);
+        if (!fallbackSchema || !fallbackSchema.TABLE_SCHEMA) {
+          return null;
+        }
+        return {
+          query: buildQueryTableQueries({
+            schema: String(fallbackSchema.TABLE_SCHEMA).trim().toUpperCase(),
+            table: context.table,
+            filter,
+          }).tableInfo,
+        };
+      },
+    },
   });
-  const columns = runReadOnlyDb2Query({
+  const columns = executeReadOnlyDb2QueryWithFallback({
     dbConfig: config.db,
     query: queries.columns,
     maxRows: 500,
+    context: {
+      table,
+      schema: effectiveSchema,
+      filter,
+    },
+    retryHandlers: {
+      SQL0204: ({ context }) => {
+        const fallbackSchema = discoverSchema(config.db, context.table);
+        if (!fallbackSchema || !fallbackSchema.TABLE_SCHEMA) {
+          return null;
+        }
+        return {
+          query: buildQueryTableQueries({
+            schema: String(fallbackSchema.TABLE_SCHEMA).trim().toUpperCase(),
+            table: context.table,
+            filter: context.filter,
+          }).columns,
+        };
+      },
+    },
   });
 
-  console.log(`Table lookup: ${schema ? `${schema}.${table}` : table}`);
+  console.log(`Table lookup: ${effectiveSchema ? `${effectiveSchema}.${table}` : table}`);
+  if (!schema && effectiveSchema) {
+    console.log(`Schema discovery: ${table} -> ${effectiveSchema}`);
+  }
   console.log('');
 
   if ((tableInfo.rows || []).length === 0) {
@@ -99,8 +144,8 @@ async function runQueryTable(args) {
   } else {
     console.log('Table Info');
     console.log(renderAsciiTable(
-      ['TABLE_SCHEMA', 'TABLE_NAME', 'ROW_COUNT'],
-      tableInfo.rows.map((row) => [row.TABLE_SCHEMA, row.TABLE_NAME, row.ROW_COUNT]),
+      ['TABLE_SCHEMA', 'TABLE_NAME'],
+      tableInfo.rows.map((row) => [row.TABLE_SCHEMA, row.TABLE_NAME]),
     ));
   }
 
@@ -121,6 +166,7 @@ async function runQueryTable(args) {
       row.NUMERIC_SCALE,
       row.IS_NULLABLE,
     ]),
+    { maxCellWidth: 40 },
   ));
 }
 

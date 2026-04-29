@@ -15,6 +15,7 @@ const path = require('path');
 const { generateImpactAnalysis, normalizeId } = require('../../impact/impactAnalyzer');
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
 const { findImpactGraph } = require('../helpers/impactGraphResolver');
+const { resolveMemberProgram } = require('../helpers/memberResolver');
 const { normalizeReproducibilitySettings } = require('../../reproducibility/reproducibility');
 
 function runImpact(args) {
@@ -25,17 +26,40 @@ function runImpact(args) {
     }
   };
 
+  if (!args.target && args.field) {
+    args.target = args.field;
+  }
+
   if (!args.target || !String(args.target).trim()) {
     console.error('Missing required option: --target <name>');
     process.exit(2);
   }
 
   const config = resolveAnalyzeConfig(args);
+  let resolvedProgram = args.program;
+  if ((!resolvedProgram || !String(resolvedProgram).trim()) && args.member) {
+    if (!config.sourceRoot || !String(config.sourceRoot).trim()) {
+      console.error('Missing required option: --source <path>');
+      process.exit(2);
+    }
+    try {
+      const memberResolution = resolveMemberProgram({
+        member: args.member,
+        sourceRoot: config.sourceRoot,
+        extensions: config.extensions,
+      });
+      resolvedProgram = memberResolution.program;
+    } catch (error) {
+      console.error(error.message);
+      process.exit(2);
+    }
+  }
+
   const outputRoot = path.resolve(process.cwd(), config.outputRoot);
   const resolved = findImpactGraph({
     outputRoot,
     target: args.target,
-    program: args.program,
+    program: resolvedProgram,
   });
 
   logVerbose(`Target: ${normalizeId(args.target)}`);
