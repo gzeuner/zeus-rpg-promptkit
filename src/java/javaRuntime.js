@@ -142,6 +142,7 @@ module.exports = {
   resolveJavaPaths,
   resolveJavaClasspathEntries,
   resolveJavaClasspath,
+  listClasspathJarEntries,
   listJavaSourceFiles,
   shouldCompileJavaSources,
   ensureJavaSourcesCompiled,

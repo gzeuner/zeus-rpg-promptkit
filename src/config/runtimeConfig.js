@@ -21,7 +21,23 @@ const { DEFAULT_ANALYSIS_LIMITS } = require('../analyze/analysisLimits');
 
 const DEFAULT_EXTENSIONS = ['.rpg', '.rpgle', '.sqlrpgle', '.rpgile', '.bnd', '.binder', '.bndsrc', '.clp', '.clle', '.dds', '.dspf', '.prtf', '.pf', '.lf'];
 const ALLOWED_FETCH_TRANSPORTS = new Set(['auto', 'sftp', 'jt400', 'ftp']);
+const ALLOWED_WORK_COPY_EXTENSIONS = new Set(['txt', 'original', 'suffixed']);
 const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits']);
+const PROFILES_METADATA_KEY = Symbol('zeusProfilesMetadata');
+const DEFAULT_WORK_COPY = Object.freeze({
+  root: 'source/',
+  extension: 'txt',
+});
+const DEFAULT_TOKEN_BUDGET = 2200;
+const TOKEN_BUDGET_KEY_ALIASES = Object.freeze({
+  documentation: 'documentation',
+  'error-analysis': 'errorAnalysis',
+  erroranalysis: 'errorAnalysis',
+  errorAnalysis: 'errorAnalysis',
+  'defect-analysis': 'defectAnalysis',
+  defectanalysis: 'defectAnalysis',
+  defectAnalysis: 'defectAnalysis',
+});
 
 function failValidation(message) {
   throw new Error(`Invalid configuration: ${message}`);
@@ -54,6 +70,14 @@ function assertPositiveInteger(value, label) {
   if (!Number.isInteger(value) || value <= 0) {
     failValidation(`${label} must be a positive integer`);
   }
+}
+
+function normalizeTokenBudgetKey(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+  return TOKEN_BUDGET_KEY_ALIASES[raw] || TOKEN_BUDGET_KEY_ALIASES[raw.toLowerCase()] || raw;
 }
 
 function normalizeExtendsList(value) {
@@ -188,6 +212,29 @@ function validateFetchProfile(value, label) {
   }
 }
 
+function validateWorkCopyConfig(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  assertOptionalString(value.root, `${label}.root`);
+  if (value.extension !== undefined) {
+    assertOptionalString(value.extension, `${label}.extension`);
+    const normalized = String(value.extension).trim().toLowerCase();
+    if (normalized && !ALLOWED_WORK_COPY_EXTENSIONS.has(normalized)) {
+      failValidation(`${label}.extension must be one of: txt, original, suffixed`);
+    }
+  }
+}
+
+function validateTokenBudgetConfig(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  for (const [key, budget] of Object.entries(value)) {
+    assertPositiveInteger(budget, `${label}.${key}`);
+  }
+}
+
 function validateNamedProfile(profile, label) {
   if (!isPlainObject(profile)) {
     failValidation(`${label} must be an object`);
@@ -212,6 +259,12 @@ function validateNamedProfile(profile, label) {
   }
   if (profile.fetch !== undefined) {
     validateFetchProfile(profile.fetch, `${label}.fetch`);
+  }
+  if (profile.workCopy !== undefined) {
+    validateWorkCopyConfig(profile.workCopy, `${label}.workCopy`);
+  }
+  if (profile.tokenBudget !== undefined) {
+    validateTokenBudgetConfig(profile.tokenBudget, `${label}.tokenBudget`);
   }
 }
 
@@ -351,21 +404,102 @@ function resolveEnvPlaceholdersDeep(value, env) {
   return value;
 }
 
-function loadProfiles({ cwd = process.cwd(), fsModule = fs } = {}) {
-  const configDir = path.resolve(cwd, 'config');
-  const preferredPath = path.join(configDir, 'profiles.json');
-  const fallbackPath = path.join(configDir, 'profiles.example.json');
-  const profilePath = fsModule.existsSync(preferredPath) ? preferredPath : fallbackPath;
+function attachProfilesMetadata(profiles, metadata) {
+  Object.defineProperty(profiles, PROFILES_METADATA_KEY, {
+    value: metadata,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+  return profiles;
+}
 
-  if (!fsModule.existsSync(profilePath)) {
-    return {};
+function getProfilesMetadata(profiles) {
+  if (!profiles || typeof profiles !== 'object') {
+    return null;
+  }
+  return profiles[PROFILES_METADATA_KEY] || null;
+}
+
+function resolveProfilesConfigPaths({ args = {}, cwd = process.cwd(), env = process.env } = {}) {
+  const cliConfig = args && args.config !== undefined && args.config !== null && args.config !== true
+    ? String(args.config).trim()
+    : '';
+  const envConfig = env.ZEUS_CONFIG_DIR ? String(env.ZEUS_CONFIG_DIR).trim() : '';
+  const rawLocation = cliConfig || envConfig;
+  const source = cliConfig
+    ? 'cli'
+    : (envConfig ? 'env' : 'default');
+  const explicitLocation = source !== 'default';
+  const resolvedLocation = rawLocation
+    ? path.resolve(cwd, rawLocation)
+    : path.resolve(cwd, 'config');
+  const looksLikeJsonFile = resolvedLocation.toLowerCase().endsWith('.json');
+
+  if (looksLikeJsonFile) {
+    return {
+      source,
+      explicitLocation,
+      configDir: path.dirname(resolvedLocation),
+      preferredPath: resolvedLocation,
+      fallbackPath: null,
+      attemptedPaths: [resolvedLocation],
+      description: resolvedLocation,
+    };
   }
 
-  const raw = fsModule.readFileSync(profilePath, 'utf8');
-  const parsed = JSON.parse(raw);
-  const profiles = parsed && typeof parsed === 'object' ? parsed : {};
-  validateProfiles(profiles);
-  return profiles;
+  const preferredPath = path.join(resolvedLocation, 'profiles.json');
+  const fallbackPath = path.join(resolvedLocation, 'profiles.example.json');
+  return {
+    source,
+    explicitLocation,
+    configDir: resolvedLocation,
+    preferredPath,
+    fallbackPath,
+    attemptedPaths: explicitLocation
+      ? [preferredPath, fallbackPath]
+      : [preferredPath, fallbackPath],
+    description: resolvedLocation,
+  };
+}
+
+function loadProfiles({ cwd = process.cwd(), env = process.env, args = {}, fsModule = fs } = {}) {
+  const configPaths = resolveProfilesConfigPaths({ args, cwd, env });
+  const candidatePaths = [configPaths.preferredPath, configPaths.fallbackPath].filter(Boolean);
+  const profilePath = candidatePaths.find((candidate) => fsModule.existsSync(candidate)) || null;
+
+  if (!profilePath) {
+    return attachProfilesMetadata({}, {
+      ...configPaths,
+      profilePath: null,
+      sourceFileLabel: candidatePaths.join(' or '),
+    });
+  }
+
+  try {
+    const raw = fsModule.readFileSync(profilePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    const profiles = parsed && typeof parsed === 'object' ? parsed : {};
+    validateProfiles(profiles);
+    return attachProfilesMetadata(profiles, {
+      ...configPaths,
+      profilePath,
+      sourceFileLabel: profilePath,
+    });
+  } catch (error) {
+    throw new Error(`Failed to load profiles from ${profilePath}: ${error.message}`);
+  }
+}
+
+function describeProfilesLocation(profiles) {
+  const metadata = getProfilesMetadata(profiles);
+  if (!metadata) {
+    return 'config/profiles.json or config/profiles.example.json';
+  }
+  if (metadata.profilePath) {
+    return metadata.profilePath;
+  }
+  return (metadata.attemptedPaths || []).join(' or ') || metadata.description || 'config/profiles.json';
 }
 
 function resolveProfile(profiles, profileName, options = {}) {
@@ -380,7 +514,7 @@ function resolveProfile(profiles, profileName, options = {}) {
 
   const profile = profiles[profileName];
   if (!profile || GLOBAL_PROFILE_KEYS.has(profileName)) {
-    throw new Error(`Profile "${profileName}" not found in config/profiles.json or config/profiles.example.json`);
+    throw new Error(`Profile "${profileName}" not found in ${describeProfilesLocation(profiles)}`);
   }
 
   const parents = normalizeExtendsList(profile.extends);
@@ -394,6 +528,34 @@ function resolveProfile(profiles, profileName, options = {}) {
   const resolved = mergeConfigLayers(inherited, profile);
   delete resolved.extends;
   return resolveEnvPlaceholdersDeep(resolved, env);
+}
+
+function readWorkCopyConfig(profile, env) {
+  const profileConfig = profile && typeof profile.workCopy === 'object'
+    ? resolveEnvPlaceholdersDeep(profile.workCopy, env)
+    : {};
+
+  return {
+    root: profileConfig.root || DEFAULT_WORK_COPY.root,
+    extension: String(profileConfig.extension || DEFAULT_WORK_COPY.extension).trim().toLowerCase(),
+  };
+}
+
+function readTokenBudgetConfig(profile, env) {
+  const profileConfig = profile && typeof profile.tokenBudget === 'object'
+    ? resolveEnvPlaceholdersDeep(profile.tokenBudget, env)
+    : {};
+  const resolved = {};
+
+  for (const [key, value] of Object.entries(profileConfig)) {
+    const normalizedKey = normalizeTokenBudgetKey(key);
+    if (!normalizedKey) {
+      continue;
+    }
+    resolved[normalizedKey] = Number(value);
+  }
+
+  return resolved;
 }
 
 function readContextOptimizerConfig(profiles, profile, env) {
@@ -464,7 +626,7 @@ function applyDbEnvOverrides(dbConfig, env) {
 }
 
 function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
-  const profiles = loadProfiles({ cwd });
+  const profiles = loadProfiles({ cwd, env, args });
   const profile = resolveProfile(profiles, args.profile, { env });
   const fetchProfile = profile ? (profile.fetch || {}) : {};
 
@@ -488,13 +650,14 @@ function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } =
     contextOptimizer: readContextOptimizerConfig(profiles, profile, env),
     analysisLimits: readAnalysisLimitConfig(profiles, profile, env),
     testData: readTestDataConfig(profiles, profile, env),
+    tokenBudget: readTokenBudgetConfig(profile, env),
   };
   validateAnalyzeConfig(resolved);
   return resolved;
 }
 
 function resolveFetchConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
-  const profiles = loadProfiles({ cwd });
+  const profiles = loadProfiles({ cwd, env, args });
   const profile = resolveProfile(profiles, args.profile, { env });
   const fetchProfile = profile ? resolveEnvPlaceholdersDeep(profile.fetch || profile, env) : {};
 
@@ -527,7 +690,7 @@ function resolveFetchConfig(args, { cwd = process.cwd(), env = process.env } = {
 }
 
 function resolveBundleConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
-  const profiles = loadProfiles({ cwd });
+  const profiles = loadProfiles({ cwd, env, args });
   const profile = resolveProfile(profiles, args.profile, { env });
 
   const resolved = {
@@ -541,11 +704,20 @@ function resolveBundleConfig(args, { cwd = process.cwd(), env = process.env } = 
 module.exports = {
   DEFAULT_EXTENSIONS,
   ALLOWED_FETCH_TRANSPORTS,
+  ALLOWED_WORK_COPY_EXTENSIONS,
   DEFAULT_ANALYSIS_LIMITS,
+  DEFAULT_TOKEN_BUDGET,
+  DEFAULT_WORK_COPY,
+  describeProfilesLocation,
+  getProfilesMetadata,
   loadProfiles,
+  normalizeTokenBudgetKey,
+  readTokenBudgetConfig,
+  readWorkCopyConfig,
   resolveAnalyzeConfig,
   resolveBundleConfig,
   resolveFetchConfig,
+  resolveProfilesConfigPaths,
   resolveProfile,
   validateProfiles,
 };

@@ -81,6 +81,7 @@ function writeAnalyzeArtifacts(state) {
     diagnosticPackReport,
     diagnosticPackManifest,
     emitDiagnostics,
+    config,
   } = state;
   const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
   const selectedPromptTemplates = resolvePromptTemplates(promptTemplates);
@@ -224,6 +225,7 @@ function writeAnalyzeArtifacts(state) {
     outputDir: outputProgramDir,
     sourceSnippet,
     templates: selectedPromptTemplates,
+    tokenBudgets: config && config.tokenBudget ? config.tokenBudget : null,
   });
   fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');
   writeJsonReport(path.join(outputProgramDir, 'analysis-index.json'), writtenAnalysisIndex);
