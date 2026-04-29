@@ -22,19 +22,23 @@ const { runWorkflow } = require('../src/cli/commands/workflowCommand');
 const { runServe } = require('../src/cli/commands/serveCommand');
 const { runDoctor } = require('../src/cli/commands/doctorCommand');
 const { runQueryTable } = require('../src/cli/commands/queryTableCommand');
+const { runQuerySql } = require('../src/cli/commands/querySqlCommand');
 const { runCopyToWorkspace } = require('../src/cli/commands/copyToWorkspaceCommand');
+const { runDiff } = require('../src/cli/commands/diffCommand');
 
 function printHelp() {
   console.log('Usage:');
-  console.log('  zeus [--config <path>] analyze --source <path> --program <name> [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]');
+  console.log('  zeus [--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]');
   console.log('  zeus [--config <path>] workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]');
   console.log('  zeus [--config <path>] bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible] [--profile <name>] [--verbose]');
-  console.log('  zeus [--config <path>] impact --target <name> [--program <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose]');
+  console.log('  zeus [--config <path>] impact (--target <name> | --field <name>) [--program <name> | --member <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose]');
   console.log('  zeus [--config <path>] fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--profile <name>] [--verbose]');
   console.log('  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
   console.log('  zeus [--config <path>] doctor --profile <name>');
   console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>]');
+  console.log('  zeus [--config <path>] query-sql --profile <name> --sql "SELECT ..." [--max-rows <n>] [--output table|csv]');
   console.log('  zeus [--config <path>] copy-to-workspace --profile <name> [--members <M1,M2,...>] [--force]');
+  console.log('  zeus [--config <path>] diff --profile <name> --member <name>');
 }
 
 function parseArgs(argv) {
@@ -132,8 +136,18 @@ async function main() {
     return;
   }
 
+  if (command === 'query-sql') {
+    await runQuerySql(args);
+    return;
+  }
+
   if (command === 'copy-to-workspace') {
     await runCopyToWorkspace(args);
+    return;
+  }
+
+  if (command === 'diff') {
+    await runDiff(args);
     return;
   }
 
