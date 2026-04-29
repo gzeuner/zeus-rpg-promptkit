@@ -15,30 +15,45 @@ function repeat(char, count) {
   return String(char || ' ').repeat(Math.max(0, Number(count) || 0));
 }
 
-function renderCell(value) {
+function truncateCell(value, maxLen = 40) {
+  const rendered = value === null || value === undefined ? '' : String(value);
+  if (!Number.isFinite(Number(maxLen)) || Number(maxLen) <= 0) {
+    return rendered;
+  }
+  const limit = Math.max(1, Number(maxLen));
+  if (rendered.length <= limit) {
+    return rendered;
+  }
+  if (limit === 1) {
+    return '…';
+  }
+  return `${rendered.slice(0, limit - 1)}…`;
+}
+
+function renderCell(value, options = {}) {
   if (value === null || value === undefined) {
     return '';
   }
   if (typeof value === 'object') {
-    return JSON.stringify(value);
+    return truncateCell(JSON.stringify(value), options.maxCellWidth);
   }
-  return String(value);
+  return truncateCell(String(value), options.maxCellWidth);
 }
 
 function buildSeparator(widths) {
   return `+-${widths.map((width) => repeat('-', width)).join('-+-')}-+`;
 }
 
-function buildRow(values, widths) {
-  return `| ${values.map((value, index) => renderCell(value).padEnd(widths[index], ' ')).join(' | ')} |`;
+function buildRow(values, widths, options) {
+  return `| ${values.map((value, index) => renderCell(value, options).padEnd(widths[index], ' ')).join(' | ')} |`;
 }
 
-function renderAsciiTable(columns, rows) {
+function renderAsciiTable(columns, rows, options = {}) {
   const headers = Array.isArray(columns) ? columns.map((column) => String(column || '')) : [];
   const normalizedRows = Array.isArray(rows) ? rows : [];
   const widths = headers.map((header, columnIndex) => Math.max(
     header.length,
-    ...normalizedRows.map((row) => renderCell(Array.isArray(row) ? row[columnIndex] : '').length),
+    ...normalizedRows.map((row) => renderCell(Array.isArray(row) ? row[columnIndex] : '', options).length),
   ));
 
   if (widths.length === 0) {
@@ -48,12 +63,12 @@ function renderAsciiTable(columns, rows) {
   const separator = buildSeparator(widths);
   const lines = [
     separator,
-    buildRow(headers, widths),
+    buildRow(headers, widths, options),
     separator,
   ];
 
   for (const row of normalizedRows) {
-    lines.push(buildRow(Array.isArray(row) ? row : [], widths));
+    lines.push(buildRow(Array.isArray(row) ? row : [], widths, options));
   }
 
   lines.push(separator);
@@ -62,4 +77,5 @@ function renderAsciiTable(columns, rows) {
 
 module.exports = {
   renderAsciiTable,
+  truncateCell,
 };

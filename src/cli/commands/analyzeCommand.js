@@ -28,6 +28,7 @@ const { buildSafeSharingArtifacts } = require('../../sharing/safeSharingArtifact
 const { listWorkflowModes, resolveWorkflowModeSettings } = require('../../workflow/workflowModeRegistry');
 const { resolvePromptTemplates } = require('../../prompt/promptBuilder');
 const { listDiagnosticPacks } = require('../../investigation/diagnosticPackRegistry');
+const { resolveMemberProgram } = require('../helpers/memberResolver');
 const {
   normalizeReproducibilitySettings,
   resolveDurationMs,
@@ -93,12 +94,32 @@ function runAnalyze(args) {
     }
   };
 
-  if (!args.program || !String(args.program).trim()) {
+  const config = resolveAnalyzeConfig(args);
+  let resolvedProgram = args.program;
+
+  if ((!resolvedProgram || !String(resolvedProgram).trim()) && args.member) {
+    if (!config.sourceRoot || !String(config.sourceRoot).trim()) {
+      console.error('Missing required option: --source <path>');
+      process.exit(2);
+    }
+    try {
+      const memberResolution = resolveMemberProgram({
+        member: args.member,
+        sourceRoot: config.sourceRoot,
+        extensions: config.extensions,
+      });
+      resolvedProgram = memberResolution.program;
+    } catch (error) {
+      console.error(error.message);
+      process.exit(2);
+    }
+  }
+
+  if (!resolvedProgram || !String(resolvedProgram).trim()) {
     console.error('Missing required option: --program <name>');
     process.exit(2);
   }
 
-  const config = resolveAnalyzeConfig(args);
   if (!config.sourceRoot || !String(config.sourceRoot).trim()) {
     console.error('Missing required option: --source <path>');
     process.exit(2);
@@ -106,7 +127,7 @@ function runAnalyze(args) {
 
   const sourceRoot = path.resolve(process.cwd(), config.sourceRoot);
   const outputRoot = path.resolve(process.cwd(), config.outputRoot);
-  const program = String(args.program).trim();
+  const program = String(resolvedProgram).trim();
   const workflowPreset = args['workflow-preset-settings'] && typeof args['workflow-preset-settings'] === 'object'
     ? {
       ...args['workflow-preset-settings'],
