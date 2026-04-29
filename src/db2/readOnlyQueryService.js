@@ -42,6 +42,18 @@ function parseReadOnlyQueryResult(stdout) {
   return JSON.parse(content);
 }
 
+function extractSqlState(error) {
+  const text = String(error && error.message ? error.message : error || '');
+  const match = text.match(/\b(SQL\d{4}|SQLSTATE\s*[=:]?\s*([0-9A-Z]{5}))\b/i);
+  if (!match) {
+    return '';
+  }
+  if (match[2]) {
+    return String(match[2]).toUpperCase();
+  }
+  return String(match[1]).toUpperCase();
+}
+
 function validateSqlIdentifier(value, label) {
   const normalized = String(value || '').trim().toUpperCase();
   if (!normalized) {
@@ -80,8 +92,52 @@ function runReadOnlyDb2Query({ dbConfig, query, maxRows = 50, runtime = {} }) {
   return parseReadOnlyQueryResult(result.stdout);
 }
 
+function executeReadOnlyDb2QueryWithFallback({
+  dbConfig,
+  query,
+  maxRows = 200,
+  runtime = {},
+  context = {},
+  retryHandlers = {},
+}) {
+  try {
+    return runReadOnlyDb2Query({
+      dbConfig,
+      query,
+      maxRows,
+      runtime,
+    });
+  } catch (error) {
+    const sqlState = extractSqlState(error);
+    const handler = retryHandlers[sqlState];
+    if (typeof handler !== 'function') {
+      throw error;
+    }
+    const fallback = handler({
+      dbConfig,
+      query,
+      maxRows,
+      runtime,
+      context,
+      error,
+      sqlState,
+    });
+    if (!fallback || typeof fallback.query !== 'string') {
+      throw error;
+    }
+    return runReadOnlyDb2Query({
+      dbConfig,
+      query: fallback.query,
+      maxRows: fallback.maxRows || maxRows,
+      runtime,
+    });
+  }
+}
+
 module.exports = {
+  executeReadOnlyDb2QueryWithFallback,
   escapeSqlLiteral,
+  extractSqlState,
   parseReadOnlyQueryResult,
   runReadOnlyDb2Query,
   SQL_IDENTIFIER_PATTERN,

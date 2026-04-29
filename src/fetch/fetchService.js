@@ -23,15 +23,9 @@ const { downloadDirectory } = require('./sftpDownloader');
 const { downloadDirectoryViaJt400 } = require('./jt400Downloader');
 const { downloadDirectoryViaFtp } = require('./ftpDownloader');
 const { buildImportManifest, writeImportManifest } = require('./importManifest');
+const { SOURCE_FILES_PRIORITY } = require('./memberDiscovery');
 
-const DEFAULT_SOURCE_FILES = [
-  'QRPGLESRC',
-  'QCPYSRC',
-  'QCLSRC',
-  'QCLLESRC',
-  'QSQLRPGLESRC',
-  'QDDSSRC',
-];
+const DEFAULT_SOURCE_FILES = [...SOURCE_FILES_PRIORITY];
 const DEFAULT_TRANSPORT = 'auto';
 const TRANSPORTS = ['auto', 'sftp', 'jt400', 'ftp'];
 

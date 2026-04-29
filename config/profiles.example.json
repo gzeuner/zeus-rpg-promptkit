@@ -29,6 +29,37 @@
       }
     ]
   },
+  "default-shared": {
+    "outputRoot": "${env:ZEUS_OUTPUT_ROOT}",
+    "extensions": [".rpgle", ".sqlrpgle", ".clle", ".clp", ".dds", ".pf", ".lf", ".bnd", ".cpy"],
+    "db": {
+      "host": "${env:ZEUS_DB_HOST}",
+      "url": "${env:ZEUS_DB_URL}",
+      "user": "${env:ZEUS_DB_USER}",
+      "password": "${env:ZEUS_DB_PASSWORD}",
+      "defaultLibrary": "${env:ZEUS_DB_DEFAULT_LIBRARY}",
+      "defaultSchema": "${env:ZEUS_DB_DEFAULT_SCHEMA}"
+    }
+  },
+  "default-fetch": {
+    "extends": "default-shared",
+    "fetch": {
+      "host": "${env:ZEUS_FETCH_HOST}",
+      "user": "${env:ZEUS_FETCH_USER}",
+      "password": "${env:ZEUS_FETCH_PASSWORD}",
+      "sourceLib": "${env:ZEUS_FETCH_SOURCE_LIB}",
+      "ifsDir": "${env:ZEUS_FETCH_IFS_DIR}",
+      "out": "${env:ZEUS_FETCH_OUT}",
+      "files": ["QRPGLESRC", "QSRVSRC", "QCPYSRC", "QCLLESRC", "QCLSRC", "QSQLSRC", "SQLTBLSRC", "SQLVIEWSRC", "SQLIDXSRC", "FORMSRC", "QDDSSRC"],
+      "streamFileCcsid": 1208,
+      "replace": true,
+      "transport": "auto"
+    }
+  },
+  "default-local": {
+    "extends": "default-shared",
+    "sourceRoot": "${env:ZEUS_SOURCE_ROOT}"
+  },
   "default": {
     "sourceRoot": "./rpg",
     "outputRoot": "./output",
