@@ -22,13 +22,16 @@ const { DEFAULT_ANALYSIS_LIMITS } = require('../analyze/analysisLimits');
 const DEFAULT_EXTENSIONS = ['.rpg', '.rpgle', '.sqlrpgle', '.rpgile', '.bnd', '.binder', '.bndsrc', '.clp', '.clle', '.dds', '.dspf', '.prtf', '.pf', '.lf'];
 const ALLOWED_FETCH_TRANSPORTS = new Set(['auto', 'sftp', 'jt400', 'ftp']);
 const ALLOWED_WORK_COPY_EXTENSIONS = new Set(['txt', 'original', 'suffixed']);
-const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits']);
+const ALLOWED_WORKFLOW_STEPS = new Set(['fetch', 'copy', 'analyze', 'impact', 'query-table', 'report']);
+const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits', 'presets']);
 const PROFILES_METADATA_KEY = Symbol('zeusProfilesMetadata');
 const DEFAULT_WORK_COPY = Object.freeze({
   root: 'source/',
   extension: 'txt',
 });
 const DEFAULT_TOKEN_BUDGET = 2200;
+const DEFAULT_WORKFLOW_STEPS = Object.freeze(['fetch', 'copy', 'analyze', 'report']);
+const DEFAULT_WORKFLOW_ANALYZE_MODES = Object.freeze(['documentation', 'defect-analysis']);
 const TOKEN_BUDGET_KEY_ALIASES = Object.freeze({
   documentation: 'documentation',
   'error-analysis': 'errorAnalysis',
@@ -235,6 +238,108 @@ function validateTokenBudgetConfig(value, label) {
   }
 }
 
+function validateWorkflowTableConfig(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  assertOptionalString(value.schema, `${label}.schema`);
+  assertOptionalString(value.table, `${label}.table`);
+  assertOptionalString(value.filter, `${label}.filter`);
+  if (!value.table || !String(value.table).trim()) {
+    failValidation(`${label}.table must be a non-empty string`);
+  }
+}
+
+function validateWorkflowImpactConfig(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  assertOptionalString(value.target, `${label}.target`);
+  assertOptionalString(value.field, `${label}.field`);
+  assertOptionalString(value.program, `${label}.program`);
+  assertOptionalString(value.member, `${label}.member`);
+  if (!value.target && !value.field) {
+    failValidation(`${label} must define at least one of .target or .field`);
+  }
+}
+
+function validateWorkflowPresetDefinition(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  if (!Array.isArray(value.steps) || value.steps.length === 0) {
+    failValidation(`${label}.steps must be a non-empty array`);
+  }
+  for (const step of value.steps) {
+    const normalized = String(step || '').trim().toLowerCase();
+    if (!ALLOWED_WORKFLOW_STEPS.has(normalized)) {
+      failValidation(`${label}.steps contains an unsupported value: ${step}`);
+    }
+  }
+  if (value.members !== undefined) {
+    assertStringArray(value.members, `${label}.members`);
+  }
+  if (value.analyzeModes !== undefined) {
+    assertStringArray(value.analyzeModes, `${label}.analyzeModes`);
+  }
+  if (value.tables !== undefined) {
+    if (!Array.isArray(value.tables)) {
+      failValidation(`${label}.tables must be an array`);
+    }
+    value.tables.forEach((entry, index) => validateWorkflowTableConfig(entry, `${label}.tables[${index}]`));
+  }
+  if (value.impact !== undefined) {
+    if (!Array.isArray(value.impact)) {
+      failValidation(`${label}.impact must be an array`);
+    }
+    value.impact.forEach((entry, index) => validateWorkflowImpactConfig(entry, `${label}.impact[${index}]`));
+  }
+  if (value.continueOnError !== undefined && typeof value.continueOnError !== 'boolean') {
+    failValidation(`${label}.continueOnError must be a boolean`);
+  }
+}
+
+function validateWorkflowPresetCollection(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  for (const [key, preset] of Object.entries(value)) {
+    validateWorkflowPresetDefinition(preset, `${label}.${key}`);
+  }
+}
+
+function validateWorkflowConfig(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  assertOptionalString(value.outputRoot, `${label}.outputRoot`);
+  assertOptionalString(value.defaultPreset, `${label}.defaultPreset`);
+  if (value.members !== undefined) {
+    assertStringArray(value.members, `${label}.members`);
+  }
+  if (value.analyzeModes !== undefined) {
+    assertStringArray(value.analyzeModes, `${label}.analyzeModes`);
+  }
+  if (value.tables !== undefined) {
+    if (!Array.isArray(value.tables)) {
+      failValidation(`${label}.tables must be an array`);
+    }
+    value.tables.forEach((entry, index) => validateWorkflowTableConfig(entry, `${label}.tables[${index}]`));
+  }
+  if (value.impact !== undefined) {
+    if (!Array.isArray(value.impact)) {
+      failValidation(`${label}.impact must be an array`);
+    }
+    value.impact.forEach((entry, index) => validateWorkflowImpactConfig(entry, `${label}.impact[${index}]`));
+  }
+  if (value.continueOnError !== undefined && typeof value.continueOnError !== 'boolean') {
+    failValidation(`${label}.continueOnError must be a boolean`);
+  }
+  if (value.presets !== undefined) {
+    validateWorkflowPresetCollection(value.presets, `${label}.presets`);
+  }
+}
+
 function validateNamedProfile(profile, label) {
   if (!isPlainObject(profile)) {
     failValidation(`${label} must be an object`);
@@ -266,6 +371,12 @@ function validateNamedProfile(profile, label) {
   if (profile.tokenBudget !== undefined) {
     validateTokenBudgetConfig(profile.tokenBudget, `${label}.tokenBudget`);
   }
+  if (profile.workflow !== undefined) {
+    validateWorkflowConfig(profile.workflow, `${label}.workflow`);
+  }
+  if (profile.presets !== undefined) {
+    validateWorkflowPresetCollection(profile.presets, `${label}.presets`);
+  }
 }
 
 function validateProfiles(profiles) {
@@ -281,6 +392,9 @@ function validateProfiles(profiles) {
   }
   if (profiles.analysisLimits !== undefined) {
     validateAnalysisLimitsConfig(profiles.analysisLimits, 'analysisLimits');
+  }
+  if (profiles.presets !== undefined) {
+    validateWorkflowPresetCollection(profiles.presets, 'presets');
   }
 
   for (const [key, value] of Object.entries(profiles)) {
@@ -558,6 +672,109 @@ function readTokenBudgetConfig(profile, env) {
   return resolved;
 }
 
+function normalizeWorkflowStepList(steps) {
+  return Array.from(new Set((steps || [])
+    .map((entry) => String(entry || '').trim().toLowerCase())
+    .filter(Boolean)))
+    .filter((entry) => ALLOWED_WORKFLOW_STEPS.has(entry));
+}
+
+function normalizeWorkflowMemberList(values) {
+  return Array.from(new Set((values || [])
+    .map((entry) => String(entry || '').trim().toUpperCase())
+    .filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeWorkflowAnalyzeModes(values) {
+  const normalized = Array.from(new Set((values || [])
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean)));
+  return normalized.length > 0 ? normalized : [...DEFAULT_WORKFLOW_ANALYZE_MODES];
+}
+
+function normalizeWorkflowTables(values) {
+  return (Array.isArray(values) ? values : [])
+    .map((entry) => ({
+      schema: entry && entry.schema ? String(entry.schema).trim().toUpperCase() : '',
+      table: entry && entry.table ? String(entry.table).trim().toUpperCase() : '',
+      filter: entry && entry.filter ? String(entry.filter).trim().toUpperCase() : '',
+    }))
+    .filter((entry) => entry.table);
+}
+
+function normalizeWorkflowImpact(values) {
+  return (Array.isArray(values) ? values : [])
+    .map((entry) => ({
+      target: entry && entry.target ? String(entry.target).trim().toUpperCase() : '',
+      field: entry && entry.field ? String(entry.field).trim().toUpperCase() : '',
+      program: entry && entry.program ? String(entry.program).trim().toUpperCase() : '',
+      member: entry && entry.member ? String(entry.member).trim().toUpperCase() : '',
+    }))
+    .filter((entry) => entry.target || entry.field);
+}
+
+function normalizeWorkflowPresetMap(value) {
+  if (!isPlainObject(value)) {
+    return {};
+  }
+  const entries = Object.entries(value).map(([name, preset]) => {
+    const normalizedName = String(name || '').trim();
+    return [normalizedName, {
+      name: normalizedName,
+      steps: normalizeWorkflowStepList(preset && preset.steps),
+      members: normalizeWorkflowMemberList(preset && preset.members),
+      analyzeModes: normalizeWorkflowAnalyzeModes(preset && preset.analyzeModes),
+      tables: normalizeWorkflowTables(preset && preset.tables),
+      impact: normalizeWorkflowImpact(preset && preset.impact),
+      continueOnError: Boolean(preset && preset.continueOnError),
+    }];
+  });
+  return Object.fromEntries(entries.filter(([name, preset]) => name && preset.steps.length > 0));
+}
+
+function readWorkflowConfig(profiles, profile, env) {
+  const globalPresets = profiles && typeof profiles.presets === 'object'
+    ? resolveEnvPlaceholdersDeep(profiles.presets, env)
+    : {};
+  const profilePresets = profile && typeof profile.presets === 'object'
+    ? resolveEnvPlaceholdersDeep(profile.presets, env)
+    : {};
+  const workflowConfig = profile && typeof profile.workflow === 'object'
+    ? resolveEnvPlaceholdersDeep(profile.workflow, env)
+    : {};
+  const workflowPresets = workflowConfig && typeof workflowConfig.presets === 'object'
+    ? workflowConfig.presets
+    : {};
+
+  return {
+    outputRoot: workflowConfig.outputRoot || (profile && profile.outputRoot) || 'analysis',
+    defaultPreset: String(workflowConfig.defaultPreset || '').trim(),
+    continueOnError: Boolean(workflowConfig.continueOnError),
+    members: normalizeWorkflowMemberList(workflowConfig.members),
+    analyzeModes: normalizeWorkflowAnalyzeModes(workflowConfig.analyzeModes),
+    tables: normalizeWorkflowTables(workflowConfig.tables),
+    impact: normalizeWorkflowImpact(workflowConfig.impact),
+    presets: normalizeWorkflowPresetMap(mergeConfigLayers(
+      mergeConfigLayers(globalPresets, profilePresets),
+      workflowPresets,
+    )),
+  };
+}
+
+function resolveWorkflowPresetConfig(profiles, profile, presetName, env = process.env) {
+  const workflowConfig = readWorkflowConfig(profiles, profile, env);
+  if (!presetName) {
+    return null;
+  }
+  const key = String(presetName).trim();
+  const preset = workflowConfig.presets[key];
+  if (!preset) {
+    throw new Error(`Workflow preset "${presetName}" not found in ${describeProfilesLocation(profiles)}`);
+  }
+  return preset;
+}
+
 function readContextOptimizerConfig(profiles, profile, env) {
   const globalConfig = profiles && typeof profiles.contextOptimizer === 'object'
     ? resolveEnvPlaceholdersDeep(profiles.contextOptimizer, env)
@@ -705,18 +922,23 @@ module.exports = {
   DEFAULT_EXTENSIONS,
   ALLOWED_FETCH_TRANSPORTS,
   ALLOWED_WORK_COPY_EXTENSIONS,
+  ALLOWED_WORKFLOW_STEPS,
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_TOKEN_BUDGET,
   DEFAULT_WORK_COPY,
+  DEFAULT_WORKFLOW_ANALYZE_MODES,
+  DEFAULT_WORKFLOW_STEPS,
   describeProfilesLocation,
   getProfilesMetadata,
   loadProfiles,
   normalizeTokenBudgetKey,
+  readWorkflowConfig,
   readTokenBudgetConfig,
   readWorkCopyConfig,
   resolveAnalyzeConfig,
   resolveBundleConfig,
   resolveFetchConfig,
+  resolveWorkflowPresetConfig,
   resolveProfilesConfigPaths,
   resolveProfile,
   validateProfiles,

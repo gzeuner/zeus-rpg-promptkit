@@ -15,10 +15,16 @@ const path = require('path');
 const { readAnalyzeRunManifest } = require('../../analyze/analyzeRunManifest');
 const { runAnalyze } = require('./analyzeCommand');
 const { runBundle } = require('./bundleCommand');
-const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
+const {
+  loadProfiles,
+  readWorkflowConfig,
+  resolveAnalyzeConfig,
+  resolveProfile,
+} = require('../../config/runtimeConfig');
 const { resolveWorkflowPresetSettings, listWorkflowPresets } = require('../../workflow/workflowPresetRegistry');
 const { buildWorkflowRunManifest, writeWorkflowRunManifest } = require('../../workflow/workflowRunManifest');
 const { normalizeReproducibilitySettings } = require('../../reproducibility/reproducibility');
+const { runWorkflowEngine } = require('../../workflow/workflowRunner');
 
 function printWorkflowPresets() {
   console.log('Supported workflow presets:');
@@ -35,7 +41,30 @@ function printWorkflowPresets() {
   }
 }
 
-function runWorkflow(args) {
+function printConfiguredWorkflowPresets(args) {
+  if (!args.profile || !String(args.profile).trim()) {
+    console.error('Missing required option: --profile <name>');
+    process.exit(2);
+  }
+  const cwd = process.cwd();
+  const env = process.env;
+  const profiles = loadProfiles({ cwd, env, args });
+  const profile = resolveProfile(profiles, args.profile, { env });
+  const workflowConfig = readWorkflowConfig(profiles, profile, env);
+
+  console.log(`Configured workflow presets for profile ${args.profile}:`);
+  const presetNames = Object.keys(workflowConfig.presets).sort((a, b) => a.localeCompare(b));
+  if (presetNames.length === 0) {
+    console.log('- none');
+    return;
+  }
+  for (const name of presetNames) {
+    const preset = workflowConfig.presets[name];
+    console.log(`- ${name}: ${preset.steps.join(', ')}`);
+  }
+}
+
+function runLegacyWorkflowPreset(args) {
   if (args['list-presets']) {
     printWorkflowPresets();
     return;
@@ -93,6 +122,37 @@ function runWorkflow(args) {
 
   console.log(`Workflow preset complete: ${preset.name}`);
   console.log(`Workflow manifest written to: ${path.join(outputProgramDir, 'workflow-run-manifest.json')}`);
+}
+
+async function runWorkflow(args) {
+  const subcommand = Array.isArray(args._) && args._.length > 0 ? String(args._[0]).trim().toLowerCase() : '';
+  if (subcommand === 'run') {
+    if (args['list-presets']) {
+      try {
+        printConfiguredWorkflowPresets(args);
+      } catch (error) {
+        console.error(error.message);
+        process.exit(2);
+      }
+      return;
+    }
+    try {
+      const state = await runWorkflowEngine(args);
+      console.log(`Workflow run complete: ${state.status}`);
+      console.log(`Run ID: ${state.runId}`);
+      console.log(`Run root: ${state.paths.runRoot}`);
+      console.log(`Context: ${state.paths.contextPath}`);
+      if (state.status !== 'succeeded') {
+        process.exitCode = 1;
+      }
+      return;
+    } catch (error) {
+      console.error(error.message);
+      process.exit(2);
+    }
+  }
+
+  runLegacyWorkflowPreset(args);
 }
 
 module.exports = {
