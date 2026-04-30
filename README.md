@@ -243,6 +243,123 @@ npm run test:benchmark
 
 ---
 
+## Setup and environment variables
+
+This toolkit is designed to keep credentials out of source control by using profile placeholders like `${env:ZEUS_DB_PASSWORD}`.
+
+Recommended first-time setup:
+
+1. Create local profile config:
+
+```bash
+cp config/profiles.example.json config/profiles.json
+```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item config/profiles.example.json config/profiles.json
+```
+
+2. Update `config/profiles.json` profile values for your workspace paths and profile names.
+3. Set required environment variables for your active profile (examples below).
+4. Validate setup:
+
+```bash
+node cli/zeus.js doctor --profile <your-profile>
+```
+
+### Which environment variables are required?
+
+Only set what your selected profile and command path need:
+
+- Local analyze only (no DB, no fetch): often none, unless your profile uses `${env:ZEUS_SOURCE_ROOT}` or `${env:ZEUS_OUTPUT_ROOT}`.
+- Fetch from IBM i: set `ZEUS_FETCH_*`.
+- DB2 metadata/test data workflows: set `ZEUS_DB_*` (and optionally `ZEUS_METADATA_DB_*`, `ZEUS_TESTDATA_DB_*` for role-specific split).
+
+Commonly used variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `ZEUS_CONFIG_DIR` | Optional config location override (directory or `profiles.json` path). |
+| `ZEUS_SOURCE_ROOT` | Source root override used by profile placeholders. |
+| `ZEUS_OUTPUT_ROOT` | Output root override used by profile placeholders. |
+| `ZEUS_FETCH_HOST` | IBM i host for fetch workflows. |
+| `ZEUS_FETCH_USER` | IBM i user for fetch workflows. |
+| `ZEUS_FETCH_PASSWORD` | IBM i password for fetch workflows. |
+| `ZEUS_FETCH_SOURCE_LIB` | Source library (for example `SOURCEN`). |
+| `ZEUS_FETCH_IFS_DIR` | Remote IFS export directory. |
+| `ZEUS_FETCH_OUT` | Local fetch output path. |
+| `ZEUS_FETCH_FILES` | Optional CSV of source files (`QRPGLESRC,QCLLESRC,...`). |
+| `ZEUS_FETCH_MEMBERS` | Optional CSV member allow-list. |
+| `ZEUS_FETCH_TRANSPORT` | `auto`, `sftp`, `jt400`, or `ftp`. |
+| `ZEUS_DB_HOST` / `ZEUS_DB_URL` | DB2 connection endpoint. |
+| `ZEUS_DB_USER` | DB2 user. |
+| `ZEUS_DB_PASSWORD` | DB2 password. |
+| `ZEUS_DB_DEFAULT_SCHEMA` | Default DB2 schema/library. |
+| `ZEUS_METADATA_DB_*` | Optional role-specific metadata DB override. |
+| `ZEUS_TESTDATA_DB_*` | Optional role-specific test-data DB override. |
+
+### How to set environment variables
+
+PowerShell (current shell):
+
+```powershell
+$env:ZEUS_SOURCE_ROOT = "C:\work\rpg_sources"
+$env:ZEUS_OUTPUT_ROOT = "C:\work\analysis"
+$env:ZEUS_DB_USER = "MYUSER"
+$env:ZEUS_DB_PASSWORD = "my-secret"
+```
+
+Windows `cmd.exe` (current shell):
+
+```bat
+set ZEUS_SOURCE_ROOT=C:\work\rpg_sources
+set ZEUS_OUTPUT_ROOT=C:\work\analysis
+set ZEUS_DB_USER=MYUSER
+set ZEUS_DB_PASSWORD=my-secret
+```
+
+macOS/Linux bash/zsh (current shell):
+
+```bash
+export ZEUS_SOURCE_ROOT="$HOME/work/rpg_sources"
+export ZEUS_OUTPUT_ROOT="$HOME/work/analysis"
+export ZEUS_DB_USER="MYUSER"
+export ZEUS_DB_PASSWORD="my-secret"
+```
+
+Persist across sessions:
+
+- PowerShell profile: add `$env:... = "..."` lines to your PowerShell profile script.
+- Windows system/user env: use `setx` or Windows Environment Variables UI.
+- bash/zsh: add `export ...` lines to `~/.bashrc`, `~/.zshrc`, or shell profile.
+
+### Minimal example by workflow
+
+Fetch + analyze:
+
+```bash
+# required for typical fetch profile placeholders
+ZEUS_FETCH_HOST=myibmi.example.com
+ZEUS_FETCH_USER=MYUSER
+ZEUS_FETCH_PASSWORD=***
+ZEUS_FETCH_SOURCE_LIB=SOURCEN
+ZEUS_FETCH_IFS_DIR=/home/zeus/rpg_sources
+ZEUS_FETCH_OUT=./rpg_sources
+```
+
+Analyze + DB2 metadata:
+
+```bash
+ZEUS_DB_HOST=myibmi.example.com
+ZEUS_DB_USER=MYUSER
+ZEUS_DB_PASSWORD=***
+ZEUS_DB_DEFAULT_SCHEMA=MYLIB
+```
+
+---
+
 ## Quick start
 
 ### 1. Analyze a local source tree
