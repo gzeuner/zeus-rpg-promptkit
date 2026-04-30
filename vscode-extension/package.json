@@ -18,78 +18,63 @@
     "commands": [
       {
         "command": "zeusRpgToolkit.openDashboard",
-        "title": "Open Dashboard",
-        "category": "Zeus"
+        "title": "Zeus: Open Dashboard"
       },
       {
         "command": "zeusRpgToolkit.selectProfile",
-        "title": "Select Profile",
-        "category": "Zeus"
+        "title": "Zeus: Select Profile"
       },
       {
         "command": "zeusRpgToolkit.runDoctor",
-        "title": "Run Doctor",
-        "category": "Zeus"
+        "title": "Zeus: Run Doctor"
       },
       {
         "command": "zeusRpgToolkit.fetchSources",
-        "title": "Fetch Sources",
-        "category": "Zeus"
+        "title": "Zeus: Fetch Sources"
       },
       {
         "command": "zeusRpgToolkit.analyzeWorkspace",
-        "title": "Analyze Workspace",
-        "category": "Zeus"
+        "title": "Zeus: Analyze Workspace"
       },
       {
         "command": "zeusRpgToolkit.analyzeCurrentFile",
-        "title": "Analyze Current File",
-        "category": "Zeus"
+        "title": "Zeus: Analyze Current File"
       },
       {
         "command": "zeusRpgToolkit.queryTable",
-        "title": "Query Table",
-        "category": "Zeus"
+        "title": "Zeus: Query Table"
       },
       {
         "command": "zeusRpgToolkit.generateAiContext",
-        "title": "Generate AI Context",
-        "category": "Zeus"
+        "title": "Zeus: Generate AI Context"
       },
       {
         "command": "zeusRpgToolkit.copyAiPromptToClipboard",
-        "title": "Copy AI Prompt to Clipboard",
-        "category": "Zeus"
+        "title": "Zeus: Copy AI Prompt to Clipboard"
       },
       {
         "command": "zeusRpgToolkit.runWorkflow",
-        "title": "Run Workflow",
-        "category": "Zeus"
+        "title": "Zeus: Run Workflow"
       },
       {
         "command": "zeusRpgToolkit.openLatestReport",
-        "title": "Open Latest Report",
-        "category": "Zeus"
+        "title": "Zeus: Open Latest Report"
       },
       {
         "command": "zeusRpgToolkit.openConfig",
-        "title": "Open Config",
-        "category": "Zeus"
+        "title": "Zeus: Open Config"
       },
       {
         "command": "zeusRpgToolkit.addFileToAiContext",
-        "title": "Add File to AI Context",
-        "category": "Zeus"
+        "title": "Zeus: Add File to AI Context"
       },
       {
         "command": "zeusRpgToolkit.addFolderToAiContext",
-        "title": "Add Folder to AI Context",
-        "category": "Zeus"
+        "title": "Zeus: Add Folder to AI Context"
       },
       {
         "command": "zeusRpgToolkit.clearAiContextSelection",
-        "title": "Clear AI Context Selection",
-        "category": "Zeus"
+        "title": "Zeus: Clear AI Context Selection"
       },
       {
         "command": "zeusRpgToolkit.refreshViews",
