@@ -15,10 +15,11 @@ const http = require('http');
 const path = require('path');
 
 const {
-  listAnalysisRuns,
-  readAnalysisRun,
-  readArtifactContent,
-} = require('./localUiDataApi');
+  executeListRuns,
+  executeReadArtifact,
+  executeReadRun,
+  executeReadRunViews,
+} = require('../core/runExplorerService');
 const { renderLocalUiShell } = require('./localUiShell');
 
 const DEFAULT_UI_HOST = '127.0.0.1';
@@ -97,30 +98,43 @@ function createLocalUiRequestHandler({ outputRoot }) {
       }
 
       if (pathname === '/api/runs') {
-        sendJson(response, 200, listAnalysisRuns(resolvedOutputRoot));
+        sendJson(response, 200, executeListRuns({
+          sourceOutputRoot: resolvedOutputRoot,
+        }).runs);
         return;
       }
 
       if (segments[0] === 'api' && segments[1] === 'runs' && segments.length === 3) {
-        sendJson(response, 200, readAnalysisRun(resolvedOutputRoot, segments[2]));
+        sendJson(response, 200, executeReadRun({
+          sourceOutputRoot: resolvedOutputRoot,
+          program: segments[2],
+        }).run);
         return;
       }
 
       if (segments[0] === 'api' && segments[1] === 'runs' && segments[3] === 'views' && segments.length === 4) {
-        sendJson(response, 200, readAnalysisRun(resolvedOutputRoot, segments[2]).views);
+        sendJson(response, 200, executeReadRunViews({
+          sourceOutputRoot: resolvedOutputRoot,
+          program: segments[2],
+        }).views);
         return;
       }
 
       if (segments[0] === 'api' && segments[1] === 'runs' && segments[3] === 'artifacts' && segments[4] === 'content') {
-        const artifactPath = url.searchParams.get('path');
-        const artifact = readArtifactContent(resolvedOutputRoot, segments[2], artifactPath);
-        sendJson(response, 200, artifact);
+        sendJson(response, 200, executeReadArtifact({
+          sourceOutputRoot: resolvedOutputRoot,
+          program: segments[2],
+          path: url.searchParams.get('path'),
+        }).artifact);
         return;
       }
 
       if (segments[0] === 'runs' && segments[2] === 'artifacts' && segments[3] === 'raw') {
-        const artifactPath = url.searchParams.get('path');
-        const artifact = readArtifactContent(resolvedOutputRoot, segments[1], artifactPath);
+        const artifact = executeReadArtifact({
+          sourceOutputRoot: resolvedOutputRoot,
+          program: segments[1],
+          path: url.searchParams.get('path'),
+        }).artifact;
         sendText(response, 200, artifact.content, artifact.contentType);
         return;
       }

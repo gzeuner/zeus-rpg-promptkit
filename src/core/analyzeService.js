@@ -197,6 +197,20 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
         testDataPolicy: config.testData,
         tokenBudget: config.tokenBudget,
         extensions: config.extensions,
+        connectionRoles: config.connections ? {
+          source: config.connections.source ? {
+            kind: config.connections.source.kind,
+            profileKey: config.connections.source.profileKey,
+          } : null,
+          metadata: config.connections.metadata ? {
+            kind: config.connections.metadata.kind,
+            profileKey: config.connections.metadata.profileKey,
+          } : null,
+          testData: config.connections.testData ? {
+            kind: config.connections.testData.kind,
+            profileKey: config.connections.testData.profileKey,
+          } : null,
+        } : null,
         reproducibility,
         guidedMode,
         workflowPreset,
@@ -259,6 +273,20 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
         testDataPolicy: config.testData,
         tokenBudget: config.tokenBudget,
         extensions: config.extensions,
+        connectionRoles: config.connections ? {
+          source: config.connections.source ? {
+            kind: config.connections.source.kind,
+            profileKey: config.connections.source.profileKey,
+          } : null,
+          metadata: config.connections.metadata ? {
+            kind: config.connections.metadata.kind,
+            profileKey: config.connections.metadata.profileKey,
+          } : null,
+          testData: config.connections.testData ? {
+            kind: config.connections.testData.kind,
+            profileKey: config.connections.testData.profileKey,
+          } : null,
+        } : null,
         reproducibility,
         guidedMode,
         workflowPreset,

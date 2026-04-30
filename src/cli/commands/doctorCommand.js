@@ -17,6 +17,7 @@ const { spawnSync } = require('child_process');
 const {
   getProfilesMetadata,
   loadProfiles,
+  resolveAnalyzeDbConfig,
   resolveAnalyzeConfig,
   resolveFetchConfig,
   resolveProfile,
@@ -88,62 +89,96 @@ function addEnvCheck(checks, { name, expected = true, envValue, fallbackValue = 
   });
 }
 
+function addDbEnvironmentChecks(checks, {
+  env,
+  envPrefix,
+  fallbackConfig,
+  requiredLabelPrefix,
+}) {
+  const usesUrl = isSet(env[`${envPrefix}_URL`]);
+  addEnvCheck(checks, {
+    name: `${envPrefix}_URL`,
+    expected: true,
+    envValue: env[`${envPrefix}_URL`],
+    fallbackValue: fallbackConfig && fallbackConfig.url,
+    required: false,
+    hint: 'jdbc:as400://mein-ibmi-host;naming=system;libraries=DATEIEN',
+  });
+  addEnvCheck(checks, {
+    name: `${envPrefix}_HOST`,
+    expected: true,
+    envValue: env[`${envPrefix}_HOST`],
+    fallbackValue: fallbackConfig && fallbackConfig.host,
+    required: !usesUrl,
+    hint: 'mein-ibmi-host',
+  });
+  addEnvCheck(checks, {
+    name: `${envPrefix}_USER`,
+    expected: true,
+    envValue: env[`${envPrefix}_USER`],
+    fallbackValue: fallbackConfig && fallbackConfig.user,
+    required: true,
+    hint: 'MEINUSER',
+  });
+  addEnvCheck(checks, {
+    name: `${envPrefix}_PASSWORD`,
+    expected: true,
+    envValue: env[`${envPrefix}_PASSWORD`],
+    fallbackValue: fallbackConfig && fallbackConfig.password,
+    required: true,
+    hint: 'mein-passwort',
+  });
+  addEnvCheck(checks, {
+    name: `${envPrefix}_DEFAULT_LIBRARY`,
+    expected: true,
+    envValue: env[`${envPrefix}_DEFAULT_LIBRARY`],
+    fallbackValue: fallbackConfig && fallbackConfig.defaultLibrary,
+    required: false,
+    hint: requiredLabelPrefix || 'DATEIEN',
+  });
+  addEnvCheck(checks, {
+    name: `${envPrefix}_DEFAULT_SCHEMA`,
+    expected: true,
+    envValue: env[`${envPrefix}_DEFAULT_SCHEMA`],
+    fallbackValue: fallbackConfig && fallbackConfig.defaultSchema,
+    required: false,
+    hint: requiredLabelPrefix || 'DATEIEN',
+  });
+}
+
 function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
   const checks = [];
   const profileHasDb = Boolean(profile && profile.db);
+  const profileHasMetadataDb = Boolean(profile && profile.dbRoles && profile.dbRoles.metadata);
+  const profileHasTestDataDb = Boolean(profile && profile.dbRoles && profile.dbRoles.testData);
   const profileHasFetch = Boolean(profile && profile.fetch);
-  const dbUsesUrl = isSet(env.ZEUS_DB_URL);
   const dbProfile = profile && profile.db ? profile.db : {};
   const fetchProfile = profile && profile.fetch ? profile.fetch : {};
 
   if (profileHasDb) {
-    addEnvCheck(checks, {
-      name: 'ZEUS_DB_URL',
-      expected: true,
-      envValue: env.ZEUS_DB_URL,
-      fallbackValue: dbProfile.url,
-      required: false,
-      hint: 'jdbc:as400://mein-ibmi-host;naming=system;libraries=DATEIEN',
+    addDbEnvironmentChecks(checks, {
+      env,
+      envPrefix: 'ZEUS_DB',
+      fallbackConfig: dbProfile,
+      requiredLabelPrefix: 'DATEIEN',
     });
-    addEnvCheck(checks, {
-      name: 'ZEUS_DB_HOST',
-      expected: true,
-      envValue: env.ZEUS_DB_HOST,
-      fallbackValue: dbProfile.host,
-      required: !dbUsesUrl,
-      hint: 'mein-ibmi-host',
+  }
+
+  if (profileHasMetadataDb) {
+    addDbEnvironmentChecks(checks, {
+      env,
+      envPrefix: 'ZEUS_METADATA_DB',
+      fallbackConfig: analyzeConfig && analyzeConfig.dbRoles ? analyzeConfig.dbRoles.metadata : {},
+      requiredLabelPrefix: 'DATEIEN',
     });
-    addEnvCheck(checks, {
-      name: 'ZEUS_DB_USER',
-      expected: true,
-      envValue: env.ZEUS_DB_USER,
-      fallbackValue: dbProfile.user,
-      required: true,
-      hint: 'MEINUSER',
-    });
-    addEnvCheck(checks, {
-      name: 'ZEUS_DB_PASSWORD',
-      expected: true,
-      envValue: env.ZEUS_DB_PASSWORD,
-      fallbackValue: dbProfile.password,
-      required: true,
-      hint: 'mein-passwort',
-    });
-    addEnvCheck(checks, {
-      name: 'ZEUS_DB_DEFAULT_LIBRARY',
-      expected: true,
-      envValue: env.ZEUS_DB_DEFAULT_LIBRARY,
-      fallbackValue: dbProfile.defaultLibrary,
-      required: false,
-      hint: 'DATEIEN',
-    });
-    addEnvCheck(checks, {
-      name: 'ZEUS_DB_DEFAULT_SCHEMA',
-      expected: true,
-      envValue: env.ZEUS_DB_DEFAULT_SCHEMA,
-      fallbackValue: dbProfile.defaultSchema,
-      required: false,
-      hint: 'DATEIEN',
+  }
+
+  if (profileHasTestDataDb) {
+    addDbEnvironmentChecks(checks, {
+      env,
+      envPrefix: 'ZEUS_TESTDATA_DB',
+      fallbackConfig: analyzeConfig && analyzeConfig.dbRoles ? analyzeConfig.dbRoles.testData : {},
+      requiredLabelPrefix: 'DATEIEN',
     });
   }
 
@@ -316,31 +351,71 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
       status: 'SKIP',
       details: 'Skipped because config/profile validation already failed.',
     });
-  } else if (!isDbConfigured(resolvedAnalyzeConfig.db)) {
+  } else if (!isDbConfigured(resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata'))) {
     checks.push({
-      name: 'JDBC',
+      name: 'JDBC Metadata',
       status: 'SKIP',
       details: 'DB2 credentials are not fully configured.',
     });
   } else {
     try {
+      const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
       runReadOnlyDb2Query({
-        dbConfig: resolvedAnalyzeConfig.db,
+        dbConfig: metadataDbConfig,
         query: 'SELECT 1 AS HEALTHCHECK FROM SYSIBM.SYSDUMMY1',
         maxRows: 1,
       });
       checks.push({
-        name: 'JDBC',
+        name: 'JDBC Metadata',
         status: 'PASS',
-        details: `Read-only query succeeded${resolveDefaultSchema(resolvedAnalyzeConfig.db) ? ` (default schema ${resolveDefaultSchema(resolvedAnalyzeConfig.db)})` : ''}.`,
+        details: `Read-only query succeeded${resolveDefaultSchema(metadataDbConfig) ? ` (default schema ${resolveDefaultSchema(metadataDbConfig)})` : ''}.`,
       });
     } catch (error) {
       hasCriticalFailure = true;
       checks.push({
-        name: 'JDBC',
+        name: 'JDBC Metadata',
         status: 'FAIL',
         details: error.message,
       });
+    }
+  }
+
+  const hasExplicitTestDataRole = Boolean(
+    (resolvedProfile && resolvedProfile.dbRoles && resolvedProfile.dbRoles.testData)
+    || env.ZEUS_TESTDATA_DB_HOST
+    || env.ZEUS_TESTDATA_DB_URL
+    || env.ZEUS_TESTDATA_DB_USER
+    || env.ZEUS_TESTDATA_DB_PASSWORD !== undefined,
+  );
+
+  if (resolvedAnalyzeConfig && hasExplicitTestDataRole) {
+    const testDataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'testData');
+    if (!isDbConfigured(testDataDbConfig)) {
+      checks.push({
+        name: 'JDBC Test Data',
+        status: 'SKIP',
+        details: 'Test-data DB2 credentials are not fully configured.',
+      });
+    } else {
+      try {
+        runReadOnlyDb2Query({
+          dbConfig: testDataDbConfig,
+          query: 'SELECT 1 AS HEALTHCHECK FROM SYSIBM.SYSDUMMY1',
+          maxRows: 1,
+        });
+        checks.push({
+          name: 'JDBC Test Data',
+          status: 'PASS',
+          details: `Read-only query succeeded${resolveDefaultSchema(testDataDbConfig) ? ` (default schema ${resolveDefaultSchema(testDataDbConfig)})` : ''}.`,
+        });
+      } catch (error) {
+        hasCriticalFailure = true;
+        checks.push({
+          name: 'JDBC Test Data',
+          status: 'FAIL',
+          details: error.message,
+        });
+      }
     }
   }
 

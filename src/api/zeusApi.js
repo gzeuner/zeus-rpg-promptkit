@@ -15,6 +15,12 @@ const { runWorkflowEngine } = require('../workflow/workflowRunner');
 const { executeFetch } = require('../core/fetchService');
 const { executeAnalyze } = require('../core/analyzeService');
 const { executeQueryTable } = require('../core/queryService');
+const {
+  executeListRuns,
+  executeReadArtifact,
+  executeReadRun,
+  executeReadRunViews,
+} = require('../core/runExplorerService');
 
 async function runWorkflow(profile, preset, options = {}) {
   const { runtime = {}, ...args } = options;
@@ -50,9 +56,49 @@ function queryTable(profile, table, options = {}) {
   }, runtime);
 }
 
+function listRuns(profile, options = {}) {
+  const { runtime = {}, ...args } = options;
+  return executeListRuns({
+    profile,
+    ...args,
+  }, runtime);
+}
+
+function readRun(profile, program, options = {}) {
+  const { runtime = {}, ...args } = options;
+  return executeReadRun({
+    profile,
+    program,
+    ...args,
+  }, runtime);
+}
+
+function readRunViews(profile, program, options = {}) {
+  const { runtime = {}, ...args } = options;
+  return executeReadRunViews({
+    profile,
+    program,
+    ...args,
+  }, runtime);
+}
+
+function readArtifact(profile, program, artifactPath, options = {}) {
+  const { runtime = {}, ...args } = options;
+  return executeReadArtifact({
+    profile,
+    program,
+    artifactPath,
+    ...args,
+  }, runtime);
+}
+
 module.exports = {
   analyze,
   fetch,
+  listRuns,
   queryTable,
+  readArtifact,
+  readRun,
+  readRunViews,
   runWorkflow,
 };
