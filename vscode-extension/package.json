@@ -1,0 +1,225 @@
+{
+  "name": "zeus-rpg-toolkit-vscode",
+  "displayName": "Zeus RPG Toolkit",
+  "description": "VS Code integration for IBM i / RPG analysis and AI agent coding workflows",
+  "version": "0.1.0",
+  "publisher": "zeus-rpg-toolkit",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "zeusRpgToolkit.openDashboard",
+        "title": "Open Dashboard",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.selectProfile",
+        "title": "Select Profile",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.runDoctor",
+        "title": "Run Doctor",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.fetchSources",
+        "title": "Fetch Sources",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.analyzeWorkspace",
+        "title": "Analyze Workspace",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.analyzeCurrentFile",
+        "title": "Analyze Current File",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.queryTable",
+        "title": "Query Table",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.generateAiContext",
+        "title": "Generate AI Context",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.copyAiPromptToClipboard",
+        "title": "Copy AI Prompt to Clipboard",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.runWorkflow",
+        "title": "Run Workflow",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.openLatestReport",
+        "title": "Open Latest Report",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.openConfig",
+        "title": "Open Config",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.addFileToAiContext",
+        "title": "Add File to AI Context",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.addFolderToAiContext",
+        "title": "Add Folder to AI Context",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.clearAiContextSelection",
+        "title": "Clear AI Context Selection",
+        "category": "Zeus"
+      },
+      {
+        "command": "zeusRpgToolkit.refreshViews",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      }
+    ],
+    "configuration": {
+      "title": "Zeus RPG Toolkit",
+      "properties": {
+        "zeusRpgToolkit.configPath": {
+          "type": "string",
+          "default": "config/profiles.json",
+          "markdownDescription": "Relative or absolute path to `profiles.json`."
+        },
+        "zeusRpgToolkit.defaultProfile": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Active Zeus profile name from `profiles.json`."
+        },
+        "zeusRpgToolkit.outputRoot": {
+          "type": "string",
+          "default": "analysis",
+          "markdownDescription": "Root output folder used by workflow and AI context commands."
+        },
+        "zeusRpgToolkit.readOnlyMode": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Read-only safety mode. Enabled by default."
+        },
+        "zeusRpgToolkit.enableAgentMode": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enable AI context generation and agent-oriented commands."
+        },
+        "zeusRpgToolkit.javaPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional Java runtime path. Can point to a directory or executable."
+        },
+        "zeusRpgToolkit.cliPath": {
+          "type": "string",
+          "default": "cli/zeus.js",
+          "markdownDescription": "Relative or absolute path to the Zeus CLI entry file."
+        }
+      }
+    },
+    "viewContainers": {
+      "activitybar": [
+        {
+          "id": "zeusRpgToolkit",
+          "title": "Zeus RPG Toolkit",
+          "icon": "resources/zeus.svg"
+        }
+      ]
+    },
+    "views": {
+      "zeusRpgToolkit": [
+        {
+          "id": "zeusProfilesView",
+          "name": "Profiles"
+        },
+        {
+          "id": "zeusWorkflowsView",
+          "name": "Workflows"
+        },
+        {
+          "id": "zeusFetchedSourcesView",
+          "name": "Fetched Sources"
+        },
+        {
+          "id": "zeusReportsView",
+          "name": "Reports"
+        },
+        {
+          "id": "zeusAiContextView",
+          "name": "AI Context Bundles"
+        },
+        {
+          "id": "zeusDiagnosticsView",
+          "name": "Diagnostics"
+        }
+      ]
+    },
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "zeusRpgToolkit.addFileToAiContext",
+          "when": "resourceScheme == file && !explorerResourceIsFolder",
+          "group": "navigation@20"
+        },
+        {
+          "command": "zeusRpgToolkit.addFolderToAiContext",
+          "when": "resourceScheme == file && explorerResourceIsFolder",
+          "group": "navigation@21"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "zeusRpgToolkit.refreshViews",
+          "when": "view == zeusProfilesView",
+          "group": "navigation"
+        },
+        {
+          "command": "zeusRpgToolkit.refreshViews",
+          "when": "view == zeusWorkflowsView",
+          "group": "navigation"
+        },
+        {
+          "command": "zeusRpgToolkit.refreshViews",
+          "when": "view == zeusFetchedSourcesView",
+          "group": "navigation"
+        },
+        {
+          "command": "zeusRpgToolkit.refreshViews",
+          "when": "view == zeusReportsView",
+          "group": "navigation"
+        },
+        {
+          "command": "zeusRpgToolkit.refreshViews",
+          "when": "view == zeusAiContextView",
+          "group": "navigation"
+        },
+        {
+          "command": "zeusRpgToolkit.refreshViews",
+          "when": "view == zeusDiagnosticsView",
+          "group": "navigation"
+        }
+      ]
+    }
+  }
+}
+
