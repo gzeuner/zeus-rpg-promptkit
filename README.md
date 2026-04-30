@@ -963,11 +963,92 @@ Then use:
 
 ---
 
+## VS Code extension
+
+This repository now includes a VS Code integration layer in:
+
+- `vscode-extension/`
+
+The extension is intentionally thin and reuses existing core/CLI modules from `src/`.
+
+### Extension commands
+
+- `Zeus: Open Dashboard`
+- `Zeus: Select Profile`
+- `Zeus: Run Doctor`
+- `Zeus: Fetch Sources`
+- `Zeus: Analyze Workspace`
+- `Zeus: Analyze Current File`
+- `Zeus: Query Table`
+- `Zeus: Generate AI Context`
+- `Zeus: Copy AI Prompt to Clipboard`
+- `Zeus: Run Workflow`
+- `Zeus: Open Latest Report`
+- `Zeus: Open Config`
+- `Zeus: Add File to AI Context`
+- `Zeus: Add Folder to AI Context`
+- `Zeus: Clear AI Context Selection`
+
+### Extension settings
+
+- `zeusRpgToolkit.configPath`
+- `zeusRpgToolkit.defaultProfile`
+- `zeusRpgToolkit.outputRoot`
+- `zeusRpgToolkit.readOnlyMode` (default: `true`)
+- `zeusRpgToolkit.enableAgentMode`
+- `zeusRpgToolkit.javaPath`
+- `zeusRpgToolkit.cliPath`
+
+### Activity bar views
+
+Container name: `Zeus RPG Toolkit`
+
+- Profiles
+- Workflows
+- Fetched Sources
+- Reports
+- AI Context Bundles
+- Diagnostics
+
+### Agent mode and AI context
+
+`Zeus: Generate AI Context` creates a safe bundle in `analysis/runs/<timestamp>/ai-context` (or under the latest workflow run root when available), including:
+
+- `ai_prompt.md`
+- `context.json`
+- `report.md`
+- `relevant_sources.txt`
+- `db_metadata.json` (if available)
+- `safety_rules.md`
+
+The context bundle is sanitized:
+
+- no passwords/tokens in generated files
+- no credential values in logs
+- only workspace-local relative paths in file selections
+
+### Run extension locally
+
+1. Open this repository in VS Code.
+2. Open `vscode-extension/extension.js`.
+3. Start extension debugging (`F5`) using VS Code's Extension Development Host.
+4. In the Extension Development Host, run `Zeus: Open Config`, then `Zeus: Select Profile`.
+5. Run `Zeus: Run Doctor`, `Zeus: Run Workflow`, and `Zeus: Generate AI Context`.
+
+### Manual validation checklist
+
+1. Select profile from Command Palette.
+2. Run doctor and verify PASS/FAIL/SKIP diagnostics in Output + Diagnostics view.
+3. Run workflow and verify report auto-opens.
+4. Generate AI context and verify required files exist.
+5. Confirm secrets are masked in Output Channel and AI context files.
+
 ## Project structure
 
 ### Main entry points and notable modules
 
 - `cli/zeus.js` — CLI entry point
+- `vscode-extension/extension.js` — VS Code extension entry point
 - `src/collector/sourceCollector.js` — source file discovery
 - `src/scanner/rpgScanner.js` — RPG heuristics scanner
 - `src/scanner/clScanner.js` — CL scanner
@@ -983,6 +1064,9 @@ Then use:
 - `src/report/architectureReport.js` — architecture report generation
 - `src/prompt/promptBuilder.js` — prompt rendering
 - `src/prompt/promptRegistry.js` — prompt contract metadata
+- `src/agent/aiContextService.js` — safe AI context bundle generation
+- `src/security/secretMasking.js` — secret masking helpers
+- `src/vscode/profileSelection.js` — profile selection helpers for VS Code integration
 - `src/viewer/architectureViewerGenerator.js` — interactive HTML viewer
 - `src/impact/impactAnalyzer.js` — reverse dependency impact analysis
 - `src/analyze/stageRegistry.js` — stage pipeline registry
