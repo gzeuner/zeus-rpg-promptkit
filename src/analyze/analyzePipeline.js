@@ -38,6 +38,7 @@ const { validateSourceFiles } = require('../source/sourceIntegrity');
 const { scanIfsPaths } = require('../investigation/ifsPathScanner');
 const { runFullTextSearch } = require('../investigation/fullTextSearch');
 const { runDiagnosticPacks } = require('../investigation/diagnosticPackRunner');
+const { resolveAnalyzeDbConfig } = require('../config/runtimeConfig');
 const {
   ANALYSIS_ARTIFACT_CACHE_FILE,
   buildDb2MetadataCacheKey,
@@ -513,11 +514,12 @@ function exportDb2Stage(state) {
   const currentDb2Cache = mergeObject(currentCacheStatus.db2Metadata, {});
   const currentDb2Hits = Number(currentDb2Cache.hits) || 0;
   const currentDb2Misses = Number(currentDb2Cache.misses) || 0;
+  const metadataDbConfig = resolveAnalyzeDbConfig(config, 'metadata');
   const cacheKey = outputProgramDir
     ? buildDb2MetadataCacheKey({
       program,
       dependencies: context.dependencies,
-      dbConfig: config.db,
+      dbConfig: metadataDbConfig,
     })
     : null;
   const cachedArtifact = cacheKey && outputProgramDir
@@ -556,7 +558,7 @@ function exportDb2Stage(state) {
     db2Export = exportDb2Metadata({
       program,
       dependencies: context.dependencies,
-      dbConfig: config.db,
+      dbConfig: metadataDbConfig,
       outputDir: outputProgramDir,
       verbose,
       canonicalAnalysis,
@@ -619,6 +621,7 @@ function exportDb2Stage(state) {
     db2Export,
     stageMetadata: {
       ...db2Export.summary,
+      connectionRole: 'metadata',
       cache: db2CacheMetadata,
     },
     stageDiagnostics: [
@@ -655,6 +658,7 @@ function exportTestDataStage(state) {
   const currentTestDataCache = mergeObject(currentCacheStatus.testData, {});
   const currentTestDataHits = Number(currentTestDataCache.hits) || 0;
   const currentTestDataMisses = Number(currentTestDataCache.misses) || 0;
+  const testDataDbConfig = resolveAnalyzeDbConfig(config, 'testData');
   const testDataConfig = {
     ...config.testData,
     limit: testDataLimit,
@@ -663,7 +667,7 @@ function exportTestDataStage(state) {
     ? buildTestDataCacheKey({
       program,
       metadataPayload: db2Export && db2Export.payload ? db2Export.payload : null,
-      dbConfig: config.db,
+      dbConfig: testDataDbConfig,
       testDataConfig,
     })
     : null;
@@ -698,7 +702,7 @@ function exportTestDataStage(state) {
     testDataExport = exportTestData({
       program,
       dependencies: context.dependencies,
-      dbConfig: config.db,
+      dbConfig: testDataDbConfig,
       outputDir: outputProgramDir,
       metadataPayload: db2Export ? db2Export.payload : null,
       canonicalAnalysis,
@@ -762,6 +766,7 @@ function exportTestDataStage(state) {
     testDataExport,
     stageMetadata: {
       ...testDataExport.summary,
+      connectionRole: 'testData',
       cache: testDataCacheMetadata,
     },
     stageDiagnostics: (testDataExport.notes || []).map((message) => ({
@@ -787,7 +792,7 @@ function runDiagnosticPacksStage(state) {
   const diagnosticResult = runDiagnosticPacks({
     packNames: diagnosticPacks,
     parameterString: diagnosticParameterString,
-    dbConfig: config.db,
+    dbConfig: resolveAnalyzeDbConfig(config, 'metadata'),
     ibmiConfig,
     reproducibility,
     verbose,

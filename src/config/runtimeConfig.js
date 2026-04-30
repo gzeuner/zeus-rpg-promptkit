@@ -184,6 +184,22 @@ function validateDbConfig(value, label) {
   assertOptionalString(value.library, `${label}.library`);
 }
 
+function validateDbRoleConfig(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+
+  for (const [key, roleConfig] of Object.entries(value)) {
+    if (key !== 'metadata' && key !== 'testData') {
+      failValidation(`${label}.${key} is not supported; valid roles are metadata and testData`);
+    }
+    if (roleConfig === undefined || roleConfig === null) {
+      continue;
+    }
+    validateDbConfig(roleConfig, `${label}.${key}`);
+  }
+}
+
 function validateFetchProfile(value, label) {
   if (!isPlainObject(value)) {
     failValidation(`${label} must be an object`);
@@ -362,6 +378,9 @@ function validateNamedProfile(profile, label) {
   if (profile.db !== undefined) {
     validateDbConfig(profile.db, `${label}.db`);
   }
+  if (profile.dbRoles !== undefined) {
+    validateDbRoleConfig(profile.dbRoles, `${label}.dbRoles`);
+  }
   if (profile.fetch !== undefined) {
     validateFetchProfile(profile.fetch, `${label}.fetch`);
   }
@@ -425,6 +444,9 @@ function validateAnalyzeConfig(config) {
   }
   if (config.db !== null && config.db !== undefined) {
     validateDbConfig(config.db, 'analyze.db');
+  }
+  if (config.dbRoles && typeof config.dbRoles === 'object') {
+    validateDbRoleConfig(config.dbRoles, 'analyze.dbRoles');
   }
 }
 
@@ -829,23 +851,83 @@ function readTestDataConfig(profiles, profile, env) {
   };
 }
 
-function applyDbEnvOverrides(dbConfig, env) {
+function applyDbEnvOverrides(dbConfig, env, prefix = 'ZEUS_DB') {
   const merged = { ...(dbConfig || {}) };
-  const schemaOverride = env.ZEUS_DB_DEFAULT_SCHEMA || env.ZEUS_DB_DEFAULT_LIBRARY || env.ZEUS_DB_SCHEMA || env.ZEUS_DB_LIBRARY;
+  const schemaOverride = env[`${prefix}_DEFAULT_SCHEMA`] || env[`${prefix}_DEFAULT_LIBRARY`] || env[`${prefix}_SCHEMA`] || env[`${prefix}_LIBRARY`];
 
-  if (env.ZEUS_DB_HOST) merged.host = env.ZEUS_DB_HOST;
-  if (env.ZEUS_DB_URL) merged.url = env.ZEUS_DB_URL;
-  if (env.ZEUS_DB_USER) merged.user = env.ZEUS_DB_USER;
-  if (env.ZEUS_DB_PASSWORD !== undefined) merged.password = env.ZEUS_DB_PASSWORD;
+  if (env[`${prefix}_HOST`]) merged.host = env[`${prefix}_HOST`];
+  if (env[`${prefix}_URL`]) merged.url = env[`${prefix}_URL`];
+  if (env[`${prefix}_USER`]) merged.user = env[`${prefix}_USER`];
+  if (env[`${prefix}_PASSWORD`] !== undefined) merged.password = env[`${prefix}_PASSWORD`];
   if (schemaOverride) merged.defaultSchema = schemaOverride;
 
   return Object.keys(merged).length > 0 ? merged : null;
+}
+
+function resolveAnalyzeDbRoleConfigs(profile, env) {
+  const baseDbConfig = applyDbEnvOverrides(
+    profile && profile.db ? resolveEnvPlaceholdersDeep(profile.db, env) : null,
+    env,
+    'ZEUS_DB',
+  );
+  const roleConfigs = profile && profile.dbRoles ? resolveEnvPlaceholdersDeep(profile.dbRoles, env) : {};
+  const metadataDb = applyDbEnvOverrides(
+    mergeConfigLayers(baseDbConfig || {}, roleConfigs && roleConfigs.metadata ? roleConfigs.metadata : undefined),
+    env,
+    'ZEUS_METADATA_DB',
+  );
+  const testDataDb = applyDbEnvOverrides(
+    mergeConfigLayers(metadataDb || baseDbConfig || {}, roleConfigs && roleConfigs.testData ? roleConfigs.testData : undefined),
+    env,
+    'ZEUS_TESTDATA_DB',
+  );
+
+  return {
+    metadata: metadataDb,
+    testData: testDataDb,
+  };
+}
+
+function buildAnalyzeConnectionRoles(profile, analyzeDbRoles) {
+  const hasFetchProfile = Boolean(profile && profile.fetch);
+  return {
+    source: {
+      kind: hasFetchProfile ? 'fetch' : 'local',
+      profileKey: hasFetchProfile ? 'fetch' : 'sourceRoot',
+    },
+    metadata: {
+      kind: 'db2',
+      profileKey: profile && profile.dbRoles && profile.dbRoles.metadata ? 'dbRoles.metadata' : 'db',
+      dbConfig: analyzeDbRoles.metadata,
+    },
+    testData: {
+      kind: 'db2',
+      profileKey: profile && profile.dbRoles && profile.dbRoles.testData
+        ? 'dbRoles.testData'
+        : (profile && profile.dbRoles && profile.dbRoles.metadata ? 'dbRoles.metadata' : 'db'),
+      dbConfig: analyzeDbRoles.testData,
+    },
+  };
+}
+
+function resolveAnalyzeDbConfig(config, role = 'metadata') {
+  if (!config || typeof config !== 'object') {
+    return null;
+  }
+  if (role === 'testData' && config.dbRoles && config.dbRoles.testData) {
+    return config.dbRoles.testData;
+  }
+  if (config.dbRoles && config.dbRoles.metadata) {
+    return config.dbRoles.metadata;
+  }
+  return config.db || null;
 }
 
 function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
   const profiles = loadProfiles({ cwd, env, args });
   const profile = resolveProfile(profiles, args.profile, { env });
   const fetchProfile = profile ? (profile.fetch || {}) : {};
+  const analyzeDbRoles = resolveAnalyzeDbRoleConfigs(profile, env);
 
   const extensions = args.extensions
     ? parseCsv(args.extensions, DEFAULT_EXTENSIONS)
@@ -855,10 +937,9 @@ function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } =
     sourceRoot: args.source || (profile && profile.sourceRoot),
     outputRoot: args.out || args.output || (profile && profile.outputRoot) || 'output',
     extensions,
-    db: applyDbEnvOverrides(
-      profile && profile.db ? resolveEnvPlaceholdersDeep(profile.db, env) : null,
-      env,
-    ),
+    db: analyzeDbRoles.metadata,
+    dbRoles: analyzeDbRoles,
+    connections: buildAnalyzeConnectionRoles(profile, analyzeDbRoles),
     ibmi: {
       host: args.host || env.ZEUS_FETCH_HOST || fetchProfile.host || null,
       user: args.user || env.ZEUS_FETCH_USER || fetchProfile.user || null,
@@ -932,6 +1013,7 @@ module.exports = {
   getProfilesMetadata,
   loadProfiles,
   normalizeTokenBudgetKey,
+  resolveAnalyzeDbConfig,
   readWorkflowConfig,
   readTokenBudgetConfig,
   readWorkCopyConfig,
