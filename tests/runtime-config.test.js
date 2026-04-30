@@ -13,6 +13,7 @@ const {
   readTokenBudgetConfig,
   readWorkflowConfig,
   readWorkCopyConfig,
+  resolveAnalyzeDbConfig,
   resolveAnalyzeConfig,
   resolveProfile,
   resolveProfilesConfigPaths,
@@ -325,6 +326,60 @@ test('resolveAnalyzeConfig applies environment overrides for DB credentials', ()
       password: 'env-pass',
       defaultSchema: 'ENVLIB',
     });
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveAnalyzeConfig supports dedicated metadata and test-data DB roles with fallback inheritance', () => {
+  const tempRoot = createTempProject({
+    sample: {
+      db: {
+        host: 'base-host',
+        user: 'base-user',
+        password: 'base-pass',
+        defaultSchema: 'BASELIB',
+      },
+      dbRoles: {
+        metadata: {
+          host: 'meta-host',
+          user: 'meta-user',
+        },
+        testData: {
+          defaultSchema: 'TESTLIB',
+        },
+      },
+    },
+  });
+
+  try {
+    const config = resolveAnalyzeConfig(
+      { profile: 'sample' },
+      {
+        cwd: tempRoot,
+        env: {
+          ZEUS_METADATA_DB_PASSWORD: 'meta-pass',
+          ZEUS_TESTDATA_DB_HOST: 'test-host',
+          ZEUS_TESTDATA_DB_USER: 'test-user',
+          ZEUS_TESTDATA_DB_PASSWORD: 'test-pass',
+        },
+      },
+    );
+
+    assert.deepEqual(resolveAnalyzeDbConfig(config, 'metadata'), {
+      host: 'meta-host',
+      user: 'meta-user',
+      password: 'meta-pass',
+      defaultSchema: 'BASELIB',
+    });
+    assert.deepEqual(resolveAnalyzeDbConfig(config, 'testData'), {
+      host: 'test-host',
+      user: 'test-user',
+      password: 'test-pass',
+      defaultSchema: 'TESTLIB',
+    });
+    assert.equal(config.connections.metadata.profileKey, 'dbRoles.metadata');
+    assert.equal(config.connections.testData.profileKey, 'dbRoles.testData');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
