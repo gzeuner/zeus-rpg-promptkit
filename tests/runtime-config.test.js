@@ -11,12 +11,14 @@ const {
   getProfilesMetadata,
   loadProfiles,
   readTokenBudgetConfig,
+  readWorkflowConfig,
   readWorkCopyConfig,
   resolveAnalyzeConfig,
   resolveProfile,
   resolveProfilesConfigPaths,
   resolveFetchConfig,
   resolveBundleConfig,
+  resolveWorkflowPresetConfig,
 } = require('../src/config/runtimeConfig');
 
 function createTempProject(profiles) {
@@ -228,6 +230,67 @@ test('resolveAnalyzeConfig exposes profile token budgets and work-copy defaults'
 
 test('readWorkCopyConfig falls back to project defaults', () => {
   assert.deepEqual(readWorkCopyConfig(null, {}), DEFAULT_WORK_COPY);
+});
+
+test('readWorkflowConfig merges global, profile, and workflow preset definitions', () => {
+  const tempRoot = createTempProject({
+    presets: {
+      shared: {
+        steps: ['analyze', 'report'],
+        analyzeModes: ['documentation'],
+      },
+    },
+    sample: {
+      sourceRoot: './src',
+      presets: {
+        local: {
+          steps: ['copy', 'analyze', 'report'],
+          members: ['ORDERPGM'],
+        },
+      },
+      workflow: {
+        outputRoot: './analysis',
+        defaultPreset: 'local',
+        analyzeModes: ['documentation', 'defect-analysis'],
+        tables: [{
+          table: 'ORDERS',
+          schema: 'APP',
+        }],
+        presets: {
+          local: {
+            steps: ['fetch', 'copy', 'analyze', 'report'],
+            impact: [{
+              field: 'CUSTOMER_ID',
+              member: 'ORDERPGM',
+            }],
+          },
+        },
+      },
+    },
+  });
+
+  try {
+    const profiles = loadProfiles({ cwd: tempRoot });
+    const profile = resolveProfile(profiles, 'sample', { env: {} });
+    const workflowConfig = readWorkflowConfig(profiles, profile, {});
+    const preset = resolveWorkflowPresetConfig(profiles, profile, 'local', {});
+
+    assert.equal(workflowConfig.outputRoot, './analysis');
+    assert.equal(workflowConfig.defaultPreset, 'local');
+    assert.deepEqual(workflowConfig.analyzeModes, ['documentation', 'defect-analysis']);
+    assert.deepEqual(workflowConfig.tables, [{
+      table: 'ORDERS',
+      schema: 'APP',
+      filter: '',
+    }]);
+    assert.deepEqual(Object.keys(workflowConfig.presets).sort(), ['local', 'shared']);
+    assert.deepEqual(preset.steps, ['fetch', 'copy', 'analyze', 'report']);
+    assert.deepEqual(preset.members, ['ORDERPGM']);
+    assert.equal(preset.impact[0].field, 'CUSTOMER_ID');
+    assert.equal(preset.impact[0].member, 'ORDERPGM');
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
 
 test('resolveAnalyzeConfig applies environment overrides for DB credentials', () => {
