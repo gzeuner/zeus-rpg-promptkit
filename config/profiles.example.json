@@ -39,6 +39,24 @@
       "password": "${env:ZEUS_DB_PASSWORD}",
       "defaultLibrary": "${env:ZEUS_DB_DEFAULT_LIBRARY}",
       "defaultSchema": "${env:ZEUS_DB_DEFAULT_SCHEMA}"
+    },
+    "dbRoles": {
+      "metadata": {
+        "host": "${env:ZEUS_METADATA_DB_HOST}",
+        "url": "${env:ZEUS_METADATA_DB_URL}",
+        "user": "${env:ZEUS_METADATA_DB_USER}",
+        "password": "${env:ZEUS_METADATA_DB_PASSWORD}",
+        "defaultLibrary": "${env:ZEUS_METADATA_DB_DEFAULT_LIBRARY}",
+        "defaultSchema": "${env:ZEUS_METADATA_DB_DEFAULT_SCHEMA}"
+      },
+      "testData": {
+        "host": "${env:ZEUS_TESTDATA_DB_HOST}",
+        "url": "${env:ZEUS_TESTDATA_DB_URL}",
+        "user": "${env:ZEUS_TESTDATA_DB_USER}",
+        "password": "${env:ZEUS_TESTDATA_DB_PASSWORD}",
+        "defaultLibrary": "${env:ZEUS_TESTDATA_DB_DEFAULT_LIBRARY}",
+        "defaultSchema": "${env:ZEUS_TESTDATA_DB_DEFAULT_SCHEMA}"
+      }
     }
   },
   "default-fetch": {
@@ -110,6 +128,20 @@
       "user": "MYUSER",
       "password": "MYPASSWORD",
       "defaultSchema": "MYLIB"
+    },
+    "dbRoles": {
+      "metadata": {
+        "host": "catalog.myibmi.example.com",
+        "user": "METAUSER",
+        "password": "METAPASSWORD",
+        "defaultSchema": "MYLIB"
+      },
+      "testData": {
+        "host": "testdata.myibmi.example.com",
+        "user": "TESTUSER",
+        "password": "TESTPASSWORD",
+        "defaultSchema": "MYLIB"
+      }
     },
     "testData": {
       "limit": 50,

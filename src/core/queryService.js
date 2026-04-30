@@ -11,7 +11,7 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
-const { resolveAnalyzeConfig } = require('../config/runtimeConfig');
+const { resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../config/runtimeConfig');
 const { isDbConfigured } = require('../db2/db2Config');
 const {
   escapeSqlLiteral,
@@ -84,11 +84,13 @@ function toRowMatrix(columns, rows) {
 }
 
 function requireDbConfig(config) {
-  if (!isDbConfigured(config.db)) {
+  const metadataDb = resolveAnalyzeDbConfig(config, 'metadata');
+  if (!isDbConfigured(metadataDb)) {
     const error = new Error('DB2 connection configuration is incomplete for the selected profile.');
     error.code = 'DB2_CONFIG_INCOMPLETE';
     throw error;
   }
+  return metadataDb;
 }
 
 function executeQueryTable(args, { cwd = process.cwd() } = {}) {
@@ -104,16 +106,16 @@ function executeQueryTable(args, { cwd = process.cwd() } = {}) {
   }
 
   const config = resolveAnalyzeConfig(args, { cwd });
-  requireDbConfig(config);
+  const dbConfig = requireDbConfig(config);
 
   const table = validateSqlIdentifier(args.table, '--table');
   const schema = args.schema ? validateSqlIdentifier(args.schema, '--schema') : null;
   const filter = args.filter ? validateFilterPattern(args.filter) : '';
-  const discovered = !schema ? discoverSchema(config.db, table) : null;
+  const discovered = !schema ? discoverSchema(dbConfig, table) : null;
   const effectiveSchema = schema || (discovered && discovered.TABLE_SCHEMA ? String(discovered.TABLE_SCHEMA).trim().toUpperCase() : '');
   const queries = buildQueryTableQueries({ schema: effectiveSchema, table, filter });
   const tableInfo = executeReadOnlyDb2QueryWithFallback({
-    dbConfig: config.db,
+    dbConfig,
     query: queries.tableInfo,
     maxRows: 50,
     context: {
@@ -122,7 +124,7 @@ function executeQueryTable(args, { cwd = process.cwd() } = {}) {
     },
     retryHandlers: {
       SQL0204: ({ context }) => {
-        const fallbackSchema = discoverSchema(config.db, context.table);
+        const fallbackSchema = discoverSchema(dbConfig, context.table);
         if (!fallbackSchema || !fallbackSchema.TABLE_SCHEMA) {
           return null;
         }
@@ -137,7 +139,7 @@ function executeQueryTable(args, { cwd = process.cwd() } = {}) {
     },
   });
   const columns = executeReadOnlyDb2QueryWithFallback({
-    dbConfig: config.db,
+    dbConfig,
     query: queries.columns,
     maxRows: 500,
     context: {
@@ -147,7 +149,7 @@ function executeQueryTable(args, { cwd = process.cwd() } = {}) {
     },
     retryHandlers: {
       SQL0204: ({ context }) => {
-        const fallbackSchema = discoverSchema(config.db, context.table);
+        const fallbackSchema = discoverSchema(dbConfig, context.table);
         if (!fallbackSchema || !fallbackSchema.TABLE_SCHEMA) {
           return null;
         }
@@ -171,6 +173,7 @@ function executeQueryTable(args, { cwd = process.cwd() } = {}) {
     discoveredSchema: !schema && effectiveSchema ? effectiveSchema : '',
     tableInfo,
     columns,
+    dbConfig,
   };
 }
 
@@ -190,11 +193,11 @@ function executeQuerySql(args, { cwd = process.cwd() } = {}) {
   const maxRows = parseMaxRows(args['max-rows']);
   const output = normalizeOutput(args.output);
   const config = resolveAnalyzeConfig(args, { cwd });
-  requireDbConfig(config);
+  const dbConfig = requireDbConfig(config);
 
   validateReadOnlySql(sql);
   const result = runReadOnlyDb2Query({
-    dbConfig: config.db,
+    dbConfig,
     query: sql,
     maxRows,
   });
@@ -205,6 +208,7 @@ function executeQuerySql(args, { cwd = process.cwd() } = {}) {
     sql,
     maxRows,
     output,
+    dbConfig,
     columns,
     rows: result.rows || [],
     rowCount: Number(result.rowCount || (result.rows || []).length || 0),
