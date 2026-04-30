@@ -20,19 +20,21 @@ test('sanitizeValue masks sensitive keys recursively', () => {
   };
 
   const sanitized = sanitizeValue(input);
-  assert.equal(sanitized.db.user, 'MYUSER');
+  assert.equal(sanitized.db.user, REDACTED_VALUE);
   assert.equal(sanitized.db.password, REDACTED_VALUE);
   assert.equal(sanitized.nested.auth, REDACTED_VALUE);
   assert.equal(sanitized.nested.apiKey, REDACTED_VALUE);
 });
 
 test('maskSecretsInText redacts common inline secret patterns', () => {
-  const input = 'jdbc:as400://host;password=superpass token=abc authorization Bearer qwerty';
+  const input = 'jdbc:as400://demo:superpass@host;naming=system;user=ME;password=superpass token=abc authorization Bearer qwerty key=xyz';
   const output = maskSecretsInText(input);
 
   assert.match(output, /\[REDACTED\]/);
   assert.doesNotMatch(output, /superpass/);
+  assert.doesNotMatch(output, /\bME\b/);
   assert.doesNotMatch(output, /\babc\b/);
   assert.doesNotMatch(output, /\bqwerty\b/);
+  assert.doesNotMatch(output, /\bxyz\b/);
 });
 

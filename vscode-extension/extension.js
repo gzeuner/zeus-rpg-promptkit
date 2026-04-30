@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const vscode = require('vscode');
 const {
   analyze,
@@ -9,7 +9,6 @@ const {
   queryTable,
   runWorkflow,
 } = require('../src/api/zeusApi');
-const { runDoctorChecks } = require('../src/cli/commands/doctorCommand');
 const {
   DEFAULT_EXTENSIONS,
   loadProfiles,
@@ -68,16 +67,15 @@ function appendOutput(output, message) {
 
 function loadProfilesForWorkspace(rootDir, settings, env) {
   const configPath = String(settings.get('configPath') || 'config/profiles.json').trim();
-  const args = configPath ? { config: configPath } : {};
+  const profileLoadArgs = configPath ? { config: configPath } : {};
   const profiles = loadProfiles({
     cwd: rootDir,
     env,
-    args,
+    args: profileLoadArgs,
   });
   return {
     profiles,
     profileNames: listSelectableProfiles(profiles),
-    args,
   };
 }
 
@@ -209,6 +207,73 @@ function buildExampleConfig() {
   };
 }
 
+function resolveConfigArg(settings) {
+  return String(settings.get('configPath') || 'config/profiles.json').trim();
+}
+
+function resolveCliInvocation(rootDir, settings) {
+  const cliPathSetting = String(settings.get('cliPath') || 'cli/zeus.js').trim() || 'cli/zeus.js';
+  const cliPath = path.resolve(rootDir, cliPathSetting);
+  return {
+    cliPath,
+    exists: fs.existsSync(cliPath),
+  };
+}
+
+function buildCliBaseArgs(settings) {
+  const args = [];
+  const configPath = resolveConfigArg(settings);
+  if (configPath) {
+    args.push('--config', configPath);
+  }
+  return args;
+}
+
+function streamMaskedOutput(output, text) {
+  const chunks = String(text || '').split(/\r?\n/);
+  for (const chunk of chunks) {
+    if (!chunk) {
+      continue;
+    }
+    appendOutput(output, chunk);
+  }
+}
+
+async function runCliCommand({ output, rootDir, env, settings, cliArgs }) {
+  const cli = resolveCliInvocation(rootDir, settings);
+  if (!cli.exists) {
+    throw new Error(`CLI path not found: ${cli.cliPath}. Update zeusRpgToolkit.cliPath or open config first.`);
+  }
+
+  const args = [cli.cliPath, ...cliArgs];
+  appendOutput(output, `[cli] node ${args.join(' ')}`);
+
+  await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, args, {
+      cwd: rootDir,
+      env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    child.stdout.on('data', (chunk) => {
+      streamMaskedOutput(output, chunk.toString());
+    });
+    child.stderr.on('data', (chunk) => {
+      streamMaskedOutput(output, chunk.toString());
+    });
+    child.on('error', (error) => {
+      reject(error);
+    });
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`CLI command failed with exit code ${code}.`));
+      }
+    });
+  });
+}
+
 class SimpleTreeProvider {
   constructor(loader) {
     this.loader = loader;
@@ -279,13 +344,68 @@ async function activate(context) {
       env,
       profiles: loaded.profiles,
       profileNames: loaded.profileNames,
-      args: loaded.args,
       activeProfile,
     };
   };
 
   const resolveOutputRoot = (root, settings) => resolveSettingPath(root, settings.get('outputRoot'), 'analysis');
-  const resolveCliPath = (root, settings) => resolveSettingPath(root, settings.get('cliPath'), 'cli/zeus.js');
+
+  function runFallbackDoctorChecks(ctx) {
+    const checks = [];
+    const cli = resolveCliInvocation(ctx.root, ctx.settings);
+    const configPath = resolveSettingPath(ctx.root, resolveConfigArg(ctx.settings), 'config/profiles.json');
+    const nodeVersion = spawnSync(process.execPath, ['--version'], { encoding: 'utf8' });
+    const javaVersion = spawnSync('java', ['-version'], {
+      cwd: ctx.root,
+      env: ctx.env,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const javaLibDir = path.join(ctx.root, 'java', 'lib');
+    const jarCount = fs.existsSync(javaLibDir)
+      ? fs.readdirSync(javaLibDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.jar')).length
+      : 0;
+
+    checks.push({
+      name: 'CLI',
+      status: cli.exists ? 'PASS' : 'FAIL',
+      details: cli.exists ? `Found ${cli.cliPath}` : `CLI path not found: ${cli.cliPath}`,
+    });
+    checks.push({
+      name: 'Config',
+      status: fs.existsSync(configPath) ? 'PASS' : 'FAIL',
+      details: fs.existsSync(configPath)
+        ? `Found ${toPosix(path.relative(ctx.root, configPath) || path.basename(configPath))}`
+        : `Missing config at ${configPath}. Run "Zeus: Open Config".`,
+    });
+    checks.push({
+      name: 'Profile',
+      status: ctx.profileNames.includes(ctx.activeProfile) ? 'PASS' : 'FAIL',
+      details: ctx.profileNames.includes(ctx.activeProfile)
+        ? `Selected profile "${ctx.activeProfile}" is available.`
+        : `Selected profile "${ctx.activeProfile}" not found in config.`,
+    });
+    checks.push({
+      name: 'Node Runtime',
+      status: nodeVersion.status === 0 ? 'PASS' : 'FAIL',
+      details: nodeVersion.status === 0
+        ? String(nodeVersion.stdout || '').trim()
+        : (nodeVersion.error ? nodeVersion.error.message : String(nodeVersion.stderr || '').trim()),
+    });
+    checks.push({
+      name: 'Java Runtime',
+      status: javaVersion.status === 0 ? 'PASS' : 'FAIL',
+      details: javaVersion.status === 0
+        ? String(javaVersion.stderr || javaVersion.stdout || '').split(/\r?\n/).find(Boolean) || 'java -version'
+        : (javaVersion.error ? javaVersion.error.message : String(javaVersion.stderr || javaVersion.stdout || '').trim()),
+    });
+    checks.push({
+      name: 'Classpath Hints',
+      status: jarCount > 0 ? 'PASS' : 'WARN',
+      details: `java/lib jars=${jarCount}${fs.existsSync(path.join(javaLibDir, 'jt400.jar')) ? ', jt400.jar detected' : ', jt400.jar not detected'}`,
+    });
+    return checks;
+  }
 
   async function selectProfile(explicitProfile) {
     const ctx = getCurrentContext();
@@ -326,43 +446,44 @@ async function activate(context) {
     if (!ctx.activeProfile) {
       throw new Error('No active profile selected. Use "Zeus: Select Profile".');
     }
+    const cli = resolveCliInvocation(ctx.root, ctx.settings);
+    runtimeState.lastDoctorChecks = [];
 
-    const cliPath = resolveCliPath(ctx.root, ctx.settings);
-    const cliExists = fs.existsSync(cliPath);
-    const nodeVersion = spawnSync('node', ['--version'], { encoding: 'utf8' });
-    const cliChecks = [
-      {
-        name: 'CLI',
-        status: cliExists ? 'PASS' : 'FAIL',
-        details: cliExists ? `Found ${cliPath}` : `CLI path not found: ${cliPath}`,
-      },
-      {
-        name: 'Node Runtime',
-        status: nodeVersion.status === 0 ? 'PASS' : 'FAIL',
-        details: nodeVersion.status === 0
-          ? String(nodeVersion.stdout || '').trim()
-          : (nodeVersion.error ? nodeVersion.error.message : String(nodeVersion.stderr || '').trim()),
-      },
-    ];
-    const result = runDoctorChecks({
-      profile: ctx.activeProfile,
-      ...ctx.args,
-    }, {
-      cwd: ctx.root,
-      env: ctx.env,
-    });
+    if (cli.exists) {
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Zeus doctor (${ctx.activeProfile})`,
+      }, async () => {
+        await runCliCommand({
+          output,
+          rootDir: ctx.root,
+          env: ctx.env,
+          settings: ctx.settings,
+          cliArgs: [...buildCliBaseArgs(ctx.settings), 'doctor', '--profile', ctx.activeProfile],
+        });
+      });
+      runtimeState.lastDoctorChecks = [
+        {
+          name: 'CLI Doctor',
+          status: 'PASS',
+          details: 'Doctor command completed successfully.',
+        },
+      ];
+      refreshViews();
+      vscode.window.showInformationMessage('Zeus doctor checks passed.');
+      return;
+    }
 
-    runtimeState.lastDoctorChecks = [...cliChecks, ...result.checks];
-    appendOutput(output, '[doctor] Zeus doctor result');
+    appendOutput(output, '[doctor] CLI not reachable; running fallback checks.');
+    runtimeState.lastDoctorChecks = runFallbackDoctorChecks(ctx);
     for (const check of runtimeState.lastDoctorChecks) {
       appendOutput(output, `[${check.status}] ${check.name}: ${check.details}`);
     }
     refreshViews();
-
-    if (runtimeState.lastDoctorChecks.some((entry) => entry.status === 'FAIL') || result.hasCriticalFailure) {
-      throw new Error('Doctor reported failures. See "Zeus RPG Toolkit" output.');
+    if (runtimeState.lastDoctorChecks.some((entry) => entry.status === 'FAIL')) {
+      throw new Error('Doctor fallback checks reported failures. See "Zeus RPG Toolkit" output.');
     }
-    vscode.window.showInformationMessage('Zeus doctor checks passed.');
+    vscode.window.showInformationMessage('Zeus fallback doctor checks passed.');
   }
 
   async function fetchSourcesCommand() {
@@ -371,19 +492,37 @@ async function activate(context) {
       throw new Error('No active profile selected. Use "Zeus: Select Profile".');
     }
 
-    await vscode.window.withProgress({
-      location: vscode.ProgressLocation.Notification,
-      title: `Zeus fetch (${ctx.activeProfile})`,
-    }, async () => {
-      const result = await fetch(ctx.activeProfile, {
-        runtime: {
-          cwd: ctx.root,
+    const cli = resolveCliInvocation(ctx.root, ctx.settings);
+    if (cli.exists) {
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Zeus fetch (${ctx.activeProfile})`,
+      }, async () => {
+        await runCliCommand({
+          output,
+          rootDir: ctx.root,
           env: ctx.env,
-        },
+          settings: ctx.settings,
+          cliArgs: [...buildCliBaseArgs(ctx.settings), 'fetch', '--profile', ctx.activeProfile],
+        });
+        appendOutput(output, '[fetch] completed via CLI');
       });
-      appendOutput(output, '[fetch] completed');
-      appendOutput(output, result.summary);
-    });
+    } else {
+      appendOutput(output, '[fetch] CLI not reachable, using core API fallback.');
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Zeus fetch (${ctx.activeProfile})`,
+      }, async () => {
+        const result = await fetch(ctx.activeProfile, {
+          runtime: {
+            cwd: ctx.root,
+            env: ctx.env,
+          },
+        });
+        appendOutput(output, '[fetch] completed via fallback');
+        appendOutput(output, result.summary);
+      });
+    }
 
     refreshViews();
     vscode.window.showInformationMessage('Fetch completed.');
@@ -589,27 +728,50 @@ async function activate(context) {
     }
 
     const outputRoot = resolveOutputRoot(ctx.root, ctx.settings);
-    const workflowState = await vscode.window.withProgress({
-      location: vscode.ProgressLocation.Notification,
-      title: `Zeus workflow (${ctx.activeProfile})`,
-    }, async () => runWorkflow(ctx.activeProfile, presetPick.preset, {
-      runtime: {
-        cwd: ctx.root,
-        env: ctx.env,
-      },
-      out: outputRoot,
-    }));
+    const cli = resolveCliInvocation(ctx.root, ctx.settings);
+    if (cli.exists) {
+      const cliArgs = [...buildCliBaseArgs(ctx.settings), 'workflow', 'run', '--profile', ctx.activeProfile, '--out', outputRoot];
+      if (presetPick.preset) {
+        cliArgs.push('--preset', presetPick.preset);
+      }
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Zeus workflow (${ctx.activeProfile})`,
+      }, async () => {
+        await runCliCommand({
+          output,
+          rootDir: ctx.root,
+          env: ctx.env,
+          settings: ctx.settings,
+          cliArgs,
+        });
+        appendOutput(output, '[workflow] completed via CLI');
+      });
+    } else {
+      appendOutput(output, '[workflow] CLI not reachable, using core API fallback.');
+      const workflowState = await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Zeus workflow (${ctx.activeProfile})`,
+      }, async () => runWorkflow(ctx.activeProfile, presetPick.preset, {
+        runtime: {
+          cwd: ctx.root,
+          env: ctx.env,
+        },
+        out: outputRoot,
+      }));
 
-    appendOutput(output, '[workflow] completed');
-    appendOutput(output, {
-      status: workflowState.status,
-      runId: workflowState.runId,
-      runRoot: workflowState.paths.runRoot,
-      reportPath: workflowState.paths.reportPath,
-    });
+      appendOutput(output, '[workflow] completed via fallback');
+      appendOutput(output, {
+        status: workflowState.status,
+        runId: workflowState.runId,
+        runRoot: workflowState.paths.runRoot,
+        reportPath: workflowState.paths.reportPath,
+      });
+    }
 
-    if (workflowState.paths && workflowState.paths.reportPath && fs.existsSync(workflowState.paths.reportPath)) {
-      const document = await vscode.workspace.openTextDocument(workflowState.paths.reportPath);
+    const latestReports = findLatestFiles(outputRoot, (entry) => path.basename(entry).toLowerCase() === 'report.md', 1);
+    if (latestReports.length > 0) {
+      const document = await vscode.workspace.openTextDocument(latestReports[0].absolutePath);
       await vscode.window.showTextDocument(document, { preview: false });
     }
 

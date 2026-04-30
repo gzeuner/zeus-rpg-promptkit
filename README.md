@@ -973,31 +973,30 @@ The extension is intentionally thin and reuses existing core/CLI modules from `s
 
 ### Extension commands
 
-- `Zeus: Open Dashboard`
 - `Zeus: Select Profile`
+- `Zeus: Open Config` (creates placeholder config if missing)
 - `Zeus: Run Doctor`
 - `Zeus: Fetch Sources`
 - `Zeus: Analyze Workspace`
-- `Zeus: Analyze Current File`
-- `Zeus: Query Table`
-- `Zeus: Generate AI Context`
-- `Zeus: Copy AI Prompt to Clipboard`
 - `Zeus: Run Workflow`
 - `Zeus: Open Latest Report`
-- `Zeus: Open Config`
-- `Zeus: Add File to AI Context`
-- `Zeus: Add Folder to AI Context`
-- `Zeus: Clear AI Context Selection`
+- `Zeus: Generate AI Context`
+- `Zeus: Copy AI Prompt to Clipboard`
+
+Additional helper commands are available (dashboard, file-scoped analysis, table query, AI context selection helpers), but the list above is the minimal first-version workflow surface.
 
 ### Extension settings
 
 - `zeusRpgToolkit.configPath`
 - `zeusRpgToolkit.defaultProfile`
+- `zeusRpgToolkit.cliPath`
 - `zeusRpgToolkit.outputRoot`
 - `zeusRpgToolkit.readOnlyMode` (default: `true`)
 - `zeusRpgToolkit.enableAgentMode`
+
+Optional:
+
 - `zeusRpgToolkit.javaPath`
-- `zeusRpgToolkit.cliPath`
 
 ### Activity bar views
 
@@ -1024,24 +1023,29 @@ Container name: `Zeus RPG Toolkit`
 The context bundle is sanitized:
 
 - no passwords/tokens in generated files
+- no `pass`, `secret`, `key`, or credential-bearing JDBC values in logs
+- masks `user`/`username` fields when paired with credentials
 - no credential values in logs
 - only workspace-local relative paths in file selections
 
 ### Run extension locally
 
 1. Open this repository in VS Code.
-2. Open `vscode-extension/extension.js`.
-3. Start extension debugging (`F5`) using VS Code's Extension Development Host.
-4. In the Extension Development Host, run `Zeus: Open Config`, then `Zeus: Select Profile`.
-5. Run `Zeus: Run Doctor`, `Zeus: Run Workflow`, and `Zeus: Generate AI Context`.
+2. Open the `vscode-extension/` folder as the extension project (or keep the root open and launch extension debugging from that subfolder).
+3. In `vscode-extension/`, run `npm install` if dependencies are not already installed.
+4. Start extension debugging (`F5`) to open the Extension Development Host.
+5. In the Extension Development Host, run `Zeus: Open Config`, then `Zeus: Select Profile`.
+6. Run `Zeus: Run Doctor`, `Zeus: Fetch Sources`, `Zeus: Analyze Workspace`, `Zeus: Run Workflow`, and `Zeus: Generate AI Context`.
 
 ### Manual validation checklist
 
-1. Select profile from Command Palette.
-2. Run doctor and verify PASS/FAIL/SKIP diagnostics in Output + Diagnostics view.
-3. Run workflow and verify report auto-opens.
-4. Generate AI context and verify required files exist.
-5. Confirm secrets are masked in Output Channel and AI context files.
+1. Run `Zeus: Open Config` in a workspace with no config and verify placeholder config creation (no real credentials).
+2. Run `Zeus: Select Profile` and verify status bar shows the active profile.
+3. Run `Zeus: Run Doctor` and verify output appears in the `Zeus RPG Toolkit` channel; if CLI is missing, verify fallback checks run.
+4. Run `Zeus: Fetch Sources`, `Zeus: Analyze Workspace`, and `Zeus: Run Workflow`; verify progress notifications and command output.
+5. Run `Zeus: Open Latest Report` and verify a report markdown file opens (or a helpful message appears when none exists).
+6. Run `Zeus: Generate AI Context`, then `Zeus: Copy AI Prompt to Clipboard`, and verify `ai_prompt.md`, `context.json`, and `safety_rules.md`.
+7. Confirm secret masking in output and generated artifacts.
 
 ## Project structure
 
