@@ -58,7 +58,17 @@
   },
   "default-local": {
     "extends": "default-shared",
-    "sourceRoot": "${env:ZEUS_SOURCE_ROOT}"
+    "sourceRoot": "${env:ZEUS_SOURCE_ROOT}",
+    "workflow": {
+      "outputRoot": "analysis",
+      "defaultPreset": "legacy-rpg-analysis",
+      "analyzeModes": ["documentation", "defect-analysis"],
+      "presets": {
+        "legacy-rpg-analysis": {
+          "steps": ["fetch", "copy", "analyze", "report"]
+        }
+      }
+    }
   },
   "default": {
     "sourceRoot": "./rpg",
@@ -132,6 +142,27 @@
     "workCopy": {
       "root": "source/",
       "extension": "txt"
+    },
+    "workflow": {
+      "outputRoot": "analysis",
+      "defaultPreset": "legacy-rpg-analysis",
+      "tables": [
+        {
+          "schema": "MYLIB",
+          "table": "CUSTOMERS"
+        }
+      ],
+      "impact": [
+        {
+          "field": "CUSTOMER_ID",
+          "member": "ORDERPGM"
+        }
+      ],
+      "presets": {
+        "legacy-rpg-analysis": {
+          "steps": ["fetch", "copy", "analyze", "impact", "query-table", "report"]
+        }
+      }
     }
   }
 }

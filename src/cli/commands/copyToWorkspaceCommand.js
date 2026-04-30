@@ -11,47 +11,19 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
-const fs = require('fs');
-const path = require('path');
-const {
-  loadProfiles,
-  readWorkCopyConfig,
-  resolveProfile,
-  resolveFetchConfig,
-} = require('../../config/runtimeConfig');
 const { renderAsciiTable } = require('../helpers/asciiTable');
-const {
-  copyFetchedSourcesToWorkspace,
-  parseMembersCsv,
-} = require('../../workspace/workCopyService');
+const { executeCopyToWorkspace } = require('../../core/workCopyService');
 
 async function runCopyToWorkspace(args) {
-  if (!args.profile || !String(args.profile).trim()) {
-    console.error('Missing required option: --profile <name>');
+  let execution;
+  try {
+    execution = executeCopyToWorkspace(args);
+  } catch (error) {
+    console.error(error.message);
     process.exit(2);
   }
 
-  const cwd = process.cwd();
-  const env = process.env;
-  const profiles = loadProfiles({ cwd, env, args });
-  const profile = resolveProfile(profiles, args.profile, { env });
-  const fetchConfig = resolveFetchConfig(args, { cwd, env });
-  const workCopyConfig = readWorkCopyConfig(profile, env);
-  const sourceRoot = path.resolve(cwd, fetchConfig.out);
-  const targetRoot = path.resolve(cwd, workCopyConfig.root);
-
-  if (!fs.existsSync(sourceRoot)) {
-    console.error(`Fetch output directory not found: ${sourceRoot}`);
-    process.exit(2);
-  }
-
-  const result = copyFetchedSourcesToWorkspace({
-    sourceRoot,
-    targetRoot,
-    workCopyMode: workCopyConfig.extension,
-    force: Boolean(args.force),
-    members: parseMembersCsv(args.members),
-  });
+  const { result } = execution;
 
   console.log(renderAsciiTable(
     ['Status', 'Member', 'Source', 'Target', 'Note'],
