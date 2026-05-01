@@ -12,7 +12,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const REDACTED_VALUE = '[REDACTED]';
-const SENSITIVE_KEY_PATTERN = /(^|[_-])(password|passwd|pwd|pass|secret|token|api[_-]?key|key|authorization|auth)$/i;
+const SENSITIVE_KEY_PATTERN = /(^|[_-])(password|passwd|pwd|pass|secret|token|api[_-]?key|key|authorization|auth|credential|credentials)$/i;
 const USER_KEY_PATTERN = /^(user|username)$/i;
 
 function isPlainObject(value) {
@@ -32,16 +32,19 @@ function maskSecretsInText(value) {
 
   text = text
     .replace(/(\bjdbc:[a-z0-9]+:\/\/)([^:\s/;,@]+):([^@\s/;]+)@/gi, `$1${REDACTED_VALUE}:${REDACTED_VALUE}@`)
+    .replace(/(\bjdbc:[^\s?;]+[?;][^\r\n]*?\buser\s*=\s*)([^;&\s]+)/gi, `$1${REDACTED_VALUE}`)
+    .replace(/(\bjdbc:[^\s?;]+[?;][^\r\n]*?\b(password|passwd|pwd|pass)\s*=\s*)([^;&\s]+)/gi, `$1${REDACTED_VALUE}`)
     .replace(/(\bjdbc:[^\r\n]*?\b(user|username)\s*=\s*)([^;\s]+)/gi, `$1${REDACTED_VALUE}`)
     .replace(/(\bjdbc:[^\r\n]*?\b(password|passwd|pwd|pass)\s*=\s*)([^;\s]+)/gi, `$1${REDACTED_VALUE}`)
     .replace(/\b(password|passwd|pwd)\s*=\s*([^;\s]+)/gi, `$1=${REDACTED_VALUE}`)
     .replace(/\b(pass)\s*=\s*([^;\s]+)/gi, `$1=${REDACTED_VALUE}`)
+    .replace(/\b(credential|credentials)\s*[:=]\s*([^\s,;]+)/gi, `$1=${REDACTED_VALUE}`)
     .replace(/\b(password|passwd|pwd)\s*:\s*([^\s,]+)/gi, `$1: ${REDACTED_VALUE}`)
     .replace(/\b(pass)\s*:\s*([^\s,]+)/gi, `$1: ${REDACTED_VALUE}`)
     .replace(/\b(token|secret|api[_-]?key|authorization|auth|key)\s*[:=]\s*([^\s,;]+)/gi, `$1=${REDACTED_VALUE}`)
     .replace(/\b(authorization)\s+bearer\s+[a-z0-9._~+/-]+=*/gi, `$1 Bearer ${REDACTED_VALUE}`);
 
-  if (/\b(password|passwd|pwd|pass|token|secret|api[_-]?key|authorization|auth|key)\b/i.test(text)) {
+  if (/\b(password|passwd|pwd|pass|token|secret|api[_-]?key|authorization|auth|key|credential|credentials)\b/i.test(text)) {
     text = text.replace(/\b(user|username)\s*[:=]\s*([^\s,;]+)/gi, `$1=${REDACTED_VALUE}`);
   }
 
