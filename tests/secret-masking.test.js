@@ -38,3 +38,13 @@ test('maskSecretsInText redacts common inline secret patterns', () => {
   assert.doesNotMatch(output, /\bxyz\b/);
 });
 
+test('maskSecretsInText redacts credential fields and jdbc query credentials', () => {
+  const input = 'jdbc:db2://host/db?user=alice&password=secret123 credentials=top-secret username=alice';
+  const output = maskSecretsInText(input);
+
+  assert.match(output, /\[REDACTED\]/);
+  assert.doesNotMatch(output, /\balice\b/i);
+  assert.doesNotMatch(output, /\bsecret123\b/);
+  assert.doesNotMatch(output, /\btop-secret\b/);
+});
+
