@@ -1164,6 +1164,78 @@ The context bundle is sanitized:
 6. Run `Zeus: Generate AI Context`, then `Zeus: Copy AI Prompt to Clipboard`, and verify `ai_prompt.md`, `context.json`, and `safety_rules.md`.
 7. Confirm secret masking in output and generated artifacts.
 
+## VS Code Agent Integration
+
+The VS Code integration now includes a safe command gateway for extension commands and agent-facing tool calls.
+
+### Environment resolution
+
+Zeus subprocess and terminal environments merge:
+
+1. `process.env`
+2. `zeusRpgToolkit.env.*` settings
+3. legacy extension settings (`configPath`, `defaultProfile`, `outputRoot`, `readOnlyMode`, `cliPath`, `javaPath`)
+4. active selected profile
+
+New `zeusRpgToolkit.env.*` settings:
+
+- `zeusRpgToolkit.env.ZEUS_CONFIG_DIR`
+- `zeusRpgToolkit.env.ZEUS_PROFILE`
+- `zeusRpgToolkit.env.ZEUS_OUTPUT_ROOT`
+- `zeusRpgToolkit.env.ZEUS_READ_ONLY`
+- `zeusRpgToolkit.env.ZEUS_CLI_PATH`
+- `zeusRpgToolkit.env.ZEUS_JAVA_PATH`
+
+### Copilot-friendly commands
+
+- `Zeus: Select Profile`
+- `Zeus: Show Active Environment`
+- `Zeus: Create Agent Terminal`
+- `Zeus: Run Doctor`
+- `Zeus: Fetch Sources`
+- `Zeus: Analyze Workspace`
+- `Zeus: Query Table`
+- `Zeus: Generate AI Context`
+- `Zeus: Copy AI Prompt to Clipboard`
+- `Zeus: Open Latest Report`
+
+### Agent tool bridge
+
+Internal stable tool names:
+
+- `zeus_doctor`
+- `zeus_fetch_sources`
+- `zeus_analyze_workspace`
+- `zeus_query_table`
+- `zeus_generate_ai_context`
+- `zeus_get_latest_report`
+
+All return sanitized structured results. Unsupported/risky operations return `BLOCKED` with confirmation required.
+
+### Language Model Tool API
+
+For this branch, Language Model Tool contribution wiring is deferred because the extension target remains `^1.90.0` and the minimal safe path is implemented through internal tool-command bridging first.
+
+### Agent terminal
+
+`Zeus: Create Agent Terminal` opens `Zeus Agent Terminal` with ZEUS_* values injected and prints:
+
+- `Zeus RPG Toolkit environment loaded.`
+- `Active profile: <profile>`
+- `Read-only mode: true|false`
+- `Config: <workspace-relative path>`
+
+### Safety model
+
+- default mode remains read-only
+- no deployment features
+- no IBM i write operations exposed
+- secrets are masked in output channel logs, tool results, and generated AI context
+
+### Detailed guide
+
+See [`docs/agent-mode.md`](docs/agent-mode.md) for full behavior and test workflow.
+
 ## Project structure
 
 ### Main entry points and notable modules

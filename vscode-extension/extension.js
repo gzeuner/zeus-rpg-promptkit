@@ -1,26 +1,26 @@
 /* eslint-disable no-console */
 const fs = require('fs');
 const path = require('path');
-const { spawn, spawnSync } = require('child_process');
 const vscode = require('vscode');
+const { runWorkflow } = require('../src/api/zeusApi');
 const {
-  analyze,
-  fetch,
-  queryTable,
-  runWorkflow,
-} = require('../src/api/zeusApi');
-const {
-  DEFAULT_EXTENSIONS,
-  loadProfiles,
   readWorkflowConfig,
   resolveProfile,
 } = require('../src/config/runtimeConfig');
-const { generateAiContextBundle } = require('../src/agent/aiContextService');
 const { maskSecretsInText, sanitizeValue } = require('../src/security/secretMasking');
-const { listSelectableProfiles, resolveActiveProfile } = require('../src/vscode/profileSelection');
+const { createZeusCommandGateway } = require('./src/zeusCommandGateway');
 
 const AI_CONTEXT_SELECTION_KEY = 'zeusRpgToolkit.aiContextSelection';
 const LAST_AI_PROMPT_KEY = 'zeusRpgToolkit.lastAiPromptPath';
+const AGENT_TOOL_COMMANDS = Object.freeze([
+  'zeus_doctor',
+  'zeus_fetch_sources',
+  'zeus_analyze_workspace',
+  'zeus_query_table',
+  'zeus_generate_ai_context',
+  'zeus_get_latest_report',
+  'zeus_open_latest_report',
+]);
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -28,126 +28,6 @@ function ensureDir(dirPath) {
 
 function toPosix(filePath) {
   return String(filePath || '').split(path.sep).join('/');
-}
-
-function getWorkspaceRoot() {
-  const folder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
-  return folder ? folder.uri.fsPath : '';
-}
-
-function getSettings(resource) {
-  return vscode.workspace.getConfiguration('zeusRpgToolkit', resource || null);
-}
-
-function resolveSettingPath(rootDir, settingValue, fallback) {
-  const raw = String(settingValue || '').trim() || fallback;
-  return path.resolve(rootDir, raw);
-}
-
-function createExtensionEnv(settings) {
-  const env = { ...process.env };
-  const javaPathSetting = String(settings.get('javaPath') || '').trim();
-  if (!javaPathSetting) {
-    return env;
-  }
-  const resolved = path.resolve(javaPathSetting);
-  const javaBinDir = fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()
-    ? resolved
-    : path.dirname(resolved);
-  env.PATH = `${javaBinDir}${path.delimiter}${env.PATH || ''}`;
-  return env;
-}
-
-function appendOutput(output, message) {
-  const line = typeof message === 'string'
-    ? message
-    : JSON.stringify(sanitizeValue(message), null, 2);
-  output.appendLine(maskSecretsInText(line));
-}
-
-function loadProfilesForWorkspace(rootDir, settings, env) {
-  const configPath = String(settings.get('configPath') || 'config/profiles.json').trim();
-  const profileLoadArgs = configPath ? { config: configPath } : {};
-  const profiles = loadProfiles({
-    cwd: rootDir,
-    env,
-    args: profileLoadArgs,
-  });
-  return {
-    profiles,
-    profileNames: listSelectableProfiles(profiles),
-  };
-}
-
-function getActiveProfileName(settings, profileNames) {
-  return resolveActiveProfile(settings.get('defaultProfile'), profileNames);
-}
-
-async function setActiveProfile(settings, profile) {
-  await settings.update('defaultProfile', profile, vscode.ConfigurationTarget.Workspace);
-}
-
-function findLatestFiles(rootDir, matcher, maxEntries = 20) {
-  if (!fs.existsSync(rootDir)) {
-    return [];
-  }
-  const results = [];
-  const pending = [rootDir];
-
-  while (pending.length > 0) {
-    const current = pending.pop();
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const absolutePath = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        pending.push(absolutePath);
-        continue;
-      }
-      if (!entry.isFile()) {
-        continue;
-      }
-      if (!matcher(absolutePath)) {
-        continue;
-      }
-      results.push({
-        absolutePath,
-        modifiedAt: fs.statSync(absolutePath).mtimeMs,
-      });
-    }
-  }
-
-  return results
-    .sort((left, right) => right.modifiedAt - left.modifiedAt)
-    .slice(0, maxEntries);
-}
-
-function collectMembers(sourceRoot) {
-  if (!sourceRoot || !fs.existsSync(sourceRoot)) {
-    return [];
-  }
-  const extensionSet = new Set(DEFAULT_EXTENSIONS.map((entry) => entry.toLowerCase()));
-  const members = new Set();
-  const pending = [sourceRoot];
-
-  while (pending.length > 0) {
-    const current = pending.pop();
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const absolutePath = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        pending.push(absolutePath);
-        continue;
-      }
-      if (!entry.isFile()) {
-        continue;
-      }
-      const ext = path.extname(entry.name).toLowerCase();
-      if (!extensionSet.has(ext)) {
-        continue;
-      }
-      members.add(path.basename(entry.name, ext).toUpperCase());
-    }
-  }
-
-  return Array.from(members).sort((left, right) => left.localeCompare(right));
 }
 
 function resolveSafeRelativePath(rootDir, inputPath) {
@@ -207,71 +87,37 @@ function buildExampleConfig() {
   };
 }
 
-function resolveConfigArg(settings) {
-  return String(settings.get('configPath') || 'config/profiles.json').trim();
-}
-
-function resolveCliInvocation(rootDir, settings) {
-  const cliPathSetting = String(settings.get('cliPath') || 'cli/zeus.js').trim() || 'cli/zeus.js';
-  const cliPath = path.resolve(rootDir, cliPathSetting);
-  return {
-    cliPath,
-    exists: fs.existsSync(cliPath),
-  };
-}
-
-function buildCliBaseArgs(settings) {
-  const args = [];
-  const configPath = resolveConfigArg(settings);
-  if (configPath) {
-    args.push('--config', configPath);
+function findLatestFiles(rootDir, matcher, maxEntries = 20) {
+  if (!fs.existsSync(rootDir)) {
+    return [];
   }
-  return args;
-}
+  const results = [];
+  const pending = [rootDir];
 
-function streamMaskedOutput(output, text) {
-  const chunks = String(text || '').split(/\r?\n/);
-  for (const chunk of chunks) {
-    if (!chunk) {
-      continue;
-    }
-    appendOutput(output, chunk);
-  }
-}
-
-async function runCliCommand({ output, rootDir, env, settings, cliArgs }) {
-  const cli = resolveCliInvocation(rootDir, settings);
-  if (!cli.exists) {
-    throw new Error(`CLI path not found: ${cli.cliPath}. Update zeusRpgToolkit.cliPath or open config first.`);
-  }
-
-  const args = [cli.cliPath, ...cliArgs];
-  appendOutput(output, `[cli] node ${args.join(' ')}`);
-
-  await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, args, {
-      cwd: rootDir,
-      env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    child.stdout.on('data', (chunk) => {
-      streamMaskedOutput(output, chunk.toString());
-    });
-    child.stderr.on('data', (chunk) => {
-      streamMaskedOutput(output, chunk.toString());
-    });
-    child.on('error', (error) => {
-      reject(error);
-    });
-    child.on('close', (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`CLI command failed with exit code ${code}.`));
+  while (pending.length > 0) {
+    const current = pending.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const absolutePath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(absolutePath);
+        continue;
       }
-    });
-  });
+      if (!entry.isFile()) {
+        continue;
+      }
+      if (!matcher(absolutePath)) {
+        continue;
+      }
+      results.push({
+        absolutePath,
+        modifiedAt: fs.statSync(absolutePath).mtimeMs,
+      });
+    }
+  }
+
+  return results
+    .sort((left, right) => right.modifiedAt - left.modifiedAt)
+    .slice(0, maxEntries);
 }
 
 class SimpleTreeProvider {
@@ -294,6 +140,23 @@ class SimpleTreeProvider {
   }
 }
 
+function createGuardedCommand(output, fn, successMessage) {
+  return async (...args) => {
+    try {
+      const result = await fn(...args);
+      if (successMessage) {
+        vscode.window.showInformationMessage(successMessage);
+      }
+      return result;
+    } catch (error) {
+      const masked = maskSecretsInText(error.message);
+      output.appendLine(`[error] ${masked}`);
+      vscode.window.showErrorMessage(masked);
+      return null;
+    }
+  };
+}
+
 async function activate(context) {
   const output = vscode.window.createOutputChannel('Zeus RPG Toolkit');
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -305,9 +168,16 @@ async function activate(context) {
     output,
     statusBar,
     selectionState,
-    lastDoctorChecks: [],
     providers: [],
+    lastDoctorChecks: [],
   };
+
+  const gateway = createZeusCommandGateway({
+    vscode,
+    outputChannel: output,
+    workspaceState: context.workspaceState,
+    lastAiPromptKey: LAST_AI_PROMPT_KEY,
+  });
 
   const refreshViews = () => {
     for (const provider of runtimeState.providers) {
@@ -316,99 +186,54 @@ async function activate(context) {
   };
 
   const persistSelectionState = async () => {
-    await context.workspaceState.update(AI_CONTEXT_SELECTION_KEY, Array.from(selectionState.values()).sort((a, b) => a.localeCompare(b)));
+    await context.workspaceState.update(
+      AI_CONTEXT_SELECTION_KEY,
+      Array.from(selectionState.values()).sort((a, b) => a.localeCompare(b)),
+    );
   };
 
-  const ensureWorkspace = () => {
-    const root = getWorkspaceRoot();
-    if (!root) {
-      throw new Error('Open a workspace folder before running Zeus commands.');
+  const updateStatusBar = () => {
+    try {
+      const ctx = gateway.resolveContext();
+      runtimeState.statusBar.text = ctx.activeProfile
+        ? `Zeus: ${ctx.activeProfile}`
+        : 'Zeus: <no profile>';
+    } catch (_) {
+      runtimeState.statusBar.text = 'Zeus: <no workspace>';
     }
-    return root;
   };
 
-  const getCurrentContext = () => {
-    const root = ensureWorkspace();
-    const settings = getSettings(vscode.Uri.file(root));
-    const env = createExtensionEnv(settings);
-    const loaded = loadProfilesForWorkspace(root, settings, env);
-    const activeProfile = getActiveProfileName(settings, loaded.profileNames);
-
-    runtimeState.statusBar.text = activeProfile
-      ? `Zeus: ${activeProfile}`
-      : 'Zeus: <no profile>';
-
-    return {
-      root,
-      settings,
-      env,
-      profiles: loaded.profiles,
-      profileNames: loaded.profileNames,
-      activeProfile,
-    };
+  const applyTerminalEnvironmentCollection = () => {
+    try {
+      const ctx = gateway.resolveContext();
+      const collection = context.environmentVariableCollection;
+      if (!collection || typeof collection.replace !== 'function') {
+        return;
+      }
+      collection.clear();
+      const keys = [
+        'ZEUS_CONFIG_DIR',
+        'ZEUS_PROFILE',
+        'ZEUS_OUTPUT_ROOT',
+        'ZEUS_READ_ONLY',
+        'ZEUS_CLI_PATH',
+        'ZEUS_JAVA_PATH',
+      ];
+      for (const key of keys) {
+        if (!ctx.zeusEnv[key]) {
+          continue;
+        }
+        collection.replace(key, String(ctx.zeusEnv[key]));
+      }
+      collection.description = 'Zeus RPG Toolkit session environment';
+      output.appendLine('[env] terminal environment collection refreshed.');
+    } catch (error) {
+      output.appendLine(`[env] could not refresh terminal environment collection: ${maskSecretsInText(error.message)}`);
+    }
   };
-
-  const resolveOutputRoot = (root, settings) => resolveSettingPath(root, settings.get('outputRoot'), 'analysis');
-
-  function runFallbackDoctorChecks(ctx) {
-    const checks = [];
-    const cli = resolveCliInvocation(ctx.root, ctx.settings);
-    const configPath = resolveSettingPath(ctx.root, resolveConfigArg(ctx.settings), 'config/profiles.json');
-    const nodeVersion = spawnSync(process.execPath, ['--version'], { encoding: 'utf8' });
-    const javaVersion = spawnSync('java', ['-version'], {
-      cwd: ctx.root,
-      env: ctx.env,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    const javaLibDir = path.join(ctx.root, 'java', 'lib');
-    const jarCount = fs.existsSync(javaLibDir)
-      ? fs.readdirSync(javaLibDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.jar')).length
-      : 0;
-
-    checks.push({
-      name: 'CLI',
-      status: cli.exists ? 'PASS' : 'FAIL',
-      details: cli.exists ? `Found ${cli.cliPath}` : `CLI path not found: ${cli.cliPath}`,
-    });
-    checks.push({
-      name: 'Config',
-      status: fs.existsSync(configPath) ? 'PASS' : 'FAIL',
-      details: fs.existsSync(configPath)
-        ? `Found ${toPosix(path.relative(ctx.root, configPath) || path.basename(configPath))}`
-        : `Missing config at ${configPath}. Run "Zeus: Open Config".`,
-    });
-    checks.push({
-      name: 'Profile',
-      status: ctx.profileNames.includes(ctx.activeProfile) ? 'PASS' : 'FAIL',
-      details: ctx.profileNames.includes(ctx.activeProfile)
-        ? `Selected profile "${ctx.activeProfile}" is available.`
-        : `Selected profile "${ctx.activeProfile}" not found in config.`,
-    });
-    checks.push({
-      name: 'Node Runtime',
-      status: nodeVersion.status === 0 ? 'PASS' : 'FAIL',
-      details: nodeVersion.status === 0
-        ? String(nodeVersion.stdout || '').trim()
-        : (nodeVersion.error ? nodeVersion.error.message : String(nodeVersion.stderr || '').trim()),
-    });
-    checks.push({
-      name: 'Java Runtime',
-      status: javaVersion.status === 0 ? 'PASS' : 'FAIL',
-      details: javaVersion.status === 0
-        ? String(javaVersion.stderr || javaVersion.stdout || '').split(/\r?\n/).find(Boolean) || 'java -version'
-        : (javaVersion.error ? javaVersion.error.message : String(javaVersion.stderr || javaVersion.stdout || '').trim()),
-    });
-    checks.push({
-      name: 'Classpath Hints',
-      status: jarCount > 0 ? 'PASS' : 'WARN',
-      details: `java/lib jars=${jarCount}${fs.existsSync(path.join(javaLibDir, 'jt400.jar')) ? ', jt400.jar detected' : ', jt400.jar not detected'}`,
-    });
-    return checks;
-  }
 
   async function selectProfile(explicitProfile) {
-    const ctx = getCurrentContext();
+    const ctx = gateway.resolveContext();
     if (ctx.profileNames.length === 0) {
       throw new Error('No profiles were found. Run "Zeus: Open Config" first.');
     }
@@ -420,119 +245,94 @@ async function activate(context) {
       });
     }
     if (!selected) {
-      return;
+      return null;
     }
-    await setActiveProfile(ctx.settings, selected);
-    runtimeState.statusBar.text = `Zeus: ${selected}`;
-    appendOutput(output, `[profile] active profile set to ${selected}`);
+
+    const result = await gateway.setActiveProfile(selected);
+    runtimeState.statusBar.text = `Zeus: ${result.profile}`;
+    output.appendLine(`[profile] active profile set to ${result.profile}`);
+    applyTerminalEnvironmentCollection();
     refreshViews();
+    return result;
   }
 
-  async function openConfig() {
-    const root = ensureWorkspace();
-    const settings = getSettings(vscode.Uri.file(root));
-    const configPath = resolveSettingPath(root, settings.get('configPath'), 'config/profiles.json');
-    if (!fs.existsSync(configPath)) {
-      ensureDir(path.dirname(configPath));
-      fs.writeFileSync(configPath, `${JSON.stringify(buildExampleConfig(), null, 2)}\n`, 'utf8');
-      appendOutput(output, `[config] created example config at ${configPath}`);
+  async function showActiveEnvironmentCommand() {
+    const summary = gateway.buildEnvironmentSummary();
+    output.appendLine('[env] active environment');
+    output.appendLine(JSON.stringify(summary, null, 2));
+
+    const details = [
+      `Profile: ${summary.activeProfile || '<none>'}`,
+      `Read-only: ${summary.readOnlyMode ? 'true' : 'false'}`,
+      `Config: ${summary.configPath}`,
+      `Output: ${summary.outputRoot}`,
+    ].join(' | ');
+    vscode.window.showInformationMessage(details);
+    return summary;
+  }
+
+  async function createAgentTerminalCommand() {
+    const result = gateway.createAgentTerminal();
+    applyTerminalEnvironmentCollection();
+    output.appendLine('[terminal] Zeus Agent Terminal created.');
+    return result;
+  }
+
+  async function openConfigCommand() {
+    const ctx = gateway.resolveContext();
+    if (!fs.existsSync(ctx.configPath)) {
+      ensureDir(path.dirname(ctx.configPath));
+      fs.writeFileSync(ctx.configPath, `${JSON.stringify(buildExampleConfig(), null, 2)}\n`, 'utf8');
+      output.appendLine(`[config] created example config at ${ctx.configPath}`);
     }
-    const document = await vscode.workspace.openTextDocument(configPath);
+
+    const document = await vscode.workspace.openTextDocument(ctx.configPath);
     await vscode.window.showTextDocument(document, { preview: false });
   }
 
   async function runDoctorCommand() {
-    const ctx = getCurrentContext();
+    const ctx = gateway.resolveContext();
     if (!ctx.activeProfile) {
       throw new Error('No active profile selected. Use "Zeus: Select Profile".');
     }
-    const cli = resolveCliInvocation(ctx.root, ctx.settings);
-    runtimeState.lastDoctorChecks = [];
 
-    if (cli.exists) {
-      await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: `Zeus doctor (${ctx.activeProfile})`,
-      }, async () => {
-        await runCliCommand({
-          output,
-          rootDir: ctx.root,
-          env: ctx.env,
-          settings: ctx.settings,
-          cliArgs: [...buildCliBaseArgs(ctx.settings), 'doctor', '--profile', ctx.activeProfile],
-        });
-      });
-      runtimeState.lastDoctorChecks = [
-        {
-          name: 'CLI Doctor',
-          status: 'PASS',
-          details: 'Doctor command completed successfully.',
-        },
-      ];
-      refreshViews();
-      vscode.window.showInformationMessage('Zeus doctor checks passed.');
-      return;
-    }
+    const result = await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: `Zeus doctor (${ctx.activeProfile})`,
+    }, async () => gateway.runDoctor({ profile: ctx.activeProfile }));
 
-    appendOutput(output, '[doctor] CLI not reachable; running fallback checks.');
-    runtimeState.lastDoctorChecks = runFallbackDoctorChecks(ctx);
-    for (const check of runtimeState.lastDoctorChecks) {
-      appendOutput(output, `[${check.status}] ${check.name}: ${check.details}`);
-    }
+    runtimeState.lastDoctorChecks = Array.isArray(result.checks) ? result.checks : [];
     refreshViews();
-    if (runtimeState.lastDoctorChecks.some((entry) => entry.status === 'FAIL')) {
-      throw new Error('Doctor fallback checks reported failures. See "Zeus RPG Toolkit" output.');
+
+    if (result.status === 'FAIL') {
+      throw new Error(result.summary || 'Doctor failed.');
     }
-    vscode.window.showInformationMessage('Zeus fallback doctor checks passed.');
+
+    vscode.window.showInformationMessage(result.summary || 'Doctor checks passed.');
+    return result;
   }
 
   async function fetchSourcesCommand() {
-    const ctx = getCurrentContext();
+    const ctx = gateway.resolveContext();
     if (!ctx.activeProfile) {
       throw new Error('No active profile selected. Use "Zeus: Select Profile".');
     }
 
-    const cli = resolveCliInvocation(ctx.root, ctx.settings);
-    if (cli.exists) {
-      await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: `Zeus fetch (${ctx.activeProfile})`,
-      }, async () => {
-        await runCliCommand({
-          output,
-          rootDir: ctx.root,
-          env: ctx.env,
-          settings: ctx.settings,
-          cliArgs: [...buildCliBaseArgs(ctx.settings), 'fetch', '--profile', ctx.activeProfile],
-        });
-        appendOutput(output, '[fetch] completed via CLI');
-      });
-    } else {
-      appendOutput(output, '[fetch] CLI not reachable, using core API fallback.');
-      await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: `Zeus fetch (${ctx.activeProfile})`,
-      }, async () => {
-        const result = await fetch(ctx.activeProfile, {
-          runtime: {
-            cwd: ctx.root,
-            env: ctx.env,
-          },
-        });
-        appendOutput(output, '[fetch] completed via fallback');
-        appendOutput(output, result.summary);
-      });
+    const result = await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: `Zeus fetch (${ctx.activeProfile})`,
+    }, async () => gateway.fetchSources({ profile: ctx.activeProfile }));
+
+    if (result.status === 'BLOCKED') {
+      throw new Error(result.reason);
     }
 
     refreshViews();
     vscode.window.showInformationMessage('Fetch completed.');
+    return result;
   }
 
   async function analyzeCurrentFileCommand() {
-    const ctx = getCurrentContext();
-    if (!ctx.activeProfile) {
-      throw new Error('No active profile selected. Use "Zeus: Select Profile".');
-    }
     const editor = vscode.window.activeTextEditor;
     if (!editor || !editor.document || editor.document.uri.scheme !== 'file') {
       throw new Error('Open a local source file first.');
@@ -541,117 +341,84 @@ async function activate(context) {
     const currentPath = editor.document.uri.fsPath;
     const member = path.basename(currentPath, path.extname(currentPath)).toUpperCase();
     const sourceRoot = path.dirname(currentPath);
-    const outputRoot = resolveOutputRoot(ctx.root, ctx.settings);
-
-    await vscode.window.withProgress({
-      location: vscode.ProgressLocation.Notification,
-      title: `Zeus analyze ${member}`,
-    }, async () => {
-      const result = analyze(ctx.activeProfile, {
-        runtime: {
-          cwd: ctx.root,
-          env: ctx.env,
-        },
-        source: sourceRoot,
-        member,
-        mode: 'documentation',
-        out: outputRoot,
-      });
-      appendOutput(output, '[analyze-current-file] completed');
-      appendOutput(output, {
-        member,
-        outputProgramDir: result.outputProgramDir,
-      });
+    const result = await gateway.analyzeWorkspace({
+      members: [member],
+      mode: 'documentation',
+      targetPath: sourceRoot,
     });
 
+    if (result.status === 'BLOCKED') {
+      throw new Error(result.reason);
+    }
+
+    output.appendLine(`[analyze-current-file] ${result.summary}`);
     refreshViews();
+    return result;
   }
 
   async function analyzeWorkspaceCommand() {
-    const ctx = getCurrentContext();
+    const ctx = gateway.resolveContext();
     if (!ctx.activeProfile) {
       throw new Error('No active profile selected. Use "Zeus: Select Profile".');
     }
 
-    const resolvedProfile = resolveProfile(ctx.profiles, ctx.activeProfile, { env: ctx.env });
-    const defaultSourceRoot = resolvedProfile && resolvedProfile.sourceRoot
-      ? path.resolve(ctx.root, resolvedProfile.sourceRoot)
-      : ctx.root;
-    const sourceRoot = fs.existsSync(defaultSourceRoot) ? defaultSourceRoot : ctx.root;
-    const members = collectMembers(sourceRoot);
-    if (members.length === 0) {
-      throw new Error(`No source members found in ${sourceRoot}`);
+    const memberCandidates = gateway.getMemberCandidates();
+    if (memberCandidates.members.length === 0) {
+      throw new Error(`No source members found in ${memberCandidates.sourceRoot}`);
     }
 
     const selectedMembers = await vscode.window.showQuickPick(
-      members.map((member) => ({ label: member })),
+      memberCandidates.members.map((member) => ({ label: member })),
       {
         canPickMany: true,
         placeHolder: 'Select one or more members to analyze',
       },
     );
     if (!selectedMembers || selectedMembers.length === 0) {
-      return;
+      return null;
     }
 
-    const workflowConfig = readWorkflowConfig(ctx.profiles, resolvedProfile, ctx.env);
     const modePick = await vscode.window.showQuickPick(
-      (workflowConfig.analyzeModes || ['documentation', 'defect-analysis']).map((mode) => ({
-        label: mode,
-      })),
+      gateway.getAnalyzeModeChoices().map((mode) => ({ label: mode })),
       {
         placeHolder: 'Select analyze mode',
       },
     );
     if (!modePick) {
-      return;
+      return null;
     }
 
-    const outputRoot = resolveOutputRoot(ctx.root, ctx.settings);
-    await vscode.window.withProgress({
+    const result = await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Zeus analyze workspace',
     }, async (progress) => {
-      for (let index = 0; index < selectedMembers.length; index += 1) {
-        const member = selectedMembers[index].label;
-        progress.report({
-          message: `${member} (${index + 1}/${selectedMembers.length})`,
-          increment: Math.floor(100 / selectedMembers.length),
-        });
-        const result = analyze(ctx.activeProfile, {
-          runtime: {
-            cwd: ctx.root,
-            env: ctx.env,
-          },
-          source: sourceRoot,
-          member,
-          mode: modePick.label,
-          out: outputRoot,
-        });
-        appendOutput(output, {
-          type: 'analyze-workspace',
-          member,
-          outputProgramDir: result.outputProgramDir,
-        });
-      }
+      progress.report({ message: `Analyzing ${selectedMembers.length} member(s)` });
+      return gateway.analyzeWorkspace({
+        profile: ctx.activeProfile,
+        mode: modePick.label,
+        members: selectedMembers.map((entry) => entry.label),
+        targetPath: memberCandidates.sourceRoot,
+      });
     });
 
+    if (result.status === 'BLOCKED') {
+      throw new Error(result.reason);
+    }
+
+    output.appendLine(`[analyze-workspace] ${result.summary}`);
     refreshViews();
+    return result;
   }
 
   async function queryTableCommand() {
-    const ctx = getCurrentContext();
-    if (!ctx.activeProfile) {
-      throw new Error('No active profile selected. Use "Zeus: Select Profile".');
-    }
-
     const table = await vscode.window.showInputBox({
       prompt: 'DB table name (required)',
       placeHolder: 'CUSTOMERS',
     });
     if (!table) {
-      return;
+      return null;
     }
+
     const schema = await vscode.window.showInputBox({
       prompt: 'Schema (optional)',
       placeHolder: 'MYLIB',
@@ -661,160 +428,124 @@ async function activate(context) {
       placeHolder: 'CUST%',
     });
 
-    const result = queryTable(ctx.activeProfile, table, {
-      runtime: {
-        cwd: ctx.root,
-        env: ctx.env,
-      },
-      schema: schema || undefined,
-      filter: filter || undefined,
+    const result = await gateway.queryTableMetadata({
+      table,
+      schema: schema || '',
+      filter: filter || '',
     });
 
-    appendOutput(output, '[query-table] completed');
-    appendOutput(output, {
-      table: result.table,
-      schema: result.schema,
-      tableRows: Array.isArray(result.tableInfo.rows) ? result.tableInfo.rows.length : 0,
-      columnRows: Array.isArray(result.columns.rows) ? result.columns.rows.length : 0,
-    });
+    if (result.status === 'BLOCKED') {
+      throw new Error(result.reason);
+    }
 
-    const outputRoot = resolveOutputRoot(ctx.root, ctx.settings);
-    const queryRoot = path.join(outputRoot, 'queries');
-    ensureDir(queryRoot);
-    const targetPath = path.join(queryRoot, `${new Date().toISOString().replace(/[:.]/g, '-')}-${String(result.table).toUpperCase()}.json`);
-    fs.writeFileSync(targetPath, `${JSON.stringify(sanitizeValue({
-      table: result.table,
-      schema: result.schema,
-      filter: result.filter,
-      tableInfo: result.tableInfo.rows || [],
-      columns: result.columns.rows || [],
-    }), null, 2)}\n`, 'utf8');
-    const document = await vscode.workspace.openTextDocument(targetPath);
-    await vscode.window.showTextDocument(document, { preview: false });
+    if (result.reportPath) {
+      const ctx = gateway.resolveContext();
+      const absolutePath = path.resolve(ctx.rootDir, result.reportPath);
+      const document = await vscode.workspace.openTextDocument(absolutePath);
+      await vscode.window.showTextDocument(document, { preview: false });
+    }
 
     refreshViews();
+    return result;
   }
 
   async function runWorkflowCommand() {
-    const ctx = getCurrentContext();
+    const ctx = gateway.resolveContext();
     if (!ctx.activeProfile) {
       throw new Error('No active profile selected. Use "Zeus: Select Profile".');
     }
 
-    const readOnlyMode = Boolean(ctx.settings.get('readOnlyMode'));
-    if (!readOnlyMode) {
+    if (!ctx.readOnlyMode) {
       const confirmation = await vscode.window.showWarningMessage(
         'Read-only mode is disabled. Continue with workflow execution?',
         { modal: true },
         'Continue',
       );
       if (confirmation !== 'Continue') {
-        return;
+        return null;
       }
     }
 
     const resolvedProfile = resolveProfile(ctx.profiles, ctx.activeProfile, { env: ctx.env });
     const workflowConfig = readWorkflowConfig(ctx.profiles, resolvedProfile, ctx.env);
     const presetNames = Object.keys(workflowConfig.presets || {}).sort((left, right) => left.localeCompare(right));
-    const quickPickItems = [
-      { label: '(Use Default Preset)', preset: '' },
-      ...presetNames.map((name) => ({ label: name, preset: name })),
-    ];
-    const presetPick = await vscode.window.showQuickPick(quickPickItems, {
-      placeHolder: 'Select workflow preset',
-    });
+    const presetPick = await vscode.window.showQuickPick(
+      [
+        { label: '(Use Default Preset)', preset: '' },
+        ...presetNames.map((name) => ({ label: name, preset: name })),
+      ],
+      { placeHolder: 'Select workflow preset' },
+    );
     if (!presetPick) {
-      return;
+      return null;
     }
 
-    const outputRoot = resolveOutputRoot(ctx.root, ctx.settings);
-    const cli = resolveCliInvocation(ctx.root, ctx.settings);
-    if (cli.exists) {
-      const cliArgs = [...buildCliBaseArgs(ctx.settings), 'workflow', 'run', '--profile', ctx.activeProfile, '--out', outputRoot];
-      if (presetPick.preset) {
-        cliArgs.push('--preset', presetPick.preset);
-      }
-      await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: `Zeus workflow (${ctx.activeProfile})`,
-      }, async () => {
-        await runCliCommand({
-          output,
-          rootDir: ctx.root,
-          env: ctx.env,
-          settings: ctx.settings,
-          cliArgs,
-        });
-        appendOutput(output, '[workflow] completed via CLI');
-      });
-    } else {
-      appendOutput(output, '[workflow] CLI not reachable, using core API fallback.');
-      const workflowState = await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: `Zeus workflow (${ctx.activeProfile})`,
-      }, async () => runWorkflow(ctx.activeProfile, presetPick.preset, {
-        runtime: {
-          cwd: ctx.root,
-          env: ctx.env,
-        },
-        out: outputRoot,
-      }));
+    const workflowState = await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: `Zeus workflow (${ctx.activeProfile})`,
+    }, async () => runWorkflow(ctx.activeProfile, presetPick.preset, {
+      runtime: {
+        cwd: ctx.rootDir,
+        env: ctx.env,
+      },
+      out: ctx.outputRoot,
+    }));
 
-      appendOutput(output, '[workflow] completed via fallback');
-      appendOutput(output, {
-        status: workflowState.status,
-        runId: workflowState.runId,
-        runRoot: workflowState.paths.runRoot,
-        reportPath: workflowState.paths.reportPath,
-      });
-    }
+    output.appendLine('[workflow] completed via core API fallback path');
+    output.appendLine(JSON.stringify(sanitizeValue({
+      status: workflowState.status,
+      runId: workflowState.runId,
+      runRoot: workflowState.paths.runRoot,
+      reportPath: workflowState.paths.reportPath,
+    }), null, 2));
 
-    const latestReports = findLatestFiles(outputRoot, (entry) => path.basename(entry).toLowerCase() === 'report.md', 1);
-    if (latestReports.length > 0) {
-      const document = await vscode.workspace.openTextDocument(latestReports[0].absolutePath);
+    const latest = await gateway.getLatestReport();
+    if (latest && latest.absolutePath) {
+      const document = await vscode.workspace.openTextDocument(latest.absolutePath);
       await vscode.window.showTextDocument(document, { preview: false });
     }
 
     refreshViews();
+    return workflowState;
   }
 
   async function openLatestReportCommand() {
-    const ctx = getCurrentContext();
-    const outputRoot = resolveOutputRoot(ctx.root, ctx.settings);
-    const reports = findLatestFiles(outputRoot, (entry) => path.basename(entry).toLowerCase() === 'report.md', 1);
-    if (reports.length === 0) {
-      throw new Error(`No report.md found under ${outputRoot}`);
+    const latest = await gateway.getLatestReport();
+    if (!latest || latest.status !== 'PASS' || !latest.absolutePath) {
+      throw new Error('No report.md found under current output root.');
     }
-    const document = await vscode.workspace.openTextDocument(reports[0].absolutePath);
+
+    const document = await vscode.workspace.openTextDocument(latest.absolutePath);
     await vscode.window.showTextDocument(document, { preview: false });
+    return latest;
   }
 
   async function openDashboardCommand() {
-    const ctx = getCurrentContext();
-    const outputRoot = resolveOutputRoot(ctx.root, ctx.settings);
-    const reportEntries = findLatestFiles(outputRoot, (entry) => path.basename(entry).toLowerCase() === 'report.md', 5);
-    const aiEntries = findLatestFiles(outputRoot, (entry) => path.basename(entry).toLowerCase() === 'ai_prompt.md', 5);
-    const dashboardPath = path.join(ctx.root, '.local', 'zeus-dashboard.md');
+    const ctx = gateway.resolveContext();
+    const reportEntries = findLatestFiles(ctx.outputRoot, (entry) => path.basename(entry).toLowerCase() === 'report.md', 5);
+    const aiEntries = findLatestFiles(ctx.outputRoot, (entry) => path.basename(entry).toLowerCase() === 'ai_prompt.md', 5);
+    const dashboardPath = path.join(ctx.rootDir, '.local', 'zeus-dashboard.md');
     ensureDir(path.dirname(dashboardPath));
 
     const content = [
       '# Zeus RPG Toolkit Dashboard',
       '',
       `- Active profile: ${ctx.activeProfile || '<none>'}`,
-      `- Config: ${resolveSettingPath(ctx.root, ctx.settings.get('configPath'), 'config/profiles.json')}`,
-      `- Output root: ${outputRoot}`,
-      `- Read-only mode: ${Boolean(ctx.settings.get('readOnlyMode'))}`,
+      `- Config: ${toPosix(path.relative(ctx.rootDir, ctx.configPath) || path.basename(ctx.configPath))}`,
+      `- Output root: ${toPosix(path.relative(ctx.rootDir, ctx.outputRoot) || '.')}`,
+      `- Read-only mode: ${ctx.readOnlyMode}`,
       '',
       '## Latest Reports',
-      ...(reportEntries.length > 0 ? reportEntries.map((entry) => `- ${toPosix(path.relative(ctx.root, entry.absolutePath))}`) : ['- none']),
+      ...(reportEntries.length > 0 ? reportEntries.map((entry) => `- ${toPosix(path.relative(ctx.rootDir, entry.absolutePath))}`) : ['- none']),
       '',
       '## Latest AI Prompts',
-      ...(aiEntries.length > 0 ? aiEntries.map((entry) => `- ${toPosix(path.relative(ctx.root, entry.absolutePath))}`) : ['- none']),
+      ...(aiEntries.length > 0 ? aiEntries.map((entry) => `- ${toPosix(path.relative(ctx.rootDir, entry.absolutePath))}`) : ['- none']),
       '',
       '## Commands',
       '- Zeus: Select Profile',
+      '- Zeus: Show Active Environment',
+      '- Zeus: Create Agent Terminal',
       '- Zeus: Run Doctor',
-      '- Zeus: Run Workflow',
       '- Zeus: Generate AI Context',
       '- Zeus: Open Latest Report',
     ].join('\n');
@@ -825,7 +556,7 @@ async function activate(context) {
   }
 
   async function generateAiContextCommand() {
-    const ctx = getCurrentContext();
+    const ctx = gateway.resolveContext();
     if (!Boolean(ctx.settings.get('enableAgentMode'))) {
       throw new Error('Agent mode is disabled in settings.');
     }
@@ -834,36 +565,41 @@ async function activate(context) {
       prompt: 'Optional ticket/task context for AI prompt',
       placeHolder: 'Ticket-123: add XYZ validation',
     }) || '';
-    const outputRoot = resolveOutputRoot(ctx.root, ctx.settings);
 
-    const result = generateAiContextBundle({
-      workspaceRoot: ctx.root,
-      outputRoot,
-      activeProfile: ctx.activeProfile,
-      taskContext,
-      selectedPaths: Array.from(selectionState.values()),
-      timestamp: new Date(),
-    });
-    await context.workspaceState.update(LAST_AI_PROMPT_KEY, result.files.aiPrompt);
+    const result = await gateway.generateAiContext(
+      {
+        profile: ctx.activeProfile,
+        ticket: taskContext,
+        selectedFiles: Array.from(selectionState.values()),
+        includeLatestReport: true,
+      },
+      Array.from(selectionState.values()),
+    );
 
-    appendOutput(output, '[ai-context] generated');
-    appendOutput(output, result);
+    if (result.status === 'BLOCKED') {
+      throw new Error(result.reason);
+    }
 
-    const document = await vscode.workspace.openTextDocument(result.files.aiPrompt);
-    await vscode.window.showTextDocument(document, { preview: false });
+    if (result.files && result.files.ai_prompt_md) {
+      const document = await vscode.workspace.openTextDocument(path.resolve(ctx.rootDir, result.files.ai_prompt_md));
+      await vscode.window.showTextDocument(document, { preview: false });
+    }
+
+    output.appendLine('[ai-context] generated');
+    output.appendLine(JSON.stringify(sanitizeValue(result), null, 2));
     refreshViews();
+    return result;
   }
 
   async function copyAiPromptToClipboardCommand() {
-    const ctx = getCurrentContext();
-    const outputRoot = resolveOutputRoot(ctx.root, ctx.settings);
+    const ctx = gateway.resolveContext();
     const lastPrompt = context.workspaceState.get(LAST_AI_PROMPT_KEY, '');
     let promptPath = '';
 
     if (lastPrompt && fs.existsSync(lastPrompt)) {
       promptPath = lastPrompt;
     } else {
-      const latest = findLatestFiles(outputRoot, (entry) => path.basename(entry).toLowerCase() === 'ai_prompt.md', 1);
+      const latest = findLatestFiles(ctx.outputRoot, (entry) => path.basename(entry).toLowerCase() === 'ai_prompt.md', 1);
       promptPath = latest.length > 0 ? latest[0].absolutePath : '';
     }
     if (!promptPath) {
@@ -876,7 +612,7 @@ async function activate(context) {
   }
 
   async function addPathSelectionCommand(uri, expectedFolder) {
-    const root = ensureWorkspace();
+    const ctx = gateway.resolveContext();
     let targetPath = '';
     if (uri && uri.fsPath) {
       targetPath = uri.fsPath;
@@ -897,30 +633,44 @@ async function activate(context) {
       }
     }
 
-    const relative = resolveSafeRelativePath(root, targetPath);
+    const relative = resolveSafeRelativePath(ctx.rootDir, targetPath);
     if (!relative) {
       throw new Error('Only paths inside the current workspace can be added.');
     }
+
     selectionState.add(relative);
     await persistSelectionState();
-    appendOutput(output, `[ai-context] added ${relative}`);
+    output.appendLine(`[ai-context] added ${relative}`);
     refreshViews();
   }
 
   async function clearAiContextSelectionCommand() {
     selectionState.clear();
     await persistSelectionState();
-    appendOutput(output, '[ai-context] selection cleared');
+    output.appendLine('[ai-context] selection cleared');
     refreshViews();
   }
 
+  async function invokeAgentToolCommand(toolName, input) {
+    const result = await gateway.runAgentTool(
+      toolName,
+      input || {},
+      Array.from(selectionState.values()),
+    );
+    output.appendLine(`[agent-tool] ${toolName || '<unknown>'} -> ${result.status}`);
+    output.appendLine(JSON.stringify(sanitizeValue(result), null, 2));
+    return result;
+  }
+
   const profilesProvider = new SimpleTreeProvider(async () => {
-    const ctx = getCurrentContext();
+    const ctx = gateway.resolveContext();
     const items = [];
+
     if (!ctx.activeProfile) {
       items.push(new vscode.TreeItem('No active profile', vscode.TreeItemCollapsibleState.None));
       return items;
     }
+
     items.push(new vscode.TreeItem(`Active: ${ctx.activeProfile}`, vscode.TreeItemCollapsibleState.None));
     for (const profile of ctx.profileNames) {
       const item = new vscode.TreeItem(profile, vscode.TreeItemCollapsibleState.None);
@@ -935,16 +685,18 @@ async function activate(context) {
   });
 
   const workflowsProvider = new SimpleTreeProvider(async () => {
-    const ctx = getCurrentContext();
+    const ctx = gateway.resolveContext();
     if (!ctx.activeProfile) {
       return [new vscode.TreeItem('No active profile', vscode.TreeItemCollapsibleState.None)];
     }
+
     const profile = resolveProfile(ctx.profiles, ctx.activeProfile, { env: ctx.env });
     const workflowConfig = readWorkflowConfig(ctx.profiles, profile, ctx.env);
     const presetNames = Object.keys(workflowConfig.presets || {}).sort((left, right) => left.localeCompare(right));
     if (presetNames.length === 0) {
       return [new vscode.TreeItem('No workflow presets configured', vscode.TreeItemCollapsibleState.None)];
     }
+
     return presetNames.map((presetName) => {
       const item = new vscode.TreeItem(presetName, vscode.TreeItemCollapsibleState.None);
       item.description = (workflowConfig.presets[presetName].steps || []).join(', ');
@@ -957,36 +709,39 @@ async function activate(context) {
   });
 
   const fetchedSourcesProvider = new SimpleTreeProvider(async () => {
-    const root = ensureWorkspace();
+    const ctx = gateway.resolveContext();
     const candidates = [];
-    const defaultFetchRoot = path.join(root, 'rpg_sources');
+    const defaultFetchRoot = path.join(ctx.rootDir, 'rpg_sources');
     if (fs.existsSync(defaultFetchRoot)) {
-      const item = new vscode.TreeItem(toPosix(path.relative(root, defaultFetchRoot)), vscode.TreeItemCollapsibleState.None);
+      const item = new vscode.TreeItem(toPosix(path.relative(ctx.rootDir, defaultFetchRoot)), vscode.TreeItemCollapsibleState.None);
       item.resourceUri = vscode.Uri.file(defaultFetchRoot);
       candidates.push(item);
     }
-    const runFetchRoots = findLatestFiles(path.join(root, 'analysis'), (entry) => entry.toLowerCase().endsWith(`${path.sep}fetch${path.sep}zeus-import-manifest.json`), 10)
+
+    const runFetchRoots = findLatestFiles(path.join(ctx.rootDir, 'analysis'), (entry) => entry.toLowerCase().endsWith(`${path.sep}fetch${path.sep}zeus-import-manifest.json`), 10)
       .map((entry) => path.dirname(entry.absolutePath));
     for (const fetchRoot of runFetchRoots) {
-      const item = new vscode.TreeItem(toPosix(path.relative(root, fetchRoot)), vscode.TreeItemCollapsibleState.None);
+      const item = new vscode.TreeItem(toPosix(path.relative(ctx.rootDir, fetchRoot)), vscode.TreeItemCollapsibleState.None);
       item.resourceUri = vscode.Uri.file(fetchRoot);
       candidates.push(item);
     }
+
     if (candidates.length === 0) {
       return [new vscode.TreeItem('No fetched sources found', vscode.TreeItemCollapsibleState.None)];
     }
+
     return candidates;
   });
 
   const reportsProvider = new SimpleTreeProvider(async () => {
-    const ctx = getCurrentContext();
-    const outputRoot = resolveOutputRoot(ctx.root, ctx.settings);
-    const reports = findLatestFiles(outputRoot, (entry) => path.basename(entry).toLowerCase() === 'report.md', 15);
+    const ctx = gateway.resolveContext();
+    const reports = findLatestFiles(ctx.outputRoot, (entry) => path.basename(entry).toLowerCase() === 'report.md', 15);
     if (reports.length === 0) {
       return [new vscode.TreeItem('No reports found', vscode.TreeItemCollapsibleState.None)];
     }
+
     return reports.map((entry) => {
-      const item = new vscode.TreeItem(toPosix(path.relative(ctx.root, entry.absolutePath)), vscode.TreeItemCollapsibleState.None);
+      const item = new vscode.TreeItem(toPosix(path.relative(ctx.rootDir, entry.absolutePath)), vscode.TreeItemCollapsibleState.None);
       item.command = {
         command: 'vscode.open',
         title: 'Open Report',
@@ -997,16 +752,16 @@ async function activate(context) {
   });
 
   const aiContextProvider = new SimpleTreeProvider(async () => {
-    const ctx = getCurrentContext();
-    const outputRoot = resolveOutputRoot(ctx.root, ctx.settings);
-    const items = [];
-    items.push(new vscode.TreeItem(`Selected Paths: ${selectionState.size}`, vscode.TreeItemCollapsibleState.None));
+    const ctx = gateway.resolveContext();
+    const prompts = findLatestFiles(ctx.outputRoot, (entry) => path.basename(entry).toLowerCase() === 'ai_prompt.md', 10);
+    const items = [new vscode.TreeItem(`Selected Paths: ${selectionState.size}`, vscode.TreeItemCollapsibleState.None)];
+
     for (const selected of Array.from(selectionState.values()).sort((left, right) => left.localeCompare(right))) {
       items.push(new vscode.TreeItem(`- ${selected}`, vscode.TreeItemCollapsibleState.None));
     }
-    const prompts = findLatestFiles(outputRoot, (entry) => path.basename(entry).toLowerCase() === 'ai_prompt.md', 10);
+
     for (const prompt of prompts) {
-      const item = new vscode.TreeItem(toPosix(path.relative(ctx.root, prompt.absolutePath)), vscode.TreeItemCollapsibleState.None);
+      const item = new vscode.TreeItem(toPosix(path.relative(ctx.rootDir, prompt.absolutePath)), vscode.TreeItemCollapsibleState.None);
       item.command = {
         command: 'vscode.open',
         title: 'Open AI Prompt',
@@ -1014,6 +769,7 @@ async function activate(context) {
       };
       items.push(item);
     }
+
     return items;
   });
 
@@ -1023,7 +779,7 @@ async function activate(context) {
     }
     return runtimeState.lastDoctorChecks.map((check) => {
       const item = new vscode.TreeItem(`[${check.status}] ${check.name}`, vscode.TreeItemCollapsibleState.None);
-      item.description = maskSecretsInText(check.details);
+      item.description = maskSecretsInText(check.details || '');
       return item;
     });
   });
@@ -1047,121 +803,40 @@ async function activate(context) {
     vscode.window.registerTreeDataProvider('zeusAiContextView', aiContextProvider),
     vscode.window.registerTreeDataProvider('zeusDiagnosticsView', diagnosticsProvider),
     vscode.commands.registerCommand('zeusRpgToolkit.refreshViews', refreshViews),
-    vscode.commands.registerCommand('zeusRpgToolkit.openConfig', async () => {
-      try {
-        await openConfig();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.selectProfile', async (profile) => {
-      try {
-        await selectProfile(profile);
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.runDoctor', async () => {
-      try {
-        await runDoctorCommand();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.fetchSources', async () => {
-      try {
-        await fetchSourcesCommand();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.analyzeWorkspace', async () => {
-      try {
-        await analyzeWorkspaceCommand();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.analyzeCurrentFile', async () => {
-      try {
-        await analyzeCurrentFileCommand();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.queryTable', async () => {
-      try {
-        await queryTableCommand();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.runWorkflow', async () => {
-      try {
-        await runWorkflowCommand();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.openLatestReport', async () => {
-      try {
-        await openLatestReportCommand();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.openDashboard', async () => {
-      try {
-        await openDashboardCommand();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.generateAiContext', async () => {
-      try {
-        await generateAiContextCommand();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.copyAiPromptToClipboard', async () => {
-      try {
-        await copyAiPromptToClipboardCommand();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.addFileToAiContext', async (uri) => {
-      try {
-        await addPathSelectionCommand(uri, false);
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.addFolderToAiContext', async (uri) => {
-      try {
-        await addPathSelectionCommand(uri, true);
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
-    vscode.commands.registerCommand('zeusRpgToolkit.clearAiContextSelection', async () => {
-      try {
-        await clearAiContextSelectionCommand();
-      } catch (error) {
-        vscode.window.showErrorMessage(maskSecretsInText(error.message));
-      }
-    }),
+    vscode.commands.registerCommand('zeusRpgToolkit.openConfig', createGuardedCommand(output, openConfigCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.selectProfile', createGuardedCommand(output, async (profile) => selectProfile(profile))),
+    vscode.commands.registerCommand('zeusRpgToolkit.showActiveEnvironment', createGuardedCommand(output, showActiveEnvironmentCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.createAgentTerminal', createGuardedCommand(output, createAgentTerminalCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.runDoctor', createGuardedCommand(output, runDoctorCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.fetchSources', createGuardedCommand(output, fetchSourcesCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.analyzeWorkspace', createGuardedCommand(output, analyzeWorkspaceCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.analyzeCurrentFile', createGuardedCommand(output, analyzeCurrentFileCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.queryTable', createGuardedCommand(output, queryTableCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.runWorkflow', createGuardedCommand(output, runWorkflowCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.openLatestReport', createGuardedCommand(output, openLatestReportCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.openDashboard', createGuardedCommand(output, openDashboardCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.generateAiContext', createGuardedCommand(output, generateAiContextCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.copyAiPromptToClipboard', createGuardedCommand(output, copyAiPromptToClipboardCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.addFileToAiContext', createGuardedCommand(output, async (uri) => addPathSelectionCommand(uri, false))),
+    vscode.commands.registerCommand('zeusRpgToolkit.addFolderToAiContext', createGuardedCommand(output, async (uri) => addPathSelectionCommand(uri, true))),
+    vscode.commands.registerCommand('zeusRpgToolkit.clearAiContextSelection', createGuardedCommand(output, clearAiContextSelectionCommand)),
+    vscode.commands.registerCommand('zeusRpgToolkit.invokeAgentTool', createGuardedCommand(output, async (toolName, input) => invokeAgentToolCommand(toolName, input))),
+    vscode.commands.registerCommand('zeusRpgToolkit.listAgentTools', createGuardedCommand(output, async () => gateway.getAgentTools())),
   );
 
-  try {
-    const ctx = getCurrentContext();
-    if (ctx.activeProfile) {
-      runtimeState.statusBar.text = `Zeus: ${ctx.activeProfile}`;
-    }
-  } catch (_) {
-    runtimeState.statusBar.text = 'Zeus: <no workspace>';
+  for (const toolName of AGENT_TOOL_COMMANDS) {
+    const commandId = `zeusRpgToolkit.tool.${toolName}`;
+    context.subscriptions.push(
+      vscode.commands.registerCommand(
+        commandId,
+        createGuardedCommand(output, async (input) => invokeAgentToolCommand(toolName, input)),
+      ),
+    );
   }
+
+  updateStatusBar();
+  applyTerminalEnvironmentCollection();
+  refreshViews();
 }
 
 function deactivate() {}
