@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -148,8 +148,15 @@ function detectSqlType(sqlText) {
   return 'OTHER';
 }
 
+function isSchemaQualified(rawName) {
+  const cleaned = String(rawName || '').trim().replace(/^"(.*)"$/, '$1');
+  // Qualified if it contains a dot (SCHEMA.TABLE) or slash (LIBRARY/FILE IBM i legacy)
+  return cleaned.includes('.') || cleaned.includes('/');
+}
+
 function extractSqlTables(sqlText) {
   const tables = new Set();
+  let hasUnqualifiedTables = false;
   const patterns = [
     /\b(?:FROM|JOIN)\s+("[^"]+"|[A-Z0-9_#$@./]+)/gi,
     /\bINSERT\s+INTO\s+("[^"]+"|[A-Z0-9_#$@./]+)/gi,
@@ -161,15 +168,19 @@ function extractSqlTables(sqlText) {
   for (const regex of patterns) {
     let match = regex.exec(sqlText);
     while (match) {
-      const normalized = normalizeTableName(match[1]);
+      const rawMatch = match[1];
+      const normalized = normalizeTableName(rawMatch);
       if (normalized) {
         tables.add(normalized);
+        if (!isSchemaQualified(rawMatch)) {
+          hasUnqualifiedTables = true;
+        }
       }
       match = regex.exec(sqlText);
     }
   }
 
-  return Array.from(tables).sort();
+  return { tables: Array.from(tables).sort(), hasUnqualifiedTables };
 }
 
 function extractSqlHostVariables(sqlText) {
@@ -245,7 +256,7 @@ function determineSqlIntent(sqlType, sqlText) {
   return 'OTHER';
 }
 
-function buildSqlUncertainty({ sqlType, intent, tables, cursors, dynamic, unresolved }) {
+function buildSqlUncertainty({ sqlType, intent, tables, cursors, dynamic, unresolved, hasUnqualifiedTables }) {
   const markers = [];
   if (dynamic) {
     markers.push('DYNAMIC_SQL');
@@ -255,6 +266,9 @@ function buildSqlUncertainty({ sqlType, intent, tables, cursors, dynamic, unreso
   }
   if ((intent === 'READ' || intent === 'WRITE') && tables.length === 0 && (cursors || []).length === 0) {
     markers.push('UNRESOLVED_TABLES');
+  }
+  if (hasUnqualifiedTables) {
+    markers.push('UNRESOLVED_LIBRARY');
   }
   if (sqlType === 'OTHER') {
     markers.push('UNKNOWN_STATEMENT_TYPE');
@@ -270,7 +284,7 @@ function createSqlStatement({
 }) {
   const normalizedText = normalizeWhitespace(sqlText);
   const type = detectSqlType(normalizedText);
-  const tables = extractSqlTables(normalizedText);
+  const { tables, hasUnqualifiedTables } = extractSqlTables(normalizedText);
   const hostVariables = extractSqlHostVariables(normalizedText);
   const cursors = extractSqlCursorActions(normalizedText);
   const dynamic = hasDynamicSqlMarker(normalizedText, type);
@@ -285,6 +299,7 @@ function createSqlStatement({
     cursors,
     dynamic,
     unresolved,
+    hasUnqualifiedTables,
   });
 
   return {

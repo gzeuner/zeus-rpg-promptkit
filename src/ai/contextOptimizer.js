@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,22 +16,24 @@ const path = require('path');
 const { estimateTokensFromObject } = require('./tokenEstimator');
 
 const DEFAULT_WORKFLOW_TOKEN_BUDGETS = {
-  documentation: 2200,
-  errorAnalysis: 1600,
+  documentation: 6000,
+  errorAnalysis: 4000,
+  security: 4000,
+  modernization: 6000,
 };
 
 const DEFAULT_OPTIONS = {
-  maxTables: 20,
-  maxProgramCalls: 20,
-  maxCopyMembers: 10,
-  maxSQLStatements: 10,
-  maxSourceSnippets: 20,
-  maxSnippetLines: 12,
-  softTokenLimit: 3000,
+  maxTables: 40,
+  maxProgramCalls: 40,
+  maxCopyMembers: 20,
+  maxSQLStatements: 30,
+  maxSourceSnippets: 40,
+  maxSnippetLines: 20,
+  softTokenLimit: 10000,
   workflowTokenBudgets: DEFAULT_WORKFLOW_TOKEN_BUDGETS,
 };
 
-const WORKFLOW_KEYS = ['documentation', 'errorAnalysis'];
+const WORKFLOW_KEYS = ['documentation', 'errorAnalysis', 'security', 'modernization'];
 
 function normalizeName(value) {
   return String(value || '').trim().toUpperCase();
@@ -74,6 +76,12 @@ function normalizeWorkflowBudgets(value) {
     resolved[key] = Number.isFinite(Number(raw))
       ? Math.max(1, Number(raw))
       : DEFAULT_WORKFLOW_TOKEN_BUDGETS[key];
+  }
+  // Preserve any additional custom workflow budgets not in WORKFLOW_KEYS
+  for (const key of Object.keys(input)) {
+    if (!WORKFLOW_KEYS.includes(key) && Number.isFinite(Number(input[key]))) {
+      resolved[key] = Math.max(1, Number(input[key]));
+    }
   }
   return resolved;
 }
@@ -603,6 +611,17 @@ function categoryCaps(options) {
   };
 }
 
+const WORKFLOW_NAME_MAP = {
+  errorAnalysis: 'error-analysis',
+  security: 'security',
+  modernization: 'modernization',
+  documentation: 'documentation',
+};
+
+function resolveWorkflowOutputName(workflowName) {
+  return WORKFLOW_NAME_MAP[workflowName] || workflowName;
+}
+
 function workflowMultipliers(workflowName) {
   if (workflowName === 'errorAnalysis') {
     return {
@@ -611,6 +630,26 @@ function workflowMultipliers(workflowName) {
       fileUsage: 1.25,
       conditionals: 1.05,
       errorPaths: 1.7,
+    };
+  }
+  if (workflowName === 'security') {
+    // Security: prioritize error paths, WRITE SQL, unresolved/dynamic calls
+    return {
+      sql: 1.5,
+      calls: 1.6,
+      fileUsage: 1.3,
+      conditionals: 1.1,
+      errorPaths: 1.8,
+    };
+  }
+  if (workflowName === 'modernization') {
+    // Modernization: prioritize native files (seams), program/procedure calls (boundaries)
+    return {
+      sql: 1.2,
+      calls: 1.7,
+      fileUsage: 1.8,
+      conditionals: 1.0,
+      errorPaths: 1.0,
     };
   }
   return {
@@ -797,7 +836,7 @@ function materializeWorkflow(workflowName, selection, projection, rankedSets, co
   }));
 
   const workflow = {
-    name: workflowName === 'errorAnalysis' ? 'error-analysis' : 'documentation',
+    name: resolveWorkflowOutputName(workflowName),
     tokenBudget: budget,
     estimatedTokens: 0,
     summary: context && context.summary ? context.summary.text : '',

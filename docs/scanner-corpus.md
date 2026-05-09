@@ -11,6 +11,8 @@ Current scope:
 - free-form RPG
 - fixed-form RPG
 - SQLRPGLE SQL table detection
+- SQL uncertainty markers: `DYNAMIC_SQL`, `UNRESOLVED_SQL`, `UNRESOLVED_TABLES`, `UNRESOLVED_LIBRARY`
+  - `UNRESOLVED_LIBRARY` wird gesetzt wenn SQL-Tabellennamen kein Schema-Praefix haben (z.B. `FROM CUSTOMERS` statt `FROM APPDATA.CUSTOMERS`)
 - ILE module, binder, and binding-directory patterns
 
 Runner:

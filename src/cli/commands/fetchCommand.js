@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,12 +21,18 @@ async function runFetch(args) {
 
     if (verbose) {
       console.log(`[verbose] Fetch host: ${config.host}`);
-      console.log(`[verbose] Source library: ${config.sourceLib}`);
+      console.log(`[verbose] Object library: ${config.sourceLib}`);
+      console.log(`[verbose] Source files: ${config.files.join(', ')}`);
       console.log(`[verbose] IFS dir: ${config.ifsDir}`);
       console.log(`[verbose] Local out: ${path.resolve(process.cwd(), config.out)}`);
-      console.log(`[verbose] Source files: ${config.files.join(', ')}`);
       console.log(`[verbose] Stream file encoding: ${summary.encodingPolicy}`);
       console.log(`[verbose] Download transport: ${config.transport}`);
+      if (config.networkType) {
+        console.log(`[verbose] Network type hint: ${config.networkType}`);
+      }
+      if (config.preferTransport) {
+        console.log(`[verbose] Preferred transport: ${config.preferTransport}`);
+      }
       if (config.members.length > 0) {
         console.log(`[verbose] Members (global filter): ${config.members.join(', ')}`);
       }
@@ -39,6 +45,9 @@ async function runFetch(args) {
     console.log(`Local destination: ${summary.localDestination}`);
     if (summary.importManifestPath) {
       console.log(`Import manifest: ${summary.importManifestPath}`);
+    }
+    if (summary.transportDiagnostics && summary.transportDiagnostics.strategyRecommendation) {
+      console.log(`Recommended transport order: ${summary.transportDiagnostics.strategyRecommendation.join(' -> ')}`);
     }
     if (summary.notes.length > 0) {
       console.log('Notes:');

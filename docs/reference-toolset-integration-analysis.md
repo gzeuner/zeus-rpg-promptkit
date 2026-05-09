@@ -38,9 +38,9 @@ The reference toolset leans heavily on IBM i catalog views rather than plain JDB
 
 This aligns directly with:
 
-- [#86](https://github.com/gzeuner/zeus-rpg-promptkit/issues/86)
-- [#85](https://github.com/gzeuner/zeus-rpg-promptkit/issues/85)
-- [#87](https://github.com/gzeuner/zeus-rpg-promptkit/issues/87)
+- [#86](https://github.com/example-org/zeus-rpg-promptkit/issues/86)
+- [#85](https://github.com/example-org/zeus-rpg-promptkit/issues/85)
+- [#87](https://github.com/example-org/zeus-rpg-promptkit/issues/87)
 
 ### 2. Catalog-backed resolution for missing source
 
@@ -48,8 +48,8 @@ The reference scripts use IBM i object and routine metadata to answer questions 
 
 This aligns with:
 
-- [#88](https://github.com/gzeuner/zeus-rpg-promptkit/issues/88)
-- [#70](https://github.com/gzeuner/zeus-rpg-promptkit/issues/70)
+- [#88](https://github.com/example-org/zeus-rpg-promptkit/issues/88)
+- [#70](https://github.com/example-org/zeus-rpg-promptkit/issues/70)
 
 ### 3. Search-oriented workflows
 
@@ -63,9 +63,9 @@ Zeus should adapt these as first-class workflows with structured outputs instead
 
 This aligns with:
 
-- [#89](https://github.com/gzeuner/zeus-rpg-promptkit/issues/89)
-- [#90](https://github.com/gzeuner/zeus-rpg-promptkit/issues/90)
-- [#91](https://github.com/gzeuner/zeus-rpg-promptkit/issues/91)
+- [#89](https://github.com/example-org/zeus-rpg-promptkit/issues/89)
+- [#90](https://github.com/example-org/zeus-rpg-promptkit/issues/90)
+- [#91](https://github.com/example-org/zeus-rpg-promptkit/issues/91)
 
 ### 4. Task-specific prompt and report discipline
 
@@ -79,10 +79,10 @@ Zeus should keep its structured artifact model and continue toward:
 
 This aligns with:
 
-- [#73](https://github.com/gzeuner/zeus-rpg-promptkit/issues/73)
-- [#74](https://github.com/gzeuner/zeus-rpg-promptkit/issues/74)
-- [#75](https://github.com/gzeuner/zeus-rpg-promptkit/issues/75)
-- [#76](https://github.com/gzeuner/zeus-rpg-promptkit/issues/76)
+- [#73](https://github.com/example-org/zeus-rpg-promptkit/issues/73)
+- [#74](https://github.com/example-org/zeus-rpg-promptkit/issues/74)
+- [#75](https://github.com/example-org/zeus-rpg-promptkit/issues/75)
+- [#76](https://github.com/example-org/zeus-rpg-promptkit/issues/76)
 
 ### 5. Safe sharing and sanitized fixtures
 
@@ -98,8 +98,8 @@ Zeus should treat sanitization as a first-class architecture concern for:
 
 This aligns with:
 
-- [#92](https://github.com/gzeuner/zeus-rpg-promptkit/issues/92)
-- [#94](https://github.com/gzeuner/zeus-rpg-promptkit/issues/94)
+- [#92](https://github.com/example-org/zeus-rpg-promptkit/issues/92)
+- [#94](https://github.com/example-org/zeus-rpg-promptkit/issues/94)
 
 ## What Zeus Should Not Reuse
 
@@ -178,10 +178,10 @@ The roadmap should explicitly treat the following as near-term work:
 
 This aligns with:
 
-- [#55](https://github.com/gzeuner/zeus-rpg-promptkit/issues/55)
-- [#56](https://github.com/gzeuner/zeus-rpg-promptkit/issues/56)
-- [#57](https://github.com/gzeuner/zeus-rpg-promptkit/issues/57)
-- [#93](https://github.com/gzeuner/zeus-rpg-promptkit/issues/93)
+- [#55](https://github.com/example-org/zeus-rpg-promptkit/issues/55)
+- [#56](https://github.com/example-org/zeus-rpg-promptkit/issues/56)
+- [#57](https://github.com/example-org/zeus-rpg-promptkit/issues/57)
+- [#93](https://github.com/example-org/zeus-rpg-promptkit/issues/93)
 
 ## Recommended Integration Sequence
 
@@ -191,11 +191,11 @@ Ship a single trusted local source contract before expanding semantics further.
 
 Priority issues:
 
-- [#55](https://github.com/gzeuner/zeus-rpg-promptkit/issues/55)
-- [#56](https://github.com/gzeuner/zeus-rpg-promptkit/issues/56)
-- [#57](https://github.com/gzeuner/zeus-rpg-promptkit/issues/57)
-- [#58](https://github.com/gzeuner/zeus-rpg-promptkit/issues/58)
-- [#93](https://github.com/gzeuner/zeus-rpg-promptkit/issues/93)
+- [#55](https://github.com/example-org/zeus-rpg-promptkit/issues/55)
+- [#56](https://github.com/example-org/zeus-rpg-promptkit/issues/56)
+- [#57](https://github.com/example-org/zeus-rpg-promptkit/issues/57)
+- [#58](https://github.com/example-org/zeus-rpg-promptkit/issues/58)
+- [#93](https://github.com/example-org/zeus-rpg-promptkit/issues/93)
 
 ### Phase 2: Raise IBM i semantic fidelity with catalog intelligence
 
@@ -203,10 +203,10 @@ Make DB2 and external object metadata materially richer.
 
 Priority issues:
 
-- [#86](https://github.com/gzeuner/zeus-rpg-promptkit/issues/86)
-- [#85](https://github.com/gzeuner/zeus-rpg-promptkit/issues/85)
-- [#87](https://github.com/gzeuner/zeus-rpg-promptkit/issues/87)
-- [#88](https://github.com/gzeuner/zeus-rpg-promptkit/issues/88)
+- [#86](https://github.com/example-org/zeus-rpg-promptkit/issues/86)
+- [#85](https://github.com/example-org/zeus-rpg-promptkit/issues/85)
+- [#87](https://github.com/example-org/zeus-rpg-promptkit/issues/87)
+- [#88](https://github.com/example-org/zeus-rpg-promptkit/issues/88)
 
 ### Phase 3: Add search and investigation workflows
 
@@ -214,10 +214,10 @@ Give users a practical workflow surface for early-stage debugging and modernizat
 
 Priority issues:
 
-- [#89](https://github.com/gzeuner/zeus-rpg-promptkit/issues/89)
-- [#90](https://github.com/gzeuner/zeus-rpg-promptkit/issues/90)
-- [#91](https://github.com/gzeuner/zeus-rpg-promptkit/issues/91)
-- [#76](https://github.com/gzeuner/zeus-rpg-promptkit/issues/76)
+- [#89](https://github.com/example-org/zeus-rpg-promptkit/issues/89)
+- [#90](https://github.com/example-org/zeus-rpg-promptkit/issues/90)
+- [#91](https://github.com/example-org/zeus-rpg-promptkit/issues/91)
+- [#76](https://github.com/example-org/zeus-rpg-promptkit/issues/76)
 
 ### Phase 4: Protect shared outputs and improve evaluation quality
 
@@ -225,9 +225,9 @@ Make the system safer to use on real project data.
 
 Priority issues:
 
-- [#92](https://github.com/gzeuner/zeus-rpg-promptkit/issues/92)
-- [#94](https://github.com/gzeuner/zeus-rpg-promptkit/issues/94)
-- [#47](https://github.com/gzeuner/zeus-rpg-promptkit/issues/47)
+- [#92](https://github.com/example-org/zeus-rpg-promptkit/issues/92)
+- [#94](https://github.com/example-org/zeus-rpg-promptkit/issues/94)
+- [#47](https://github.com/example-org/zeus-rpg-promptkit/issues/47)
 
 ## Bottom Line
 

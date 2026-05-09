@@ -25,8 +25,8 @@ test('getActualColumns returns uppercase column names in ordinal order', () => {
     user: 'ZEUS',
     password: 'secret',
   }, 'APPDATA', 'APPVIEW_00', buildRuntimeWithRows([
-    { COLUMN_NAME: 'pjahr' },
-    { COLUMN_NAME: 'pwpreis' },
+    { COLUMN_NAME: 'p_year' },
+    { COLUMN_NAME: 'p_price' },
   ]));
 
   assert.deepEqual(columns, ['P_YEAR', 'P_PRICE']);

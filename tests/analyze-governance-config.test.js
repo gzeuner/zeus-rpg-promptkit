@@ -10,8 +10,11 @@ const cliPath = path.join(projectRoot, 'cli', 'zeus.js');
 const fixtureRoot = path.join(__dirname, 'fixtures', 'v1-smoke', 'src');
 
 function runCli(args, cwd) {
+  const env = { ...process.env };
+  delete env.ZEUS_CONFIG_DIR;
   return execFileSync(process.execPath, [cliPath, ...args], {
     cwd,
+    env,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });

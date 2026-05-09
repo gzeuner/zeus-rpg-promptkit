@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
+const fs = require('fs');
+const path = require('path');
 const { resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../config/runtimeConfig');
 const { isDbConfigured } = require('../db2/db2Config');
 const {
@@ -177,19 +179,33 @@ function executeQueryTable(args, { cwd = process.cwd() } = {}) {
   };
 }
 
+function resolveQuerySqlText(args, { cwd = process.cwd() } = {}) {
+  if (args.file && String(args.file).trim()) {
+    const filePath = path.resolve(cwd, String(args.file).trim());
+    try {
+      return fs.readFileSync(filePath, 'utf8').trim();
+    } catch (err) {
+      const error = new Error(`Cannot read SQL file: ${filePath} — ${err.message}`);
+      error.code = 'SQL_FILE_NOT_FOUND';
+      throw error;
+    }
+  }
+  if (args.sql && String(args.sql).trim()) {
+    return String(args.sql).trim();
+  }
+  const error = new Error('Missing required option: --sql "SELECT ..." or --file <path>');
+  error.code = 'SQL_REQUIRED';
+  throw error;
+}
+
 function executeQuerySql(args, { cwd = process.cwd() } = {}) {
   if (!args.profile || !String(args.profile).trim()) {
     const error = new Error('Missing required option: --profile <name>');
     error.code = 'PROFILE_REQUIRED';
     throw error;
   }
-  if (!args.sql || !String(args.sql).trim()) {
-    const error = new Error('Missing required option: --sql "SELECT ..."');
-    error.code = 'SQL_REQUIRED';
-    throw error;
-  }
 
-  const sql = String(args.sql).trim();
+  const sql = resolveQuerySqlText(args, { cwd });
   const maxRows = parseMaxRows(args['max-rows']);
   const output = normalizeOutput(args.output);
   const config = resolveAnalyzeConfig(args, { cwd });
@@ -223,6 +239,7 @@ module.exports = {
   executeQueryTable,
   normalizeOutput,
   parseMaxRows,
+  resolveQuerySqlText,
   toRowMatrix,
   validateFilterPattern,
 };

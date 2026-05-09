@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -298,6 +298,51 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
         { path: 'ai_prompt_test_generation.md', purpose: 'Primary prompt for scenario, fixture, and assertion planning.' },
         { path: 'ai_prompt_documentation.md', purpose: 'Supporting prompt for program context and flow.' },
         { path: 'report.md', purpose: 'Human-readable summary for validating proposed coverage.' },
+      ],
+    }),
+  }),
+  'security-review': Object.freeze({
+    name: 'security-review',
+    title: 'Security Review',
+    description: 'Bundle security-analysis prompt with evidence artifacts for IBM i RPG security risk review.',
+    analyzeMode: 'security',
+    bundleArtifacts: Object.freeze([
+      'analyze-run-manifest.json',
+      'analysis-index.json',
+      'canonical-analysis.json',
+      'ai-knowledge.json',
+      'report.md',
+      'ai_prompt_security_analysis.md',
+    ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'Security reviewers',
+        'IBM i architects assessing operational risk',
+        'Developers hardening existing RPG programs',
+      ],
+      keyQuestionsAnswered: [
+        'Where are the SQL injection and dynamic SQL risk paths?',
+        'Which native I/O operations lack authorization checks or commitment control?',
+        'Which error-handling paths expose internal information or silently discard failures?',
+      ],
+      expectedDecisions: [
+        'Prioritize the highest-risk security finding and plan remediation.',
+        'Decide whether architectural changes are needed or point fixes are sufficient.',
+      ],
+      interpretationGuidance: [
+        'Start with the highest-ranked evidence highlights in ai_prompt_security_analysis.md, then trace back through canonical-analysis.json.',
+        'DYNAMIC_SQL and UNRESOLVED_TABLES markers are security risk signals, not just analysis gaps.',
+        'Mutating native file I/O without authority pre-checks is an IBM i-specific privilege escalation risk.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and root program selection.',
+        'Security-optimized AI knowledge projection with SQL, native files, and error path evidence.',
+        'Security analysis prompt grounded in source-backed evidence with EVxxxx citation support.',
+      ],
+      recommendedOutputs: [
+        { path: 'ai_prompt_security_analysis.md', purpose: 'Primary security review prompt for IBM i RPG risk categories.' },
+        { path: 'report.md', purpose: 'Human-readable summary for tracking security findings.' },
+        { path: 'canonical-analysis.json', purpose: 'Source-backed semantic evidence for validating security claims.' },
       ],
     }),
   }),
