@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -368,6 +368,50 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
         { path: 'dependency-graph.json', purpose: 'Machine-readable dependency structure for impact follow-up.' },
         { path: 'program-call-tree.json', purpose: 'Cross-program graph used by zeus impact.' },
         { path: 'architecture-report.md', purpose: 'Narrative context before selecting an impact target.' },
+      ],
+    }),
+  }),
+  security: Object.freeze({
+    name: 'security',
+    title: 'Security Analysis',
+    description: 'Identify injection risks, authorization gaps, missing error handling, and commitment control issues in IBM i RPG source.',
+    promptTemplates: Object.freeze(['security-analysis']),
+    autoOptimizeContext: true,
+    primaryArtifacts: Object.freeze([
+      'analysis-index.json',
+      'ai-knowledge.json',
+      'report.md',
+      'ai_prompt_security_analysis.md',
+    ]),
+    reviewWorkflow: freezeReviewWorkflow({
+      intendedAudience: [
+        'Security reviewers',
+        'IBM i architects assessing operational risk',
+        'Developers hardening existing RPG programs',
+      ],
+      keyQuestionsAnswered: [
+        'Where are the highest dynamic SQL and injection risk paths?',
+        'Which native I/O operations lack commitment control or authority checks?',
+        'Which error-handling paths silently swallow failures or expose internals?',
+      ],
+      expectedDecisions: [
+        'Choose the highest-risk security finding to verify against source and runtime evidence.',
+        'Decide whether a security hardening pass is feasible without broader architectural changes.',
+      ],
+      interpretationGuidance: [
+        'Use ai_prompt_security_analysis.md for structured risk discovery and canonical-analysis.json to verify evidence claims.',
+        'Treat DYNAMIC_SQL and UNRESOLVED_TABLES uncertainty markers as security risk signals until verified.',
+        'Mutating native file I/O without explicit authority checks is an escalation-of-privilege risk on IBM i.',
+      ],
+      requiredInputs: [
+        'A local IBM i source tree and selected root program.',
+        'AI knowledge projection with security workflow evidence: SQL statements, native files, error paths, risk markers.',
+        'Security analysis prompt grounded in source-backed evidence.',
+      ],
+      recommendedOutputs: [
+        { path: 'ai_prompt_security_analysis.md', purpose: 'Primary security review prompt with IBM i specific risk categories.' },
+        { path: 'report.md', purpose: 'Human-readable summary for tracking identified security risks.' },
+        { path: 'ai-knowledge.json', purpose: 'Workflow-specific evidence for security-focused AI analysis.' },
       ],
     }),
   }),

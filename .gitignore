@@ -45,16 +45,23 @@ scripts/__pycache__/
 
 # -----------------------------
 # Secrets and local config
-# -----------------------------
+# ────────────────────────────
+# Keep committed: .env.example, profiles.example.json (templates)
+# Ignore local:   .env.local, local-only profiles (user credentials)
+# ────────────────────────────
 
-.env
-.env.*
+.env.local
+.env.*.local
 *.secret
 *.secrets
 *.credentials
 credentials.*
 config/local.*
 config/private.*
+# Local profile credentials — never commit them.
+# Copy config/profiles.example.json to config/local-only/profiles.json and fill in your values.
+config/local-only/
+config/profiles.json
 
 # -----------------------------
 # OS files

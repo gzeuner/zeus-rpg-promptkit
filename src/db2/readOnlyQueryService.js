@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,12 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const { buildJdbcUrl, resolveDefaultSchema, isDbConfigured } = require('./db2Config');
 const { runJavaHelper } = require('../fetch/jt400CommandRunner');
+const {
+  executeWithAdaptiveRetry,
+  normalizeSqlState,
+} = require('./adaptiveQueryService');
 
 const SQL_IDENTIFIER_PATTERN = /^[A-Z][A-Z0-9_#$@]*$/;
 const FORBIDDEN_SQL_PATTERN = /\b(INSERT|UPDATE|DELETE|MERGE|ALTER|DROP|CREATE|TRUNCATE|CALL|GRANT|REVOKE)\b/i;
 
+function stripSqlComments(sql) {
+  // Entfernt einzeilige Kommentare (-- ...) und mehrzeilige (/* ... */)
+  return sql
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--[^\r\n]*/g, '')
+    .trim();
+}
+
 function validateReadOnlySql(query) {
-  const normalized = String(query || '').trim();
+  const normalized = stripSqlComments(String(query || '').trim());
   if (!normalized) {
     throw new Error('Read-only SQL query is empty.');
   }
@@ -99,19 +111,21 @@ function executeReadOnlyDb2QueryWithFallback({
   runtime = {},
   context = {},
   retryHandlers = {},
+  degradedMode = 'throw',
 }) {
-  try {
-    return runReadOnlyDb2Query({
-      dbConfig,
-      query,
-      maxRows,
-      runtime,
-    });
-  } catch (error) {
-    const sqlState = extractSqlState(error);
-    const handler = retryHandlers[sqlState];
+  const attemptOrder = [{ name: 'primary', query, maxRows }];
+  const queryExecutor = (sql, attemptMaxRows = maxRows) => runReadOnlyDb2Query({
+    dbConfig,
+    query: sql,
+    maxRows: attemptMaxRows,
+    runtime,
+  });
+
+  const buildFallbackAttempts = ({ error, sqlState }) => {
+    const normalizedSqlState = normalizeSqlState(sqlState || extractSqlState(error));
+    const handler = retryHandlers[normalizedSqlState] || retryHandlers[sqlState];
     if (typeof handler !== 'function') {
-      throw error;
+      return [];
     }
     const fallback = handler({
       dbConfig,
@@ -120,17 +134,56 @@ function executeReadOnlyDb2QueryWithFallback({
       runtime,
       context,
       error,
-      sqlState,
+      sqlState: normalizedSqlState || sqlState,
     });
-    if (!fallback || typeof fallback.query !== 'string') {
-      throw error;
+    const fallbacks = Array.isArray(fallback) ? fallback : [fallback];
+    return fallbacks
+      .filter((entry) => entry && typeof entry.query === 'string')
+      .map((entry, index) => ({
+        name: entry.name || `fallback-${normalizedSqlState || 'unknown'}-${index + 1}`,
+        query: entry.query,
+        maxRows: entry.maxRows || maxRows,
+      }));
+  };
+
+  try {
+    const result = executeWithAdaptiveRetry(
+      ({ query: sql, maxRows: attemptMaxRows }) => queryExecutor(sql, attemptMaxRows),
+      attemptOrder,
+      {
+        verbose: Boolean(context.verbose),
+        onError: ({ error, sqlState, attempts }) => {
+          const fallbackAttempts = buildFallbackAttempts({ error, sqlState });
+          if (fallbackAttempts.length > 0) {
+            attempts.push(...fallbackAttempts);
+          }
+        },
+      },
+    );
+    if (!result || result.success !== true) {
+      if (result && result.degradedMode && degradedMode !== 'throw') {
+        return {
+          columns: [],
+          rows: [],
+          rowCount: 0,
+          degradedMode: true,
+          recommendations: result.recommendations || [],
+        };
+      }
+      throw (result && result.lastError) || new Error('Read-only DB2 query failed.');
     }
-    return runReadOnlyDb2Query({
-      dbConfig,
-      query: fallback.query,
-      maxRows: fallback.maxRows || maxRows,
-      runtime,
-    });
+    return result.result;
+  } catch (error) {
+    if (normalizeSqlState(extractSqlState(error)) === '42501' && degradedMode !== 'throw') {
+      return {
+        columns: [],
+        rows: [],
+        rowCount: 0,
+        degradedMode: true,
+        recommendations: ['Metadata query skipped because the current user has no QSYS2 authority.'],
+      };
+    }
+    throw error;
   }
 }
 

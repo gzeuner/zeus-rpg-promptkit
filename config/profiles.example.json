@@ -1,12 +1,24 @@
 {
+  "qa": {
+    "qaMode": false,
+    "qaStrict": "LENIENT",
+    "reportFormat": "markdown",
+    "enabledValidators": [],
+    "disabledValidators": [
+      "qa-test-precondition-validation",
+      "qa-regression-risk-analyzer",
+      "qa-sql-consistency-validator",
+      "qa-ibm-i-platform-checker"
+    ]
+  },
   "contextOptimizer": {
-    "maxTables": 20,
-    "maxProgramCalls": 20,
-    "maxCopyMembers": 10,
-    "maxSQLStatements": 10,
-    "maxSourceSnippets": 20,
-    "maxSnippetLines": 12,
-    "softTokenLimit": 3000
+    "maxTables": 40,
+    "maxProgramCalls": 40,
+    "maxCopyMembers": 20,
+    "maxSQLStatements": 30,
+    "maxSourceSnippets": 40,
+    "maxSnippetLines": 20,
+    "softTokenLimit": 10000
   },
   "analysisLimits": {
     "maxProgramDepth": 25,
@@ -65,10 +77,10 @@
       "host": "${env:ZEUS_FETCH_HOST}",
       "user": "${env:ZEUS_FETCH_USER}",
       "password": "${env:ZEUS_FETCH_PASSWORD}",
-      "sourceLib": "${env:ZEUS_FETCH_SOURCE_LIB}",
+      "sourceLibrary": "${env:ZEUS_FETCH_SOURCE_LIBRARY}",
       "ifsDir": "${env:ZEUS_FETCH_IFS_DIR}",
       "out": "${env:ZEUS_FETCH_OUT}",
-      "files": ["QRPGLESRC", "QSRVSRC", "QCPYSRC", "QCLLESRC", "QCLSRC", "QSQLSRC", "SQLTBLSRC", "SQLVIEWSRC", "SQLIDXSRC", "FORMSRC", "QDDSSRC"],
+      "sourceFiles": ["QRPGLESRC", "QSRVSRC", "QCPYSRC", "QCLLESRC", "QCLSRC", "QSQLSRC", "SQLTBLSRC", "SQLVIEWSRC", "SQLIDXSRC", "FORMSRC", "QDDSSRC"],
       "streamFileCcsid": 1208,
       "replace": true,
       "transport": "auto"
@@ -93,12 +105,12 @@
     "outputRoot": "./output",
     "extensions": [".rpgle", ".rpg", ".sqlrpgle", ".rpgleinc"],
     "contextOptimizer": {
-      "maxTables": 20,
-      "maxProgramCalls": 20,
-      "maxCopyMembers": 10,
-      "maxSQLStatements": 10,
-      "maxSourceSnippets": 20,
-      "maxSnippetLines": 12
+      "maxTables": 40,
+      "maxProgramCalls": 40,
+      "maxCopyMembers": 20,
+      "maxSQLStatements": 30,
+      "maxSourceSnippets": 40,
+      "maxSnippetLines": 20
     },
     "analysisLimits": {
       "maxProgramDepth": 15,
@@ -118,29 +130,31 @@
     "outputRoot": "./output",
     "extensions": [".rpgle", ".rpg"],
     "tokenBudget": {
-      "documentation": 4000,
+      "documentation": 6000,
       "error-analysis": 4000,
-      "defect-analysis": 4000
+      "defect-analysis": 4000,
+      "security": 4000,
+      "modernization": 6000
     },
     "db": {
-      "host": "myibmi.example.com",
-      "url": "jdbc:as400://myibmi.example.com;naming=system;libraries=MYLIB",
-      "user": "MYUSER",
-      "password": "MYPASSWORD",
-      "defaultSchema": "MYLIB"
+      "host": "${env:ZEUS_DB_HOST}",
+      "url": "${env:ZEUS_DB_URL}",
+      "user": "${env:ZEUS_DB_USER}",
+      "password": "${env:ZEUS_DB_PASSWORD}",
+      "defaultSchema": "${env:ZEUS_DB_DEFAULT_SCHEMA}"
     },
     "dbRoles": {
       "metadata": {
-        "host": "catalog.myibmi.example.com",
-        "user": "METAUSER",
-        "password": "METAPASSWORD",
-        "defaultSchema": "MYLIB"
+        "host": "${env:ZEUS_METADATA_DB_HOST}",
+        "user": "${env:ZEUS_METADATA_DB_USER}",
+        "password": "${env:ZEUS_METADATA_DB_PASSWORD}",
+        "defaultSchema": "${env:ZEUS_METADATA_DB_DEFAULT_SCHEMA}"
       },
       "testData": {
-        "host": "testdata.myibmi.example.com",
-        "user": "TESTUSER",
-        "password": "TESTPASSWORD",
-        "defaultSchema": "MYLIB"
+        "host": "${env:ZEUS_TESTDATA_DB_HOST}",
+        "user": "${env:ZEUS_TESTDATA_DB_USER}",
+        "password": "${env:ZEUS_TESTDATA_DB_PASSWORD}",
+        "defaultSchema": "${env:ZEUS_TESTDATA_DB_DEFAULT_SCHEMA}"
       }
     },
     "testData": {
@@ -160,13 +174,13 @@
   },
   "sample-fetch": {
     "fetch": {
-      "host": "myibmi.example.com",
-      "user": "MYUSER",
-      "password": "MYPASSWORD",
-      "sourceLib": "SOURCEN",
-      "ifsDir": "/home/zeus/rpg_sources",
-      "out": "./rpg_sources",
-      "files": ["QRPGLESRC", "QSQLRPGLESRC", "QCLLESRC"],
+      "host": "${env:ZEUS_FETCH_HOST}",
+      "user": "${env:ZEUS_FETCH_USER}",
+      "password": "${env:ZEUS_FETCH_PASSWORD}",
+      "sourceLib": "${env:ZEUS_FETCH_SOURCE_LIB}",
+      "ifsDir": "${env:ZEUS_FETCH_IFS_DIR}",
+      "out": "${env:ZEUS_FETCH_OUT}",
+      "files": ["QRPGLESRC", "QCPYSRC", "QCLLESRC", "QCLSRC", "QSRVSRC", "QSQLSRC", "QDDSSRC"],
       "streamFileCcsid": 1208,
       "replace": true,
       "transport": "auto"
@@ -193,8 +207,25 @@
       "presets": {
         "legacy-rpg-analysis": {
           "steps": ["fetch", "copy", "analyze", "impact", "query-table", "report"]
+        },
+        "security-check": {
+          "steps": ["fetch", "analyze", "report"],
+          "analyzeMode": "security"
+        },
+        "modernization-check": {
+          "steps": ["fetch", "analyze", "report"],
+          "analyzeMode": "modernization"
         }
       }
+    },
+    "runtimeContext": {
+      "_comment": "runtimeContext: Laufzeit-Metadaten über das IBM i System — wird von 'zeus doctor' und 'inspect-object' ausgewertet.",
+      "compiledProgramLib": "APPLIB",
+      "activeLibraries": ["APPLIB", "APPDATA"],
+      "journaledTables": [
+        "APPDATA.CUSTOMERS",
+        "APPLIB.CUSTOMERS"
+      ]
     }
   }
 }

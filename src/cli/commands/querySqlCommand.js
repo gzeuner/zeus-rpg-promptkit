@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const { renderAsciiTable } = require('../helpers/asciiTable');
 const { renderCsv } = require('../helpers/csvRenderer');
+const { resolveProfile, loadProfiles } = require('../../config/runtimeConfig');
 const {
   DEFAULT_MAX_ROWS,
   executeQuerySql,
@@ -22,6 +23,23 @@ const {
 } = require('../../core/queryService');
 
 async function runQuerySql(args) {
+  // productionSystem-Warnung: vor der Abfrage ausgeben (nicht bei CSV-Output)
+  const output = normalizeOutput(args.output);
+  if (output !== 'csv') {
+    try {
+      const profiles = loadProfiles({ cwd: process.cwd(), env: process.env, args });
+      const profile = resolveProfile(profiles, args.profile, { env: process.env });
+      if (profile && profile.productionSystem) {
+        console.warn('');
+        console.warn('  *** WARNUNG: Dieses Profil ist als productionSystem=true markiert! ***');
+        console.warn('  *** Du bist mit einem PRODUKTIONSSYSTEM verbunden.                ***');
+        console.warn('');
+      }
+    } catch (_) {
+      // Profilfehler wird von executeQuerySql behandelt
+    }
+  }
+
   let execution;
   try {
     execution = executeQuerySql(args);
@@ -30,7 +48,7 @@ async function runQuerySql(args) {
     process.exit(2);
   }
 
-  const { sql, output, columns, matrix } = execution;
+  const { sql, columns, matrix } = execution;
 
   if (output === 'csv') {
     process.stdout.write(renderCsv(columns, matrix));
