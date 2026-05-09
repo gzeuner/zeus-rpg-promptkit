@@ -93,29 +93,29 @@ Für externe Reviews kann `--safe-sharing` genutzt werden, um Artefakte besser t
 
 ---
 
----
+### Verantwortung, KI-Einsatz, Gewährleistung und Haftung
 
-### Verantwortung, KI-Einsatz und Haftungsausschluss
+Zeus RPG PromptKit ist ein freies Open-Source-Werkzeug zur Analyse, Kontextaufbereitung und Unterstützung von Entwicklungs- und Modernisierungsprozessen. Das Projekt wird unentgeltlich und ohne individuelle Zusicherungen bereitgestellt. Es trifft keine fachlichen, rechtlichen, betrieblichen oder sicherheitsrelevanten Entscheidungen.
 
-Zeus RPG PromptKit ist ein technisches Open-Source-Werkzeug zur Analyse, Kontextaufbereitung und Unterstützung von Entwicklungs- und Modernisierungsprozessen. Es trifft keine fachlichen, rechtlichen, betrieblichen oder sicherheitsrelevanten Entscheidungen.
-
-Die Verantwortung für den Einsatz liegt immer bei den jeweiligen Nutzer:innen, Entwickler:innen, Betreiber:innen und Organisationen. Das gilt insbesondere für:
+Die Verantwortung für den Einsatz liegt ausschließlich bei den jeweiligen Nutzer:innen, Entwickler:innen, Betreiber:innen und Organisationen. Das gilt insbesondere für:
 
 - die Auswahl, Konfiguration und Ausführung von Befehlen, Profilen, SQL-Abfragen und Workflows
 - den Umgang mit Zugangsdaten, produktiven Systemen, Fachlogik und sensiblen Daten
-- die Bewertung, Prüfung, Änderung, Übernahme oder Ablehnung von Analyseergebnissen
+- die Prüfung, Bewertung, Änderung, Übernahme oder Ablehnung von Analyseergebnissen
 - die Nutzung von KI-Assistenten, Agenten, Auto-Approve-Funktionen oder automatisierten Entwicklungswerkzeugen
 - Tests, Code-Reviews, Freigaben, Deployments und den Betrieb geänderter Software
 
-KI-gestützte Werkzeuge können hilfreiche Vorschläge liefern, aber auch unvollständige, falsche oder riskante Ergebnisse erzeugen. Weder eine KI noch Zeus RPG PromptKit übernehmen Verantwortung für Entscheidungen, Änderungen oder Handlungen, die aus erzeugten Artefakten, Prompts, Reports, Analysen, Code-Vorschlägen oder Agentenaktionen abgeleitet werden.
+KI-gestützte Werkzeuge können hilfreiche Vorschläge liefern, aber auch unvollständige, falsche, unsichere oder riskante Ergebnisse erzeugen. Weder eine KI noch Zeus RPG PromptKit übernehmen Verantwortung für Entscheidungen, Änderungen oder Handlungen, die aus erzeugten Artefakten, Prompts, Reports, Analysen, Code-Vorschlägen oder Agentenaktionen abgeleitet werden. Wer KI- oder Agentenfunktionen einsetzt, bleibt für deren Kontrolle, Begrenzung, Freigabe und Folgen selbst verantwortlich.
 
-Die bereitgestellte Software und Dokumentation werden ohne Zusicherungen bereitgestellt. Es wird insbesondere keine Gewähr dafür übernommen, dass Analysen vollständig, fehlerfrei, für einen bestimmten Zweck geeignet, sicher, jederzeit verfügbar oder für produktive Systeme ausreichend sind.
+Die Software, Dokumentation, Beispiele, Prompts und sonstigen Inhalte werden „as is“ und „as available“ bereitgestellt. Es wird keine Gewähr dafür übernommen, dass sie vollständig, fehlerfrei, aktuell, sicher, dauerhaft verfügbar, frei von Schutzrechtsverletzungen, für einen bestimmten Zweck geeignet oder für produktive Systeme ausreichend sind.
 
-Soweit nach deutschem und europäischem Recht zulässig, ist jede Haftung der Autor:innen, Maintainer:innen und Beitragenden für Schäden ausgeschlossen, die aus der Nutzung oder Nichtnutzbarkeit dieses Projekts entstehen. Dies umfasst insbesondere Schäden durch fehlerhafte Analysen, falsche KI-Ausgaben, Konfigurationsfehler, Datenverlust, Betriebsunterbrechungen, Sicherheitsvorfälle, fehlerhafte Änderungen an Software oder Systemen sowie die Nutzung von Drittsoftware, Drittanbietern oder externen KI-Diensten.
+Soweit nach deutschem und europäischem Recht zulässig, ist jede Haftung der Autor:innen, Maintainer:innen und Beitragenden für Schäden ausgeschlossen, die aus der Nutzung oder Nichtnutzbarkeit dieses Projekts entstehen. Dies umfasst insbesondere Schäden durch fehlerhafte Analysen, falsche KI-Ausgaben, Konfigurationsfehler, Datenverlust, Betriebsunterbrechungen, Sicherheitsvorfälle, fehlerhafte Änderungen an Software oder Systemen, fehlerhafte Annahmen über IBM i-/DB2-Umgebungen sowie die Nutzung von Drittsoftware, Drittanbietern oder externen KI-Diensten.
 
-Der Haftungsausschluss gilt nicht, soweit zwingend gehaftet wird, insbesondere bei Vorsatz, grober Fahrlässigkeit, Verletzung von Leben, Körper oder Gesundheit, übernommenen Garantien oder sonstiger gesetzlich zwingender Haftung. Bei einfacher Fahrlässigkeit im Zusammenhang mit wesentlichen Vertragspflichten ist die Haftung, soweit rechtlich zulässig, auf den typischerweise vorhersehbaren Schaden begrenzt.
+Der Haftungsausschluss gilt nicht, soweit zwingend gehaftet wird, insbesondere bei Vorsatz, grober Fahrlässigkeit, Verletzung von Leben, Körper oder Gesundheit, arglistig verschwiegenen Mängeln, übernommenen Garantien, Ansprüchen nach zwingendem Produkthaftungsrecht oder sonstiger gesetzlich zwingender Haftung. Bei einfacher Fahrlässigkeit im Zusammenhang mit wesentlichen Vertragspflichten ist die Haftung, soweit rechtlich zulässig, auf den typischerweise vorhersehbaren Schaden begrenzt.
 
-Dieser Abschnitt ergänzt die Regelungen der Apache License 2.0, ersetzt sie aber nicht. Die Lizenzbedingungen bleiben maßgeblich. Dieser Hinweis ist keine Rechtsberatung.
+Wer dieses Projekt verändert, in eigene Produkte oder Dienstleistungen integriert, intern oder extern weitergibt, kommerziell nutzt oder gegenüber Dritten bereitstellt, ist selbst dafür verantwortlich, die dafür geltenden Lizenz-, Sicherheits-, Prüf-, Informations-, Gewährleistungs- und Haftungspflichten einzuhalten. Dies gilt insbesondere für den Einsatz in produktiven, sicherheitskritischen oder geschäftskritischen Umgebungen.
+
+Dieser Abschnitt ergänzt die Regelungen der Apache License 2.0, ersetzt sie aber nicht. Die Lizenzbedingungen bleiben maßgeblich.
 
 ## Quickstart
 
@@ -495,7 +495,6 @@ Empfehlung:
 - Dependency-Lizenzen regelmäßig mit einem License-Checker prüfen.
 - Bei Distribution von Drittanbieter-JARs deren Lizenztexte beilegen.
 
-Dies ist keine Rechtsberatung, sondern eine technische Einschätzung zur Open-Source-Compliance.
 
 ---
 
@@ -585,13 +584,11 @@ For external review, use `--safe-sharing` where appropriate.
 
 ---
 
----
+### Responsibility, AI usage, warranty and liability
 
-### Responsibility, AI usage and liability disclaimer
+Zeus RPG PromptKit is a free open-source tool for analysis, context preparation and support of development and modernization workflows. The project is provided free of charge and without individual assurances. It does not make business, legal, operational or security decisions.
 
-Zeus RPG PromptKit is a technical open-source tool for analysis, context preparation and support of development and modernization workflows. It does not make business, legal, operational or security decisions.
-
-Responsibility for using this project always remains with the respective users, developers, operators and organizations. This includes, in particular:
+Responsibility for using this project remains solely with the respective users, developers, operators and organizations. This includes, in particular:
 
 - selecting, configuring and executing commands, profiles, SQL queries and workflows
 - handling credentials, production systems, business logic and sensitive data
@@ -599,15 +596,17 @@ Responsibility for using this project always remains with the respective users, 
 - using AI assistants, agents, auto-approve features or automated development tools
 - testing, code review, approval, deployment and operation of modified software
 
-AI-assisted tools can provide useful suggestions, but they may also produce incomplete, incorrect or risky results. Neither an AI nor Zeus RPG PromptKit assumes responsibility for decisions, changes or actions derived from generated artifacts, prompts, reports, analyses, code suggestions or agent actions.
+AI-assisted tools can provide useful suggestions, but they may also produce incomplete, incorrect, unsafe or risky results. Neither an AI nor Zeus RPG PromptKit assumes responsibility for decisions, changes or actions derived from generated artifacts, prompts, reports, analyses, code suggestions or agent actions. Anyone using AI or agent functionality remains responsible for controlling, limiting, approving and accepting the consequences of that use.
 
-The software and documentation are provided without warranties or representations. In particular, no warranty is given that analyses are complete, error-free, fit for a particular purpose, secure, continuously available or sufficient for production use.
+The software, documentation, examples, prompts and other materials are provided “as is” and “as available”. No warranty or representation is made that they are complete, error-free, up to date, secure, continuously available, non-infringing, fit for a particular purpose or sufficient for production systems.
 
-To the maximum extent permitted under applicable German and European law, the authors, maintainers and contributors exclude liability for any damages arising from the use of, or inability to use, this project. This includes, without limitation, damages caused by incorrect analyses, incorrect AI outputs, configuration errors, data loss, business interruption, security incidents, faulty changes to software or systems, or the use of third-party software, third-party providers or external AI services.
+To the maximum extent permitted under applicable German and European law, the authors, maintainers and contributors exclude liability for any damages arising from the use of, or inability to use, this project. This includes, without limitation, damages caused by incorrect analyses, incorrect AI outputs, configuration errors, data loss, business interruption, security incidents, faulty changes to software or systems, incorrect assumptions about IBM i/DB2 environments, or the use of third-party software, third-party providers or external AI services.
 
-This limitation of liability does not apply where liability is mandatory by law, including intent, gross negligence, injury to life, body or health, guarantees given, or any other legally mandatory liability. In cases of simple negligence relating to material contractual obligations, liability is limited, to the extent legally permissible, to the typically foreseeable damage.
+This limitation of liability does not apply where liability is mandatory by law, including intent, gross negligence, injury to life, body or health, fraudulently concealed defects, guarantees given, claims under mandatory product liability law, or any other legally mandatory liability. In cases of simple negligence relating to material contractual obligations, liability is limited, to the extent legally permissible, to the typically foreseeable damage.
 
-This section supplements but does not replace the terms of the Apache License 2.0. The license terms remain authoritative. This notice does not constitute legal advice.
+Anyone who modifies this project, integrates it into their own products or services, redistributes it internally or externally, uses it commercially, or makes it available to third parties is responsible for complying with the applicable license, security, review, information, warranty and liability obligations. This applies in particular to use in production, safety-critical or business-critical environments.
+
+This section supplements but does not replace the terms of the Apache License 2.0. The license terms remain authoritative.
 
 ## Quickstart
 
