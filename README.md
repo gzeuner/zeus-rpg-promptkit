@@ -1,9 +1,19 @@
 # Zeus RPG PromptKit
 
+![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?logo=nodedotjs&logoColor=white)
+![Java](https://img.shields.io/badge/Java-11%2B-blue?logo=openjdk&logoColor=white)
+![IBM i](https://img.shields.io/badge/Platform-IBM%20i%20%2F%20AS%2F400-1F70C1)
+![DB2](https://img.shields.io/badge/DB-DB2-0F62FE)
+![License](https://img.shields.io/badge/License-Apache%202.0-green)
+![Status](https://img.shields.io/badge/Status-draft%20%2F%20work%20in%20progress-lightgrey)
+![Scope](https://img.shields.io/badge/Scope-evidence--first%20analysis-6A1B9A)
+
 ![Zeus RPG PromptKit](./images/zeus-rpg-promptkit.png)
 
 > Status: Draft / Work in Progress  
 > Evidence-first toolkit for IBM i RPG analysis, modernization preparation and AI-assisted development workflows.
+
+**Tags:** `IBM i`, `AS/400`, `RPG`, `CL`, `DDS`, `DB2`, `Static Analysis`, `Impact Analysis`, `AI Context`, `Modernization`
 
 ---
 
