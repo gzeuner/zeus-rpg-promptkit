@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -182,6 +182,9 @@ function validateDbConfig(value, label) {
   assertOptionalString(value.defaultLibrary, `${label}.defaultLibrary`);
   assertOptionalString(value.schema, `${label}.schema`);
   assertOptionalString(value.library, `${label}.library`);
+  if (value.schemaPreference !== undefined) {
+    assertStringArray(value.schemaPreference, `${label}.schemaPreference`);
+  }
 }
 
 function validateDbRoleConfig(value, label) {
@@ -208,10 +211,14 @@ function validateFetchProfile(value, label) {
   assertOptionalString(value.user, `${label}.user`);
   assertOptionalString(value.password, `${label}.password`);
   assertOptionalString(value.sourceLib, `${label}.sourceLib`);
+  assertOptionalString(value.sourceLibrary, `${label}.sourceLibrary`);
   assertOptionalString(value.ifsDir, `${label}.ifsDir`);
   assertOptionalString(value.out, `${label}.out`);
   if (value.files !== undefined) {
     assertStringArray(value.files, `${label}.files`);
+  }
+  if (value.sourceFiles !== undefined) {
+    assertStringArray(value.sourceFiles, `${label}.sourceFiles`);
   }
   if (value.members !== undefined) {
     assertStringArray(value.members, `${label}.members`);
@@ -228,6 +235,23 @@ function validateFetchProfile(value, label) {
     if (normalized && !ALLOWED_FETCH_TRANSPORTS.has(normalized)) {
       failValidation(`${label}.transport must be one of: auto, sftp, jt400, ftp`);
     }
+  }
+  if (value.networkType !== undefined) {
+    assertOptionalString(value.networkType, `${label}.networkType`);
+    const normalized = String(value.networkType).trim().toLowerCase();
+    if (normalized && normalized !== 'local' && normalized !== 'internet') {
+      failValidation(`${label}.networkType must be one of: local, internet`);
+    }
+  }
+  if (value.preferTransport !== undefined) {
+    assertOptionalString(value.preferTransport, `${label}.preferTransport`);
+    const normalized = String(value.preferTransport).trim().toLowerCase();
+    if (normalized && !ALLOWED_FETCH_TRANSPORTS.has(normalized)) {
+      failValidation(`${label}.preferTransport must be one of: auto, sftp, jt400, ftp`);
+    }
+  }
+  if (value.transportTimeoutMs !== undefined) {
+    assertPositiveInteger(value.transportTimeoutMs, `${label}.transportTimeoutMs`);
   }
 }
 
@@ -455,6 +479,7 @@ function validateFetchConfig(config) {
   assertOptionalString(config.user, 'fetch.user');
   assertOptionalString(config.password, 'fetch.password');
   assertOptionalString(config.sourceLib, 'fetch.sourceLib');
+  assertOptionalString(config.sourceLibrary, 'fetch.sourceLibrary');
   assertOptionalString(config.ifsDir, 'fetch.ifsDir');
   assertOptionalString(config.out, 'fetch.out');
   assertStringArray(config.files, 'fetch.files');
@@ -584,43 +609,64 @@ function resolveProfilesConfigPaths({ args = {}, cwd = process.cwd(), env = proc
     };
   }
 
-  const preferredPath = path.join(resolvedLocation, 'profiles.json');
+  const preferredPath = path.join(resolvedLocation, 'local-only', 'profiles.json');
+  const secondaryPath = path.join(resolvedLocation, 'profiles.json');
   const fallbackPath = path.join(resolvedLocation, 'profiles.example.json');
   return {
     source,
     explicitLocation,
     configDir: resolvedLocation,
     preferredPath,
+    secondaryPath,
     fallbackPath,
-    attemptedPaths: explicitLocation
-      ? [preferredPath, fallbackPath]
-      : [preferredPath, fallbackPath],
+    attemptedPaths: [preferredPath, secondaryPath, fallbackPath],
     description: resolvedLocation,
   };
 }
 
 function loadProfiles({ cwd = process.cwd(), env = process.env, args = {}, fsModule = fs } = {}) {
   const configPaths = resolveProfilesConfigPaths({ args, cwd, env });
-  const candidatePaths = [configPaths.preferredPath, configPaths.fallbackPath].filter(Boolean);
+  const candidatePaths = (configPaths.attemptedPaths || [configPaths.preferredPath, configPaths.fallbackPath])
+    .filter(Boolean);
   const profilePath = candidatePaths.find((candidate) => fsModule.existsSync(candidate)) || null;
+  const baseFileName = profilePath ? path.basename(profilePath).toLowerCase() : '';
+  const shouldLoadOverlays = !profilePath || baseFileName === 'profiles.json' || baseFileName === 'profiles.example.json';
+  const overlayPaths = shouldLoadOverlays
+    ? ((configPaths.configDir && fsModule.existsSync(configPaths.configDir))
+      ? fsModule.readdirSync(configPaths.configDir)
+        .filter((entry) => /^profiles\.[^.]+\.json$/i.test(entry))
+        .map((entry) => path.join(configPaths.configDir, entry))
+        .filter((entry) => fsModule.existsSync(entry))
+        .sort((left, right) => left.localeCompare(right))
+      : [])
+    : [];
 
   if (!profilePath) {
     return attachProfilesMetadata({}, {
       ...configPaths,
       profilePath: null,
-      sourceFileLabel: candidatePaths.join(' or '),
+      sourceFileLabel: [...candidatePaths, ...overlayPaths].join(' or '),
     });
   }
 
   try {
     const raw = fsModule.readFileSync(profilePath, 'utf8');
     const parsed = JSON.parse(raw);
-    const profiles = parsed && typeof parsed === 'object' ? parsed : {};
+    let profiles = parsed && typeof parsed === 'object' ? parsed : {};
+
+    for (const overlayPath of overlayPaths) {
+      const overlayRaw = fsModule.readFileSync(overlayPath, 'utf8');
+      const overlayParsed = JSON.parse(overlayRaw);
+      const overlayProfiles = overlayParsed && typeof overlayParsed === 'object' ? overlayParsed : {};
+      profiles = mergeConfigLayers(profiles, overlayProfiles);
+    }
+
     validateProfiles(profiles);
     return attachProfilesMetadata(profiles, {
       ...configPaths,
       profilePath,
-      sourceFileLabel: profilePath,
+      attemptedPaths: [...candidatePaths, ...overlayPaths],
+      sourceFileLabel: [profilePath, ...overlayPaths].join(' + '),
     });
   } catch (error) {
     throw new Error(`Failed to load profiles from ${profilePath}: ${error.message}`);
@@ -630,12 +676,12 @@ function loadProfiles({ cwd = process.cwd(), env = process.env, args = {}, fsMod
 function describeProfilesLocation(profiles) {
   const metadata = getProfilesMetadata(profiles);
   if (!metadata) {
-    return 'config/profiles.json or config/profiles.example.json';
+    return 'config/local-only/profiles.json or config/profiles.json or config/profiles.example.json';
   }
   if (metadata.profilePath) {
     return metadata.profilePath;
   }
-  return (metadata.attemptedPaths || []).join(' or ') || metadata.description || 'config/profiles.json';
+  return (metadata.attemptedPaths || []).join(' or ') || metadata.description || 'config/local-only/profiles.json';
 }
 
 function resolveProfile(profiles, profileName, options = {}) {
@@ -851,12 +897,22 @@ function readTestDataConfig(profiles, profile, env) {
   };
 }
 
-function applyDbEnvOverrides(dbConfig, env, prefix = 'ZEUS_DB') {
+function isEnvPlaceholder(value) {
+  return typeof value === 'string' && /^\$\{env:[^}]+\}$/.test(value.trim());
+}
+
+// rawConfig = original profile config before env-placeholder expansion.
+// Env-var overrides always win over profile values (env = deployment-specific, profile = defaults).
+// This enables multi-machine setups: e.g. ZEUS_METADATA_DB_HOST=SYS_PROD overrides a profile
+// that defaults to SYS_TEST, without changing the profile file.
+function applyDbEnvOverrides(dbConfig, env, prefix = 'ZEUS_DB', rawConfig = null) {
   const merged = { ...(dbConfig || {}) };
   const schemaOverride = env[`${prefix}_DEFAULT_SCHEMA`] || env[`${prefix}_DEFAULT_LIBRARY`] || env[`${prefix}_SCHEMA`] || env[`${prefix}_LIBRARY`];
 
+  // Env-vars take precedence over profile values (including literal values).
+  // This supports dynamic multi-machine routing at runtime.
   if (env[`${prefix}_HOST`]) merged.host = env[`${prefix}_HOST`];
-  if (env[`${prefix}_URL`]) merged.url = env[`${prefix}_URL`];
+  if (env[`${prefix}_URL`])  merged.url  = env[`${prefix}_URL`];
   if (env[`${prefix}_USER`]) merged.user = env[`${prefix}_USER`];
   if (env[`${prefix}_PASSWORD`] !== undefined) merged.password = env[`${prefix}_PASSWORD`];
   if (schemaOverride) merged.defaultSchema = schemaOverride;
@@ -865,21 +921,28 @@ function applyDbEnvOverrides(dbConfig, env, prefix = 'ZEUS_DB') {
 }
 
 function resolveAnalyzeDbRoleConfigs(profile, env) {
+  const rawDb = profile && profile.db ? profile.db : null;
   const baseDbConfig = applyDbEnvOverrides(
-    profile && profile.db ? resolveEnvPlaceholdersDeep(profile.db, env) : null,
+    rawDb ? resolveEnvPlaceholdersDeep(rawDb, env) : null,
     env,
     'ZEUS_DB',
+    rawDb,
   );
-  const roleConfigs = profile && profile.dbRoles ? resolveEnvPlaceholdersDeep(profile.dbRoles, env) : {};
+  const rawRoleConfigs = profile && profile.dbRoles ? profile.dbRoles : {};
+  const roleConfigs = resolveEnvPlaceholdersDeep(rawRoleConfigs, env);
+  const rawMetadata = rawRoleConfigs && rawRoleConfigs.metadata ? rawRoleConfigs.metadata : null;
   const metadataDb = applyDbEnvOverrides(
     mergeConfigLayers(baseDbConfig || {}, roleConfigs && roleConfigs.metadata ? roleConfigs.metadata : undefined),
     env,
     'ZEUS_METADATA_DB',
+    rawMetadata || rawDb,
   );
+  const rawTestData = rawRoleConfigs && rawRoleConfigs.testData ? rawRoleConfigs.testData : null;
   const testDataDb = applyDbEnvOverrides(
     mergeConfigLayers(metadataDb || baseDbConfig || {}, roleConfigs && roleConfigs.testData ? roleConfigs.testData : undefined),
     env,
     'ZEUS_TESTDATA_DB',
+    rawTestData || rawMetadata || rawDb,
   );
 
   return {
@@ -958,16 +1021,29 @@ function resolveFetchConfig(args, { cwd = process.cwd(), env = process.env } = {
   const profiles = loadProfiles({ cwd, env, args });
   const profile = resolveProfile(profiles, args.profile, { env });
   const fetchProfile = profile ? resolveEnvPlaceholdersDeep(profile.fetch || profile, env) : {};
+  const sourceLibrary = args['source-library']
+    || args['source-lib']
+    || env.ZEUS_FETCH_SOURCE_LIBRARY
+    || env.ZEUS_FETCH_SOURCE_LIB
+    || fetchProfile.sourceLibrary
+    || fetchProfile.sourceLib;
+  const sourceFiles = args['source-files']
+    || args.files
+    || env.ZEUS_FETCH_SOURCE_FILES
+    || env.ZEUS_FETCH_FILES
+    || fetchProfile.sourceFiles
+    || fetchProfile.files;
 
   const resolved = {
-    host: args.host || env.ZEUS_FETCH_HOST || fetchProfile.host,
-    user: args.user || env.ZEUS_FETCH_USER || fetchProfile.user,
+    host: args.host || fetchProfile.host || env.ZEUS_FETCH_HOST,
+    user: args.user || fetchProfile.user || env.ZEUS_FETCH_USER,
     password: args.password || env.ZEUS_FETCH_PASSWORD || fetchProfile.password,
-    sourceLib: String(args['source-lib'] || env.ZEUS_FETCH_SOURCE_LIB || fetchProfile.sourceLib || '').toUpperCase(),
-    ifsDir: args['ifs-dir'] || env.ZEUS_FETCH_IFS_DIR || fetchProfile.ifsDir,
-    out: args.out || env.ZEUS_FETCH_OUT || fetchProfile.out || './rpg_sources',
-    files: parseCsv(args.files || env.ZEUS_FETCH_FILES || fetchProfile.files, [...DEFAULT_SOURCE_FILES], (item) => item.toUpperCase()),
-    members: parseCsv(args.members || env.ZEUS_FETCH_MEMBERS || fetchProfile.members, [], (item) => item.toUpperCase()),
+    sourceLib: String(sourceLibrary || '').toUpperCase(),
+    sourceLibrary: String(sourceLibrary || '').toUpperCase(),
+    ifsDir: args['ifs-dir'] || fetchProfile.ifsDir || env.ZEUS_FETCH_IFS_DIR,
+    out: args.out || fetchProfile.out || env.ZEUS_FETCH_OUT || './rpg_sources',
+    files: parseCsv(sourceFiles, [...DEFAULT_SOURCE_FILES], (item) => item.toUpperCase()),
+    members: parseCsv(args.members || fetchProfile.members || env.ZEUS_FETCH_MEMBERS, [], (item) => item.toUpperCase()),
     replace: parseBoolean(
       args.replace !== undefined ? args.replace : (env.ZEUS_FETCH_REPLACE !== undefined ? env.ZEUS_FETCH_REPLACE : fetchProfile.replace),
       true,
@@ -975,13 +1051,31 @@ function resolveFetchConfig(args, { cwd = process.cwd(), env = process.env } = {
     streamFileCcsid: Number.parseInt(
       String(
         args['streamfile-ccsid']
-        || env.ZEUS_FETCH_STREAMFILE_CCSID
         || fetchProfile.streamFileCcsid
+        || env.ZEUS_FETCH_STREAMFILE_CCSID
         || DEFAULT_STREAM_FILE_CCSID,
       ).trim(),
       10,
     ),
-    transport: String(args.transport || env.ZEUS_FETCH_TRANSPORT || fetchProfile.transport || DEFAULT_TRANSPORT).toLowerCase(),
+    transport: String(args.transport || fetchProfile.transport || env.ZEUS_FETCH_TRANSPORT || DEFAULT_TRANSPORT).toLowerCase(),
+    networkType: String(args['network-type'] || fetchProfile.networkType || env.ZEUS_FETCH_NETWORK_TYPE || '').trim().toLowerCase(),
+    preferTransport: String(args['prefer-transport'] || fetchProfile.preferTransport || env.ZEUS_FETCH_PREFER_TRANSPORT || '').trim().toLowerCase(),
+    diagnoseTransport: parseBoolean(
+      args['diagnose-transport'] !== undefined
+        ? args['diagnose-transport']
+        : (fetchProfile.diagnoseTransport !== undefined ? fetchProfile.diagnoseTransport : env.ZEUS_FETCH_DIAGNOSE_TRANSPORT),
+      false,
+    ),
+    encrypted: parseBoolean(
+      args.encrypted !== undefined
+        ? args.encrypted
+        : (fetchProfile.encrypted !== undefined ? fetchProfile.encrypted : env.ZEUS_FETCH_ENCRYPTED),
+      true,
+    ),
+    transportTimeoutMs: Number.parseInt(
+      String(args['transport-timeout-ms'] || fetchProfile.transportTimeoutMs || env.ZEUS_FETCH_TRANSPORT_TIMEOUT_MS || 30000).trim(),
+      10,
+    ),
   };
   validateFetchConfig(resolved);
   return resolved;

@@ -24,12 +24,12 @@ test('getActualColumns returns uppercase column names in ordinal order', () => {
     host: 'ibmi.example.com',
     user: 'ZEUS',
     password: 'secret',
-  }, 'DATEIEN', 'WERBPLA_00', buildRuntimeWithRows([
-    { COLUMN_NAME: 'pjahr' },
-    { COLUMN_NAME: 'pwpreis' },
+  }, 'APPDATA', 'APPVIEW_00', buildRuntimeWithRows([
+    { COLUMN_NAME: 'p_year' },
+    { COLUMN_NAME: 'p_price' },
   ]));
 
-  assert.deepEqual(columns, ['PJAHR', 'PWPREIS']);
+  assert.deepEqual(columns, ['P_YEAR', 'P_PRICE']);
 });
 
 test('resolveColumn uses central alias candidates before giving up', () => {
@@ -37,11 +37,11 @@ test('resolveColumn uses central alias candidates before giving up', () => {
     host: 'ibmi.example.com',
     user: 'ZEUS',
     password: 'secret',
-  }, 'DATEIEN', 'WERBPLA_00', 'WERBEJAHR', buildRuntimeWithRows([
-    { COLUMN_NAME: 'PJAHR' },
-    { COLUMN_NAME: 'PWPREIS' },
+  }, 'APPDATA', 'APPVIEW_00', 'APP_YEAR', buildRuntimeWithRows([
+    { COLUMN_NAME: 'P_YEAR' },
+    { COLUMN_NAME: 'P_PRICE' },
   ]));
 
-  assert.deepEqual(COLUMN_ALIASES.WERBEJAHR, ['WERBEJAHR', 'PJAHR', 'XJAHR', 'WERBJAHR']);
-  assert.equal(resolved, 'PJAHR');
+  assert.deepEqual(COLUMN_ALIASES.APP_YEAR, ['APP_YEAR', 'P_YEAR', 'X_YEAR', 'APP_YEAR_ALT']);
+  assert.equal(resolved, 'P_YEAR');
 });

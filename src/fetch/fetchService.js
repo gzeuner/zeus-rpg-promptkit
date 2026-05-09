@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,6 +24,12 @@ const { downloadDirectoryViaJt400 } = require('./jt400Downloader');
 const { downloadDirectoryViaFtp } = require('./ftpDownloader');
 const { buildImportManifest, writeImportManifest } = require('./importManifest');
 const { SOURCE_FILES_PRIORITY } = require('./memberDiscovery');
+const {
+  executeWithTransportDiagnostics,
+  formatTransportAttempt,
+  runTransportDiagnostics,
+  selectTransportStrategy,
+} = require('./transportDiagnosticsService');
 
 const DEFAULT_SOURCE_FILES = [...SOURCE_FILES_PRIORITY];
 const DEFAULT_TRANSPORT = 'auto';
@@ -102,6 +108,7 @@ async function fetchSources(options, services = {}) {
     notes: [],
     encodingPolicy: describeEncodingPolicy(options.streamFileCcsid),
     transportUsed: null,
+    transportDiagnostics: null,
     importManifestPath: null,
   };
 
@@ -162,34 +169,31 @@ async function fetchSources(options, services = {}) {
     throw new Error(`Unsupported transport "${transport}". Valid values: ${TRANSPORTS.join(', ')}`);
   }
 
-  const strategies = transport === 'auto'
-    ? ['sftp', 'jt400', 'ftp']
-    : [transport];
+  if (options.diagnoseTransport) {
+    summary.transportDiagnostics = await runTransportDiagnostics({
+      verbose: options.verbose,
+      networkType: options.networkType,
+      preferSftp: options.preferTransport === 'sftp',
+      preferJt400: options.preferTransport === 'jt400',
+      ftpOnly: options.preferTransport === 'ftp',
+      encrypted: options.encrypted,
+    });
+  }
 
-  let lastError = null;
-  for (const strategy of strategies) {
-    try {
-      let downloadResult;
+  const strategies = selectTransportStrategy({
+    transport,
+    networkType: options.networkType,
+    preferSftp: options.preferTransport === 'sftp',
+    preferJt400: options.preferTransport === 'jt400',
+    ftpOnly: options.preferTransport === 'ftp',
+    encrypted: options.encrypted,
+  }, (summary.transportDiagnostics && summary.transportDiagnostics.networkProfile) || {});
+
+  const transportRun = await executeWithTransportDiagnostics(
+    strategies,
+    async (strategy) => {
       if (strategy === 'sftp') {
-        downloadResult = await downloadDirectoryFn({
-          host: options.host,
-          user: options.user,
-          password: options.password,
-          remoteDir: options.ifsDir,
-          localDir: options.out,
-          verbose: options.verbose,
-        });
-      } else if (strategy === 'jt400') {
-        downloadResult = await downloadDirectoryViaJt400Fn({
-          host: options.host,
-          user: options.user,
-          password: options.password,
-          remoteDir: options.ifsDir,
-          localDir: options.out,
-          verbose: options.verbose,
-        });
-      } else {
-        downloadResult = await downloadDirectoryViaFtpFn({
+        return downloadDirectoryFn({
           host: options.host,
           user: options.user,
           password: options.password,
@@ -198,19 +202,43 @@ async function fetchSources(options, services = {}) {
           verbose: options.verbose,
         });
       }
+      if (strategy === 'jt400') {
+        return downloadDirectoryViaJt400Fn({
+          host: options.host,
+          user: options.user,
+          password: options.password,
+          remoteDir: options.ifsDir,
+          localDir: options.out,
+          verbose: options.verbose,
+        });
+      }
+      return downloadDirectoryViaFtpFn({
+        host: options.host,
+        user: options.user,
+        password: options.password,
+        remoteDir: options.ifsDir,
+        localDir: options.out,
+        verbose: options.verbose,
+      });
+    },
+    {
+      verbose: options.verbose,
+      timeout: options.transportTimeoutMs,
+    },
+  );
 
-      summary.downloadedCount = downloadResult.downloadedCount || 0;
-      summary.transportUsed = strategy;
-      lastError = null;
-      break;
-    } catch (error) {
-      lastError = error;
-      summary.notes.push(`Download via ${strategy} failed: ${error.message}`);
+  if (!transportRun.success) {
+    summary.notes.push(...(transportRun.recommendations || []));
+    for (const attempt of transportRun.diagnostics || []) {
+      summary.notes.push(`Download via ${formatTransportAttempt(attempt)} failed`);
     }
+    throw new Error(`All download transports failed. Last error: ${transportRun.lastError.message}`);
   }
 
-  if (lastError) {
-    throw new Error(`All download transports failed. Last error: ${lastError.message}`);
+  summary.downloadedCount = transportRun.result.downloadedCount || 0;
+  summary.transportUsed = transportRun.transport;
+  for (const attempt of transportRun.diagnostics || []) {
+    summary.notes.push(`Transport fallback: ${formatTransportAttempt(attempt)}`);
   }
 
   const manifest = buildImportManifest({
@@ -228,5 +256,6 @@ module.exports = {
   fetchSources,
   DEFAULT_SOURCE_FILES,
   DEFAULT_TRANSPORT,
+  TRANSPORTS,
   describeEncodingPolicy,
 };

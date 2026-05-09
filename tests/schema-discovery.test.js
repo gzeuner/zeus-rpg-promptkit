@@ -22,11 +22,11 @@ function buildRuntimeWithRows(rows) {
 test('sortSchemaCandidates prefers production-like schemas first', () => {
   const sorted = sortSchemaCandidates([
     { TABLE_SCHEMA: 'ARCHIVE' },
-    { TABLE_SCHEMA: 'DATEIEN' },
+    { TABLE_SCHEMA: 'APPDATA' },
     { TABLE_SCHEMA: 'PROD' },
   ]);
 
-  assert.deepEqual(sorted.map((entry) => entry.TABLE_SCHEMA), ['DATEIEN', 'PROD', 'ARCHIVE']);
+  assert.deepEqual(sorted.map((entry) => entry.TABLE_SCHEMA), ['APPDATA', 'PROD', 'ARCHIVE']);
 });
 
 test('discoverSchema returns the preferred schema candidate', () => {
@@ -36,8 +36,8 @@ test('discoverSchema returns the preferred schema candidate', () => {
     password: 'secret',
   }, 'meine_tabelle', buildRuntimeWithRows([
     { TABLE_SCHEMA: 'ARCHIVE' },
-    { TABLE_SCHEMA: 'DATEIEN' },
+    { TABLE_SCHEMA: 'APPDATA' },
   ]));
 
-  assert.equal(resolved.TABLE_SCHEMA, 'DATEIEN');
+  assert.equal(resolved.TABLE_SCHEMA, 'APPDATA');
 });

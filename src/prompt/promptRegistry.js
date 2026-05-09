@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -94,15 +94,15 @@ const PROMPT_REGISTRY = Object.freeze({
     name: 'modernization',
     version: 1,
     templateFile: 'modernization',
-    workflow: 'documentation',
+    workflow: 'modernization',
     outputFileName: 'ai_prompt_modernization.md',
     requiredInputs: Object.freeze([
       Object.freeze({ path: 'kind', equals: 'ai-knowledge-projection' }),
       Object.freeze({ path: 'program', type: 'string', nonEmpty: true }),
-      Object.freeze({ path: 'workflows.documentation.summary', type: 'string', nonEmpty: true }),
-      Object.freeze({ path: 'workflows.documentation.tables', type: 'array' }),
-      Object.freeze({ path: 'workflows.documentation.programCalls', type: 'array' }),
-      Object.freeze({ path: 'workflows.documentation.evidenceHighlights', type: 'array' }),
+      Object.freeze({ path: 'workflows.modernization.summary', type: 'string', nonEmpty: true }),
+      Object.freeze({ path: 'workflows.modernization.tables', type: 'array' }),
+      Object.freeze({ path: 'workflows.modernization.programCalls', type: 'array' }),
+      Object.freeze({ path: 'workflows.modernization.evidenceHighlights', type: 'array' }),
     ]),
     preferredOutputShape: Object.freeze([
       'Modernization candidates',
@@ -112,8 +112,8 @@ const PROMPT_REGISTRY = Object.freeze({
       'Evidence-backed migration guidance',
     ]),
     budget: Object.freeze({
-      targetTokens: 1500,
-      maxTokens: 2400,
+      targetTokens: 3000,
+      maxTokens: 6000,
     }),
   }),
   'architecture-review': Object.freeze({
@@ -189,6 +189,33 @@ const PROMPT_REGISTRY = Object.freeze({
     budget: Object.freeze({
       targetTokens: 1500,
       maxTokens: 2400,
+    }),
+  }),
+  'security-analysis': Object.freeze({
+    name: 'security-analysis',
+    version: 1,
+    templateFile: 'security-analysis',
+    workflow: 'security',
+    outputFileName: 'ai_prompt_security_analysis.md',
+    requiredInputs: Object.freeze([
+      Object.freeze({ path: 'kind', equals: 'ai-knowledge-projection' }),
+      Object.freeze({ path: 'program', type: 'string', nonEmpty: true }),
+      Object.freeze({ path: 'workflows.security.summary', type: 'string', nonEmpty: true }),
+      Object.freeze({ path: 'workflows.security.sqlStatements', type: 'array' }),
+      Object.freeze({ path: 'workflows.security.nativeFiles', type: 'array' }),
+      Object.freeze({ path: 'workflows.security.evidenceHighlights', type: 'array' }),
+    ]),
+    preferredOutputShape: Object.freeze([
+      'SQL injection and dynamic SQL risks',
+      'Input validation gaps',
+      'Authorization and access control issues',
+      'Error handling and information disclosure',
+      'Commitment control gaps',
+      'Evidence-backed findings with EVxxxx citations',
+    ]),
+    budget: Object.freeze({
+      targetTokens: 2500,
+      maxTokens: 4000,
     }),
   }),
 });

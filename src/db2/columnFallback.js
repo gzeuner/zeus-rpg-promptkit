@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,12 +18,12 @@ const {
 } = require('./readOnlyQueryService');
 
 const COLUMN_ALIASES = Object.freeze({
-  WERBEJAHR: ['WERBEJAHR', 'PJAHR', 'XJAHR', 'WERBJAHR'],
-  WERBENUMMER: ['WERBENUMMER', 'PWERBNR', 'XWERBNR', 'WERBNR'],
-  DAN: ['INTERNE_ARTIKEL_DAN', 'PDAN', 'XDAN', 'ARTIKEL_DAN', 'DAN'],
-  VKST: ['VERKAUFSSTELLE_ID', 'PVKST', 'VERKAUFSSTELLE', 'VKST_NR'],
-  PREIS: ['WERBE_VERKAUFSPREIS', 'PWPREIS', 'PREIS_ERFASST', 'VKP'],
-  TIMESTAMP: ['ZEITPUNKT_AENDERUNG', 'XTIMESTMP', 'LETZTEAENDERUNG'],
+  APP_YEAR: ['APP_YEAR', 'P_YEAR', 'X_YEAR', 'APP_YEAR_ALT'],
+  APP_NUMBER: ['APP_NUMBER', 'P_NUMBER', 'X_NUMBER', 'APP_NR'],
+  DAN: ['INTERNAL_ITEM_ID', 'P_ITEM_ID', 'X_ITEM_ID', 'ITEM_ID', 'DAN'],
+  VKST: ['LOCATION_ID', 'P_LOCATION', 'LOCATION', 'LOCATION_NR'],
+  PREIS: ['APP_SALE_PRICE', 'P_PRICE', 'RECORDED_PRICE', 'SALE_PRICE'],
+  TIMESTAMP: ['CHANGE_TIMESTAMP', 'X_TIMESTAMP', 'LAST_CHANGE'],
 });
 
 function getActualColumns(dbConfig, schema, table, runtime = {}) {

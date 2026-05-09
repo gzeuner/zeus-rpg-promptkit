@@ -1,5 +1,6 @@
+
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,12 +25,13 @@ import java.util.List;
 
 public class Db2DiagnosticQueryRunner {
     private static String escape(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return value
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r");
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
     }
 
     private static int parseMaxRows(String value) {
@@ -89,6 +91,13 @@ public class Db2DiagnosticQueryRunner {
         String query = args[3];
         int maxRows = parseMaxRows(args.length >= 5 ? args[4] : "50");
 
+        try {
+            Class.forName("com.ibm.as400.access.AS400JDBCDriver");
+        } catch (ClassNotFoundException e) {
+            System.err.println("DB2 diagnostic query failed: jt400 driver not found on classpath.");
+            System.exit(2);
+        }
+
         try (Connection connection = DriverManager.getConnection(jdbcUrl, user, password)) {
             connection.setReadOnly(true);
 
@@ -125,7 +134,7 @@ public class Db2DiagnosticQueryRunner {
                             }
                             Object value = readValue(rs, i, metaData.getColumnType(i));
                             json.append("\"").append(escape(columns.get(i - 1))).append("\":")
-                                .append(encodeValue(value));
+                                    .append(encodeValue(value));
                         }
                         json.append("}");
                         rowCount += 1;

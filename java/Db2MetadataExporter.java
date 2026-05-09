@@ -1,5 +1,6 @@
+
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -88,12 +89,13 @@ public class Db2MetadataExporter {
     }
 
     private static String escape(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return value
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r");
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
     }
 
     private static String normalizeIdentifier(String value) {
@@ -137,7 +139,7 @@ public class Db2MetadataExporter {
         String normalized = normalizeIdentifier(columnName);
         for (int index = 1; index <= columnCount; index += 1) {
             if (normalizeIdentifier(metaData.getColumnLabel(index)).equals(normalized)
-                || normalizeIdentifier(metaData.getColumnName(index)).equals(normalized)) {
+                    || normalizeIdentifier(metaData.getColumnName(index)).equals(normalized)) {
                 return true;
             }
         }
@@ -198,7 +200,8 @@ public class Db2MetadataExporter {
         return "TABLE";
     }
 
-    private static Set<String> loadPrimaryKeys(DatabaseMetaData metaData, String schema, String table) throws SQLException {
+    private static Set<String> loadPrimaryKeys(DatabaseMetaData metaData, String schema, String table)
+            throws SQLException {
         Set<String> primaryKeys = new HashSet<>();
         try (ResultSet rs = metaData.getPrimaryKeys(null, schema, table)) {
             while (rs.next()) {
@@ -211,7 +214,8 @@ public class Db2MetadataExporter {
         return primaryKeys;
     }
 
-    private static List<ColumnInfo> loadColumns(DatabaseMetaData metaData, String schema, String table, Set<String> primaryKeys) throws SQLException {
+    private static List<ColumnInfo> loadColumns(DatabaseMetaData metaData, String schema, String table,
+            Set<String> primaryKeys) throws SQLException {
         List<ColumnInfo> columns = new ArrayList<>();
         try (ResultSet cols = metaData.getColumns(null, schema, table, "%")) {
             while (cols.next()) {
@@ -234,7 +238,8 @@ public class Db2MetadataExporter {
         return columns;
     }
 
-    private static List<ForeignKeyInfo> loadForeignKeys(DatabaseMetaData metaData, String schema, String table) throws SQLException {
+    private static List<ForeignKeyInfo> loadForeignKeys(DatabaseMetaData metaData, String schema, String table)
+            throws SQLException {
         Map<String, ForeignKeyInfo> byKey = new LinkedHashMap<>();
         try (ResultSet rs = metaData.getImportedKeys(null, schema, table)) {
             while (rs.next()) {
@@ -247,7 +252,8 @@ public class Db2MetadataExporter {
                 foreignKey.updateRule = mapImportedRule(rs.getShort("UPDATE_RULE"));
                 foreignKey.deleteRule = mapImportedRule(rs.getShort("DELETE_RULE"));
 
-                String key = foreignKey.column + "|" + foreignKey.referencesSchema + "|" + foreignKey.referencesTable + "|" + foreignKey.referencesColumn;
+                String key = foreignKey.column + "|" + foreignKey.referencesSchema + "|" + foreignKey.referencesTable
+                        + "|" + foreignKey.referencesColumn;
                 if (!byKey.containsKey(key)) {
                     byKey.put(key, foreignKey);
                 }
@@ -256,10 +262,10 @@ public class Db2MetadataExporter {
 
         List<ForeignKeyInfo> foreignKeys = new ArrayList<>(byKey.values());
         Collections.sort(foreignKeys, Comparator
-            .comparing((ForeignKeyInfo fk) -> fk.column)
-            .thenComparing(fk -> fk.referencesSchema)
-            .thenComparing(fk -> fk.referencesTable)
-            .thenComparing(fk -> fk.referencesColumn));
+                .comparing((ForeignKeyInfo fk) -> fk.column)
+                .thenComparing(fk -> fk.referencesSchema)
+                .thenComparing(fk -> fk.referencesTable)
+                .thenComparing(fk -> fk.referencesColumn));
         return foreignKeys;
     }
 
@@ -282,9 +288,9 @@ public class Db2MetadataExporter {
     private static List<TriggerInfo> loadTriggers(Connection connection, TableInfo tableInfo) {
         List<TriggerInfo> triggers = new ArrayList<>();
         String sql = ""
-            + "SELECT TRIGGER_SCHEMA, TRIGGER_NAME, EVENT_MANIPULATION, ACTION_TIMING, ACTION_ORIENTATION "
-            + "FROM QSYS2.SYSTRIGGERS "
-            + "WHERE EVENT_OBJECT_SCHEMA = ? AND EVENT_OBJECT_TABLE = ?";
+                + "SELECT TRIGGER_SCHEMA, TRIGGER_NAME, EVENT_MANIPULATION, ACTION_TIMING, ACTION_ORIENTATION "
+                + "FROM QSYS2.SYSTRIGGERS "
+                + "WHERE EVENT_OBJECT_SCHEMA = ? AND EVENT_OBJECT_TABLE = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, tableInfo.schema);
@@ -305,17 +311,17 @@ public class Db2MetadataExporter {
         }
 
         Collections.sort(triggers, Comparator
-            .comparing((TriggerInfo trigger) -> trigger.schema)
-            .thenComparing(trigger -> trigger.name));
+                .comparing((TriggerInfo trigger) -> trigger.schema)
+                .thenComparing(trigger -> trigger.name));
         return triggers;
     }
 
     private static List<DerivedObjectInfo> loadDerivedObjects(Connection connection, TableInfo tableInfo) {
         List<DerivedObjectInfo> derivedObjects = new ArrayList<>();
         String sql = ""
-            + "SELECT VIEW_SCHEMA, VIEW_NAME, SYSTEM_VIEW_SCHEMA, SYSTEM_VIEW_NAME, TABLE_TYPE "
-            + "FROM QSYS2.SYSVIEWDEP "
-            + "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
+                + "SELECT VIEW_SCHEMA, VIEW_NAME, SYSTEM_VIEW_SCHEMA, SYSTEM_VIEW_NAME, TABLE_TYPE "
+                + "FROM QSYS2.SYSVIEWDEP "
+                + "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, tableInfo.schema);
@@ -327,7 +333,8 @@ public class Db2MetadataExporter {
                     derivedObject.name = normalizeIdentifier(getString(rs, "VIEW_NAME"));
                     derivedObject.systemSchema = normalizeIdentifier(getString(rs, "SYSTEM_VIEW_SCHEMA"));
                     derivedObject.systemName = normalizeIdentifier(getString(rs, "SYSTEM_VIEW_NAME"));
-                    derivedObject.objectType = inferObjectType(getString(rs, "OBJECT_TYPE"), getString(rs, "TABLE_TYPE"), "VIEW");
+                    derivedObject.objectType = inferObjectType(getString(rs, "OBJECT_TYPE"),
+                            getString(rs, "TABLE_TYPE"), "VIEW");
                     derivedObjects.add(derivedObject);
                 }
             }
@@ -336,8 +343,8 @@ public class Db2MetadataExporter {
         }
 
         Collections.sort(derivedObjects, Comparator
-            .comparing((DerivedObjectInfo derivedObject) -> derivedObject.schema)
-            .thenComparing(derivedObject -> derivedObject.name));
+                .comparing((DerivedObjectInfo derivedObject) -> derivedObject.schema)
+                .thenComparing(derivedObject -> derivedObject.name));
         return derivedObjects;
     }
 
@@ -353,17 +360,18 @@ public class Db2MetadataExporter {
         return target;
     }
 
-    private static List<TableInfo> findTablesViaCatalog(Connection connection, String requestedTable, String defaultSchema) {
+    private static List<TableInfo> findTablesViaCatalog(Connection connection, String requestedTable,
+            String defaultSchema) {
         List<TableInfo> matches = new ArrayList<>();
         String normalizedRequested = normalizeIdentifier(requestedTable);
         String[] schemaCandidates = defaultSchema == null || defaultSchema.isEmpty()
-            ? new String[]{"*ALLUSR"}
-            : new String[]{defaultSchema, "*ALLUSR"};
+                ? new String[] { "*ALLUSR" }
+                : new String[] { defaultSchema, "*ALLUSR" };
 
         String sql = ""
-            + "SELECT OBJLONGSCHEMA, OBJLONGNAME, OBJLIB, OBJNAME, SQL_OBJECT_TYPE, OBJATTRIBUTE, OBJTEXT "
-            + "FROM TABLE(QSYS2.OBJECT_STATISTICS(OBJECT_SCHEMA => ?, OBJTYPELIST => '*FILE', OBJECT_NAME => ?)) "
-            + "WHERE UPPER(COALESCE(OBJLONGNAME, OBJNAME)) = ? OR UPPER(OBJNAME) = ?";
+                + "SELECT OBJLONGSCHEMA, OBJLONGNAME, OBJLIB, OBJNAME, SQL_OBJECT_TYPE, OBJATTRIBUTE, OBJTEXT "
+                + "FROM TABLE(QSYS2.OBJECT_STATISTICS(OBJECT_SCHEMA => ?, OBJTYPELIST => '*FILE', OBJECT_NAME => ?)) "
+                + "WHERE UPPER(COALESCE(OBJLONGNAME, OBJNAME)) = ? OR UPPER(OBJNAME) = ?";
 
         for (String schemaCandidate : schemaCandidates) {
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -378,7 +386,8 @@ public class Db2MetadataExporter {
                         tableInfo.table = normalizeIdentifier(getString(rs, "OBJLONGNAME"));
                         tableInfo.systemSchema = normalizeIdentifier(getString(rs, "OBJLIB"));
                         tableInfo.systemName = normalizeIdentifier(getString(rs, "OBJNAME"));
-                        tableInfo.objectType = inferObjectType(getString(rs, "SQL_OBJECT_TYPE"), getString(rs, "OBJATTRIBUTE"), "");
+                        tableInfo.objectType = inferObjectType(getString(rs, "SQL_OBJECT_TYPE"),
+                                getString(rs, "OBJATTRIBUTE"), "");
                         tableInfo.textDescription = getString(rs, "OBJTEXT");
                         tableInfo.lookupStrategy = "IBM_I_CATALOG";
                         if (tableInfo.table.isEmpty()) {
@@ -402,7 +411,8 @@ public class Db2MetadataExporter {
         return matches;
     }
 
-    private static List<TableInfo> findTablesViaJdbc(DatabaseMetaData metaData, String requestedTable, String defaultSchema) throws SQLException {
+    private static List<TableInfo> findTablesViaJdbc(DatabaseMetaData metaData, String requestedTable,
+            String defaultSchema) throws SQLException {
         List<TableInfo> matches = new ArrayList<>();
         String schemaPattern = defaultSchema;
         String normalizedTable = normalizeIdentifier(requestedTable);
@@ -417,7 +427,8 @@ public class Db2MetadataExporter {
             normalizedTable = normalizeIdentifier(parts[1]);
         }
 
-        try (ResultSet rs = metaData.getTables(null, schemaPattern, normalizedTable, new String[]{"TABLE", "VIEW", "ALIAS"})) {
+        try (ResultSet rs = metaData.getTables(null, schemaPattern, normalizedTable,
+                new String[] { "TABLE", "VIEW", "ALIAS" })) {
             while (rs.next()) {
                 TableInfo tableInfo = new TableInfo();
                 tableInfo.schema = normalizeIdentifier(rs.getString("TABLE_SCHEM"));
@@ -433,7 +444,8 @@ public class Db2MetadataExporter {
         return matches;
     }
 
-    private static TableInfo enrichTableInfo(Connection connection, DatabaseMetaData metaData, TableInfo seed) throws SQLException {
+    private static TableInfo enrichTableInfo(Connection connection, DatabaseMetaData metaData, TableInfo seed)
+            throws SQLException {
         TableInfo tableInfo = copyTableInfo(seed);
         Set<String> primaryKeys = loadPrimaryKeys(metaData, tableInfo.schema, tableInfo.table);
         tableInfo.columns = loadColumns(metaData, tableInfo.schema, tableInfo.table, primaryKeys);
@@ -446,64 +458,64 @@ public class Db2MetadataExporter {
 
     private static void appendColumnJson(StringBuilder json, ColumnInfo column) {
         json.append("{")
-            .append("\"name\":").append(encodeValue(column.name)).append(",")
-            .append("\"type\":").append(encodeValue(column.type)).append(",")
-            .append("\"length\":").append(column.length).append(",")
-            .append("\"precision\":").append(encodeNumber(column.precision)).append(",")
-            .append("\"scale\":").append(encodeNumber(column.scale)).append(",")
-            .append("\"nullable\":").append(column.nullable).append(",")
-            .append("\"primaryKey\":").append(column.primaryKey)
-            .append("}");
+                .append("\"name\":").append(encodeValue(column.name)).append(",")
+                .append("\"type\":").append(encodeValue(column.type)).append(",")
+                .append("\"length\":").append(column.length).append(",")
+                .append("\"precision\":").append(encodeNumber(column.precision)).append(",")
+                .append("\"scale\":").append(encodeNumber(column.scale)).append(",")
+                .append("\"nullable\":").append(column.nullable).append(",")
+                .append("\"primaryKey\":").append(column.primaryKey)
+                .append("}");
     }
 
     private static void appendForeignKeyJson(StringBuilder json, ForeignKeyInfo foreignKey) {
         json.append("{")
-            .append("\"column\":").append(encodeValue(foreignKey.column)).append(",")
-            .append("\"referencesSchema\":").append(encodeValue(foreignKey.referencesSchema)).append(",")
-            .append("\"referencesTable\":").append(encodeValue(foreignKey.referencesTable)).append(",")
-            .append("\"referencesColumn\":").append(encodeValue(foreignKey.referencesColumn)).append(",")
-            .append("\"constraintName\":").append(encodeValue(foreignKey.constraintName)).append(",")
-            .append("\"updateRule\":").append(encodeValue(foreignKey.updateRule)).append(",")
-            .append("\"deleteRule\":").append(encodeValue(foreignKey.deleteRule))
-            .append("}");
+                .append("\"column\":").append(encodeValue(foreignKey.column)).append(",")
+                .append("\"referencesSchema\":").append(encodeValue(foreignKey.referencesSchema)).append(",")
+                .append("\"referencesTable\":").append(encodeValue(foreignKey.referencesTable)).append(",")
+                .append("\"referencesColumn\":").append(encodeValue(foreignKey.referencesColumn)).append(",")
+                .append("\"constraintName\":").append(encodeValue(foreignKey.constraintName)).append(",")
+                .append("\"updateRule\":").append(encodeValue(foreignKey.updateRule)).append(",")
+                .append("\"deleteRule\":").append(encodeValue(foreignKey.deleteRule))
+                .append("}");
     }
 
     private static void appendTriggerJson(StringBuilder json, TriggerInfo trigger) {
         json.append("{")
-            .append("\"schema\":").append(encodeValue(trigger.schema)).append(",")
-            .append("\"name\":").append(encodeValue(trigger.name)).append(",")
-            .append("\"systemSchema\":").append(encodeValue(trigger.systemSchema)).append(",")
-            .append("\"systemName\":").append(encodeValue(trigger.systemName)).append(",")
-            .append("\"eventManipulation\":").append(encodeValue(trigger.eventManipulation)).append(",")
-            .append("\"actionTiming\":").append(encodeValue(trigger.actionTiming)).append(",")
-            .append("\"actionOrientation\":").append(encodeValue(trigger.actionOrientation)).append(",")
-            .append("\"programName\":").append(encodeValue(trigger.programName)).append(",")
-            .append("\"programLibrary\":").append(encodeValue(trigger.programLibrary))
-            .append("}");
+                .append("\"schema\":").append(encodeValue(trigger.schema)).append(",")
+                .append("\"name\":").append(encodeValue(trigger.name)).append(",")
+                .append("\"systemSchema\":").append(encodeValue(trigger.systemSchema)).append(",")
+                .append("\"systemName\":").append(encodeValue(trigger.systemName)).append(",")
+                .append("\"eventManipulation\":").append(encodeValue(trigger.eventManipulation)).append(",")
+                .append("\"actionTiming\":").append(encodeValue(trigger.actionTiming)).append(",")
+                .append("\"actionOrientation\":").append(encodeValue(trigger.actionOrientation)).append(",")
+                .append("\"programName\":").append(encodeValue(trigger.programName)).append(",")
+                .append("\"programLibrary\":").append(encodeValue(trigger.programLibrary))
+                .append("}");
     }
 
     private static void appendDerivedObjectJson(StringBuilder json, DerivedObjectInfo derivedObject) {
         json.append("{")
-            .append("\"schema\":").append(encodeValue(derivedObject.schema)).append(",")
-            .append("\"name\":").append(encodeValue(derivedObject.name)).append(",")
-            .append("\"systemSchema\":").append(encodeValue(derivedObject.systemSchema)).append(",")
-            .append("\"systemName\":").append(encodeValue(derivedObject.systemName)).append(",")
-            .append("\"objectType\":").append(encodeValue(derivedObject.objectType)).append(",")
-            .append("\"textDescription\":").append(encodeValue(derivedObject.textDescription))
-            .append("}");
+                .append("\"schema\":").append(encodeValue(derivedObject.schema)).append(",")
+                .append("\"name\":").append(encodeValue(derivedObject.name)).append(",")
+                .append("\"systemSchema\":").append(encodeValue(derivedObject.systemSchema)).append(",")
+                .append("\"systemName\":").append(encodeValue(derivedObject.systemName)).append(",")
+                .append("\"objectType\":").append(encodeValue(derivedObject.objectType)).append(",")
+                .append("\"textDescription\":").append(encodeValue(derivedObject.textDescription))
+                .append("}");
     }
 
     private static void appendTableJson(StringBuilder json, TableInfo table) {
         json.append("{")
-            .append("\"schema\":").append(encodeValue(table.schema)).append(",")
-            .append("\"table\":").append(encodeValue(table.table)).append(",")
-            .append("\"systemSchema\":").append(encodeValue(table.systemSchema)).append(",")
-            .append("\"systemName\":").append(encodeValue(table.systemName)).append(",")
-            .append("\"objectType\":").append(encodeValue(table.objectType)).append(",")
-            .append("\"textDescription\":").append(encodeValue(table.textDescription)).append(",")
-            .append("\"estimatedRowCount\":").append(encodeLong(table.estimatedRowCount)).append(",")
-            .append("\"lookupStrategy\":").append(encodeValue(table.lookupStrategy)).append(",")
-            .append("\"columns\":[");
+                .append("\"schema\":").append(encodeValue(table.schema)).append(",")
+                .append("\"table\":").append(encodeValue(table.table)).append(",")
+                .append("\"systemSchema\":").append(encodeValue(table.systemSchema)).append(",")
+                .append("\"systemName\":").append(encodeValue(table.systemName)).append(",")
+                .append("\"objectType\":").append(encodeValue(table.objectType)).append(",")
+                .append("\"textDescription\":").append(encodeValue(table.textDescription)).append(",")
+                .append("\"estimatedRowCount\":").append(encodeLong(table.estimatedRowCount)).append(",")
+                .append("\"lookupStrategy\":").append(encodeValue(table.lookupStrategy)).append(",")
+                .append("\"columns\":[");
 
         for (int i = 0; i < table.columns.size(); i += 1) {
             if (i > 0) {
@@ -540,7 +552,8 @@ public class Db2MetadataExporter {
 
     public static void main(String[] args) {
         if (args.length < 3) {
-            System.err.println("Usage: java Db2MetadataExporter <jdbcUrl> <user> <password> [defaultSchema] [table1,table2,...]");
+            System.err.println(
+                    "Usage: java Db2MetadataExporter <jdbcUrl> <user> <password> [defaultSchema] [table1,table2,...]");
             System.exit(1);
         }
 
@@ -549,6 +562,13 @@ public class Db2MetadataExporter {
         String password = args[2];
         String defaultSchema = normalizeSchemaArg(args.length >= 4 ? args[3] : null);
         List<String> requestedTables = parseTables(args.length >= 5 ? args[4] : "");
+
+        try {
+            Class.forName("com.ibm.as400.access.AS400JDBCDriver");
+        } catch (ClassNotFoundException e) {
+            System.err.println("DB2 metadata export failed: jt400 driver not found on classpath.");
+            System.exit(2);
+        }
 
         try (Connection connection = DriverManager.getConnection(jdbcUrl, user, password)) {
             DatabaseMetaData metaData = connection.getMetaData();
@@ -573,9 +593,9 @@ public class Db2MetadataExporter {
             }
 
             Collections.sort(tableInfos, Comparator
-                .comparing((TableInfo table) -> table.table)
-                .thenComparing(table -> table.schema)
-                .thenComparing(table -> table.systemName));
+                    .comparing((TableInfo table) -> table.table)
+                    .thenComparing(table -> table.schema)
+                    .thenComparing(table -> table.systemName));
 
             StringBuilder json = new StringBuilder();
             json.append("{\"tables\":[");

@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,12 +30,14 @@ const {
 } = require('../../java/javaRuntime');
 const { isDbConfigured, resolveDefaultSchema } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
+const { getIbmiOsVersion } = require('../../db2/ibmiPlatformInfo');
 const { renderAsciiTable } = require('../helpers/asciiTable');
 
 function formatStatus(status) {
   if (status === 'PASS') return '[PASS]';
   if (status === 'FAIL') return '[FAIL]';
   if (status === 'WARN') return '[WARN]';
+  if (status === 'INFO') return '[INFO]';
   return '[SKIP]';
 }
 
@@ -102,7 +104,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_URL`],
     fallbackValue: fallbackConfig && fallbackConfig.url,
     required: false,
-    hint: 'jdbc:as400://mein-ibmi-host;naming=system;libraries=DATEIEN',
+    hint: 'jdbc:as400://mein-ibmi-host;naming=system;libraries=APPDATA',
   });
   addEnvCheck(checks, {
     name: `${envPrefix}_HOST`,
@@ -134,7 +136,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_DEFAULT_LIBRARY`],
     fallbackValue: fallbackConfig && fallbackConfig.defaultLibrary,
     required: false,
-    hint: requiredLabelPrefix || 'DATEIEN',
+    hint: requiredLabelPrefix || 'APPDATA',
   });
   addEnvCheck(checks, {
     name: `${envPrefix}_DEFAULT_SCHEMA`,
@@ -142,7 +144,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_DEFAULT_SCHEMA`],
     fallbackValue: fallbackConfig && fallbackConfig.defaultSchema,
     required: false,
-    hint: requiredLabelPrefix || 'DATEIEN',
+    hint: requiredLabelPrefix || 'APPDATA',
   });
 }
 
@@ -160,7 +162,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       env,
       envPrefix: 'ZEUS_DB',
       fallbackConfig: dbProfile,
-      requiredLabelPrefix: 'DATEIEN',
+      requiredLabelPrefix: 'APPDATA',
     });
   }
 
@@ -169,7 +171,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       env,
       envPrefix: 'ZEUS_METADATA_DB',
       fallbackConfig: analyzeConfig && analyzeConfig.dbRoles ? analyzeConfig.dbRoles.metadata : {},
-      requiredLabelPrefix: 'DATEIEN',
+      requiredLabelPrefix: 'APPDATA',
     });
   }
 
@@ -178,7 +180,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       env,
       envPrefix: 'ZEUS_TESTDATA_DB',
       fallbackConfig: analyzeConfig && analyzeConfig.dbRoles ? analyzeConfig.dbRoles.testData : {},
-      requiredLabelPrefix: 'DATEIEN',
+      requiredLabelPrefix: 'APPDATA',
     });
   }
 
@@ -273,7 +275,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
     checks.push({
       name: 'Config/Profile',
       status: 'PASS',
-      details: `Loaded profile "${args.profile}" from ${(metadata && metadata.sourceFileLabel) || 'config/profiles.json'}`,
+      details: `Loaded profile "${args.profile}" from ${(metadata && metadata.sourceFileLabel) || 'config/local-only/profiles.json'}`,
     });
   } catch (error) {
     hasCriticalFailure = true;
@@ -380,6 +382,72 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
     }
   }
 
+  // IBM i OS-Version Check
+  if (resolvedAnalyzeConfig && isDbConfigured(resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata'))) {
+    try {
+      const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
+      const versionInfo = getIbmiOsVersion(metadataDbConfig);
+      checks.push({
+        name: 'IBM i OS-Version',
+        status: versionInfo.versionString !== 'UNKNOWN' ? 'PASS' : 'WARN',
+        details: versionInfo.versionString !== 'UNKNOWN'
+          ? `${versionInfo.versionString} (ermittelt via QSYS2.SYSTEM_STATUS_INFO)`
+          : 'OS-Version konnte nicht ermittelt werden — Catalog-Queries ohne Versions-Awareness.',
+      });
+    } catch (_err) {
+      checks.push({
+        name: 'IBM i OS-Version',
+        status: 'WARN',
+        details: 'OS-Version konnte nicht abgefragt werden.',
+      });
+    }
+  }
+
+  // Journal-Status Check für runtimeContext-Tabellen
+  if (
+    resolvedAnalyzeConfig
+    && isDbConfigured(resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata'))
+    && resolvedProfile
+    && resolvedProfile.runtimeContext
+    && Array.isArray(resolvedProfile.runtimeContext.journaledTables)
+    && resolvedProfile.runtimeContext.journaledTables.length > 0
+  ) {
+    const { queryJournalStatus } = require('../../db2/ibmiPlatformInfo');
+    const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
+    for (const tableSpec of resolvedProfile.runtimeContext.journaledTables) {
+      const [schema, tableName] = String(tableSpec).split('.').map((s) => s.trim().toUpperCase());
+      if (!schema || !tableName) continue;
+      try {
+        const journalInfo = queryJournalStatus({ schema, tableName, dbConfig: metadataDbConfig });
+        if (journalInfo === null) {
+          checks.push({
+            name: `Journal: ${schema}.${tableName}`,
+            status: 'WARN',
+            details: 'Tabelle nicht gefunden oder OBJECT_STATISTICS nicht verfügbar.',
+          });
+        } else if (!journalInfo.journaled) {
+          checks.push({
+            name: `Journal: ${schema}.${tableName}`,
+            status: 'FAIL',
+            details: `Tabelle NICHT journalisiert! Programme mit COMMIT/ROLLBACK bekommen SQLSTATE 55019. Fix: STRJRNPF FILE(${schema}/${tableName}) JRN(<JRN>) IMAGES(*AFTER)`,
+          });
+        } else {
+          checks.push({
+            name: `Journal: ${schema}.${tableName}`,
+            status: 'PASS',
+            details: `Journalisiert: ${journalInfo.journalLibrary}/${journalInfo.journalName} (${journalInfo.journalImages || '*AFTER'})`,
+          });
+        }
+      } catch (_err) {
+        checks.push({
+          name: `Journal: ${schema}.${tableName}`,
+          status: 'WARN',
+          details: `Journal-Status konnte nicht geprüft werden: ${_err.message}`,
+        });
+      }
+    }
+  }
+
   const hasExplicitTestDataRole = Boolean(
     (resolvedProfile && resolvedProfile.dbRoles && resolvedProfile.dbRoles.testData)
     || env.ZEUS_TESTDATA_DB_HOST
@@ -427,6 +495,79 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
 
 async function runDoctor(args) {
   const result = runDoctorChecks(args);
+
+  if (args['show-resolved']) {
+    const cwd = process.cwd();
+    const env = process.env;
+    let resolvedChecks = [];
+    try {
+      const { resolveProfile, loadProfiles, resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../../config/runtimeConfig');
+      const { buildJdbcUrl, resolveDefaultSchema } = require('../../db2/db2Config');
+      const profiles = loadProfiles({ cwd, env, args });
+      const resolvedProfile = resolveProfile(profiles, args.profile, { env });
+      const resolvedAnalyzeConfig = resolveAnalyzeConfig(args, { cwd, env });
+      const dbConfig = resolvedAnalyzeConfig && resolvedAnalyzeConfig.db;
+      const jdbcUrl = dbConfig ? buildJdbcUrl(dbConfig, resolveDefaultSchema(dbConfig)) : '(nicht konfiguriert)';
+      resolvedChecks.push({ name: 'db.host', status: 'INFO', details: (dbConfig && dbConfig.host) || '(leer)' });
+      resolvedChecks.push({ name: 'db.user', status: 'INFO', details: (dbConfig && dbConfig.user) || '(leer)' });
+      resolvedChecks.push({ name: 'db.defaultLibrary', status: 'INFO', details: (dbConfig && dbConfig.defaultLibrary) || '(leer)' });
+      resolvedChecks.push({ name: 'JDBC URL', status: 'INFO', details: jdbcUrl });
+
+      // CURRENT_SERVER Sanity-Check
+      const { isDbConfigured } = require('../../db2/db2Config');
+      const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
+      const { getIbmiOsVersion } = require('../../db2/ibmiPlatformInfo');
+      if (dbConfig && isDbConfigured(dbConfig)) {
+        try {
+          const serverResult = runReadOnlyDb2Query({
+            dbConfig,
+            query: 'SELECT CURRENT_SERVER AS SYS FROM SYSIBM.SYSDUMMY1',
+            maxRows: 1,
+          });
+          const currentServer = serverResult.rows && serverResult.rows[0] && (serverResult.rows[0].SYS || serverResult.rows[0].sys || Object.values(serverResult.rows[0])[0]);
+          const configuredHost = String(dbConfig.host || '').toUpperCase();
+          const reportedServer = String(currentServer || '').trim().toUpperCase();
+          const mismatch = configuredHost && reportedServer && configuredHost !== reportedServer;
+          resolvedChecks.push({
+            name: 'CURRENT_SERVER',
+            status: mismatch ? 'WARN' : 'PASS',
+            details: mismatch
+              ? `System meldet "${reportedServer}" — konfiguriert ist "${configuredHost}". Prüfe ob der Hostname korrekt ist!`
+              : `${reportedServer} ✓`,
+          });
+        } catch (err) {
+          resolvedChecks.push({ name: 'CURRENT_SERVER', status: 'WARN', details: `Konnte nicht abgefragt werden: ${err.message}` });
+        }
+
+        // IBM i OS-Version anzeigen
+        try {
+          const versionInfo = getIbmiOsVersion(dbConfig);
+          resolvedChecks.push({
+            name: 'IBM i OS-Version',
+            status: 'INFO',
+            details: versionInfo.versionString,
+          });
+        } catch (_err) {
+          resolvedChecks.push({ name: 'IBM i OS-Version', status: 'WARN', details: 'Nicht ermittelbar' });
+        }
+      }
+
+      // productionSystem-Warnung
+      const profObj = resolvedProfile || {};
+      if (profObj.productionSystem) {
+        resolvedChecks.push({ name: 'Produktionssystem', status: 'WARN', details: 'Dieses Profil ist als productionSystem=true markiert!' });
+      }
+    } catch (err) {
+      resolvedChecks.push({ name: 'show-resolved', status: 'FAIL', details: err.message });
+    }
+
+    console.log('\n--- Aufgelöste Verbindung ---');
+    console.log(renderAsciiTable(
+      ['Status', 'Parameter', 'Wert'],
+      resolvedChecks.map((c) => [formatStatus(c.status), c.name, c.details]),
+    ));
+  }
+
   console.log(renderAsciiTable(
     ['Status', 'Check', 'Details'],
     result.checks.map((check) => [formatStatus(check.status), check.name, check.details]),

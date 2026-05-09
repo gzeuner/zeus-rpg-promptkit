@@ -1,5 +1,6 @@
+
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,12 +37,13 @@ public class Db2ExternalObjectResolver {
     }
 
     private static String escape(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return value
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r");
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
     }
 
     private static String normalizeIdentifier(String value) {
@@ -67,13 +69,14 @@ public class Db2ExternalObjectResolver {
         return value == null ? "null" : "\"" + escape(value) + "\"";
     }
 
-    private static List<ExternalObjectInfo> resolveExternalObjects(Connection connection, String requestedName) throws SQLException {
+    private static List<ExternalObjectInfo> resolveExternalObjects(Connection connection, String requestedName)
+            throws SQLException {
         List<ExternalObjectInfo> objects = new ArrayList<>();
         String normalizedRequested = normalizeIdentifier(requestedName);
         String sql = ""
-            + "SELECT OBJLONGSCHEMA, OBJLONGNAME, OBJLIB, OBJNAME, OBJTYPE, SQL_OBJECT_TYPE, OBJTEXT "
-            + "FROM TABLE(QSYS2.OBJECT_STATISTICS(OBJECT_SCHEMA => '*ALLUSR', OBJTYPELIST => 'PGM,SRVPGM,MODULE', OBJECT_NAME => ?)) "
-            + "WHERE UPPER(OBJNAME) = ? OR UPPER(COALESCE(OBJLONGNAME, OBJNAME)) = ?";
+                + "SELECT OBJLONGSCHEMA, OBJLONGNAME, OBJLIB, OBJNAME, OBJTYPE, SQL_OBJECT_TYPE, OBJTEXT "
+                + "FROM TABLE(QSYS2.OBJECT_STATISTICS(OBJECT_SCHEMA => '*ALLUSR', OBJTYPELIST => 'PGM,SRVPGM,MODULE', OBJECT_NAME => ?)) "
+                + "WHERE UPPER(OBJNAME) = ? OR UPPER(COALESCE(OBJLONGNAME, OBJNAME)) = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, requestedName);
@@ -98,25 +101,25 @@ public class Db2ExternalObjectResolver {
         }
 
         Collections.sort(objects, Comparator
-            .comparing((ExternalObjectInfo object) -> object.requestedName)
-            .thenComparing(object -> object.library)
-            .thenComparing(object -> object.systemName));
+                .comparing((ExternalObjectInfo object) -> object.requestedName)
+                .thenComparing(object -> object.library)
+                .thenComparing(object -> object.systemName));
         return objects;
     }
 
     private static void appendObjectJson(StringBuilder json, ExternalObjectInfo object) {
         json.append("{")
-            .append("\"requestedName\":").append(encodeValue(object.requestedName)).append(",")
-            .append("\"schema\":").append(encodeValue(object.schema)).append(",")
-            .append("\"library\":").append(encodeValue(object.library)).append(",")
-            .append("\"sqlName\":").append(encodeValue(object.sqlName)).append(",")
-            .append("\"systemName\":").append(encodeValue(object.systemName)).append(",")
-            .append("\"objectType\":").append(encodeValue(object.objectType)).append(",")
-            .append("\"sqlObjectType\":").append(encodeValue(object.sqlObjectType)).append(",")
-            .append("\"textDescription\":").append(encodeValue(object.textDescription)).append(",")
-            .append("\"evidenceSource\":").append(encodeValue(object.evidenceSource)).append(",")
-            .append("\"matchedBy\":").append(encodeValue(object.matchedBy))
-            .append("}");
+                .append("\"requestedName\":").append(encodeValue(object.requestedName)).append(",")
+                .append("\"schema\":").append(encodeValue(object.schema)).append(",")
+                .append("\"library\":").append(encodeValue(object.library)).append(",")
+                .append("\"sqlName\":").append(encodeValue(object.sqlName)).append(",")
+                .append("\"systemName\":").append(encodeValue(object.systemName)).append(",")
+                .append("\"objectType\":").append(encodeValue(object.objectType)).append(",")
+                .append("\"sqlObjectType\":").append(encodeValue(object.sqlObjectType)).append(",")
+                .append("\"textDescription\":").append(encodeValue(object.textDescription)).append(",")
+                .append("\"evidenceSource\":").append(encodeValue(object.evidenceSource)).append(",")
+                .append("\"matchedBy\":").append(encodeValue(object.matchedBy))
+                .append("}");
     }
 
     public static void main(String[] args) {
@@ -129,6 +132,13 @@ public class Db2ExternalObjectResolver {
         String user = args[1];
         String password = args[2];
         List<String> requestedNames = parseNames(args[3]);
+
+        try {
+            Class.forName("com.ibm.as400.access.AS400JDBCDriver");
+        } catch (ClassNotFoundException e) {
+            System.err.println("DB2 object resolution failed: jt400 driver not found on classpath.");
+            System.exit(2);
+        }
 
         try (Connection connection = DriverManager.getConnection(jdbcUrl, user, password)) {
             List<ExternalObjectInfo> resolvedObjects = new ArrayList<>();

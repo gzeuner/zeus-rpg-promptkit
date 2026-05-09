@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -539,7 +539,13 @@ function projectSqlSelection(optimizedContext, fallbackStatements) {
 }
 
 function buildWorkflowPayload(workflowName, optimizedContext, fallbackSqlStatements, fallbackEvidenceHighlights) {
-  const workflowKey = workflowName === 'error-analysis' ? 'errorAnalysis' : 'documentation';
+  const WORKFLOW_KEY_MAP = {
+    'error-analysis': 'errorAnalysis',
+    'security': 'security',
+    'modernization': 'modernization',
+    'documentation': 'documentation',
+  };
+  const workflowKey = WORKFLOW_KEY_MAP[workflowName] || 'documentation';
   const optimizedWorkflow = optimizedContext && optimizedContext.workflows
     ? optimizedContext.workflows[workflowKey]
     : null;
@@ -644,6 +650,26 @@ function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedConte
     context,
     projection,
     errorAnalysisPayload,
+  );
+
+  const securityPayload = buildWorkflowPayload('security', optimizedContext, selectedSqlStatements, evidenceHighlights);
+  securityPayload.db2Tables = projectWorkflowDb2Tables(projection.entities.db2Tables, securityPayload);
+  securityPayload.testData = projectWorkflowTestData(context, securityPayload.db2Tables);
+  projection.workflows.security = buildWorkflow(
+    'security',
+    context,
+    projection,
+    securityPayload,
+  );
+
+  const modernizationPayload = buildWorkflowPayload('modernization', optimizedContext, selectedSqlStatements, evidenceHighlights);
+  modernizationPayload.db2Tables = projectWorkflowDb2Tables(projection.entities.db2Tables, modernizationPayload);
+  modernizationPayload.testData = projectWorkflowTestData(context, modernizationPayload.db2Tables);
+  projection.workflows.modernization = buildWorkflow(
+    'modernization',
+    context,
+    projection,
+    modernizationPayload,
   );
 
   return projection;

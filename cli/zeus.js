@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,6 +25,14 @@ const { runQueryTable } = require('../src/cli/commands/queryTableCommand');
 const { runQuerySql } = require('../src/cli/commands/querySqlCommand');
 const { runCopyToWorkspace } = require('../src/cli/commands/copyToWorkspaceCommand');
 const { runDiff } = require('../src/cli/commands/diffCommand');
+const { runFieldSearch } = require('../src/cli/commands/fieldSearchCommand');
+const { run: runQA } = require('../src/cli/commands/qaCommand');
+const { runAssessRisk } = require('../src/cli/commands/assessRiskCommand');
+const { runGenerateTest } = require('../src/cli/commands/generateTestCommand');
+const { runGenerateChecklist } = require('../src/cli/commands/generateChecklistCommand');
+const { runUpsertSql } = require('../src/cli/commands/upsertSqlCommand');
+const { runInspectObject } = require('../src/cli/commands/inspectObjectCommand');
+const { run: runTestRun } = require('../src/cli/commands/testRunCommand');
 
 function printHelp() {
   console.log('Usage:');
@@ -33,13 +41,21 @@ function printHelp() {
   console.log('  zeus [--config <path>] workflow run --profile <name> [--preset <name>] [--out <path>] [--continue-on-error]');
   console.log('  zeus [--config <path>] bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible] [--profile <name>] [--verbose]');
   console.log('  zeus [--config <path>] impact (--target <name> | --field <name>) [--program <name> | --member <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose]');
-  console.log('  zeus [--config <path>] fetch --host <hostname> --user <username> --password <password> --source-lib <lib> --ifs-dir <ifsPath> --out <localPath> [--files <list>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--profile <name>] [--verbose]');
+  console.log('  zeus [--config <path>] assess-risk --program <name> [--out <path>] [--verbose]');
+  console.log('  zeus [--config <path>] generate-test --program <name> [--format jest|markdown] [--critical] [--change] [--table <name>] [--column <name>] [--out <path>] [--verbose]');
+  console.log('  zeus [--config <path>] generate-checklist --program <name> [--type DDL_CHANGE|CODE_CHANGE|BOTH] [--affected <P1,P2,...>] [--table <name>] [--impact LOW|MEDIUM|HIGH] [--out <path>] [--verbose]');
+  console.log('  zeus [--config <path>] fetch --host <hostname> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--profile <name>] [--verbose]');
   console.log('  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
-  console.log('  zeus [--config <path>] doctor --profile <name>');
+  console.log('  zeus [--config <path>] doctor --profile <name> [--show-resolved]');
   console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>]');
-  console.log('  zeus [--config <path>] query-sql --profile <name> --sql "SELECT ..." [--max-rows <n>] [--output table|csv]');
+  console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ..." | --file <path>) [--max-rows <n>] [--output table|csv]');
+  console.log('  zeus [--config <path>] upsert-sql --profile <name> (--sql "INSERT/UPDATE/DELETE ..." | --file <path>)');
   console.log('  zeus [--config <path>] copy-to-workspace --profile <name> [--members <M1,M2,...>] [--force]');
   console.log('  zeus [--config <path>] diff --profile <name> --member <name>');
+  console.log('  zeus [--config <path>] field-search --profile <name> --field <name> [--table <name>] [--source <path>] [--source-lib <lib>] [--source-file <file>] [--mode local|remote|xref|all] [--max-results <n>] [--verbose]');
+  console.log('  zeus [--config <path>] qa [--input <path>] [--format jira|markdown|json] [--strict LENIENT|STRICT] [--post-comment] [--jira-ticket <ticket>] [--verbose]');
+  console.log('  zeus [--config <path>] inspect-object --profile <name> --lib <lib> --name <name> [--type *PGM|*FILE|*SRVPGM|*MODULE] [--journal]');
+  console.log('  zeus [--config <path>] test-run <start|capture|show|rollback> --profile <name> [options]');
 }
 
 function parseArgs(argv) {
@@ -142,6 +158,11 @@ async function main() {
     return;
   }
 
+  if (command === 'upsert-sql') {
+    await runUpsertSql(args);
+    return;
+  }
+
   if (command === 'copy-to-workspace') {
     await runCopyToWorkspace(args);
     return;
@@ -149,6 +170,41 @@ async function main() {
 
   if (command === 'diff') {
     await runDiff(args);
+    return;
+  }
+
+  if (command === 'field-search') {
+    await runFieldSearch(args);
+    return;
+  }
+
+  if (command === 'qa') {
+    await runQA(args, {});
+    return;
+  }
+
+  if (command === 'assess-risk') {
+    await runAssessRisk(args);
+    return;
+  }
+
+  if (command === 'generate-test') {
+    await runGenerateTest(args);
+    return;
+  }
+
+  if (command === 'generate-checklist') {
+    await runGenerateChecklist(args);
+    return;
+  }
+
+  if (command === 'inspect-object') {
+    await runInspectObject(args);
+    return;
+  }
+
+  if (command === 'test-run') {
+    await runTestRun(args);
     return;
   }
 

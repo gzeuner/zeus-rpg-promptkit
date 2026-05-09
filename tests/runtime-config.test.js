@@ -41,7 +41,7 @@ test('loadProfiles falls back to profiles.example.json', () => {
   });
 
   try {
-    const profiles = loadProfiles({ cwd: tempRoot });
+    const profiles = loadProfiles({ cwd: tempRoot, env: {} });
     assert.equal(profiles.default.sourceRoot, './src');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -85,7 +85,7 @@ test('resolveProfilesConfigPaths honors ZEUS_CONFIG_DIR when --config is absent'
   });
 
   assert.equal(resolved.source, 'env');
-  assert.equal(resolved.preferredPath.endsWith(path.join('profiles-dir', 'profiles.json')), true);
+  assert.equal(resolved.preferredPath.endsWith(path.join('profiles-dir', 'local-only', 'profiles.json')), true);
 });
 
 test('resolveAnalyzeConfig merges profile settings with global optimizer and test data defaults', () => {
@@ -173,7 +173,7 @@ test('resolveProfile supports inheritance and env placeholder expansion for secr
   });
 
   try {
-    const profile = resolveProfile(loadProfiles({ cwd: tempRoot }), 'child', {
+    const profile = resolveProfile(loadProfiles({ cwd: tempRoot, env: {} }), 'child', {
       env: {
         ZEUS_DB_PASSWORD: 'super-secret',
       },
@@ -208,7 +208,7 @@ test('resolveAnalyzeConfig exposes profile token budgets and work-copy defaults'
   });
 
   try {
-    const profiles = loadProfiles({ cwd: tempRoot });
+    const profiles = loadProfiles({ cwd: tempRoot, env: {} });
     const profile = resolveProfile(profiles, 'sample', { env: {} });
     const config = resolveAnalyzeConfig({ profile: 'sample' }, { cwd: tempRoot, env: {} });
 
@@ -271,7 +271,7 @@ test('readWorkflowConfig merges global, profile, and workflow preset definitions
   });
 
   try {
-    const profiles = loadProfiles({ cwd: tempRoot });
+    const profiles = loadProfiles({ cwd: tempRoot, env: {} });
     const profile = resolveProfile(profiles, 'sample', { env: {} });
     const workflowConfig = readWorkflowConfig(profiles, profile, {});
     const preset = resolveWorkflowPresetConfig(profiles, profile, 'local', {});
@@ -452,7 +452,7 @@ test('loadProfiles rejects invalid profile structure', () => {
 
   try {
     assert.throws(
-      () => loadProfiles({ cwd: tempRoot }),
+      () => loadProfiles({ cwd: tempRoot, env: {} }),
       /Failed to load profiles from .*Invalid configuration: profile "broken"\.extensions must be an array of strings/,
     );
   } finally {
@@ -473,7 +473,7 @@ test('loadProfiles rejects invalid test-data policy shape', () => {
 
   try {
     assert.throws(
-      () => loadProfiles({ cwd: tempRoot }),
+      () => loadProfiles({ cwd: tempRoot, env: {} }),
       /Failed to load profiles from .*Invalid configuration: profile "broken"\.testData\.maskRules\[0\] must define at least one of \.table or \.schema/,
     );
   } finally {
@@ -489,7 +489,7 @@ test('resolveProfile rejects cyclic inheritance chains', () => {
 
   try {
     assert.throws(
-      () => resolveProfile(loadProfiles({ cwd: tempRoot }), 'a', { env: {} }),
+      () => resolveProfile(loadProfiles({ cwd: tempRoot, env: {} }), 'a', { env: {} }),
       /cyclic inheritance chain/i,
     );
   } finally {

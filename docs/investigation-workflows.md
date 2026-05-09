@@ -102,3 +102,54 @@ zeus analyze --source ./rpg_sources --program ORDERPGM --diagnostic-packs table-
 zeus workflow --preset refactoring-review --source ./rpg_sources --program ORDERPGM
 zeus workflow --preset test-generation-review --source ./rpg_sources --program ORDERPGM
 ```
+
+## inspect-object — Kompilierte Objekte inspizieren
+
+Zeigt Eigenschaften von IBM i Objekten direkt aus `QSYS2.OBJECT_STATISTICS`:
+Kompilierungszeit, Besitzer, Quellmember, Compiler-Version und Journal-Status.
+
+```bash
+# Vollstaendige Objektinfo (*PGM, *FILE, *SRVPGM, *MODULE ...)
+zeus inspect-object --profile sample-ase --lib APPLIB --name APP_TABLE_00 --type *FILE
+
+# Nur Journal-Status (schnell, relevant fuer SQLSTATE 55019 Diagnose)
+zeus inspect-object --profile sample-ase --lib APPLIB --name APP_TABLE_00 --type *FILE --journal
+```
+
+Schluessel-Output-Felder:
+- `Journalized` — YES/NO, mit Hinweis auf SQLSTATE 55019 wenn NO
+- `Journal` — `APPDATA/APPPGMJRN (*AFTER)`
+- `Source Member`, `Source Timestamp` — welcher Source-Stand kompiliert wurde
+- `Compiler`, `OS Version` — Build-Kontext
+
+## test-run — Test-Lifecycle-Tracking mit Before/After-Snapshots
+
+Nimmt vor einem Integrationstest einen DB-Snapshot auf, ermittelt nach dem Test
+den Diff und generiert Rollback-SQL. Das Rollback-SQL wird **nur angezeigt**,
+nie automatisch ausgefuehrt.
+
+```bash
+# 1. Before-Snapshot aufnehmen (vor dem Test)
+zeus test-run start --profile sample-ase \
+    --program APPPGM \
+    --table APPLIB.APP_TABLE_00 \
+    --key ID=88656 \
+    --label "CHANGE-1234 Test DAN=127002"
+# → schreibt test-run-manifest.json
+
+# 2. Test manuell durchfuehren
+
+# 3. After-Snapshot + Diff
+zeus test-run capture --profile sample-ase --manifest test-run-manifest.json
+
+# 4. Rollback-SQL anzeigen (fuer manuelle Ausfuehrung in ACS)
+zeus test-run rollback --manifest test-run-manifest.json
+
+# Manifest ansehen
+zeus test-run show --manifest test-run-manifest.json
+```
+
+Das `test-run-manifest.json` enthaelt:
+- `snapshots.<table>.before` / `.after` — Zeileninhalt vor/nach dem Test
+- `snapshots.<table>.diff.changedRows` — UPDATED / INSERTED / DELETED
+- `rollbackSql[]` — fertige SQL-Statements zum manuellen Zuruecksetzen

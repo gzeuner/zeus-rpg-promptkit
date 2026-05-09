@@ -1,5 +1,6 @@
+
 /*
-Copyright 2026 Guido Zeuner
+Copyright 2026 Zeus PromptKit Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,12 +25,13 @@ import java.util.List;
 
 public class Db2TestDataExtractor {
     private static String escape(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return value
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r");
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
     }
 
     private static String normalizeIdentifier(String value) {
@@ -70,7 +72,8 @@ public class Db2TestDataExtractor {
         return quoteIdentifier(schema) + delimiter + quoteIdentifier(table);
     }
 
-    private static String buildSql(String jdbcUrl, String schema, String table, int limit, List<String> orderByColumns) {
+    private static String buildSql(String jdbcUrl, String schema, String table, int limit,
+            List<String> orderByColumns) {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT * FROM ").append(resolveQualifiedTableName(jdbcUrl, schema, table));
         if (!orderByColumns.isEmpty()) {
@@ -124,7 +127,8 @@ public class Db2TestDataExtractor {
 
     public static void main(String[] args) {
         if (args.length < 6) {
-            System.err.println("Usage: java Db2TestDataExtractor <jdbcUrl> <user> <password> <schema> <table> <limit> [orderByColumn1,orderByColumn2,...]");
+            System.err.println(
+                    "Usage: java Db2TestDataExtractor <jdbcUrl> <user> <password> <schema> <table> <limit> [orderByColumn1,orderByColumn2,...]");
             System.exit(1);
         }
 
@@ -143,11 +147,18 @@ public class Db2TestDataExtractor {
 
         String sql = buildSql(jdbcUrl, schema, table, limit, orderByColumns);
 
+        try {
+            Class.forName("com.ibm.as400.access.AS400JDBCDriver");
+        } catch (ClassNotFoundException e) {
+            System.err.println("DB2 test data extraction failed: jt400 driver not found on classpath.");
+            System.exit(2);
+        }
+
         try (Connection connection = DriverManager.getConnection(jdbcUrl, user, password)) {
             connection.setReadOnly(true);
 
             try (Statement statement = connection.createStatement();
-                 ResultSet rs = statement.executeQuery(sql)) {
+                    ResultSet rs = statement.executeQuery(sql)) {
                 ResultSetMetaData metaData = rs.getMetaData();
                 int columnCount = metaData.getColumnCount();
                 List<String> columns = new ArrayList<>();
@@ -158,9 +169,9 @@ public class Db2TestDataExtractor {
 
                 StringBuilder json = new StringBuilder();
                 json.append("{")
-                    .append("\"schema\":\"").append(escape(schema)).append("\",")
-                    .append("\"table\":\"").append(escape(table)).append("\",")
-                    .append("\"columns\":[");
+                        .append("\"schema\":\"").append(escape(schema)).append("\",")
+                        .append("\"table\":\"").append(escape(table)).append("\",")
+                        .append("\"columns\":[");
 
                 for (int i = 0; i < columns.size(); i += 1) {
                     if (i > 0) {
@@ -183,7 +194,7 @@ public class Db2TestDataExtractor {
                         }
                         Object value = readValue(rs, i, metaData.getColumnType(i));
                         json.append("\"").append(escape(columns.get(i - 1))).append("\":")
-                            .append(encodeValue(value));
+                                .append(encodeValue(value));
                     }
                     json.append("}");
                     rowCount += 1;
