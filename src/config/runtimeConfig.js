@@ -23,6 +23,7 @@ const DEFAULT_EXTENSIONS = ['.rpg', '.rpgle', '.sqlrpgle', '.rpgile', '.bnd', '.
 const ALLOWED_FETCH_TRANSPORTS = new Set(['auto', 'sftp', 'jt400', 'ftp']);
 const ALLOWED_WORK_COPY_EXTENSIONS = new Set(['txt', 'original', 'suffixed']);
 const ALLOWED_WORKFLOW_STEPS = new Set(['fetch', 'copy', 'analyze', 'impact', 'query-table', 'report']);
+const ALLOWED_BRIDGE_MODES = new Set(['plan-only', 'plan-stage-apply', 'plan-stage-apply-compile']);
 const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits', 'presets']);
 const PROFILES_METADATA_KEY = Symbol('zeusProfilesMetadata');
 const DEFAULT_WORK_COPY = Object.freeze({
@@ -380,6 +381,73 @@ function validateWorkflowConfig(value, label) {
   }
 }
 
+function validateBridgeProfile(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  if (value.enabled !== undefined && typeof value.enabled !== 'boolean') {
+    failValidation(`${label}.enabled must be a boolean`);
+  }
+  if (value.mode !== undefined) {
+    assertOptionalString(value.mode, `${label}.mode`);
+    const normalized = String(value.mode || '').trim().toLowerCase();
+    if (normalized && !ALLOWED_BRIDGE_MODES.has(normalized)) {
+      failValidation(`${label}.mode must be one of: plan-only, plan-stage-apply, plan-stage-apply-compile`);
+    }
+  }
+  if (value.requireConfirmation !== undefined && typeof value.requireConfirmation !== 'boolean') {
+    failValidation(`${label}.requireConfirmation must be a boolean`);
+  }
+  if (value.allowAutoApprove !== undefined && typeof value.allowAutoApprove !== 'boolean') {
+    failValidation(`${label}.allowAutoApprove must be a boolean`);
+  }
+  if (value.auditLog !== undefined && typeof value.auditLog !== 'boolean') {
+    failValidation(`${label}.auditLog must be a boolean`);
+  }
+  if (value.allowedTargets !== undefined) {
+    if (!isPlainObject(value.allowedTargets)) {
+      failValidation(`${label}.allowedTargets must be an object`);
+    }
+    if (value.allowedTargets.libraries !== undefined) {
+      assertStringArray(value.allowedTargets.libraries, `${label}.allowedTargets.libraries`);
+    }
+    if (value.allowedTargets.sourceFiles !== undefined) {
+      assertStringArray(value.allowedTargets.sourceFiles, `${label}.allowedTargets.sourceFiles`);
+    }
+    if (value.allowedTargets.ifsPaths !== undefined) {
+      assertStringArray(value.allowedTargets.ifsPaths, `${label}.allowedTargets.ifsPaths`);
+    }
+  }
+  if (value.staging !== undefined) {
+    if (!isPlainObject(value.staging)) {
+      failValidation(`${label}.staging must be an object`);
+    }
+    if (value.staging.enabled !== undefined && typeof value.staging.enabled !== 'boolean') {
+      failValidation(`${label}.staging.enabled must be a boolean`);
+    }
+    assertOptionalString(value.staging.library, `${label}.staging.library`);
+    assertOptionalString(value.staging.sourceFile, `${label}.staging.sourceFile`);
+    assertOptionalString(value.staging.ifsPath, `${label}.staging.ifsPath`);
+  }
+  if (value.compile !== undefined) {
+    if (!isPlainObject(value.compile)) {
+      failValidation(`${label}.compile must be an object`);
+    }
+    if (value.compile.enabled !== undefined && typeof value.compile.enabled !== 'boolean') {
+      failValidation(`${label}.compile.enabled must be a boolean`);
+    }
+    if (value.compile.allowedTemplates !== undefined) {
+      assertStringArray(value.compile.allowedTemplates, `${label}.compile.allowedTemplates`);
+    }
+    if (value.compile.requirePlan !== undefined && typeof value.compile.requirePlan !== 'boolean') {
+      failValidation(`${label}.compile.requirePlan must be a boolean`);
+    }
+    if (value.compile.requireApproval !== undefined && typeof value.compile.requireApproval !== 'boolean') {
+      failValidation(`${label}.compile.requireApproval must be a boolean`);
+    }
+  }
+}
+
 function validateNamedProfile(profile, label) {
   if (!isPlainObject(profile)) {
     failValidation(`${label} must be an object`);
@@ -419,6 +487,9 @@ function validateNamedProfile(profile, label) {
   }
   if (profile.presets !== undefined) {
     validateWorkflowPresetCollection(profile.presets, `${label}.presets`);
+  }
+  if (profile.bridge !== undefined) {
+    validateBridgeProfile(profile.bridge, `${label}.bridge`);
   }
 }
 

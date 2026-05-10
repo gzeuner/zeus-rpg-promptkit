@@ -93,6 +93,19 @@ Für externe Reviews kann `--safe-sharing` genutzt werden, um Artefakte besser t
 
 ---
 
+### Zukunftsrichtung: Operator-gesteuerte Change-Bridge
+
+Geplant ist eine optionale, explizit aktivierbare Bridge für kontrollierte IBM i-Änderungen.
+
+- Standard bleibt read-only.
+- Änderungen entstehen zuerst lokal und werden als Diff bewertet.
+- Write/Apply/Compile sollen nur mit Plan, Review, Freigabe und Audit möglich sein.
+- KI-Assistenten dürfen unterstützen, aber keine gefährlichen Schritte selbst freigeben.
+
+Bis zur vollständigen Umsetzung bleibt Zeus im Kern ein Evidence-First-Toolkit mit lokaler Analyse und menschlicher Verantwortung.
+
+---
+
 ### Verantwortung, KI-Einsatz, Gewährleistung und Haftung
 
 Zeus RPG PromptKit ist ein freies Open-Source-Projekt. Es wird unentgeltlich bereitgestellt und soll Entwickler:innen dabei helfen, IBM i-/AS/400-Quellen, DB2-Metadaten und Abhängigkeiten besser zu verstehen und für Reviews oder KI-gestützte Workflows aufzubereiten.
@@ -234,6 +247,7 @@ zeus <command> [options]
 | `field-search` | sucht Feld-/Tabellenzugriffe lokal, remote oder per SQL-Xref |
 | `serve` | startet die lokale Browser-UI |
 | `diff` | vergleicht lokales Member mit IBM i-Version |
+| `bridge` | experimentelles, standardmäßig deaktiviertes Scaffold für operator-gesteuerte Change-Planung |
 
 Beispiel:
 
@@ -585,6 +599,19 @@ For external review, use `--safe-sharing` where appropriate.
 
 ---
 
+### Future direction: operator-controlled change bridge
+
+An optional IBM i change bridge is planned as an explicit opt-in workflow.
+
+- Read-only remains the default mode.
+- Changes are prepared locally first and reviewed as diffs.
+- Write, apply, and compile steps are intended to require plan, review, approval, and audit.
+- AI may assist with analysis and planning, but approval remains with the operator.
+
+Until this is fully implemented, Zeus remains an evidence-first CLI focused on local analysis and human-controlled delivery.
+
+---
+
 ### Responsibility, AI usage, warranty and liability
 
 Zeus RPG PromptKit is a free open-source project. It is provided free of charge and is intended to help developers understand IBM i / AS/400 sources, DB2 metadata and dependencies, and prepare them for reviews or AI-assisted workflows.
@@ -722,6 +749,7 @@ zeus <command> [options]
 | `field-search` | searches field/table usage locally, remotely or via SQL xref |
 | `serve` | starts the local browser UI |
 | `diff` | compares a local member with the IBM i version |
+| `bridge` | experimental disabled-by-default scaffold for operator-controlled change planning |
 
 Example:
 

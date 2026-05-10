@@ -33,6 +33,7 @@ const { runGenerateChecklist } = require('../src/cli/commands/generateChecklistC
 const { runUpsertSql } = require('../src/cli/commands/upsertSqlCommand');
 const { runInspectObject } = require('../src/cli/commands/inspectObjectCommand');
 const { run: runTestRun } = require('../src/cli/commands/testRunCommand');
+const { runBridge } = require('../src/cli/commands/bridgeCommand');
 
 function printHelp() {
   console.log('Usage:');
@@ -56,6 +57,7 @@ function printHelp() {
   console.log('  zeus [--config <path>] qa [--input <path>] [--format jira|markdown|json] [--strict LENIENT|STRICT] [--post-comment] [--jira-ticket <ticket>] [--verbose]');
   console.log('  zeus [--config <path>] inspect-object --profile <name> --lib <lib> --name <name> [--type *PGM|*FILE|*SRVPGM|*MODULE] [--journal]');
   console.log('  zeus [--config <path>] test-run <start|capture|show|rollback> --profile <name> [options]');
+  console.log('  zeus [--config <path>] bridge <plan|stage|apply|compile-plan|compile-run|report> --profile <name> [options]');
 }
 
 function parseArgs(argv) {
@@ -205,6 +207,11 @@ async function main() {
 
   if (command === 'test-run') {
     await runTestRun(args);
+    return;
+  }
+
+  if (command === 'bridge') {
+    await runBridge(args);
     return;
   }
 

@@ -552,3 +552,23 @@ test('resolveFetchConfig rejects invalid stream file CCSID values', () => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
+
+test('loadProfiles rejects invalid bridge mode values', () => {
+  const tempRoot = createTempProject({
+    broken: {
+      bridge: {
+        enabled: true,
+        mode: 'unsafe',
+      },
+    },
+  });
+
+  try {
+    assert.throws(
+      () => loadProfiles({ cwd: tempRoot, env: {} }),
+      /Invalid configuration: profile "broken"\.bridge\.mode must be one of: plan-only, plan-stage-apply, plan-stage-apply-compile/,
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
