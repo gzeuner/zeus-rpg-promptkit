@@ -69,6 +69,30 @@
         "defaultLibrary": "${env:ZEUS_TESTDATA_DB_DEFAULT_LIBRARY}",
         "defaultSchema": "${env:ZEUS_TESTDATA_DB_DEFAULT_SCHEMA}"
       }
+    },
+    "bridge": {
+      "enabled": false,
+      "mode": "plan-only",
+      "requireConfirmation": true,
+      "allowAutoApprove": false,
+      "auditLog": true,
+      "allowedTargets": {
+        "libraries": [],
+        "sourceFiles": [],
+        "ifsPaths": []
+      },
+      "staging": {
+        "enabled": true,
+        "library": "",
+        "sourceFile": "",
+        "ifsPath": ""
+      },
+      "compile": {
+        "enabled": false,
+        "allowedTemplates": [],
+        "requirePlan": true,
+        "requireApproval": true
+      }
     }
   },
   "default-fetch": {
