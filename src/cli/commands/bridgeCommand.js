@@ -14,10 +14,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const path = require('path');
 const { loadProfiles, resolveAnalyzeConfig, resolveProfile } = require('../../config/runtimeConfig');
 const { appendBridgeAuditEvent } = require('../../bridge/bridgeAuditLog');
+const {
+  readApprovalArtifact,
+  validateApprovalForAction,
+} = require('../../bridge/bridgeApprovalModel');
 const { normalizeBridgeConfig } = require('../../bridge/bridgeConfig');
 const { validateCompileTemplateRequest } = require('../../bridge/bridgeCompileGuard');
 const { BRIDGE_SUBCOMMANDS } = require('../../bridge/bridgeDefaults');
-const { buildChangePlan, writeChangePlanArtifacts } = require('../../bridge/bridgePlanModel');
+const {
+  buildChangePlan,
+  readChangePlanArtifact,
+  writeChangePlanArtifacts,
+} = require('../../bridge/bridgePlanModel');
 const { BridgeRefusalError, throwBridgeRefusal } = require('../../bridge/bridgeRefusal');
 const { validateBridgeTarget } = require('../../bridge/bridgeTargetValidator');
 
@@ -41,10 +49,10 @@ function parseBoolean(value, fallback = false) {
 function printBridgeHelp() {
   console.log('Bridge commands (experimental, opt-in):');
   console.log('  zeus bridge plan --profile <name> --program <name> --source <path> --target-lib <lib> --target-file <file> --target-member <member> [--target-type source-member|ifs-streamfile] [--target-ifs <path>] [--json]');
-  console.log('  zeus bridge stage --profile <name> --program <name> [--dry-run] [--json]');
-  console.log('  zeus bridge apply --profile <name> --program <name> [--dry-run] [--json]');
+  console.log('  zeus bridge stage --profile <name> --program <name> [--dry-run] [--approval-file <path>] [--json]');
+  console.log('  zeus bridge apply --profile <name> --program <name> [--dry-run] [--approval-file <path>] [--json]');
   console.log('  zeus bridge compile-plan --profile <name> --program <name> --template <id> [--json]');
-  console.log('  zeus bridge compile-run --profile <name> --program <name> --template <id> [--dry-run] [--json]');
+  console.log('  zeus bridge compile-run --profile <name> --program <name> --template <id> [--dry-run] [--approval-file <path>] [--json]');
   console.log('  zeus bridge report --profile <name> --program <name> [--json]');
 }
 
@@ -187,15 +195,154 @@ function executePlan(args, context) {
   };
 }
 
+function isApprovalRequired(command, bridgeConfig) {
+  if (command === 'compile-run') {
+    return Boolean(bridgeConfig.requireConfirmation || (bridgeConfig.compile && bridgeConfig.compile.requireApproval));
+  }
+  if (command === 'stage' || command === 'apply') {
+    return Boolean(bridgeConfig.requireConfirmation);
+  }
+  return false;
+}
+
+function evaluateApprovalState({
+  args,
+  context,
+  command,
+  program,
+}) {
+  const planResult = readChangePlanArtifact({
+    outputRoot: context.outputRoot,
+    program,
+  });
+  const approvalRequired = isApprovalRequired(command, context.bridgeConfig);
+
+  if (!approvalRequired) {
+    return {
+      required: false,
+      status: 'not-required',
+      code: 'APPROVAL_NOT_REQUIRED',
+      message: 'Approval is not required by current bridge configuration.',
+      planPath: planResult.planPath,
+      approvalPath: null,
+      planId: planResult.plan && planResult.plan.planId ? planResult.plan.planId : '',
+      planHash: planResult.plan && planResult.plan.planHash ? planResult.plan.planHash : '',
+    };
+  }
+
+  if (!planResult.exists || !planResult.plan) {
+    return {
+      required: true,
+      status: 'missing-plan',
+      code: 'PLAN_MISSING',
+      message: 'Change plan is missing. Generate a plan before approval checks.',
+      planPath: planResult.planPath,
+      approvalPath: null,
+      planId: '',
+      planHash: '',
+    };
+  }
+
+  const approvalResult = readApprovalArtifact({
+    outputRoot: context.outputRoot,
+    program,
+    approvalFile: args['approval-file'],
+  });
+
+  if (!approvalResult.exists || !approvalResult.approval) {
+    return {
+      required: true,
+      status: 'missing',
+      code: 'APPROVAL_MISSING',
+      message: 'Approval artifact is missing.',
+      planPath: planResult.planPath,
+      approvalPath: approvalResult.approvalPath,
+      planId: planResult.plan.planId || '',
+      planHash: planResult.plan.planHash || '',
+    };
+  }
+
+  try {
+    validateApprovalForAction({
+      approval: approvalResult.approval,
+      requiredAction: command,
+      expectedProgram: program,
+      expectedProfileName: String(args.profile || '').trim(),
+      expectedPlanId: planResult.plan.planId,
+      expectedPlanHash: planResult.plan.planHash,
+      now: new Date().toISOString(),
+    });
+    return {
+      required: true,
+      status: 'accepted',
+      code: 'APPROVAL_ACCEPTED',
+      message: 'Approval accepted.',
+      planPath: planResult.planPath,
+      approvalPath: approvalResult.approvalPath,
+      planId: planResult.plan.planId || '',
+      planHash: planResult.plan.planHash || '',
+    };
+  } catch (error) {
+    return {
+      required: true,
+      status: 'rejected',
+      code: error.code || 'APPROVAL_REJECTED',
+      message: error.message,
+      planPath: planResult.planPath,
+      approvalPath: approvalResult.approvalPath,
+      planId: planResult.plan.planId || '',
+      planHash: planResult.plan.planHash || '',
+    };
+  }
+}
+
 function executeStageOrApply(args, context, command) {
   const program = resolveProgram(args);
   const dryRun = parseBoolean(args['dry-run'], true);
+  const approval = evaluateApprovalState({
+    args,
+    context,
+    command,
+    program,
+  });
+
+  appendBridgeAuditEvent({
+    outputRoot: context.outputRoot,
+    event: {
+      command: `bridge ${command}`,
+      profile: String(args.profile || '').trim(),
+      actorMode: String(args['actor-mode'] || 'human').trim(),
+      action: `${command}-approval-check`,
+      dryRun,
+      approvalStatus: approval.status,
+      result: approval.code,
+      warnings: approval.message ? [approval.message] : [],
+      planId: approval.planId,
+      planHash: approval.planHash,
+    },
+  });
 
   if (!dryRun) {
+    appendBridgeAuditEvent({
+      outputRoot: context.outputRoot,
+      event: {
+        command: `bridge ${command}`,
+        profile: String(args.profile || '').trim(),
+        actorMode: String(args['actor-mode'] || 'human').trim(),
+        action: command,
+        dryRun: false,
+        approvalStatus: approval.status,
+        result: 'refused-not-implemented',
+        warnings: ['Remote mutation path not implemented in scaffold.'],
+        planId: approval.planId,
+        planHash: approval.planHash,
+      },
+    });
     throwBridgeRefusal({
       code: 'BRIDGE_EXECUTION_NOT_IMPLEMENTED',
       message: `${command} execution is intentionally not implemented in this scaffold branch.`,
       hints: [
+        `Approval status: ${approval.status} (${approval.code})`,
         'Use --dry-run=true for planning and audit generation.',
         'Wait for human-reviewed implementation before enabling remote write behavior.',
       ],
@@ -211,12 +358,14 @@ function executeStageOrApply(args, context, command) {
       actorMode: String(args['actor-mode'] || 'human').trim(),
       action: command,
       dryRun: true,
-      approvalStatus: 'required',
+      approvalStatus: approval.status,
       result: 'skipped',
       warnings: ['Remote mutation path not implemented in scaffold.'],
       maskedConfigurationSummary: {
         bridgeMode: context.bridgeConfig.mode,
       },
+      planId: approval.planId,
+      planHash: approval.planHash,
     },
   });
 
@@ -226,6 +375,7 @@ function executeStageOrApply(args, context, command) {
     dryRun: true,
     status: 'skipped',
     reason: 'execution-not-implemented',
+    approval,
     auditPath: audit.auditPath,
   };
 }
@@ -266,11 +416,51 @@ function executeCompileRun(args, context) {
     bridgeConfig: context.bridgeConfig,
   });
   const dryRun = parseBoolean(args['dry-run'], true);
+  const approval = evaluateApprovalState({
+    args,
+    context,
+    command: 'compile-run',
+    program,
+  });
+
+  appendBridgeAuditEvent({
+    outputRoot: context.outputRoot,
+    event: {
+      command: 'bridge compile-run',
+      profile: String(args.profile || '').trim(),
+      actorMode: String(args['actor-mode'] || 'human').trim(),
+      action: 'compile-run-approval-check',
+      dryRun,
+      approvalStatus: approval.status,
+      result: approval.code,
+      warnings: approval.message ? [approval.message] : [],
+      planId: approval.planId,
+      planHash: approval.planHash,
+    },
+  });
+
   if (!dryRun) {
+    appendBridgeAuditEvent({
+      outputRoot: context.outputRoot,
+      event: {
+        command: 'bridge compile-run',
+        profile: String(args.profile || '').trim(),
+        actorMode: String(args['actor-mode'] || 'human').trim(),
+        action: 'compile-run',
+        dryRun: false,
+        approvalStatus: approval.status,
+        result: 'refused-not-implemented',
+        compileTemplateId: templateId,
+        warnings: ['Remote compile path not implemented in scaffold.'],
+        planId: approval.planId,
+        planHash: approval.planHash,
+      },
+    });
     throwBridgeRefusal({
       code: 'BRIDGE_EXECUTION_NOT_IMPLEMENTED',
       message: 'compile-run execution is intentionally not implemented in this scaffold branch.',
       hints: [
+        `Approval status: ${approval.status} (${approval.code})`,
         'Use compile-plan to validate template selection.',
         'Run compile-run with --dry-run while execution is under review.',
       ],
@@ -285,10 +475,12 @@ function executeCompileRun(args, context) {
       actorMode: String(args['actor-mode'] || 'human').trim(),
       action: 'compile-run',
       dryRun: true,
-      approvalStatus: 'required',
+      approvalStatus: approval.status,
       result: 'skipped',
       compileTemplateId: templateId,
       warnings: ['Remote compile path not implemented in scaffold.'],
+      planId: approval.planId,
+      planHash: approval.planHash,
     },
   });
   return {
@@ -297,6 +489,7 @@ function executeCompileRun(args, context) {
     compileTemplateId: templateId,
     dryRun: true,
     status: 'skipped',
+    approval,
     auditPath: audit.auditPath,
   };
 }
@@ -310,6 +503,8 @@ function executeReport(args, context) {
     expectedArtifacts: {
       changePlanJson: path.join(outputDir, 'change-plan.json'),
       changePlanMarkdown: path.join(outputDir, 'change-plan.md'),
+      approvalJson: path.join(outputDir, 'bridge-approval.json'),
+      approvalMarkdown: path.join(outputDir, 'bridge-approval.md'),
       auditLog: path.join(context.outputRoot, 'audit', 'bridge-audit.jsonl'),
     },
   };
@@ -332,6 +527,8 @@ function formatResultForConsole(result) {
       `Expected bridge artifacts for ${result.program}:`,
       `- ${result.expectedArtifacts.changePlanJson}`,
       `- ${result.expectedArtifacts.changePlanMarkdown}`,
+      `- ${result.expectedArtifacts.approvalJson}`,
+      `- ${result.expectedArtifacts.approvalMarkdown}`,
       `- ${result.expectedArtifacts.auditLog}`,
     ];
   }

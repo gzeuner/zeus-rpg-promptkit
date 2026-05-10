@@ -25,11 +25,13 @@ test('buildChangePlan emits safe metadata contract', () => {
   });
 
   assert.equal(plan.kind, 'bridge-change-plan');
-  assert.equal(plan.schemaVersion, 1);
+  assert.equal(plan.schemaVersion, 2);
   assert.equal(plan.program, 'ORDERPGM');
   assert.equal(plan.remoteTarget.library, 'APPLIB');
   assert.equal(plan.beforeHash, 'before-hash');
   assert.equal(plan.afterHash, 'after-hash');
   assert.equal(plan.riskLevel, 'MEDIUM');
   assert.deepEqual(plan.requiredApprovals, ['operator-review']);
+  assert.match(plan.planId, /^plan-[a-f0-9]{12}$/);
+  assert.match(plan.planHash, /^[a-f0-9]{64}$/);
 });

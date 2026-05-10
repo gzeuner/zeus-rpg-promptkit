@@ -13,6 +13,42 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+
+function buildPlanIdentityPayload({
+  program,
+  profileName,
+  localSourcePath,
+  target,
+  targetType,
+  beforeHash,
+  afterHash,
+  diffSummary,
+  riskLevel,
+  requiredApprovals,
+  intendedAction,
+  staging,
+}) {
+  return {
+    program: String(program || '').trim().toUpperCase(),
+    profileName: String(profileName || '').trim(),
+    localSourcePath: String(localSourcePath || '').trim(),
+    remoteTarget: target || null,
+    targetType: String(targetType || '').trim(),
+    beforeHash: String(beforeHash || '').trim(),
+    afterHash: String(afterHash || '').trim(),
+    diffSummary: String(diffSummary || '').trim(),
+    riskLevel: String(riskLevel || '').trim().toUpperCase(),
+    requiredApprovals: Array.isArray(requiredApprovals) ? requiredApprovals : [],
+    intendedAction: String(intendedAction || '').trim(),
+    staging: staging || {},
+  };
+}
+
+function computePlanHash(payload) {
+  const text = JSON.stringify(payload);
+  return crypto.createHash('sha256').update(text).digest('hex');
+}
 
 function buildChangePlan({
   program,
@@ -29,12 +65,32 @@ function buildChangePlan({
   staging = {},
   rollbackHints = [],
   warnings = [],
-  generatedAt = new Date().toISOString(),
+  createdAt = new Date().toISOString(),
 }) {
+  const identityPayload = buildPlanIdentityPayload({
+    program,
+    profileName,
+    localSourcePath,
+    target,
+    targetType,
+    beforeHash,
+    afterHash,
+    diffSummary,
+    riskLevel,
+    requiredApprovals,
+    intendedAction,
+    staging,
+  });
+  const planHash = computePlanHash(identityPayload);
+  const planId = `plan-${planHash.slice(0, 12)}`;
+
   return {
     kind: 'bridge-change-plan',
-    schemaVersion: 1,
-    generatedAt,
+    schemaVersion: 2,
+    planId,
+    planHash,
+    createdAt,
+    generatedAt: createdAt,
     program: String(program || '').trim().toUpperCase(),
     profileName: String(profileName || '').trim(),
     localSourcePath: String(localSourcePath || '').trim(),
@@ -66,7 +122,9 @@ function renderChangePlanMarkdown(plan) {
 
   return `# Change Plan: ${plan.program}
 
-- Generated: ${plan.generatedAt}
+- Plan ID: ${plan.planId || 'n/a'}
+- Plan Hash: ${plan.planHash || 'n/a'}
+- Created: ${plan.createdAt || plan.generatedAt || 'n/a'}
 - Profile: ${plan.profileName}
 - Local source: ${plan.localSourcePath}
 - Target type: ${plan.targetType}
@@ -113,8 +171,32 @@ function writeChangePlanArtifacts({
   };
 }
 
+function readChangePlanArtifact({
+  outputRoot,
+  program,
+}) {
+  const programName = String(program || '').trim().toUpperCase();
+  const planPath = path.join(outputRoot, programName, 'change-plan.json');
+  if (!fs.existsSync(planPath)) {
+    return {
+      exists: false,
+      planPath,
+      plan: null,
+    };
+  }
+  const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+  return {
+    exists: true,
+    planPath,
+    plan,
+  };
+}
+
 module.exports = {
   buildChangePlan,
+  buildPlanIdentityPayload,
+  computePlanHash,
+  readChangePlanArtifact,
   renderChangePlanMarkdown,
   writeChangePlanArtifacts,
 };

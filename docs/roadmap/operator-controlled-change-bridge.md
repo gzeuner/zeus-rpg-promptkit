@@ -202,11 +202,15 @@ Planned artifact location:
 
 - `output/<PROGRAM>/change-plan.json`
 - `output/<PROGRAM>/change-plan.md`
+- `output/<PROGRAM>/bridge-approval.json`
+- `output/<PROGRAM>/bridge-approval.md`
 
 Current scaffold already writes these locally.
 
 Plan fields:
 
+- planId
+- planHash
 - local source path
 - remote target + target type
 - before/after hashes (if provided)
@@ -355,9 +359,11 @@ Added:
 - bridge config normalization helpers
 - target allowlist validation helpers
 - compile template guard
-- change-plan data model and local artifact writer
+- change-plan data model with plan identity (`planId`, `planHash`)
+- local approval record model (`bridge-approval.json`, `bridge-approval.md`)
+- approval validator bound to program/profile/plan/action/expiry
 - audit-log writer with secret masking
-- bridge command stubs with refusal-first behavior
+- bridge command stubs with approval-aware refusal/dry-run reporting
 
 Not added:
 

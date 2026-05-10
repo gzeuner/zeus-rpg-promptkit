@@ -99,6 +99,7 @@ Geplant ist eine optionale, explizit aktivierbare Bridge für kontrollierte IBM 
 
 - Standard bleibt read-only.
 - Änderungen entstehen zuerst lokal und werden als Diff bewertet.
+- Freigaben können als lokale Bridge-Artefakte dokumentiert werden, bevor sensitive Schritte freigegeben werden.
 - Write/Apply/Compile sollen nur mit Plan, Review, Freigabe und Audit möglich sein.
 - KI-Assistenten dürfen unterstützen, aber keine gefährlichen Schritte selbst freigeben.
 
@@ -605,6 +606,7 @@ An optional IBM i change bridge is planned as an explicit opt-in workflow.
 
 - Read-only remains the default mode.
 - Changes are prepared locally first and reviewed as diffs.
+- Approval can be captured in local bridge artifacts before sensitive steps are considered.
 - Write, apply, and compile steps are intended to require plan, review, approval, and audit.
 - AI may assist with analysis and planning, but approval remains with the operator.
 
