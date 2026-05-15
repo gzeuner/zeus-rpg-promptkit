@@ -1,0 +1,87 @@
+/*
+Copyright 2026 Zeus PromptKit Contributors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*/
+const fs = require('fs');
+const path = require('path');
+const { cloneReviewWorkflow } = require('./reviewWorkflowMetadata');
+const {
+  buildReproducibilityMetadata,
+  hashNormalizedValue,
+  normalizeReproducibilitySettings,
+  resolveTimestamp,
+} = require('../reproducibility/reproducibility');
+
+const WORKFLOW_RUN_MANIFEST_FILE = 'workflow-run-manifest.json';
+const WORKFLOW_RUN_MANIFEST_SCHEMA_VERSION = 1;
+
+function buildWorkflowRunManifest({ preset, analyzeManifest, bundleManifest, bundlePath, reproducibility = null }) {
+  const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
+  const manifest = {
+    schemaVersion: WORKFLOW_RUN_MANIFEST_SCHEMA_VERSION,
+    kind: 'workflow-run-manifest',
+    generatedAt: resolveTimestamp(reproducibilitySettings),
+    program: analyzeManifest && analyzeManifest.inputs ? analyzeManifest.inputs.program : null,
+    preset: preset ? {
+      name: preset.name,
+      title: preset.title,
+      description: preset.description,
+      analyzeMode: preset.analyzeMode,
+      promptTemplates: [...(preset.promptTemplates || [])],
+      workflowKeys: [...(preset.workflowKeys || [])],
+      bundleArtifacts: [...(preset.bundleArtifacts || [])],
+      reviewWorkflow: cloneReviewWorkflow(preset.reviewWorkflow),
+    } : null,
+    analyzeRun: analyzeManifest ? {
+      manifestFile: 'analyze-run-manifest.json',
+      status: analyzeManifest.run ? analyzeManifest.run.status : null,
+      completedAt: analyzeManifest.run ? analyzeManifest.run.completedAt : null,
+      generatedArtifactCount: analyzeManifest.summary ? analyzeManifest.summary.generatedArtifactCount : 0,
+      safeSharingEnabled: analyzeManifest.inputs && analyzeManifest.inputs.options
+        ? Boolean(analyzeManifest.inputs.options.safeSharingEnabled)
+        : false,
+      guidedMode: analyzeManifest.inputs && analyzeManifest.inputs.options
+        ? analyzeManifest.inputs.options.guidedMode
+        : null,
+    } : null,
+    bundle: bundleManifest ? {
+      manifestFile: 'bundle-manifest.json',
+      zipPath: bundlePath ? path.basename(bundlePath) : null,
+      totalFiles: bundleManifest.summary ? bundleManifest.summary.totalFiles : 0,
+      totalSizeBytes: bundleManifest.summary ? bundleManifest.summary.totalSizeBytes : 0,
+    } : null,
+  };
+
+  manifest.reproducibility = buildReproducibilityMetadata(
+    reproducibilitySettings,
+    hashNormalizedValue({
+      program: manifest.program,
+      preset: manifest.preset,
+      analyzeRun: manifest.analyzeRun,
+      bundle: manifest.bundle,
+    }),
+  );
+  return manifest;
+}
+
+function writeWorkflowRunManifest(outputProgramDir, manifest) {
+  const manifestPath = path.join(outputProgramDir, WORKFLOW_RUN_MANIFEST_FILE);
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  return manifestPath;
+}
+
+module.exports = {
+  WORKFLOW_RUN_MANIFEST_FILE,
+  WORKFLOW_RUN_MANIFEST_SCHEMA_VERSION,
+  buildWorkflowRunManifest,
+  writeWorkflowRunManifest,
+};

@@ -1,0 +1,177 @@
+/*
+Copyright 2026 Zeus PromptKit Contributors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*/
+const path = require('path');
+const {
+  runClCommand,
+  exportSourceMemberViaJdbc,
+} = require('./jt400CommandRunner');
+
+const DEFAULT_STREAM_FILE_CCSID = 1208;
+
+const EXTENSION_MAP = {
+  QRPGLESRC: '.rpgle',
+  QSQLRPGLESRC: '.sqlrpgle',
+  QRPGSRC: '.rpg',
+  QCLSRC: '.clp',
+  QCLLESRC: '.clle',
+  QCPYSRC: '.cpy',
+  QDDSSRC: '.dds',
+};
+
+function clQuote(value) {
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+function memberToExtension(sourceFile) {
+  return EXTENSION_MAP[String(sourceFile || '').toUpperCase()] || '.src';
+}
+
+function buildMkdirCommand(remoteDir) {
+  return `MKDIR DIR(${clQuote(remoteDir)})`;
+}
+
+function buildRemoteTargetPath({ sourceFile, member, ifsDir }) {
+  return path.posix.join(ifsDir, sourceFile, `${member}${memberToExtension(sourceFile)}`);
+}
+
+function buildLocalTargetPath({ sourceFile, member, localRoot }) {
+  return path.join(localRoot, sourceFile, `${member}${memberToExtension(sourceFile)}`);
+}
+
+function buildCopyCommandWithEncoding({
+  sourceLib,
+  sourceFile,
+  member,
+  ifsDir,
+  replace,
+  streamFileCcsid,
+}) {
+  const fromMember = `/QSYS.LIB/${sourceLib}.LIB/${sourceFile}.FILE/${member}.MBR`;
+  const toFile = buildRemoteTargetPath({ sourceFile, member, ifsDir });
+  const stmfOpt = replace ? '*REPLACE' : '*NONE';
+  const targetCcsid = Number.isInteger(streamFileCcsid) && streamFileCcsid > 0
+    ? streamFileCcsid
+    : DEFAULT_STREAM_FILE_CCSID;
+  return `CPYTOSTMF FROMMBR(${clQuote(fromMember)}) TOSTMF(${clQuote(toFile)}) STMFOPT(${stmfOpt}) STMFCODPAG(${targetCcsid})`;
+}
+
+function shouldUseJdbcFallback(result) {
+  const combined = `${result && result.stderr ? result.stderr : ''} ${((result && result.messages) || []).join(' ')}`.toUpperCase();
+  return combined.includes('CPDA08C') || combined.includes('CCSID 65535');
+}
+
+function ensureRemoteDirectory(options, remoteDir) {
+  const mkdirResult = runClCommand({
+    ...options,
+    command: buildMkdirCommand(remoteDir),
+  });
+
+  if (mkdirResult.ok) {
+    return;
+  }
+
+  const combined = `${mkdirResult.stderr || ''} ${(mkdirResult.messages || []).join(' ')}`.toUpperCase();
+  const alreadyExists = combined.includes('ALREADY EXISTS')
+    || combined.includes('CPFA0A9')
+    || combined.includes('CPFA0A0')
+    || combined.includes('CPF0000');
+
+  if (!alreadyExists) {
+    throw new Error(`Failed to ensure IFS directory ${remoteDir}: ${combined || 'unknown error'}`);
+  }
+}
+
+function exportMembersForSourceFile({
+  host,
+  user,
+  password,
+  sourceLib,
+  sourceFile,
+  members,
+  ifsDir,
+  replace,
+  streamFileCcsid = DEFAULT_STREAM_FILE_CCSID,
+  verbose,
+}) {
+  const baseOptions = { host, user, password, verbose };
+  ensureRemoteDirectory(baseOptions, ifsDir);
+  ensureRemoteDirectory(baseOptions, path.posix.join(ifsDir, sourceFile));
+
+  const results = [];
+  for (const member of members) {
+    const targetPath = buildRemoteTargetPath({ sourceFile, member, ifsDir });
+    const command = buildCopyCommandWithEncoding({
+      sourceLib,
+      sourceFile,
+      member,
+      ifsDir,
+      replace,
+      streamFileCcsid,
+    });
+
+    const result = runClCommand({
+      ...baseOptions,
+      command,
+    });
+
+    let finalResult = result;
+    let fallback = null;
+    if (result.ok !== true && shouldUseJdbcFallback(result)) {
+      fallback = exportSourceMemberViaJdbc({
+        host,
+        user,
+        password,
+        sourceLib,
+        sourceFile,
+        member,
+        targetPath,
+        streamFileCcsid,
+        verbose,
+      });
+      if (fallback.ok) {
+        finalResult = {
+          ok: true,
+          messages: [
+            ...((result.messages || []).filter(Boolean)),
+            `Fell back to JDBC source export for ${sourceLib}/${sourceFile}(${member}).`,
+            ...((fallback.messages || []).filter(Boolean)),
+          ],
+          stderr: fallback.stderr || '',
+        };
+      }
+    }
+
+    results.push({
+      sourceFile,
+      member,
+      ok: finalResult.ok === true,
+      command,
+      messages: finalResult.messages || [],
+      stderr: finalResult.stderr || '',
+      fallbackUsed: Boolean(fallback && fallback.ok),
+    });
+  }
+
+  return results;
+}
+
+module.exports = {
+  exportMembersForSourceFile,
+  buildCopyCommand: buildCopyCommandWithEncoding,
+  buildLocalTargetPath,
+  buildRemoteTargetPath,
+  memberToExtension,
+  shouldUseJdbcFallback,
+  DEFAULT_STREAM_FILE_CCSID,
+};

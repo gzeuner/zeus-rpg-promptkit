@@ -1,0 +1,96 @@
+# -----------------------------
+# Java
+# -----------------------------
+
+*.class
+java/bin/
+*.jar
+*.war
+*.nar
+*.ear
+
+# logs
+*.log
+
+# crash logs
+hs_err_pid*
+replay_pid*
+
+# build folders
+target/
+build/
+out/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# -----------------------------
+# Node
+# -----------------------------
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# -----------------------------
+# Python
+# -----------------------------
+
+__pycache__/
+*.pyc
+scripts/__pycache__/
+
+# -----------------------------
+# Secrets and local config
+# ────────────────────────────
+# Keep committed: .env.example, profiles.example.json (templates)
+# Ignore local:   .env.local, local-only profiles (user credentials)
+# ────────────────────────────
+
+.env.local
+.env.*.local
+*.secret
+*.secrets
+*.credentials
+credentials.*
+config/local.*
+config/private.*
+# Local profile credentials — never commit them.
+# Copy config/profiles.example.json to config/local-only/profiles.json and fill in your values.
+config/local-only/
+config/profiles.json
+
+# -----------------------------
+# OS files
+# -----------------------------
+
+.DS_Store
+Thumbs.db
+
+# -----------------------------
+# Generated analysis output
+# -----------------------------
+
+output/*
+!output/.gitkeep
+bundles/
+*.zip
+*.7z
+
+# -----------------------------
+# Local external/reference material
+# -----------------------------
+
+.tools/
+rpg_sources/
+java/lib/
+
+# -----------------------------
+# Local planning
+# -----------------------------
+
+.local/
+.local-roadmap/

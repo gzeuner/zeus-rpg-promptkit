@@ -1,0 +1,255 @@
+{
+  "qa": {
+    "qaMode": false,
+    "qaStrict": "LENIENT",
+    "reportFormat": "markdown",
+    "enabledValidators": [],
+    "disabledValidators": [
+      "qa-test-precondition-validation",
+      "qa-regression-risk-analyzer",
+      "qa-sql-consistency-validator",
+      "qa-ibm-i-platform-checker"
+    ]
+  },
+  "contextOptimizer": {
+    "maxTables": 40,
+    "maxProgramCalls": 40,
+    "maxCopyMembers": 20,
+    "maxSQLStatements": 30,
+    "maxSourceSnippets": 40,
+    "maxSnippetLines": 20,
+    "softTokenLimit": 10000
+  },
+  "analysisLimits": {
+    "maxProgramDepth": 25,
+    "maxPrograms": 500,
+    "maxNodes": 5000,
+    "maxEdges": 4000,
+    "maxScannedFiles": 500,
+    "maxProgramCallsPerProgram": 200
+  },
+  "testData": {
+    "limit": 50,
+    "maskColumns": ["NAME", "EMAIL", "PHONE"],
+    "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
+    "denyTables": ["MYLIB.AUDITLOG"],
+    "maskRules": [
+      {
+        "table": "CUSTOMERS",
+        "columns": ["PHONE"],
+        "value": "MASKED_PHONE"
+      }
+    ]
+  },
+  "default-shared": {
+    "outputRoot": "${env:ZEUS_OUTPUT_ROOT}",
+    "extensions": [".rpgle", ".sqlrpgle", ".clle", ".clp", ".dds", ".pf", ".lf", ".bnd", ".cpy"],
+    "db": {
+      "host": "${env:ZEUS_DB_HOST}",
+      "url": "${env:ZEUS_DB_URL}",
+      "user": "${env:ZEUS_DB_USER}",
+      "password": "${env:ZEUS_DB_PASSWORD}",
+      "defaultLibrary": "${env:ZEUS_DB_DEFAULT_LIBRARY}",
+      "defaultSchema": "${env:ZEUS_DB_DEFAULT_SCHEMA}"
+    },
+    "dbRoles": {
+      "metadata": {
+        "host": "${env:ZEUS_METADATA_DB_HOST}",
+        "url": "${env:ZEUS_METADATA_DB_URL}",
+        "user": "${env:ZEUS_METADATA_DB_USER}",
+        "password": "${env:ZEUS_METADATA_DB_PASSWORD}",
+        "defaultLibrary": "${env:ZEUS_METADATA_DB_DEFAULT_LIBRARY}",
+        "defaultSchema": "${env:ZEUS_METADATA_DB_DEFAULT_SCHEMA}"
+      },
+      "testData": {
+        "host": "${env:ZEUS_TESTDATA_DB_HOST}",
+        "url": "${env:ZEUS_TESTDATA_DB_URL}",
+        "user": "${env:ZEUS_TESTDATA_DB_USER}",
+        "password": "${env:ZEUS_TESTDATA_DB_PASSWORD}",
+        "defaultLibrary": "${env:ZEUS_TESTDATA_DB_DEFAULT_LIBRARY}",
+        "defaultSchema": "${env:ZEUS_TESTDATA_DB_DEFAULT_SCHEMA}"
+      }
+    },
+    "bridge": {
+      "enabled": false,
+      "mode": "plan-only",
+      "requireConfirmation": true,
+      "allowAutoApprove": false,
+      "auditLog": true,
+      "allowedTargets": {
+        "libraries": [],
+        "sourceFiles": [],
+        "ifsPaths": []
+      },
+      "staging": {
+        "enabled": true,
+        "library": "",
+        "sourceFile": "",
+        "ifsPath": ""
+      },
+      "compile": {
+        "enabled": false,
+        "allowedTemplates": [],
+        "requirePlan": true,
+        "requireApproval": true
+      }
+    }
+  },
+  "default-fetch": {
+    "extends": "default-shared",
+    "fetch": {
+      "host": "${env:ZEUS_FETCH_HOST}",
+      "user": "${env:ZEUS_FETCH_USER}",
+      "password": "${env:ZEUS_FETCH_PASSWORD}",
+      "sourceLibrary": "${env:ZEUS_FETCH_SOURCE_LIBRARY}",
+      "ifsDir": "${env:ZEUS_FETCH_IFS_DIR}",
+      "out": "${env:ZEUS_FETCH_OUT}",
+      "sourceFiles": ["QRPGLESRC", "QSRVSRC", "QCPYSRC", "QCLLESRC", "QCLSRC", "QSQLSRC", "SQLTBLSRC", "SQLVIEWSRC", "SQLIDXSRC", "FORMSRC", "QDDSSRC"],
+      "streamFileCcsid": 1208,
+      "replace": true,
+      "transport": "auto"
+    }
+  },
+  "default-local": {
+    "extends": "default-shared",
+    "sourceRoot": "${env:ZEUS_SOURCE_ROOT}",
+    "workflow": {
+      "outputRoot": "analysis",
+      "defaultPreset": "legacy-rpg-analysis",
+      "analyzeModes": ["documentation", "defect-analysis"],
+      "presets": {
+        "legacy-rpg-analysis": {
+          "steps": ["fetch", "copy", "analyze", "report"]
+        }
+      }
+    }
+  },
+  "default": {
+    "sourceRoot": "./rpg",
+    "outputRoot": "./output",
+    "extensions": [".rpgle", ".rpg", ".sqlrpgle", ".rpgleinc"],
+    "contextOptimizer": {
+      "maxTables": 40,
+      "maxProgramCalls": 40,
+      "maxCopyMembers": 20,
+      "maxSQLStatements": 30,
+      "maxSourceSnippets": 40,
+      "maxSnippetLines": 20
+    },
+    "analysisLimits": {
+      "maxProgramDepth": 15,
+      "maxPrograms": 250
+    }
+  },
+  "modernization-large": {
+    "extends": "default",
+    "outputRoot": "./output-modernization",
+    "analysisLimits": {
+      "maxProgramDepth": 40,
+      "maxPrograms": 1000
+    }
+  },
+  "sample-db2": {
+    "sourceRoot": "./rpg",
+    "outputRoot": "./output",
+    "extensions": [".rpgle", ".rpg"],
+    "tokenBudget": {
+      "documentation": 6000,
+      "error-analysis": 4000,
+      "defect-analysis": 4000,
+      "security": 4000,
+      "modernization": 6000
+    },
+    "db": {
+      "host": "${env:ZEUS_DB_HOST}",
+      "url": "${env:ZEUS_DB_URL}",
+      "user": "${env:ZEUS_DB_USER}",
+      "password": "${env:ZEUS_DB_PASSWORD}",
+      "defaultSchema": "${env:ZEUS_DB_DEFAULT_SCHEMA}"
+    },
+    "dbRoles": {
+      "metadata": {
+        "host": "${env:ZEUS_METADATA_DB_HOST}",
+        "user": "${env:ZEUS_METADATA_DB_USER}",
+        "password": "${env:ZEUS_METADATA_DB_PASSWORD}",
+        "defaultSchema": "${env:ZEUS_METADATA_DB_DEFAULT_SCHEMA}"
+      },
+      "testData": {
+        "host": "${env:ZEUS_TESTDATA_DB_HOST}",
+        "user": "${env:ZEUS_TESTDATA_DB_USER}",
+        "password": "${env:ZEUS_TESTDATA_DB_PASSWORD}",
+        "defaultSchema": "${env:ZEUS_TESTDATA_DB_DEFAULT_SCHEMA}"
+      }
+    },
+    "testData": {
+      "limit": 50,
+      "maskColumns": ["NAME", "EMAIL", "PHONE"],
+      "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
+      "denyTables": ["MYLIB.AUDITLOG"],
+      "maskRules": [
+        {
+          "schema": "MYLIB",
+          "table": "CUSTOMERS",
+          "columns": ["PHONE"],
+          "value": "MASKED_PHONE"
+        }
+      ]
+    }
+  },
+  "sample-fetch": {
+    "fetch": {
+      "host": "${env:ZEUS_FETCH_HOST}",
+      "user": "${env:ZEUS_FETCH_USER}",
+      "password": "${env:ZEUS_FETCH_PASSWORD}",
+      "sourceLib": "${env:ZEUS_FETCH_SOURCE_LIB}",
+      "ifsDir": "${env:ZEUS_FETCH_IFS_DIR}",
+      "out": "${env:ZEUS_FETCH_OUT}",
+      "files": ["QRPGLESRC", "QCPYSRC", "QCLLESRC", "QCLSRC", "QSRVSRC", "QSQLSRC", "QDDSSRC"],
+      "streamFileCcsid": 1208,
+      "replace": true,
+      "transport": "auto"
+    },
+    "workCopy": {
+      "root": "source/",
+      "extension": "txt"
+    },
+    "workflow": {
+      "outputRoot": "analysis",
+      "defaultPreset": "legacy-rpg-analysis",
+      "tables": [
+        {
+          "schema": "MYLIB",
+          "table": "CUSTOMERS"
+        }
+      ],
+      "impact": [
+        {
+          "field": "CUSTOMER_ID",
+          "member": "ORDERPGM"
+        }
+      ],
+      "presets": {
+        "legacy-rpg-analysis": {
+          "steps": ["fetch", "copy", "analyze", "impact", "query-table", "report"]
+        },
+        "security-check": {
+          "steps": ["fetch", "analyze", "report"],
+          "analyzeMode": "security"
+        },
+        "modernization-check": {
+          "steps": ["fetch", "analyze", "report"],
+          "analyzeMode": "modernization"
+        }
+      }
+    },
+    "runtimeContext": {
+      "_comment": "runtimeContext: Laufzeit-Metadaten über das IBM i System — wird von 'zeus doctor' und 'inspect-object' ausgewertet.",
+      "compiledProgramLib": "APPLIB",
+      "activeLibraries": ["APPLIB", "APPDATA"],
+      "journaledTables": [
+        "APPDATA.CUSTOMERS",
+        "APPLIB.CUSTOMERS"
+      ]
+    }
+  }
+}
