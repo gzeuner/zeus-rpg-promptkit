@@ -20,6 +20,7 @@ const {
   resolveFetchConfig,
   resolveBundleConfig,
   resolveWorkflowPresetConfig,
+  validateProfiles,
 } = require('../src/config/runtimeConfig');
 
 function createTempProject(profiles) {
@@ -76,6 +77,47 @@ test('loadProfiles resolves config directory from --config before cwd/config', (
   }
 });
 
+test('loadProfiles applies overlay files in deterministic sorted order', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-runtime-config-overlays-'));
+  const configDir = path.join(tempRoot, 'config');
+  fs.mkdirSync(configDir, { recursive: true });
+  fs.writeFileSync(path.join(configDir, 'profiles.json'), `${JSON.stringify({
+    sample: {
+      sourceRoot: './base-source',
+      outputRoot: './base-output',
+      extensions: ['.rpgle'],
+    },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(configDir, 'profiles.alpha.json'), `${JSON.stringify({
+    sample: {
+      outputRoot: './alpha-output',
+    },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(configDir, 'profiles.beta.json'), `${JSON.stringify({
+    sample: {
+      outputRoot: './beta-output',
+    },
+  }, null, 2)}\n`);
+
+  try {
+    const profiles = loadProfiles({ cwd: tempRoot, env: {} });
+    const metadata = getProfilesMetadata(profiles);
+
+    assert.equal(profiles.sample.sourceRoot, './base-source');
+    assert.equal(profiles.sample.outputRoot, './beta-output');
+    assert.ok(metadata.sourceFileLabel.includes('profiles.alpha.json +'));
+    assert.ok(metadata.sourceFileLabel.includes('profiles.beta.json'));
+    const alphaIndex = metadata.attemptedPaths.findIndex((entry) => entry.endsWith(path.join('config', 'profiles.alpha.json')));
+    const betaIndex = metadata.attemptedPaths.findIndex((entry) => entry.endsWith(path.join('config', 'profiles.beta.json')));
+    assert.ok(alphaIndex >= 0);
+    assert.ok(betaIndex >= 0);
+    assert.ok(alphaIndex < betaIndex);
+    assert.equal(path.basename(metadata.profilePath), 'profiles.json');
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test('resolveProfilesConfigPaths honors ZEUS_CONFIG_DIR when --config is absent', () => {
   const resolved = resolveProfilesConfigPaths({
     cwd: 'C:/workspace/project',
@@ -86,6 +128,22 @@ test('resolveProfilesConfigPaths honors ZEUS_CONFIG_DIR when --config is absent'
 
   assert.equal(resolved.source, 'env');
   assert.equal(resolved.preferredPath.endsWith(path.join('profiles-dir', 'local-only', 'profiles.json')), true);
+});
+
+test('resolveProfilesConfigPaths supports --config with direct JSON file path', () => {
+  const resolved = resolveProfilesConfigPaths({
+    cwd: '/workspace/project',
+    args: {
+      config: './config/custom-profiles.json',
+    },
+    env: {},
+  });
+
+  assert.equal(resolved.source, 'cli');
+  assert.equal(resolved.preferredPath.endsWith(path.join('config', 'custom-profiles.json')), true);
+  assert.equal(resolved.fallbackPath, null);
+  assert.deepEqual(resolved.attemptedPaths, [resolved.preferredPath]);
+  assert.equal(resolved.configDir.endsWith(path.join('config')), true);
 });
 
 test('resolveAnalyzeConfig merges profile settings with global optimizer and test data defaults', () => {
@@ -443,6 +501,22 @@ test('resolveBundleConfig throws for unknown profiles', () => {
   }
 });
 
+test('resolveBundleConfig resolves known profile with default bundle output root', () => {
+  const tempRoot = createTempProject({
+    sample: {
+      outputRoot: './profile-output',
+    },
+  });
+
+  try {
+    const config = resolveBundleConfig({ profile: 'sample' }, { cwd: tempRoot, env: {} });
+    assert.equal(config.sourceOutputRoot, './profile-output');
+    assert.equal(config.bundleOutputRoot, 'bundles');
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test('loadProfiles rejects invalid profile structure', () => {
   const tempRoot = createTempProject({
     broken: {
@@ -571,4 +645,22 @@ test('loadProfiles rejects invalid bridge mode values', () => {
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
+});
+
+test('validateProfiles accepts minimal valid structures and rejects invalid profile shape', () => {
+  assert.doesNotThrow(() => validateProfiles({}));
+  assert.doesNotThrow(() => validateProfiles({
+    default: {
+      sourceRoot: './src',
+    },
+  }));
+
+  assert.throws(
+    () => validateProfiles({
+      broken: {
+        extensions: '.rpgle',
+      },
+    }),
+    /Invalid configuration: profile "broken"\.extensions must be an array of strings/,
+  );
 });
