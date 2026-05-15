@@ -664,3 +664,213 @@ test('validateProfiles accepts minimal valid structures and rejects invalid prof
     /Invalid configuration: profile "broken"\.extensions must be an array of strings/,
   );
 });
+
+test('loadProfiles with --config JSON file path loads only that file (no overlay merge)', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-runtime-config-json-file-'));
+  const configDir = path.join(tempRoot, 'config');
+  fs.mkdirSync(configDir, { recursive: true });
+
+  const directPath = path.join(configDir, 'custom-profiles.json');
+  fs.writeFileSync(directPath, `${JSON.stringify({
+    sample: {
+      sourceRoot: './direct-source',
+      outputRoot: './direct-output',
+    },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(configDir, 'profiles.alpha.json'), `${JSON.stringify({
+    sample: {
+      outputRoot: './overlay-output',
+    },
+  }, null, 2)}\n`);
+
+  try {
+    const profiles = loadProfiles({
+      cwd: tempRoot,
+      env: {},
+      args: {
+        config: './config/custom-profiles.json',
+      },
+    });
+    const metadata = getProfilesMetadata(profiles);
+
+    assert.equal(profiles.sample.sourceRoot, './direct-source');
+    assert.equal(profiles.sample.outputRoot, './direct-output');
+    assert.equal(metadata.profilePath, directPath);
+    assert.deepEqual(metadata.attemptedPaths, [directPath]);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('loadProfiles prefers local-only/profiles.json over config/profiles.json', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-runtime-config-local-only-'));
+  const configDir = path.join(tempRoot, 'config');
+  const localOnlyDir = path.join(configDir, 'local-only');
+  fs.mkdirSync(localOnlyDir, { recursive: true });
+
+  fs.writeFileSync(path.join(configDir, 'profiles.json'), `${JSON.stringify({
+    sample: {
+      sourceRoot: './shared-source',
+      outputRoot: './shared-output',
+    },
+  }, null, 2)}\n`);
+  fs.writeFileSync(path.join(localOnlyDir, 'profiles.json'), `${JSON.stringify({
+    sample: {
+      sourceRoot: './local-source',
+      outputRoot: './local-output',
+    },
+  }, null, 2)}\n`);
+
+  try {
+    const profiles = loadProfiles({ cwd: tempRoot, env: {} });
+    const metadata = getProfilesMetadata(profiles);
+
+    assert.equal(profiles.sample.sourceRoot, './local-source');
+    assert.equal(profiles.sample.outputRoot, './local-output');
+    assert.equal(metadata.profilePath, path.join(localOnlyDir, 'profiles.json'));
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('readWorkflowConfig normalizes workflow preset fields deterministically', () => {
+  const tempRoot = createTempProject({
+    sample: {
+      sourceRoot: './src',
+      workflow: {
+        presets: {
+          release: {
+            steps: [' Analyze ', 'REPORT', 'report'],
+            members: ['orderpgm', ' ORDERPGM ', 'bpgm'],
+            analyzeModes: ['documentation', 'documentation', 'error-analysis'],
+            tables: [{
+              table: ' orders ',
+              schema: ' app ',
+              filter: 'status = "o"',
+            }],
+            impact: [{
+              field: 'customer_id',
+              member: 'orderpgm',
+            }],
+          },
+        },
+      },
+    },
+  });
+
+  try {
+    const profiles = loadProfiles({ cwd: tempRoot, env: {} });
+    const profile = resolveProfile(profiles, 'sample', { env: {} });
+    const preset = resolveWorkflowPresetConfig(profiles, profile, 'release', {});
+
+    assert.deepEqual(preset.steps, ['analyze', 'report']);
+    assert.deepEqual(preset.members, ['BPGM', 'ORDERPGM']);
+    assert.deepEqual(preset.analyzeModes, ['documentation', 'error-analysis']);
+    assert.deepEqual(preset.tables, [{
+      schema: 'APP',
+      table: 'ORDERS',
+      filter: 'STATUS = "O"',
+    }]);
+    assert.deepEqual(preset.impact, [{
+      target: '',
+      field: 'CUSTOMER_ID',
+      program: '',
+      member: 'ORDERPGM',
+    }]);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveProfile expands env placeholders in nested objects and arrays, including missing values', () => {
+  const tempRoot = createTempProject({
+    sample: {
+      db: {
+        host: '${env:ZEUS_DB_HOST}',
+        user: 'USER_${env:ZEUS_DB_USER_SUFFIX}',
+      },
+      testData: {
+        maskColumns: ['EMAIL', '${env:ZEUS_MASK_COLUMN}', '${env:ZEUS_MISSING_COLUMN}'],
+      },
+    },
+  });
+
+  try {
+    const profile = resolveProfile(loadProfiles({ cwd: tempRoot, env: {} }), 'sample', {
+      env: {
+        ZEUS_DB_HOST: 'ibmi.example.com',
+        ZEUS_DB_USER_SUFFIX: 'OPS',
+        ZEUS_MASK_COLUMN: 'PHONE',
+      },
+    });
+
+    assert.equal(profile.db.host, 'ibmi.example.com');
+    assert.equal(profile.db.user, 'USER_OPS');
+    assert.deepEqual(profile.testData.maskColumns, ['EMAIL', 'PHONE', '']);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveProfile merge semantics keep object inheritance and replace arrays', () => {
+  const tempRoot = createTempProject({
+    parent: {
+      extensions: ['.rpg', '.rpgle'],
+      db: {
+        host: 'base-host',
+        user: 'base-user',
+        password: 'base-password',
+      },
+      testData: {
+        maskColumns: ['EMAIL', 'PHONE'],
+      },
+    },
+    child: {
+      extends: 'parent',
+      extensions: ['.sqlrpgle'],
+      db: {
+        user: 'child-user',
+      },
+      testData: {
+        maskColumns: ['SSN'],
+      },
+    },
+  });
+
+  try {
+    const profile = resolveProfile(loadProfiles({ cwd: tempRoot, env: {} }), 'child', { env: {} });
+
+    assert.deepEqual(profile.extensions, ['.sqlrpgle']);
+    assert.deepEqual(profile.db, {
+      host: 'base-host',
+      user: 'child-user',
+      password: 'base-password',
+    });
+    assert.deepEqual(profile.testData.maskColumns, ['SSN']);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveProfile distinguishes null overrides from undefined inherit-through', () => {
+  const profiles = {
+    parent: {
+      db: {
+        host: 'base-host',
+        user: 'base-user',
+      },
+    },
+    child: {
+      extends: 'parent',
+      db: {
+        host: null,
+        user: undefined,
+      },
+    },
+  };
+
+  assert.doesNotThrow(() => validateProfiles(profiles));
+  const resolved = resolveProfile(profiles, 'child', { env: {} });
+  assert.equal(resolved.db.host, null);
+  assert.equal(resolved.db.user, 'base-user');
+});
