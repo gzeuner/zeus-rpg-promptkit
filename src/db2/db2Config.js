@@ -15,6 +15,24 @@ function normalizeIdentifier(value) {
   return String(value || '').trim().toUpperCase();
 }
 
+function normalizeLibraryList(value) {
+  if (value === undefined || value === null || value === false) {
+    return '';
+  }
+
+  const entries = Array.isArray(value)
+    ? value
+    : String(value)
+      .split(/[\s,]+/)
+      .filter(Boolean);
+
+  return entries
+    .map((entry) => normalizeIdentifier(entry))
+    .filter(Boolean)
+    .filter((entry, index, list) => list.indexOf(entry) === index)
+    .join(',');
+}
+
 function resolveDefaultSchema(dbConfig) {
   return normalizeIdentifier(
     (dbConfig && (dbConfig.defaultSchema || dbConfig.defaultLibrary || dbConfig.schema || dbConfig.library)) || '',
@@ -22,8 +40,22 @@ function resolveDefaultSchema(dbConfig) {
 }
 
 function buildJdbcUrl(dbConfig, defaultSchema) {
+  const normalizedDefaultSchema = normalizeIdentifier(defaultSchema);
+  const normalizedLibraryList = normalizeLibraryList(dbConfig && dbConfig.libraryList);
+  const requestedLibraries = normalizedLibraryList || normalizedDefaultSchema;
+
   if (dbConfig && dbConfig.url) {
-    return String(dbConfig.url).trim();
+    const baseUrl = String(dbConfig.url).trim();
+    if (!baseUrl) {
+      return '';
+    }
+    if (!requestedLibraries) {
+      return baseUrl;
+    }
+    if (/(?:^|;)(libraries|library)\s*=/i.test(baseUrl)) {
+      return baseUrl.replace(/(?:^|;)(libraries|library)\s*=[^;]*/i, `;libraries=${requestedLibraries}`);
+    }
+    return `${baseUrl};libraries=${requestedLibraries}`;
   }
 
   const host = dbConfig && dbConfig.host ? String(dbConfig.host).trim() : '';
@@ -32,8 +64,8 @@ function buildJdbcUrl(dbConfig, defaultSchema) {
   }
 
   const parts = [`jdbc:as400://${host}`, 'naming=system'];
-  if (defaultSchema) {
-    parts.push(`libraries=${defaultSchema}`);
+  if (requestedLibraries) {
+    parts.push(`libraries=${requestedLibraries}`);
   }
   return parts.join(';');
 }
@@ -52,6 +84,7 @@ function isDbConfigured(dbConfig) {
 
 module.exports = {
   normalizeIdentifier,
+  normalizeLibraryList,
   resolveDefaultSchema,
   buildJdbcUrl,
   isDbConfigured,

@@ -59,7 +59,7 @@ node cli/zeus.js qa --input ./analysis/my-program --strict STRICT --format jira
 #### Output Jira-ready report:
 
 ```bash
-node cli/zeus.js qa --input ./analysis/my-program --format jira --post-comment --jira-ticket WER-1024
+node cli/zeus.js qa --input ./analysis/my-program --format jira --post-comment --jira-ticket PROJECT
 ```
 
 ### Configuration
@@ -319,7 +319,7 @@ Start with one validator, review results, then enable others:
 ### 5. Post to Jira for Team Collaboration
 
 ```bash
-zeus qa --input ./analysis/my-program --format jira --post-comment --jira-ticket WER-1024
+zeus qa --input ./analysis/my-program --format jira --post-comment --jira-ticket PROJECT
 ```
 
 ## Testing

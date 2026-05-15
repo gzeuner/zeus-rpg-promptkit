@@ -34,6 +34,9 @@ const { runUpsertSql } = require('../src/cli/commands/upsertSqlCommand');
 const { runInspectObject } = require('../src/cli/commands/inspectObjectCommand');
 const { run: runTestRun } = require('../src/cli/commands/testRunCommand');
 const { runBridge } = require('../src/cli/commands/bridgeCommand');
+const { run: runPuiEdit } = require('../src/cli/commands/puiEditCommand');
+const { runSearchSource } = require('../src/cli/commands/searchSourceCommand');
+const { runJoblog } = require('../src/cli/commands/joblogCommand');
 
 function printHelp() {
   console.log('Usage:');
@@ -49,8 +52,10 @@ function printHelp() {
   console.log('  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
   console.log('  zeus [--config <path>] doctor --profile <name> [--show-resolved]');
   console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>]');
-  console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ..." | --file <path>) [--max-rows <n>] [--output table|csv]');
+  console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ..." | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv]');
+  console.log('  zeus [--config <path>] joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>]');
   console.log('  zeus [--config <path>] upsert-sql --profile <name> (--sql "INSERT/UPDATE/DELETE ..." | --file <path>)');
+  console.log('  zeus [--config <path>] search-source --source-root <path> (--search-term <term> | --member <name> | --table <name>) [--file-pattern <glob>] [--case-sensitive] [--max-results <n>]');
   console.log('  zeus [--config <path>] copy-to-workspace --profile <name> [--members <M1,M2,...>] [--force]');
   console.log('  zeus [--config <path>] diff --profile <name> --member <name>');
   console.log('  zeus [--config <path>] field-search --profile <name> --field <name> [--table <name>] [--source <path>] [--source-lib <lib>] [--source-file <file>] [--mode local|remote|xref|all] [--max-results <n>] [--verbose]');
@@ -58,16 +63,35 @@ function printHelp() {
   console.log('  zeus [--config <path>] inspect-object --profile <name> --lib <lib> --name <name> [--type *PGM|*FILE|*SRVPGM|*MODULE] [--journal]');
   console.log('  zeus [--config <path>] test-run <start|capture|show|rollback> --profile <name> [options]');
   console.log('  zeus [--config <path>] bridge <plan|stage|apply|compile-plan|compile-run|report> --profile <name> [options]');
+  console.log('  zeus pui-edit --file <path> --action <roundtrip-check|dump-json|plan|apply|grid-add-column> [--changes-file <path>] [--confirm] [--sfl-record <name>] [--sfl-field "<DDS line>"]');
 }
 
 function parseArgs(argv) {
   const args = { _: [] };
+  const multiValueKeys = new Set(['sfl-field']);
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];
     if (token.startsWith('--')) {
       const key = token.slice(2);
+      if (key === 'liblist') {
+        const values = [];
+        while (argv[i + 1] && !argv[i + 1].startsWith('--')) {
+          values.push(argv[++i]);
+        }
+        args[key] = values.length > 0 ? values : true;
+        continue;
+      }
       const value = argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[++i] : true;
-      args[key] = value;
+      if (multiValueKeys.has(key)) {
+        if (!Object.prototype.hasOwnProperty.call(args, key)) {
+          args[key] = [];
+        } else if (!Array.isArray(args[key])) {
+          args[key] = [args[key]];
+        }
+        args[key].push(value);
+      } else {
+        args[key] = value;
+      }
     } else {
       args._.push(token);
     }
@@ -160,8 +184,18 @@ async function main() {
     return;
   }
 
+  if (command === 'joblog') {
+    await runJoblog(args);
+    return;
+  }
+
   if (command === 'upsert-sql') {
     await runUpsertSql(args);
+    return;
+  }
+
+  if (command === 'search-source') {
+    await runSearchSource(args);
     return;
   }
 
@@ -212,6 +246,11 @@ async function main() {
 
   if (command === 'bridge') {
     await runBridge(args);
+    return;
+  }
+
+  if (command === 'pui-edit') {
+    await runPuiEdit(args);
     return;
   }
 

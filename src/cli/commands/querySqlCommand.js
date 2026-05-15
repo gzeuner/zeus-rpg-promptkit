@@ -48,13 +48,19 @@ async function runQuerySql(args) {
     process.exit(2);
   }
 
-  const { sql, columns, matrix } = execution;
+  const { sql, defaultSchema, columns, matrix } = execution;
 
   if (output === 'csv') {
     process.stdout.write(renderCsv(columns, matrix));
     return;
   }
 
+  if (defaultSchema) {
+    console.log(`Default Schema: ${defaultSchema}`);
+  }
+  if (execution.libraryList && execution.libraryList.length > 0) {
+    console.log(`Library List: ${execution.libraryList.join(', ')}`);
+  }
   console.log(`SQL: ${sql}`);
   console.log('');
 

@@ -26,6 +26,24 @@ const { discoverSchema } = require('../db2/schemaDiscovery');
 
 const DEFAULT_MAX_ROWS = 200;
 
+function normalizeLibraryList(value) {
+  if (value === undefined || value === null || value === false) {
+    return [];
+  }
+
+  const entries = Array.isArray(value)
+    ? value
+    : String(value)
+      .split(/[\s,]+/)
+      .filter(Boolean);
+
+  return Array.from(
+    new Set(
+      entries.map((entry) => validateSqlIdentifier(entry, '--liblist')),
+    ),
+  );
+}
+
 function validateFilterPattern(value) {
   const normalized = String(value || '').trim().toUpperCase();
   if (!normalized) {
@@ -79,6 +97,17 @@ function normalizeOutput(value) {
     return normalized;
   }
   throw new Error('Invalid option: --output must be one of: table, csv');
+}
+
+function validateDefaultSchema(value) {
+  if (!value) return null;
+  return validateSqlIdentifier(String(value).trim(), '--default-schema');
+}
+
+function prependSchemaDirective(sql, schema) {
+  if (!schema) return sql;
+  return `SET CURRENT SCHEMA = '${schema}';
+${sql}`;
 }
 
 function toRowMatrix(columns, rows) {
@@ -205,15 +234,24 @@ function executeQuerySql(args, { cwd = process.cwd() } = {}) {
     throw error;
   }
 
-  const sql = resolveQuerySqlText(args, { cwd });
+  let sql = resolveQuerySqlText(args, { cwd });
   const maxRows = parseMaxRows(args['max-rows']);
   const output = normalizeOutput(args.output);
+  const defaultSchema = validateDefaultSchema(args['default-schema']);
+  const libraryList = normalizeLibraryList(args.liblist);
   const config = resolveAnalyzeConfig(args, { cwd });
   const dbConfig = requireDbConfig(config);
+  const effectiveDbConfig = libraryList.length > 0
+    ? { ...dbConfig, libraryList: libraryList.join(',') }
+    : dbConfig;
+
+  if (defaultSchema) {
+    sql = prependSchemaDirective(sql, defaultSchema);
+  }
 
   validateReadOnlySql(sql);
   const result = runReadOnlyDb2Query({
-    dbConfig,
+    dbConfig: effectiveDbConfig,
     query: sql,
     maxRows,
   });
@@ -222,9 +260,11 @@ function executeQuerySql(args, { cwd = process.cwd() } = {}) {
   return {
     config,
     sql,
+    defaultSchema,
+    libraryList,
     maxRows,
     output,
-    dbConfig,
+    dbConfig: effectiveDbConfig,
     columns,
     rows: result.rows || [],
     rowCount: Number(result.rowCount || (result.rows || []).length || 0),
@@ -239,7 +279,10 @@ module.exports = {
   executeQueryTable,
   normalizeOutput,
   parseMaxRows,
+  prependSchemaDirective,
   resolveQuerySqlText,
   toRowMatrix,
+  normalizeLibraryList,
+  validateDefaultSchema,
   validateFilterPattern,
 };
