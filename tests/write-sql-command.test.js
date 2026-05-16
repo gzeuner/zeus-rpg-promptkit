@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { validateWriteSql } = require('../src/cli/commands/upsertSqlCommand');
+const { validateWriteSql } = require('../src/cli/commands/writeSqlCommand');
 
 test('validateWriteSql accepts INSERT/UPDATE/DELETE/MERGE in upsert mode', () => {
   assert.doesNotThrow(() => validateWriteSql('INSERT INTO T (ID) VALUES (1)', { mode: 'upsert-sql' }));
