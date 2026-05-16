@@ -19,12 +19,39 @@ const { resolveAnalyzeConfig, resolveAnalyzeDbConfig, loadProfiles, resolveProfi
 const { isDbConfigured } = require('../../db2/db2Config');
 const { runWriteDb2Query } = require('../../db2/writeQueryService');
 
-const ALLOWED_DML_PATTERN = /^\s*(INSERT|UPDATE|DELETE|MERGE)\s+/i;
+const WRITE_MODES = Object.freeze({
+  'upsert-sql': {
+    command: 'upsert-sql',
+    pattern: /^\s*(INSERT|UPDATE|DELETE|MERGE)\s+/i,
+    accepted: 'INSERT, UPDATE, DELETE, MERGE',
+  },
+  upsert: {
+    command: 'upsert',
+    pattern: /^\s*(INSERT|UPDATE|DELETE|MERGE)\s+/i,
+    accepted: 'INSERT, UPDATE, DELETE, MERGE',
+  },
+  insert: {
+    command: 'insert',
+    pattern: /^\s*INSERT\s+/i,
+    accepted: 'INSERT',
+  },
+  update: {
+    command: 'update',
+    pattern: /^\s*UPDATE\s+/i,
+    accepted: 'UPDATE',
+  },
+});
 
-function validateWriteSql(sql) {
-  if (!ALLOWED_DML_PATTERN.test(sql)) {
+function resolveWriteMode(mode = 'upsert-sql') {
+  const key = String(mode || 'upsert-sql').trim().toLowerCase();
+  return WRITE_MODES[key] || WRITE_MODES['upsert-sql'];
+}
+
+function validateWriteSql(sql, { mode = 'upsert-sql' } = {}) {
+  const writeMode = resolveWriteMode(mode);
+  if (!writeMode.pattern.test(sql)) {
     throw new Error(
-      'upsert-sql only accepts DML statements: INSERT, UPDATE, DELETE, MERGE. ' +
+      `${writeMode.command} only accepts DML statements: ${writeMode.accepted}. ` +
       'Use query-sql for SELECT statements.'
     );
   }
@@ -44,12 +71,14 @@ function resolveSqlText(args, { cwd = process.cwd() } = {}) {
   if (args.sql && String(args.sql).trim()) {
     return String(args.sql).trim();
   }
-  const error = new Error('Missing required option: --sql "INSERT ..." or --file <path>');
+  const error = new Error('Missing required option: --sql "<DML ...>" or --file <path>');
   error.code = 'SQL_REQUIRED';
   throw error;
 }
 
-async function runUpsertSql(args) {
+async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
+  const writeMode = resolveWriteMode(mode);
+
   if (!args.profile || !String(args.profile).trim()) {
     console.error('Missing required option: --profile <name>');
     process.exit(2);
@@ -62,7 +91,7 @@ async function runUpsertSql(args) {
     if (profile && profile.productionSystem) {
       console.error('');
       console.error('  *** FEHLER: Dieses Profil ist als productionSystem=true markiert!      ***');
-      console.error('  *** upsert-sql verweigert Write-Operationen auf Produktionssystemen.   ***');
+      console.error(`  *** ${writeMode.command} verweigert Write-Operationen auf Produktionssystemen.   ***`);
       console.error('  *** Bitte SQL manuell in ACS ausführen.                                ***');
       console.error('');
       process.exit(3);
@@ -82,7 +111,7 @@ async function runUpsertSql(args) {
   }
 
   try {
-    validateWriteSql(sql);
+    validateWriteSql(sql, { mode });
   } catch (err) {
     console.error(err.message);
     process.exit(2);
@@ -109,4 +138,16 @@ async function runUpsertSql(args) {
   console.log(`${result.rowsAffected} row(s) affected`);
 }
 
-module.exports = { runUpsertSql };
+async function runUpsertSql(args) {
+  await runWriteSql(args, { mode: 'upsert-sql' });
+}
+
+async function runInsertSql(args) {
+  await runWriteSql(args, { mode: 'insert' });
+}
+
+async function runUpdateSql(args) {
+  await runWriteSql(args, { mode: 'update' });
+}
+
+module.exports = { runUpsertSql, runInsertSql, runUpdateSql, validateWriteSql, resolveWriteMode };
