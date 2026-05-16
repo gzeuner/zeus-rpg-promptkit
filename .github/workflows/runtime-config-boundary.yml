@@ -1,0 +1,29 @@
+name: Runtime Config Boundary
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  runtime-config-boundary:
+    name: Runtime Config Boundary Guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run runtime-config boundary tests
+        run: node --test tests/runtime-config-boundary.test.js
