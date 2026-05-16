@@ -255,6 +255,9 @@ zeus <command> [options]
 | `generate-checklist` | erzeugt Deployment-Checklisten |
 | `query-table` | liest DB2-Tabellenmetadaten |
 | `query-sql` | führt read-only SQL aus |
+| `upsert` | führt DML aus (`INSERT`/`UPDATE`/`DELETE`/`MERGE`) mit Produktionsschutz |
+| `insert` | führt ausschließlich `INSERT`-SQL aus |
+| `update` | führt ausschließlich `UPDATE`-SQL aus |
 | `field-search` | sucht Feld-/Tabellenzugriffe lokal, remote oder per SQL-Xref |
 | `serve` | startet die lokale Browser-UI |
 | `diff` | vergleicht lokales Member mit IBM i-Version |
@@ -768,6 +771,9 @@ zeus <command> [options]
 | `generate-checklist` | creates deployment checklists |
 | `query-table` | reads DB2 table metadata |
 | `query-sql` | executes read-only SQL |
+| `upsert` | executes DML (`INSERT`/`UPDATE`/`DELETE`/`MERGE`) with production guardrails |
+| `insert` | executes `INSERT` SQL only |
+| `update` | executes `UPDATE` SQL only |
 | `field-search` | searches field/table usage locally, remotely or via SQL xref |
 | `serve` | starts the local browser UI |
 | `diff` | compares a local member with the IBM i version |
