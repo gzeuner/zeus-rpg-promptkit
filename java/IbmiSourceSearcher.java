@@ -1,6 +1,6 @@
 
 /*
-Copyright 2026 Zeus PromptKit Contributors
+Copyright 2026 gzeuner - tiny-tool.de
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
