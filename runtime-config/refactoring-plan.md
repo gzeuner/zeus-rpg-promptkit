@@ -1,4 +1,4 @@
-# Runtime Config Refactoring Plan (Konsolidiert, Stand: 2026-05-15)
+# Runtime Config Refactoring Plan (Konsolidiert, Stand: 2026-05-16)
 
 ## Kontext
 
@@ -197,6 +197,55 @@ bleibt zentrale stabile Export-Fassade.
 
 Schritt A bis C wurden verhaltensgleich als interne Extraktionen umgesetzt.
 Die nachfolgenden Schrittbeschreibungen bleiben als Referenz des umgesetzten Zuschnitts erhalten.
+
+---
+
+## Phase 3 – Boundary-Guard gegen Direktimporte (abgeschlossen)
+
+Zusätzlich abgesichert in:
+
+`tests/runtime-config.test.js`
+
+Abgedeckt:
+
+- keine Direktimporte von internen Runtime-Config-Modulen außerhalb `src/config/`
+- Scan über `src/`, `cli/`, `tests/` auf:
+  - `runtimeConfigCore`
+  - `runtimeConfigDefaults`
+  - `runtimeConfigEnv`
+  - `runtimeConfigProfiles`
+  - `runtimeConfigResolver`
+  - `runtimeConfigValidation`
+  - `runtimeConfigWorkflow`
+- harte Test-Fehlerausgabe mit Datei/Zeile bei Boundary-Verletzungen
+
+Verifikation:
+
+- `node --test tests/runtime-config.test.js`
+- `npm test`
+
+Beide vollständig grün.
+
+---
+
+## Phase 4 – Facade-API-Guard (abgeschlossen)
+
+Zusätzlich abgesichert in:
+
+`tests/runtime-config.test.js`
+
+Abgedeckt:
+
+- stabile öffentliche Exportfläche von `src/config/runtimeConfig.js`
+- expliziter Test der exportierten Schlüssel gegen erwarteten öffentlichen Vertrag
+- verhindert versehentliches Entfernen/Umbenennen von Public Exports
+
+Verifikation:
+
+- `node --test tests/runtime-config.test.js`
+- `npm test`
+
+Beide vollständig grün.
 
 ---
 
