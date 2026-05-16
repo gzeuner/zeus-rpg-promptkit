@@ -19,8 +19,8 @@
 
 ## Documentation Map
 
-- Canonical documentation index: [`docs/index.md`](/home/zeus/dev/zeus-rpg-promptkit/docs/index.md)
-- Authoritative tool reference for all AI assistants: [`docs/tool-catalog.md`](/home/zeus/dev/zeus-rpg-promptkit/docs/tool-catalog.md)
+- Canonical documentation index: [`docs/index.md`](docs/index.md)
+- Authoritative tool reference for all AI assistants: [`docs/tool-catalog.md`](docs/tool-catalog.md)
 
 The documentation is now organized by domains (`ai/`, `cli/`, `quickstart/`, `workflows/`, `safety/`, `internal/`, `viewer/`).
 `docs/tool-catalog.md` is the binding command reference and safety baseline for GPT, Claude, Grok, Copilot, and other assistants.
