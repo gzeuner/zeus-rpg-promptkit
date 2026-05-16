@@ -273,4 +273,4 @@ Systems:
 - **SYS_TEST** — test system, active development, profile `sample-dev`
 - **SYS_PROD** — production system, metadata read-only, NEVER write
 
-Session prompt template: `docs/ai-session-prompt.md`
+Session prompt template: `docs/ai/session-prompt.md`
