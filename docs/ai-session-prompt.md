@@ -52,7 +52,7 @@ cd C:\Users\Developer.User\Tools\zeus-rpg-promptkit
 
 Danach Verbindung prüfen:
 ```powershell
-node cli/zeus.js doctor --profile sample-ase --show-resolved
+node cli/zeus.js doctor --profile sample-dev --show-resolved
 ```
 
 Erwartetes Ergebnis: Alle kritischen Checks [PASS], CURRENT_SERVER = SYS_TEST.
@@ -62,15 +62,15 @@ Erwartetes Ergebnis: Alle kritischen Checks [PASS], CURRENT_SERVER = SYS_TEST.
 **SQL-Abfragen (read-only):**
 ```powershell
 # Inline SQL
-node cli/zeus.js query-sql --profile sample-ase --sql "SELECT ..." --output table
+node cli/zeus.js query-sql --profile sample-dev --sql "SELECT ..." --output table
 
 # SQL aus Datei (Kommentar-Header erlaubt)
-node cli/zeus.js query-sql --profile sample-ase --file ./test-scripts/sql/meine-abfrage.sql --output table
+node cli/zeus.js query-sql --profile sample-dev --file ./test-scripts/sql/meine-abfrage.sql --output table
 ```
 
 **Tabellen-Metadaten:**
 ```powershell
-node cli/zeus.js query-table --profile sample-ase --table APP_TABLE_00 --schema APPDATA
+node cli/zeus.js query-table --profile sample-dev --table APP_TABLE_00 --schema APPDATA
 ```
 
 **IBM i CL-Kommandos (via Java IbmiCommandRunner — read-only bevorzugen):**
@@ -102,33 +102,33 @@ SELECT JOB_NAME, JOB_STATUS, JOB_TYPE FROM QSYS2.ACTIVE_JOB_INFO WHERE CURRENT_U
 **Feld- und Tabellenquerverweise suchen (`field-search`):**
 ```powershell
 # Lokal — in bereits gefetchten Quellen (sehr schnell, kein IBM i-Zugriff)
-node cli/zeus.js field-search --profile sample-ase --field FIELD_ALPHA --table APP_TABLE --source ./analysis/zeus-fetch --mode local
+node cli/zeus.js field-search --profile sample-dev --field FIELD_ALPHA --table APP_TABLE --source ./analysis/zeus-fetch --mode local
 
 # Remote — alle Member direkt auf IBM i durchsuchen (langsamer, vollständig)
-node cli/zeus.js field-search --profile sample-ase --field FIELD_ALPHA --table APP_TABLE --source-lib ASE --source-file QRPGLESRC --mode remote
+node cli/zeus.js field-search --profile sample-dev --field FIELD_ALPHA --table APP_TABLE --source-lib LIBDEV --source-file QRPGLESRC --mode remote
 
 # Alles kombiniert
-node cli/zeus.js field-search --profile sample-ase --field FIELD_ALPHA --table APP_TABLE --source ./analysis/zeus-fetch --source-lib ASE --mode all
+node cli/zeus.js field-search --profile sample-dev --field FIELD_ALPHA --table APP_TABLE --source ./analysis/zeus-fetch --source-lib LIBDEV --mode all
 ```
 > Ausschließlich lesend — lokal via `fs.readFileSync`, remote via JT400 `IFSFileInputStream`.
 > Ausgabe zeigt automatisch `[READS:TABELLE]` / `[WRITES:TABELLE]` Kontext.
 
 **RPG-Quellcode analysieren:**
 ```powershell
-node cli/zeus.js analyze --source ./analysis/zeus-fetch/QRPGLESRC --program APPPGM --profile sample-ase --out ./output
-node cli/zeus.js analyze --source ./analysis/zeus-fetch/QRPGLESRC --program APPPGM --profile sample-ase --out ./output --optimize-context
+node cli/zeus.js analyze --source ./analysis/zeus-fetch/QRPGLESRC --program APPPGM --profile sample-dev --out ./output
+node cli/zeus.js analyze --source ./analysis/zeus-fetch/QRPGLESRC --program APPPGM --profile sample-dev --out ./output --optimize-context
 ```
 
 **Fetch von IBM i (nur mit expliziter User-Freigabe):**
 ```powershell
 # ⚠ Fragt User vorher, ob Quellen neu geholt werden sollen
-node cli/zeus.js fetch --profile sample-ase
+node cli/zeus.js fetch --profile sample-dev
 ```
 
 ### Systemlandschaft (wichtig!)
 - **SYS_TEST** = IBM i Testsystem → Abfragen und Diagnose erlaubt, schreibende Aktionen nur mit Freigabe
 - **SYS_PROD** = IBM i Produktionssystem → ausschließlich READ-ONLY, NIEMALS schreibend anfassen
-- **Profil** `sample-ase` → Standard für aktive Entwicklung (Libraries: ASE, APPLIB, APPDATA)
+- **Profil** `sample-dev` → Standard für aktive Entwicklung (Libraries: LIBDEV, APPLIB, APPDATA)
 - **Profil** `sample-source` → Produktionsnahe Quelldaten (Library SOURCEN)
 
 **Grundregel:** Code wird lokal im Workspace bearbeitet, nie direkt auf IBM i.
@@ -212,7 +212,7 @@ $env:ZEUS_DB_HOST    # sollte: SYS_TEST
 $env:ZEUS_DB_USER       # sollte: Dein IBM i User
 
 # Verbindung validieren
-node cli/zeus.js doctor --profile sample-ase --show-resolved
+node cli/zeus.js doctor --profile sample-dev --show-resolved
 ```
 
 Geladen werden:
@@ -225,8 +225,8 @@ Geladen werden:
 
 | Profil | Source-Library | Zweck |
 |---|---|---|
-| `sample-ase` | ASE, APPLIB, APPDATA | Aktive Entwicklung, laufende Tickets |
-| `sample-objecttest` | APPLIB, APPDATA | Neu entwickelte/geänderte Quellen |
+| `sample-dev` | LIBDEV, APPLIB, APPDATA | Aktive Entwicklung, laufende Tickets |
+| `sample-preprod` | APPLIB, APPDATA | Neu entwickelte/geänderte Quellen |
 | `sample-source` | SOURCEN, APPDATA | Produktionsnahe Quellbasis |
 
 Alle drei Profile nutzen SYS_TEST als Fetch- und DB-Host.

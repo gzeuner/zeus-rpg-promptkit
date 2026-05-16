@@ -1,7 +1,7 @@
 -- PROJECT environment discovery queries
 -- Purpose:
---   1. Confirm source-file presence in BIB, APPLIB, ASE
---   2. Inspect application files in APPDATA, APPLIB, ASE
+--   1. Confirm source-file presence in BIB, APPLIB, LIBDEV
+--   2. Inspect application files in APPDATA, APPLIB, LIBDEV
 --   3. Discover schema, columns, and likely ticket-relevant fields
 -- Usage:
 --   Replace the placeholder literals before execution.
@@ -13,7 +13,7 @@ SELECT TABLE_SCHEMA,
        SYSTEM_TABLE_SCHEMA,
        SYSTEM_TABLE_NAME
 FROM QSYS2.SYSTABLES
-WHERE TABLE_SCHEMA IN ('BIB', 'APPLIB', 'ASE')
+WHERE TABLE_SCHEMA IN ('BIB', 'APPLIB', 'LIBDEV')
   AND TABLE_NAME IN (
     'QRPGLESRC',
     'QCPYSRC',
@@ -33,7 +33,7 @@ SELECT TABLE_SCHEMA,
        SYSTEM_TABLE_SCHEMA,
        SYSTEM_TABLE_NAME
 FROM QSYS2.SYSTABLES
-WHERE TABLE_SCHEMA IN ('APPDATA', 'APPLIB', 'ASE')
+WHERE TABLE_SCHEMA IN ('APPDATA', 'APPLIB', 'LIBDEV')
   AND TABLE_NAME NOT IN (
     'QRPGLESRC',
     'QCPYSRC',
@@ -45,7 +45,7 @@ WHERE TABLE_SCHEMA IN ('APPDATA', 'APPLIB', 'ASE')
   )
 ORDER BY TABLE_SCHEMA, TABLE_NAME;
 
--- 3) Locate a concrete file or table across APPDATA, APPLIB, ASE.
+-- 3) Locate a concrete file or table across APPDATA, APPLIB, LIBDEV.
 --    Replace 'MEINTABLE' with the object you are investigating.
 SELECT TABLE_SCHEMA,
        TABLE_NAME,
@@ -54,7 +54,7 @@ SELECT TABLE_SCHEMA,
        SYSTEM_TABLE_NAME
 FROM QSYS2.SYSTABLES
 WHERE TABLE_NAME = 'MEINTABLE'
-  AND TABLE_SCHEMA IN ('APPDATA', 'APPLIB', 'ASE')
+  AND TABLE_SCHEMA IN ('APPDATA', 'APPLIB', 'LIBDEV')
 ORDER BY TABLE_SCHEMA, TABLE_NAME;
 
 -- 4) Column shape for one concrete table or file.
@@ -82,7 +82,7 @@ SELECT TABLE_SCHEMA,
        LENGTH,
        COLUMN_TEXT
 FROM QSYS2.SYSCOLUMNS
-WHERE TABLE_SCHEMA IN ('APPDATA', 'APPLIB', 'ASE')
+WHERE TABLE_SCHEMA IN ('APPDATA', 'APPLIB', 'LIBDEV')
   AND (
     COLUMN_NAME LIKE '%STATUS%'
     OR COLUMN_NAME LIKE '%NR%'
@@ -108,7 +108,7 @@ FROM TABLE(
     OBJECT_TYPE_LIST => '*FILE'
   )
 )
-WHERE OBJLIB IN ('BIB', 'APPLIB', 'ASE')
+WHERE OBJLIB IN ('BIB', 'APPLIB', 'LIBDEV')
 ORDER BY OBJLIB, OBJNAME;
 
 -- 7) Program object lookup across the known libraries.
@@ -127,7 +127,7 @@ FROM TABLE(
     OBJECT_TYPE_LIST => '*PGM'
   )
 )
-WHERE OBJLIB IN ('BIB', 'APPLIB', 'ASE')
+WHERE OBJLIB IN ('BIB', 'APPLIB', 'LIBDEV')
 ORDER BY OBJLIB, OBJNAME;
 
 -- 8) Quick schema discovery when only the table name is known.
