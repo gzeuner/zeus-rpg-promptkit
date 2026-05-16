@@ -17,6 +17,16 @@
 
 ---
 
+## Documentation Map
+
+- Canonical documentation index: [`docs/index.md`](/home/zeus/dev/zeus-rpg-promptkit/docs/index.md)
+- Authoritative tool reference for all AI assistants: [`docs/tool-catalog.md`](/home/zeus/dev/zeus-rpg-promptkit/docs/tool-catalog.md)
+
+The documentation is now organized by domains (`ai/`, `cli/`, `quickstart/`, `workflows/`, `safety/`, `internal/`, `viewer/`).
+`docs/tool-catalog.md` is the binding command reference and safety baseline for GPT, Claude, Grok, Copilot, and other assistants.
+
+---
+
 ## Deutsch
 
 ### Was ist Zeus RPG PromptKit?
@@ -360,7 +370,7 @@ Für KI-gestützte IBM i-Arbeit sind zwei Prompt-Dateien wichtig:
 
 | Datei | Wann verwenden | Zweck |
 |---|---|---|
-| `docs/ai-session-prompt.md` | beim Start einer konkreten Ticket-Session | macht die KI zum IBM i-Analyseassistenten |
+| `docs/ai/session-prompt.md` | beim Start einer konkreten Ticket-Session | macht die KI zum IBM i-Analyseassistenten |
 | `.github/copilot-instructions.md` | automatisch durch GitHub Copilot im Repo | Regeln für die Weiterentwicklung von Zeus selbst |
 
 Typischer Einstieg für eine Ticket-Session:
@@ -863,7 +873,7 @@ Two prompt files are relevant for AI-assisted IBM i work:
 
 | File | When to use | Purpose |
 |---|---|---|
-| `docs/ai-session-prompt.md` | at the start of a concrete ticket session | turns the AI into an IBM i analysis assistant |
+| `docs/ai/session-prompt.md` | at the start of a concrete ticket session | turns the AI into an IBM i analysis assistant |
 | `.github/copilot-instructions.md` | automatically loaded by GitHub Copilot in this repo | rules for developing Zeus itself |
 
 Typical ticket-session starter:

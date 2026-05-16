@@ -18,7 +18,7 @@ In practice the product shape is:
 2. Keep the real behavior in the tools.
 3. Use normal chat as the default entry point.
 
-For a faster operational checklist, see [docs/quickstart-5-minutes.md](docs/quickstart-5-minutes.md).
+For a faster operational checklist, see [`../quickstart/5-minutes.md`](../quickstart/5-minutes.md).
 
 For rollout validation, see [docs/agent-validation-checklist.md](docs/agent-validation-checklist.md).
 

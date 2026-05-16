@@ -4,7 +4,7 @@ This document explains the Zeus RPG Toolkit VS Code integration for direct Zeus 
 
 For the recommended product shape and the fastest agentic-coding path, start with [docs/agentic-coding.md](docs/agentic-coding.md).
 
-Use [docs/quickstart-5-minutes.md](docs/quickstart-5-minutes.md) for the shortest onboarding path.
+Use [`../quickstart/5-minutes.md`](../quickstart/5-minutes.md) for the shortest onboarding path.
 
 Use [docs/agent-validation-checklist.md](docs/agent-validation-checklist.md) after changing extension, prompt, or agent integration.
 
@@ -362,4 +362,3 @@ node cli/zeus.js serve --source-output-root ./output --port 4782
 5. Ask the agent to analyze a program — verify it asks for confirmation before executing.
 6. Run `Zeus: Generate AI Context`, then `Zeus: Copy AI Prompt to Clipboard` — verify `ai_prompt.md`, `context.json`, and `safety_rules.md`.
 7. Confirm no secrets appear in output channel, tool results, or generated files.
-
