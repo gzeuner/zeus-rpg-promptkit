@@ -20,7 +20,10 @@
     "test:contract": "node --test tests/analyze-run-manifest.test.js tests/bundle-manifest.test.js tests/fetch-readability-contract.test.js tests/ai-knowledge-projection.test.js tests/task-oriented-analysis-index.test.js tests/workflow-presets.test.js",
     "test:smoke": "node --test tests/v1-smoke.test.js tests/safe-sharing.test.js tests/reproducible-output.test.js",
     "test:corpus": "node --test tests/scanner-corpus.test.js",
-    "test:benchmark": "node --test tests/analyze-benchmark.test.js"
+    "test:benchmark": "node --test tests/analyze-benchmark.test.js",
+    "demo:run": "bash ./examples/demo-rpg-mini-system/scripts/run-demo.sh",
+    "demo:prompt": "node ./examples/demo-rpg-mini-system/scripts/build-ai-session-prompt.mjs",
+    "demo:safety-check": "node ./examples/demo-rpg-mini-system/scripts/safety-check.mjs"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",

@@ -1,0 +1,118 @@
+{
+  "program": "PROGRAM_100",
+  "nodes": [
+    {
+      "id": "ETCH",
+      "type": "TABLE",
+      "label": "ETCH"
+    },
+    {
+      "id": "FILE_100",
+      "type": "TABLE",
+      "label": "FILE_100"
+    },
+    {
+      "id": "FILE_200",
+      "type": "TABLE",
+      "label": "FILE_200"
+    },
+    {
+      "id": "MODULE_PROGRAM_100",
+      "type": "MODULE",
+      "label": "PROGRAM_100"
+    },
+    {
+      "id": "MODULE_PROGRAM_200",
+      "type": "MODULE",
+      "label": "PROGRAM_200"
+    },
+    {
+      "id": "MODULE_PROGRAM_300",
+      "type": "MODULE",
+      "label": "PROGRAM_300"
+    },
+    {
+      "id": "PROGRAM_100",
+      "type": "PROGRAM",
+      "label": "PROGRAM_100"
+    },
+    {
+      "id": "PROGRAM_200",
+      "type": "PROGRAM",
+      "label": "PROGRAM_200"
+    },
+    {
+      "id": "PROGRAM_300",
+      "type": "PROGRAM",
+      "label": "PROGRAM_300"
+    },
+    {
+      "id": "TABLE_100",
+      "type": "TABLE",
+      "label": "TABLE_100"
+    }
+  ],
+  "edges": [
+    {
+      "from": "PROGRAM_100",
+      "to": "ETCH",
+      "type": "USES_TABLE"
+    },
+    {
+      "from": "PROGRAM_100",
+      "to": "FILE_100",
+      "type": "USES_TABLE"
+    },
+    {
+      "from": "PROGRAM_100",
+      "to": "FILE_200",
+      "type": "USES_TABLE"
+    },
+    {
+      "from": "PROGRAM_100",
+      "to": "MODULE_PROGRAM_100",
+      "type": "HAS_MODULE"
+    },
+    {
+      "from": "PROGRAM_100",
+      "to": "MODULE_PROGRAM_200",
+      "type": "HAS_MODULE"
+    },
+    {
+      "from": "PROGRAM_100",
+      "to": "MODULE_PROGRAM_300",
+      "type": "HAS_MODULE"
+    },
+    {
+      "from": "PROGRAM_100",
+      "to": "PROGRAM_100",
+      "type": "CALLS_PROGRAM"
+    },
+    {
+      "from": "PROGRAM_100",
+      "to": "PROGRAM_200",
+      "type": "CALLS_PROGRAM"
+    },
+    {
+      "from": "PROGRAM_100",
+      "to": "PROGRAM_300",
+      "type": "CALLS_PROGRAM"
+    },
+    {
+      "from": "PROGRAM_100",
+      "to": "TABLE_100",
+      "type": "USES_TABLE"
+    }
+  ],
+  "summary": {
+    "nodeCount": 10,
+    "edgeCount": 10,
+    "tableCount": 4,
+    "programCallCount": 3,
+    "copyMemberCount": 0,
+    "moduleCount": 3,
+    "serviceProgramCount": 0,
+    "bindingDirectoryCount": 0,
+    "bindEdgeCount": 3
+  }
+}

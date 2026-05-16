@@ -1,0 +1,1531 @@
+{
+  "schemaVersion": 1,
+  "kind": "analysis-task-index",
+  "generatedAt": "2000-01-01T00:00:00.000Z",
+  "program": "PROGRAM_100",
+  "sourceRoot": "SOURCE_ROOT",
+  "selectedMode": "documentation",
+  "derivedModeSettings": {
+    "name": "documentation",
+    "title": "Documentation",
+    "description": "Generate prompt-ready technical documentation grounded in the canonical and AI projections.",
+    "autoOptimizeContext": true,
+    "promptTemplates": [
+      "documentation"
+    ],
+    "workflowKeys": [
+      "documentation"
+    ],
+    "primaryArtifacts": [
+      "analysis-index.json",
+      "ai-knowledge.json",
+      "report.md",
+      "ai_prompt_documentation.md"
+    ],
+    "reviewWorkflow": {
+      "intendedAudience": [
+        "New engineers",
+        "Technical writers",
+        "Maintainers assembling onboarding or system orientation notes"
+      ],
+      "keyQuestionsAnswered": [
+        "What does the program do at a high level?",
+        "Which tables, calls, and source-backed evidence matter most for onboarding?",
+        "Which generated artifacts are most useful for documentation handoff?"
+      ],
+      "expectedDecisions": [
+        "Decide whether the generated documentation is sufficient for onboarding or needs deeper analysis.",
+        "Choose the next artifact or subsystem to document in more detail."
+      ],
+      "interpretationGuidance": [
+        "Prefer ai_prompt_documentation.md for narrative synthesis and use report.md or ai-knowledge.json to verify claims.",
+        "Treat missing evidence highlights as a sign that the workflow is broad orientation, not a complete design review."
+      ],
+      "requiredInputs": [
+        "A local IBM i source tree and selected root program.",
+        "Prompt-ready AI knowledge projection with documentation workflow evidence.",
+        "Report and prompt artifacts for narrative handoff."
+      ],
+      "recommendedOutputs": [
+        {
+          "path": "report.md",
+          "purpose": "Broad run summary with source-backed counts and notes."
+        },
+        {
+          "path": "ai_prompt_documentation.md",
+          "purpose": "Documentation-first prompt for onboarding or explanation."
+        },
+        {
+          "path": "ai-knowledge.json",
+          "purpose": "Prompt-ready evidence projection for follow-up AI tasks."
+        }
+      ]
+    },
+    "effectiveOptimizeContext": true
+  },
+  "selectedPreset": null,
+  "summary": {
+    "taskCount": 9,
+    "selectedTaskCount": 1,
+    "generatedArtifactCount": 15,
+    "applicablePromptCount": 14,
+    "selectedPresetCount": 0
+  },
+  "guidedModes": [
+    {
+      "name": "architecture",
+      "title": "Architecture Review",
+      "description": "Focus on dependency structure, semantic relationships, and architecture-facing documentation artifacts.",
+      "autoOptimizeContext": true,
+      "promptTemplates": [
+        "documentation",
+        "architecture-review"
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "IBM i architects",
+          "Platform maintainers",
+          "Engineers reviewing structural boundaries before change"
+        ],
+        "keyQuestionsAnswered": [
+          "What are the dominant program, table, and copy-member dependencies?",
+          "Which unresolved edges or ambiguous calls still weaken the architecture picture?",
+          "Which artifacts should anchor a structure-first architecture review?"
+        ],
+        "expectedDecisions": [
+          "Choose the next subsystem or dependency path for deeper review.",
+          "Decide whether the current architecture evidence is sufficient for planned change work."
+        ],
+        "interpretationGuidance": [
+          "Use architecture-report.md together with dependency and call-tree artifacts; summaries alone can hide structural context.",
+          "Treat unresolved calls or ambiguous source resolution as follow-up work before making strong architecture claims."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Canonical semantic analysis, AI knowledge projection, and dependency graph artifacts.",
+          "The documentation prompt contract for architecture-facing narrative output."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "architecture-report.md",
+            "purpose": "Narrative architecture summary for review and sharing."
+          },
+          {
+            "path": "dependency-graph.md",
+            "purpose": "Single-program dependency structure for quick inspection."
+          },
+          {
+            "path": "program-call-tree.md",
+            "purpose": "Cross-program call chain view for boundary tracing."
+          },
+          {
+            "path": "ai_prompt_documentation.md",
+            "purpose": "AI-assisted architecture walkthrough grounded in the workflow evidence."
+          }
+        ]
+      },
+      "selected": false
+    },
+    {
+      "name": "documentation",
+      "title": "Documentation",
+      "description": "Generate prompt-ready technical documentation grounded in the canonical and AI projections.",
+      "autoOptimizeContext": true,
+      "promptTemplates": [
+        "documentation"
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "New engineers",
+          "Technical writers",
+          "Maintainers assembling onboarding or system orientation notes"
+        ],
+        "keyQuestionsAnswered": [
+          "What does the program do at a high level?",
+          "Which tables, calls, and source-backed evidence matter most for onboarding?",
+          "Which generated artifacts are most useful for documentation handoff?"
+        ],
+        "expectedDecisions": [
+          "Decide whether the generated documentation is sufficient for onboarding or needs deeper analysis.",
+          "Choose the next artifact or subsystem to document in more detail."
+        ],
+        "interpretationGuidance": [
+          "Prefer ai_prompt_documentation.md for narrative synthesis and use report.md or ai-knowledge.json to verify claims.",
+          "Treat missing evidence highlights as a sign that the workflow is broad orientation, not a complete design review."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Prompt-ready AI knowledge projection with documentation workflow evidence.",
+          "Report and prompt artifacts for narrative handoff."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "report.md",
+            "purpose": "Broad run summary with source-backed counts and notes."
+          },
+          {
+            "path": "ai_prompt_documentation.md",
+            "purpose": "Documentation-first prompt for onboarding or explanation."
+          },
+          {
+            "path": "ai-knowledge.json",
+            "purpose": "Prompt-ready evidence projection for follow-up AI tasks."
+          }
+        ]
+      },
+      "selected": true
+    },
+    {
+      "name": "error-analysis",
+      "title": "Error Analysis",
+      "description": "Prioritize risky SQL, error paths, and operational failure signals for troubleshooting.",
+      "autoOptimizeContext": true,
+      "promptTemplates": [
+        "error-analysis"
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Incident responders",
+          "Support engineers",
+          "Developers triaging risky runtime behavior"
+        ],
+        "keyQuestionsAnswered": [
+          "Where are the highest-risk SQL, error-path, and evidence hotspots?",
+          "Which uncertainty markers or weak handling paths need manual validation first?",
+          "Which artifacts best support troubleshooting discussion?"
+        ],
+        "expectedDecisions": [
+          "Choose the highest-priority failure hypothesis to verify.",
+          "Decide whether additional runtime evidence or DB2 context is needed before root-cause work."
+        ],
+        "interpretationGuidance": [
+          "Start with the highest-ranked evidence highlights, then validate against canonical-analysis.json before concluding root cause.",
+          "Treat dynamic or unresolved SQL markers as risk multipliers until verified against source or catalog evidence."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "AI knowledge projection with errorAnalysis workflow evidence.",
+          "Risk markers, SQL semantics, and ranked evidence highlights."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_error_analysis.md",
+            "purpose": "Prompt for structured troubleshooting and risk review."
+          },
+          {
+            "path": "report.md",
+            "purpose": "Human-readable summary of analysis notes and operational risk signals."
+          },
+          {
+            "path": "ai-knowledge.json",
+            "purpose": "Workflow-specific evidence used by error analysis prompts."
+          }
+        ]
+      },
+      "selected": false
+    },
+    {
+      "name": "defect-analysis",
+      "title": "Defect Analysis",
+      "description": "Package evidence for defect hypotheses, trigger conditions, and verification steps.",
+      "autoOptimizeContext": true,
+      "promptTemplates": [
+        "error-analysis",
+        "defect-analysis"
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Developers preparing a dependency or defect risk review",
+          "Release owners",
+          "Technical leads validating blast radius before change"
+        ],
+        "keyQuestionsAnswered": [
+          "Which defects or dependency paths are most likely to cause downstream impact?",
+          "What source-backed evidence supports each risk hypothesis?",
+          "Which artifacts should be shared with reviewers before a change decision?"
+        ],
+        "expectedDecisions": [
+          "Decide whether the change can proceed with current controls or needs more investigation.",
+          "Choose the next verification step for the highest-risk dependency or defect path."
+        ],
+        "interpretationGuidance": [
+          "Use error-analysis and defect-analysis prompts together; one surfaces risk signals and the other organizes decision-oriented hypotheses.",
+          "Treat program-call and table dependencies as review inputs, not proof of production impact, until source evidence is checked."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "AI knowledge projection with risk markers, SQL semantics, and ranked evidence.",
+          "Dependency graph and program-call-tree artifacts for blast-radius review."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_error_analysis.md",
+            "purpose": "Evidence-oriented risk prompt for suspicious behavior and hotspots."
+          },
+          {
+            "path": "ai_prompt_defect_analysis.md",
+            "purpose": "Decision-oriented defect and dependency risk prompt."
+          },
+          {
+            "path": "report.md",
+            "purpose": "Human-readable summary to pair with prompt conclusions."
+          }
+        ]
+      },
+      "selected": false
+    },
+    {
+      "name": "modernization",
+      "title": "Modernization",
+      "description": "Highlight extraction boundaries, change blockers, and evidence-backed modernization candidates.",
+      "autoOptimizeContext": true,
+      "promptTemplates": [
+        "documentation",
+        "architecture-review",
+        "modernization"
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Modernization leads",
+          "IBM i architects",
+          "Engineers planning extraction or refactoring work"
+        ],
+        "keyQuestionsAnswered": [
+          "Which change boundaries look safest to extract or rewrite first?",
+          "What dependencies, native I/O patterns, or SQL semantics block clean modernization?",
+          "Which artifacts best support a modernization readiness review?"
+        ],
+        "expectedDecisions": [
+          "Choose a pilot extraction candidate or defer until prerequisites are addressed.",
+          "Decide which blockers require architecture, data, or integration follow-up before modernization work begins."
+        ],
+        "interpretationGuidance": [
+          "Use ai_prompt_modernization.md for synthesis, then validate proposed seams against architecture-report.md and canonical-analysis.json.",
+          "Treat unresolved calls, dynamic SQL, and mutating native file usage as modernization blockers until reviewed explicitly."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Canonical semantic analysis, AI knowledge projection, and modernization prompt contract.",
+          "Architecture and dependency artifacts that expose extraction boundaries and risky integrations."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_modernization.md",
+            "purpose": "Opinionated modernization review prompt with blockers and candidates."
+          },
+          {
+            "path": "architecture-report.md",
+            "purpose": "Architecture narrative for reviewing seams and dependencies."
+          },
+          {
+            "path": "canonical-analysis.json",
+            "purpose": "Semantic source of truth for validating modernization claims."
+          },
+          {
+            "path": "ai_prompt_documentation.md",
+            "purpose": "Supporting documentation prompt for reviewer context."
+          }
+        ]
+      },
+      "selected": false
+    },
+    {
+      "name": "refactoring",
+      "title": "Refactoring",
+      "description": "Focus on small safe change seams, dependency-aware sequencing, and verification guidance.",
+      "autoOptimizeContext": true,
+      "promptTemplates": [
+        "architecture-review",
+        "refactoring-plan"
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Developers planning local improvements",
+          "Technical leads sequencing safer refactors",
+          "Reviewers validating change boundaries before implementation"
+        ],
+        "keyQuestionsAnswered": [
+          "Which refactoring candidates are small enough to execute safely now?",
+          "Which dependencies or IBM i behaviors constrain sequencing?",
+          "Which evidence should reviewers inspect before approving the first change?"
+        ],
+        "expectedDecisions": [
+          "Choose the first refactoring slice and the verification plan around it.",
+          "Decide whether blockers require more architecture or runtime investigation first."
+        ],
+        "interpretationGuidance": [
+          "Prefer ai_prompt_refactoring_plan.md for sequencing guidance and ai_prompt_architecture_review.md for boundary validation.",
+          "Treat mutating file I/O, unresolved calls, and dynamic SQL as indicators that refactoring scope should stay narrow until validated."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Canonical semantic analysis, architecture evidence, and dependency graph artifacts.",
+          "Refactoring and architecture prompt packs grounded in the same shared context model."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_refactoring_plan.md",
+            "purpose": "Primary refactoring plan with sequencing and validation guidance."
+          },
+          {
+            "path": "ai_prompt_architecture_review.md",
+            "purpose": "Supporting architecture prompt for boundary checks."
+          },
+          {
+            "path": "dependency-graph.md",
+            "purpose": "Readable dependency structure used to limit change scope."
+          }
+        ]
+      },
+      "selected": false
+    },
+    {
+      "name": "test-generation",
+      "title": "Test Generation",
+      "description": "Package scenario, data-setup, and assertion guidance for evidence-backed test planning.",
+      "autoOptimizeContext": true,
+      "promptTemplates": [
+        "documentation",
+        "test-generation"
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Developers expanding regression coverage",
+          "QA engineers translating IBM i behavior into test scenarios",
+          "Reviewers planning fixtures and assertions before implementation"
+        ],
+        "keyQuestionsAnswered": [
+          "Which scenarios and edge cases deserve the first automated tests?",
+          "Which dependencies, tables, or SQL paths drive fixture needs?",
+          "Which generated artifacts best support evidence-backed test planning?"
+        ],
+        "expectedDecisions": [
+          "Choose the first test scenarios and fixture boundaries to implement.",
+          "Decide whether additional data or diagnostic evidence is needed before writing tests."
+        ],
+        "interpretationGuidance": [
+          "Use ai_prompt_test_generation.md for scenario design and ai_prompt_documentation.md for broader program context.",
+          "Treat test-data and diagnostic-pack outputs as setup hints, not proof that runtime behavior is fully covered."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Prompt-ready AI knowledge projection with tables, SQL, evidence highlights, and optional diagnostic outputs.",
+          "Documentation and test-generation prompt packs that consume the shared context model."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_test_generation.md",
+            "purpose": "Primary test-generation prompt with scenarios, fixtures, and assertions."
+          },
+          {
+            "path": "ai_prompt_documentation.md",
+            "purpose": "Supporting documentation prompt for system context."
+          },
+          {
+            "path": "report.md",
+            "purpose": "Human-readable summary for manual validation of the proposed tests."
+          }
+        ]
+      },
+      "selected": false
+    },
+    {
+      "name": "impact",
+      "title": "Impact Investigation",
+      "description": "Prepare graph artifacts and next-step guidance for reverse dependency and blast-radius analysis.",
+      "autoOptimizeContext": false,
+      "promptTemplates": [],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Maintainers estimating blast radius",
+          "Release coordinators",
+          "Engineers preparing follow-up impact analysis"
+        ],
+        "keyQuestionsAnswered": [
+          "Which generated artifacts should be reviewed before running a reverse dependency check?",
+          "What structural signals define the likely blast radius for a target change?"
+        ],
+        "expectedDecisions": [
+          "Choose the impact target and next investigation command.",
+          "Decide whether the available graph evidence is sufficient for a change review."
+        ],
+        "interpretationGuidance": [
+          "Use this workflow as prework for zeus impact, not as a replacement for target-specific blast-radius analysis.",
+          "Prefer program-call-tree.json and dependency-graph.json when choosing the target for reverse lookup."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Dependency graph and cross-program graph artifacts.",
+          "Canonical analysis and architecture report for context before reverse impact review."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "dependency-graph.json",
+            "purpose": "Machine-readable dependency structure for impact follow-up."
+          },
+          {
+            "path": "program-call-tree.json",
+            "purpose": "Cross-program graph used by zeus impact."
+          },
+          {
+            "path": "architecture-report.md",
+            "purpose": "Narrative context before selecting an impact target."
+          }
+        ]
+      },
+      "selected": false
+    },
+    {
+      "name": "security",
+      "title": "Security Analysis",
+      "description": "Identify injection risks, authorization gaps, missing error handling, and commitment control issues in IBM i RPG source.",
+      "autoOptimizeContext": true,
+      "promptTemplates": [
+        "security-analysis"
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Security reviewers",
+          "IBM i architects assessing operational risk",
+          "Developers hardening existing RPG programs"
+        ],
+        "keyQuestionsAnswered": [
+          "Where are the highest dynamic SQL and injection risk paths?",
+          "Which native I/O operations lack commitment control or authority checks?",
+          "Which error-handling paths silently swallow failures or expose internals?"
+        ],
+        "expectedDecisions": [
+          "Choose the highest-risk security finding to verify against source and runtime evidence.",
+          "Decide whether a security hardening pass is feasible without broader architectural changes."
+        ],
+        "interpretationGuidance": [
+          "Use ai_prompt_security_analysis.md for structured risk discovery and canonical-analysis.json to verify evidence claims.",
+          "Treat DYNAMIC_SQL and UNRESOLVED_TABLES uncertainty markers as security risk signals until verified.",
+          "Mutating native file I/O without explicit authority checks is an escalation-of-privilege risk on IBM i."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "AI knowledge projection with security workflow evidence: SQL statements, native files, error paths, risk markers.",
+          "Security analysis prompt grounded in source-backed evidence."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_security_analysis.md",
+            "purpose": "Primary security review prompt with IBM i specific risk categories."
+          },
+          {
+            "path": "report.md",
+            "purpose": "Human-readable summary for tracking identified security risks."
+          },
+          {
+            "path": "ai-knowledge.json",
+            "purpose": "Workflow-specific evidence for security-focused AI analysis."
+          }
+        ]
+      },
+      "selected": false
+    }
+  ],
+  "tasks": [
+    {
+      "id": "architecture",
+      "title": "Architecture Review",
+      "description": "Focus on dependency structure, semantic relationships, and architecture-facing documentation artifacts.",
+      "selected": false,
+      "autoOptimizeContext": true,
+      "prompts": [
+        {
+          "name": "documentation",
+          "workflow": "documentation",
+          "version": 1,
+          "outputFile": "ai_prompt_documentation.md",
+          "generated": true,
+          "applicable": true,
+          "failures": []
+        },
+        {
+          "name": "architecture-review",
+          "workflow": "documentation",
+          "version": 1,
+          "outputFile": "ai_prompt_architecture_review.md",
+          "generated": false,
+          "applicable": true,
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "ai_prompt_architecture_review.md",
+          "kind": "markdown",
+          "generated": false
+        },
+        {
+          "path": "ai_prompt_documentation.md",
+          "kind": "markdown",
+          "generated": true
+        },
+        {
+          "path": "analysis-index.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "architecture-report.md",
+          "kind": "markdown",
+          "generated": true
+        },
+        {
+          "path": "canonical-analysis.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "dependency-graph.md",
+          "kind": "markdown",
+          "generated": true
+        },
+        {
+          "path": "program-call-tree.md",
+          "kind": "markdown",
+          "generated": true
+        }
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "IBM i architects",
+          "Platform maintainers",
+          "Engineers reviewing structural boundaries before change"
+        ],
+        "keyQuestionsAnswered": [
+          "What are the dominant program, table, and copy-member dependencies?",
+          "Which unresolved edges or ambiguous calls still weaken the architecture picture?",
+          "Which artifacts should anchor a structure-first architecture review?"
+        ],
+        "expectedDecisions": [
+          "Choose the next subsystem or dependency path for deeper review.",
+          "Decide whether the current architecture evidence is sufficient for planned change work."
+        ],
+        "interpretationGuidance": [
+          "Use architecture-report.md together with dependency and call-tree artifacts; summaries alone can hide structural context.",
+          "Treat unresolved calls or ambiguous source resolution as follow-up work before making strong architecture claims."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Canonical semantic analysis, AI knowledge projection, and dependency graph artifacts.",
+          "The documentation prompt contract for architecture-facing narrative output."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "architecture-report.md",
+            "purpose": "Narrative architecture summary for review and sharing."
+          },
+          {
+            "path": "dependency-graph.md",
+            "purpose": "Single-program dependency structure for quick inspection."
+          },
+          {
+            "path": "program-call-tree.md",
+            "purpose": "Cross-program call chain view for boundary tracing."
+          },
+          {
+            "path": "ai_prompt_documentation.md",
+            "purpose": "AI-assisted architecture walkthrough grounded in the workflow evidence."
+          }
+        ]
+      },
+      "evidenceSummary": {
+        "workflow": "documentation",
+        "tableCount": 4,
+        "programCallCount": 3,
+        "copyMemberCount": 0,
+        "sqlStatementCount": 2,
+        "nativeFileCount": 3,
+        "evidenceHighlightCount": 9,
+        "riskMarkers": [
+          "Embedded SQL detected",
+          "External program calls detected",
+          "Mutating native file I/O detected"
+        ],
+        "uncertaintyMarkers": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      },
+      "nextActions": [
+        "Open architecture-report.md to review the semantic architecture summary.",
+        "Inspect dependency-graph.md and program-call-tree.md to trace structural edges.",
+        "Use ai_prompt_documentation.md when you need an AI-assisted architecture walkthrough."
+      ]
+    },
+    {
+      "id": "documentation",
+      "title": "Documentation",
+      "description": "Generate prompt-ready technical documentation grounded in the canonical and AI projections.",
+      "selected": true,
+      "autoOptimizeContext": true,
+      "prompts": [
+        {
+          "name": "documentation",
+          "workflow": "documentation",
+          "version": 1,
+          "outputFile": "ai_prompt_documentation.md",
+          "generated": true,
+          "applicable": true,
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "ai_prompt_documentation.md",
+          "kind": "markdown",
+          "generated": true
+        },
+        {
+          "path": "ai-knowledge.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "analysis-index.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "report.md",
+          "kind": "markdown",
+          "generated": true
+        }
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "New engineers",
+          "Technical writers",
+          "Maintainers assembling onboarding or system orientation notes"
+        ],
+        "keyQuestionsAnswered": [
+          "What does the program do at a high level?",
+          "Which tables, calls, and source-backed evidence matter most for onboarding?",
+          "Which generated artifacts are most useful for documentation handoff?"
+        ],
+        "expectedDecisions": [
+          "Decide whether the generated documentation is sufficient for onboarding or needs deeper analysis.",
+          "Choose the next artifact or subsystem to document in more detail."
+        ],
+        "interpretationGuidance": [
+          "Prefer ai_prompt_documentation.md for narrative synthesis and use report.md or ai-knowledge.json to verify claims.",
+          "Treat missing evidence highlights as a sign that the workflow is broad orientation, not a complete design review."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Prompt-ready AI knowledge projection with documentation workflow evidence.",
+          "Report and prompt artifacts for narrative handoff."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "report.md",
+            "purpose": "Broad run summary with source-backed counts and notes."
+          },
+          {
+            "path": "ai_prompt_documentation.md",
+            "purpose": "Documentation-first prompt for onboarding or explanation."
+          },
+          {
+            "path": "ai-knowledge.json",
+            "purpose": "Prompt-ready evidence projection for follow-up AI tasks."
+          }
+        ]
+      },
+      "evidenceSummary": {
+        "workflow": "documentation",
+        "tableCount": 4,
+        "programCallCount": 3,
+        "copyMemberCount": 0,
+        "sqlStatementCount": 2,
+        "nativeFileCount": 3,
+        "evidenceHighlightCount": 9,
+        "riskMarkers": [
+          "Embedded SQL detected",
+          "External program calls detected",
+          "Mutating native file I/O detected"
+        ],
+        "uncertaintyMarkers": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      },
+      "nextActions": [
+        "Open report.md for the broad run summary and ai_prompt_documentation.md for prompt-ready documentation.",
+        "Cross-check canonical-analysis.json when a documentation statement needs source-backed evidence."
+      ]
+    },
+    {
+      "id": "error-analysis",
+      "title": "Error Analysis",
+      "description": "Prioritize risky SQL, error paths, and operational failure signals for troubleshooting.",
+      "selected": false,
+      "autoOptimizeContext": true,
+      "prompts": [
+        {
+          "name": "error-analysis",
+          "workflow": "errorAnalysis",
+          "version": 1,
+          "outputFile": "ai_prompt_error_analysis.md",
+          "generated": false,
+          "applicable": true,
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "ai_prompt_error_analysis.md",
+          "kind": "markdown",
+          "generated": false
+        },
+        {
+          "path": "ai-knowledge.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "analysis-index.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "report.md",
+          "kind": "markdown",
+          "generated": true
+        }
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Incident responders",
+          "Support engineers",
+          "Developers triaging risky runtime behavior"
+        ],
+        "keyQuestionsAnswered": [
+          "Where are the highest-risk SQL, error-path, and evidence hotspots?",
+          "Which uncertainty markers or weak handling paths need manual validation first?",
+          "Which artifacts best support troubleshooting discussion?"
+        ],
+        "expectedDecisions": [
+          "Choose the highest-priority failure hypothesis to verify.",
+          "Decide whether additional runtime evidence or DB2 context is needed before root-cause work."
+        ],
+        "interpretationGuidance": [
+          "Start with the highest-ranked evidence highlights, then validate against canonical-analysis.json before concluding root cause.",
+          "Treat dynamic or unresolved SQL markers as risk multipliers until verified against source or catalog evidence."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "AI knowledge projection with errorAnalysis workflow evidence.",
+          "Risk markers, SQL semantics, and ranked evidence highlights."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_error_analysis.md",
+            "purpose": "Prompt for structured troubleshooting and risk review."
+          },
+          {
+            "path": "report.md",
+            "purpose": "Human-readable summary of analysis notes and operational risk signals."
+          },
+          {
+            "path": "ai-knowledge.json",
+            "purpose": "Workflow-specific evidence used by error analysis prompts."
+          }
+        ]
+      },
+      "evidenceSummary": {
+        "workflow": "error-analysis",
+        "tableCount": 4,
+        "programCallCount": 3,
+        "copyMemberCount": 0,
+        "sqlStatementCount": 2,
+        "nativeFileCount": 3,
+        "evidenceHighlightCount": 9,
+        "riskMarkers": [
+          "Embedded SQL detected",
+          "External program calls detected",
+          "Mutating native file I/O detected"
+        ],
+        "uncertaintyMarkers": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      },
+      "nextActions": [
+        "Start with ai_prompt_error_analysis.md and compare it with report.md risk notes.",
+        "Validate the highest-ranked evidence highlights against canonical-analysis.json before concluding root cause."
+      ]
+    },
+    {
+      "id": "defect-analysis",
+      "title": "Defect Analysis",
+      "description": "Package evidence for defect hypotheses, trigger conditions, and verification steps.",
+      "selected": false,
+      "autoOptimizeContext": true,
+      "prompts": [
+        {
+          "name": "error-analysis",
+          "workflow": "errorAnalysis",
+          "version": 1,
+          "outputFile": "ai_prompt_error_analysis.md",
+          "generated": false,
+          "applicable": true,
+          "failures": []
+        },
+        {
+          "name": "defect-analysis",
+          "workflow": "errorAnalysis",
+          "version": 1,
+          "outputFile": "ai_prompt_defect_analysis.md",
+          "generated": false,
+          "applicable": true,
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "ai_prompt_defect_analysis.md",
+          "kind": "markdown",
+          "generated": false
+        },
+        {
+          "path": "ai_prompt_error_analysis.md",
+          "kind": "markdown",
+          "generated": false
+        },
+        {
+          "path": "ai-knowledge.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "analysis-index.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "report.md",
+          "kind": "markdown",
+          "generated": true
+        }
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Developers preparing a dependency or defect risk review",
+          "Release owners",
+          "Technical leads validating blast radius before change"
+        ],
+        "keyQuestionsAnswered": [
+          "Which defects or dependency paths are most likely to cause downstream impact?",
+          "What source-backed evidence supports each risk hypothesis?",
+          "Which artifacts should be shared with reviewers before a change decision?"
+        ],
+        "expectedDecisions": [
+          "Decide whether the change can proceed with current controls or needs more investigation.",
+          "Choose the next verification step for the highest-risk dependency or defect path."
+        ],
+        "interpretationGuidance": [
+          "Use error-analysis and defect-analysis prompts together; one surfaces risk signals and the other organizes decision-oriented hypotheses.",
+          "Treat program-call and table dependencies as review inputs, not proof of production impact, until source evidence is checked."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "AI knowledge projection with risk markers, SQL semantics, and ranked evidence.",
+          "Dependency graph and program-call-tree artifacts for blast-radius review."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_error_analysis.md",
+            "purpose": "Evidence-oriented risk prompt for suspicious behavior and hotspots."
+          },
+          {
+            "path": "ai_prompt_defect_analysis.md",
+            "purpose": "Decision-oriented defect and dependency risk prompt."
+          },
+          {
+            "path": "report.md",
+            "purpose": "Human-readable summary to pair with prompt conclusions."
+          }
+        ]
+      },
+      "evidenceSummary": {
+        "workflow": "error-analysis",
+        "tableCount": 4,
+        "programCallCount": 3,
+        "copyMemberCount": 0,
+        "sqlStatementCount": 2,
+        "nativeFileCount": 3,
+        "evidenceHighlightCount": 9,
+        "riskMarkers": [
+          "Embedded SQL detected",
+          "External program calls detected",
+          "Mutating native file I/O detected"
+        ],
+        "uncertaintyMarkers": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      },
+      "nextActions": [
+        "Review ai_prompt_defect_analysis.md for defect hypotheses and ai_prompt_error_analysis.md for supporting evidence.",
+        "Trace the cited evidence highlights back to source files before proposing a fix."
+      ]
+    },
+    {
+      "id": "modernization",
+      "title": "Modernization",
+      "description": "Highlight extraction boundaries, change blockers, and evidence-backed modernization candidates.",
+      "selected": false,
+      "autoOptimizeContext": true,
+      "prompts": [
+        {
+          "name": "documentation",
+          "workflow": "documentation",
+          "version": 1,
+          "outputFile": "ai_prompt_documentation.md",
+          "generated": true,
+          "applicable": true,
+          "failures": []
+        },
+        {
+          "name": "architecture-review",
+          "workflow": "documentation",
+          "version": 1,
+          "outputFile": "ai_prompt_architecture_review.md",
+          "generated": false,
+          "applicable": true,
+          "failures": []
+        },
+        {
+          "name": "modernization",
+          "workflow": "modernization",
+          "version": 1,
+          "outputFile": "ai_prompt_modernization.md",
+          "generated": false,
+          "applicable": true,
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "ai_prompt_architecture_review.md",
+          "kind": "markdown",
+          "generated": false
+        },
+        {
+          "path": "ai_prompt_documentation.md",
+          "kind": "markdown",
+          "generated": true
+        },
+        {
+          "path": "ai_prompt_modernization.md",
+          "kind": "markdown",
+          "generated": false
+        },
+        {
+          "path": "analysis-index.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "architecture-report.md",
+          "kind": "markdown",
+          "generated": true
+        },
+        {
+          "path": "canonical-analysis.json",
+          "kind": "json",
+          "generated": true
+        }
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Modernization leads",
+          "IBM i architects",
+          "Engineers planning extraction or refactoring work"
+        ],
+        "keyQuestionsAnswered": [
+          "Which change boundaries look safest to extract or rewrite first?",
+          "What dependencies, native I/O patterns, or SQL semantics block clean modernization?",
+          "Which artifacts best support a modernization readiness review?"
+        ],
+        "expectedDecisions": [
+          "Choose a pilot extraction candidate or defer until prerequisites are addressed.",
+          "Decide which blockers require architecture, data, or integration follow-up before modernization work begins."
+        ],
+        "interpretationGuidance": [
+          "Use ai_prompt_modernization.md for synthesis, then validate proposed seams against architecture-report.md and canonical-analysis.json.",
+          "Treat unresolved calls, dynamic SQL, and mutating native file usage as modernization blockers until reviewed explicitly."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Canonical semantic analysis, AI knowledge projection, and modernization prompt contract.",
+          "Architecture and dependency artifacts that expose extraction boundaries and risky integrations."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_modernization.md",
+            "purpose": "Opinionated modernization review prompt with blockers and candidates."
+          },
+          {
+            "path": "architecture-report.md",
+            "purpose": "Architecture narrative for reviewing seams and dependencies."
+          },
+          {
+            "path": "canonical-analysis.json",
+            "purpose": "Semantic source of truth for validating modernization claims."
+          },
+          {
+            "path": "ai_prompt_documentation.md",
+            "purpose": "Supporting documentation prompt for reviewer context."
+          }
+        ]
+      },
+      "evidenceSummary": {
+        "workflow": "documentation",
+        "tableCount": 4,
+        "programCallCount": 3,
+        "copyMemberCount": 0,
+        "sqlStatementCount": 2,
+        "nativeFileCount": 3,
+        "evidenceHighlightCount": 9,
+        "riskMarkers": [
+          "Embedded SQL detected",
+          "External program calls detected",
+          "Mutating native file I/O detected"
+        ],
+        "uncertaintyMarkers": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      },
+      "nextActions": [
+        "Open ai_prompt_modernization.md to review candidates, blockers, and suggested first steps.",
+        "Use architecture-report.md and canonical-analysis.json to validate extraction boundaries and integration risks."
+      ]
+    },
+    {
+      "id": "refactoring",
+      "title": "Refactoring",
+      "description": "Focus on small safe change seams, dependency-aware sequencing, and verification guidance.",
+      "selected": false,
+      "autoOptimizeContext": true,
+      "prompts": [
+        {
+          "name": "architecture-review",
+          "workflow": "documentation",
+          "version": 1,
+          "outputFile": "ai_prompt_architecture_review.md",
+          "generated": false,
+          "applicable": true,
+          "failures": []
+        },
+        {
+          "name": "refactoring-plan",
+          "workflow": "documentation",
+          "version": 1,
+          "outputFile": "ai_prompt_refactoring_plan.md",
+          "generated": false,
+          "applicable": true,
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "ai_prompt_architecture_review.md",
+          "kind": "markdown",
+          "generated": false
+        },
+        {
+          "path": "ai_prompt_refactoring_plan.md",
+          "kind": "markdown",
+          "generated": false
+        },
+        {
+          "path": "analysis-index.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "architecture-report.md",
+          "kind": "markdown",
+          "generated": true
+        },
+        {
+          "path": "canonical-analysis.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "dependency-graph.md",
+          "kind": "markdown",
+          "generated": true
+        }
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Developers planning local improvements",
+          "Technical leads sequencing safer refactors",
+          "Reviewers validating change boundaries before implementation"
+        ],
+        "keyQuestionsAnswered": [
+          "Which refactoring candidates are small enough to execute safely now?",
+          "Which dependencies or IBM i behaviors constrain sequencing?",
+          "Which evidence should reviewers inspect before approving the first change?"
+        ],
+        "expectedDecisions": [
+          "Choose the first refactoring slice and the verification plan around it.",
+          "Decide whether blockers require more architecture or runtime investigation first."
+        ],
+        "interpretationGuidance": [
+          "Prefer ai_prompt_refactoring_plan.md for sequencing guidance and ai_prompt_architecture_review.md for boundary validation.",
+          "Treat mutating file I/O, unresolved calls, and dynamic SQL as indicators that refactoring scope should stay narrow until validated."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Canonical semantic analysis, architecture evidence, and dependency graph artifacts.",
+          "Refactoring and architecture prompt packs grounded in the same shared context model."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_refactoring_plan.md",
+            "purpose": "Primary refactoring plan with sequencing and validation guidance."
+          },
+          {
+            "path": "ai_prompt_architecture_review.md",
+            "purpose": "Supporting architecture prompt for boundary checks."
+          },
+          {
+            "path": "dependency-graph.md",
+            "purpose": "Readable dependency structure used to limit change scope."
+          }
+        ]
+      },
+      "evidenceSummary": {
+        "workflow": "documentation",
+        "tableCount": 4,
+        "programCallCount": 3,
+        "copyMemberCount": 0,
+        "sqlStatementCount": 2,
+        "nativeFileCount": 3,
+        "evidenceHighlightCount": 9,
+        "riskMarkers": [
+          "Embedded SQL detected",
+          "External program calls detected",
+          "Mutating native file I/O detected"
+        ],
+        "uncertaintyMarkers": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      },
+      "nextActions": [
+        "Open ai_prompt_refactoring_plan.md for the smallest safe change slices and validation steps.",
+        "Use ai_prompt_architecture_review.md and dependency-graph.md to confirm the proposed scope is actually isolated."
+      ]
+    },
+    {
+      "id": "test-generation",
+      "title": "Test Generation",
+      "description": "Package scenario, data-setup, and assertion guidance for evidence-backed test planning.",
+      "selected": false,
+      "autoOptimizeContext": true,
+      "prompts": [
+        {
+          "name": "documentation",
+          "workflow": "documentation",
+          "version": 1,
+          "outputFile": "ai_prompt_documentation.md",
+          "generated": true,
+          "applicable": true,
+          "failures": []
+        },
+        {
+          "name": "test-generation",
+          "workflow": "documentation",
+          "version": 1,
+          "outputFile": "ai_prompt_test_generation.md",
+          "generated": false,
+          "applicable": true,
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "ai_prompt_documentation.md",
+          "kind": "markdown",
+          "generated": true
+        },
+        {
+          "path": "ai_prompt_test_generation.md",
+          "kind": "markdown",
+          "generated": false
+        },
+        {
+          "path": "ai-knowledge.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "analysis-index.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "report.md",
+          "kind": "markdown",
+          "generated": true
+        }
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Developers expanding regression coverage",
+          "QA engineers translating IBM i behavior into test scenarios",
+          "Reviewers planning fixtures and assertions before implementation"
+        ],
+        "keyQuestionsAnswered": [
+          "Which scenarios and edge cases deserve the first automated tests?",
+          "Which dependencies, tables, or SQL paths drive fixture needs?",
+          "Which generated artifacts best support evidence-backed test planning?"
+        ],
+        "expectedDecisions": [
+          "Choose the first test scenarios and fixture boundaries to implement.",
+          "Decide whether additional data or diagnostic evidence is needed before writing tests."
+        ],
+        "interpretationGuidance": [
+          "Use ai_prompt_test_generation.md for scenario design and ai_prompt_documentation.md for broader program context.",
+          "Treat test-data and diagnostic-pack outputs as setup hints, not proof that runtime behavior is fully covered."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Prompt-ready AI knowledge projection with tables, SQL, evidence highlights, and optional diagnostic outputs.",
+          "Documentation and test-generation prompt packs that consume the shared context model."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_test_generation.md",
+            "purpose": "Primary test-generation prompt with scenarios, fixtures, and assertions."
+          },
+          {
+            "path": "ai_prompt_documentation.md",
+            "purpose": "Supporting documentation prompt for system context."
+          },
+          {
+            "path": "report.md",
+            "purpose": "Human-readable summary for manual validation of the proposed tests."
+          }
+        ]
+      },
+      "evidenceSummary": {
+        "workflow": "documentation",
+        "tableCount": 4,
+        "programCallCount": 3,
+        "copyMemberCount": 0,
+        "sqlStatementCount": 2,
+        "nativeFileCount": 3,
+        "evidenceHighlightCount": 9,
+        "riskMarkers": [
+          "Embedded SQL detected",
+          "External program calls detected",
+          "Mutating native file I/O detected"
+        ],
+        "uncertaintyMarkers": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      },
+      "nextActions": [
+        "Open ai_prompt_test_generation.md to review scenarios, fixture hints, and assertion ideas.",
+        "Cross-check the suggested tests against report.md and ai_prompt_documentation.md before implementing them."
+      ]
+    },
+    {
+      "id": "impact",
+      "title": "Impact Investigation",
+      "description": "Prepare graph artifacts and next-step guidance for reverse dependency and blast-radius analysis.",
+      "selected": false,
+      "autoOptimizeContext": false,
+      "prompts": [],
+      "artifacts": [
+        {
+          "path": "analysis-index.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "architecture-report.md",
+          "kind": "markdown",
+          "generated": true
+        },
+        {
+          "path": "canonical-analysis.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "dependency-graph.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "program-call-tree.json",
+          "kind": "json",
+          "generated": true
+        }
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Maintainers estimating blast radius",
+          "Release coordinators",
+          "Engineers preparing follow-up impact analysis"
+        ],
+        "keyQuestionsAnswered": [
+          "Which generated artifacts should be reviewed before running a reverse dependency check?",
+          "What structural signals define the likely blast radius for a target change?"
+        ],
+        "expectedDecisions": [
+          "Choose the impact target and next investigation command.",
+          "Decide whether the available graph evidence is sufficient for a change review."
+        ],
+        "interpretationGuidance": [
+          "Use this workflow as prework for zeus impact, not as a replacement for target-specific blast-radius analysis.",
+          "Prefer program-call-tree.json and dependency-graph.json when choosing the target for reverse lookup."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "Dependency graph and cross-program graph artifacts.",
+          "Canonical analysis and architecture report for context before reverse impact review."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "dependency-graph.json",
+            "purpose": "Machine-readable dependency structure for impact follow-up."
+          },
+          {
+            "path": "program-call-tree.json",
+            "purpose": "Cross-program graph used by zeus impact."
+          },
+          {
+            "path": "architecture-report.md",
+            "purpose": "Narrative context before selecting an impact target."
+          }
+        ]
+      },
+      "evidenceSummary": {
+        "workflow": null,
+        "tableCount": 4,
+        "programCallCount": 3,
+        "copyMemberCount": 0,
+        "sqlStatementCount": 2,
+        "nativeFileCount": 3,
+        "evidenceHighlightCount": 0,
+        "riskMarkers": [
+          "Embedded SQL detected",
+          "External program calls detected",
+          "Mutating native file I/O detected"
+        ],
+        "uncertaintyMarkers": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      },
+      "nextActions": [
+        "Run zeus impact --target <name> --program PROGRAM_100 to compute reverse dependency blast radius.",
+        "Inspect program-call-tree.json and dependency-graph.json before choosing the impact target."
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Security Analysis",
+      "description": "Identify injection risks, authorization gaps, missing error handling, and commitment control issues in IBM i RPG source.",
+      "selected": false,
+      "autoOptimizeContext": true,
+      "prompts": [
+        {
+          "name": "security-analysis",
+          "workflow": "security",
+          "version": 1,
+          "outputFile": "ai_prompt_security_analysis.md",
+          "generated": false,
+          "applicable": true,
+          "failures": []
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "ai_prompt_security_analysis.md",
+          "kind": "markdown",
+          "generated": false
+        },
+        {
+          "path": "ai-knowledge.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "analysis-index.json",
+          "kind": "json",
+          "generated": true
+        },
+        {
+          "path": "report.md",
+          "kind": "markdown",
+          "generated": true
+        }
+      ],
+      "reviewWorkflow": {
+        "intendedAudience": [
+          "Security reviewers",
+          "IBM i architects assessing operational risk",
+          "Developers hardening existing RPG programs"
+        ],
+        "keyQuestionsAnswered": [
+          "Where are the highest dynamic SQL and injection risk paths?",
+          "Which native I/O operations lack commitment control or authority checks?",
+          "Which error-handling paths silently swallow failures or expose internals?"
+        ],
+        "expectedDecisions": [
+          "Choose the highest-risk security finding to verify against source and runtime evidence.",
+          "Decide whether a security hardening pass is feasible without broader architectural changes."
+        ],
+        "interpretationGuidance": [
+          "Use ai_prompt_security_analysis.md for structured risk discovery and canonical-analysis.json to verify evidence claims.",
+          "Treat DYNAMIC_SQL and UNRESOLVED_TABLES uncertainty markers as security risk signals until verified.",
+          "Mutating native file I/O without explicit authority checks is an escalation-of-privilege risk on IBM i."
+        ],
+        "requiredInputs": [
+          "A local IBM i source tree and selected root program.",
+          "AI knowledge projection with security workflow evidence: SQL statements, native files, error paths, risk markers.",
+          "Security analysis prompt grounded in source-backed evidence."
+        ],
+        "recommendedOutputs": [
+          {
+            "path": "ai_prompt_security_analysis.md",
+            "purpose": "Primary security review prompt with IBM i specific risk categories."
+          },
+          {
+            "path": "report.md",
+            "purpose": "Human-readable summary for tracking identified security risks."
+          },
+          {
+            "path": "ai-knowledge.json",
+            "purpose": "Workflow-specific evidence for security-focused AI analysis."
+          }
+        ]
+      },
+      "evidenceSummary": {
+        "workflow": "security",
+        "tableCount": 4,
+        "programCallCount": 3,
+        "copyMemberCount": 0,
+        "sqlStatementCount": 2,
+        "nativeFileCount": 3,
+        "evidenceHighlightCount": 9,
+        "riskMarkers": [
+          "Embedded SQL detected",
+          "External program calls detected",
+          "Mutating native file I/O detected"
+        ],
+        "uncertaintyMarkers": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      },
+      "nextActions": []
+    }
+  ]
+}
