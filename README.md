@@ -199,6 +199,16 @@ Ohne IBM i-Anbindung kannst du RPG-Dateien einfach in `rpg_sources/` ablegen und
 
 ---
 
+### Öffentliches Demo (synthetisch)
+
+Für ein vollständig reproduzierbares Mini-Beispiel mit synthetischen RPG/CL/DDS-Daten:
+
+`examples/demo-rpg-mini-system/README.md`
+
+Das Demo enthält keine Kundendaten, keine Credentials und keine produktiven IBM-i-Informationen.
+
+---
+
 ## Installation
 
 ### Voraussetzungen
@@ -699,6 +709,16 @@ node cli/zeus.js analyze --profile default --source ./rpg_sources --program ORDE
 ```
 
 Without IBM i access, place RPG files in `rpg_sources/` and run `analyze` directly.
+
+---
+
+### Public demo (synthetic)
+
+For a fully reproducible mini example with synthetic RPG/CL/DDS data:
+
+`examples/demo-rpg-mini-system/README.md`
+
+The demo contains no customer data, no credentials, and no production IBM i information.
 
 ---
 
