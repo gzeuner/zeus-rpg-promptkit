@@ -249,6 +249,29 @@ Beide vollständig grün.
 
 ---
 
+## Phase 5 – Layering-Guard intern -> Fassade (abgeschlossen)
+
+Zusätzlich abgesichert in:
+
+`tests/runtime-config.test.js`
+
+Abgedeckt:
+
+- interne `runtimeConfig*.js`-Module (außer `runtimeConfig.js`) dürfen die Fassade nicht importieren
+- verhindert Rückkopplungen und zyklische Schichtungsdrift im Runtime-Config-Subsystem
+- sichert die gerichtete Architektur:
+  - `runtimeConfig.js` -> interne Module
+  - interne Module -/-> `runtimeConfig.js`
+
+Verifikation:
+
+- `node --test tests/runtime-config.test.js`
+- `npm test`
+
+Beide vollständig grün.
+
+---
+
 # Referenz der umgesetzten Extraktionsschritte
 
 ## Schritt A – Resolver-Extraktion

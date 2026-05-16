@@ -112,6 +112,24 @@ function readInternalRuntimeConfigModuleNames(repoRoot) {
     .sort((a, b) => a.localeCompare(b));
 }
 
+function collectImportSpecifiers(sourceText) {
+  const imports = [];
+
+  for (const pattern of IMPORT_SPECIFIER_PATTERNS) {
+    pattern.lastIndex = 0;
+    let match = pattern.exec(sourceText);
+    while (match) {
+      const specifier = String(match[1] || '').trim();
+      const uptoMatch = sourceText.slice(0, match.index);
+      const line = uptoMatch.split('\n').length;
+      imports.push({ line, specifier });
+      match = pattern.exec(sourceText);
+    }
+  }
+
+  return imports;
+}
+
 function collectForbiddenRuntimeConfigImports(relativePath, sourceText, internalModuleNames) {
   const violations = [];
   const internalModuleNameSet = new Set(internalModuleNames.map((name) => name.toLowerCase()));
@@ -119,23 +137,16 @@ function collectForbiddenRuntimeConfigImports(relativePath, sourceText, internal
     return violations;
   }
 
-  for (const pattern of IMPORT_SPECIFIER_PATTERNS) {
-    pattern.lastIndex = 0;
-    let match = pattern.exec(sourceText);
-    while (match) {
-      const specifier = String(match[1] || '').trim();
-      const moduleName = path.basename(specifier).replace(/\.js$/i, '');
-      if (internalModuleNameSet.has(moduleName.toLowerCase())) {
-        const uptoMatch = sourceText.slice(0, match.index);
-        const line = uptoMatch.split('\n').length;
-        violations.push({
-          relativePath,
-          line,
-          specifier,
-        });
-      }
-      match = pattern.exec(sourceText);
+  for (const imported of collectImportSpecifiers(sourceText)) {
+    const moduleName = path.basename(imported.specifier).replace(/\.js$/i, '');
+    if (!internalModuleNameSet.has(moduleName.toLowerCase())) {
+      continue;
     }
+    violations.push({
+      relativePath,
+      line: imported.line,
+      specifier: imported.specifier,
+    });
   }
 
   return violations;
@@ -1013,5 +1024,40 @@ test('runtime-config boundary: no direct imports of internal runtime-config modu
     violations.length,
     0,
     `Found forbidden direct imports of internal runtime-config modules:\n${formattedViolations}`,
+  );
+});
+
+test('runtime-config layering: internal runtime-config modules must not import runtimeConfig facade', () => {
+  const repoRoot = path.resolve(__dirname, '..');
+  const configDir = path.join(repoRoot, 'src', 'config');
+  const violations = [];
+  const files = listJavaScriptFiles(configDir)
+    .filter((filePath) => /^runtimeConfig.+\.js$/i.test(path.basename(filePath)))
+    .filter((filePath) => path.basename(filePath).toLowerCase() !== 'runtimeconfig.js');
+
+  for (const filePath of files) {
+    const relativePath = path.relative(repoRoot, filePath).replace(/\\/g, '/');
+    const sourceText = fs.readFileSync(filePath, 'utf8');
+    const importedSpecifiers = collectImportSpecifiers(sourceText);
+    for (const imported of importedSpecifiers) {
+      const moduleName = path.basename(imported.specifier).replace(/\.js$/i, '').toLowerCase();
+      if (moduleName !== 'runtimeconfig') {
+        continue;
+      }
+      violations.push({
+        relativePath,
+        line: imported.line,
+        specifier: imported.specifier,
+      });
+    }
+  }
+
+  const formattedViolations = violations
+    .map((entry) => `${entry.relativePath}:${entry.line} imports "${entry.specifier}"`)
+    .join('\n');
+  assert.equal(
+    violations.length,
+    0,
+    `Found layering violations: internal runtime-config modules must not import runtimeConfig facade:\n${formattedViolations}`,
   );
 });
