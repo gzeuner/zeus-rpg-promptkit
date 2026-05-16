@@ -30,7 +30,7 @@ const { run: runQA } = require('../src/cli/commands/qaCommand');
 const { runAssessRisk } = require('../src/cli/commands/assessRiskCommand');
 const { runGenerateTest } = require('../src/cli/commands/generateTestCommand');
 const { runGenerateChecklist } = require('../src/cli/commands/generateChecklistCommand');
-const { runUpsertSql } = require('../src/cli/commands/upsertSqlCommand');
+const { runUpsertSql, runInsertSql, runUpdateSql } = require('../src/cli/commands/upsertSqlCommand');
 const { runInspectObject } = require('../src/cli/commands/inspectObjectCommand');
 const { run: runTestRun } = require('../src/cli/commands/testRunCommand');
 const { runBridge } = require('../src/cli/commands/bridgeCommand');
@@ -54,7 +54,10 @@ function printHelp() {
   console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>]');
   console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ..." | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv]');
   console.log('  zeus [--config <path>] joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>]');
+  console.log('  zeus [--config <path>] upsert --profile <name> (--sql "INSERT/UPDATE/DELETE/MERGE ..." | --file <path>)');
   console.log('  zeus [--config <path>] upsert-sql --profile <name> (--sql "INSERT/UPDATE/DELETE ..." | --file <path>)');
+  console.log('  zeus [--config <path>] insert --profile <name> (--sql "INSERT ..." | --file <path>)');
+  console.log('  zeus [--config <path>] update --profile <name> (--sql "UPDATE ..." | --file <path>)');
   console.log('  zeus [--config <path>] search-source --source-root <path> (--search-term <term> | --member <name> | --table <name>) [--file-pattern <glob>] [--case-sensitive] [--max-results <n>]');
   console.log('  zeus [--config <path>] copy-to-workspace --profile <name> [--members <M1,M2,...>] [--force]');
   console.log('  zeus [--config <path>] diff --profile <name> --member <name>');
@@ -189,8 +192,23 @@ async function main() {
     return;
   }
 
+  if (command === 'upsert') {
+    await runUpsertSql(args);
+    return;
+  }
+
   if (command === 'upsert-sql') {
     await runUpsertSql(args);
+    return;
+  }
+
+  if (command === 'insert') {
+    await runInsertSql(args);
+    return;
+  }
+
+  if (command === 'update') {
+    await runUpdateSql(args);
     return;
   }
 
