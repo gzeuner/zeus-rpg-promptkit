@@ -4,7 +4,7 @@ Die System-Profile trennen drei Rollen:
 
 - SYS_TEST als primaeres Arbeits- und Fetch-System
 - SYS_PROD als Quelle fuer produktive Metadaten und bei Bedarf Testdaten
-- BIB, APPLIB und ASE als getrennte Source-Libraries auf SYS_TEST
+- BIB, APPLIB und LIBDEV als getrennte Source-Libraries auf SYS_TEST
 
 **Env-Vars haben immer Vorrang vor Profilwerten.** Das erlaubt Multi-Maschinen-Setups
 ohne Profile anzufassen — z.B. Sourcen von SYS_TEST fetchen, Metadaten aber gegen
@@ -58,10 +58,10 @@ Wenn nicht gesetzt, faellt zeus auf `ZEUS_METADATA_DB_*` zurueck.
 
 - `sample-source`
   Zweck: Produktivnahe Source-Basis aus Library `SOURCEN`
-- `sample-objecttest`
+- `sample-preprod`
   Zweck: neu entwickelte oder geaenderte Quellen aus `APPLIB`
-- `sample-ase`
-  Zweck: laufende Entwicklung aus `ASE`
+- `sample-dev`
+  Zweck: laufende Entwicklung aus `LIBDEV`
 
 Alle drei Profile:
 
@@ -118,7 +118,7 @@ cd C:\Users\Developer.User\Tools\zeus-rpg-promptkit
 . .\config\load-env.ps1 -Environment project
 
 # Pruefen ob alles korrekt geladen wurde:
-node cli/zeus.js doctor --profile sample-ase --show-resolved
+node cli/zeus.js doctor --profile sample-dev --show-resolved
 ```
 
 ## Neue Befehle dieser Session
@@ -127,10 +127,10 @@ node cli/zeus.js doctor --profile sample-ase --show-resolved
 
 ```powershell
 # Zeigt kompiliertes Objekt inkl. Journal-Status
-node cli/zeus.js inspect-object --profile sample-ase --lib APPLIB --name APP_TABLE_00 --type *FILE
+node cli/zeus.js inspect-object --profile sample-dev --lib APPLIB --name APP_TABLE_00 --type *FILE
 
 # Nur Journal-Status
-node cli/zeus.js inspect-object --profile sample-ase --lib APPLIB --name APP_TABLE_00 --type *FILE --journal
+node cli/zeus.js inspect-object --profile sample-dev --lib APPLIB --name APP_TABLE_00 --type *FILE --journal
 ```
 
 ### test-run — Before/After-Snapshot + Rollback-SQL
@@ -140,7 +140,7 @@ Diff ermitteln und bei Bedarf Rollback-SQL anzeigen (wird NICHT automatisch ausg
 
 ```powershell
 # 1. Vor dem Test: Before-Snapshot
-node cli/zeus.js test-run start --profile sample-ase `
+node cli/zeus.js test-run start --profile sample-dev `
     --program APPPGM `
     --table APPLIB.APP_TABLE_00 `
     --key ID=88656 `
@@ -149,7 +149,7 @@ node cli/zeus.js test-run start --profile sample-ase `
 # 2. Test durchfuehren (manuell)
 
 # 3. After-Snapshot + Diff
-node cli/zeus.js test-run capture --profile sample-ase --manifest test-run-manifest.json
+node cli/zeus.js test-run capture --profile sample-dev --manifest test-run-manifest.json
 
 # 4. Rollback-SQL anzeigen (nur lesen, nicht ausfuehren!)
 node cli/zeus.js test-run rollback --manifest test-run-manifest.json
@@ -158,6 +158,6 @@ node cli/zeus.js test-run rollback --manifest test-run-manifest.json
 ## Empfohlene Reihenfolge
 
 1. `sample-source` fuer die produktionsnahe Ausgangslage verwenden.
-2. `sample-objecttest` gegenpruefen, wenn ein Change oder ein Hotfix kurz vor Produktivnahme steht.
-3. `sample-ase` nur dann dazunehmen, wenn die Ursache vermutlich noch in aktiver Entwicklung liegt.
+2. `sample-preprod` gegenpruefen, wenn ein Change oder ein Hotfix kurz vor Produktivnahme steht.
+3. `sample-dev` nur dann dazunehmen, wenn die Ursache vermutlich noch in aktiver Entwicklung liegt.
 4. Fuer Support-Tickets zuerst Metadaten via SYS_PROD lesen und nur bei Bedarf read-only Testdaten ziehen.

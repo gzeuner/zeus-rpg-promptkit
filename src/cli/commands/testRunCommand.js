@@ -22,9 +22,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   zeus test-run rollback --manifest <path>   (zeigt Rollback-SQL — führt es NICHT aus)
  *
  * Beispiel (aus Session CHANGE-1234):
- *   zeus test-run start --profile sample-ase --program APPPGM --table APPLIB.APP_TABLE_00 --key ID=88656 --label "CHANGE-1234 Test DAN=127002"
+ *   zeus test-run start --profile sample-dev --program APPPGM --table APPLIB.APP_TABLE_00 --key ID=88656 --label "CHANGE-1234 Test DAN=127002"
  *   # ... Test durchführen ...
- *   zeus test-run capture --profile sample-ase --manifest test-run-manifest.json
+ *   zeus test-run capture --profile sample-dev --manifest test-run-manifest.json
  *   zeus test-run rollback --manifest test-run-manifest.json
  */
 
@@ -85,9 +85,9 @@ async function run(args) {
     console.log('  rollback — Rollback-SQL aus Manifest anzeigen (nicht ausführen!)');
     console.log('');
     console.log('Beispiel:');
-    console.log('  zeus test-run start --profile sample-ase --program APPPGM \\');
+    console.log('  zeus test-run start --profile sample-dev --program APPPGM \\');
     console.log('       --table APPLIB.APP_TABLE_00 --key ID=88656 --label "Test DAN=127002"');
-    console.log('  zeus test-run capture --profile sample-ase --manifest test-run-manifest.json');
+    console.log('  zeus test-run capture --profile sample-dev --manifest test-run-manifest.json');
     console.log('  zeus test-run rollback --manifest test-run-manifest.json');
     console.log('');
     return;

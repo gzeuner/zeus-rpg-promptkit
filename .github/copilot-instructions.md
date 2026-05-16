@@ -266,11 +266,11 @@ Standard env load for project development sessions:
 ```powershell
 cd C:\Users\Developer.User\Tools\zeus-rpg-promptkit
 . .\config\load-env.ps1 -Environment project   # loads .env.local + .env.project.local
-node cli/zeus.js doctor --profile sample-ase --show-resolved
+node cli/zeus.js doctor --profile sample-dev --show-resolved
 ```
 
 Systems:
-- **SYS_TEST** — test system, active development, profile `sample-ase`
+- **SYS_TEST** — test system, active development, profile `sample-dev`
 - **SYS_PROD** — production system, metadata read-only, NEVER write
 
 Session prompt template: `docs/ai-session-prompt.md`

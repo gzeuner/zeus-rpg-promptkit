@@ -110,10 +110,10 @@ Kompilierungszeit, Besitzer, Quellmember, Compiler-Version und Journal-Status.
 
 ```bash
 # Vollstaendige Objektinfo (*PGM, *FILE, *SRVPGM, *MODULE ...)
-zeus inspect-object --profile sample-ase --lib APPLIB --name APP_TABLE_00 --type *FILE
+zeus inspect-object --profile sample-dev --lib APPLIB --name APP_TABLE_00 --type *FILE
 
 # Nur Journal-Status (schnell, relevant fuer SQLSTATE 55019 Diagnose)
-zeus inspect-object --profile sample-ase --lib APPLIB --name APP_TABLE_00 --type *FILE --journal
+zeus inspect-object --profile sample-dev --lib APPLIB --name APP_TABLE_00 --type *FILE --journal
 ```
 
 Schluessel-Output-Felder:
@@ -130,7 +130,7 @@ nie automatisch ausgefuehrt.
 
 ```bash
 # 1. Before-Snapshot aufnehmen (vor dem Test)
-zeus test-run start --profile sample-ase \
+zeus test-run start --profile sample-dev \
     --program APPPGM \
     --table APPLIB.APP_TABLE_00 \
     --key ID=88656 \
@@ -140,7 +140,7 @@ zeus test-run start --profile sample-ase \
 # 2. Test manuell durchfuehren
 
 # 3. After-Snapshot + Diff
-zeus test-run capture --profile sample-ase --manifest test-run-manifest.json
+zeus test-run capture --profile sample-dev --manifest test-run-manifest.json
 
 # 4. Rollback-SQL anzeigen (fuer manuelle Ausfuehrung in ACS)
 zeus test-run rollback --manifest test-run-manifest.json

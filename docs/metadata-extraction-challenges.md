@@ -68,18 +68,18 @@ function extractSqlState(error) {
 
 **Problem:**
 ```
-Error: SQLSTATE 42704 (Object not found: ASE/APP_STAGING_00)
+Error: SQLSTATE 42704 (Object not found: LIBDEV/APP_STAGING_00)
 ```
 
 **Root Cause:**
 - Table **exists** but in a **different schema** than queried
 - `resolveDefaultSchema()` doesn't check alternative schemas
-- Query fails because it queries `ASE.APP_STAGING_00` but table is in `APPDATA.APP_STAGING_00`
+- Query fails because it queries `LIBDEV.APP_STAGING_00` but table is in `APPDATA.APP_STAGING_00`
 
 **Current Workaround:**
 ```javascript
 // Hardcoded to one schema — no fallback
-const schema = resolveDefaultSchema(dbConfig); // → 'ASE'
+const schema = resolveDefaultSchema(dbConfig); // → 'LIBDEV'
 ```
 
 **Impact**: 
@@ -131,7 +131,7 @@ const resolveColumn = (logicalName, catalogName) => {
 -- Query ambiguous: which APP_STAGING_00?
 SELECT * FROM APP_STAGING_00;
 -- Result: SQL0205 (Ambiguous reference)
--- Because APP_STAGING_00 exists in both ASE and APPDATA libraries
+-- Because APP_STAGING_00 exists in both LIBDEV and APPDATA libraries
 ```
 
 **Root Cause:**
@@ -142,7 +142,7 @@ SELECT * FROM APP_STAGING_00;
 **Current Workaround:**
 ```javascript
 // Must always qualify
-SELECT * FROM ASE.APP_STAGING_00;  // explicit
+SELECT * FROM LIBDEV.APP_STAGING_00;  // explicit
 ```
 
 **Impact**: 
