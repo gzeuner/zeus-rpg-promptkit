@@ -164,7 +164,7 @@ npm test -- tests/qa-stage-registry.test.js
 
 **Documentation (2 files):**
 - `docs/qa-validation-layer.md`
-- `docs/QA_QUICKSTART.md` (this file)
+- `docs/quickstart/qa-quickstart.md` (this file)
 
 **Modified (2 files):**
 - `cli/zeus.js` - Added QA command routing

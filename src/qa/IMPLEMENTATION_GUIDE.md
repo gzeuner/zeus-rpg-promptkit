@@ -281,5 +281,5 @@ To add a new validator:
 ## See Also
 
 - [QA Validation Layer](../../docs/qa-validation-layer.md) - Full documentation
-- [QA Quick Start](../../docs/QA_QUICKSTART.md) - User guide
+- [QA Quick Start](../../docs/quickstart/qa-quickstart.md) - User guide
 - [CLI Integration](./README.md) - This implementation guide
