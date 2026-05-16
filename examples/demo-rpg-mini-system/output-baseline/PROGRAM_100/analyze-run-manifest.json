@@ -1,0 +1,789 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "zeus-rpg-promptkit",
+    "command": "analyze"
+  },
+  "run": {
+    "status": "succeeded",
+    "startedAt": "2000-01-01T00:00:00.000Z",
+    "completedAt": "2000-01-01T00:00:00.000Z",
+    "durationMs": 0,
+    "cwd": "WORKSPACE_ROOT",
+    "outputDir": "OUTPUT_ROOT/PROGRAM_100",
+    "reproducible": true
+  },
+  "inputs": {
+    "program": "PROGRAM_100",
+    "sourceRoot": "SOURCE_ROOT",
+    "outputRoot": "OUTPUT_ROOT",
+    "options": {
+      "optimizeContextEnabled": true,
+      "safeSharingEnabled": false,
+      "emitDiagnosticsEnabled": false,
+      "skipTestData": false,
+      "testDataLimit": 50,
+      "analysisLimits": {
+        "maxProgramDepth": 25,
+        "maxPrograms": 500,
+        "maxNodes": 5000,
+        "maxEdges": 4000,
+        "maxScannedFiles": 500,
+        "maxProgramCallsPerProgram": 200
+      },
+      "testDataPolicy": {
+        "limit": 50,
+        "maskColumns": [
+          "NAME",
+          "EMAIL",
+          "PHONE"
+        ],
+        "allowTables": [
+          "MYLIB.CUSTOMERS",
+          "MYLIB.ORDERS"
+        ],
+        "denyTables": [
+          "MYLIB.AUDITLOG"
+        ],
+        "maskRules": [
+          {
+            "table": "CUSTOMERS",
+            "columns": [
+              "PHONE"
+            ],
+            "value": "MASKED_PHONE"
+          }
+        ]
+      },
+      "extensions": [
+        ".rpg",
+        ".rpgle",
+        ".sqlrpgle",
+        ".rpgile",
+        ".bnd",
+        ".binder",
+        ".bndsrc",
+        ".clp",
+        ".clle",
+        ".dds",
+        ".dspf",
+        ".prtf",
+        ".pf",
+        ".lf"
+      ],
+      "reproducibleEnabled": true,
+      "guidedMode": {
+        "name": "documentation",
+        "title": "Documentation",
+        "description": "Generate prompt-ready technical documentation grounded in the canonical and AI projections.",
+        "autoOptimizeContext": true,
+        "promptTemplates": [
+          "documentation"
+        ],
+        "workflowKeys": [
+          "documentation"
+        ],
+        "primaryArtifacts": [
+          "analysis-index.json",
+          "ai-knowledge.json",
+          "report.md",
+          "ai_prompt_documentation.md"
+        ],
+        "reviewWorkflow": {
+          "intendedAudience": [
+            "New engineers",
+            "Technical writers",
+            "Maintainers assembling onboarding or system orientation notes"
+          ],
+          "keyQuestionsAnswered": [
+            "What does the program do at a high level?",
+            "Which tables, calls, and source-backed evidence matter most for onboarding?",
+            "Which generated artifacts are most useful for documentation handoff?"
+          ],
+          "expectedDecisions": [
+            "Decide whether the generated documentation is sufficient for onboarding or needs deeper analysis.",
+            "Choose the next artifact or subsystem to document in more detail."
+          ],
+          "interpretationGuidance": [
+            "Prefer ai_prompt_documentation.md for narrative synthesis and use report.md or ai-knowledge.json to verify claims.",
+            "Treat missing evidence highlights as a sign that the workflow is broad orientation, not a complete design review."
+          ],
+          "requiredInputs": [
+            "A local IBM i source tree and selected root program.",
+            "Prompt-ready AI knowledge projection with documentation workflow evidence.",
+            "Report and prompt artifacts for narrative handoff."
+          ],
+          "recommendedOutputs": [
+            {
+              "path": "report.md",
+              "purpose": "Broad run summary with source-backed counts and notes."
+            },
+            {
+              "path": "ai_prompt_documentation.md",
+              "purpose": "Documentation-first prompt for onboarding or explanation."
+            },
+            {
+              "path": "ai-knowledge.json",
+              "purpose": "Prompt-ready evidence projection for follow-up AI tasks."
+            }
+          ]
+        },
+        "effectiveOptimizeContext": true
+      },
+      "workflowPreset": null,
+      "investigation": {
+        "scanIfsPathsEnabled": false,
+        "searchTerms": [],
+        "searchIgnorePatterns": [],
+        "searchMaxResults": 200,
+        "diagnosticPacks": [],
+        "diagnosticParameterString": ""
+      }
+    },
+    "sourceSnapshot": {
+      "root": "SOURCE_ROOT",
+      "fileCount": 6,
+      "fingerprint": "dd03395e6333a70a13113a0c243bb4656a15d38f7ce2170f6e13aacb33d22816",
+      "contentFingerprint": "dd03395e6333a70a13113a0c243bb4656a15d38f7ce2170f6e13aacb33d22816",
+      "files": [
+        {
+          "path": "QCLLESRC/DRIVER_100.clle",
+          "sizeBytes": 36,
+          "mtimeMs": null,
+          "sha256": "a0483086294615b3f6161fd35a525c31adcff516c031f2823835c8516f9ebf6e"
+        },
+        {
+          "path": "QDDSSRC/FILE_100.pf",
+          "sizeBytes": 118,
+          "mtimeMs": null,
+          "sha256": "e9913181a46f8018ee0bf3826b510d792dd7d529c1a9c946ab1ed92a3627d189"
+        },
+        {
+          "path": "QDDSSRC/FILE_200.lf",
+          "sizeBytes": 72,
+          "mtimeMs": null,
+          "sha256": "828df66bbfb8d45ccc72471d2d577e47fb26b8cc434691de7687a37130e9ad11"
+        },
+        {
+          "path": "QRPGLESRC/PROGRAM_100.rpgle",
+          "sizeBytes": 140,
+          "mtimeMs": null,
+          "sha256": "45800c0ea725d5e77617dee7a5bbccff6816cd6e59d50dfd4f4306d4de808c1d"
+        },
+        {
+          "path": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "sizeBytes": 266,
+          "mtimeMs": null,
+          "sha256": "3a7f37e6957a8d4447e3dfd72caf4307182e43b3e83fd6bdfbfb353d1edeb253"
+        },
+        {
+          "path": "QRPGLESRC/PROGRAM_300.rpgle",
+          "sizeBytes": 148,
+          "mtimeMs": null,
+          "sha256": "269ca2663ea11ea37699f6f33e104219adedbd10fd4ab5d87825c01c98e2c48b"
+        }
+      ]
+    },
+    "importManifest": null
+  },
+  "summary": {
+    "stageCount": 8,
+    "completedStageCount": 8,
+    "failedStageCount": 0,
+    "diagnosticCount": 2,
+    "errorCount": 0,
+    "warningCount": 2,
+    "generatedArtifactCount": 15,
+    "sourceFileCount": 6
+  },
+  "cacheStatus": {
+    "enabled": true,
+    "sourceScan": {
+      "requests": 6,
+      "hits": 0,
+      "memoryHits": 0,
+      "persistentHits": 0,
+      "misses": 5,
+      "invalidations": 0,
+      "writes": 5,
+      "entryCount": 5,
+      "cacheDir": "OUTPUT_ROOT/.zeus-cache/source-scans"
+    },
+    "db2Metadata": {
+      "status": "disabled",
+      "hits": 0,
+      "misses": 0,
+      "cacheKey": null,
+      "payloadFile": null,
+      "markdownFile": null,
+      "manifestFile": "analysis-cache.json",
+      "reason": "no DB2 connection configuration was available"
+    },
+    "testData": {
+      "status": "disabled",
+      "hits": 0,
+      "misses": 0,
+      "cacheKey": null,
+      "payloadFile": null,
+      "markdownFile": null,
+      "manifestFile": "analysis-cache.json",
+      "reason": "no DB2 connection configuration was available"
+    },
+    "artifactManifestFile": "analysis-cache.json"
+  },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "message": "DB2 metadata export was skipped because no DB2 connection configuration was available.",
+      "code": "DB2_EXPORT_SKIPPED"
+    },
+    {
+      "severity": "warning",
+      "message": "Test data extraction was skipped because no DB2 connection configuration was available.",
+      "code": "TEST_DATA_SKIPPED"
+    }
+  ],
+  "stages": [
+    {
+      "id": "collect-scan",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Collect and scan source files",
+        "description": "Discovers source files, validates encodings, and runs the base scanner suite.",
+        "category": "scan",
+        "registrationOrder": 0,
+        "before": [],
+        "after": []
+      },
+      "metadata": {
+        "sourceFileCount": 6,
+        "scannableSourceFileCount": 6,
+        "invalidSourceFileCount": 0,
+        "sourceValidationWarningCount": 0,
+        "importManifestFound": false,
+        "scanCache": {
+          "requests": 6,
+          "hits": 0,
+          "memoryHits": 0,
+          "persistentHits": 0,
+          "misses": 5,
+          "invalidations": 0,
+          "writes": 5,
+          "entryCount": 5,
+          "cacheDir": "OUTPUT_ROOT/.zeus-cache/source-scans"
+        },
+        "analysisArtifactCacheEntries": 0,
+        "scannedFileCount": 5,
+        "tableCount": 4,
+        "programCallCount": 3,
+        "copyMemberCount": 0,
+        "sqlStatementCount": 2,
+        "procedureCount": 3,
+        "prototypeCount": 0,
+        "procedureCallCount": 0,
+        "nativeFileCount": 3,
+        "nativeFileAccessCount": 0,
+        "moduleCount": 3,
+        "bindingDirectoryCount": 0,
+        "serviceProgramCount": 0,
+        "commandCount": 3,
+        "objectUsageCount": 0,
+        "ddsFileCount": 1,
+        "sourceTypeSummary": {
+          "byType": {
+            "CLLE": 1,
+            "PF": 1,
+            "RPGLE": 2,
+            "SQLRPGLE": 1
+          },
+          "byFamily": {
+            "CL": 1,
+            "DDS": 1,
+            "RPG": 3
+          }
+        },
+        "sourceNormalization": {
+          "fileCount": 6,
+          "convertedEncodingCount": 0,
+          "normalizedFileCount": 0,
+          "bomRemovedCount": 0,
+          "normalizedLineEndingCount": 0,
+          "invalidFileCount": 0,
+          "warningCount": 0
+        },
+        "diagnosticCount": 0,
+        "noteCount": 1
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "build-context",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Build semantic context",
+        "description": "Builds canonical/context projections and the dependency graphs.",
+        "category": "analysis",
+        "registrationOrder": 1,
+        "before": [],
+        "after": [
+          "collect-scan"
+        ]
+      },
+      "metadata": {
+        "canonicalAnalysis": {
+          "schemaVersion": 1,
+          "relationCount": 25,
+          "sourceFileCount": 5
+        },
+        "dependencyGraph": {
+          "nodeCount": 10,
+          "edgeCount": 10,
+          "tableCount": 4,
+          "programCallCount": 3,
+          "copyMemberCount": 0,
+          "moduleCount": 3,
+          "serviceProgramCount": 0,
+          "bindingDirectoryCount": 0,
+          "bindEdgeCount": 3,
+          "files": {
+            "json": "dependency-graph.json",
+            "mermaid": "dependency-graph.mmd",
+            "markdown": "dependency-graph.md"
+          }
+        },
+        "crossProgramGraph": {
+          "programCount": 3,
+          "tableCount": 4,
+          "copyMemberCount": 0,
+          "scannedFileCount": 3,
+          "edgeCount": 6,
+          "ambiguousPrograms": [],
+          "unresolvedPrograms": [],
+          "truncated": false,
+          "limitDiagnosticsCount": 0,
+          "limitsConfigured": {
+            "maxProgramDepth": 25,
+            "maxPrograms": 500,
+            "maxNodes": 5000,
+            "maxEdges": 4000,
+            "maxScannedFiles": 500,
+            "maxProgramCallsPerProgram": 200
+          },
+          "limitsReached": {
+            "maxProgramDepth": false,
+            "maxPrograms": false,
+            "maxNodes": false,
+            "maxEdges": false,
+            "maxScannedFiles": false,
+            "maxProgramCallsPerProgram": false
+          }
+        },
+        "sourceCatalog": {
+          "fileCount": 6,
+          "distinctMemberCount": 6,
+          "manifestBackedCount": 0,
+          "ambiguousMemberCount": 0,
+          "ambiguousMembers": []
+        },
+        "scanCache": {
+          "requests": 9,
+          "hits": 3,
+          "memoryHits": 3,
+          "persistentHits": 0,
+          "misses": 5,
+          "invalidations": 0,
+          "writes": 5,
+          "entryCount": 5,
+          "cacheDir": "OUTPUT_ROOT/.zeus-cache/source-scans"
+        },
+        "sourceSnippetFound": true
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "investigate-sources",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Run source investigations",
+        "description": "Applies optional IFS-path, full-text search, and similar source investigations.",
+        "category": "investigation",
+        "registrationOrder": 2,
+        "before": [],
+        "after": [
+          "build-context"
+        ]
+      },
+      "metadata": {
+        "ifsPathScanEnabled": false,
+        "ifsPathCount": 0,
+        "searchEnabled": false,
+        "searchTermCount": 0,
+        "searchMatchCount": 0,
+        "searchTruncated": false
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "optimize-context",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Optimize prompt context",
+        "description": "Builds the salience-ranked optimized context projection when enabled.",
+        "category": "optimization",
+        "registrationOrder": 3,
+        "before": [],
+        "after": [
+          "investigate-sources"
+        ]
+      },
+      "metadata": {
+        "enabled": true,
+        "contextTokens": 2511,
+        "optimizedTokens": 8687,
+        "reductionPercent": 0
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "export-db2",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Export DB2 metadata",
+        "description": "Exports DB2 metadata and folds linked evidence back into semantic analysis.",
+        "category": "db2",
+        "registrationOrder": 4,
+        "before": [],
+        "after": [
+          "optimize-context"
+        ]
+      },
+      "metadata": {
+        "status": "skipped",
+        "file": "db2-metadata.json",
+        "markdownFile": "db2-metadata.md",
+        "tableCount": 0,
+        "requestedTableCount": 0,
+        "resolvedTableCount": 0,
+        "unresolvedTableCount": 0,
+        "ambiguousTableCount": 0,
+        "triggerCount": 0,
+        "derivedObjectCount": 0,
+        "externalObjectCount": 0,
+        "catalogResolvedProgramCount": 0,
+        "catalogResolvedProcedureCount": 0,
+        "fallbackLookupCount": 0,
+        "reason": "no DB2 connection configuration was available",
+        "cacheStatus": "disabled",
+        "connectionRole": "metadata",
+        "cache": {
+          "status": "disabled",
+          "hits": 0,
+          "misses": 0,
+          "cacheKey": null,
+          "payloadFile": null,
+          "markdownFile": null,
+          "manifestFile": "analysis-cache.json",
+          "reason": "no DB2 connection configuration was available"
+        }
+      },
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "message": "DB2 metadata export was skipped because no DB2 connection configuration was available.",
+          "code": "DB2_EXPORT_SKIPPED"
+        }
+      ]
+    },
+    {
+      "id": "export-test-data",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Export governed test data",
+        "description": "Exports bounded DB2 sample rows with configured masking and governance policy.",
+        "category": "db2",
+        "registrationOrder": 5,
+        "before": [],
+        "after": [
+          "export-db2"
+        ]
+      },
+      "metadata": {
+        "status": "skipped",
+        "file": "test-data.json",
+        "markdownFile": "test-data.md",
+        "tableCount": 0,
+        "requestedTableCount": 4,
+        "skippedTableCount": 4,
+        "rowLimit": 50,
+        "reason": "no DB2 connection configuration was available",
+        "policy": {
+          "allowTables": [
+            {
+              "schema": "MYLIB",
+              "table": "CUSTOMERS"
+            },
+            {
+              "schema": "MYLIB",
+              "table": "ORDERS"
+            }
+          ],
+          "denyTables": [
+            {
+              "schema": "MYLIB",
+              "table": "AUDITLOG"
+            }
+          ],
+          "maskColumns": [
+            "EMAIL",
+            "NAME",
+            "PHONE"
+          ],
+          "maskRules": [
+            {
+              "schema": "",
+              "table": "CUSTOMERS",
+              "columns": [
+                "PHONE"
+              ],
+              "value": "MASKED_PHONE"
+            }
+          ]
+        },
+        "policySummary": {
+          "allowlistCount": 2,
+          "denylistCount": 1,
+          "maskRuleCount": 1,
+          "globalMaskColumnCount": 3,
+          "deniedTableCount": 0,
+          "notAllowlistedTableCount": 0,
+          "maskedTableCount": 0,
+          "maskedColumnCount": 0
+        },
+        "cacheStatus": "disabled",
+        "connectionRole": "testData",
+        "cache": {
+          "status": "disabled",
+          "hits": 0,
+          "misses": 0,
+          "cacheKey": null,
+          "payloadFile": null,
+          "markdownFile": null,
+          "manifestFile": "analysis-cache.json",
+          "reason": "no DB2 connection configuration was available"
+        }
+      },
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "message": "Test data extraction was skipped because no DB2 connection configuration was available.",
+          "code": "TEST_DATA_SKIPPED"
+        }
+      ]
+    },
+    {
+      "id": "run-diagnostic-packs",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Run diagnostic packs",
+        "description": "Executes optional read-only investigation packs after the main semantic pipeline.",
+        "category": "investigation",
+        "registrationOrder": 6,
+        "before": [],
+        "after": [
+          "export-test-data"
+        ]
+      },
+      "metadata": {
+        "enabled": false,
+        "packCount": 0,
+        "failedPackCount": 0,
+        "stepCount": 0
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "write-artifacts",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": null,
+      "metadata": {
+        "fileCount": 15,
+        "generatedFiles": [
+          "canonical-analysis.json",
+          "context.json",
+          "optimized-context.json",
+          "ai-knowledge.json",
+          "analysis-index.json",
+          "dependency-graph.json",
+          "dependency-graph.mmd",
+          "dependency-graph.md",
+          "program-call-tree.json",
+          "program-call-tree.mmd",
+          "program-call-tree.md",
+          "architecture.html",
+          "architecture-report.md",
+          "ai_prompt_documentation.md",
+          "report.md"
+        ],
+        "workflowMode": "documentation",
+        "workflowPreset": null,
+        "promptTemplateCount": 1,
+        "diagnosticsFileWritten": false,
+        "viewerAsset": {
+          "packageName": "vis-network",
+          "version": "10.0.2",
+          "license": "(Apache-2.0 OR MIT)",
+          "asset": "vis-network/standalone/umd/vis-network.min.js",
+          "sourceMode": "bundled-inline",
+          "sha256": "92a2603c7125a249f1b61f3c3a316b4041ef47b32f4433484e3471f140f91485"
+        }
+      },
+      "diagnostics": []
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "ai_prompt_documentation.md",
+      "kind": "markdown",
+      "exists": true,
+      "sizeBytes": 2370,
+      "sha256": "40aebd8e6b1426bc882fd56160dcc97a5efeeab891616d83a00975e564d8ac12"
+    },
+    {
+      "path": "ai-knowledge.json",
+      "kind": "json",
+      "exists": true,
+      "sizeBytes": 69723,
+      "sha256": "7a43332ffcb9fd2e2b6a0cb6560e738e19cf109670d72f863d7030a108e1a889"
+    },
+    {
+      "path": "analysis-index.json",
+      "kind": "json",
+      "exists": true,
+      "sizeBytes": 58064,
+      "sha256": "0705c78e701f3bba7bc6edd1b7c57c5f24d7f8160df17096f01626490cd1cace"
+    },
+    {
+      "path": "architecture-report.md",
+      "kind": "markdown",
+      "exists": true,
+      "sizeBytes": 2648,
+      "sha256": "39a25d1b0671bd170b1606d0f320f94d172af99f4fdf689221b0b1aa064b65d7"
+    },
+    {
+      "path": "architecture.html",
+      "kind": "html",
+      "exists": true,
+      "sizeBytes": 653292,
+      "sha256": "de24e7faac5aca867e4d6e557c77d699db7086178ae9074fe67dd6696f928d38"
+    },
+    {
+      "path": "canonical-analysis.json",
+      "kind": "json",
+      "exists": true,
+      "sizeBytes": 33935,
+      "sha256": "7de9060d794800732d4f58129726dc645f8a968a2f45486d95d5f950c86c600b"
+    },
+    {
+      "path": "context.json",
+      "kind": "json",
+      "exists": true,
+      "sizeBytes": 16905,
+      "sha256": "0b63b5a1681e94c8f37b28630838c67db95f9d7fb840ab0345655fbd7d78b7c6"
+    },
+    {
+      "path": "dependency-graph.json",
+      "kind": "json",
+      "exists": true,
+      "sizeBytes": 2203,
+      "sha256": "79ad9bbec542e31fd36d703ce17b351ec48fac55b7709ac66ff8e6dda8478c20"
+    },
+    {
+      "path": "dependency-graph.md",
+      "kind": "markdown",
+      "exists": true,
+      "sizeBytes": 999,
+      "sha256": "7ce4d6b1f0f700bada8174be12d2feb4a1b8af7843e3dca45030551c9b86a512"
+    },
+    {
+      "path": "dependency-graph.mmd",
+      "kind": "mermaid",
+      "exists": true,
+      "sizeBytes": 775,
+      "sha256": "f9b02d9f6f5eafc2464d18d89c98eaa02596b23672bf8a0c8dac2da1c8b3fadb"
+    },
+    {
+      "path": "optimized-context.json",
+      "kind": "json",
+      "exists": true,
+      "sizeBytes": 61528,
+      "sha256": "6b7264bf5d759dd2541207e044def48aefd78a48f1a6a5d8a07d98bf011afe6c"
+    },
+    {
+      "path": "program-call-tree.json",
+      "kind": "json",
+      "exists": true,
+      "sizeBytes": 2180,
+      "sha256": "a3376ddc48d37ec6cf7f947f8fe3a330c6ec011bb3441bd4609ad7614b338a31"
+    },
+    {
+      "path": "program-call-tree.md",
+      "kind": "markdown",
+      "exists": true,
+      "sizeBytes": 631,
+      "sha256": "620d833ed36a2f8667c7eb7af96209d05831a108e4c3b9d8d0d62e7031a27b84"
+    },
+    {
+      "path": "program-call-tree.mmd",
+      "kind": "mermaid",
+      "exists": true,
+      "sizeBytes": 462,
+      "sha256": "4371c90bc0d1af0dfb47a928d28b2c86f9858be08c78149390ee6d5f98540af7"
+    },
+    {
+      "path": "report.md",
+      "kind": "markdown",
+      "exists": true,
+      "sizeBytes": 5265,
+      "sha256": "1e0fad6a0e9a3b670807d1b20a22cac4dd2c6071c3dad4c32b0d5fbe1d17c470"
+    }
+  ],
+  "reproducibility": {
+    "enabled": true,
+    "stableTimestamp": "2000-01-01T00:00:00.000Z",
+    "contentFingerprint": "09607d604e906597c032a159e0a6fe8907cff8c10cf267322162ca0fcfbe6ba0",
+    "runtimeMetadataSuppressed": true,
+    "comparisonSuppressed": true
+  },
+  "comparison": null
+}

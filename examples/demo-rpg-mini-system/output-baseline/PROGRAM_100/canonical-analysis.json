@@ -1,0 +1,1280 @@
+{
+  "schemaVersion": 1,
+  "kind": "canonical-analysis",
+  "generatedAt": "2000-01-01T00:00:00.000Z",
+  "rootProgram": "PROGRAM_100",
+  "sourceRoot": "SOURCE_ROOT",
+  "provenance": {
+    "importManifest": null
+  },
+  "sourceFiles": [
+    {
+      "id": "FILE:QCLLESRC/DRIVER_100.clle",
+      "path": "QCLLESRC/DRIVER_100.clle",
+      "sizeBytes": 36,
+      "lines": 5,
+      "sourceType": "CLLE",
+      "normalization": {
+        "detectedEncoding": "UTF-8",
+        "newlineStyle": "LF",
+        "normalizedNewlineStyle": "LF",
+        "status": "ok"
+      },
+      "provenance": {
+        "origin": "local",
+        "import": null
+      }
+    },
+    {
+      "id": "FILE:QDDSSRC/FILE_100.pf",
+      "path": "QDDSSRC/FILE_100.pf",
+      "sizeBytes": 118,
+      "lines": 6,
+      "sourceType": "PF",
+      "normalization": {
+        "detectedEncoding": "UTF-8",
+        "newlineStyle": "LF",
+        "normalizedNewlineStyle": "LF",
+        "status": "ok"
+      },
+      "provenance": {
+        "origin": "local",
+        "import": null
+      }
+    },
+    {
+      "id": "FILE:QRPGLESRC/PROGRAM_100.rpgle",
+      "path": "QRPGLESRC/PROGRAM_100.rpgle",
+      "sizeBytes": 140,
+      "lines": 11,
+      "sourceType": "RPGLE",
+      "normalization": {
+        "detectedEncoding": "UTF-8",
+        "newlineStyle": "LF",
+        "normalizedNewlineStyle": "LF",
+        "status": "ok"
+      },
+      "provenance": {
+        "origin": "local",
+        "import": null
+      }
+    },
+    {
+      "id": "FILE:QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "path": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "sizeBytes": 266,
+      "lines": 19,
+      "sourceType": "SQLRPGLE",
+      "normalization": {
+        "detectedEncoding": "UTF-8",
+        "newlineStyle": "LF",
+        "normalizedNewlineStyle": "LF",
+        "status": "ok"
+      },
+      "provenance": {
+        "origin": "local",
+        "import": null
+      }
+    },
+    {
+      "id": "FILE:QRPGLESRC/PROGRAM_300.rpgle",
+      "path": "QRPGLESRC/PROGRAM_300.rpgle",
+      "sizeBytes": 148,
+      "lines": 11,
+      "sourceType": "RPGLE",
+      "normalization": {
+        "detectedEncoding": "UTF-8",
+        "newlineStyle": "LF",
+        "normalizedNewlineStyle": "LF",
+        "status": "ok"
+      },
+      "provenance": {
+        "origin": "local",
+        "import": null
+      }
+    }
+  ],
+  "entities": {
+    "programs": [
+      {
+        "id": "PROGRAM:DRIVER_100",
+        "name": "DRIVER_100",
+        "role": "SCANNED",
+        "resolutionSource": "SOURCE"
+      },
+      {
+        "id": "PROGRAM:FILE_100",
+        "name": "FILE_100",
+        "role": "SCANNED",
+        "resolutionSource": "SOURCE"
+      },
+      {
+        "id": "PROGRAM:PROGRAM_100",
+        "name": "PROGRAM_100",
+        "role": "ROOT",
+        "resolutionSource": "SOURCE"
+      },
+      {
+        "id": "PROGRAM:PROGRAM_200",
+        "name": "PROGRAM_200",
+        "role": "SCANNED",
+        "resolutionSource": "SOURCE"
+      },
+      {
+        "id": "PROGRAM:PROGRAM_300",
+        "name": "PROGRAM_300",
+        "role": "SCANNED",
+        "resolutionSource": "SOURCE"
+      }
+    ],
+    "tables": [
+      {
+        "name": "ETCH",
+        "kind": "FILE",
+        "evidenceCount": 1,
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "line": 11,
+            "text": "fetch first 1 row only;"
+          }
+        ],
+        "id": "TABLE:ETCH"
+      },
+      {
+        "name": "FILE_100",
+        "kind": "DISK",
+        "evidenceCount": 1,
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "line": 4,
+            "text": "dcl-f FILE_100 disk keyed usage(*input);"
+          }
+        ],
+        "id": "TABLE:FILE_100"
+      },
+      {
+        "name": "FILE_200",
+        "kind": "DISK",
+        "evidenceCount": 1,
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "line": 4,
+            "text": "dcl-f FILE_200 disk usage(*update);"
+          }
+        ],
+        "id": "TABLE:FILE_200"
+      },
+      {
+        "name": "TABLE_100",
+        "kind": "SQL",
+        "evidenceCount": 2,
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "line": 7,
+            "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;"
+          },
+          {
+            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "line": 13,
+            "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;"
+          }
+        ],
+        "id": "TABLE:TABLE_100"
+      }
+    ],
+    "db2Triggers": [],
+    "nativeFiles": [
+      {
+        "name": "ETCH",
+        "kind": "FILE",
+        "declaredAccess": [],
+        "keyed": false,
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "line": 11,
+            "text": "fetch first 1 row only;"
+          }
+        ],
+        "id": "NATIVE_FILE:ETCH",
+        "evidenceCount": 1
+      },
+      {
+        "name": "FILE_100",
+        "kind": "DISK",
+        "declaredAccess": [
+          "READ"
+        ],
+        "keyed": true,
+        "evidence": [
+          {
+            "file": "QDDSSRC/FILE_100.pf",
+            "line": 1,
+            "text": "FILE_100 DISK"
+          },
+          {
+            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "line": 4,
+            "text": "dcl-f FILE_100 disk keyed usage(*input);"
+          }
+        ],
+        "id": "NATIVE_FILE:FILE_100",
+        "evidenceCount": 2
+      },
+      {
+        "name": "FILE_200",
+        "kind": "DISK",
+        "declaredAccess": [
+          "READ",
+          "UPDATE"
+        ],
+        "keyed": false,
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "line": 4,
+            "text": "dcl-f FILE_200 disk usage(*update);"
+          }
+        ],
+        "id": "NATIVE_FILE:FILE_200",
+        "evidenceCount": 1
+      }
+    ],
+    "modules": [
+      {
+        "name": "PROGRAM_100",
+        "kind": "PROGRAM_MODULE",
+        "ownerProgram": "PROGRAM_100",
+        "sourceFile": "QRPGLESRC/PROGRAM_100.rpgle",
+        "bindingDirectories": [],
+        "servicePrograms": [],
+        "importedProcedures": [],
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "line": 2,
+            "text": "ctl-opt dftactgrp(*no);"
+          }
+        ],
+        "id": "MODULE:PROGRAM_100:QRPGLESRC/PROGRAM_100.rpgle:PROGRAM_100",
+        "evidenceCount": 1
+      },
+      {
+        "name": "PROGRAM_200",
+        "kind": "PROGRAM_MODULE",
+        "ownerProgram": "PROGRAM_200",
+        "sourceFile": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+        "bindingDirectories": [],
+        "servicePrograms": [],
+        "importedProcedures": [],
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "line": 2,
+            "text": "ctl-opt dftactgrp(*no);"
+          }
+        ],
+        "id": "MODULE:PROGRAM_200:QRPGLESRC/PROGRAM_200.sqlrpgle:PROGRAM_200",
+        "evidenceCount": 1
+      },
+      {
+        "name": "PROGRAM_300",
+        "kind": "PROGRAM_MODULE",
+        "ownerProgram": "PROGRAM_300",
+        "sourceFile": "QRPGLESRC/PROGRAM_300.rpgle",
+        "bindingDirectories": [],
+        "servicePrograms": [],
+        "importedProcedures": [],
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "line": 2,
+            "text": "ctl-opt dftactgrp(*no);"
+          }
+        ],
+        "id": "MODULE:PROGRAM_300:QRPGLESRC/PROGRAM_300.rpgle:PROGRAM_300",
+        "evidenceCount": 1
+      }
+    ],
+    "servicePrograms": [],
+    "bindingDirectories": [],
+    "copyMembers": [],
+    "sqlStatements": [
+      {
+        "type": "SELECT",
+        "intent": "READ",
+        "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+        "tables": [
+          "TABLE_100"
+        ],
+        "hostVariables": [
+          "ID_001"
+        ],
+        "cursors": [
+          {
+            "name": "FIRST",
+            "action": "FETCH"
+          }
+        ],
+        "readsData": true,
+        "writesData": false,
+        "dynamic": false,
+        "unresolved": false,
+        "uncertainty": [
+          "UNRESOLVED_LIBRARY"
+        ],
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "startLine": 7,
+            "endLine": 11
+          }
+        ],
+        "id": "SQL:0001"
+      },
+      {
+        "type": "UPDATE",
+        "intent": "WRITE",
+        "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+        "tables": [
+          "TABLE_100"
+        ],
+        "hostVariables": [
+          "ID_001"
+        ],
+        "cursors": [],
+        "readsData": false,
+        "writesData": true,
+        "dynamic": false,
+        "unresolved": false,
+        "uncertainty": [
+          "UNRESOLVED_LIBRARY"
+        ],
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "startLine": 13,
+            "endLine": 16
+          }
+        ],
+        "id": "SQL:0002"
+      }
+    ],
+    "procedures": [
+      {
+        "name": "MAIN",
+        "kind": "PROCEDURE",
+        "ownerProgram": "PROGRAM_100",
+        "sourceFile": "QRPGLESRC/PROGRAM_100.rpgle",
+        "startLine": 6,
+        "endLine": 9,
+        "sourceForm": "FREE_FORM",
+        "exported": false,
+        "imported": false,
+        "externalName": null,
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "startLine": 6,
+            "endLine": 9,
+            "text": "dcl-proc MAIN;"
+          }
+        ],
+        "id": "PROCEDURE:PROGRAM_100:QRPGLESRC/PROGRAM_100.rpgle:MAIN",
+        "evidenceCount": 1
+      },
+      {
+        "name": "MAIN",
+        "kind": "PROCEDURE",
+        "ownerProgram": "PROGRAM_200",
+        "sourceFile": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+        "startLine": 6,
+        "endLine": 17,
+        "sourceForm": "FREE_FORM",
+        "exported": false,
+        "imported": false,
+        "externalName": null,
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "startLine": 6,
+            "endLine": 17,
+            "text": "dcl-proc MAIN;"
+          }
+        ],
+        "id": "PROCEDURE:PROGRAM_200:QRPGLESRC/PROGRAM_200.sqlrpgle:MAIN",
+        "evidenceCount": 1
+      },
+      {
+        "name": "MAIN",
+        "kind": "PROCEDURE",
+        "ownerProgram": "PROGRAM_300",
+        "sourceFile": "QRPGLESRC/PROGRAM_300.rpgle",
+        "startLine": 6,
+        "endLine": 9,
+        "sourceForm": "FREE_FORM",
+        "exported": false,
+        "imported": false,
+        "externalName": null,
+        "evidence": [
+          {
+            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "startLine": 6,
+            "endLine": 9,
+            "text": "dcl-proc MAIN;"
+          }
+        ],
+        "id": "PROCEDURE:PROGRAM_300:QRPGLESRC/PROGRAM_300.rpgle:MAIN",
+        "evidenceCount": 1
+      }
+    ],
+    "prototypes": [],
+    "procedureReferences": [],
+    "externalObjects": []
+  },
+  "relations": [
+    {
+      "id": "CALLS_PROGRAM:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100",
+      "type": "CALLS_PROGRAM",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100",
+      "evidence": [
+        {
+          "file": "QCLLESRC/DRIVER_100.clle",
+          "line": 2,
+          "text": "CALL PGM(PROGRAM_100)"
+        }
+      ],
+      "attributes": {
+        "callKind": "PROGRAM"
+      }
+    },
+    {
+      "id": "CALLS_PROGRAM:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_200",
+      "type": "CALLS_PROGRAM",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_200",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 7,
+          "text": "call PROGRAM_200;"
+        }
+      ],
+      "attributes": {
+        "callKind": "PROGRAM"
+      }
+    },
+    {
+      "id": "CALLS_PROGRAM:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_300",
+      "type": "CALLS_PROGRAM",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_300",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 8,
+          "text": "call PROGRAM_300;"
+        }
+      ],
+      "attributes": {
+        "callKind": "PROGRAM"
+      }
+    },
+    {
+      "id": "EXECUTES_SQL:PROGRAM:PROGRAM_100->SQL:0001",
+      "type": "EXECUTES_SQL",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "SQL:0001",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 7,
+          "endLine": 11
+        }
+      ],
+      "attributes": {
+        "sqlType": "SELECT",
+        "intent": "READ",
+        "readsData": true,
+        "writesData": false,
+        "dynamic": false,
+        "unresolved": false,
+        "hostVariables": [
+          "ID_001"
+        ],
+        "cursorNames": [
+          "FIRST"
+        ],
+        "uncertainty": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      }
+    },
+    {
+      "id": "EXECUTES_SQL:PROGRAM:PROGRAM_100->SQL:0002",
+      "type": "EXECUTES_SQL",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "SQL:0002",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 13,
+          "endLine": 16
+        }
+      ],
+      "attributes": {
+        "sqlType": "UPDATE",
+        "intent": "WRITE",
+        "readsData": false,
+        "writesData": true,
+        "dynamic": false,
+        "unresolved": false,
+        "hostVariables": [
+          "ID_001"
+        ],
+        "cursorNames": [],
+        "uncertainty": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      }
+    },
+    {
+      "id": "HAS_MODULE:PROGRAM:PROGRAM_100->MODULE:PROGRAM_100:QRPGLESRC/PROGRAM_100.rpgle:PROGRAM_100",
+      "type": "HAS_MODULE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "MODULE:PROGRAM_100:QRPGLESRC/PROGRAM_100.rpgle:PROGRAM_100",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 2,
+          "text": "ctl-opt dftactgrp(*no);"
+        }
+      ],
+      "attributes": {
+        "moduleKind": "PROGRAM_MODULE",
+        "sourceFile": "QRPGLESRC/PROGRAM_100.rpgle"
+      }
+    },
+    {
+      "id": "HAS_MODULE:PROGRAM:PROGRAM_200->MODULE:PROGRAM_200:QRPGLESRC/PROGRAM_200.sqlrpgle:PROGRAM_200",
+      "type": "HAS_MODULE",
+      "from": "PROGRAM:PROGRAM_200",
+      "to": "MODULE:PROGRAM_200:QRPGLESRC/PROGRAM_200.sqlrpgle:PROGRAM_200",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 2,
+          "text": "ctl-opt dftactgrp(*no);"
+        }
+      ],
+      "attributes": {
+        "moduleKind": "PROGRAM_MODULE",
+        "sourceFile": "QRPGLESRC/PROGRAM_200.sqlrpgle"
+      }
+    },
+    {
+      "id": "HAS_MODULE:PROGRAM:PROGRAM_300->MODULE:PROGRAM_300:QRPGLESRC/PROGRAM_300.rpgle:PROGRAM_300",
+      "type": "HAS_MODULE",
+      "from": "PROGRAM:PROGRAM_300",
+      "to": "MODULE:PROGRAM_300:QRPGLESRC/PROGRAM_300.rpgle:PROGRAM_300",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 2,
+          "text": "ctl-opt dftactgrp(*no);"
+        }
+      ],
+      "attributes": {
+        "moduleKind": "PROGRAM_MODULE",
+        "sourceFile": "QRPGLESRC/PROGRAM_300.rpgle"
+      }
+    },
+    {
+      "id": "HAS_SOURCE:PROGRAM:PROGRAM_100->FILE:QCLLESRC/DRIVER_100.clle",
+      "type": "HAS_SOURCE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "FILE:QCLLESRC/DRIVER_100.clle",
+      "evidence": []
+    },
+    {
+      "id": "HAS_SOURCE:PROGRAM:PROGRAM_100->FILE:QDDSSRC/FILE_100.pf",
+      "type": "HAS_SOURCE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "FILE:QDDSSRC/FILE_100.pf",
+      "evidence": []
+    },
+    {
+      "id": "HAS_SOURCE:PROGRAM:PROGRAM_100->FILE:QRPGLESRC/PROGRAM_100.rpgle",
+      "type": "HAS_SOURCE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "FILE:QRPGLESRC/PROGRAM_100.rpgle",
+      "evidence": []
+    },
+    {
+      "id": "HAS_SOURCE:PROGRAM:PROGRAM_100->FILE:QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "type": "HAS_SOURCE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "FILE:QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "evidence": []
+    },
+    {
+      "id": "HAS_SOURCE:PROGRAM:PROGRAM_100->FILE:QRPGLESRC/PROGRAM_300.rpgle",
+      "type": "HAS_SOURCE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "FILE:QRPGLESRC/PROGRAM_300.rpgle",
+      "evidence": []
+    },
+    {
+      "id": "OWNS_PROCEDURE:PROGRAM:PROGRAM_100->PROCEDURE:PROGRAM_100:QRPGLESRC/PROGRAM_100.rpgle:MAIN",
+      "type": "OWNS_PROCEDURE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "PROCEDURE:PROGRAM_100:QRPGLESRC/PROGRAM_100.rpgle:MAIN",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "startLine": 6,
+          "endLine": 9,
+          "text": "dcl-proc MAIN;"
+        }
+      ],
+      "attributes": {
+        "procedureKind": "PROCEDURE"
+      }
+    },
+    {
+      "id": "OWNS_PROCEDURE:PROGRAM:PROGRAM_200->PROCEDURE:PROGRAM_200:QRPGLESRC/PROGRAM_200.sqlrpgle:MAIN",
+      "type": "OWNS_PROCEDURE",
+      "from": "PROGRAM:PROGRAM_200",
+      "to": "PROCEDURE:PROGRAM_200:QRPGLESRC/PROGRAM_200.sqlrpgle:MAIN",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 6,
+          "endLine": 17,
+          "text": "dcl-proc MAIN;"
+        }
+      ],
+      "attributes": {
+        "procedureKind": "PROCEDURE"
+      }
+    },
+    {
+      "id": "OWNS_PROCEDURE:PROGRAM:PROGRAM_300->PROCEDURE:PROGRAM_300:QRPGLESRC/PROGRAM_300.rpgle:MAIN",
+      "type": "OWNS_PROCEDURE",
+      "from": "PROGRAM:PROGRAM_300",
+      "to": "PROCEDURE:PROGRAM_300:QRPGLESRC/PROGRAM_300.rpgle:MAIN",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 6,
+          "endLine": 9,
+          "text": "dcl-proc MAIN;"
+        }
+      ],
+      "attributes": {
+        "procedureKind": "PROCEDURE"
+      }
+    },
+    {
+      "id": "SQL_REFERENCES_TABLE:SQL:0001->TABLE:TABLE_100",
+      "type": "SQL_REFERENCES_TABLE",
+      "from": "SQL:0001",
+      "to": "TABLE:TABLE_100",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 7,
+          "endLine": 11
+        }
+      ]
+    },
+    {
+      "id": "SQL_REFERENCES_TABLE:SQL:0002->TABLE:TABLE_100",
+      "type": "SQL_REFERENCES_TABLE",
+      "from": "SQL:0002",
+      "to": "TABLE:TABLE_100",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 13,
+          "endLine": 16
+        }
+      ]
+    },
+    {
+      "id": "USES_NATIVE_FILE:PROGRAM:PROGRAM_100->NATIVE_FILE:ETCH",
+      "type": "USES_NATIVE_FILE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "NATIVE_FILE:ETCH",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 11,
+          "text": "fetch first 1 row only;"
+        }
+      ],
+      "attributes": {
+        "fileKind": "FILE",
+        "keyed": false,
+        "declaredAccess": [],
+        "mutating": false,
+        "interactive": false
+      }
+    },
+    {
+      "id": "USES_NATIVE_FILE:PROGRAM:PROGRAM_100->NATIVE_FILE:FILE_100",
+      "type": "USES_NATIVE_FILE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "NATIVE_FILE:FILE_100",
+      "evidence": [
+        {
+          "file": "QDDSSRC/FILE_100.pf",
+          "line": 1,
+          "text": "FILE_100 DISK"
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 4,
+          "text": "dcl-f FILE_100 disk keyed usage(*input);"
+        }
+      ],
+      "attributes": {
+        "fileKind": "DISK",
+        "keyed": true,
+        "declaredAccess": [
+          "READ"
+        ],
+        "mutating": false,
+        "interactive": false
+      }
+    },
+    {
+      "id": "USES_NATIVE_FILE:PROGRAM:PROGRAM_100->NATIVE_FILE:FILE_200",
+      "type": "USES_NATIVE_FILE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "NATIVE_FILE:FILE_200",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 4,
+          "text": "dcl-f FILE_200 disk usage(*update);"
+        }
+      ],
+      "attributes": {
+        "fileKind": "DISK",
+        "keyed": false,
+        "declaredAccess": [
+          "READ",
+          "UPDATE"
+        ],
+        "mutating": true,
+        "interactive": false
+      }
+    },
+    {
+      "id": "USES_TABLE:PROGRAM:PROGRAM_100->TABLE:ETCH",
+      "type": "USES_TABLE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "TABLE:ETCH",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 11,
+          "text": "fetch first 1 row only;"
+        }
+      ]
+    },
+    {
+      "id": "USES_TABLE:PROGRAM:PROGRAM_100->TABLE:FILE_100",
+      "type": "USES_TABLE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "TABLE:FILE_100",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 4,
+          "text": "dcl-f FILE_100 disk keyed usage(*input);"
+        }
+      ]
+    },
+    {
+      "id": "USES_TABLE:PROGRAM:PROGRAM_100->TABLE:FILE_200",
+      "type": "USES_TABLE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "TABLE:FILE_200",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 4,
+          "text": "dcl-f FILE_200 disk usage(*update);"
+        }
+      ]
+    },
+    {
+      "id": "USES_TABLE:PROGRAM:PROGRAM_100->TABLE:TABLE_100",
+      "type": "USES_TABLE",
+      "from": "PROGRAM:PROGRAM_100",
+      "to": "TABLE:TABLE_100",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 7,
+          "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;"
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 13,
+          "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;"
+        }
+      ]
+    }
+  ],
+  "enrichments": {
+    "summary": {
+      "sourceFileCount": 5,
+      "tableCount": 4,
+      "programCallCount": 3,
+      "copyMemberCount": 0,
+      "sqlStatementCount": 2,
+      "readSqlStatementCount": 1,
+      "writeSqlStatementCount": 1,
+      "dynamicSqlStatementCount": 0,
+      "unresolvedSqlStatementCount": 0,
+      "procedureCount": 3,
+      "prototypeCount": 0,
+      "procedureCallCount": 0,
+      "internalProcedureCallCount": 0,
+      "externalProcedureCallCount": 0,
+      "dynamicProcedureCallCount": 0,
+      "unresolvedProcedureCallCount": 0,
+      "nativeFileCount": 3,
+      "mutatingNativeFileCount": 1,
+      "interactiveNativeFileCount": 0,
+      "recordFormatCount": 0,
+      "moduleCount": 3,
+      "serviceProgramCount": 0,
+      "bindingDirectoryCount": 0,
+      "unresolvedBindingCount": 0,
+      "text": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings)."
+    },
+    "aiContext": {
+      "programPurposeHint": "",
+      "primaryTables": [
+        "ETCH",
+        "FILE_100",
+        "FILE_200",
+        "TABLE_100"
+      ],
+      "primaryCalls": [
+        "PROGRAM_100",
+        "PROGRAM_200",
+        "PROGRAM_300"
+      ],
+      "riskHints": [
+        "Embedded SQL detected",
+        "External program calls detected",
+        "Mutating native file I/O detected"
+      ]
+    },
+    "bindingAnalysis": {
+      "summary": {
+        "moduleCount": 3,
+        "noMainModuleCount": 0,
+        "serviceProgramCount": 0,
+        "binderSourceCount": 0,
+        "bindingDirectoryCount": 0,
+        "boundModuleCount": 0,
+        "unresolvedModuleCount": 0,
+        "exportCount": 0
+      },
+      "modules": [
+        {
+          "name": "PROGRAM_100",
+          "kind": "PROGRAM_MODULE",
+          "ownerProgram": "PROGRAM_100",
+          "sourceFile": "QRPGLESRC/PROGRAM_100.rpgle",
+          "bindingDirectories": [],
+          "servicePrograms": [],
+          "importedProcedures": [],
+          "unresolvedBindings": false
+        },
+        {
+          "name": "PROGRAM_200",
+          "kind": "PROGRAM_MODULE",
+          "ownerProgram": "PROGRAM_200",
+          "sourceFile": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "bindingDirectories": [],
+          "servicePrograms": [],
+          "importedProcedures": [],
+          "unresolvedBindings": false
+        },
+        {
+          "name": "PROGRAM_300",
+          "kind": "PROGRAM_MODULE",
+          "ownerProgram": "PROGRAM_300",
+          "sourceFile": "QRPGLESRC/PROGRAM_300.rpgle",
+          "bindingDirectories": [],
+          "servicePrograms": [],
+          "importedProcedures": [],
+          "unresolvedBindings": false
+        }
+      ],
+      "servicePrograms": [],
+      "bindingDirectories": []
+    },
+    "nativeFileUsage": {
+      "summary": {
+        "fileCount": 3,
+        "readOnlyFileCount": 1,
+        "mutatingFileCount": 1,
+        "interactiveFileCount": 0,
+        "workstationFileCount": 0,
+        "printerFileCount": 0,
+        "keyedFileCount": 1,
+        "recordFormatCount": 0
+      },
+      "files": [
+        {
+          "name": "ETCH",
+          "kind": "FILE",
+          "keyed": false,
+          "declaredAccess": [],
+          "access": {
+            "read": false,
+            "write": false,
+            "update": false,
+            "delete": false,
+            "position": false,
+            "display": false,
+            "mutating": false,
+            "interactive": false
+          },
+          "owners": [],
+          "recordFormats": [],
+          "evidenceCount": 1
+        },
+        {
+          "name": "FILE_100",
+          "kind": "DISK",
+          "keyed": true,
+          "declaredAccess": [
+            "READ"
+          ],
+          "access": {
+            "read": true,
+            "write": false,
+            "update": false,
+            "delete": false,
+            "position": false,
+            "display": false,
+            "mutating": false,
+            "interactive": false
+          },
+          "owners": [],
+          "recordFormats": [],
+          "evidenceCount": 2
+        },
+        {
+          "name": "FILE_200",
+          "kind": "DISK",
+          "keyed": false,
+          "declaredAccess": [
+            "READ",
+            "UPDATE"
+          ],
+          "access": {
+            "read": true,
+            "write": false,
+            "update": true,
+            "delete": false,
+            "position": false,
+            "display": false,
+            "mutating": true,
+            "interactive": false
+          },
+          "owners": [],
+          "recordFormats": [],
+          "evidenceCount": 1
+        }
+      ]
+    },
+    "graph": {
+      "nodeCount": 10,
+      "edgeCount": 10,
+      "tableCount": 4,
+      "programCallCount": 3,
+      "copyMemberCount": 0,
+      "files": {
+        "json": "dependency-graph.json",
+        "mermaid": "dependency-graph.mmd",
+        "markdown": "dependency-graph.md"
+      },
+      "moduleCount": 3,
+      "serviceProgramCount": 0,
+      "bindingDirectoryCount": 0,
+      "bindEdgeCount": 3
+    },
+    "crossProgramGraph": {
+      "programCount": 3,
+      "tableCount": 4,
+      "copyMemberCount": 0,
+      "edgeCount": 6,
+      "ambiguousPrograms": [],
+      "unresolvedPrograms": [],
+      "files": {
+        "json": "program-call-tree.json",
+        "mermaid": "program-call-tree.mmd",
+        "markdown": "program-call-tree.md"
+      }
+    },
+    "sourceNormalization": {
+      "fileCount": 6,
+      "convertedEncodingCount": 0,
+      "normalizedFileCount": 0,
+      "bomRemovedCount": 0,
+      "normalizedLineEndingCount": 0,
+      "invalidFileCount": 0,
+      "warningCount": 0
+    },
+    "sourceTypeAnalysis": {
+      "summary": {
+        "byType": {
+          "CLLE": 1,
+          "PF": 1,
+          "RPGLE": 2,
+          "SQLRPGLE": 1
+        },
+        "byFamily": {
+          "CL": 1,
+          "DDS": 1,
+          "RPG": 3
+        }
+      },
+      "commands": [
+        {
+          "name": "CALL",
+          "command": "CALL",
+          "text": "CALL PGM(PROGRAM_100)",
+          "evidence": [
+            {
+              "file": "SOURCE_ROOT/QCLLESRC/DRIVER_100.clle",
+              "line": 2,
+              "text": "CALL PGM(PROGRAM_100)"
+            }
+          ]
+        },
+        {
+          "name": "ENDPGM",
+          "command": "ENDPGM",
+          "text": "ENDPGM",
+          "evidence": [
+            {
+              "file": "SOURCE_ROOT/QCLLESRC/DRIVER_100.clle",
+              "line": 3,
+              "text": "ENDPGM"
+            }
+          ]
+        },
+        {
+          "name": "PGM",
+          "command": "PGM",
+          "text": "PGM",
+          "evidence": [
+            {
+              "file": "SOURCE_ROOT/QCLLESRC/DRIVER_100.clle",
+              "line": 1,
+              "text": "PGM"
+            }
+          ]
+        }
+      ],
+      "objectUsages": [],
+      "ddsFiles": [
+        {
+          "name": "FILE_100",
+          "kind": "DISK",
+          "sourceType": "PF",
+          "recordFormats": [
+            "REC100"
+          ],
+          "referencedFiles": [],
+          "evidence": [
+            {
+              "file": "SOURCE_ROOT/QDDSSRC/FILE_100.pf",
+              "line": 1,
+              "text": "FILE_100"
+            }
+          ]
+        }
+      ]
+    },
+    "sourceCatalog": {
+      "fileCount": 6,
+      "distinctMemberCount": 6,
+      "manifestBackedCount": 0,
+      "ambiguousMemberCount": 0,
+      "ambiguousMembers": []
+    },
+    "ifsPaths": {
+      "enabled": false,
+      "summary": {
+        "uniquePathCount": 0,
+        "evidenceCount": 0,
+        "fileCount": 0,
+        "familyCounts": {}
+      },
+      "paths": [],
+      "notes": [],
+      "schemaVersion": 1,
+      "kind": "ifs-path-report"
+    },
+    "searchResults": {
+      "enabled": false,
+      "terms": [],
+      "ignorePatterns": [],
+      "summary": {
+        "termCount": 0,
+        "scannedFileCount": 0,
+        "ignoredFileCount": 0,
+        "matchCount": 0,
+        "truncated": false,
+        "categoryCounts": {}
+      },
+      "matches": [],
+      "notes": [],
+      "schemaVersion": 1,
+      "kind": "full-text-search-results"
+    },
+    "diagnosticPacks": {
+      "enabled": false,
+      "packs": [],
+      "summary": {
+        "packCount": 0,
+        "succeededPackCount": 0,
+        "failedPackCount": 0,
+        "skippedPackCount": 0,
+        "stepCount": 0
+      },
+      "notes": [],
+      "schemaVersion": 1,
+      "kind": "diagnostic-query-pack-report"
+    },
+    "analysisCache": {
+      "enabled": true,
+      "sourceScan": {
+        "requests": 6,
+        "hits": 0,
+        "memoryHits": 0,
+        "persistentHits": 0,
+        "misses": 5,
+        "invalidations": 0,
+        "writes": 5,
+        "entryCount": 5,
+        "cacheDir": "OUTPUT_ROOT/.zeus-cache/source-scans"
+      },
+      "db2Metadata": {
+        "status": "disabled",
+        "hits": 0,
+        "misses": 0,
+        "cacheKey": null,
+        "payloadFile": null,
+        "markdownFile": null,
+        "manifestFile": "analysis-cache.json",
+        "reason": "no DB2 connection configuration was available"
+      },
+      "testData": {
+        "status": "disabled",
+        "hits": 0,
+        "misses": 0,
+        "cacheKey": null,
+        "payloadFile": null,
+        "markdownFile": null,
+        "manifestFile": "analysis-cache.json",
+        "reason": "no DB2 connection configuration was available"
+      },
+      "artifactManifestFile": "analysis-cache.json"
+    },
+    "db2Metadata": {
+      "status": "skipped",
+      "file": "db2-metadata.json",
+      "markdownFile": "db2-metadata.md",
+      "tableCount": 0,
+      "requestedTableCount": 0,
+      "resolvedTableCount": 0,
+      "unresolvedTableCount": 0,
+      "ambiguousTableCount": 0,
+      "triggerCount": 0,
+      "derivedObjectCount": 0,
+      "externalObjectCount": 0,
+      "catalogResolvedProgramCount": 0,
+      "catalogResolvedProcedureCount": 0,
+      "fallbackLookupCount": 0,
+      "reason": "no DB2 connection configuration was available",
+      "cacheStatus": "disabled"
+    },
+    "testData": {
+      "status": "skipped",
+      "file": "test-data.json",
+      "markdownFile": "test-data.md",
+      "tableCount": 0,
+      "requestedTableCount": 4,
+      "skippedTableCount": 4,
+      "rowLimit": 50,
+      "reason": "no DB2 connection configuration was available",
+      "policy": {
+        "allowTables": [
+          {
+            "schema": "MYLIB",
+            "table": "CUSTOMERS"
+          },
+          {
+            "schema": "MYLIB",
+            "table": "ORDERS"
+          }
+        ],
+        "denyTables": [
+          {
+            "schema": "MYLIB",
+            "table": "AUDITLOG"
+          }
+        ],
+        "maskColumns": [
+          "EMAIL",
+          "NAME",
+          "PHONE"
+        ],
+        "maskRules": [
+          {
+            "schema": "",
+            "table": "CUSTOMERS",
+            "columns": [
+              "PHONE"
+            ],
+            "value": "MASKED_PHONE"
+          }
+        ]
+      },
+      "policySummary": {
+        "allowlistCount": 2,
+        "denylistCount": 1,
+        "maskRuleCount": 1,
+        "globalMaskColumnCount": 3,
+        "deniedTableCount": 0,
+        "notAllowlistedTableCount": 0,
+        "maskedTableCount": 0,
+        "maskedColumnCount": 0
+      },
+      "cacheStatus": "disabled"
+    }
+  },
+  "notes": [
+    "DB2 metadata export was skipped because no DB2 connection configuration was available.",
+    "Skipped file SOURCE_ROOT/QDDSSRC/FILE_200.lf: object is not iterable (cannot read property Symbol(Symbol.iterator))",
+    "Test data extraction was skipped because no DB2 connection configuration was available."
+  ]
+}
