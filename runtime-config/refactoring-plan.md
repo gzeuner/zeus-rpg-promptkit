@@ -204,7 +204,7 @@ Die nachfolgenden Schrittbeschreibungen bleiben als Referenz des umgesetzten Zus
 
 Zusätzlich abgesichert in:
 
-`tests/runtime-config.test.js`
+`tests/runtime-config-boundary.test.js`
 
 Abgedeckt:
 
@@ -221,7 +221,7 @@ Abgedeckt:
 
 Verifikation:
 
-- `node --test tests/runtime-config.test.js`
+- `node --test tests/runtime-config-boundary.test.js`
 - `npm test`
 
 Beide vollständig grün.
@@ -232,7 +232,7 @@ Beide vollständig grün.
 
 Zusätzlich abgesichert in:
 
-`tests/runtime-config.test.js`
+`tests/runtime-config-boundary.test.js`
 
 Abgedeckt:
 
@@ -242,7 +242,7 @@ Abgedeckt:
 
 Verifikation:
 
-- `node --test tests/runtime-config.test.js`
+- `node --test tests/runtime-config-boundary.test.js`
 - `npm test`
 
 Beide vollständig grün.
@@ -253,7 +253,7 @@ Beide vollständig grün.
 
 Zusätzlich abgesichert in:
 
-`tests/runtime-config.test.js`
+`tests/runtime-config-boundary.test.js`
 
 Abgedeckt:
 
@@ -265,7 +265,7 @@ Abgedeckt:
 
 Verifikation:
 
-- `node --test tests/runtime-config.test.js`
+- `node --test tests/runtime-config-boundary.test.js`
 - `npm test`
 
 Beide vollständig grün.
