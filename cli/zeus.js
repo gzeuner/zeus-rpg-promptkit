@@ -68,8 +68,8 @@ function printHelp() {
   console.log('  zeus [--config <path>] test-run <start|capture|show|rollback> --profile <name> [options]');
   console.log('  zeus [--config <path>] bridge <plan|stage|apply|compile-plan|compile-run|report> --profile <name> [options]');
   console.log('  zeus pui-edit --file <path> --action <roundtrip-check|dump-json|plan|apply|grid-add-column> [--changes-file <path>] [--confirm] [--sfl-record <name>] [--sfl-field "<DDS line>"]');
-  console.log('  zeus [--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json]');
-  console.log('  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json]');
+  console.log('  zeus [--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>]');
+  console.log('  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>]');
 }
 
 function parseArgs(argv) {
