@@ -19,55 +19,329 @@ function renderLocalUiShell() {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Zeus Local UI</title>
 <style>
-body{margin:0;font-family:Georgia,serif;background:#f6f1e6;color:#1f2933}
+:root{
+  --bg:#f3efe5;
+  --panel:#fffaf0;
+  --panel-strong:#f9f1de;
+  --panel-soft:rgba(255,250,240,.82);
+  --text:#1f2933;
+  --muted:#5c6b73;
+  --line:#d4c3a3;
+  --accent:#8a4b08;
+  --accent-soft:#edd7b5;
+  --success:#166534;
+  --danger:#991b1b;
+  --shadow:0 18px 40px rgba(73,52,18,.12);
+}
 *{box-sizing:border-box}
-.app{display:grid;grid-template-columns:300px 1fr;min-height:100vh}
-.panel{background:#fffaf0;border:1px solid #d4c3a3;border-radius:14px}
-aside{padding:18px;border-right:1px solid #d4c3a3;background:#fffaf0}
-.main{padding:18px;display:grid;gap:14px;min-height:100vh}
-.list,.tabs,.chips{display:flex;flex-wrap:wrap;gap:8px}
-.stack{display:grid;gap:12px}
-.run-list,.item-list{display:grid;gap:8px;max-height:70vh;overflow:auto}
-button,.chip,a.btn,select,input,textarea{font:inherit}
-.run,.item,.tab,.btn{border:1px solid #d4c3a3;background:#fff;padding:10px 12px;border-radius:12px;cursor:pointer;text-decoration:none;color:#8a4b08}
-.active{background:#fff0cf;border-color:#8a4b08}
-.hero{padding:18px;display:flex;justify-content:space-between;gap:12px}
-.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.metric{padding:14px}
-.metric strong{display:block;font-size:24px;color:#8a4b08}
-.view{display:none}
+body{
+  margin:0;
+  min-height:100vh;
+  color:var(--text);
+  font-family:Georgia,"Times New Roman",serif;
+  background:
+    radial-gradient(circle at top left, rgba(138,75,8,.14), transparent 34%),
+    linear-gradient(180deg, #fcf8ef 0%, var(--bg) 100%);
+}
+.app{display:grid;grid-template-columns:320px 1fr;min-height:100vh}
+aside{
+  padding:24px 20px;
+  border-right:1px solid var(--line);
+  background:var(--panel-soft);
+  backdrop-filter:blur(6px);
+  display:grid;
+  align-content:start;
+  gap:18px;
+}
+.main{
+  padding:24px;
+  display:grid;
+  gap:18px;
+  min-height:100vh;
+  align-content:start;
+}
+h1,h2,h3,h4{margin:0;font-weight:700}
+h1{font-size:28px;letter-spacing:.02em}
+h2{font-size:19px}
+h3{
+  font-size:13px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--muted);
+}
+h4{font-size:15px}
+p{margin:0;color:var(--muted);line-height:1.45}
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:18px;
+  box-shadow:var(--shadow);
+}
+.hero{
+  padding:22px 24px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:20px;
+}
+.hero-meta{justify-content:flex-end}
+.list,.tabs,.chips,.tokens,.actions,.hero-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.tabs{
+  padding:12px;
+  align-items:center;
+  overflow:auto;
+}
+.stack{display:grid;gap:14px}
+.run-list,.item-list,.card-grid{
+  display:grid;
+  gap:10px;
+}
+.run-list{
+  max-height:calc(100vh - 190px);
+  overflow:auto;
+}
+.item-list{
+  max-height:min(560px, calc(100vh - 360px));
+  overflow:auto;
+}
+button,.chip,a.btn,select,input,textarea{
+  font:inherit;
+  color:inherit;
+}
+.run,.item,.tab,.btn,.card,.module-row{
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:14px;
+  transition:transform 140ms ease,border-color 140ms ease,box-shadow 140ms ease,background 140ms ease;
+}
+.run,.item,.tab,.btn{
+  padding:12px 14px;
+  cursor:pointer;
+  text-decoration:none;
+}
+.run,.item{text-align:left}
+.run:hover,.item:hover,.tab:hover,.btn:hover,.card:hover,.module-row:hover{
+  transform:translateY(-1px);
+  border-color:var(--accent);
+  box-shadow:0 10px 24px rgba(138,75,8,.08);
+}
+.run.active,.item.active,.tab.active,.card.active,.module-row.active{
+  background:linear-gradient(135deg, #fff5df, #fffaf0);
+  border-color:var(--accent);
+}
+.run strong,.item strong{
+  display:block;
+  font-size:15px;
+  overflow-wrap:anywhere;
+}
+.run div,.run small,.item div,.small{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.45;
+}
+.tab{
+  color:var(--accent);
+  background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(249,241,222,.78));
+}
+.btn{
+  color:var(--accent);
+  background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(249,241,222,.82));
+}
+.token{
+  padding:7px 12px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--panel-strong);
+  color:var(--accent);
+  font-size:12px;
+}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.metric{
+  padding:16px 18px;
+  background:linear-gradient(180deg, rgba(255,255,255,.86), rgba(249,241,222,.76));
+}
+.metric div{
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--muted);
+  font-weight:700;
+}
+.metric strong{
+  display:block;
+  font-size:26px;
+  color:var(--accent);
+  margin-top:8px;
+}
+.view{
+  display:none;
+  overflow:hidden;
+}
 .view.active{display:grid}
-.two{grid-template-columns:300px 1fr;gap:14px}
-.three{grid-template-columns:260px 1fr 1fr;gap:14px}
-.sub{padding:14px;display:grid;gap:10px;align-content:start}
-.preview{border:1px solid #d4c3a3;border-radius:12px;background:#fffdf7;min-height:340px;overflow:auto}
-pre{margin:0;padding:14px;white-space:pre-wrap;word-break:break-word;font-family:Consolas,monospace;font-size:12px;line-height:1.45}
-.empty{padding:18px;color:#5c6b73;border:1px dashed #d4c3a3;border-radius:12px}
-.tokens{display:flex;flex-wrap:wrap;gap:6px}
-.token{padding:6px 9px;border:1px solid #d4c3a3;border-radius:999px;background:#fff}
-iframe{width:100%;height:420px;border:0;background:#fff}
-textarea{width:100%;min-height:120px;padding:10px;border:1px solid #d4c3a3;border-radius:12px;background:#fff}
-.card-grid{display:grid;gap:10px}
-.card{border:1px solid #d4c3a3;background:#fff;padding:12px;border-radius:12px;display:grid;gap:8px}
-.card h3{margin:0;color:#8a4b08;font-size:17px}
-.card p{margin:0;color:#344854;font-size:14px;line-height:1.35}
+.two{grid-template-columns:minmax(260px,300px) minmax(0,1fr);gap:18px}
+.three{grid-template-columns:minmax(220px,260px) minmax(0,1fr) minmax(0,1fr);gap:18px}
+.sub{
+  padding:18px;
+  display:grid;
+  gap:12px;
+  align-content:start;
+  min-width:0;
+}
+.view.active>.sub:not(:first-child){
+  border-left:1px solid rgba(212,195,163,.65);
+}
+.preview{
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fffdf7;
+  min-height:340px;
+  overflow:auto;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
+}
+pre{
+  margin:0;
+  padding:16px;
+  white-space:pre-wrap;
+  word-break:break-word;
+  font-family:"Cascadia Code",Consolas,monospace;
+  font-size:13px;
+  line-height:1.5;
+}
+iframe{width:100%;height:520px;border:0;background:#fff}
+textarea{
+  width:100%;
+  min-height:120px;
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fffdfa;
+}
+.card-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.card{
+  padding:14px;
+  display:grid;
+  gap:10px;
+  background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(249,241,222,.7));
+}
+.card h3{color:var(--text);font-size:17px}
+.card p{color:#344854;font-size:14px;line-height:1.4}
 .card .meta{display:flex;gap:8px;flex-wrap:wrap}
 .card .meta .token{font-size:12px}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
-input[type="search"]{width:100%;padding:9px;border:1px solid #d4c3a3;border-radius:10px;background:#fff}
-.field-grid{display:grid;gap:8px}
-.field-grid label{font-size:12px;color:#5b6570;font-weight:bold}
-.field-grid input,.field-grid textarea,.field-grid select{width:100%;padding:9px;border:1px solid #d4c3a3;border-radius:10px;background:#fff}
-.module-row{display:grid;gap:6px;border:1px solid #d4c3a3;border-radius:10px;padding:9px;background:#fff}
-.module-row.active{background:#fff0cf;border-color:#8a4b08}
-.module-row h4{margin:0;color:#8a4b08}
-.small{font-size:12px;color:#5c6b73}
-.status-ok{color:#1f7a3f}
-.status-warn{color:#8a4b08}
-.status-err{color:#a11d2d}
-@media(max-width:1100px){
+input[type="search"]{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+}
+.field-grid{display:grid;gap:10px}
+.field-grid label{
+  display:grid;
+  gap:6px;
+  font-size:12px;
+  color:var(--muted);
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.field-grid input,.field-grid textarea,.field-grid select{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+}
+.home-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+}
+.home-card{
+  padding:16px;
+  display:grid;
+  gap:10px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(249,241,222,.72));
+}
+.home-card strong{
+  font-size:16px;
+  color:var(--text);
+}
+.home-card code{
+  font-family:"Cascadia Code",Consolas,monospace;
+  font-size:12px;
+  background:rgba(237,215,181,.45);
+  padding:2px 6px;
+  border-radius:999px;
+}
+.home-callout{
+  padding:18px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:
+    radial-gradient(circle at top right, rgba(138,75,8,.08), transparent 32%),
+    linear-gradient(180deg, rgba(255,255,255,.95), rgba(249,241,222,.78));
+}
+.home-callout h2{margin-bottom:6px}
+.command-block{
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fffdf7;
+  overflow:auto;
+}
+.command-block pre{
+  font-size:12px;
+  line-height:1.6;
+}
+.hint-list{
+  display:grid;
+  gap:10px;
+}
+.hint-item{
+  padding:12px 14px;
+  border:1px dashed var(--line);
+  border-radius:14px;
+  background:rgba(255,250,240,.76);
+}
+.module-row{
+  display:grid;
+  gap:8px;
+  padding:12px 13px;
+}
+.module-row h4{color:var(--text)}
+.small{font-size:12px}
+.empty{
+  padding:28px;
+  color:var(--muted);
+  border:1px dashed var(--line);
+  border-radius:16px;
+  background:rgba(255,250,240,.8);
+}
+.status-ok{color:var(--success)}
+.status-warn{color:var(--accent)}
+.status-err{color:var(--danger)}
+@media(max-width:1200px){
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:980px){
   .app{grid-template-columns:1fr}
+  aside{
+    border-right:0;
+    border-bottom:1px solid var(--line);
+  }
+  .main{padding:18px}
+  .hero{padding:18px}
   .metrics,.two,.three{grid-template-columns:1fr}
+  .view.active>.sub:not(:first-child){border-left:0;border-top:1px solid rgba(212,195,163,.65)}
+  .run-list,.item-list{max-height:none}
+}
+@media(max-width:640px){
+  .metrics{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -77,24 +351,25 @@ input[type="search"]{width:100%;padding:9px;border:1px solid #d4c3a3;border-radi
     <div class="stack">
       <div>
         <h1>Zeus Local UI</h1>
-        <p>Focused read-only views.</p>
+        <p>Run explorer and local prompt tools.</p>
       </div>
-      <div class="token">Local-only API</div>
+      <div class="token">Local-only UI + API</div>
     </div>
-    <div id="runs" class="run-list"></div>
+    <div id="runs" class="run-list"><div class="empty">No runs loaded yet. Start with Prompt Workbench or create output under <code>./output</code>.</div></div>
   </aside>
   <div class="main">
     <div class="panel hero">
       <div class="stack">
-        <h2 id="title">Analysis Runs</h2>
-        <p id="subtitle">Select a run.</p>
+        <h2 id="title">Welcome to Zeus Local UI</h2>
+        <p id="subtitle">Open Prompt Workbench now or load analysis runs from ./output.</p>
       </div>
-      <div id="chips" class="chips"></div>
+      <div id="chips" class="chips hero-meta"><div class="token">Runs: 0</div><div class="token">Workbench loading</div></div>
     </div>
 
-    <div id="metrics" class="metrics"></div>
-    <div id="tabs" class="panel tabs" style="padding:10px"></div>
+    <div id="metrics" class="metrics"><div class="panel metric"><div>Runs</div><strong>0</strong></div><div class="panel metric"><div>Next Step</div><strong>Open Workbench</strong></div><div class="panel metric"><div>Output Root</div><strong>./output</strong></div><div class="panel metric"><div>Mode</div><strong>Local UI</strong></div></div>
+    <div id="tabs" class="panel tabs"><button class="tab active">Home</button><button class="tab">Graph</button><button class="tab">DB2/Test Data</button><button class="tab">Prompt Compare</button><button class="tab">Prompt Workbench</button><button class="tab">Artifacts</button></div>
 
+    <div id="home" class="panel view two active"><div class="sub"><div class="home-callout"><h2>Start Here</h2><p>No analysis runs are loaded yet. You can still open Prompt Workbench now, or create your first run and refresh this screen.</p><div class="tokens"><div class="token">Runs: 0</div><div class="token">Local-only UI</div></div></div><h3>Quick Actions</h3><div class="home-grid"><div class="home-card"><strong>Open Prompt Workbench</strong><p>Build or refine prompts directly in the browser with guided use cases.</p></div><div class="home-card"><strong>Create an analysis run</strong><p>Generate artifacts under <code>./output</code> so the explorers have something to show.</p><div class="command-block"><pre>zeus analyze --source ./src --program ORDERPGM --out ./output</pre></div></div><div class="home-card"><strong>Use a guided workflow</strong><p>Generate richer prompt packs and workflow-specific output.</p><div class="command-block"><pre>zeus workflow --preset modernization-review --source ./src --program ORDERPGM --out ./output</pre></div></div></div></div><div class="sub"><h2>What You Can Do Here</h2><p>The home screen gives you the fastest path into the tool, even before the first run exists.</p><div class="hint-list"><div class="hint-item"><strong>1. Create output</strong><p>Use <code>zeus analyze</code> or <code>zeus workflow</code> so this UI has artifacts to browse.</p></div><div class="hint-item"><strong>2. Refresh runs</strong><p>Once output exists, reload the run list and switch into graph, DB2, prompts, or artifacts.</p></div><div class="hint-item"><strong>3. Start with Prompt Workbench</strong><p>Use the guided prompt canvas immediately, even if your first analysis run is still being prepared.</p></div></div></div></div>
     <div id="graph" class="panel view two"></div>
     <div id="db2" class="panel view two"></div>
     <div id="prompts" class="panel view three"></div>
@@ -105,7 +380,7 @@ input[type="search"]{width:100%;padding:9px;border:1px solid #d4c3a3;border-radi
 
 <script>
 const s={
-  runs:[],detail:null,program:null,tab:'graph',artifact:null,node:null,table:null,left:null,right:null,cache:new Map(),
+  runs:[],detail:null,program:null,tab:'home',artifact:null,node:null,table:null,left:null,right:null,cache:new Map(),
   promptBuilder:{
     loading:false,
     loaded:false,
@@ -138,6 +413,7 @@ const s={
 };
 
 const tabs=[
+  ['home','Home'],
   ['graph','Graph'],
   ['db2','DB2/Test Data'],
   ['prompts','Prompt Compare'],
@@ -157,6 +433,14 @@ const esc=(v)=>String(v)
   .replace(/>/g,'&gt;');
 
 const escAttr=(v)=>esc(v).replace(/"/g,'&quot;');
+
+const statusToneClass=(value)=>{
+  const normalized=String(value||'').trim().toLowerCase();
+  if(!normalized) return '';
+  if(/fail|error|unavailable|not found/.test(normalized)) return 'status-err';
+  if(/loading|refreshing|saving|deleting|importing|select |nothing to|no ai_prompt|empty/.test(normalized)) return 'status-warn';
+  return 'status-ok';
+};
 
 const fmt=(v)=>{
   if(!v) return 'n/a';
@@ -211,14 +495,19 @@ function renderRuns(){
 
 function renderHero(){
   if(!s.detail){
-    q('title').textContent='Analysis Runs';
-    q('subtitle').textContent='Select a run.';
-    q('chips').innerHTML='';
+    q('title').textContent='Welcome to Zeus Local UI';
+    q('subtitle').textContent='Start with Prompt Workbench or load analysis runs from ./output.';
+    q('chips').innerHTML=[
+      'Runs: '+String(s.runs.length||0),
+      s.promptBuilder.loading?'Workbench loading':s.promptBuilder.error?'Workbench issue':'Workbench ready'
+    ].map((v)=>'<div class="token">'+esc(v)+'</div>').join('');
     return;
   }
   const x=s.detail.summary;
   q('title').textContent=x.program;
-  q('subtitle').textContent='Focused explorer over graph, DB2, prompts, and Prompt Workbench.';
+  q('subtitle').textContent=s.tab==='home'
+    ? 'Choose your next step from the guided start view.'
+    : 'Focused explorer over graph, DB2, prompts, and Prompt Workbench.';
   q('chips').innerHTML=['Status: '+(x.status||'unknown'),'Mode: '+(x.workflowPreset||x.workflowMode||'standard'),'Artifacts: '+x.artifactCount,x.safeSharingEnabled?'Safe sharing':'No safe sharing'].map((v)=>'<div class="token">'+esc(v)+'</div>').join('');
 }
 
@@ -242,6 +531,128 @@ function renderMetrics(){
 function renderTabs(){
   q('tabs').innerHTML=tabs.map(([id,label])=>'<button class="tab'+(s.tab===id?' active':'')+'" data-tab="'+id+'">'+label+'</button>').join('');
   for(const b of q('tabs').querySelectorAll('[data-tab]')) b.onclick=()=>selectTab(b.dataset.tab);
+}
+
+function renderCommandBlock(lines){
+  return '<div class="command-block"><pre>'+esc((Array.isArray(lines)?lines:[String(lines||'')]).join('\\n'))+'</pre></div>';
+}
+
+function promptWorkbenchHighlights(){
+  const useCases=(s.promptBuilder.useCases||[]).slice(0,3);
+  if(s.promptBuilder.loading){
+    return '<div class="empty">Loading Prompt Workbench options...</div>';
+  }
+  if(s.promptBuilder.error){
+    return '<div class="empty">Prompt Workbench unavailable: '+esc(s.promptBuilder.error)+'</div>';
+  }
+  if(!useCases.length){
+    return '<div class="empty">No Prompt Workbench use cases available.</div>';
+  }
+  return '<div class="home-grid">'+useCases.map((entry)=>'<div class="home-card"><strong>'+esc(entry.title)+'</strong><p>'+esc(entry.description||'')+'</p><div class="actions"><button class="btn" data-home-workbench="'+esc(entry.id)+'">Open In Workbench</button></div></div>').join('')+'</div>';
+}
+
+async function refreshRuns(){
+  const currentProgram=s.program;
+  s.runs=await getJson('/api/runs');
+  renderRuns();
+
+  const preferred=currentProgram&&s.runs.some((run)=>run.program===currentProgram)
+    ? currentProgram
+    : s.runs[0]&&s.runs[0].program||null;
+
+  if(preferred){
+    await selectRun(preferred);
+    return;
+  }
+
+  s.program=null;
+  s.detail=null;
+  s.artifact=null;
+  s.node=null;
+  s.table=null;
+  s.left=null;
+  s.right=null;
+  renderHero();
+  renderMetrics();
+  await render();
+}
+
+async function openHomeTarget(target,options){
+  const opts=options||{};
+  if(target==='refresh'){
+    await refreshRuns();
+    return;
+  }
+
+  if(target==='workbench'){
+    s.tab='workbench';
+    await render();
+    if(!s.promptBuilder.loaded&&!s.promptBuilder.loading){
+      await loadPromptBuilderData();
+    }
+    if(opts.useCaseId&&s.promptBuilder.loaded&&!s.promptBuilder.error){
+      setWorkbenchUseCase(opts.useCaseId);
+      return;
+    }
+    await render();
+    return;
+  }
+
+  if(!s.detail&&s.runs.length>0){
+    await selectRun(s.runs[0].program);
+  }
+  s.tab=target;
+  await render();
+}
+
+function renderHome(){
+  const root=q('home');
+  root.classList.toggle('active',s.tab==='home');
+  if(s.tab!=='home') return;
+
+  const hasRun=Boolean(s.detail);
+  const summary=hasRun?s.detail.summary:null;
+  const promptCount=hasRun?s.detail.views.prompts.artifacts.length:0;
+  const graphCount=hasRun?s.detail.views.summary.graphNodeCount||0:0;
+  const tableCount=hasRun?s.detail.views.summary.db2TableCount||0:0;
+  const runStatus=summary?(summary.status||'unknown'):'No run selected';
+  const workflowLabel=summary?(summary.workflowPreset||summary.workflowMode||'standard'):'Analyze output pending';
+
+  root.innerHTML='<div class="sub"><div class="home-callout">'+
+    (hasRun
+      ? '<h2>Start with '+esc(summary.program)+'</h2><p>Your latest selected run is ready. Choose where you want to continue, or open Prompt Workbench for guided prompt creation.</p><div class="tokens"><div class="token">Status: '+esc(runStatus)+'</div><div class="token">Workflow: '+esc(workflowLabel)+'</div><div class="token">Artifacts: '+esc(String(summary.artifactCount||0))+'</div></div>'
+      : '<h2>Start Here</h2><p>No analysis runs are loaded yet. You can still open Prompt Workbench now, or create your first run and refresh this screen.</p><div class="tokens"><div class="token">Runs: '+esc(String(s.runs.length||0))+'</div><div class="token">'+esc(s.promptBuilder.loading?'Workbench loading':s.promptBuilder.error?'Workbench issue':'Workbench ready')+'</div></div>'
+    )+
+    '</div><h3>Quick Actions</h3><div class="home-grid">'+
+      (hasRun
+        ? [
+          ['Graph Explorer','Follow calls, tables, and related artifacts.','graph','Open Graph'],
+          ['DB2 / Test Data','Check metadata, evidence, and masking.','db2','Open DB2'],
+          ['Prompt Compare','Compare generated prompt packs side by side.','prompts','Compare Prompts'],
+          ['Artifact Explorer','Browse reports, JSON, HTML, and safe-sharing output.','artifacts','Browse Artifacts']
+        ].map(([title,desc,target,label])=>'<div class="home-card"><strong>'+esc(title)+'</strong><p>'+esc(desc)+'</p><div class="actions"><button class="btn" data-home-target="'+esc(target)+'">'+esc(label)+'</button></div></div>').join('')
+        : [
+          '<div class="home-card"><strong>Create an analysis run</strong><p>Generate output under <code>./output</code>, then reload the run list here.</p>'+renderCommandBlock(['zeus analyze --source ./src --program ORDERPGM --out ./output'])+'</div>',
+          '<div class="home-card"><strong>Use a guided workflow</strong><p>Run a preset when you want richer artifacts and prompt packs.</p>'+renderCommandBlock(['zeus workflow --preset modernization-review --source ./src --program ORDERPGM --out ./output'])+'</div>'
+        ].join('')
+      )+
+    '</div><div class="actions"><button class="btn" data-home-target="workbench">Open Prompt Workbench</button><button class="btn" data-home-target="refresh">Refresh Runs</button></div></div>'+
+    '<div class="sub"><h2>'+(hasRun?'Recommended Next Steps':'What You Can Do Here')+'</h2><p>'+(hasRun
+      ? 'Pick a focused entry point or jump straight into a Prompt Workbench use case.'
+      : 'Even before the first run exists, Prompt Workbench can be used as a guided starting point.')+'</p>'+
+      '<div class="hint-list">'+
+        (hasRun
+          ? '<div class="hint-item"><strong>'+esc(summary.program)+'</strong><p>'+esc('Graph nodes: '+String(graphCount)+' • DB2 tables: '+String(tableCount)+' • Prompt packs: '+String(promptCount))+'.</p></div><div class="hint-item"><strong>Select another run from the left sidebar</strong><p>The home screen stays as your landing area, while the tabs take you into the focused explorers.</p></div><div class="hint-item"><strong>Need a different prompt?</strong><p>Open Prompt Workbench to assemble a use case, import an existing ai_prompt artifact, and refine the preview live.</p></div>'
+          : '<div class="hint-item"><strong>1. Create output</strong><p>Use <code>zeus analyze</code> or <code>zeus workflow</code> so this UI has artifacts to browse.</p></div><div class="hint-item"><strong>2. Refresh runs</strong><p>Keep the local UI open, then use <code>Refresh Runs</code> instead of restarting the server.</p></div><div class="hint-item"><strong>3. Start with Prompt Workbench</strong><p>Use the guided prompt canvas immediately, even if your first analysis run is still being prepared.</p></div>'
+        )+
+      '</div><h3>Prompt Workbench Choices</h3>'+promptWorkbenchHighlights()+'</div>';
+
+  for(const b of root.querySelectorAll('[data-home-target]')){
+    b.onclick=()=>openHomeTarget(b.dataset.homeTarget);
+  }
+  for(const b of root.querySelectorAll('[data-home-workbench]')){
+    b.onclick=()=>openHomeTarget('workbench',{useCaseId:b.dataset.homeWorkbench});
+  }
 }
 
 function linkArtifacts(paths){
@@ -366,14 +777,14 @@ function moduleById(moduleId){
 
 function splitTextToList(value){
   return String(value||'')
-    .split(/\n|,/g)
+    .split(/\\n|,/g)
     .map((entry)=>entry.trim())
     .filter(Boolean);
 }
 
 function arrayToText(value){
   if(!Array.isArray(value)) return '';
-  return value.join('\n');
+  return value.join('\\n');
 }
 
 function collectFieldDefinitions(useCase,moduleOrder){
@@ -580,6 +991,7 @@ async function importContextSourcePrompt(){
 async function loadPromptBuilderData(){
   s.promptBuilder.loading=true;
   s.promptBuilder.error=null;
+  if(s.tab==='home') renderHome();
   renderWorkbench();
 
   try {
@@ -614,6 +1026,7 @@ async function loadPromptBuilderData(){
     s.promptBuilder.error=error.message||String(error);
   } finally {
     s.promptBuilder.loading=false;
+    if(s.tab==='home') renderHome();
     renderWorkbench();
   }
 }
@@ -871,7 +1284,7 @@ function renderWorkbench(){
 
   const useCases=s.promptBuilder.useCases||[];
   if(!useCases.length){
-    root.innerHTML='<div class="sub"><div class="empty">No prompt builder use cases available.</div></div>';
+    root.innerHTML='<div class="sub"><div class="empty">No Prompt Workbench use cases available.</div></div>';
     return;
   }
 
@@ -896,7 +1309,7 @@ function renderWorkbench(){
     : fieldDefs;
   const previewText=currentPreviewText();
 
-  root.innerHTML='<div class="sub"><h2>Prompt Workbench</h2><p>Prompt Canvas for direct toolset implementation workflows.</p><input id="wbFilter" type="search" placeholder="Filter use cases"><div class="card-grid">'+filtered.map((entry)=>'<div class="card'+(selected&&selected.id===entry.id?' active':'')+'"><h3>'+esc(entry.title)+'</h3><p>'+esc(entry.description||'')+'</p><div class="meta"><div class="token">Priority: '+esc(entry.priority||'n/a')+'</div><div class="token">Default Modules: '+esc(String((entry.defaultModuleIds||[]).length))+'</div></div><div class="actions"><button class="btn" data-wb-select="'+esc(entry.id)+'">Select</button></div></div>').join('')+'</div><h3>Template</h3><div class="field-grid"><label>Name<input id="wbTemplateName" value="'+escAttr(s.promptBuilder.templateName||'')+'" placeholder="Template name"></label><label>Description<textarea id="wbTemplateDescription" placeholder="Template description">'+esc(s.promptBuilder.templateDescription||'')+'</textarea></label><label>Tags (comma separated)<input id="wbTemplateTags" value="'+escAttr(s.promptBuilder.templateTags||'')+'" placeholder="mvp, api, ui"></label><label>Saved Templates<select id="wbTemplateSel"><option value="">'+esc('Select saved template')+'</option>'+((s.promptBuilder.templates||[]).map((template)=>'<option value="'+esc(template.id)+'"'+(template.id===s.promptBuilder.selectedTemplateId?' selected':'')+'>'+esc(template.name)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbLoadTemplate">Load</button><button class="btn" id="wbSaveTemplate">Save Template</button><button class="btn" id="wbDeleteTemplate">Delete</button></div><div class="small '+(String(s.promptBuilder.saveStatus||'').toLowerCase().includes('failed')?'status-err':'status-ok')+'">'+esc(s.promptBuilder.saveStatus||'')+'</div><h3>Output Context Source</h3><div class="field-grid"><label>Analyze Run<select id="wbContextRunSel"><option value="">'+esc('Select output/<PROGRAM>')+'</option>'+((s.promptBuilder.contextSources||[]).map((entry)=>'<option value="'+esc(entry.program)+'"'+(entry.program===s.promptBuilder.contextSourceProgram?' selected':'')+'>'+esc(entry.program+' ('+(entry.promptArtifactCount||0)+' prompts)')+'</option>').join(''))+'</select></label><label>Prompt Artifact<select id="wbContextPromptSel"><option value="">'+esc('Select ai_prompt_*.md')+'</option>'+((s.promptBuilder.contextSourcePrompts||[]).map((entry)=>'<option value="'+esc(entry.path)+'"'+(entry.path===s.promptBuilder.contextSourcePromptPath?' selected':'')+'>'+esc(entry.path)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbContextRefresh">Refresh Runs</button><button class="btn" id="wbContextLoadPrompts">Load Prompts</button><button class="btn" id="wbContextImport">Import As Seed</button></div><div class="small '+(String(s.promptBuilder.contextSourceStatus||'').toLowerCase().includes('failed')?'status-err':'status-ok')+'">'+esc(s.promptBuilder.contextSourceStatus||'')+'</div><h3>Prompt Canvas</h3><div class="item-list">'+moduleOrder.map((moduleId,index)=>'<div class="module-row'+(s.promptBuilder.selectedModuleId===moduleId?' active':'')+'"><h4>'+esc(moduleMap[moduleId]||moduleId)+'</h4><div class="small">'+esc(moduleId)+'</div><div class="actions"><button class="btn" data-wb-module-select="'+esc(moduleId)+'">Config</button><button class="btn" data-wb-module-up="'+esc(String(index))+'">Up</button><button class="btn" data-wb-module-down="'+esc(String(index))+'">Down</button><button class="btn" data-wb-module-remove="'+esc(String(index))+'">Remove</button></div></div>').join('')+'</div><h4>Add Module</h4><div class="chips">'+(availableModules.length?availableModules.map((module)=>'<button class="btn" data-wb-module-add="'+esc(module.id)+'">+ '+esc(module.title)+'</button>').join(''):'<div class="empty">All modules in canvas.</div>')+'</div><h4>Additional Requirements</h4><textarea id="wbAddReq" style="min-height:180px" placeholder="Additional requirements for this implementation prompt...">'+esc(s.promptBuilder.additionalRequirements||'')+'</textarea></div>'+
+  root.innerHTML='<div class="sub"><h2>Prompt Workbench</h2><p>Prompt Canvas for direct toolset implementation workflows.</p><input id="wbFilter" type="search" placeholder="Filter use cases"><div class="card-grid">'+filtered.map((entry)=>'<div class="card'+(selected&&selected.id===entry.id?' active':'')+'"><h3>'+esc(entry.title)+'</h3><p>'+esc(entry.description||'')+'</p><div class="meta"><div class="token">Priority: '+esc(entry.priority||'n/a')+'</div><div class="token">Default Modules: '+esc(String((entry.defaultModuleIds||[]).length))+'</div></div><div class="actions"><button class="btn" data-wb-select="'+esc(entry.id)+'">Select</button></div></div>').join('')+'</div><h3>Template</h3><div class="field-grid"><label>Name<input id="wbTemplateName" value="'+escAttr(s.promptBuilder.templateName||'')+'" placeholder="Template name"></label><label>Description<textarea id="wbTemplateDescription" placeholder="Template description">'+esc(s.promptBuilder.templateDescription||'')+'</textarea></label><label>Tags (comma separated)<input id="wbTemplateTags" value="'+escAttr(s.promptBuilder.templateTags||'')+'" placeholder="mvp, api, ui"></label><label>Saved Templates<select id="wbTemplateSel"><option value="">'+esc('Select saved template')+'</option>'+((s.promptBuilder.templates||[]).map((template)=>'<option value="'+esc(template.id)+'"'+(template.id===s.promptBuilder.selectedTemplateId?' selected':'')+'>'+esc(template.name)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbLoadTemplate">Load</button><button class="btn" id="wbSaveTemplate">Save Template</button><button class="btn" id="wbDeleteTemplate">Delete</button></div><div class="small '+statusToneClass(s.promptBuilder.saveStatus)+'">'+esc(s.promptBuilder.saveStatus||'')+'</div><h3>Output Context Source</h3><div class="field-grid"><label>Analyze Run<select id="wbContextRunSel"><option value="">'+esc('Select output/<PROGRAM>')+'</option>'+((s.promptBuilder.contextSources||[]).map((entry)=>'<option value="'+esc(entry.program)+'"'+(entry.program===s.promptBuilder.contextSourceProgram?' selected':'')+'>'+esc(entry.program+' ('+(entry.promptArtifactCount||0)+' prompts)')+'</option>').join(''))+'</select></label><label>Prompt Artifact<select id="wbContextPromptSel"><option value="">'+esc('Select ai_prompt_*.md')+'</option>'+((s.promptBuilder.contextSourcePrompts||[]).map((entry)=>'<option value="'+esc(entry.path)+'"'+(entry.path===s.promptBuilder.contextSourcePromptPath?' selected':'')+'>'+esc(entry.path)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbContextRefresh">Refresh Runs</button><button class="btn" id="wbContextLoadPrompts">Load Prompts</button><button class="btn" id="wbContextImport">Import As Seed</button></div><div class="small '+statusToneClass(s.promptBuilder.contextSourceStatus)+'">'+esc(s.promptBuilder.contextSourceStatus||'')+'</div><h3>Prompt Canvas</h3><div class="item-list">'+moduleOrder.map((moduleId,index)=>'<div class="module-row'+(s.promptBuilder.selectedModuleId===moduleId?' active':'')+'"><h4>'+esc(moduleMap[moduleId]||moduleId)+'</h4><div class="small">'+esc(moduleId)+'</div><div class="actions"><button class="btn" data-wb-module-select="'+esc(moduleId)+'">Config</button><button class="btn" data-wb-module-up="'+esc(String(index))+'">Up</button><button class="btn" data-wb-module-down="'+esc(String(index))+'">Down</button><button class="btn" data-wb-module-remove="'+esc(String(index))+'">Remove</button></div></div>').join('')+'</div><h4>Add Module</h4><div class="chips">'+(availableModules.length?availableModules.map((module)=>'<button class="btn" data-wb-module-add="'+esc(module.id)+'">+ '+esc(module.title)+'</button>').join(''):'<div class="empty">All modules in canvas.</div>')+'</div><h4>Additional Requirements</h4><textarea id="wbAddReq" style="min-height:180px" placeholder="Additional requirements for this implementation prompt...">'+esc(s.promptBuilder.additionalRequirements||'')+'</textarea></div>'+
     '<div class="sub">'+
     (selected?'<h2>'+esc(selected.title)+'</h2><p>'+esc(selected.description||'')+'</p><div class="tokens"><div class="token">Modules in Canvas: '+esc(String(moduleOrder.length))+'</div><div class="token">Preview tokens: '+esc(String((preview&&preview.estimatedTokens)||0))+'</div><div class="token">Mode: '+esc(s.promptBuilder.previewEditable?'edit':'live')+'</div></div><h3>Module Configuration'+(selectedModule?': '+esc(selectedModule.title):'')+'</h3>'+(activeFieldDefs.length?'<div class="field-grid">'+activeFieldDefs.map((field)=>renderCanvasFieldInput(field,(s.promptBuilder.fields||{})[field.name])).join('')+'</div>':'<div class="empty">No configurable fields for selected modules.</div>')+'<div class="actions"><button class="btn" id="wbPreviewRefresh">Refresh Preview</button><button class="btn" id="wbEditToggle">'+esc(s.promptBuilder.previewEditable?'Lock Preview':'Edit Preview')+'</button><button class="btn" id="wbCopyPreview">Copy</button><button class="btn" id="wbExportPreview">Export</button><button class="btn" id="wbToCompare">Open Prompt Compare</button></div><h3>Live Preview</h3><div id="wbPreviewPane" class="preview">'+(s.promptBuilder.previewLoading?'<pre>Generating preview...</pre>':s.promptBuilder.previewError?'<div class="empty">'+esc(s.promptBuilder.previewError)+'</div>':s.promptBuilder.previewEditable?'<textarea id="wbPreviewEditor" style="min-height:360px">'+esc(previewText)+'</textarea>':previewText?'<pre>'+esc(previewText)+'</pre>':'<div class="empty">No preview yet. Configure canvas or click refresh.</div>')+'</div>'
     :'<div class="empty">Select a use case to start.</div>')+
@@ -1129,6 +1542,7 @@ async function selectTab(tab){
 
 async function render(){
   renderTabs();
+  renderHome();
   renderGraph();
   renderDb2();
   await renderPrompts();
@@ -1157,12 +1571,11 @@ async function selectRun(program){
 }
 
 async function boot(){
-  await loadPromptBuilderData();
-  s.runs=await getJson('/api/runs');
-  renderRuns();
+  renderHero();
   renderTabs();
-  if(s.runs.length) await selectRun(s.runs[0].program);
-  else await render();
+  renderHome();
+  await loadPromptBuilderData();
+  await refreshRuns();
 }
 
 boot().catch((e)=>{

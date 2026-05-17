@@ -6,7 +6,7 @@ Last Updated: 2026-05-17
 
 # Local UI Shell
 
-The first local UI slice is intentionally small and read-only. It exists to browse generated analysis runs without introducing a separate parsing layer in the browser.
+The local UI keeps the run explorer read-only while also exposing local-only Prompt Workbench actions such as preview generation, template persistence, and prompt-seed import. It still avoids introducing a separate parsing layer in the browser.
 
 ## Command
 
@@ -17,7 +17,7 @@ zeus serve --source-output-root ./output --port 4782
 Behavior:
 
 - binds to loopback only (`127.0.0.1` by default)
-- serves a local HTML shell and a read-only JSON API
+- serves a local HTML shell plus local-only JSON routes
 - reads existing analyze output directories; it does not run analysis itself
 - reuses the current manifest and artifact contracts instead of introducing a parallel storage model
 
@@ -29,6 +29,14 @@ Behavior:
 - `GET /api/runs/:program/views`
 - `GET /api/runs/:program/artifacts/content?path=...`
 - `GET /runs/:program/artifacts/raw?path=...`
+- `GET /api/prompt-builder/contracts`
+- `GET /api/prompt-builder/use-cases`
+- `GET /api/prompt-builder/modules`
+- `POST /api/prompt-builder/preview`
+- `GET|POST|PUT|DELETE /api/prompt-builder/templates[...]`
+- `GET /api/prompt-builder/context-sources`
+- `GET /api/prompt-builder/context-sources/:program/prompts`
+- `POST /api/prompt-builder/context-sources/import`
 
 The browser shell consumes only those endpoints. It does not parse output directories directly.
 
@@ -39,6 +47,8 @@ The browser shell consumes only those endpoints. It does not parse output direct
 - provide a graph explorer with node-level links to related artifacts and prompts
 - provide dedicated DB2 metadata and test-data table views
 - provide side-by-side prompt comparison for generated prompt packs
+- provide Prompt Workbench canvas, live preview, and local template CRUD
+- import existing `ai_prompt_*.md` artifacts as Prompt Canvas seeds
 - enumerate available artifacts, including `safe-sharing/` variants
 - preview JSON, Markdown, and HTML artifacts on demand
 
