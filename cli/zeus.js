@@ -69,6 +69,7 @@ function printHelp() {
   console.log('  zeus [--config <path>] bridge <plan|stage|apply|compile-plan|compile-run|report> --profile <name> [options]');
   console.log('  zeus pui-edit --file <path> --action <roundtrip-check|dump-json|plan|apply|grid-add-column> [--changes-file <path>] [--confirm] [--sfl-record <name>] [--sfl-field "<DDS line>"]');
   console.log('  zeus [--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json]');
+  console.log('  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json]');
 }
 
 function parseArgs(argv) {
@@ -277,6 +278,14 @@ async function main() {
   if (command === 'docs:generate-catalog') {
     await runDocsGenerateCatalog(args);
     return;
+  }
+
+  if (command === 'docs') {
+    const subcommand = Array.isArray(args._) && args._.length > 0 ? String(args._[0]).trim().toLowerCase() : '';
+    if (subcommand === 'generate-catalog') {
+      await runDocsGenerateCatalog(args);
+      return;
+    }
   }
 
   printHelp();
