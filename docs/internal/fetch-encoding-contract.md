@@ -1,3 +1,9 @@
+---
+Title: Fetch Encoding Contract
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # Fetch Encoding Contract
 
 Zeus guarantees one local source contract for Windows-readable analysis input:
@@ -29,7 +35,7 @@ When `zeus fetch` runs with the default `--streamfile-ccsid 1208`, Zeus guarante
 - per-file `validationStatus`
 - per-file `validationMessages`
 
-See [docs/import-manifest-contract.md](/c:/Java/workspace-java/zeus-rpg-promptkit/docs/import-manifest-contract.md) for the full public fetch manifest schema.
+See [`import-manifest-contract.md`](import-manifest-contract.md) for the full public fetch manifest schema.
 
 ## Failure Semantics
 

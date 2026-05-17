@@ -1,3 +1,9 @@
+---
+Title: AI Knowledge Projection
+Description: KI-bezogene Arbeitsvertraege, Prompt-Richtlinien und Validierungsleitlinien fuer Zeus.
+Last Updated: 2026-05-17
+---
+
 # AI Knowledge Projection
 
 `ai-knowledge.json` is the versioned prompt-ready projection emitted by `zeus analyze`.

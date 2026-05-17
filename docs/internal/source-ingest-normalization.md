@@ -1,3 +1,9 @@
+---
+Title: Source Ingest And Source-Type Scanning
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # Source Ingest And Source-Type Scanning
 
 Zeus analyzes local source through an internal normalized text contract before scanner passes run.

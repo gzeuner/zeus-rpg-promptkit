@@ -1,3 +1,9 @@
+---
+Title: Scanner Corpus
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # Scanner Corpus
 
 The scanner corpus is a deterministic regression fixture set for RPG, SQLRPGLE, and ILE detection behavior.

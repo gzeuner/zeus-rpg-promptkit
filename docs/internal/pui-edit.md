@@ -1,3 +1,9 @@
+---
+Title: PUI Edit Workflow
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # PUI Edit Workflow
 
 `pui-edit` is a local-only command for ProfoundUI display files. It reads a DDS display member, changes the embedded PUI JSON block, and writes the result back only when you explicitly confirm the write.

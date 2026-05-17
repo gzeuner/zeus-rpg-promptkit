@@ -1,3 +1,9 @@
+---
+Title: Fixture Sanitization
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # Fixture Sanitization
 
 The sanitized fixture corpus under `tests/fixtures/sanitized-corpus/` exists to preserve IBM i technical patterns without carrying forward case-specific names, customer identifiers, or copied production-like values.

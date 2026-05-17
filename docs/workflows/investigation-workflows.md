@@ -1,3 +1,9 @@
+---
+Title: Investigation Workflows
+Description: Workflow-orientierte Leitfaeden fuer Analyse-, Review- und Agentenablaeufe.
+Last Updated: 2026-05-17
+---
+
 # Investigation Workflows
 
 Zeus now includes three opt-in investigation features that extend the existing analyze pipeline without introducing a second workflow framework:
