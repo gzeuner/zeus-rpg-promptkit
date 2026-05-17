@@ -8,7 +8,7 @@ Last Updated: 2026-05-17
 
 ## Status
 
-Implemented on `main` as `node cli/zeus.js docs:generate-catalog` with alias support `node cli/zeus.js docs generate-catalog`.
+Jetzt implementiert auf `main` als `zeus docs:generate-catalog` mit Alias `zeus docs generate-catalog`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ Related:
 ## Proposed Command
 
 ```bash
-node cli/zeus.js docs:generate-catalog [--output docs/tool-catalog.md] [--format markdown|json]
+zeus docs:generate-catalog [--output docs/tool-catalog.md] [--format markdown|json] [--json-output docs/tool-catalog.json]
 ```
 
 ## Scope
