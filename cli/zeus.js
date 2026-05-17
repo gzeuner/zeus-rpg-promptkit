@@ -37,7 +37,7 @@ const { runBridge } = require('../src/cli/commands/bridgeCommand');
 const { run: runPuiEdit } = require('../src/cli/commands/puiEditCommand');
 const { runSearchSource } = require('../src/cli/commands/searchSourceCommand');
 const { runJoblog } = require('../src/cli/commands/joblogCommand');
-const { runDocsGenerateCatalog } = require('../src/cli/commands/docsGenerateCatalogCommand');
+const { runDocsGenerateCatalog } = require('./commands/generate-tool-catalog');
 
 function printHelp() {
   console.log('Usage:');
