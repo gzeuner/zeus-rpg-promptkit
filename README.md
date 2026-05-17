@@ -24,7 +24,7 @@ Die Dokumentation ist jetzt **KI-ready** und auf skalierbare, Safety-First-Workf
 - Zentraler Documentation Hub: [`docs/index.md`](docs/index.md)
 - Verbindliche Command-Referenz fuer alle KI-Assistenten: [`docs/tool-catalog.md`](docs/tool-catalog.md)
 
-Domains: `ai/`, `cli/`, `quickstart/`, `workflows/`, `safety/`, `internal/`, `viewer/`
+Domains: `ai/`, `cli/`, `quickstart/`, `workflows/`, `safety/`, `internal/`, `viewer/`, `sql/`
 
 Fuer GPT, Claude, Grok, Copilot und lokale Agenten gilt: `docs/tool-catalog.md` ist die bindende Safety- und Scope-Baseline.
 

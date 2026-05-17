@@ -25,6 +25,7 @@ Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 | `workflows/` | Geführte Analyse- und Agenten-Workflows | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Analysten, Architekten |
 | `safety/` | Safety-Guidance, Governance, Sharing | [`safety/best-practice-guide.md`](safety/best-practice-guide.md) | Reviewer, Security, Leads |
 | `viewer/` | Lokale UI-/Viewer-Architektur | [`viewer/local-ui-shell.md`](viewer/local-ui-shell.md) | Tooling Engineers |
+| `sql/` | Reproduzierbare SQL-Discovery-Skripte fuer IBM i/DB2 | [`sql/index.md`](sql/index.md) | Analysts, DB2 Engineers |
 | `internal/` | Interne Verträge, Pipelines, technische Details | [`internal/canonical-analysis-model.md`](internal/canonical-analysis-model.md) | Maintainer, Contributors |
 
 ## Quick Links For AI Assistants
@@ -37,6 +38,7 @@ Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 | Workflow options | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Zeigt Opt-in Vertiefungsfeatures |
 | Safe sharing guidance | [`safety/safe-sharing.md`](safety/safe-sharing.md) | Reduktions-/Sanitization-Regeln für externe Nutzung |
 | CLI examples | [`cli/examples.md`](cli/examples.md) | Schnell nutzbare, reproduzierbare Befehlsmuster |
+| DB2 discovery SQL | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql) | Standardisierte Discovery-Queries fuer System- und Ticketkontext |
 
 ## Visual Map
 
@@ -53,6 +55,7 @@ flowchart TD
     A --> I[docs/safety]
     A --> J[docs/viewer]
     A --> K[docs/internal]
+    A --> L[docs/sql]
 
     H --> B
     C --> B

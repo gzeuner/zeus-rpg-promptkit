@@ -429,7 +429,7 @@ node cli/zeus.js workflow --preset change-planning \
 
 ## Quick Links
 
-- [Risk Assessment Analyzer Source](../src/impact/riskAssessmentAnalyzer.js)
-- [Test Scenario Generator Source](../src/investigation/testScenarioGenerator.js)
-- [Deployment Checklist Builder Source](../src/report/deploymentChecklistBuilder.js)
-- [CHANGE-1234 Session Documentation](../../Snippets/CHANGE-1234-Modulgruppe/)
+- [Risk Assessment Analyzer Source](../../src/impact/riskAssessmentAnalyzer.js)
+- [Test Scenario Generator Source](../../src/investigation/testScenarioGenerator.js)
+- [Deployment Checklist Builder Source](../../src/report/deploymentChecklistBuilder.js)
+- [Investigation Workflows](../workflows/investigation-workflows.md)
