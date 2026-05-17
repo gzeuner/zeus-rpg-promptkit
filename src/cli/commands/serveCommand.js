@@ -43,7 +43,7 @@ async function runServe(args) {
 
   if (verbose) {
     console.log(`[verbose] Output root: ${result.outputRoot}`);
-    console.log('[verbose] API routes: /api/health, /api/runs, /api/runs/:program, /api/runs/:program/artifacts/content');
+    console.log('[verbose] API routes: /api/health, /api/runs, /api/runs/:program, /api/runs/:program/artifacts/content, /api/prompt-builder/*');
   }
 
   console.log(`Zeus local UI available at: ${result.url}`);
