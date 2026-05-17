@@ -117,17 +117,19 @@ function createUiFixture() {
   return {
     tempRoot,
     outputRoot,
+    templateStorePath: path.join(tempRoot, 'config', 'local-only', 'prompt-workbench', 'templates.json'),
   };
 }
 
 test('local UI server exposes runs, details, and artifact content through a read-only API', async () => {
-  const { tempRoot, outputRoot } = createUiFixture();
+  const { tempRoot, outputRoot, templateStorePath } = createUiFixture();
   let started = null;
 
   try {
     started = await startLocalUiServer({
       outputRoot,
       port: 0,
+      templateStorePath,
     });
 
     const health = await fetch(`${started.url}/api/health`).then((response) => response.json());
@@ -169,9 +171,185 @@ test('local UI server exposes runs, details, and artifact content through a read
     assert.match(shellHtml, /Graph Explorer|Graph/);
     assert.match(shellHtml, /DB2\/Test Data/);
     assert.match(shellHtml, /Prompt Compare/);
+    assert.match(shellHtml, /Prompt Workbench/);
+    assert.match(shellHtml, /Prompt Canvas/);
+    assert.match(shellHtml, /Output Context Source/);
+
+    const promptContracts = await fetch(`${started.url}/api/prompt-builder/contracts`).then((response) => response.json());
+    assert.equal(promptContracts.version, 1);
+    assert.equal(promptContracts.routes.preview.path, '/api/prompt-builder/preview');
+
+    const useCasesPayload = await fetch(`${started.url}/api/prompt-builder/use-cases`).then((response) => response.json());
+    assert.ok(Array.isArray(useCasesPayload.useCases));
+    assert.ok(useCasesPayload.useCases.some((entry) => entry.id === 'documentation-generation'));
+
+    const modulesPayload = await fetch(`${started.url}/api/prompt-builder/modules`).then((response) => response.json());
+    assert.ok(Array.isArray(modulesPayload.modules));
+    assert.ok(modulesPayload.modules.some((entry) => entry.id === 'system-role'));
+
+    const previewPayload = await fetch(`${started.url}/api/prompt-builder/preview`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        useCaseId: 'documentation-generation',
+        fields: {
+          goal: 'Document Prompt Workbench implementation for maintainers.',
+          language: 'English',
+        },
+        additionalRequirements: 'Reference changed files and test scope.',
+      }),
+    }).then((response) => response.json());
+    assert.equal(previewPayload.preview.useCase.id, 'documentation-generation');
+    assert.ok(previewPayload.preview.estimatedTokens > 0);
+    assert.match(previewPayload.preview.content, /Prompt Workbench/);
+
+    const emptyTemplates = await fetch(`${started.url}/api/prompt-builder/templates`).then((response) => response.json());
+    assert.deepEqual(emptyTemplates.templates, []);
+
+    const createdTemplate = await fetch(`${started.url}/api/prompt-builder/templates`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Workbench API Contract Review',
+        description: 'Template for API-first implementation review.',
+        useCaseId: 'impact-change-analysis',
+        moduleIds: ['system-role', 'toolset-context', 'implementation-task', 'quality-guardrails'],
+        fields: {
+          goal: 'Assess impact of new prompt builder routes.',
+        },
+      }),
+    }).then((response) => response.json());
+    assert.equal(typeof createdTemplate.template.id, 'string');
+    assert.equal(createdTemplate.template.useCaseId, 'impact-change-analysis');
+
+    const listedTemplates = await fetch(`${started.url}/api/prompt-builder/templates`).then((response) => response.json());
+    assert.equal(listedTemplates.templates.length, 1);
+    const templateId = listedTemplates.templates[0].id;
+
+    const loadedTemplate = await fetch(`${started.url}/api/prompt-builder/templates/${encodeURIComponent(templateId)}`).then((response) => response.json());
+    assert.equal(loadedTemplate.template.id, templateId);
+    assert.equal(loadedTemplate.template.name, 'Workbench API Contract Review');
+
+    const updatedTemplate = await fetch(`${started.url}/api/prompt-builder/templates/${encodeURIComponent(templateId)}`, {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Workbench API Contract Review v2',
+        description: 'Updated template',
+        useCaseId: 'impact-change-analysis',
+        moduleIds: ['system-role', 'toolset-context', 'implementation-task', 'output-contract'],
+        fields: {
+          goal: 'Assess impact and regression risks of prompt builder APIs.',
+        },
+      }),
+    }).then((response) => response.json());
+    assert.equal(updatedTemplate.template.id, templateId);
+    assert.equal(updatedTemplate.template.name, 'Workbench API Contract Review v2');
+
+    const deletedTemplate = await fetch(`${started.url}/api/prompt-builder/templates/${encodeURIComponent(templateId)}`, {
+      method: 'DELETE',
+    }).then((response) => response.json());
+    assert.equal(deletedTemplate.deleted.id, templateId);
+
+    const templatesAfterDelete = await fetch(`${started.url}/api/prompt-builder/templates`).then((response) => response.json());
+    assert.deepEqual(templatesAfterDelete.templates, []);
+
+    const promptBuilderMethodError = await fetch(`${started.url}/api/prompt-builder/use-cases`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(promptBuilderMethodError.status, 405);
+    assert.match(promptBuilderMethodError.headers.get('allow') || '', /GET/);
+
+    const invalidPreviewJson = await fetch(`${started.url}/api/prompt-builder/preview`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: '{"useCaseId":',
+    });
+    assert.equal(invalidPreviewJson.status, 400);
+
+    const invalidPreviewPayload = await fetch(`${started.url}/api/prompt-builder/preview`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        fields: {},
+      }),
+    });
+    assert.equal(invalidPreviewPayload.status, 400);
+
+    const templateNotFound = await fetch(`${started.url}/api/prompt-builder/templates/does-not-exist`);
+    assert.equal(templateNotFound.status, 404);
+
+    const contextSources = await fetch(`${started.url}/api/prompt-builder/context-sources`).then((response) => response.json());
+    assert.equal(contextSources.contextSources.length, 1);
+    assert.equal(contextSources.contextSources[0].program, 'ORDERPGM');
+    assert.ok(contextSources.contextSources[0].promptArtifacts.some((entry) => entry.path === 'ai_prompt_documentation.md'));
+
+    const contextPrompts = await fetch(`${started.url}/api/prompt-builder/context-sources/ORDERPGM/prompts`).then((response) => response.json());
+    assert.equal(contextPrompts.program, 'ORDERPGM');
+    assert.ok(contextPrompts.promptArtifacts.some((entry) => entry.path === 'ai_prompt_modernization.md'));
+
+    const importedPrompt = await fetch(`${started.url}/api/prompt-builder/context-sources/import`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        program: 'ORDERPGM',
+        path: 'ai_prompt_documentation.md',
+      }),
+    }).then((response) => response.json());
+    assert.equal(importedPrompt.seed.program, 'ORDERPGM');
+    assert.equal(importedPrompt.seed.path, 'ai_prompt_documentation.md');
+    assert.match(importedPrompt.seed.content, /Documentation Prompt/);
+
+    const invalidImportedPrompt = await fetch(`${started.url}/api/prompt-builder/context-sources/import`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        program: 'ORDERPGM',
+        path: 'report.md',
+      }),
+    });
+    assert.equal(invalidImportedPrompt.status, 400);
+
+    const missingImportedPromptPayload = await fetch(`${started.url}/api/prompt-builder/context-sources/import`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        program: 'ORDERPGM',
+      }),
+    });
+    assert.equal(missingImportedPromptPayload.status, 400);
+
+    const missingRunContextPrompts = await fetch(`${started.url}/api/prompt-builder/context-sources/UNKNOWNPGM/prompts`);
+    assert.equal(missingRunContextPrompts.status, 404);
 
     const traversal = await fetch(`${started.url}/api/runs/ORDERPGM/artifacts/content?path=..%2Fsecret.txt`);
     assert.equal(traversal.status, 400);
+
+    const readOnlyRouteMethodError = await fetch(`${started.url}/api/runs`, {
+      method: 'POST',
+    });
+    assert.equal(readOnlyRouteMethodError.status, 405);
+    assert.match(readOnlyRouteMethodError.headers.get('allow') || '', /GET/);
   } finally {
     if (started) {
       await new Promise((resolve) => started.server.close(resolve));
