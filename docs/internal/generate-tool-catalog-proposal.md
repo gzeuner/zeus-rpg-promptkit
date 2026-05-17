@@ -6,6 +6,10 @@ Last Updated: 2026-05-17
 
 # Proposal: `docs:generate-catalog`
 
+## Status
+
+Implemented on `main` as `node cli/zeus.js docs:generate-catalog` with alias support `node cli/zeus.js docs generate-catalog`.
+
 ## Goal
 
 Automatisches Erzeugen von `docs/tool-catalog.md` direkt aus CLI- und Workflow-Metadaten, um Drift zwischen Implementierung und Dokumentation zu verhindern.

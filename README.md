@@ -30,10 +30,11 @@ Fuer GPT, Claude, Grok, Copilot und lokale Agenten gilt: `docs/tool-catalog.md` 
 
 ### Next-Level Automation: `zeus docs:generate-catalog`
 
-Als naechster Schritt ist ein Dokumentationsgenerator vorgesehen, der `docs/tool-catalog.md` automatisch aus CLI- und Preset-Metadaten aktualisiert.
+Der Dokumentationsgenerator ist jetzt implementiert und aktualisiert `docs/tool-catalog.md` automatisch aus CLI- und Preset-Metadaten.
 
 - Vorschlag: [`docs/internal/generate-tool-catalog-proposal.md`](docs/internal/generate-tool-catalog-proposal.md)
-- Geplante CLI-Form: `node cli/zeus.js docs:generate-catalog --output docs/tool-catalog.md`
+- CLI: `node cli/zeus.js docs:generate-catalog`
+- Alias: `node cli/zeus.js docs generate-catalog`
 
 ---
 
