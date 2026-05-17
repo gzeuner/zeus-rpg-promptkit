@@ -12,18 +12,38 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 
+const { generateToolCatalog } = require('../../docs/toolCatalogGenerator');
+
 async function runDocsGenerateCatalog(args) {
-  const output = args.output ? String(args.output).trim() : 'docs/tool-catalog.md';
   const format = args.format ? String(args.format).trim().toLowerCase() : 'markdown';
 
   if (!['markdown', 'json'].includes(format)) {
     throw new Error('Invalid --format value. Use markdown or json.');
   }
 
-  console.log('docs:generate-catalog is currently a scaffold command.');
-  console.log(`Requested format: ${format}`);
-  console.log(`Requested output: ${output}`);
-  console.log('Next step: implement generator in src/docs/toolCatalogGenerator.js and wire metadata-based emission.');
+  if (format === 'json') {
+    const jsonOutput = args.output ? String(args.output).trim() : 'docs/tool-catalog.json';
+    const result = generateToolCatalog({
+      repoRoot: process.cwd(),
+      markdownOutputPath: 'docs/tool-catalog.md',
+      jsonOutputPath: jsonOutput,
+    });
+    console.log(`Tool catalog markdown written to: ${result.markdownPath}`);
+    console.log(`Tool catalog json written to: ${result.jsonPath}`);
+    console.log(`Commands exported: ${result.commandCount}`);
+    console.log(`Workflow presets exported: ${result.presetCount}`);
+    return;
+  }
+
+  const markdownOutput = args.output ? String(args.output).trim() : 'docs/tool-catalog.md';
+  const result = generateToolCatalog({
+    repoRoot: process.cwd(),
+    markdownOutputPath: markdownOutput,
+    jsonOutputPath: null,
+  });
+  console.log(`Tool catalog markdown written to: ${result.markdownPath}`);
+  console.log(`Commands exported: ${result.commandCount}`);
+  console.log(`Workflow presets exported: ${result.presetCount}`);
 }
 
 module.exports = {
