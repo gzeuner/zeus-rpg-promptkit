@@ -1,12 +1,18 @@
+---
+Title: VS Code Agent Integration
+Description: Workflow-orientierte Leitfaeden fuer Analyse-, Review- und Agentenablaeufe.
+Last Updated: 2026-05-17
+---
+
 # VS Code Agent Integration
 
 This document explains the Zeus RPG Toolkit VS Code integration for direct Zeus tool usage from chat — including installation, setup, and Language Model Tool API registration.
 
-For the recommended product shape and the fastest agentic-coding path, start with [docs/agentic-coding.md](docs/agentic-coding.md).
+For the recommended product shape and the fastest agentic-coding path, start with [`agentic-coding.md`](agentic-coding.md).
 
 Use [`../quickstart/5-minutes.md`](../quickstart/5-minutes.md) for the shortest onboarding path.
 
-Use [docs/agent-validation-checklist.md](docs/agent-validation-checklist.md) after changing extension, prompt, or agent integration.
+Use [`../ai/agent-validation-checklist.md`](../ai/agent-validation-checklist.md) after changing extension, prompt, or agent integration.
 
 ## Recommended operating model
 

@@ -1,3 +1,9 @@
+---
+Title: Zeus in 5 Minutes
+Description: Schneller operativer Einstieg in typische Zeus-Workflows.
+Last Updated: 2026-05-17
+---
+
 # Zeus in 5 Minutes
 
 This is the shortest path to get Zeus working for agentic coding.

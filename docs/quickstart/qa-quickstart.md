@@ -1,3 +1,9 @@
+---
+Title: QA Validation Layer - Quick Start
+Description: Schneller operativer Einstieg in typische Zeus-Workflows.
+Last Updated: 2026-05-17
+---
+
 # QA Validation Layer - Quick Start
 
 ## What Just Happened?
@@ -138,7 +144,7 @@ npm test -- tests/qa-stage-registry.test.js
 
 ## Next Steps
 
-1. **Review documentation:** Read [qa-validation-layer.md](qa-validation-layer.md)
+1. **Review documentation:** Read [`../internal/qa-validation-layer.md`](../internal/qa-validation-layer.md)
 2. **Try it out:** Run QA on an existing analysis
 3. **Enable validators gradually:** Start with one, add more as needed
 4. **Integrate with CI/CD:** Use `--strict STRICT` in pipelines
@@ -163,7 +169,7 @@ npm test -- tests/qa-stage-registry.test.js
 - `tests/qa-report-generator.test.js`
 
 **Documentation (2 files):**
-- `docs/qa-validation-layer.md`
+- `docs/internal/qa-validation-layer.md`
 - `docs/quickstart/qa-quickstart.md` (this file)
 
 **Modified (2 files):**
@@ -181,10 +187,10 @@ npm test -- tests/qa-stage-registry.test.js
 ## Support
 
 For issues or questions, refer to:
-- Full documentation: [qa-validation-layer.md](qa-validation-layer.md)
+- Full documentation: [`../internal/qa-validation-layer.md`](../internal/qa-validation-layer.md)
 - Test examples: `tests/qa-*.test.js`
 - CLI usage: `node cli/zeus.js qa --help`
 
 ---
 
-**Welcome to better QA! 🚀**
+**Welcome to better QA!**

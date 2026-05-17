@@ -1,7 +1,17 @@
-# Zeus RPG PromptKit – AI Session Prompt (v0.2.0)
+---
+Title: AI Session Prompt
+Description: Standardisierter Session-Startprompt fuer Evidence-First- und Safety-First-Arbeit mit Zeus.
+Last Updated: 2026-05-17
+---
 
-Use this prompt at the beginning of a new AI-assisted Zeus session.
-It is designed for evidence-first IBM i/RPG analysis with strict safety boundaries.
+# Zeus RPG PromptKit - AI Session Prompt (v2.1)
+
+Nutze diesen Prompt am Start einer neuen Zeus-Session mit KI-Assistenten.
+
+Related:
+- [`../tool-catalog.md`](../tool-catalog.md)
+- [`../index.md`](../index.md)
+- [`../cli/reference.md`](../cli/reference.md)
 
 ## Session Start Prompt (Copy/Paste)
 
@@ -16,7 +26,7 @@ Core operating model:
 
 Safety rules:
 1) Never run write operations on production systems.
-2) Ask for explicit approval before data mutation (`upsert`, `insert`, `update`) or bridge/apply style operations.
+2) Ask for explicit approval before data mutation (`upsert`, `insert`, `update`, `upsert-sql`) or bridge/apply style operations.
 3) For risky actions, show the exact command first, then wait for confirmation.
 4) Keep credentials out of outputs, prompts, logs, and artifacts.
 
@@ -58,6 +68,7 @@ Tooling quick reference:
 | test-run | S2/S1 | Before/after test snapshots |
 | bridge | S4 | Operator-gated bridge workflow |
 | pui-edit | S1 | Local UI artifact edits |
+| docs:generate-catalog | S1 | Regenerate tool catalog docs |
 
 Workflow presets:
 - onboarding
@@ -79,7 +90,6 @@ Now proceed with this session goal:
 
 ## Usage Notes
 
-- Keep this prompt unchanged across assistants where possible for deterministic behavior.
-- If command behavior changes, update `docs/tool-catalog.md` first, then this file.
-- For enterprise usage, pair this prompt with repository-specific policy files (e.g., Copilot instructions).
-
+- Behandle `docs/tool-catalog.md` als verbindliche Referenz, nicht nur als Beispiel.
+- Bei Command-Aenderungen zuerst `docs/tool-catalog.md`, dann diese Datei aktualisieren.
+- Fuer Enterprise-Setups mit projektspezifischen Policy-Dateien kombinieren.

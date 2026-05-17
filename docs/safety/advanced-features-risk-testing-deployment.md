@@ -1,3 +1,9 @@
+---
+Title: Zeus Advanced Features: Risk, Testing & Deployment Planning
+Description: Safety-First- und Governance-Dokumentation fuer risikoarme Zeus-Nutzung.
+Last Updated: 2026-05-17
+---
+
 # Zeus Advanced Features: Risk, Testing & Deployment Planning
 
 **Neue Toolkit-Erweiterungen für CHANGE-1234 und ähnliche Change-Szenarien**
@@ -423,7 +429,7 @@ node cli/zeus.js workflow --preset change-planning \
 
 ## Quick Links
 
-- [Risk Assessment Analyzer Source](../src/impact/riskAssessmentAnalyzer.js)
-- [Test Scenario Generator Source](../src/investigation/testScenarioGenerator.js)
-- [Deployment Checklist Builder Source](../src/report/deploymentChecklistBuilder.js)
-- [CHANGE-1234 Session Documentation](../../Snippets/CHANGE-1234-Modulgruppe/)
+- [Risk Assessment Analyzer Source](../../src/impact/riskAssessmentAnalyzer.js)
+- [Test Scenario Generator Source](../../src/investigation/testScenarioGenerator.js)
+- [Deployment Checklist Builder Source](../../src/report/deploymentChecklistBuilder.js)
+- [Investigation Workflows](../workflows/investigation-workflows.md)

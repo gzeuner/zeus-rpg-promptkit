@@ -1,3 +1,9 @@
+---
+Title: CLI Examples
+Description: CLI-Referenz- und Praxisdokumentation fuer reproduzierbare Zeus-Befehlsablaeufe.
+Last Updated: 2026-05-17
+---
+
 # CLI Examples
 
 ## Environment and Baseline
