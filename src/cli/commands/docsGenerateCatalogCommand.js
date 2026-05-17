@@ -12,43 +12,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 
-const { generateToolCatalog } = require('../../docs/toolCatalogGenerator');
-
-async function runDocsGenerateCatalog(args) {
-  const format = args.format ? String(args.format).trim().toLowerCase() : 'markdown';
-  const jsonOutput = args['json-output'] ? String(args['json-output']).trim() : null;
-
-  if (!['markdown', 'json'].includes(format)) {
-    throw new Error('Invalid --format value. Use markdown or json.');
-  }
-
-  if (format === 'json') {
-    const jsonTarget = args.output ? String(args.output).trim() : (jsonOutput || 'docs/tool-catalog.json');
-    const result = generateToolCatalog({
-      repoRoot: process.cwd(),
-      markdownOutputPath: 'docs/tool-catalog.md',
-      jsonOutputPath: jsonTarget,
-    });
-    console.log(`Tool catalog markdown written to: ${result.markdownPath}`);
-    console.log(`Tool catalog json written to: ${result.jsonPath}`);
-    console.log(`Commands exported: ${result.commandCount}`);
-    console.log(`Workflow presets exported: ${result.presetCount}`);
-    return;
-  }
-
-  const markdownOutput = args.output ? String(args.output).trim() : 'docs/tool-catalog.md';
-  const result = generateToolCatalog({
-    repoRoot: process.cwd(),
-    markdownOutputPath: markdownOutput,
-    jsonOutputPath: jsonOutput,
-  });
-  console.log(`Tool catalog markdown written to: ${result.markdownPath}`);
-  if (result.jsonPath) {
-    console.log(`Tool catalog json written to: ${result.jsonPath}`);
-  }
-  console.log(`Commands exported: ${result.commandCount}`);
-  console.log(`Workflow presets exported: ${result.presetCount}`);
-}
+const { runDocsGenerateCatalog } = require('../../../cli/commands/generate-tool-catalog');
 
 module.exports = {
   runDocsGenerateCatalog,
