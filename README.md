@@ -11,11 +11,11 @@
 
 ![Zeus RPG PromptKit](./images/zeus-rpg-promptkit.png)
 
-> **Quellen holen · Analysieren · Abhängigkeiten verstehen · KI mit hochwertigem Kontext versorgen.**
+> **Quellen holen · Analysieren · Abhängigkeiten verstehen · KI mit hochwertigem, nachvollziehbarem Kontext versorgen.**
 
-Zeus RPG PromptKit ist ein Open-Source-Toolkit, das IBM i / AS/400 Entwicklern hilft, Legacy-RPG-Programme, CL und DDS strukturiert zu analysieren und perfekten, nachvollziehbaren Kontext für Menschen **und** KI-Assistenten zu erzeugen.
+Zeus RPG PromptKit ist ein Open-Source-Toolkit, das IBM i / AS/400 Entwicklern, Architekten und Modernisierern hilft, Legacy-RPG-Programme, CL und DDS strukturiert zu analysieren und **perfekte, prüfbare Kontexte** für Menschen **und** KI-Assistenten zu erzeugen.
 
-**Kein Code-Generator.** Sondern ein **Evidence Preparation Layer** – read-only, transparent und reviewbar.
+**Kein Code-Generator.** Sondern ein **Evidence Preparation Layer** – read-only, transparent und vollständig reviewbar.
 
 ---
 
@@ -23,63 +23,85 @@ Zeus RPG PromptKit ist ein Open-Source-Toolkit, das IBM i / AS/400 Entwicklern h
 
 ### 1. Voraussetzungen
 - Node.js 20+
-- Java 11+ (für JT400/DB2 Zugriff)
+- Java 11+ (für JT400/DB2-Zugriff)
 
-### 2. Installation & Demo ausführen
+### 2. Installation & Demo
 
 ```bash
 git clone https://github.com/gzeuner/zeus-rpg-promptkit.git
 cd zeus-rpg-promptkit
 npm install
 
-# Demo mit synthetischem RPG-System analysieren (perfekt zum Ausprobieren)
+# Demo mit synthetischem RPG-System analysieren
 ./examples/demo-rpg-mini-system/scripts/run-demo.sh
 ```
 
-### 3. Ergebnisse anschauen
+### 3. KI-ready Artefakte nutzen
 
-```bash
-# Lokale Viewer-UI starten
-node cli/zeus.js serve --source-output-root ./examples/demo-rpg-mini-system/output-baseline
-```
+Nach der Analyse liegen im Ordner `examples/demo-rpg-mini-system/output-baseline/PROGRAM_100/` alle wichtigen Dateien bereit:
+- `ai-knowledge.json` – optimierter Kontext für KI
+- `report.md` und `architecture-report.md`
+- `dependency-graph.mmd` (Mermaid)
+- uvm.
 
-Öffne **http://localhost:4782** im Browser.
+Einen vollständigen AI-Session-Prompt erzeugst du mit:
 
-### 4. KI-Ready Prompt erzeugen
 ```bash
 node ./examples/demo-rpg-mini-system/scripts/build-ai-session-prompt.mjs
 ```
-
-Du findest in `output-baseline/` sofort nutzbare Artefakte:
-- `report.md`
-- `architecture-report.md`
-- `ai-knowledge.json`
-- `dependency-graph.mmd`
-- uvm.
 
 ---
 
 ## ✨ Kern-Features
 
 - **📥 Source Fetching** von IBM i (SFTP, JT400, FTP)
-- **🔍 Statische Analyse** von RPG III/IV, CL, DDS
+- **🔍 Tiefgehende statische Analyse** von RPG III/IV, CL, DDS
 - **🌐 Vollständiges Dependency Mapping** & Call-Graphs
-- **🗄️ DB2 Metadata Integration** (Tabellen, Felder, Triggers, Constraints)
-- **🤖 AI-optimierte Artefakte** für Copilot, Claude, GPT, Grok etc.
-- **🖥️ Lokale Viewer UI** zur interaktiven Inspektion
-- **📋 Vordefinierte Workflows** (Onboarding, Impact Analysis, Modernization, Security Review …)
+- **🗄️ DB2 Metadata Integration** (Tabellen, Felder, Triggers, Constraints, Views)
+- **🤖 AI-optimierte Artefakte** – speziell aufbereitet für Claude, GPT, Cursor, Grok etc.
+- **📋 Vordefinierte Analyse-Workflows** (Documentation, Impact Analysis, Security Review, Modernization Roadmap …)
 - **🛡️ Safety-First** – Read-only Default, Credentials niemals im Repo
 
 ---
 
-## Wofür ist Zeus perfekt geeignet?
+## Wofür ist Zeus RPG PromptKit ideal?
 
-- Schnelles Verständnis von gewachsenen RPG-Programmen
-- Sichere Impact-Analysen vor Änderungen
-- Vorbereitung von Modernisierungsprojekten
-- Bereitstellung von Kontext für KI-gestützte Entwicklung
+- Schnelles tiefes Verständnis von komplexen, gewachsenen RPG-Programmen
+- Sichere Impact-Analysen vor Code-Änderungen
+- Vorbereitung von Modernisierungs- und Refactoring-Projekten
+- Bereitstellung von hochwertigem Kontext für KI-gestützte Entwicklung
 - Technisches Onboarding neuer Teammitglieder
-- Erstellung von Review- und Dokumentations-Artefakten
+- Erstellung von Dokumentationen, Reviews und Architektur-Artefakten
+
+---
+
+## English Version
+
+**Zeus RPG PromptKit – Evidence-First Context Builder for IBM i RPG, CL & DDS**
+
+Zeus RPG PromptKit is an open-source toolkit that helps IBM i / AS/400 developers, architects and modernization teams to analyze legacy RPG, CL and DDS programs in a structured way and generate **high-quality, verifiable context** for both humans and AI assistants (Claude, GPT, Cursor, Grok etc.).
+
+**Not a code generator.** It is an **Evidence Preparation Layer** – read-only, transparent and fully auditable.
+
+### Quick Start
+
+```bash
+git clone https://github.com/gzeuner/zeus-rpg-promptkit.git
+cd zeus-rpg-promptkit
+npm install
+./examples/demo-rpg-mini-system/scripts/run-demo.sh
+node ./examples/demo-rpg-mini-system/scripts/build-ai-session-prompt.mjs
+```
+
+### Key Features
+
+- Source fetching from IBM i (SFTP, JT400, FTP)
+- Deep static analysis of RPG III/IV, CL, DDS
+- Complete dependency mapping & call graphs
+- DB2 metadata integration
+- AI-optimized artifacts and prompts
+- Predefined analysis workflows
+- Security-first design
 
 ---
 
@@ -88,10 +110,11 @@ Du findest in `output-baseline/` sofort nutzbare Artefakte:
 ```bash
 npm install
 cp config/profiles.example.json config/local-only/profiles.json
-# Profile und Umgebungsvariablen anpassen (siehe docs/)
 ```
 
-Alle Befehle und Presets findest du in der **[Tool Catalog](docs/tool-catalog.md)**.
+Passe die Profile in `config/local-only/profiles.json` und ggf. Umgebungsvariablen an (siehe `docs/`).
+
+Alle verfügbaren Befehle und Presets findest du in der **[Tool Catalog](docs/tool-catalog.md)**.
 
 ---
 
@@ -99,21 +122,19 @@ Alle Befehle und Presets findest du in der **[Tool Catalog](docs/tool-catalog.md
 
 **„Evidence first, AI second.“**
 
-- Nur lesender Zugriff auf IBM i
-- Alle Credentials bleiben lokal (`config/local-only/`)
-- KI bekommt **prüfbare Fakten**, keine Halluzinationen
-- Der Mensch bleibt immer in der Verantwortung
-
-Mehr dazu im [Safety-Bereich der Docs](docs/safety/).
+- Nur lesender Zugriff auf dein IBM i System
+- Alle sensiblen Daten bleiben lokal
+- Die KI erhält **prüfbare Fakten** statt Halluzinationen
+- Der Entwickler behält die volle Kontrolle und Verantwortung
 
 ---
 
 ## Dokumentation
 
-- **Zentrale Übersicht**: [`docs/index.md`](docs/index.md)
-- **Tool & Command Reference** (KI-ready): [`docs/tool-catalog.md`](docs/tool-catalog.md)
-- **AI Session Prompt**: [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)
-- **Beispiel-Workflows & Quickstarts**: [`docs/quickstart/`](docs/quickstart/) und [`docs/workflows/`](docs/workflows/)
+- [Zentrale Dokumentation](docs/index.md)
+- [Tool Catalog & Command Reference](docs/tool-catalog.md)
+- [AI Session Prompt Guide](docs/ai/session-prompt.md)
+- [Quickstarts & Workflows](docs/quickstart/)
 
 ---
 
@@ -123,4 +144,4 @@ Apache License 2.0 – siehe [LICENSE](LICENSE)
 
 ---
 
-**Made with ❤️ für die IBM i Community**
+**Made with ❤️ for the IBM i / RPG Community**
