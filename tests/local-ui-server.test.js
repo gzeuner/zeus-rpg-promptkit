@@ -121,7 +121,7 @@ function createUiFixture() {
   };
 }
 
-test('local UI server exposes runs, details, and artifact content through a read-only API', async () => {
+test('local UI server exposes run explorer data and Prompt Workbench routes through a local-only API', async () => {
   const { tempRoot, outputRoot, templateStorePath } = createUiFixture();
   let started = null;
 
@@ -155,6 +155,7 @@ test('local UI server exposes runs, details, and artifact content through a read
     assert.equal(views.summary.db2TableCount, 1);
     assert.equal(views.graph.nodes.find((node) => node.id === 'ORDERPGM').relatedPromptPaths.includes('ai_prompt_documentation.md'), true);
     assert.equal(views.db2.tables[0].sampleRowCount, 1);
+    assert.deepEqual(views.db2.tables[0].relatedArtifactPaths, ['db2-metadata.json', 'test-data.json']);
     assert.equal(views.prompts.artifacts[0].path.startsWith('ai_prompt_'), true);
 
     const artifact = await fetch(`${started.url}/api/runs/ORDERPGM/artifacts/content?path=report.md`).then((response) => response.json());
@@ -168,12 +169,17 @@ test('local UI server exposes runs, details, and artifact content through a read
 
     const shellHtml = await fetch(`${started.url}/`).then((response) => response.text());
     assert.match(shellHtml, /Zeus Local UI/);
+    assert.match(shellHtml, /Home/);
     assert.match(shellHtml, /Graph Explorer|Graph/);
     assert.match(shellHtml, /DB2\/Test Data/);
     assert.match(shellHtml, /Prompt Compare/);
     assert.match(shellHtml, /Prompt Workbench/);
     assert.match(shellHtml, /Prompt Canvas/);
     assert.match(shellHtml, /Output Context Source/);
+    assert.match(shellHtml, /Quick Actions|Open Prompt Workbench/);
+    const scriptMatch = shellHtml.match(/<script>([\s\S]*)<\/script>/);
+    assert.ok(scriptMatch);
+    assert.doesNotThrow(() => new Function(scriptMatch[1]));
 
     const promptContracts = await fetch(`${started.url}/api/prompt-builder/contracts`).then((response) => response.json());
     assert.equal(promptContracts.version, 1);
