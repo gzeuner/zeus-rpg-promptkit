@@ -21,9 +21,11 @@ const {
   executeReadRunViews,
 } = require('../core/runExplorerService');
 const { renderLocalUiShell } = require('./localUiShell');
+const { createPromptWorkbenchService } = require('./promptWorkbenchService');
 
 const DEFAULT_UI_HOST = '127.0.0.1';
 const DEFAULT_UI_PORT = 4782;
+const MAX_JSON_BODY_BYTES = 512 * 1024;
 
 function normalizeHost(host) {
   const normalized = String(host || DEFAULT_UI_HOST).trim();
@@ -55,6 +57,15 @@ function sendJson(response, statusCode, payload) {
   response.end(`${JSON.stringify(payload, null, 2)}\n`);
 }
 
+function sendMethodNotAllowed(response, methods) {
+  response.writeHead(405, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    Allow: (Array.isArray(methods) ? methods : []).join(', '),
+  });
+  response.end(`${JSON.stringify({ error: 'Method not allowed' }, null, 2)}\n`);
+}
+
 function sendText(response, statusCode, content, contentType = 'text/plain; charset=utf-8') {
   response.writeHead(statusCode, {
     'Content-Type': contentType,
@@ -70,20 +81,181 @@ function splitPathname(pathname) {
     .map((entry) => decodeURIComponent(entry));
 }
 
-function createLocalUiRequestHandler({ outputRoot }) {
-  const resolvedOutputRoot = path.resolve(outputRoot);
+function readJsonBody(request, options = {}) {
+  const maxBytes = Number.isInteger(options.maxBytes) && options.maxBytes > 0
+    ? options.maxBytes
+    : MAX_JSON_BODY_BYTES;
 
-  return function handleRequest(request, response) {
+  return new Promise((resolve, reject) => {
+    let bytes = 0;
+    let body = '';
+
+    request.on('data', (chunk) => {
+      bytes += chunk.length;
+      if (bytes > maxBytes) {
+        reject(new Error(`Request body exceeds ${maxBytes} bytes.`));
+        return;
+      }
+      body += chunk.toString('utf8');
+    });
+
+    request.on('end', () => {
+      const trimmed = body.trim();
+      if (!trimmed) {
+        resolve({});
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(trimmed));
+      } catch (error) {
+        reject(new Error(`Invalid JSON body: ${error.message}`));
+      }
+    });
+
+    request.on('error', reject);
+  });
+}
+
+async function handlePromptBuilderRequest({
+  request,
+  response,
+  pathname,
+  segments,
+  promptWorkbenchService,
+}) {
+  if (!pathname.startsWith('/api/prompt-builder')) {
+    return false;
+  }
+
+  if (pathname === '/api/prompt-builder/contracts') {
+    if (request.method !== 'GET') {
+      sendMethodNotAllowed(response, ['GET']);
+      return true;
+    }
+    sendJson(response, 200, promptWorkbenchService.getContract());
+    return true;
+  }
+
+  if (pathname === '/api/prompt-builder/use-cases') {
+    if (request.method !== 'GET') {
+      sendMethodNotAllowed(response, ['GET']);
+      return true;
+    }
+    sendJson(response, 200, promptWorkbenchService.listUseCases());
+    return true;
+  }
+
+  if (pathname === '/api/prompt-builder/modules') {
+    if (request.method !== 'GET') {
+      sendMethodNotAllowed(response, ['GET']);
+      return true;
+    }
+    sendJson(response, 200, promptWorkbenchService.listModules());
+    return true;
+  }
+
+  if (pathname === '/api/prompt-builder/preview') {
+    if (request.method !== 'POST') {
+      sendMethodNotAllowed(response, ['POST']);
+      return true;
+    }
+    const payload = await readJsonBody(request);
+    sendJson(response, 200, promptWorkbenchService.previewPrompt(payload));
+    return true;
+  }
+
+  if (pathname === '/api/prompt-builder/templates') {
+    if (request.method === 'GET') {
+      sendJson(response, 200, promptWorkbenchService.listTemplates());
+      return true;
+    }
+    if (request.method === 'POST') {
+      const payload = await readJsonBody(request);
+      sendJson(response, 201, promptWorkbenchService.createTemplate(payload));
+      return true;
+    }
+    sendMethodNotAllowed(response, ['GET', 'POST']);
+    return true;
+  }
+
+  if (segments[0] === 'api' && segments[1] === 'prompt-builder' && segments[2] === 'templates' && segments.length === 4) {
+    const templateId = segments[3];
+    if (request.method === 'GET') {
+      sendJson(response, 200, promptWorkbenchService.readTemplate(templateId));
+      return true;
+    }
+    if (request.method === 'PUT') {
+      const payload = await readJsonBody(request);
+      sendJson(response, 200, promptWorkbenchService.updateTemplate(templateId, payload));
+      return true;
+    }
+    if (request.method === 'DELETE') {
+      sendJson(response, 200, promptWorkbenchService.deleteTemplate(templateId));
+      return true;
+    }
+    sendMethodNotAllowed(response, ['GET', 'PUT', 'DELETE']);
+    return true;
+  }
+
+  if (pathname === '/api/prompt-builder/context-sources') {
+    if (request.method !== 'GET') {
+      sendMethodNotAllowed(response, ['GET']);
+      return true;
+    }
+    sendJson(response, 200, promptWorkbenchService.listContextSources());
+    return true;
+  }
+
+  if (segments[0] === 'api' && segments[1] === 'prompt-builder' && segments[2] === 'context-sources' && segments[4] === 'prompts' && segments.length === 5) {
+    if (request.method !== 'GET') {
+      sendMethodNotAllowed(response, ['GET']);
+      return true;
+    }
+    sendJson(response, 200, promptWorkbenchService.listContextSourcePrompts(segments[3]));
+    return true;
+  }
+
+  if (pathname === '/api/prompt-builder/context-sources/import') {
+    if (request.method !== 'POST') {
+      sendMethodNotAllowed(response, ['POST']);
+      return true;
+    }
+    const payload = await readJsonBody(request);
+    sendJson(response, 200, promptWorkbenchService.importContextPrompt(payload));
+    return true;
+  }
+
+  sendJson(response, 404, { error: `Route not found: ${pathname}` });
+  return true;
+}
+
+function createLocalUiRequestHandler({ outputRoot, promptWorkbenchService }) {
+  const resolvedOutputRoot = path.resolve(outputRoot);
+  const service = promptWorkbenchService || createPromptWorkbenchService();
+
+  return async function handleRequest(request, response) {
     const url = new URL(request.url, 'http://127.0.0.1');
     const pathname = url.pathname;
     const segments = splitPathname(pathname);
 
-    if (request.method !== 'GET') {
-      sendJson(response, 405, { error: 'Method not allowed' });
-      return;
-    }
-
     try {
+      const promptBuilderHandled = await handlePromptBuilderRequest({
+        request,
+        response,
+        pathname,
+        segments,
+        promptWorkbenchService: service,
+      });
+      if (promptBuilderHandled) {
+        return;
+      }
+
+      if (request.method !== 'GET') {
+        sendMethodNotAllowed(response, ['GET']);
+        return;
+      }
+
       if (pathname === '/' || pathname === '/index.html') {
         sendText(response, 200, renderLocalUiShell(), 'text/html; charset=utf-8');
         return;
@@ -148,12 +320,22 @@ function createLocalUiRequestHandler({ outputRoot }) {
   };
 }
 
-async function startLocalUiServer({ outputRoot, host = DEFAULT_UI_HOST, port = DEFAULT_UI_PORT } = {}) {
+async function startLocalUiServer({
+  outputRoot,
+  host = DEFAULT_UI_HOST,
+  port = DEFAULT_UI_PORT,
+  templateStorePath,
+} = {}) {
   const resolvedHost = normalizeHost(host);
   const resolvedPort = parsePositiveInteger(port, DEFAULT_UI_PORT);
   const resolvedOutputRoot = path.resolve(outputRoot || 'output');
+  const promptWorkbenchService = createPromptWorkbenchService({
+    templateStorePath,
+    outputRoot: resolvedOutputRoot,
+  });
   const server = http.createServer(createLocalUiRequestHandler({
     outputRoot: resolvedOutputRoot,
+    promptWorkbenchService,
   }));
 
   await new Promise((resolve, reject) => {
