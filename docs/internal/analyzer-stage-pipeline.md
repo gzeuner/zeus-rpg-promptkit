@@ -1,3 +1,9 @@
+---
+Title: Analyzer Stage Pipeline
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # Analyzer Stage Pipeline
 
 The analyze runtime is now built around a registry-backed stage pipeline instead of one hard-coded stage list in the CLI path.

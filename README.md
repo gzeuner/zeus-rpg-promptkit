@@ -17,13 +17,23 @@
 
 ---
 
-## Documentation Map
+## Documentation Map (v2.1)
 
-- Canonical documentation index: [`docs/index.md`](docs/index.md)
-- Authoritative tool reference for all AI assistants: [`docs/tool-catalog.md`](docs/tool-catalog.md)
+Die Dokumentation ist jetzt **KI-ready** und auf skalierbare, Safety-First-Workflows ausgerichtet.
 
-The documentation is now organized by domains (`ai/`, `cli/`, `quickstart/`, `workflows/`, `safety/`, `internal/`, `viewer/`).
-`docs/tool-catalog.md` is the binding command reference and safety baseline for GPT, Claude, Grok, Copilot, and other assistants.
+- Zentraler Documentation Hub: [`docs/index.md`](docs/index.md)
+- Verbindliche Command-Referenz fuer alle KI-Assistenten: [`docs/tool-catalog.md`](docs/tool-catalog.md)
+
+Domains: `ai/`, `cli/`, `quickstart/`, `workflows/`, `safety/`, `internal/`, `viewer/`
+
+Fuer GPT, Claude, Grok, Copilot und lokale Agenten gilt: `docs/tool-catalog.md` ist die bindende Safety- und Scope-Baseline.
+
+### Next-Level Automation: `zeus docs:generate-catalog`
+
+Als naechster Schritt ist ein Dokumentationsgenerator vorgesehen, der `docs/tool-catalog.md` automatisch aus CLI- und Preset-Metadaten aktualisiert.
+
+- Vorschlag: [`docs/internal/generate-tool-catalog-proposal.md`](docs/internal/generate-tool-catalog-proposal.md)
+- Geplante CLI-Form: `node cli/zeus.js docs:generate-catalog --output docs/tool-catalog.md`
 
 ---
 

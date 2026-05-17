@@ -1,3 +1,9 @@
+---
+Title: Quickstart: Multi-Root Workspace für Ticket-basierte Analyse
+Description: Schneller operativer Einstieg in typische Zeus-Workflows.
+Last Updated: 2026-05-17
+---
+
 # Quickstart: Multi-Root Workspace für Ticket-basierte Analyse
 
 Dieses Quickstart beschreibt die sichere Einrichtung eines Multi-Root Workspaces:

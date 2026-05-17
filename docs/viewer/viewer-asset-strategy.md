@@ -1,3 +1,9 @@
+---
+Title: Viewer Asset Strategy
+Description: Dokumentation zur lokalen Viewer- und UI-Shell fuer erzeugte Analyseartefakte.
+Last Updated: 2026-05-17
+---
+
 # Viewer Asset Strategy
 
 The generated `architecture.html` artifact is intended to be portable and usable in restricted local environments. It therefore cannot depend on a CDN-hosted runtime script.

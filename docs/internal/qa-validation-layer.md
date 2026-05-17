@@ -1,3 +1,9 @@
+---
+Title: QA Validation Layer
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # QA Validation Layer
 
 ## Overview

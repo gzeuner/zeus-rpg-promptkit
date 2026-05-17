@@ -1,3 +1,9 @@
+---
+Title: QA Validation Layer - Quick Start
+Description: Schneller operativer Einstieg in typische Zeus-Workflows.
+Last Updated: 2026-05-17
+---
+
 # QA Validation Layer - Quick Start
 
 ## What Just Happened?

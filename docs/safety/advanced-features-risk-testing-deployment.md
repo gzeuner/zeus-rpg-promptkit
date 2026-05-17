@@ -1,3 +1,9 @@
+---
+Title: Zeus Advanced Features: Risk, Testing & Deployment Planning
+Description: Safety-First- und Governance-Dokumentation fuer risikoarme Zeus-Nutzung.
+Last Updated: 2026-05-17
+---
+
 # Zeus Advanced Features: Risk, Testing & Deployment Planning
 
 **Neue Toolkit-Erweiterungen für CHANGE-1234 und ähnliche Change-Szenarien**

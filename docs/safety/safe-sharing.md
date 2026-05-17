@@ -1,3 +1,9 @@
+---
+Title: Safe Sharing
+Description: Safety-First- und Governance-Dokumentation fuer risikoarme Zeus-Nutzung.
+Last Updated: 2026-05-17
+---
+
 # Safe Sharing
 
 Use Zeus `--safe-sharing` mode before sharing generated artifacts outside the working repository.

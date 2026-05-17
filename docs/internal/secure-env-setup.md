@@ -1,3 +1,9 @@
+---
+Title: Sichere Umgebungskonfiguration für Zeus RPG PromptKit
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # Sichere Umgebungskonfiguration für Zeus RPG PromptKit
 
 ## Überblick
