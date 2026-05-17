@@ -1,3 +1,9 @@
+---
+Title: Zeus Agent Validation Checklist
+Description: KI-bezogene Arbeitsvertraege, Prompt-Richtlinien und Validierungsleitlinien fuer Zeus.
+Last Updated: 2026-05-17
+---
+
 # Zeus Agent Validation Checklist
 
 Use this checklist after extension changes that affect Zeus tools, prompts, or agent workflows.

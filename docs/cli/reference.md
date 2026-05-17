@@ -1,7 +1,15 @@
+---
+Title: CLI Reference Alias
+Description: Stabiler Einstiegspunkt unter docs/cli mit Verweis auf den autoritativen Tool-Katalog.
+Last Updated: 2026-05-17
+---
+
 # CLI Reference
 
-The authoritative CLI command reference is maintained in:
+Die verbindliche CLI-Referenz wird in [`../tool-catalog.md`](../tool-catalog.md) gepflegt.
 
-- [`../tool-catalog.md`](../tool-catalog.md)
+Related:
+- [`../index.md`](../index.md)
+- [`../ai/session-prompt.md`](../ai/session-prompt.md)
 
-This file intentionally acts as a stable alias so humans and AI assistants have a predictable entry point under `docs/cli/`.
+Diese Datei bleibt bewusst ein stabiler Alias-Pfad unter `docs/cli/`, damit Menschen und KI-Assistenten einen vorhersehbaren Einstieg haben.

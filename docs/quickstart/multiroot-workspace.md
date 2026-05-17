@@ -1,3 +1,9 @@
+---
+Title: Quickstart: Multi-Root Workspace für Ticket-basierte Analyse
+Description: Schneller operativer Einstieg in typische Zeus-Workflows.
+Last Updated: 2026-05-17
+---
+
 # Quickstart: Multi-Root Workspace für Ticket-basierte Analyse
 
 Dieses Quickstart beschreibt die sichere Einrichtung eines Multi-Root Workspaces:
@@ -275,7 +281,7 @@ A: Ja! Öffne mehrere PowerShell-Tabs/Sessions. Jede Session lädt ihre eigenen 
 A: `.env.local` enthält deine persönlichen Credentials (Passwörter, Hostnames). Diese dürfen nie ins Repository.
 
 **F: Wie teile ich meine Analyse mit einem Kollegen?**  
-A: Siehe [safe-sharing.md](safe-sharing.md) — Zeus generiert ZIP-Bundles ohne Secrets.
+A: Siehe [`../safety/safe-sharing.md`](../safety/safe-sharing.md) - Zeus generiert ZIP-Bundles ohne Secrets.
 
 ---
 
@@ -291,6 +297,6 @@ A: Siehe [safe-sharing.md](safe-sharing.md) — Zeus generiert ZIP-Bundles ohne 
 ---
 
 Fragen? Siehe auch:
-- [BEST_PRACTICE_GUIDE.md](BEST_PRACTICE_GUIDE.md)
-- [secure-env-setup.md](secure-env-setup.md)
-- [investigation-workflows.md](investigation-workflows.md)
+- [`../safety/best-practice-guide.md`](../safety/best-practice-guide.md)
+- [`../internal/secure-env-setup.md`](../internal/secure-env-setup.md)
+- [`../workflows/investigation-workflows.md`](../workflows/investigation-workflows.md)

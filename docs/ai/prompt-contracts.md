@@ -1,3 +1,9 @@
+---
+Title: Prompt Contracts
+Description: KI-bezogene Arbeitsvertraege, Prompt-Richtlinien und Validierungsleitlinien fuer Zeus.
+Last Updated: 2026-05-17
+---
+
 # Prompt Contracts
 
 Zeus prompt generation is governed by a registry-backed contract layer.

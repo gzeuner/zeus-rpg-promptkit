@@ -1,3 +1,9 @@
+---
+Title: PROJECT Environment Setup
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # PROJECT Environment Setup
 
 Die System-Profile trennen drei Rollen:

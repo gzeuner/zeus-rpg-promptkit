@@ -1,3 +1,9 @@
+---
+Title: Import Manifest Contract
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # Import Manifest Contract
 
 `zeus fetch` writes `zeus-import-manifest.json` into the local fetch root.

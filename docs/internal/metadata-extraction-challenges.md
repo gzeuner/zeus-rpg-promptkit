@@ -1,3 +1,9 @@
+---
+Title: Zeus Metadata Extraction Challenges & Optimizations
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # Zeus Metadata Extraction Challenges & Optimizations
 
 **Status**: Analysis & Optimization Recommendations for v0.3

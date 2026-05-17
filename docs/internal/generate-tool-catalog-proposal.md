@@ -1,32 +1,47 @@
-# Proposal: `generate-tool-catalog` Command
+---
+Title: Proposal - docs:generate-catalog
+Description: Vorschlag fuer einen CLI-Generator, der den Tool-Katalog aus Code-Metadaten deterministisch erzeugt.
+Last Updated: 2026-05-17
+---
+
+# Proposal: `docs:generate-catalog`
 
 ## Goal
 
-Add a CLI command that auto-generates `docs/tool-catalog.md` directly from runtime command metadata.
+Automatisches Erzeugen von `docs/tool-catalog.md` direkt aus CLI- und Workflow-Metadaten, um Drift zwischen Implementierung und Dokumentation zu verhindern.
+
+Related:
+- [`../tool-catalog.md`](../tool-catalog.md)
+- [`../index.md`](../index.md)
 
 ## Proposed Command
 
 ```bash
-node cli/zeus.js generate-tool-catalog [--output docs/tool-catalog.md] [--format markdown|json]
+node cli/zeus.js docs:generate-catalog [--output docs/tool-catalog.md] [--format markdown|json]
 ```
 
 ## Scope
 
-1. Parse command registry from `cli/zeus.js` and command modules.
-2. Include safety levels from static metadata per command.
-3. Include workflow presets from `src/workflow/workflowPresetRegistry.js`.
-4. Emit deterministic markdown table and optional JSON representation.
+1. Parse Command-Surface aus `cli/zeus.js` und Command-Modulen.
+2. Safety-Level/Scope/Purpose aus statischen Metadaten lesen.
+3. Workflow-Presets aus `src/workflow/workflowPresetRegistry.js` einbeziehen.
+4. Deterministische Markdown-Tabelle und optional JSON ausgeben.
 
 ## Benefits
 
-- Prevents drift between CLI implementation and documentation.
-- Improves onboarding consistency for all AI assistants.
-- Enables CI checks for catalog freshness.
+- Verhindert Dokumentations-Drift.
+- Erhoeht Konsistenz fuer alle KI-Assistenten.
+- Ermoeglicht CI-Checks auf Katalog-Freshness.
 
 ## Implementation Suggestion
 
-1. Introduce command metadata map (name, purpose, safety, example).
-2. Add generator service under `src/docs/toolCatalogGenerator.js`.
-3. Add `src/cli/commands/generateToolCatalogCommand.js`.
-4. Add CI check comparing generated output with committed `docs/tool-catalog.md`.
+1. Command-Metadata-Map als kanonische Quelle einfuehren.
+2. Generator-Service unter `src/docs/toolCatalogGenerator.js` ergänzen.
+3. Command-Handler `src/cli/commands/docsGenerateCatalogCommand.js` nutzen.
+4. CI-Check: generierter Output muss dem committed `docs/tool-catalog.md` entsprechen.
 
+## Acceptance Criteria
+
+- `docs:generate-catalog` erzeugt stabilen Output ohne manuelle Nacharbeit.
+- Alle aktiven CLI-Commands erscheinen mit Safety/Scope/Purpose/Example.
+- Workflow-Presets und empfohlene AI-Sequence werden mitgeneriert.

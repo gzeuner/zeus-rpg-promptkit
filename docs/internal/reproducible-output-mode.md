@@ -1,3 +1,9 @@
+---
+Title: Reproducible Output Mode
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # Reproducible Output Mode
 
 Use `--reproducible` when you want Zeus to emit stable artifacts for regression testing, bundle verification, or repository-local comparisons.

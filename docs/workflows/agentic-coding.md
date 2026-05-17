@@ -1,3 +1,9 @@
+---
+Title: Agentic Coding with Zeus
+Description: Workflow-orientierte Leitfaeden fuer Analyse-, Review- und Agentenablaeufe.
+Last Updated: 2026-05-17
+---
+
 # Agentic Coding with Zeus
 
 This is the recommended setup for developers who want an AI to build IBM i context before coding, review, or analysis work.
@@ -20,7 +26,7 @@ In practice the product shape is:
 
 For a faster operational checklist, see [`../quickstart/5-minutes.md`](../quickstart/5-minutes.md).
 
-For rollout validation, see [docs/agent-validation-checklist.md](docs/agent-validation-checklist.md).
+For rollout validation, see [`../ai/agent-validation-checklist.md`](../ai/agent-validation-checklist.md).
 
 ## Fastest developer path
 

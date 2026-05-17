@@ -1,3 +1,9 @@
+---
+Title: Canonical Analysis Model
+Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
+Last Updated: 2026-05-17
+---
+
 # Canonical Analysis Model
 
 `canonical-analysis.json` is the semantic source of truth produced by `zeus analyze`.

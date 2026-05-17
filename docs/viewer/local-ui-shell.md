@@ -1,3 +1,9 @@
+---
+Title: Local UI Shell
+Description: Dokumentation zur lokalen Viewer- und UI-Shell fuer erzeugte Analyseartefakte.
+Last Updated: 2026-05-17
+---
+
 # Local UI Shell
 
 The first local UI slice is intentionally small and read-only. It exists to browse generated analysis runs without introducing a separate parsing layer in the browser.
