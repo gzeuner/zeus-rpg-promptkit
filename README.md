@@ -117,7 +117,7 @@ node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_
 
 ### Sicherheitsmodell
 
-- Der Standardpfad fuer Analyse und Evidence-Aufbau bleibt in `S0` bis `S2`: lokal oder remote read-only.
+- Der Standardpfad fuer Analyse und Evidence-Aufbau bleibt in den niedrigen Safety-Levels `S0` bis `S2`: `S0` lokal read-only, `S2` remote read-only, `S1` nur fuer lokale Artefakt-Erzeugung im Workspace bzw. unter `./output`.
 - `fetch`, `query-table`, `query-sql`, `joblog` und `inspect-object` lesen nur.
 - Kontrollierte Schreibbefehle wie `insert`, `update`, `upsert` und `bridge` existieren, gehoeren aber bewusst nicht in den Schnellstart.
 
@@ -242,7 +242,7 @@ node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_
 
 ### Safety model
 
-- The primary analysis path stays in `S0` to `S2`: local or remote read-only workflows.
+- The primary analysis path stays in the low safety levels `S0` to `S2`: `S0` is local read-only, `S2` is remote read-only, and `S1` is limited to local artifact generation in the workspace or under `./output`.
 - `fetch`, `query-table`, `query-sql`, `joblog`, and `inspect-object` are read-only by design.
 - Controlled write commands such as `insert`, `update`, `upsert`, and `bridge` exist, but are intentionally excluded from the quick start.
 
