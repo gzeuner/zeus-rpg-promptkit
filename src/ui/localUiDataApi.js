@@ -277,10 +277,15 @@ function buildGraphView(programOutputDir, context, artifacts) {
   };
 }
 
-function buildDb2View(programOutputDir, promptArtifacts) {
+function buildDb2View(programOutputDir, promptArtifacts, artifacts) {
   const db2Metadata = readJsonIfExists(path.join(programOutputDir, DB2_METADATA_FILE));
   const testData = readJsonIfExists(path.join(programOutputDir, TEST_DATA_FILE));
   const tableMap = new Map();
+  const availablePaths = new Set((Array.isArray(artifacts) ? artifacts : []).map((artifact) => artifact.path));
+
+  function existingDb2ArtifactPaths(paths) {
+    return uniqueSorted((Array.isArray(paths) ? paths : []).filter((entry) => availablePaths.has(entry)));
+  }
 
   for (const table of (db2Metadata && Array.isArray(db2Metadata.tables) ? db2Metadata.tables : [])) {
     const id = `${table.schema || ''}|${table.table || table.systemName || ''}`;
@@ -297,7 +302,7 @@ function buildDb2View(programOutputDir, promptArtifacts) {
       maskedColumnCount: 0,
       policyEligibility: null,
       relatedPromptPaths: promptArtifacts.map((artifact) => artifact.path),
-      relatedArtifactPaths: uniqueSorted(['db2-metadata.json', 'db2-metadata.md']),
+      relatedArtifactPaths: existingDb2ArtifactPaths(['db2-metadata.json', 'db2-metadata.md']),
     });
   }
 
@@ -323,7 +328,7 @@ function buildDb2View(programOutputDir, promptArtifacts) {
       ? table.policyDecision.maskedColumns.length
       : 0;
     current.policyEligibility = table.policyDecision ? table.policyDecision.eligibility || null : null;
-    current.relatedArtifactPaths = uniqueSorted([
+    current.relatedArtifactPaths = existingDb2ArtifactPaths([
       ...current.relatedArtifactPaths,
       'test-data.json',
       'test-data.md',
@@ -352,7 +357,7 @@ function buildPromptView(artifacts) {
 function buildInteractiveViews(programOutputDir, context, artifacts) {
   const promptView = buildPromptView(artifacts);
   const graphView = buildGraphView(programOutputDir, context, artifacts);
-  const db2View = buildDb2View(programOutputDir, promptView.artifacts);
+  const db2View = buildDb2View(programOutputDir, promptView.artifacts, artifacts);
 
   return {
     summary: {
