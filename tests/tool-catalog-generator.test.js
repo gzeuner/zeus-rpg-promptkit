@@ -14,10 +14,11 @@ test('tool catalog model includes docs generator command with S0 safety', () => 
 
 test('tool catalog markdown contains auto-generated notice and required sections', () => {
   const model = buildCatalogModel({ repoRoot: projectRoot });
-  const markdown = renderMarkdown(model, new Date('2026-05-17T08:55:00Z'));
+  const markdown = renderMarkdown(model, new Date('2026-05-17T08:55:42Z'));
 
   assert.match(markdown, /AUTO-GENERATED FILE/);
   assert.match(markdown, /Regenerate with: zeus docs:generate-catalog/);
+  assert.match(markdown, /Last generated: 2026-05-17 \d{2}:\d{2}:42/);
   assert.match(markdown, /## Safety Levels/);
   assert.match(markdown, /## CLI Command Catalog/);
   assert.match(markdown, /\| `docs:generate-catalog` \| `S0` \|/);

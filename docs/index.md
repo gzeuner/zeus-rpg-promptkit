@@ -67,5 +67,6 @@ flowchart TD
 
 - `docs/tool-catalog.md` bleibt die verbindliche Referenz für KI-Assistenten.
 - Dokumentänderungen sollen Safety-Level und Scope-Terminologie konsistent halten (`S0` bis `S4`).
-- Regenerierung: `node cli/zeus.js docs:generate-catalog` oder `node cli/zeus.js docs generate-catalog`.
+- Regenerierung: `zeus docs:generate-catalog` oder `zeus docs generate-catalog`.
+- Optional maschinenlesbar: `zeus docs:generate-catalog --json-output docs/tool-catalog.json`.
 - Tool catalog generator (implemented): [`internal/generate-tool-catalog-proposal.md`](internal/generate-tool-catalog-proposal.md).

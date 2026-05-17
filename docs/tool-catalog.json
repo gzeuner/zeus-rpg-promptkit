@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-17T06:54:56.353Z",
+  "generatedAt": "2026-05-17T07:02:57.399Z",
   "commandRows": [
     {
       "command": "doctor",
@@ -638,13 +638,14 @@
       "purpose": "Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.",
       "example": "node cli/zeus.js docs:generate-catalog",
       "usage": [
-        "[--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json]",
-        "[--config <path>] docs generate-catalog [--output <path>] [--format markdown|json]"
+        "[--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>]",
+        "[--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>]"
       ],
       "options": [
         "--config",
         "--output",
-        "--format"
+        "--format",
+        "--json-output"
       ],
       "source": {
         "routeDetected": true,
