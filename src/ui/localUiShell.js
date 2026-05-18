@@ -15,39 +15,13 @@ const fs = require('fs');
 const path = require('path');
 
 function resolveBrandLogoDataUri() {
-  const imagesDir = path.resolve(__dirname, '../../images');
-  if (!fs.existsSync(imagesDir)) {
+  const logoPath = path.resolve(__dirname, '../../images/tiny_tool_logo-1030x254.png');
+  if (!fs.existsSync(logoPath)) {
     return null;
   }
 
-  const candidates = fs.readdirSync(imagesDir)
-    .filter((name) => /tiny.*logo.*\.(png|svg|jpe?g|webp)$/i.test(name))
-    .map((name) => {
-      const absolutePath = path.join(imagesDir, name);
-      const stats = fs.statSync(absolutePath);
-      return {
-        name,
-        absolutePath,
-        mtimeMs: Number(stats.mtimeMs) || 0,
-      };
-    })
-    .sort((left, right) => right.mtimeMs - left.mtimeMs);
-
-  const selected = candidates[0];
-  if (!selected) {
-    return null;
-  }
-
-  const ext = path.extname(selected.name).toLowerCase();
-  const mimeByExt = {
-    '.png': 'image/png',
-    '.svg': 'image/svg+xml',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.webp': 'image/webp',
-  };
-  const mime = mimeByExt[ext] || 'image/png';
-  const content = fs.readFileSync(selected.absolutePath);
+  const content = fs.readFileSync(logoPath);
+  const mime = 'image/png';
   return `data:${mime};base64,${content.toString('base64')}`;
 }
 
