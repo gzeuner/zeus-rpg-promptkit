@@ -20,8 +20,12 @@ const {
   executeReadRun,
   executeReadRunViews,
 } = require('../core/runExplorerService');
+const { listAnalysisRuns } = require('./localUiDataApi');
 const { renderLocalUiShell } = require('./localUiShell');
 const { createPromptWorkbenchService } = require('./promptWorkbenchService');
+const { collectSensitiveTermsFromEnv, maskSensitiveTermsInText, sanitizeValue } = require('../security/secretMasking');
+const { listWorkspaces, readWorkspaceById, touchWorkspace } = require('../workspace/analysisRegistryService');
+const { readWorkspaceIndex, WORKSPACE_INDEX_FILE } = require('../workspace/workspaceIndexBuilder');
 
 const DEFAULT_UI_HOST = '127.0.0.1';
 const DEFAULT_UI_PORT = 4782;
@@ -49,12 +53,14 @@ function parsePositiveInteger(value, fallback) {
   return parsed;
 }
 
-function sendJson(response, statusCode, payload) {
+function sendJson(response, statusCode, payload, options = {}) {
+  const sensitiveTerms = Array.isArray(options.sensitiveTerms) ? options.sensitiveTerms : [];
+  const sanitizedPayload = sanitizeValue(payload, { sensitiveTerms });
   response.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
   });
-  response.end(`${JSON.stringify(payload, null, 2)}\n`);
+  response.end(`${JSON.stringify(sanitizedPayload, null, 2)}\n`);
 }
 
 function sendMethodNotAllowed(response, methods) {
@@ -66,12 +72,13 @@ function sendMethodNotAllowed(response, methods) {
   response.end(`${JSON.stringify({ error: 'Method not allowed' }, null, 2)}\n`);
 }
 
-function sendText(response, statusCode, content, contentType = 'text/plain; charset=utf-8') {
+function sendText(response, statusCode, content, contentType = 'text/plain; charset=utf-8', sensitiveTerms = []) {
+  const sanitized = maskSensitiveTermsInText(content, sensitiveTerms);
   response.writeHead(statusCode, {
     'Content-Type': contentType,
     'Cache-Control': 'no-store',
   });
-  response.end(content);
+  response.end(sanitized);
 }
 
 function splitPathname(pathname) {
@@ -123,7 +130,10 @@ async function handlePromptBuilderRequest({
   pathname,
   segments,
   promptWorkbenchService,
+  sensitiveTerms = [],
 }) {
+  const send = (statusCode, payload) => sendJson(response, statusCode, payload, { sensitiveTerms });
+
   if (!pathname.startsWith('/api/prompt-builder')) {
     return false;
   }
@@ -133,7 +143,7 @@ async function handlePromptBuilderRequest({
       sendMethodNotAllowed(response, ['GET']);
       return true;
     }
-    sendJson(response, 200, promptWorkbenchService.getContract());
+    send(200, promptWorkbenchService.getContract());
     return true;
   }
 
@@ -142,7 +152,7 @@ async function handlePromptBuilderRequest({
       sendMethodNotAllowed(response, ['GET']);
       return true;
     }
-    sendJson(response, 200, promptWorkbenchService.listUseCases());
+    send(200, promptWorkbenchService.listUseCases());
     return true;
   }
 
@@ -151,7 +161,7 @@ async function handlePromptBuilderRequest({
       sendMethodNotAllowed(response, ['GET']);
       return true;
     }
-    sendJson(response, 200, promptWorkbenchService.listModules());
+    send(200, promptWorkbenchService.listModules());
     return true;
   }
 
@@ -161,18 +171,18 @@ async function handlePromptBuilderRequest({
       return true;
     }
     const payload = await readJsonBody(request);
-    sendJson(response, 200, promptWorkbenchService.previewPrompt(payload));
+    send(200, promptWorkbenchService.previewPrompt(payload));
     return true;
   }
 
   if (pathname === '/api/prompt-builder/templates') {
     if (request.method === 'GET') {
-      sendJson(response, 200, promptWorkbenchService.listTemplates());
+      send(200, promptWorkbenchService.listTemplates());
       return true;
     }
     if (request.method === 'POST') {
       const payload = await readJsonBody(request);
-      sendJson(response, 201, promptWorkbenchService.createTemplate(payload));
+      send(201, promptWorkbenchService.createTemplate(payload));
       return true;
     }
     sendMethodNotAllowed(response, ['GET', 'POST']);
@@ -182,16 +192,16 @@ async function handlePromptBuilderRequest({
   if (segments[0] === 'api' && segments[1] === 'prompt-builder' && segments[2] === 'templates' && segments.length === 4) {
     const templateId = segments[3];
     if (request.method === 'GET') {
-      sendJson(response, 200, promptWorkbenchService.readTemplate(templateId));
+      send(200, promptWorkbenchService.readTemplate(templateId));
       return true;
     }
     if (request.method === 'PUT') {
       const payload = await readJsonBody(request);
-      sendJson(response, 200, promptWorkbenchService.updateTemplate(templateId, payload));
+      send(200, promptWorkbenchService.updateTemplate(templateId, payload));
       return true;
     }
     if (request.method === 'DELETE') {
-      sendJson(response, 200, promptWorkbenchService.deleteTemplate(templateId));
+      send(200, promptWorkbenchService.deleteTemplate(templateId));
       return true;
     }
     sendMethodNotAllowed(response, ['GET', 'PUT', 'DELETE']);
@@ -203,7 +213,7 @@ async function handlePromptBuilderRequest({
       sendMethodNotAllowed(response, ['GET']);
       return true;
     }
-    sendJson(response, 200, promptWorkbenchService.listContextSources());
+    send(200, promptWorkbenchService.listContextSources());
     return true;
   }
 
@@ -212,7 +222,7 @@ async function handlePromptBuilderRequest({
       sendMethodNotAllowed(response, ['GET']);
       return true;
     }
-    sendJson(response, 200, promptWorkbenchService.listContextSourcePrompts(segments[3]));
+    send(200, promptWorkbenchService.listContextSourcePrompts(segments[3]));
     return true;
   }
 
@@ -222,15 +232,140 @@ async function handlePromptBuilderRequest({
       return true;
     }
     const payload = await readJsonBody(request);
-    sendJson(response, 200, promptWorkbenchService.importContextPrompt(payload));
+    send(200, promptWorkbenchService.importContextPrompt(payload));
     return true;
   }
 
-  sendJson(response, 404, { error: `Route not found: ${pathname}` });
+  send(404, { error: `Route not found: ${pathname}` });
   return true;
 }
 
-function createLocalUiRequestHandler({ outputRoot, promptWorkbenchService }) {
+function buildDefaultAnalysisWorkspace({ outputRoot }) {
+  return {
+    id: 'default',
+    name: 'Current Output Root',
+    description: 'Fallback workspace when no analyses registry is configured.',
+    path: path.resolve(outputRoot),
+    outputDir: '.',
+    sourceDir: '',
+    registeredAt: null,
+    lastAccessedAt: null,
+  };
+}
+
+function listAnalyses(registryPath, outputRoot) {
+  if (!registryPath) {
+    return [buildDefaultAnalysisWorkspace({ outputRoot })];
+  }
+  return listWorkspaces(registryPath);
+}
+
+function resolveAnalysisWorkspace({ registryPath, workspaceId, outputRoot }) {
+  if (workspaceId === 'default') {
+    return buildDefaultAnalysisWorkspace({ outputRoot });
+  }
+  if (!registryPath) {
+    throw new Error(`Workspace not found: ${workspaceId}`);
+  }
+  const workspace = readWorkspaceById(registryPath, workspaceId);
+  if (!workspace) {
+    throw new Error(`Workspace not found: ${workspaceId}`);
+  }
+  return workspace;
+}
+
+function resolveWorkspaceOutputRoot(workspace) {
+  if (workspace.id === 'default') {
+    return path.resolve(workspace.path);
+  }
+  return path.resolve(workspace.path, workspace.outputDir || 'output');
+}
+
+async function handleAnalysesRequest({
+  request,
+  response,
+  pathname,
+  segments,
+  registryPath,
+  outputRoot,
+  sensitiveTerms,
+}) {
+  if (!pathname.startsWith('/api/analyses')) {
+    return false;
+  }
+
+  if (pathname === '/api/analyses') {
+    if (request.method !== 'GET') {
+      sendMethodNotAllowed(response, ['GET']);
+      return true;
+    }
+    sendJson(response, 200, {
+      registryPath: registryPath || null,
+      workspaces: listAnalyses(registryPath, outputRoot),
+    }, { sensitiveTerms });
+    return true;
+  }
+
+  if (segments[0] !== 'api' || segments[1] !== 'analyses' || segments.length < 3) {
+    sendJson(response, 404, { error: `Route not found: ${pathname}` }, { sensitiveTerms });
+    return true;
+  }
+
+  const workspaceId = segments[2];
+  const workspace = resolveAnalysisWorkspace({ registryPath, workspaceId, outputRoot });
+  const workspaceOutputRoot = resolveWorkspaceOutputRoot(workspace);
+
+  if (segments.length === 3) {
+    if (request.method !== 'GET') {
+      sendMethodNotAllowed(response, ['GET']);
+      return true;
+    }
+    sendJson(response, 200, {
+      workspace,
+      outputRoot: workspaceOutputRoot,
+      index: readWorkspaceIndex(workspace.path),
+      runs: listAnalysisRuns(workspaceOutputRoot),
+    }, { sensitiveTerms });
+    return true;
+  }
+
+  if (segments.length === 4 && segments[3] === 'index') {
+    if (request.method !== 'GET') {
+      sendMethodNotAllowed(response, ['GET']);
+      return true;
+    }
+    const index = readWorkspaceIndex(workspace.path);
+    if (!index) {
+      sendJson(response, 404, { error: `${WORKSPACE_INDEX_FILE} not found for workspace ${workspaceId}` }, { sensitiveTerms });
+      return true;
+    }
+    sendJson(response, 200, index, { sensitiveTerms });
+    return true;
+  }
+
+  if (segments.length === 4 && segments[3] === 'touch') {
+    if (request.method !== 'POST') {
+      sendMethodNotAllowed(response, ['POST']);
+      return true;
+    }
+    const touched = registryPath ? touchWorkspace(registryPath, workspaceId) : workspace;
+    sendJson(response, 200, {
+      ok: true,
+      workspace: touched,
+    }, { sensitiveTerms });
+    return true;
+  }
+
+  sendJson(response, 404, { error: `Route not found: ${pathname}` }, { sensitiveTerms });
+  return true;
+}
+
+function createLocalUiRequestHandler({
+  outputRoot,
+  promptWorkbenchService,
+  registryPath = null,
+  sensitiveTerms = [],
+}) {
   const resolvedOutputRoot = path.resolve(outputRoot);
   const service = promptWorkbenchService || createPromptWorkbenchService();
 
@@ -240,12 +375,26 @@ function createLocalUiRequestHandler({ outputRoot, promptWorkbenchService }) {
     const segments = splitPathname(pathname);
 
     try {
+      const analysesHandled = await handleAnalysesRequest({
+        request,
+        response,
+        pathname,
+        segments,
+        registryPath,
+        outputRoot: resolvedOutputRoot,
+        sensitiveTerms,
+      });
+      if (analysesHandled) {
+        return;
+      }
+
       const promptBuilderHandled = await handlePromptBuilderRequest({
         request,
         response,
         pathname,
         segments,
         promptWorkbenchService: service,
+        sensitiveTerms,
       });
       if (promptBuilderHandled) {
         return;
@@ -257,7 +406,7 @@ function createLocalUiRequestHandler({ outputRoot, promptWorkbenchService }) {
       }
 
       if (pathname === '/' || pathname === '/index.html') {
-        sendText(response, 200, renderLocalUiShell(), 'text/html; charset=utf-8');
+        sendText(response, 200, renderLocalUiShell(), 'text/html; charset=utf-8', sensitiveTerms);
         return;
       }
 
@@ -265,14 +414,14 @@ function createLocalUiRequestHandler({ outputRoot, promptWorkbenchService }) {
         sendJson(response, 200, {
           ok: true,
           outputRoot: resolvedOutputRoot,
-        });
+        }, { sensitiveTerms });
         return;
       }
 
       if (pathname === '/api/runs') {
         sendJson(response, 200, executeListRuns({
           sourceOutputRoot: resolvedOutputRoot,
-        }).runs);
+        }).runs, { sensitiveTerms });
         return;
       }
 
@@ -280,7 +429,7 @@ function createLocalUiRequestHandler({ outputRoot, promptWorkbenchService }) {
         sendJson(response, 200, executeReadRun({
           sourceOutputRoot: resolvedOutputRoot,
           program: segments[2],
-        }).run);
+        }).run, { sensitiveTerms });
         return;
       }
 
@@ -288,7 +437,7 @@ function createLocalUiRequestHandler({ outputRoot, promptWorkbenchService }) {
         sendJson(response, 200, executeReadRunViews({
           sourceOutputRoot: resolvedOutputRoot,
           program: segments[2],
-        }).views);
+        }).views, { sensitiveTerms });
         return;
       }
 
@@ -297,7 +446,7 @@ function createLocalUiRequestHandler({ outputRoot, promptWorkbenchService }) {
           sourceOutputRoot: resolvedOutputRoot,
           program: segments[2],
           path: url.searchParams.get('path'),
-        }).artifact);
+        }).artifact, { sensitiveTerms });
         return;
       }
 
@@ -307,15 +456,15 @@ function createLocalUiRequestHandler({ outputRoot, promptWorkbenchService }) {
           program: segments[1],
           path: url.searchParams.get('path'),
         }).artifact;
-        sendText(response, 200, artifact.content, artifact.contentType);
+        sendText(response, 200, artifact.content, artifact.contentType, sensitiveTerms);
         return;
       }
 
-      sendJson(response, 404, { error: `Route not found: ${pathname}` });
+      sendJson(response, 404, { error: `Route not found: ${pathname}` }, { sensitiveTerms });
     } catch (error) {
       sendJson(response, /not found/i.test(error.message) ? 404 : 400, {
         error: error.message,
-      });
+      }, { sensitiveTerms });
     }
   };
 }
@@ -325,6 +474,8 @@ async function startLocalUiServer({
   host = DEFAULT_UI_HOST,
   port = DEFAULT_UI_PORT,
   templateStorePath,
+  registryPath = null,
+  sensitiveTerms = [],
 } = {}) {
   const resolvedHost = normalizeHost(host);
   const resolvedPort = parsePositiveInteger(port, DEFAULT_UI_PORT);
@@ -333,9 +484,12 @@ async function startLocalUiServer({
     templateStorePath,
     outputRoot: resolvedOutputRoot,
   });
+  const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(process.env, sensitiveTerms);
   const server = http.createServer(createLocalUiRequestHandler({
     outputRoot: resolvedOutputRoot,
     promptWorkbenchService,
+    registryPath: registryPath ? path.resolve(registryPath) : null,
+    sensitiveTerms: resolvedSensitiveTerms,
   }));
 
   await new Promise((resolve, reject) => {
@@ -350,6 +504,7 @@ async function startLocalUiServer({
     host: resolvedHost,
     port: actualPort,
     outputRoot: resolvedOutputRoot,
+    registryPath: registryPath ? path.resolve(registryPath) : null,
     url: `http://${resolvedHost === '::1' ? '[::1]' : resolvedHost}:${actualPort}`,
   };
 }
