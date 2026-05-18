@@ -168,7 +168,7 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(await rawArtifactResponse.text(), /Architecture Viewer/);
 
     const shellHtml = await fetch(`${started.url}/`).then((response) => response.text());
-    assert.match(shellHtml, /Zeus Local UI/);
+    assert.match(shellHtml, /Zeus RPG PromptKit/);
     assert.match(shellHtml, /Home/);
     assert.match(shellHtml, /Graph Explorer|Graph/);
     assert.match(shellHtml, /DB2\/Test Data/);
