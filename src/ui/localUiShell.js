@@ -11,39 +11,83 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
+const fs = require('fs');
+const path = require('path');
+
+function resolveBrandLogoDataUri() {
+  const imagesDir = path.resolve(__dirname, '../../images');
+  if (!fs.existsSync(imagesDir)) {
+    return null;
+  }
+
+  const candidates = fs.readdirSync(imagesDir)
+    .filter((name) => /tiny.*logo.*\.(png|svg|jpe?g|webp)$/i.test(name))
+    .map((name) => {
+      const absolutePath = path.join(imagesDir, name);
+      const stats = fs.statSync(absolutePath);
+      return {
+        name,
+        absolutePath,
+        mtimeMs: Number(stats.mtimeMs) || 0,
+      };
+    })
+    .sort((left, right) => right.mtimeMs - left.mtimeMs);
+
+  const selected = candidates[0];
+  if (!selected) {
+    return null;
+  }
+
+  const ext = path.extname(selected.name).toLowerCase();
+  const mimeByExt = {
+    '.png': 'image/png',
+    '.svg': 'image/svg+xml',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
+  };
+  const mime = mimeByExt[ext] || 'image/png';
+  const content = fs.readFileSync(selected.absolutePath);
+  return `data:${mime};base64,${content.toString('base64')}`;
+}
+
 function renderLocalUiShell() {
+  const brandLogoDataUri = resolveBrandLogoDataUri();
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Zeus Local UI</title>
+<title>Zeus RPG PromptKit</title>
 <style>
 :root{
-  --bg:#f3efe5;
-  --panel:#fffaf0;
-  --panel-strong:#f9f1de;
-  --panel-soft:rgba(255,250,240,.82);
-  --text:#1f2933;
-  --muted:#5c6b73;
-  --line:#d4c3a3;
-  --accent:#8a4b08;
-  --accent-soft:#edd7b5;
+  --bg:#eaf4f6;
+  --panel:#f9fdfe;
+  --panel-strong:#e7f4f7;
+  --panel-soft:rgba(249,253,254,.88);
+  --text:#12304f;
+  --muted:#46607c;
+  --line:#c2dbe2;
+  --accent:#0f8ea8;
+  --accent-soft:#d7eef3;
+  --brand-dark:#0d2f57;
+  --brand-mint:#2bb7a3;
   --success:#166534;
   --danger:#991b1b;
-  --shadow:0 18px 40px rgba(73,52,18,.12);
+  --shadow:0 18px 40px rgba(13,47,87,.12);
 }
 *{box-sizing:border-box}
 body{
   margin:0;
   min-height:100vh;
   color:var(--text);
-  font-family:Georgia,"Times New Roman",serif;
+  font-family:"Space Grotesk","Avenir Next","Trebuchet MS",sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(138,75,8,.14), transparent 34%),
-    linear-gradient(180deg, #fcf8ef 0%, var(--bg) 100%);
+    radial-gradient(circle at top left, rgba(15,142,168,.16), transparent 32%),
+    radial-gradient(circle at 90% 15%, rgba(43,183,163,.18), transparent 22%),
+    linear-gradient(180deg, #f8fdfe 0%, var(--bg) 100%);
 }
-.app{display:grid;grid-template-columns:320px 1fr;min-height:100vh}
+.app{display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr);min-height:100vh}
 aside{
   padding:24px 20px;
   border-right:1px solid var(--line);
@@ -52,6 +96,8 @@ aside{
   display:grid;
   align-content:start;
   gap:18px;
+  min-width:0;
+  overflow:hidden;
 }
 .main{
   padding:24px;
@@ -59,9 +105,10 @@ aside{
   gap:18px;
   min-height:100vh;
   align-content:start;
+  min-width:0;
 }
 h1,h2,h3,h4{margin:0;font-weight:700}
-h1{font-size:28px;letter-spacing:.02em}
+h1{font-size:24px;letter-spacing:.01em;line-height:1.15}
 h2{font-size:19px}
 h3{
   font-size:13px;
@@ -71,6 +118,49 @@ h3{
 }
 h4{font-size:15px}
 p{margin:0;color:var(--muted);line-height:1.45}
+.brand{
+  display:grid;
+  gap:14px;
+  align-items:start;
+  min-width:0;
+}
+.brand-logo-wrap{
+  width:min(100%,220px);
+  min-height:44px;
+  height:auto;
+  border-radius:10px;
+  background:#fff;
+  border:1px solid var(--line);
+  box-shadow:0 10px 24px rgba(15,142,168,.16);
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  padding:4px 8px;
+}
+.brand-logo{
+  width:100%;
+  max-width:180px;
+  height:auto;
+  display:block;
+}
+.brand-logo-fallback{
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--brand-dark);
+  font-weight:700;
+}
+.brand-note{
+  color:var(--brand-dark);
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  font-size:11px;
+}
+.brand-copy{
+  min-width:0;
+  overflow-wrap:anywhere;
+}
 .panel{
   background:var(--panel);
   border:1px solid var(--line);
@@ -103,6 +193,7 @@ p{margin:0;color:var(--muted);line-height:1.45}
 .run-list{
   max-height:calc(100vh - 190px);
   overflow:auto;
+  min-width:0;
 }
 .item-list{
   max-height:min(560px, calc(100vh - 360px));
@@ -127,10 +218,10 @@ button,.chip,a.btn,select,input,textarea{
 .run:hover,.item:hover,.tab:hover,.btn:hover,.card:hover,.module-row:hover{
   transform:translateY(-1px);
   border-color:var(--accent);
-  box-shadow:0 10px 24px rgba(138,75,8,.08);
+  box-shadow:0 10px 24px rgba(13,47,87,.12);
 }
 .run.active,.item.active,.tab.active,.card.active,.module-row.active{
-  background:linear-gradient(135deg, #fff5df, #fffaf0);
+  background:linear-gradient(135deg, #f4fcfe, #e7f4f7);
   border-color:var(--accent);
 }
 .run strong,.item strong{
@@ -145,11 +236,20 @@ button,.chip,a.btn,select,input,textarea{
 }
 .tab{
   color:var(--accent);
-  background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(249,241,222,.78));
+  background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(220,244,249,.86));
 }
 .btn{
   color:var(--accent);
-  background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(249,241,222,.82));
+  background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(220,244,249,.86));
+}
+.btn.primary{
+  background:linear-gradient(135deg,var(--accent),var(--brand-dark));
+  color:#fff;
+  border-color:transparent;
+}
+.btn.primary:hover{
+  border-color:transparent;
+  box-shadow:0 12px 26px rgba(13,47,87,.24);
 }
 .token{
   padding:7px 12px;
@@ -158,11 +258,13 @@ button,.chip,a.btn,select,input,textarea{
   background:var(--panel-strong);
   color:var(--accent);
   font-size:12px;
+  max-width:100%;
+  overflow-wrap:anywhere;
 }
 .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 .metric{
   padding:16px 18px;
-  background:linear-gradient(180deg, rgba(255,255,255,.86), rgba(249,241,222,.76));
+  background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(225,244,248,.82));
 }
 .metric div{
   font-size:12px;
@@ -192,12 +294,12 @@ button,.chip,a.btn,select,input,textarea{
   min-width:0;
 }
 .view.active>.sub:not(:first-child){
-  border-left:1px solid rgba(212,195,163,.65);
+  border-left:1px solid rgba(194,219,226,.7);
 }
 .preview{
   border:1px solid var(--line);
   border-radius:14px;
-  background:#fffdf7;
+  background:#f8fdff;
   min-height:340px;
   overflow:auto;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
@@ -218,14 +320,14 @@ textarea{
   padding:12px;
   border:1px solid var(--line);
   border-radius:12px;
-  background:#fffdfa;
+  background:#fbfeff;
 }
 .card-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .card{
   padding:14px;
   display:grid;
   gap:10px;
-  background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(249,241,222,.7));
+  background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(225,244,248,.78));
 }
 .card h3{color:var(--text);font-size:17px}
 .card p{color:#344854;font-size:14px;line-height:1.4}
@@ -266,7 +368,7 @@ input[type="search"]{
   gap:10px;
   border:1px solid var(--line);
   border-radius:16px;
-  background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(249,241,222,.72));
+  background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(225,244,248,.76));
 }
 .home-card strong{
   font-size:16px;
@@ -275,7 +377,7 @@ input[type="search"]{
 .home-card code{
   font-family:"Cascadia Code",Consolas,monospace;
   font-size:12px;
-  background:rgba(237,215,181,.45);
+  background:rgba(215,238,243,.62);
   padding:2px 6px;
   border-radius:999px;
 }
@@ -284,14 +386,14 @@ input[type="search"]{
   border:1px solid var(--line);
   border-radius:16px;
   background:
-    radial-gradient(circle at top right, rgba(138,75,8,.08), transparent 32%),
-    linear-gradient(180deg, rgba(255,255,255,.95), rgba(249,241,222,.78));
+    radial-gradient(circle at top right, rgba(15,142,168,.14), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(225,244,248,.82));
 }
 .home-callout h2{margin-bottom:6px}
 .command-block{
   border:1px solid var(--line);
   border-radius:14px;
-  background:#fffdf7;
+  background:#f8fdff;
   overflow:auto;
 }
 .command-block pre{
@@ -306,7 +408,25 @@ input[type="search"]{
   padding:12px 14px;
   border:1px dashed var(--line);
   border-radius:14px;
-  background:rgba(255,250,240,.76);
+  background:rgba(234,248,251,.82);
+}
+.step-list{
+  display:grid;
+  gap:10px;
+}
+.step-item{
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  padding:12px;
+  display:grid;
+  gap:6px;
+}
+.step-item strong{
+  font-size:13px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--brand-dark);
 }
 .module-row{
   display:grid;
@@ -320,7 +440,7 @@ input[type="search"]{
   color:var(--muted);
   border:1px dashed var(--line);
   border-radius:16px;
-  background:rgba(255,250,240,.8);
+  background:rgba(225,244,248,.76);
 }
 .status-ok{color:var(--success)}
 .status-warn{color:var(--accent)}
@@ -337,7 +457,7 @@ input[type="search"]{
   .main{padding:18px}
   .hero{padding:18px}
   .metrics,.two,.three{grid-template-columns:1fr}
-  .view.active>.sub:not(:first-child){border-left:0;border-top:1px solid rgba(212,195,163,.65)}
+  .view.active>.sub:not(:first-child){border-left:0;border-top:1px solid rgba(194,219,226,.7)}
   .run-list,.item-list{max-height:none}
 }
 @media(max-width:640px){
@@ -349,24 +469,32 @@ input[type="search"]{
 <div class="app">
   <aside>
     <div class="stack">
-      <div>
-        <h1>Zeus Local UI</h1>
-        <p>Run explorer and local prompt tools.</p>
+      <div class="brand">
+        <div class="brand-logo-wrap" aria-hidden="true">
+          ${brandLogoDataUri
+            ? `<img class="brand-logo" src="${brandLogoDataUri}" alt="tiny-tool.de logo">`
+            : '<div class="brand-logo-fallback">tiny-tool.de</div>'}
+        </div>
+        <div class="brand-copy">
+          <h1>Zeus RPG PromptKit</h1>
+          <p>Run explorer and local prompt tools.</p>
+          <div class="brand-note">tiny-tool.de</div>
+        </div>
       </div>
-      <div class="token">Local-only UI + API</div>
+      <div class="token">Brand Edition - Local-only UI + API</div>
     </div>
     <div id="runs" class="run-list"><div class="empty">No runs loaded yet. Start with Prompt Workbench or create output under <code>./output</code>.</div></div>
   </aside>
   <div class="main">
     <div class="panel hero">
       <div class="stack">
-        <h2 id="title">Welcome to Zeus Local UI</h2>
+        <h2 id="title">Welcome to Zeus RPG PromptKit</h2>
         <p id="subtitle">Open Prompt Workbench now or load analysis runs from ./output.</p>
       </div>
       <div id="chips" class="chips hero-meta"><div class="token">Runs: 0</div><div class="token">Workbench loading</div></div>
     </div>
 
-    <div id="metrics" class="metrics"><div class="panel metric"><div>Runs</div><strong>0</strong></div><div class="panel metric"><div>Next Step</div><strong>Open Workbench</strong></div><div class="panel metric"><div>Output Root</div><strong>./output</strong></div><div class="panel metric"><div>Mode</div><strong>Local UI</strong></div></div>
+    <div id="metrics" class="metrics"><div class="panel metric"><div>Runs</div><strong>0</strong></div><div class="panel metric"><div>Next Step</div><strong>Open Workbench</strong></div><div class="panel metric"><div>Output Root</div><strong>./output</strong></div><div class="panel metric"><div>Mode</div><strong>PromptKit UI</strong></div></div>
     <div id="tabs" class="panel tabs"><button class="tab active">Home</button><button class="tab">Graph</button><button class="tab">DB2/Test Data</button><button class="tab">Prompt Compare</button><button class="tab">Prompt Workbench</button><button class="tab">Artifacts</button></div>
 
     <div id="home" class="panel view two active"><div class="sub"><div class="home-callout"><h2>Start Here</h2><p>No analysis runs are loaded yet. You can still open Prompt Workbench now, or create your first run and refresh this screen.</p><div class="tokens"><div class="token">Runs: 0</div><div class="token">Local-only UI</div></div></div><h3>Quick Actions</h3><div class="home-grid"><div class="home-card"><strong>Open Prompt Workbench</strong><p>Build or refine prompts directly in the browser with guided use cases.</p></div><div class="home-card"><strong>Create an analysis run</strong><p>Generate artifacts under <code>./output</code> so the explorers have something to show.</p><div class="command-block"><pre>zeus analyze --source ./src --program ORDERPGM --out ./output</pre></div></div><div class="home-card"><strong>Use a guided workflow</strong><p>Generate richer prompt packs and workflow-specific output.</p><div class="command-block"><pre>zeus workflow --preset modernization-review --source ./src --program ORDERPGM --out ./output</pre></div></div></div></div><div class="sub"><h2>What You Can Do Here</h2><p>The home screen gives you the fastest path into the tool, even before the first run exists.</p><div class="hint-list"><div class="hint-item"><strong>1. Create output</strong><p>Use <code>zeus analyze</code> or <code>zeus workflow</code> so this UI has artifacts to browse.</p></div><div class="hint-item"><strong>2. Refresh runs</strong><p>Once output exists, reload the run list and switch into graph, DB2, prompts, or artifacts.</p></div><div class="hint-item"><strong>3. Start with Prompt Workbench</strong><p>Use the guided prompt canvas immediately, even if your first analysis run is still being prepared.</p></div></div></div></div>
@@ -408,7 +536,10 @@ const s={
     contextSourceProgram:'',
     contextSourcePrompts:[],
     contextSourcePromptPath:'',
-    contextSourceStatus:''
+    contextSourceStatus:'',
+    starterGoal:'',
+    starterLanguage:'German',
+    starterUseCaseId:''
   }
 };
 
@@ -495,7 +626,7 @@ function renderRuns(){
 
 function renderHero(){
   if(!s.detail){
-    q('title').textContent='Welcome to Zeus Local UI';
+    q('title').textContent='Welcome to Zeus RPG PromptKit';
     q('subtitle').textContent='Start with Prompt Workbench or load analysis runs from ./output.';
     q('chips').innerHTML=[
       'Runs: '+String(s.runs.length||0),
@@ -605,6 +736,50 @@ async function openHomeTarget(target,options){
   await render();
 }
 
+function ensureStarterDefaults(){
+  if(!s.promptBuilder||!s.promptBuilder.loaded||s.promptBuilder.error) return;
+  if(!s.promptBuilder.starterUseCaseId){
+    s.promptBuilder.starterUseCaseId=s.promptBuilder.selectedUseCaseId
+      ||(s.promptBuilder.useCases[0]&&s.promptBuilder.useCases[0].id)
+      ||'';
+  }
+  if(!s.promptBuilder.starterGoal){
+    s.promptBuilder.starterGoal='Describe what you want to analyze and what outcome you need.';
+  }
+  if(!s.promptBuilder.starterLanguage){
+    s.promptBuilder.starterLanguage='German';
+  }
+}
+
+async function startWorkbenchFromStarter(){
+  if(!s.promptBuilder.loaded||s.promptBuilder.error){
+    await openHomeTarget('workbench');
+    return;
+  }
+
+  const useCaseId=((q('starterUseCase')&&q('starterUseCase').value)||s.promptBuilder.starterUseCaseId||'').trim();
+  const goal=((q('starterGoal')&&q('starterGoal').value)||s.promptBuilder.starterGoal||'').trim();
+  const language=((q('starterLanguage')&&q('starterLanguage').value)||s.promptBuilder.starterLanguage||'German').trim()||'German';
+
+  if(useCaseId){
+    setWorkbenchUseCase(useCaseId);
+  }
+  s.promptBuilder.starterUseCaseId=useCaseId;
+  s.promptBuilder.starterGoal=goal;
+  s.promptBuilder.starterLanguage=language;
+
+  if(!s.promptBuilder.fields||typeof s.promptBuilder.fields!=='object'){
+    s.promptBuilder.fields={};
+  }
+  s.promptBuilder.fields.goal=goal||s.promptBuilder.fields.goal||'';
+  s.promptBuilder.fields.language=language;
+  s.promptBuilder.saveStatus='Starter template applied.';
+
+  s.tab='workbench';
+  renderWorkbench();
+  scheduleWorkbenchPreview();
+}
+
 function renderHome(){
   const root=q('home');
   root.classList.toggle('active',s.tab==='home');
@@ -617,6 +792,8 @@ function renderHome(){
   const tableCount=hasRun?s.detail.views.summary.db2TableCount||0:0;
   const runStatus=summary?(summary.status||'unknown'):'No run selected';
   const workflowLabel=summary?(summary.workflowPreset||summary.workflowMode||'standard'):'Analyze output pending';
+  ensureStarterDefaults();
+  const starterUseCases=(s.promptBuilder.useCases||[]).slice(0,4);
 
   root.innerHTML='<div class="sub"><div class="home-callout">'+
     (hasRun
@@ -636,7 +813,7 @@ function renderHome(){
           '<div class="home-card"><strong>Use a guided workflow</strong><p>Run a preset when you want richer artifacts and prompt packs.</p>'+renderCommandBlock(['zeus workflow --preset modernization-review --source ./src --program ORDERPGM --out ./output'])+'</div>'
         ].join('')
       )+
-    '</div><div class="actions"><button class="btn" data-home-target="workbench">Open Prompt Workbench</button><button class="btn" data-home-target="refresh">Refresh Runs</button></div></div>'+
+    '</div><h3>From first start to finished analysis</h3><div class="step-list"><div class="step-item"><strong>Step 1</strong><p>Pick a template and describe your goal in one sentence.</p></div><div class="step-item"><strong>Step 2</strong><p>Run analyze/workflow once to generate output under <code>./output</code>.</p></div><div class="step-item"><strong>Step 3</strong><p>Review Graph, DB2/Test Data, Prompts, and artifacts in tabs.</p></div><div class="step-item"><strong>Step 4</strong><p>Compare/export final prompt and share report artifacts.</p></div></div><div class="actions"><button class="btn primary" data-home-starter-open="1">Start With Template</button><button class="btn" data-home-target="workbench">Open Prompt Workbench</button><button class="btn" data-home-target="refresh">Refresh Runs</button></div></div>'+
     '<div class="sub"><h2>'+(hasRun?'Recommended Next Steps':'What You Can Do Here')+'</h2><p>'+(hasRun
       ? 'Pick a focused entry point or jump straight into a Prompt Workbench use case.'
       : 'Even before the first run exists, Prompt Workbench can be used as a guided starting point.')+'</p>'+
@@ -645,13 +822,35 @@ function renderHome(){
           ? '<div class="hint-item"><strong>'+esc(summary.program)+'</strong><p>'+esc('Graph nodes: '+String(graphCount)+' • DB2 tables: '+String(tableCount)+' • Prompt packs: '+String(promptCount))+'.</p></div><div class="hint-item"><strong>Select another run from the left sidebar</strong><p>The home screen stays as your landing area, while the tabs take you into the focused explorers.</p></div><div class="hint-item"><strong>Need a different prompt?</strong><p>Open Prompt Workbench to assemble a use case, import an existing ai_prompt artifact, and refine the preview live.</p></div>'
           : '<div class="hint-item"><strong>1. Create output</strong><p>Use <code>zeus analyze</code> or <code>zeus workflow</code> so this UI has artifacts to browse.</p></div><div class="hint-item"><strong>2. Refresh runs</strong><p>Keep the local UI open, then use <code>Refresh Runs</code> instead of restarting the server.</p></div><div class="hint-item"><strong>3. Start with Prompt Workbench</strong><p>Use the guided prompt canvas immediately, even if your first analysis run is still being prepared.</p></div>'
         )+
-      '</div><h3>Prompt Workbench Choices</h3>'+promptWorkbenchHighlights()+'</div>';
+      '</div><h3>Template Starter</h3>'+
+      (s.promptBuilder.loading
+        ? '<div class="empty">Loading starter templates...</div>'
+        : s.promptBuilder.error
+          ? '<div class="empty">Starter unavailable: '+esc(s.promptBuilder.error)+'</div>'
+          : '<div class="step-list"><div class="step-item"><strong>Step 1</strong><p>Choose a ready template.</p><select id="starterUseCase">'+((s.promptBuilder.useCases||[]).map((entry)=>'<option value="'+esc(entry.id)+'"'+(entry.id===s.promptBuilder.starterUseCaseId?' selected':'')+'>'+esc(entry.title)+'</option>').join(''))+'</select></div><div class="step-item"><strong>Step 2</strong><p>Describe what you want to do. We prefill the template.</p><textarea id="starterGoal" style="min-height:120px" placeholder="What do you want to analyze?">'+esc(s.promptBuilder.starterGoal||'')+'</textarea></div><div class="step-item"><strong>Step 3</strong><p>Select response language and open Workbench.</p><select id="starterLanguage"><option value="German"'+((s.promptBuilder.starterLanguage||'German')==='German'?' selected':'')+'>German</option><option value="English"'+((s.promptBuilder.starterLanguage||'German')==='English'?' selected':'')+'>English</option></select><div class="actions"><button class="btn primary" data-home-starter-open="1">Open Filled Template</button></div></div></div><div class="chips">'+starterUseCases.map((entry)=>'<button class="btn" data-home-workbench="'+esc(entry.id)+'">'+esc(entry.title)+'</button>').join('')+'</div>'
+      )+
+      '<h3>Prompt Workbench Choices</h3>'+promptWorkbenchHighlights()+'</div>';
 
   for(const b of root.querySelectorAll('[data-home-target]')){
     b.onclick=()=>openHomeTarget(b.dataset.homeTarget);
   }
   for(const b of root.querySelectorAll('[data-home-workbench]')){
     b.onclick=()=>openHomeTarget('workbench',{useCaseId:b.dataset.homeWorkbench});
+  }
+  for(const b of root.querySelectorAll('[data-home-starter-open]')){
+    b.onclick=()=>startWorkbenchFromStarter();
+  }
+  const starterUseCase=q('starterUseCase');
+  if(starterUseCase){
+    starterUseCase.onchange=(e)=>{s.promptBuilder.starterUseCaseId=e.target.value||'';};
+  }
+  const starterGoal=q('starterGoal');
+  if(starterGoal){
+    starterGoal.oninput=(e)=>{s.promptBuilder.starterGoal=e.target.value;};
+  }
+  const starterLanguage=q('starterLanguage');
+  if(starterLanguage){
+    starterLanguage.onchange=(e)=>{s.promptBuilder.starterLanguage=e.target.value||'German';};
   }
 }
 
@@ -1309,7 +1508,7 @@ function renderWorkbench(){
     : fieldDefs;
   const previewText=currentPreviewText();
 
-  root.innerHTML='<div class="sub"><h2>Prompt Workbench</h2><p>Prompt Canvas for direct toolset implementation workflows.</p><input id="wbFilter" type="search" placeholder="Filter use cases"><div class="card-grid">'+filtered.map((entry)=>'<div class="card'+(selected&&selected.id===entry.id?' active':'')+'"><h3>'+esc(entry.title)+'</h3><p>'+esc(entry.description||'')+'</p><div class="meta"><div class="token">Priority: '+esc(entry.priority||'n/a')+'</div><div class="token">Default Modules: '+esc(String((entry.defaultModuleIds||[]).length))+'</div></div><div class="actions"><button class="btn" data-wb-select="'+esc(entry.id)+'">Select</button></div></div>').join('')+'</div><h3>Template</h3><div class="field-grid"><label>Name<input id="wbTemplateName" value="'+escAttr(s.promptBuilder.templateName||'')+'" placeholder="Template name"></label><label>Description<textarea id="wbTemplateDescription" placeholder="Template description">'+esc(s.promptBuilder.templateDescription||'')+'</textarea></label><label>Tags (comma separated)<input id="wbTemplateTags" value="'+escAttr(s.promptBuilder.templateTags||'')+'" placeholder="mvp, api, ui"></label><label>Saved Templates<select id="wbTemplateSel"><option value="">'+esc('Select saved template')+'</option>'+((s.promptBuilder.templates||[]).map((template)=>'<option value="'+esc(template.id)+'"'+(template.id===s.promptBuilder.selectedTemplateId?' selected':'')+'>'+esc(template.name)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbLoadTemplate">Load</button><button class="btn" id="wbSaveTemplate">Save Template</button><button class="btn" id="wbDeleteTemplate">Delete</button></div><div class="small '+statusToneClass(s.promptBuilder.saveStatus)+'">'+esc(s.promptBuilder.saveStatus||'')+'</div><h3>Output Context Source</h3><div class="field-grid"><label>Analyze Run<select id="wbContextRunSel"><option value="">'+esc('Select output/<PROGRAM>')+'</option>'+((s.promptBuilder.contextSources||[]).map((entry)=>'<option value="'+esc(entry.program)+'"'+(entry.program===s.promptBuilder.contextSourceProgram?' selected':'')+'>'+esc(entry.program+' ('+(entry.promptArtifactCount||0)+' prompts)')+'</option>').join(''))+'</select></label><label>Prompt Artifact<select id="wbContextPromptSel"><option value="">'+esc('Select ai_prompt_*.md')+'</option>'+((s.promptBuilder.contextSourcePrompts||[]).map((entry)=>'<option value="'+esc(entry.path)+'"'+(entry.path===s.promptBuilder.contextSourcePromptPath?' selected':'')+'>'+esc(entry.path)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbContextRefresh">Refresh Runs</button><button class="btn" id="wbContextLoadPrompts">Load Prompts</button><button class="btn" id="wbContextImport">Import As Seed</button></div><div class="small '+statusToneClass(s.promptBuilder.contextSourceStatus)+'">'+esc(s.promptBuilder.contextSourceStatus||'')+'</div><h3>Prompt Canvas</h3><div class="item-list">'+moduleOrder.map((moduleId,index)=>'<div class="module-row'+(s.promptBuilder.selectedModuleId===moduleId?' active':'')+'"><h4>'+esc(moduleMap[moduleId]||moduleId)+'</h4><div class="small">'+esc(moduleId)+'</div><div class="actions"><button class="btn" data-wb-module-select="'+esc(moduleId)+'">Config</button><button class="btn" data-wb-module-up="'+esc(String(index))+'">Up</button><button class="btn" data-wb-module-down="'+esc(String(index))+'">Down</button><button class="btn" data-wb-module-remove="'+esc(String(index))+'">Remove</button></div></div>').join('')+'</div><h4>Add Module</h4><div class="chips">'+(availableModules.length?availableModules.map((module)=>'<button class="btn" data-wb-module-add="'+esc(module.id)+'">+ '+esc(module.title)+'</button>').join(''):'<div class="empty">All modules in canvas.</div>')+'</div><h4>Additional Requirements</h4><textarea id="wbAddReq" style="min-height:180px" placeholder="Additional requirements for this implementation prompt...">'+esc(s.promptBuilder.additionalRequirements||'')+'</textarea></div>'+
+  root.innerHTML='<div class="sub"><h2>Prompt Workbench</h2><p>Template-based flow: choose use case, fill only your goal, preview, then compare and export.</p><input id="wbFilter" type="search" placeholder="Filter use cases"><div class="card-grid">'+filtered.map((entry)=>'<div class="card'+(selected&&selected.id===entry.id?' active':'')+'"><h3>'+esc(entry.title)+'</h3><p>'+esc(entry.description||'')+'</p><div class="meta"><div class="token">Priority: '+esc(entry.priority||'n/a')+'</div><div class="token">Default Modules: '+esc(String((entry.defaultModuleIds||[]).length))+'</div></div><div class="actions"><button class="btn" data-wb-select="'+esc(entry.id)+'">Select</button></div></div>').join('')+'</div><h3>Template</h3><div class="field-grid"><label>Name<input id="wbTemplateName" value="'+escAttr(s.promptBuilder.templateName||'')+'" placeholder="Template name"></label><label>Description<textarea id="wbTemplateDescription" placeholder="Template description">'+esc(s.promptBuilder.templateDescription||'')+'</textarea></label><label>Tags (comma separated)<input id="wbTemplateTags" value="'+escAttr(s.promptBuilder.templateTags||'')+'" placeholder="mvp, api, ui"></label><label>Saved Templates<select id="wbTemplateSel"><option value="">'+esc('Select saved template')+'</option>'+((s.promptBuilder.templates||[]).map((template)=>'<option value="'+esc(template.id)+'"'+(template.id===s.promptBuilder.selectedTemplateId?' selected':'')+'>'+esc(template.name)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbLoadTemplate">Load</button><button class="btn primary" id="wbSaveTemplate">Save Template</button><button class="btn" id="wbDeleteTemplate">Delete</button></div><div class="small '+statusToneClass(s.promptBuilder.saveStatus)+'">'+esc(s.promptBuilder.saveStatus||'')+'</div><h3>Output Context Source (optional)</h3><div class="field-grid"><label>Analyze Run<select id="wbContextRunSel"><option value="">'+esc('Select output/<PROGRAM>')+'</option>'+((s.promptBuilder.contextSources||[]).map((entry)=>'<option value="'+esc(entry.program)+'"'+(entry.program===s.promptBuilder.contextSourceProgram?' selected':'')+'>'+esc(entry.program+' ('+(entry.promptArtifactCount||0)+' prompts)')+'</option>').join(''))+'</select></label><label>Prompt Artifact<select id="wbContextPromptSel"><option value="">'+esc('Select ai_prompt_*.md')+'</option>'+((s.promptBuilder.contextSourcePrompts||[]).map((entry)=>'<option value="'+esc(entry.path)+'"'+(entry.path===s.promptBuilder.contextSourcePromptPath?' selected':'')+'>'+esc(entry.path)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbContextRefresh">Refresh Runs</button><button class="btn" id="wbContextLoadPrompts">Load Prompts</button><button class="btn" id="wbContextImport">Import As Seed</button></div><div class="small '+statusToneClass(s.promptBuilder.contextSourceStatus)+'">'+esc(s.promptBuilder.contextSourceStatus||'')+'</div><h3>Prompt Canvas</h3><div class="item-list">'+moduleOrder.map((moduleId,index)=>'<div class="module-row'+(s.promptBuilder.selectedModuleId===moduleId?' active':'')+'"><h4>'+esc(moduleMap[moduleId]||moduleId)+'</h4><div class="small">'+esc(moduleId)+'</div><div class="actions"><button class="btn" data-wb-module-select="'+esc(moduleId)+'">Config</button><button class="btn" data-wb-module-up="'+esc(String(index))+'">Up</button><button class="btn" data-wb-module-down="'+esc(String(index))+'">Down</button><button class="btn" data-wb-module-remove="'+esc(String(index))+'">Remove</button></div></div>').join('')+'</div><h4>Add Module</h4><div class="chips">'+(availableModules.length?availableModules.map((module)=>'<button class="btn" data-wb-module-add="'+esc(module.id)+'">+ '+esc(module.title)+'</button>').join(''):'<div class="empty">All modules in canvas.</div>')+'</div><h4>Additional Requirements</h4><textarea id="wbAddReq" style="min-height:180px" placeholder="Additional requirements for this implementation prompt...">'+esc(s.promptBuilder.additionalRequirements||'')+'</textarea></div>'+
     '<div class="sub">'+
     (selected?'<h2>'+esc(selected.title)+'</h2><p>'+esc(selected.description||'')+'</p><div class="tokens"><div class="token">Modules in Canvas: '+esc(String(moduleOrder.length))+'</div><div class="token">Preview tokens: '+esc(String((preview&&preview.estimatedTokens)||0))+'</div><div class="token">Mode: '+esc(s.promptBuilder.previewEditable?'edit':'live')+'</div></div><h3>Module Configuration'+(selectedModule?': '+esc(selectedModule.title):'')+'</h3>'+(activeFieldDefs.length?'<div class="field-grid">'+activeFieldDefs.map((field)=>renderCanvasFieldInput(field,(s.promptBuilder.fields||{})[field.name])).join('')+'</div>':'<div class="empty">No configurable fields for selected modules.</div>')+'<div class="actions"><button class="btn" id="wbPreviewRefresh">Refresh Preview</button><button class="btn" id="wbEditToggle">'+esc(s.promptBuilder.previewEditable?'Lock Preview':'Edit Preview')+'</button><button class="btn" id="wbCopyPreview">Copy</button><button class="btn" id="wbExportPreview">Export</button><button class="btn" id="wbToCompare">Open Prompt Compare</button></div><h3>Live Preview</h3><div id="wbPreviewPane" class="preview">'+(s.promptBuilder.previewLoading?'<pre>Generating preview...</pre>':s.promptBuilder.previewError?'<div class="empty">'+esc(s.promptBuilder.previewError)+'</div>':s.promptBuilder.previewEditable?'<textarea id="wbPreviewEditor" style="min-height:360px">'+esc(previewText)+'</textarea>':previewText?'<pre>'+esc(previewText)+'</pre>':'<div class="empty">No preview yet. Configure canvas or click refresh.</div>')+'</div>'
     :'<div class="empty">Select a use case to start.</div>')+
