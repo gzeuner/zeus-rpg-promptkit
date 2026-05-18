@@ -14,6 +14,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const REDACTED_VALUE = '[REDACTED]';
 const SENSITIVE_KEY_PATTERN = /(^|[_-])(password|passwd|pwd|pass|secret|token|api[_-]?key|key|authorization|auth|credential|credentials)$/i;
 const USER_KEY_PATTERN = /^(user|username)$/i;
+const SENSITIVE_ENV_KEYS = Object.freeze([
+  'ZEUS_DB_HOST',
+  'ZEUS_DB_USER',
+  'ZEUS_DB_DEFAULT_LIBRARY',
+  'ZEUS_DB_DEFAULT_SCHEMA',
+  'ZEUS_METADATA_DB_HOST',
+  'ZEUS_METADATA_DB_USER',
+  'ZEUS_METADATA_DB_DEFAULT_LIBRARY',
+  'ZEUS_METADATA_DB_DEFAULT_SCHEMA',
+  'ZEUS_TESTDATA_DB_HOST',
+  'ZEUS_TESTDATA_DB_USER',
+  'ZEUS_TESTDATA_DB_DEFAULT_LIBRARY',
+  'ZEUS_TESTDATA_DB_DEFAULT_SCHEMA',
+  'ZEUS_FETCH_HOST',
+  'ZEUS_FETCH_USER',
+  'ZEUS_FETCH_SOURCE_LIB',
+  'ZEUS_FETCH_SOURCE_LIBRARY',
+]);
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -25,6 +43,64 @@ function shouldMaskKey(key) {
 
 function hasCredentialFields(value) {
   return Object.keys(value || {}).some((entry) => shouldMaskKey(entry));
+}
+
+function escapeRegExp(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function normalizeSensitiveTerms(input = []) {
+  const terms = Array.isArray(input) ? input : [input];
+  return Array.from(new Set(terms
+    .map((entry) => String(entry || '').trim())
+    .filter((entry) => entry.length > 1)
+    .map((entry) => entry.toUpperCase())))
+    .sort((left, right) => right.length - left.length || left.localeCompare(right));
+}
+
+function parseSensitiveTermsCsv(value) {
+  if (value === undefined || value === null || value === false) {
+    return [];
+  }
+  const raw = Array.isArray(value) ? value.join(',') : String(value);
+  return raw
+    .split(/[,\n;]+/g)
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean);
+}
+
+function collectSensitiveTermsFromEnv(env = process.env, additionalTerms = []) {
+  const terms = [];
+
+  for (const key of SENSITIVE_ENV_KEYS) {
+    if (env && env[key]) {
+      terms.push(env[key]);
+    }
+  }
+
+  if (env && env.ZEUS_SENSITIVE_TERMS) {
+    terms.push(...parseSensitiveTermsCsv(env.ZEUS_SENSITIVE_TERMS));
+  }
+  if (env && env.ZEUS_MASK_TERMS) {
+    terms.push(...parseSensitiveTermsCsv(env.ZEUS_MASK_TERMS));
+  }
+  terms.push(...parseSensitiveTermsCsv(additionalTerms));
+  return normalizeSensitiveTerms(terms);
+}
+
+function maskSensitiveTermsInText(value, sensitiveTerms = []) {
+  let text = String(value === undefined || value === null ? '' : value);
+  const normalizedTerms = normalizeSensitiveTerms(sensitiveTerms);
+
+  for (const term of normalizedTerms) {
+    const escaped = escapeRegExp(term);
+    text = text.replace(
+      new RegExp(`(^|[^A-Z0-9_#$@])(${escaped})(?=[^A-Z0-9_#$@]|$)`, 'gi'),
+      `$1${REDACTED_VALUE}`,
+    );
+  }
+
+  return text;
 }
 
 function maskSecretsInText(value) {
@@ -51,7 +127,13 @@ function maskSecretsInText(value) {
   return text;
 }
 
-function sanitizeValue(value, key = '') {
+function sanitizeValue(value, keyOrOptions = '', maybeOptions = {}) {
+  const key = typeof keyOrOptions === 'string' ? keyOrOptions : '';
+  const options = typeof keyOrOptions === 'object' && keyOrOptions !== null && !Array.isArray(keyOrOptions)
+    ? keyOrOptions
+    : maybeOptions;
+  const sensitiveTerms = normalizeSensitiveTerms((options && options.sensitiveTerms) || []);
+
   if (value === undefined || value === null) {
     return value;
   }
@@ -61,11 +143,11 @@ function sanitizeValue(value, key = '') {
   }
 
   if (typeof value === 'string') {
-    return maskSecretsInText(value);
+    return maskSensitiveTermsInText(maskSecretsInText(value), sensitiveTerms);
   }
 
   if (Array.isArray(value)) {
-    return value.map((entry) => sanitizeValue(entry));
+    return value.map((entry) => sanitizeValue(entry, options));
   }
 
   if (isPlainObject(value)) {
@@ -76,7 +158,7 @@ function sanitizeValue(value, key = '') {
         sanitized[childKey] = REDACTED_VALUE;
         continue;
       }
-      sanitized[childKey] = sanitizeValue(childValue, childKey);
+      sanitized[childKey] = sanitizeValue(childValue, childKey, options);
     }
     return sanitized;
   }
@@ -86,8 +168,11 @@ function sanitizeValue(value, key = '') {
 
 module.exports = {
   REDACTED_VALUE,
+  collectSensitiveTermsFromEnv,
+  maskSensitiveTermsInText,
   maskSecretsInText,
+  normalizeSensitiveTerms,
+  parseSensitiveTermsCsv,
   sanitizeValue,
   shouldMaskKey,
 };
-

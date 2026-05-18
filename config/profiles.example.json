@@ -43,6 +43,8 @@
   },
   "default-shared": {
     "outputRoot": "${env:ZEUS_OUTPUT_ROOT}",
+    "analysesRegistryPath": "${env:ZEUS_ANALYSES_REGISTRY}",
+    "defaultWorkspaceRoot": "${env:ZEUS_ANALYSES_ROOT}",
     "extensions": [".rpgle", ".sqlrpgle", ".clle", ".clp", ".dds", ".pf", ".lf", ".bnd", ".cpy"],
     "db": {
       "host": "${env:ZEUS_DB_HOST}",
