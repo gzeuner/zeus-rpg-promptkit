@@ -135,6 +135,11 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     const health = await fetch(`${started.url}/api/health`).then((response) => response.json());
     assert.equal(health.ok, true);
 
+    const analyses = await fetch(`${started.url}/api/analyses`).then((response) => response.json());
+    assert.equal(Array.isArray(analyses.workspaces), true);
+    assert.equal(analyses.workspaces.length, 1);
+    assert.equal(analyses.workspaces[0].id, 'default');
+
     const runs = await fetch(`${started.url}/api/runs`).then((response) => response.json());
     assert.equal(runs.length, 1);
     assert.equal(runs[0].program, 'ORDERPGM');
