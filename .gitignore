@@ -94,3 +94,12 @@ java/lib/
 
 .local/
 .local-roadmap/
+
+# -----------------------------
+# Local analyses registry/workspaces
+# -----------------------------
+
+# Optional local registry file (if kept inside this repository)
+config/analyses-registry.json
+# Optional in-repo analyses workspaces
+analyses/

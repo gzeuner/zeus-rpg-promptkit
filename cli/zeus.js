@@ -38,6 +38,7 @@ const { run: runPuiEdit } = require('../src/cli/commands/puiEditCommand');
 const { runSearchSource } = require('../src/cli/commands/searchSourceCommand');
 const { runJoblog } = require('../src/cli/commands/joblogCommand');
 const { runDocsGenerateCatalog } = require('./commands/generate-tool-catalog');
+const { run: runAnalyses } = require('../src/cli/commands/analysesCommand');
 
 function printHelp() {
   console.log('Usage:');
@@ -51,6 +52,7 @@ function printHelp() {
   console.log('  zeus [--config <path>] generate-checklist --program <name> [--type DDL_CHANGE|CODE_CHANGE|BOTH] [--affected <P1,P2,...>] [--table <name>] [--impact LOW|MEDIUM|HIGH] [--out <path>] [--verbose]');
   console.log('  zeus [--config <path>] fetch --host <hostname> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--profile <name>] [--verbose]');
   console.log('  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
+  console.log('  zeus [--config <path>] analyses <list|register|index|open|show|unregister> [options]');
   console.log('  zeus [--config <path>] doctor --profile <name> [--show-resolved]');
   console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>]');
   console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ..." | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv]');
@@ -172,6 +174,11 @@ async function main() {
 
   if (command === 'serve') {
     await runServe(args);
+    return;
+  }
+
+  if (command === 'analyses') {
+    await runAnalyses(args);
     return;
   }
 
