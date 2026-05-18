@@ -3,7 +3,7 @@
 **Evidence-First Context Builder für IBM i RPG, CL & DDS**
 
 ![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=nodedotjs&logoColor=white)
-![Java](https://img.shields.io/badge/Java-11+-blue?logo=openjdk&logoColor=white)
+![Java](https://img.shields.io/badge/Java-11+-blue?logo=openjdk)
 ![IBM i](https://img.shields.io/badge/Platform-IBM%20i%20/%20AS%2F400-1F70C1)
 ![DB2](https://img.shields.io/badge/DB-DB2-0F62FE)
 ![License](https://img.shields.io/badge/License-Apache%202.0-green)
@@ -13,7 +13,7 @@
 
 > **Quellen holen · Analysieren · Abhängigkeiten verstehen · KI mit hochwertigem Kontext versorgen.**
 
-Zeus RPG PromptKit ist ein Open-Source-Toolkit, das IBM i / AS/400 Entwicklern hilft, Legacy-RPG-Programme, CL und DDS strukturiert zu analysieren und perfekten, nachvollziehbaren Kontext für Menschen **und** KI-Assistenten zu erzeugen.
+Zeus RPG PromptKit ist ein Open-Source-Toolkit, das IBM i / AS/400-Entwicklerinnen und -Entwicklern hilft, gewachsene RPG-, CL- und DDS-Systeme strukturiert zu analysieren und nachvollziehbaren Kontext für Menschen **und** KI-Assistenten zu erzeugen.
 
 **Kein Code-Generator.** Sondern ein **Evidence Preparation Layer** – read-only, transparent und reviewbar.
 
@@ -22,11 +22,24 @@ Zeus RPG PromptKit ist ein Open-Source-Toolkit, das IBM i / AS/400 Entwicklern h
 
 ---
 
+## Rechtlicher Hinweis, Marken & Haftung
+
+Zeus RPG PromptKit ist ein eigenständiges Open-Source-Projekt und steht in keiner Verbindung zu IBM. Es ist weder von IBM entwickelt, unterstützt, geprüft, zertifiziert noch offiziell empfohlen.
+
+IBM, IBM i, AS/400, DB2, RPG, CL, DDS, JT400, JTOpen und weitere genannte Produkt- oder Markennamen sind Marken oder eingetragene Marken der jeweiligen Rechteinhaber. Die Nennung dient ausschließlich der technischen Beschreibung des Einsatzbereichs.
+
+Die Software wird im Rahmen der Apache License 2.0 **„as is“** bereitgestellt – ohne Gewährleistung irgendeiner Art. Nutzung, Konfiguration, Betrieb, Interpretation der erzeugten Analyseergebnisse sowie der Einsatz von KI-Assistenten auf Basis dieser Ergebnisse liegen vollständig in der Verantwortung der jeweiligen Anwenderinnen, Anwender und Betreiber.
+
+Insbesondere ersetzt dieses Toolkit keine fachliche Prüfung, kein Code Review, keine Sicherheitsbewertung und keine Freigabeprozesse durch qualifizierte Personen. Vor produktiven Änderungen an IBM i-Systemen oder daraus abgeleiteten Anwendungen sind die erzeugten Artefakte sorgfältig zu prüfen.
+
+---
+
 ## 🚀 Schnellstart – In 5 Minuten loslegen
 
 ### 1. Voraussetzungen
+
 - Node.js 20+
-- Java 11+ (für JT400/DB2 Zugriff)
+- Java 11+ für JT400/DB2-Zugriff
 
 ### 2. Installation & Demo ausführen
 
@@ -35,7 +48,7 @@ git clone https://github.com/gzeuner/zeus-rpg-promptkit.git
 cd zeus-rpg-promptkit
 npm install
 
-# Demo mit synthetischem RPG-System analysieren (perfekt zum Ausprobieren)
+# Demo mit synthetischem RPG-System analysieren – perfekt zum Ausprobieren
 ./examples/demo-rpg-mini-system/scripts/run-demo.sh
 ```
 
@@ -46,55 +59,57 @@ npm install
 node cli/zeus.js serve --source-output-root ./examples/demo-rpg-mini-system/output-baseline
 ```
 
-Öffne **http://localhost:4782** im Browser.
+Öffne danach **http://localhost:4782** im Browser.
 
 ### 4. KI-Ready Prompt erzeugen
+
 ```bash
 node ./examples/demo-rpg-mini-system/scripts/build-ai-session-prompt.mjs
 ```
 
-Du findest in `output-baseline/` sofort nutzbare Artefakte:
+In `output-baseline/` findest du sofort nutzbare Artefakte, zum Beispiel:
+
 - `report.md`
 - `architecture-report.md`
 - `ai-knowledge.json`
 - `dependency-graph.mmd`
-- uvm.
+- weitere Analyse-, Kontext- und Review-Artefakte
 
 ---
 
 ## ✨ Kern-Features
 
-- **📥 Source Fetching** von IBM i (SFTP, JT400, FTP)
-- **🔍 Statische Analyse** von RPG III/IV, CL, DDS
-- **🌐 Vollständiges Dependency Mapping** & Call-Graphs
-- **🗄️ DB2 Metadata Integration** (Tabellen, Felder, Triggers, Constraints)
-- **🤖 AI-optimierte Artefakte** für Copilot, Claude, GPT, Grok etc.
-- **🖥️ Lokale Viewer UI** zur interaktiven Inspektion
-- **📋 Vordefinierte Workflows** (Onboarding, Impact Analysis, Modernization, Security Review …)
-- **🛡️ Safety-First** – Read-only Default, Credentials niemals im Repo
+- **📥 Source Fetching** von IBM i per SFTP, JT400 oder FTP
+- **🔍 Statische Analyse** von RPG III/IV, CL und DDS
+- **🌐 Dependency Mapping** und Call-Graphs
+- **🗄️ DB2 Metadata Integration** für Tabellen, Felder, Trigger und Constraints
+- **🤖 KI-optimierte Artefakte** für Copilot, Claude, GPT, Grok und andere Assistenten
+- **🖥️ Lokale Viewer-UI** zur interaktiven Inspektion
+- **📋 Vordefinierte Workflows** für Onboarding, Impact Analysis, Modernization, Security Review und mehr
+- **🛡️ Safety-First-Ansatz** mit read-only Defaults und lokaler Konfiguration
 
 ---
 
-## Wofür ist Zeus perfekt geeignet?
+## Wofür ist Zeus RPG PromptKit geeignet?
 
-- Schnelles Verständnis von gewachsenen RPG-Programmen
+- Schnelles Verständnis gewachsener RPG-Programme
 - Sichere Impact-Analysen vor Änderungen
 - Vorbereitung von Modernisierungsprojekten
-- Bereitstellung von Kontext für KI-gestützte Entwicklung
+- Bereitstellung hochwertiger Kontextdaten für KI-gestützte Entwicklung
 - Technisches Onboarding neuer Teammitglieder
-- Erstellung von Review- und Dokumentations-Artefakten
+- Erstellung von Review-, Architektur- und Dokumentationsartefakten
 
 ---
 
-## Installation für echte IBM i Systeme
+## Installation für echte IBM i-Systeme
 
 ```bash
 npm install
 cp config/profiles.example.json config/local-only/profiles.json
-# Profile und Umgebungsvariablen anpassen (siehe docs/)
+# Profile und Umgebungsvariablen anpassen – siehe docs/
 ```
 
-Alle Befehle und Presets findest du in der **[Tool Catalog](docs/tool-catalog.md)**.
+Alle Befehle und Presets findest du im **[Tool Catalog](docs/tool-catalog.md)**.
 
 ---
 
@@ -102,33 +117,72 @@ Alle Befehle und Presets findest du in der **[Tool Catalog](docs/tool-catalog.md
 
 **„Evidence first, AI second.“**
 
-- Safety-Levels kurz erklaert:
-  - `S0` = local read-only (nur lokal lesen)
-  - `S1` = local write (nur lokale Artefakte schreiben)
-  - `S2` = remote read-only (IBM i/DB2 nur lesen)
-  - `S3` = controlled write (kontrollierte Datenmutation mit Freigabe)
-  - `S4` = operator-gated high risk (hochriskante, explizit gegatete Operationen)
-- Nur lesender Zugriff auf IBM i
-- Alle Credentials bleiben lokal (`config/local-only/`)
-- KI bekommt **prüfbare Fakten**, keine Halluzinationen
-- Der Mensch bleibt immer in der Verantwortung
+Zeus RPG PromptKit soll KI nicht „blind“ machen, sondern besser erden: mit Quellen, Abhängigkeiten, Analyseergebnissen und prüfbaren Artefakten.
 
-Mehr dazu im [Safety-Bereich der Docs](docs/safety/).
+Safety-Level im Überblick:
+
+- `S0` = local read-only – nur lokal lesen
+- `S1` = local write – nur lokale Artefakte schreiben
+- `S2` = remote read-only – IBM i/DB2 nur lesend anbinden
+- `S3` = controlled write – kontrollierte Datenmutation mit Freigabe
+- `S4` = operator-gated high risk – hochriskante, explizit gegatete Operationen
+
+Grundprinzipien:
+
+- IBM i-Zugriffe sind standardmäßig lesend ausgelegt.
+- Lokale Konfiguration bleibt lokal.
+- KI erhält prüfbare Fakten statt losem Bauchgefühl.
+- Der Mensch bleibt immer in der Verantwortung.
+
+Mehr dazu findest du im [Safety-Bereich der Dokumentation](docs/safety/).
 
 ---
 
 ## Dokumentation
 
 - **Zentrale Übersicht**: [`docs/index.md`](docs/index.md)
-- **Tool & Command Reference** (KI-ready): [`docs/tool-catalog.md`](docs/tool-catalog.md)
+- **Tool & Command Reference**: [`docs/tool-catalog.md`](docs/tool-catalog.md)
 - **AI Session Prompt**: [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)
-- **Beispiel-Workflows & Quickstarts**: [`docs/quickstart/`](docs/quickstart/) und [`docs/workflows/`](docs/workflows/)
+- **Quickstarts & Workflows**: [`docs/quickstart/`](docs/quickstart/) und [`docs/workflows/`](docs/workflows/)
 
 ---
 
-## Lizenz
+## English Summary
 
-Apache License 2.0 – siehe [LICENSE](LICENSE)
+**Zeus RPG PromptKit** is an open-source, evidence-first context builder for IBM i / AS/400 RPG, CL and DDS systems.
+
+It helps developers, reviewers and AI assistants understand legacy codebases by collecting sources, analyzing dependencies, enriching results with metadata and producing structured, reviewable artifacts.
+
+It is **not** a code generator. The goal is to prepare reliable context before humans or AI systems reason about modernization, impact analysis, onboarding or documentation.
+
+### What it does
+
+- Fetches IBM i sources through supported read-oriented access paths
+- Analyzes RPG, CL and DDS code
+- Builds dependency maps and call graphs
+- Adds optional DB2 metadata context
+- Generates Markdown, JSON and AI-ready context artifacts
+- Provides a local viewer UI for inspection and review
+
+### Project status
+
+This project is under active development. Features, workflows, command options and generated artifacts may change between releases.
+
+### Non-affiliation and disclaimer
+
+Zeus RPG PromptKit is an independent open-source project. It is not affiliated with, endorsed by, certified by or supported by IBM.
+
+IBM, IBM i, AS/400, DB2, RPG, CL, DDS, JT400, JTOpen and other product names are trademarks or registered trademarks of their respective owners. They are used only to describe the technical environment this project can work with.
+
+The software is provided **“as is”**, without warranty of any kind, under the Apache License 2.0. Users and operators are solely responsible for installation, configuration, operation, review of generated artifacts and any use of AI assistants based on those artifacts.
+
+Generated reports, prompts and analysis results must be reviewed by qualified humans before they are used for production decisions or system changes.
+
+---
+
+## License
+
+Apache License 2.0 – see [LICENSE](LICENSE).
 
 ---
 
