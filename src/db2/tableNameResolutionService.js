@@ -15,6 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const {
   escapeSqlLiteral,
+  executeReadOnlyDb2QueryWithFallback,
   runReadOnlyDb2Query,
   validateSqlIdentifier,
 } = require('./readOnlyQueryService');
@@ -29,9 +30,18 @@ function normalizeRowValue(row, ...keys) {
 }
 
 function normalizeTableRow(row) {
+  const sqlName = String(normalizeRowValue(row, 'SQL_TABLE_NAME', 'sql_table_name', 'TABLE_NAME', 'table_name') || '').trim().toUpperCase();
   return {
-    systemName: String(normalizeRowValue(row, 'SYSTEM_TABLE_NAME', 'system_table_name') || '').trim().toUpperCase(),
-    sqlName: String(normalizeRowValue(row, 'SQL_TABLE_NAME', 'sql_table_name', 'TABLE_NAME', 'table_name') || '').trim().toUpperCase(),
+    systemName: String(normalizeRowValue(
+      row,
+      'SYSTEM_TABLE_NAME',
+      'system_table_name',
+      'SQL_TABLE_NAME',
+      'sql_table_name',
+      'TABLE_NAME',
+      'table_name',
+    ) || '').trim().toUpperCase(),
+    sqlName,
     schema: String(normalizeRowValue(row, 'TABLE_SCHEMA', 'table_schema') || '').trim().toUpperCase(),
     type: String(normalizeRowValue(row, 'TABLE_TYPE', 'table_type') || '').trim().toUpperCase(),
   };
@@ -48,11 +58,23 @@ WHERE TABLE_SCHEMA = ${escapeSqlLiteral(resolvedSchema)}
 ORDER BY TABLE_SCHEMA, TABLE_NAME
 FETCH FIRST 1 ROW ONLY`;
 
-  const result = runReadOnlyDb2Query({
+  const result = executeReadOnlyDb2QueryWithFallback({
     dbConfig,
     query,
     maxRows: 1,
     runtime,
+    degradedMode: 'empty',
+    retryHandlers: {
+      '42703': () => ({
+        name: 'without-system-table-name',
+        query: `SELECT TABLE_NAME AS SQL_TABLE_NAME, TABLE_SCHEMA
+FROM QSYS2.SYSTABLES
+WHERE TABLE_SCHEMA = ${escapeSqlLiteral(resolvedSchema)}
+  AND TABLE_NAME = ${escapeSqlLiteral(searchName)}
+ORDER BY TABLE_SCHEMA, TABLE_NAME
+FETCH FIRST 1 ROW ONLY`,
+      }),
+    },
   });
 
   if (!result.rows || result.rows.length === 0) {
@@ -68,7 +90,7 @@ FETCH FIRST 1 ROW ONLY`;
 
   const normalized = normalizeTableRow(result.rows[0]);
   return {
-    systemName: normalized.systemName,
+    systemName: normalized.systemName || normalized.sqlName,
     sqlName: normalized.sqlName,
     schema: normalized.schema || resolvedSchema,
     found: true,
@@ -84,11 +106,21 @@ FROM QSYS2.SYSTABLES
 WHERE TABLE_SCHEMA = ${escapeSqlLiteral(resolvedSchema)}
 ORDER BY TABLE_NAME`;
 
-  const result = runReadOnlyDb2Query({
+  const result = executeReadOnlyDb2QueryWithFallback({
     dbConfig,
     query,
     maxRows: 500,
     runtime,
+    degradedMode: 'empty',
+    retryHandlers: {
+      '42703': () => ({
+        name: 'without-system-table-name',
+        query: `SELECT TABLE_NAME AS SQL_TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE
+FROM QSYS2.SYSTABLES
+WHERE TABLE_SCHEMA = ${escapeSqlLiteral(resolvedSchema)}
+ORDER BY TABLE_NAME`,
+      }),
+    },
   });
 
   const tables = (result.rows || []).map((row) => normalizeTableRow(row));
