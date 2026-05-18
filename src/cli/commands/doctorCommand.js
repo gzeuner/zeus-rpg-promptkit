@@ -251,6 +251,14 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
     required: false,
     hint: 'C:/Projekte/ticket/zeus-source',
   });
+  addEnvCheck(checks, {
+    name: 'ZEUS_ANALYSES_REGISTRY',
+    expected: true,
+    envValue: env.ZEUS_ANALYSES_REGISTRY,
+    fallbackValue: profile && profile.analysesRegistryPath,
+    required: false,
+    hint: 'C:/Projekte/analyses/_registry.json',
+  });
 
   return checks;
 }

@@ -12,9 +12,12 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
+const { collectSensitiveTermsFromEnv, sanitizeValue } = require('../security/secretMasking');
 
 function writeJsonReport(filePath, data) {
-  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+  const sensitiveTerms = collectSensitiveTermsFromEnv(process.env);
+  const sanitized = sanitizeValue(data, { sensitiveTerms });
+  fs.writeFileSync(filePath, `${JSON.stringify(sanitized, null, 2)}\n`, 'utf8');
 }
 
 module.exports = {
