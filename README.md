@@ -17,6 +17,9 @@ Zeus RPG PromptKit ist ein Open-Source-Toolkit, das IBM i / AS/400 Entwicklern h
 
 **Kein Code-Generator.** Sondern ein **Evidence Preparation Layer** – read-only, transparent und reviewbar.
 
+> ⚠️ **Hinweis: Laufende Entwicklung / Active Development**  
+> Dieses Projekt wird aktiv weiterentwickelt. Features, UI, Workflows und Schnittstellen können sich zwischen Releases ändern.
+
 ---
 
 ## 🚀 Schnellstart – In 5 Minuten loslegen
