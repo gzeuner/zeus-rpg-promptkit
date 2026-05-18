@@ -99,6 +99,12 @@ Alle Befehle und Presets findest du in der **[Tool Catalog](docs/tool-catalog.md
 
 **„Evidence first, AI second.“**
 
+- Safety-Levels kurz erklaert:
+  - `S0` = local read-only (nur lokal lesen)
+  - `S1` = local write (nur lokale Artefakte schreiben)
+  - `S2` = remote read-only (IBM i/DB2 nur lesen)
+  - `S3` = controlled write (kontrollierte Datenmutation mit Freigabe)
+  - `S4` = operator-gated high risk (hochriskante, explizit gegatete Operationen)
 - Nur lesender Zugriff auf IBM i
 - Alle Credentials bleiben lokal (`config/local-only/`)
 - KI bekommt **prüfbare Fakten**, keine Halluzinationen
