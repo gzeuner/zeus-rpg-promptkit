@@ -26,36 +26,41 @@ async function runDiff(args) {
     process.exit(2);
   }
 
-  const cwd = process.cwd();
-  const env = process.env;
-  const profiles = loadProfiles({ cwd, env, args });
-  const profile = resolveProfile(profiles, args.profile, { env });
-  const analyzeConfig = resolveAnalyzeConfig(args, { cwd, env });
-  const fetchConfig = resolveFetchConfig(args, { cwd, env });
-  const workCopyConfig = readWorkCopyConfig(profile, env);
-  const fetchRoot = path.resolve(cwd, fetchConfig.out);
-  const workspaceRoot = path.resolve(cwd, analyzeConfig.sourceRoot || workCopyConfig.root);
-  const resolved = resolveDiffPaths({
-    member: args.member,
-    fetchRoot,
-    workspaceRoot,
-    workCopyMode: workCopyConfig.extension,
-  });
-  const comparison = buildLineComparison(
-    readLines(resolved.originalPath),
-    readLines(resolved.modifiedPath),
-  );
+  try {
+    const cwd = process.cwd();
+    const env = process.env;
+    const profiles = loadProfiles({ cwd, env, args });
+    const profile = resolveProfile(profiles, args.profile, { env });
+    const analyzeConfig = resolveAnalyzeConfig(args, { cwd, env });
+    const fetchConfig = resolveFetchConfig(args, { cwd, env });
+    const workCopyConfig = readWorkCopyConfig(profile, env);
+    const fetchRoot = path.resolve(cwd, fetchConfig.out);
+    const workspaceRoot = path.resolve(cwd, analyzeConfig.sourceRoot || workCopyConfig.root);
+    const resolved = resolveDiffPaths({
+      member: args.member,
+      fetchRoot,
+      workspaceRoot,
+      workCopyMode: workCopyConfig.extension,
+    });
+    const comparison = buildLineComparison(
+      readLines(resolved.originalPath),
+      readLines(resolved.modifiedPath),
+    );
 
-  console.log(`Member: ${resolved.member}`);
-  console.log(`Original: ${resolved.originalPath}`);
-  console.log(`Modified: ${resolved.modifiedPath}`);
-  console.log('');
-  console.log(renderAsciiTable(
-    ['Line', 'Diff', 'Original', 'Modified'],
-    comparison.rows.map((row) => [row.line, row.marker, row.original, row.modified]),
-    { maxCellWidth: 60 },
-  ));
-  console.log(`Changed lines: ${comparison.changedCount}`);
+    console.log(`Member: ${resolved.member}`);
+    console.log(`Original: ${resolved.originalPath}`);
+    console.log(`Modified: ${resolved.modifiedPath}`);
+    console.log('');
+    console.log(renderAsciiTable(
+      ['Line', 'Diff', 'Original', 'Modified'],
+      comparison.rows.map((row) => [row.line, row.marker, row.original, row.modified]),
+      { maxCellWidth: 60 },
+    ));
+    console.log(`Changed lines: ${comparison.changedCount}`);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
+  }
 }
 
 module.exports = {

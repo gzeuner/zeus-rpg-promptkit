@@ -21,6 +21,7 @@ async function runFetch(args) {
 
     if (verbose) {
       console.log(`[verbose] Fetch host: ${config.host}`);
+      console.log(`[verbose] Fetch port: ${config.port}`);
       console.log(`[verbose] Object library: ${config.sourceLib}`);
       console.log(`[verbose] Source files: ${config.files.join(', ')}`);
       console.log(`[verbose] IFS dir: ${config.ifsDir}`);

@@ -52,37 +52,42 @@ const {
 } = require('../../pui/puiEditEngine');
 
 async function run(args) {
-  const file = args.file || args.f;
-  if (!file) {
-    throw new Error('--file ist erforderlich');
-  }
+  try {
+    const file = args.file || args.f;
+    if (!file) {
+      throw new Error('--file ist erforderlich');
+    }
 
-  const filePath = path.resolve(file);
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Datei nicht gefunden: ${filePath}`);
-  }
+    const filePath = path.resolve(file);
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Datei nicht gefunden: ${filePath}`);
+    }
 
-  const action = args.action || args.a;
-  if (!action) {
-    throw new Error('--action ist erforderlich (roundtrip-check | dump-json | plan | apply | grid-add-column)');
-  }
+    const action = args.action || args.a;
+    if (!action) {
+      throw new Error('--action ist erforderlich (roundtrip-check | dump-json | plan | apply | grid-add-column)');
+    }
 
-  const content = fs.readFileSync(filePath, 'utf8');
-  const parsed = parseDds(content);
+    const content = fs.readFileSync(filePath, 'utf8');
+    const parsed = parseDds(content);
 
-  switch (action) {
-    case 'roundtrip-check':
-      return actionRoundtripCheck(parsed, content, filePath);
-    case 'dump-json':
-      return actionDumpJson(parsed);
-    case 'plan':
-      return actionChangeSetPreview(parsed, args, filePath);
-    case 'apply':
-      return actionChangeSetApply(parsed, args, filePath);
-    case 'grid-add-column':
-      return actionGridAddColumn(parsed, args, filePath);
-    default:
-      throw new Error(`Unbekannte Aktion: ${action}. Erlaubt: roundtrip-check, dump-json, plan, apply, grid-add-column`);
+    switch (action) {
+      case 'roundtrip-check':
+        return actionRoundtripCheck(parsed, content, filePath);
+      case 'dump-json':
+        return actionDumpJson(parsed);
+      case 'plan':
+        return actionChangeSetPreview(parsed, args, filePath);
+      case 'apply':
+        return actionChangeSetApply(parsed, args, filePath);
+      case 'grid-add-column':
+        return actionGridAddColumn(parsed, args, filePath);
+      default:
+        throw new Error(`Unbekannte Aktion: ${action}. Erlaubt: roundtrip-check, dump-json, plan, apply, grid-add-column`);
+    }
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
   }
 }
 

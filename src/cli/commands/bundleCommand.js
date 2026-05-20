@@ -23,33 +23,38 @@ function runBundle(args) {
     process.exit(2);
   }
 
-  const config = resolveBundleConfig(args);
-  const result = buildOutputBundle({
-    program: String(args.program).trim(),
-    sourceOutputRoot: config.sourceOutputRoot,
-    bundleOutputRoot: config.bundleOutputRoot,
-    includeJson: args['include-json'] === true,
-    includeMd: args['include-md'] === true,
-    includeHtml: args['include-html'] === true,
-    safeSharingEnabled: Boolean(args['safe-sharing']),
-    reproducibility: normalizeReproducibilitySettings(Boolean(args.reproducible)),
-    artifactPaths: Array.isArray(args['artifact-paths']) ? args['artifact-paths'] : null,
-    workflowPreset: args['workflow-preset-settings'] || null,
-    bundleFileName: args['bundle-file-name'] || null,
-  });
+  try {
+    const config = resolveBundleConfig(args);
+    const result = buildOutputBundle({
+      program: String(args.program).trim(),
+      sourceOutputRoot: config.sourceOutputRoot,
+      bundleOutputRoot: config.bundleOutputRoot,
+      includeJson: args['include-json'] === true,
+      includeMd: args['include-md'] === true,
+      includeHtml: args['include-html'] === true,
+      safeSharingEnabled: Boolean(args['safe-sharing']),
+      reproducibility: normalizeReproducibilitySettings(Boolean(args.reproducible)),
+      artifactPaths: Array.isArray(args['artifact-paths']) ? args['artifact-paths'] : null,
+      workflowPreset: args['workflow-preset-settings'] || null,
+      bundleFileName: args['bundle-file-name'] || null,
+    });
 
-  if (verbose) {
-    console.log(`[verbose] Program output: ${result.programOutputDir}`);
-    console.log(`[verbose] Bundle output: ${result.bundleOutputRoot}`);
-  }
+    if (verbose) {
+      console.log(`[verbose] Program output: ${result.programOutputDir}`);
+      console.log(`[verbose] Bundle output: ${result.bundleOutputRoot}`);
+    }
 
-  console.log(`Bundle created for program ${result.program}`);
-  if (result.manifest.safeSharing && result.manifest.safeSharing.enabled) {
-    console.log('Safe-sharing bundle: enabled');
+    console.log(`Bundle created for program ${result.program}`);
+    if (result.manifest.safeSharing && result.manifest.safeSharing.enabled) {
+      console.log('Safe-sharing bundle: enabled');
+    }
+    console.log(`Files included: ${result.manifest.summary.totalFiles}`);
+    console.log(`Bundle written to: ${result.zipPath}`);
+    return result;
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
   }
-  console.log(`Files included: ${result.manifest.summary.totalFiles}`);
-  console.log(`Bundle written to: ${result.zipPath}`);
-  return result;
 }
 
 module.exports = {
