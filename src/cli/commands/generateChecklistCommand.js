@@ -26,99 +26,109 @@ async function runGenerateChecklist(args) {
     process.exit(2);
   }
 
-  const program = String(args.program).trim().toUpperCase();
-  const changeType = args.type || 'CODE_CHANGE'; // 'DDL_CHANGE', 'CODE_CHANGE', 'BOTH'
-  const cwd = process.cwd();
-  const config = resolveAnalyzeConfig(args, { cwd });
-  const outputRoot = path.resolve(cwd, config.outputRoot);
-  const programDir = path.join(outputRoot, program);
+  try {
+    const program = String(args.program).trim().toUpperCase();
+    const changeType = String(args.type || 'CODE_CHANGE').trim().toUpperCase(); // 'DDL_CHANGE', 'CODE_CHANGE', 'BOTH'
+    if (!['DDL_CHANGE', 'CODE_CHANGE', 'BOTH'].includes(changeType)) {
+      console.error(`Invalid type "${changeType}". Use --type DDL_CHANGE, CODE_CHANGE, or BOTH.`);
+      process.exit(2);
+    }
 
-  // Check if analysis exists
-  const analysisPath = path.join(programDir, 'canonical-analysis.json');
-  let canonicalAnalysis = null;
-  if (fs.existsSync(analysisPath)) {
-    canonicalAnalysis = JSON.parse(fs.readFileSync(analysisPath, 'utf8'));
-  }
+    const cwd = process.cwd();
+    const config = resolveAnalyzeConfig(args, { cwd });
+    const outputRoot = path.resolve(cwd, config.outputRoot);
+    const programDir = path.join(outputRoot, program);
 
-  // Check for risk assessment
-  const riskPath = path.join(programDir, 'risk-assessment.json');
-  let riskAssessment = null;
-  if (fs.existsSync(riskPath)) {
-    riskAssessment = JSON.parse(fs.readFileSync(riskPath, 'utf8'));
-  }
+    // Check if analysis exists
+    const analysisPath = path.join(programDir, 'canonical-analysis.json');
+    let canonicalAnalysis = null;
+    if (fs.existsSync(analysisPath)) {
+      canonicalAnalysis = JSON.parse(fs.readFileSync(analysisPath, 'utf8'));
+    }
 
-  if (verbose) {
-    console.log(`[verbose] Program: ${program}`);
-    console.log(`[verbose] Change type: ${changeType}`);
-    console.log(`[verbose] Analysis path: ${analysisPath}`);
-    console.log(`[verbose] Risk assessment available: ${Boolean(riskAssessment)}`);
-  }
+    // Check for risk assessment
+    const riskPath = path.join(programDir, 'risk-assessment.json');
+    let riskAssessment = null;
+    if (fs.existsSync(riskPath)) {
+      riskAssessment = JSON.parse(fs.readFileSync(riskPath, 'utf8'));
+    }
 
-  // Generate checklist
-  const hasCriticalPath = riskAssessment && riskAssessment.summary && riskAssessment.summary.riskLevel === 'RED';
-  const affectedPrograms = args.affected ? args.affected.split(',') : [program];
+    if (verbose) {
+      console.log(`[verbose] Program: ${program}`);
+      console.log(`[verbose] Change type: ${changeType}`);
+      console.log(`[verbose] Analysis path: ${analysisPath}`);
+      console.log(`[verbose] Risk assessment available: ${Boolean(riskAssessment)}`);
+    }
 
-  const checklist = generateDeploymentChecklist({
-    program,
-    table: args.table,
-    changeType,
-    affectedPrograms,
-    hasCriticalPath,
-    estimatedImpact: args.impact || (hasCriticalPath ? 'HIGH' : 'MEDIUM'),
-  });
+    // Generate checklist
+    const hasCriticalPath = riskAssessment && riskAssessment.summary && riskAssessment.summary.riskLevel === 'RED';
+    const affectedPrograms = args.affected ? args.affected.split(',') : [program];
 
-  // Generate timeline
-  const timeline = estimateDeploymentTimeline({
-    changeType,
-    affectedProgramCount: affectedPrograms.length,
-    hasCriticalPath,
-  });
-
-  // Generate risk areas
-  let riskAreas = [];
-  if (canonicalAnalysis) {
-    riskAreas = identifyRiskAreas(canonicalAnalysis, { program, changeType });
-  }
-
-  // Build complete document
-  let document = checklist;
-
-  if (timeline) {
-    document += `\n## Timeline Estimate\n\n`;
-    document += `**Total Time:** ${timeline.totalHours} hours (${timeline.workDays} working days)\n\n`;
-    document += `| Phase | Hours |\n`;
-    document += `|-------|-------|\n`;
-    Object.entries(timeline.hours).forEach(([phase, hours]) => {
-      document += `| ${phase} | ${hours}h |\n`;
+    const checklist = generateDeploymentChecklist({
+      program,
+      table: args.table,
+      changeType,
+      affectedPrograms,
+      hasCriticalPath,
+      estimatedImpact: args.impact || (hasCriticalPath ? 'HIGH' : 'MEDIUM'),
     });
-    document += '\n';
-  }
 
-  if (riskAreas.length > 0) {
-    document += `\n## Identified Risk Areas\n\n`;
-    riskAreas.forEach((risk) => {
-      const sevEmoji = risk.severity === 'CRITICAL' ? '🔴' : '🟡';
-      document += `${sevEmoji} **${risk.type}** (${risk.severity})\n`;
-      document += `   Description: ${risk.description}\n`;
-      document += `   Mitigation: ${risk.mitigation}\n\n`;
+    // Generate timeline
+    const timeline = estimateDeploymentTimeline({
+      changeType,
+      affectedProgramCount: affectedPrograms.length,
+      hasCriticalPath,
     });
-  }
 
-  // Write output
-  const outputPath = path.join(programDir, 'deployment-checklist.md');
-  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, document, 'utf8');
+    // Generate risk areas
+    let riskAreas = [];
+    if (canonicalAnalysis) {
+      riskAreas = identifyRiskAreas(canonicalAnalysis, { program, changeType });
+    }
 
-  console.log(`Deployment checklist generated successfully`);
-  console.log(`Program: ${program}`);
-  console.log(`Change type: ${changeType}`);
-  console.log(`Estimated time: ${timeline.totalHours} hours`);
-  console.log(`Has critical paths: ${hasCriticalPath ? 'YES' : 'NO'}`);
-  console.log(`Output: ${outputPath}`);
+    // Build complete document
+    let document = checklist;
 
-  if (verbose) {
-    console.log(`[verbose] File size: ${document.length} bytes`);
-    console.log(`[verbose] Risk areas identified: ${riskAreas.length}`);
+    if (timeline) {
+      document += `\n## Timeline Estimate\n\n`;
+      document += `**Total Time:** ${timeline.totalHours} hours (${timeline.workDays} working days)\n\n`;
+      document += `| Phase | Hours |\n`;
+      document += `|-------|-------|\n`;
+      Object.entries(timeline.hours).forEach(([phase, hours]) => {
+        document += `| ${phase} | ${hours}h |\n`;
+      });
+      document += '\n';
+    }
+
+    if (riskAreas.length > 0) {
+      document += `\n## Identified Risk Areas\n\n`;
+      riskAreas.forEach((risk) => {
+        const sevEmoji = risk.severity === 'CRITICAL' ? '🔴' : '🟡';
+        document += `${sevEmoji} **${risk.type}** (${risk.severity})\n`;
+        document += `   Description: ${risk.description}\n`;
+        document += `   Mitigation: ${risk.mitigation}\n\n`;
+      });
+    }
+
+    // Write output
+    const outputPath = path.join(programDir, 'deployment-checklist.md');
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, document, 'utf8');
+
+    console.log(`Deployment checklist generated successfully`);
+    console.log(`Program: ${program}`);
+    console.log(`Change type: ${changeType}`);
+    console.log(`Estimated time: ${timeline.totalHours} hours`);
+    console.log(`Has critical paths: ${hasCriticalPath ? 'YES' : 'NO'}`);
+    console.log(`Output: ${outputPath}`);
+
+    if (verbose) {
+      console.log(`[verbose] File size: ${document.length} bytes`);
+      console.log(`[verbose] Risk areas identified: ${riskAreas.length}`);
+    }
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
   }
 }
 

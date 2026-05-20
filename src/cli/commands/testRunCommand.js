@@ -72,7 +72,7 @@ function parseTableRef(rawTable) {
 }
 
 async function run(args) {
-  const subcommand = args._[1] || args.subcommand || args.sub;
+  const subcommand = String(args.subcommand || args.sub || args._[0] || args._[1] || '').trim().toLowerCase();
 
   if (!subcommand || subcommand === 'help') {
     console.log('');
@@ -104,7 +104,7 @@ async function run(args) {
       manifest = loadTestRunManifest(path.resolve(manifestPath));
     } catch (err) {
       console.error(`Fehler beim Laden: ${err.message}`);
-      process.exit(1);
+      process.exit(2);
     }
     console.log(JSON.stringify(manifest, null, 2));
     return;
@@ -121,13 +121,17 @@ async function run(args) {
       manifest = loadTestRunManifest(path.resolve(manifestPath));
     } catch (err) {
       console.error(`Fehler beim Laden: ${err.message}`);
-      process.exit(1);
+      process.exit(2);
     }
 
     const sql = manifest.rollbackSql || [];
     if (sql.length === 0) {
-      console.log('Kein Rollback-SQL vorhanden (noch kein After-Snapshot aufgenommen?).');
-      console.log('Führe zuerst aus: zeus test-run capture --manifest <path>');
+      if (String(manifest.status || '').toUpperCase() === 'CAPTURED') {
+        console.log('Kein Rollback-SQL erforderlich (keine Datenänderung zwischen Before/After erkannt).');
+      } else {
+        console.log('Kein Rollback-SQL vorhanden (noch kein After-Snapshot aufgenommen?).');
+        console.log('Führe zuerst aus: zeus test-run capture --manifest <path>');
+      }
       return;
     }
 
@@ -147,6 +151,10 @@ async function run(args) {
   const cwd = process.cwd();
   const env = process.env;
   let resolvedAnalyzeConfig;
+  if (!args.profile || !String(args.profile).trim()) {
+    console.error('Fehler: --profile <name> ist erforderlich.');
+    process.exit(2);
+  }
 
   try {
     const profiles = loadProfiles({ cwd, env, args });
@@ -202,7 +210,7 @@ async function run(args) {
       });
     } catch (err) {
       console.error(`DB2-Fehler beim Snapshot: ${err.message}`);
-      process.exit(1);
+      process.exit(2);
     }
 
     const runId = `TR-${Date.now()}`;
@@ -239,7 +247,7 @@ async function run(args) {
       manifest = captureAndUpdateManifest({ manifestPath: absPath, dbConfig });
     } catch (err) {
       console.error(`Fehler: ${err.message}`);
-      process.exit(1);
+      process.exit(2);
     }
 
     const rollbackCount = (manifest.rollbackSql || []).length;

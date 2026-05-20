@@ -229,35 +229,40 @@ function runUnregister(args, context) {
 }
 
 async function run(args = {}, runtime = {}) {
-  const context = resolveCommandContext(args, runtime);
-  const subcommand = requireSubcommand(args);
+  try {
+    const context = resolveCommandContext(args, runtime);
+    const subcommand = requireSubcommand(args);
 
-  if (subcommand === 'list') {
-    printWorkspaceList(context);
-    return;
-  }
-  if (subcommand === 'register') {
-    runRegister(args, context);
-    return;
-  }
-  if (subcommand === 'index') {
-    runIndex(args, context);
-    return;
-  }
-  if (subcommand === 'show') {
-    runShow(args, context);
-    return;
-  }
-  if (subcommand === 'open') {
-    await runOpen(args, context);
-    return;
-  }
-  if (subcommand === 'unregister') {
-    runUnregister(args, context);
-    return;
-  }
+    if (subcommand === 'list') {
+      printWorkspaceList(context);
+      return;
+    }
+    if (subcommand === 'register') {
+      runRegister(args, context);
+      return;
+    }
+    if (subcommand === 'index') {
+      runIndex(args, context);
+      return;
+    }
+    if (subcommand === 'show') {
+      runShow(args, context);
+      return;
+    }
+    if (subcommand === 'open') {
+      await runOpen(args, context);
+      return;
+    }
+    if (subcommand === 'unregister') {
+      runUnregister(args, context);
+      return;
+    }
 
-  throw new Error(`Unsupported analyses subcommand: ${subcommand}`);
+    throw new Error(`Unsupported analyses subcommand: ${subcommand}`);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
+  }
 }
 
 module.exports = {

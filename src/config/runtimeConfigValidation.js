@@ -170,6 +170,9 @@ function validateFetchProfile(value, label) {
   assertOptionalString(value.sourceLibrary, `${label}.sourceLibrary`);
   assertOptionalString(value.ifsDir, `${label}.ifsDir`);
   assertOptionalString(value.out, `${label}.out`);
+  if (value.port !== undefined) {
+    assertPositiveInteger(value.port, `${label}.port`);
+  }
   if (value.files !== undefined) {
     assertStringArray(value.files, `${label}.files`);
   }
@@ -508,6 +511,7 @@ function validateFetchConfig(config) {
   assertOptionalString(config.sourceLibrary, 'fetch.sourceLibrary');
   assertOptionalString(config.ifsDir, 'fetch.ifsDir');
   assertOptionalString(config.out, 'fetch.out');
+  assertPositiveInteger(config.port, 'fetch.port');
   assertStringArray(config.files, 'fetch.files');
   assertStringArray(config.members, 'fetch.members');
   if (typeof config.replace !== 'boolean') {

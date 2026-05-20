@@ -144,6 +144,10 @@ async function runInspectObject(args) {
     console.error('Fehler: --name <object> ist erforderlich.');
     process.exit(2);
   }
+  if (!SUPPORTED_TYPES.includes(type)) {
+    console.error(`Fehler: --type muss einer der folgenden Werte sein: ${SUPPORTED_TYPES.join(', ')}`);
+    process.exit(2);
+  }
 
   // Identifier validieren
   try {
@@ -185,7 +189,7 @@ async function runInspectObject(args) {
     result = runReadOnlyDb2Query({ dbConfig, query, maxRows: 20 });
   } catch (err) {
     console.error(`DB2-Fehler: ${err.message}`);
-    process.exit(1);
+    process.exit(2);
   }
 
   if (!result.rows || result.rows.length === 0) {

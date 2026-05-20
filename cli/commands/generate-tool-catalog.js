@@ -351,34 +351,39 @@ function generateToolCatalog({
 }
 
 async function runDocsGenerateCatalog(args) {
-  const format = args.format ? String(args.format).trim().toLowerCase() : 'markdown';
-  if (!['markdown', 'json'].includes(format)) {
-    throw new Error('Invalid --format value. Use markdown or json.');
+  try {
+    const format = args.format ? String(args.format).trim().toLowerCase() : 'markdown';
+    if (!['markdown', 'json'].includes(format)) {
+      throw new Error('Invalid --format value. Use markdown or json.');
+    }
+
+    const outputArg = args.output ? String(args.output).trim() : null;
+    const jsonOutputArg = args['json-output'] ? String(args['json-output']).trim() : null;
+
+    const markdownOutputPath = format === 'markdown'
+      ? (outputArg || DEFAULT_MARKDOWN_OUTPUT)
+      : DEFAULT_MARKDOWN_OUTPUT;
+
+    const jsonOutputPath = format === 'json'
+      ? (outputArg || jsonOutputArg || DEFAULT_JSON_OUTPUT)
+      : (jsonOutputArg || DEFAULT_JSON_OUTPUT);
+
+    const result = generateToolCatalog({
+      repoRoot: process.cwd(),
+      markdownOutputPath,
+      jsonOutputPath,
+    });
+
+    console.log(`Tool catalog markdown written to: ${result.markdownPath}`);
+    if (result.jsonPath) {
+      console.log(`Tool catalog json written to: ${result.jsonPath}`);
+    }
+    console.log(`Commands exported: ${result.commandCount}`);
+    console.log(`Workflow presets exported: ${result.presetCount}`);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
   }
-
-  const outputArg = args.output ? String(args.output).trim() : null;
-  const jsonOutputArg = args['json-output'] ? String(args['json-output']).trim() : null;
-
-  const markdownOutputPath = format === 'markdown'
-    ? (outputArg || DEFAULT_MARKDOWN_OUTPUT)
-    : DEFAULT_MARKDOWN_OUTPUT;
-
-  const jsonOutputPath = format === 'json'
-    ? (outputArg || jsonOutputArg || DEFAULT_JSON_OUTPUT)
-    : (jsonOutputArg || DEFAULT_JSON_OUTPUT);
-
-  const result = generateToolCatalog({
-    repoRoot: process.cwd(),
-    markdownOutputPath,
-    jsonOutputPath,
-  });
-
-  console.log(`Tool catalog markdown written to: ${result.markdownPath}`);
-  if (result.jsonPath) {
-    console.log(`Tool catalog json written to: ${result.jsonPath}`);
-  }
-  console.log(`Commands exported: ${result.commandCount}`);
-  console.log(`Workflow presets exported: ${result.presetCount}`);
 }
 
 module.exports = {
