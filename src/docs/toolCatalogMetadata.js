@@ -181,6 +181,12 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.',
     example: 'node cli/zeus.js docs:generate-catalog',
   }),
+  mcp: Object.freeze({
+    safety: 'S0',
+    scope: 'Local read-only',
+    purpose: 'Start local MCP stdio server for safe Zeus tool exposure (MVP: health/version).',
+    example: 'node cli/zeus.js mcp serve --stdio true',
+  }),
 });
 
 const COMMAND_ORDER = Object.freeze([
@@ -212,6 +218,7 @@ const COMMAND_ORDER = Object.freeze([
   'bridge',
   'pui-edit',
   'docs:generate-catalog',
+  'mcp',
 ]);
 
 const SAFETY_LEVELS = Object.freeze([
