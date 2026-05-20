@@ -25,6 +25,25 @@ const {
 } = require('../../investigation/fieldXrefService');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
 
+function parseMaxResultsOption(value) {
+  if (value === undefined || value === null || value === false) {
+    return 300;
+  }
+  const parsed = Number.parseInt(String(value).trim(), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error('Invalid option: --max-results must be a positive integer');
+  }
+  return parsed;
+}
+
+function normalizeMode(value) {
+  const normalized = String(value || 'all').trim().toLowerCase();
+  if (['local', 'remote', 'xref', 'all'].includes(normalized)) {
+    return normalized;
+  }
+  throw new Error('Invalid option: --mode must be one of local, remote, xref, all');
+}
+
 /**
  * Load all source files from a local directory tree into a map relPath → content.
  */
@@ -184,10 +203,18 @@ async function runFieldSearch(args) {
     process.exit(2);
   }
 
+  let maxResults;
+  let modeArg;
+  try {
+    maxResults = parseMaxResultsOption(args['max-results']);
+    modeArg = normalizeMode(args.mode);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
+  }
+
   const table = args.table ? String(args.table).toUpperCase().trim() : null;
-  const maxResults = args['max-results'] ? parseInt(args['max-results'], 10) : 300;
   const verbose = args.verbose === true || args.verbose === 'true';
-  const modeArg = String(args.mode || 'all').toLowerCase();
   const runLocal = modeArg === 'all' || modeArg === 'local';
   const runRemote = modeArg === 'all' || modeArg === 'remote';
   const runXref = modeArg === 'all' || modeArg === 'xref';
@@ -291,4 +318,8 @@ async function runFieldSearch(args) {
   console.log('field-search abgeschlossen.');
 }
 
-module.exports = { runFieldSearch };
+module.exports = {
+  normalizeMode,
+  parseMaxResultsOption,
+  runFieldSearch,
+};

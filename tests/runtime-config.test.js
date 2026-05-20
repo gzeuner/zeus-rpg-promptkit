@@ -467,22 +467,114 @@ test('resolveFetchConfig accepts environment overrides for sensitive fetch setti
       {
         cwd: tempRoot,
         env: {
+          ZEUS_FETCH_HOST: 'env-host',
+          ZEUS_FETCH_USER: 'env-user',
           ZEUS_FETCH_PASSWORD: 'env-pass',
           ZEUS_FETCH_SOURCE_LIB: 'qcllesrc',
+          ZEUS_FETCH_IFS_DIR: '/home/env',
+          ZEUS_FETCH_OUT: './env-download',
           ZEUS_FETCH_FILES: 'qrpglesrc,qsqlrpglesrc',
+          ZEUS_FETCH_TRANSPORT: 'jt400',
           ZEUS_FETCH_REPLACE: 'true',
         },
       },
     );
 
-    assert.equal(config.host, 'profile-host');
-    assert.equal(config.user, 'profile-user');
+    assert.equal(config.host, 'env-host');
+    assert.equal(config.user, 'env-user');
     assert.equal(config.password, 'env-pass');
     assert.equal(config.sourceLib, 'QCLLESRC');
+    assert.equal(config.ifsDir, '/home/env');
+    assert.equal(config.out, './env-download');
     assert.deepEqual(config.files, ['QRPGLESRC', 'QSQLRPGLESRC']);
     assert.equal(config.streamFileCcsid, 1208);
+    assert.equal(config.transport, 'jt400');
     assert.equal(config.replace, true);
-    assert.equal(config.transport, 'sftp');
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveFetchConfig resolves fetch port from profile and environment overrides', () => {
+  const tempRoot = createTempProject({
+    fetcher: {
+      fetch: {
+        host: 'profile-host',
+        user: 'profile-user',
+        password: 'profile-pass',
+        sourceLib: 'qrpglsrc',
+        ifsDir: '/home/profile',
+        out: './download',
+        port: 2222,
+      },
+    },
+  });
+
+  try {
+    const configFromProfile = resolveFetchConfig(
+      { profile: 'fetcher' },
+      {
+        cwd: tempRoot,
+        env: {},
+      },
+    );
+    assert.equal(configFromProfile.port, 2222);
+
+    const configFromEnv = resolveFetchConfig(
+      { profile: 'fetcher' },
+      {
+        cwd: tempRoot,
+        env: {
+          ZEUS_FETCH_PORT: '2200',
+        },
+      },
+    );
+    assert.equal(configFromEnv.port, 2200);
+
+    const configFromArgs = resolveFetchConfig(
+      { profile: 'fetcher', port: '2022' },
+      {
+        cwd: tempRoot,
+        env: {
+          ZEUS_FETCH_PORT: '2200',
+        },
+      },
+    );
+    assert.equal(configFromArgs.port, 2022);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveFetchConfig preserves boolean fetch toggles from profile definitions', () => {
+  const tempRoot = createTempProject({
+    fetcher: {
+      fetch: {
+        host: 'profile-host',
+        user: 'profile-user',
+        password: 'profile-pass',
+        sourceLib: 'QRPGLESRC',
+        ifsDir: '/home/profile',
+        out: './download',
+        diagnoseTransport: true,
+        replace: false,
+        encrypted: true,
+      },
+    },
+  });
+
+  try {
+    const config = resolveFetchConfig(
+      { profile: 'fetcher' },
+      {
+        cwd: tempRoot,
+        env: {},
+      },
+    );
+
+    assert.equal(config.diagnoseTransport, true);
+    assert.equal(config.replace, false);
+    assert.equal(config.encrypted, true);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

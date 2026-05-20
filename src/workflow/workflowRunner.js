@@ -266,6 +266,9 @@ async function runWorkflowEngine(args, { cwd = process.cwd(), env = process.env 
 
   state.status = state.stepResults.some((entry) => entry.status === 'failed') ? 'failed' : 'succeeded';
   state.completedAt = new Date().toISOString();
+  if (state.stepResults.some((entry) => entry.name === 'report')) {
+    await workflowStepHandlers.report(state);
+  }
   writeWorkflowState(state);
   return state;
 }

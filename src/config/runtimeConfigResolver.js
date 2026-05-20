@@ -164,15 +164,19 @@ function resolveFetchConfig(
     || fetchProfile.files;
 
   const resolved = {
-    host: args.host || fetchProfile.host || env.ZEUS_FETCH_HOST,
-    user: args.user || fetchProfile.user || env.ZEUS_FETCH_USER,
+    host: args.host || env.ZEUS_FETCH_HOST || fetchProfile.host,
+    user: args.user || env.ZEUS_FETCH_USER || fetchProfile.user,
     password: args.password || env.ZEUS_FETCH_PASSWORD || fetchProfile.password,
     sourceLib: String(sourceLibrary || '').toUpperCase(),
     sourceLibrary: String(sourceLibrary || '').toUpperCase(),
-    ifsDir: args['ifs-dir'] || fetchProfile.ifsDir || env.ZEUS_FETCH_IFS_DIR,
-    out: args.out || fetchProfile.out || env.ZEUS_FETCH_OUT || './rpg_sources',
+    ifsDir: args['ifs-dir'] || env.ZEUS_FETCH_IFS_DIR || fetchProfile.ifsDir,
+    out: args.out || env.ZEUS_FETCH_OUT || fetchProfile.out || './rpg_sources',
+    port: Number.parseInt(
+      String(args.port || env.ZEUS_FETCH_PORT || fetchProfile.port || 22).trim(),
+      10,
+    ),
     files: parseCsv(sourceFiles, [...DEFAULT_SOURCE_FILES], (item) => item.toUpperCase()),
-    members: parseCsv(args.members || fetchProfile.members || env.ZEUS_FETCH_MEMBERS, [], (item) => item.toUpperCase()),
+    members: parseCsv(args.members || env.ZEUS_FETCH_MEMBERS || fetchProfile.members, [], (item) => item.toUpperCase()),
     replace: parseBoolean(
       args.replace !== undefined ? args.replace : (env.ZEUS_FETCH_REPLACE !== undefined ? env.ZEUS_FETCH_REPLACE : fetchProfile.replace),
       true,
@@ -180,29 +184,29 @@ function resolveFetchConfig(
     streamFileCcsid: Number.parseInt(
       String(
         args['streamfile-ccsid']
-        || fetchProfile.streamFileCcsid
         || env.ZEUS_FETCH_STREAMFILE_CCSID
+        || fetchProfile.streamFileCcsid
         || DEFAULT_STREAM_FILE_CCSID,
       ).trim(),
       10,
     ),
-    transport: String(args.transport || fetchProfile.transport || env.ZEUS_FETCH_TRANSPORT || DEFAULT_TRANSPORT).toLowerCase(),
-    networkType: String(args['network-type'] || fetchProfile.networkType || env.ZEUS_FETCH_NETWORK_TYPE || '').trim().toLowerCase(),
-    preferTransport: String(args['prefer-transport'] || fetchProfile.preferTransport || env.ZEUS_FETCH_PREFER_TRANSPORT || '').trim().toLowerCase(),
+    transport: String(args.transport || env.ZEUS_FETCH_TRANSPORT || fetchProfile.transport || DEFAULT_TRANSPORT).toLowerCase(),
+    networkType: String(args['network-type'] || env.ZEUS_FETCH_NETWORK_TYPE || fetchProfile.networkType || '').trim().toLowerCase(),
+    preferTransport: String(args['prefer-transport'] || env.ZEUS_FETCH_PREFER_TRANSPORT || fetchProfile.preferTransport || '').trim().toLowerCase(),
     diagnoseTransport: parseBoolean(
       args['diagnose-transport'] !== undefined
         ? args['diagnose-transport']
-        : (fetchProfile.diagnoseTransport !== undefined ? fetchProfile.diagnoseTransport : env.ZEUS_FETCH_DIAGNOSE_TRANSPORT),
+        : (env.ZEUS_FETCH_DIAGNOSE_TRANSPORT !== undefined ? env.ZEUS_FETCH_DIAGNOSE_TRANSPORT : fetchProfile.diagnoseTransport),
       false,
     ),
     encrypted: parseBoolean(
       args.encrypted !== undefined
         ? args.encrypted
-        : (fetchProfile.encrypted !== undefined ? fetchProfile.encrypted : env.ZEUS_FETCH_ENCRYPTED),
+        : (env.ZEUS_FETCH_ENCRYPTED !== undefined ? env.ZEUS_FETCH_ENCRYPTED : fetchProfile.encrypted),
       true,
     ),
     transportTimeoutMs: Number.parseInt(
-      String(args['transport-timeout-ms'] || fetchProfile.transportTimeoutMs || env.ZEUS_FETCH_TRANSPORT_TIMEOUT_MS || 30000).trim(),
+      String(args['transport-timeout-ms'] || env.ZEUS_FETCH_TRANSPORT_TIMEOUT_MS || fetchProfile.transportTimeoutMs || 30000).trim(),
       10,
     ),
   };

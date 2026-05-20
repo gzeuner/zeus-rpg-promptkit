@@ -109,8 +109,11 @@ if ($Environment -eq "project") {
     $criticalVars = @(
         # Fetch (Sourcen von IBM i holen) — typisch SYS_TEST
         "ZEUS_FETCH_HOST",
+        "ZEUS_FETCH_PORT",
         "ZEUS_FETCH_USER",
         "ZEUS_FETCH_PASSWORD",
+        "ZEUS_FETCH_IFS_DIR",
+        "ZEUS_FETCH_OUT",
         # DB-Standardverbindung
         "ZEUS_DB_HOST",
         "ZEUS_DB_USER",
@@ -125,6 +128,14 @@ foreach ($var in $criticalVars) {
     $value = [System.Environment]::GetEnvironmentVariable($var, "Process")
     if (-not $value -or $value -eq "") {
         $missing += $var
+    }
+}
+
+if ($Environment -eq "project") {
+    $sourceLib = [System.Environment]::GetEnvironmentVariable("ZEUS_FETCH_SOURCE_LIB", "Process")
+    $sourceLibrary = [System.Environment]::GetEnvironmentVariable("ZEUS_FETCH_SOURCE_LIBRARY", "Process")
+    if ((-not $sourceLib -or $sourceLib -eq "") -and (-not $sourceLibrary -or $sourceLibrary -eq "")) {
+        $missing += "ZEUS_FETCH_SOURCE_LIB|ZEUS_FETCH_SOURCE_LIBRARY"
     }
 }
 
