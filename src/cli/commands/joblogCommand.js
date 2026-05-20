@@ -16,7 +16,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const { renderAsciiTable } = require('../helpers/asciiTable');
 const { resolveAnalyzeConfig, resolveAnalyzeDbConfig, loadProfiles, resolveProfile } = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
-const { runReadOnlyDb2Query, escapeSqlLiteral, validateSqlIdentifier } = require('../../db2/readOnlyQueryService');
+const { runReadOnlyDb2Query, escapeSqlLiteral } = require('../../db2/readOnlyQueryService');
 
 /**
  * zeus joblog
@@ -28,14 +28,46 @@ const { runReadOnlyDb2Query, escapeSqlLiteral, validateSqlIdentifier } = require
  *   zeus joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>]
  */
 
+function parseMaxMessages(value) {
+  const parsed = Number.parseInt(String(value || '100').trim(), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error('Invalid option: --max-messages must be a positive integer');
+  }
+  return Math.min(parsed, 500);
+}
+
+function normalizeSeverity(value) {
+  if (value === undefined || value === null || value === false) {
+    return null;
+  }
+  const normalized = String(value).trim().toUpperCase();
+  if (!normalized) {
+    return null;
+  }
+  if (!['WARNING', 'ERROR', 'INFO'].includes(normalized)) {
+    throw new Error('Invalid option: --severity must be one of WARNING, ERROR, INFO');
+  }
+  return normalized;
+}
+
 async function runJoblog(args) {
   if (!args.profile || !String(args.profile).trim()) {
     console.error('Missing required option: --profile <name>');
     process.exit(2);
   }
 
-  // Production system warning
+  let severity;
+  let maxMessages;
   try {
+    severity = normalizeSeverity(args.severity);
+    maxMessages = parseMaxMessages(args['max-messages']);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
+  }
+
+  try {
+    // Production system warning
     const profiles = loadProfiles({ cwd: process.cwd(), env: process.env, args });
     const profile = resolveProfile(profiles, args.profile, { env: process.env });
     if (profile && profile.productionSystem) {
@@ -44,33 +76,28 @@ async function runJoblog(args) {
       console.warn('  *** Du bist mit einem PRODUKTIONSSYSTEM verbunden.                ***');
       console.warn('');
     }
-  } catch (_) {
-    // Profile error handled below
-  }
 
-  const config = resolveAnalyzeConfig(args, { cwd: process.cwd() });
-  const dbConfig = resolveAnalyzeDbConfig(config, 'metadata');
-  if (!isDbConfigured(dbConfig)) {
-    console.error('DB2 connection configuration is incomplete for the selected profile.');
-    process.exit(2);
-  }
+    const config = resolveAnalyzeConfig(args, { cwd: process.cwd() });
+    const dbConfig = resolveAnalyzeDbConfig(config, 'metadata');
+    if (!isDbConfigured(dbConfig)) {
+      console.error('DB2 connection configuration is incomplete for the selected profile.');
+      process.exit(2);
+    }
 
-  const jobName = args.job ? String(args.job).trim().toUpperCase() : null;
-  const severity = args.severity ? String(args.severity).trim().toUpperCase() : null;
-  const maxMessages = parseInt(args['max-messages'] || '100', 10);
+    const jobName = args.job ? String(args.job).trim().toUpperCase() : null;
 
-  // Build query
-  const whereClauses = [];
-  if (jobName) {
-    whereClauses.push(`JOB_NAME LIKE ${escapeSqlLiteral(`${jobName}%`)}`);
-  }
-  if (severity && (severity === 'WARNING' || severity === 'ERROR' || severity === 'INFO')) {
-    whereClauses.push(`MESSAGE_TYPE = ${escapeSqlLiteral(severity)}`);
-  }
+    // Build query
+    const whereClauses = [];
+    if (jobName) {
+      whereClauses.push(`JOB_NAME LIKE ${escapeSqlLiteral(`${jobName}%`)}`);
+    }
+    if (severity) {
+      whereClauses.push(`MESSAGE_TYPE = ${escapeSqlLiteral(severity)}`);
+    }
 
-  const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-  const query = `
+    const query = `
     SELECT
       JOB_NAME,
       MESSAGE_ID,
@@ -80,14 +107,13 @@ async function runJoblog(args) {
     FROM QSYS2.JOBLOG_INFO
     ${whereClause}
     ORDER BY MESSAGE_TIMESTAMP DESC
-    FETCH FIRST ${Math.min(maxMessages, 500)} ROWS ONLY
+    FETCH FIRST ${maxMessages} ROWS ONLY
   `;
 
-  try {
     const result = runReadOnlyDb2Query({
       dbConfig,
       query,
-      maxRows: Math.min(maxMessages, 500),
+      maxRows: maxMessages,
     });
 
     if (!result.rows || result.rows.length === 0) {
@@ -120,8 +146,9 @@ async function runJoblog(args) {
       console.log(`(showing first ${maxMessages} entries; use --max-messages <n> to increase)`);
     }
   } catch (err) {
-    console.error(`Job log query failed: ${err.message}`);
-    if (err.message && err.message.includes('QSYS2.JOBLOG_INFO')) {
+    const message = err && err.message ? err.message : String(err);
+    console.error(`Job log query failed: ${message}`);
+    if (/JOBLOG_INFO|SQL0204/i.test(message)) {
       console.error('');
       console.error('Note: QSYS2.JOBLOG_INFO may not be available on all IBM i versions.');
       console.error('Workaround: Use DSPJOBLOG in ACS or: SELECT * FROM QSYS2.HISTORY_LOG_INFO');
@@ -130,4 +157,8 @@ async function runJoblog(args) {
   }
 }
 
-module.exports = { runJoblog };
+module.exports = {
+  normalizeSeverity,
+  parseMaxMessages,
+  runJoblog,
+};

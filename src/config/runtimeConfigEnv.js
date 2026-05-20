@@ -16,7 +16,8 @@ function isPlainObject(value) {
 }
 
 function parseBoolean(value, fallback) {
-  if (value === undefined || value === null || value === true) return fallback;
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === 'boolean') return value;
   const normalized = String(value).trim().toLowerCase();
   if (normalized === 'true') return true;
   if (normalized === 'false') return false;

@@ -85,4 +85,56 @@ if [ -n "${base_env_file}" ]; then
 fi
 load_env_file "${env_file}"
 
+is_set() {
+  local key="$1"
+  local value="${!key-}"
+  [ -n "${value}" ]
+}
+
+missing_vars=()
+if [ "${environment}" = "project" ]; then
+  required_vars=(
+    ZEUS_FETCH_HOST
+    ZEUS_FETCH_PORT
+    ZEUS_FETCH_USER
+    ZEUS_FETCH_PASSWORD
+    ZEUS_FETCH_IFS_DIR
+    ZEUS_FETCH_OUT
+    ZEUS_DB_HOST
+    ZEUS_DB_USER
+    ZEUS_DB_PASSWORD
+  )
+else
+  required_vars=(
+    ZEUS_OUTPUT_ROOT
+    ZEUS_SOURCE_ROOT
+    ZEUS_DB_HOST
+    ZEUS_DB_USER
+    ZEUS_DB_PASSWORD
+  )
+fi
+
+for key in "${required_vars[@]}"; do
+  if ! is_set "${key}"; then
+    missing_vars+=("${key}")
+  fi
+done
+
+if [ "${environment}" = "project" ]; then
+  if ! is_set "ZEUS_FETCH_SOURCE_LIB" && ! is_set "ZEUS_FETCH_SOURCE_LIBRARY"; then
+    missing_vars+=("ZEUS_FETCH_SOURCE_LIB|ZEUS_FETCH_SOURCE_LIBRARY")
+  fi
+fi
+
+if [ "${#missing_vars[@]}" -gt 0 ]; then
+  echo
+  echo "Warning: critical variables are missing:"
+  for key in "${missing_vars[@]}"; do
+    echo "  - ${key}"
+  done
+else
+  echo
+  echo "All critical variables are set."
+fi
+
 echo "Environment variables are now available in this shell session."

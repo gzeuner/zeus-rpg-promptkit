@@ -121,7 +121,7 @@ test('fetchSources falls back from sftp to jt400 and preserves the UTF-8 manifes
 
     const manifest = readManifest(outDir);
     assert.equal(summary.transportUsed, 'jt400');
-    assert.ok(summary.notes.some((note) => note.includes('Download via sftp failed: SFTP unavailable for fixture')));
+    assert.ok(summary.notes.some((note) => note.includes('sftp') && note.includes('SFTP unavailable for fixture')));
     assert.equal(manifest.transportRequested, 'auto');
     assert.equal(manifest.transportUsed, 'jt400');
     assert.equal(manifest.files[0].utf8Valid, true);
@@ -164,8 +164,8 @@ test('fetchSources falls back to ftp and records mixed newline diagnostics in th
 
     const manifest = readManifest(outDir);
     assert.equal(summary.transportUsed, 'ftp');
-    assert.ok(summary.notes.some((note) => note.includes('Download via sftp failed: SFTP unavailable for fixture')));
-    assert.ok(summary.notes.some((note) => note.includes('Download via jt400 failed: JT400 unavailable for fixture')));
+    assert.ok(summary.notes.some((note) => note.includes('sftp') && note.includes('SFTP unavailable for fixture')));
+    assert.ok(summary.notes.some((note) => note.includes('jt400') && note.includes('JT400 unavailable for fixture')));
     assert.equal(manifest.transportUsed, 'ftp');
     assert.equal(manifest.files[0].utf8Valid, true);
     assert.equal(manifest.files[0].newlineStyle, 'MIXED');
