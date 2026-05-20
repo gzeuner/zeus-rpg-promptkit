@@ -86,6 +86,7 @@ In `output-baseline/` findest du sofort nutzbare Artefakte, zum Beispiel:
 - **🤖 KI-optimierte Artefakte** für Copilot, Claude, GPT, Grok und andere Assistenten
 - **🖥️ Lokale Viewer-UI** zur interaktiven Inspektion
 - **📋 Vordefinierte Workflows** für Onboarding, Impact Analysis, Modernization, Security Review und mehr
+- **🔌 MCP (local-first, stdio)** mit allowlist, Redaction und lokalem Audit-Trail (MVP)
 - **🛡️ Safety-First-Ansatz** mit read-only Defaults und lokaler Konfiguration
 
 ---
@@ -110,6 +111,43 @@ cp config/profiles.example.json config/local-only/profiles.json
 ```
 
 Alle Befehle und Presets findest du im **[Tool Catalog](docs/tool-catalog.md)**.
+
+---
+
+## MCP Support (Experimental MVP)
+
+Der Branch enthält eine **lokale MCP-Server-Integration** für sichere, read-only Tool-Nutzung über `stdio`.
+
+Aktueller Umfang:
+
+- Transport: nur lokal, `stdio`
+- Policy: default-deny für nicht allowlistete Tools
+- Tool-Allowlist im CLI: `--allow-tools`
+- Redaction: Response/Error-Payloads werden vor Emission maskiert
+- Audit: append-only JSONL unter `.local/mcp/audit/mcp-audit.jsonl`
+
+Aktuell verfügbare MCP-Tools:
+
+- `zeus.health`
+- `zeus.version`
+- `zeus.doctor`
+- `zeus.query-sql` (strict read-only: nur `SELECT`/`WITH`)
+
+Startbeispiele:
+
+```bash
+# Standardstart (alle aktuell registrierten MVP-Tools)
+node cli/zeus.js mcp serve --verbose
+
+# Explizit eingeschränkte Allowlist
+node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-sql
+```
+
+Hinweise:
+
+- MCP-Write-Operationen sind im MVP nicht freigeschaltet.
+- Keine Credentials in tracked Dateien speichern.
+- Für produktive Datenzugriffe nur mit geeigneter Profil- und Rollenprüfung arbeiten.
 
 ---
 
