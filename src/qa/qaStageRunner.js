@@ -24,8 +24,15 @@ class QAStageRunner {
     const startTime = Date.now();
     
     try {
+      const stage = this.config.stage || {};
+      const stageMethod = stage.validate || stage.analyze || stage.check || stage.run;
+      if (typeof stageMethod !== 'function') {
+        throw new Error(`QA stage "${this.name}" does not expose validate/analyze/check/run`);
+      }
+
       // Call the stage validator
-      const validationResult = await this.config.stage.validate(
+      const validationResult = await stageMethod.call(
+        stage,
         context.canonicalAnalysis,
         context.sourceFiles,
         context

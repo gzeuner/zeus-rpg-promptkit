@@ -23,54 +23,60 @@ const {
 } = require('../../core/queryService');
 
 async function runQuerySql(args) {
-  // productionSystem-Warnung: vor der Abfrage ausgeben (nicht bei CSV-Output)
-  const output = normalizeOutput(args.output);
-  if (output !== 'csv') {
-    try {
-      const profiles = loadProfiles({ cwd: process.cwd(), env: process.env, args });
-      const profile = resolveProfile(profiles, args.profile, { env: process.env });
-      if (profile && profile.productionSystem) {
-        console.warn('');
-        console.warn('  *** WARNUNG: Dieses Profil ist als productionSystem=true markiert! ***');
-        console.warn('  *** Du bist mit einem PRODUKTIONSSYSTEM verbunden.                ***');
-        console.warn('');
-      }
-    } catch (_) {
-      // Profilfehler wird von executeQuerySql behandelt
-    }
-  }
-
-  let execution;
+  let output;
   try {
-    execution = executeQuerySql(args);
+    output = normalizeOutput(args.output);
   } catch (error) {
     console.error(error.message);
     process.exit(2);
   }
 
-  const { sql, defaultSchema, columns, matrix } = execution;
+  try {
+    // productionSystem-Warnung: vor der Abfrage ausgeben (nicht bei CSV-Output)
+    if (output !== 'csv') {
+      try {
+        const profiles = loadProfiles({ cwd: process.cwd(), env: process.env, args });
+        const profile = resolveProfile(profiles, args.profile, { env: process.env });
+        if (profile && profile.productionSystem) {
+          console.warn('');
+          console.warn('  *** WARNUNG: Dieses Profil ist als productionSystem=true markiert! ***');
+          console.warn('  *** Du bist mit einem PRODUKTIONSSYSTEM verbunden.                ***');
+          console.warn('');
+        }
+      } catch (_) {
+        // Profilfehler wird von executeQuerySql behandelt
+      }
+    }
 
-  if (output === 'csv') {
-    process.stdout.write(renderCsv(columns, matrix));
-    return;
-  }
+    const execution = executeQuerySql(args);
 
-  if (defaultSchema) {
-    console.log(`Default Schema: ${defaultSchema}`);
-  }
-  if (execution.libraryList && execution.libraryList.length > 0) {
-    console.log(`Library List: ${execution.libraryList.join(', ')}`);
-  }
-  console.log(`SQL: ${sql}`);
-  console.log('');
+    const { sql, defaultSchema, columns, matrix } = execution;
 
-  if (matrix.length === 0) {
-    console.log('0 row(s) returned');
-    return;
-  }
+    if (output === 'csv') {
+      process.stdout.write(renderCsv(columns, matrix));
+      return;
+    }
 
-  console.log(renderAsciiTable(columns, matrix, { maxCellWidth: 40 }));
-  console.log(`${matrix.length} row(s) returned`);
+    if (defaultSchema) {
+      console.log(`Default Schema: ${defaultSchema}`);
+    }
+    if (execution.libraryList && execution.libraryList.length > 0) {
+      console.log(`Library List: ${execution.libraryList.join(', ')}`);
+    }
+    console.log(`SQL: ${sql}`);
+    console.log('');
+
+    if (matrix.length === 0) {
+      console.log('0 row(s) returned');
+      return;
+    }
+
+    console.log(renderAsciiTable(columns, matrix, { maxCellWidth: 40 }));
+    console.log(`${matrix.length} row(s) returned`);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
+  }
 }
 
 module.exports = {

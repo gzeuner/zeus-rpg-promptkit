@@ -10,8 +10,6 @@
  *   Or via CLI: --qa-mode enabled
  */
 
-const Object = require('object');
-
 const QA_STAGE_REGISTRY = Object.freeze({
   'qa-test-precondition-validation': {
     name: 'qa-test-precondition-validation',

@@ -17,6 +17,8 @@ const fs = require('fs');
 const path = require('path');
 const { glob } = require('glob');
 
+const DEFAULT_SOURCE_FILE_PATTERN = '**/*.{rpgle,rpg,sqlrpgle,rpgile,clle,clp,sql,dds,dspf,prtf,pf,lf,bnd,binder,bndsrc,cpy}';
+
 function escapeRegex(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -31,6 +33,14 @@ function parseMaxResults(value) {
     throw new Error('Invalid option: --max-results must be a positive integer');
   }
   return parsed;
+}
+
+function normalizeFilePattern(value) {
+  const pattern = String(value || '').trim();
+  if (!pattern) {
+    return DEFAULT_SOURCE_FILE_PATTERN;
+  }
+  return pattern.includes('/') ? pattern : `**/${pattern}`;
 }
 
 function buildSearchRegex({ searchTerm, member, table, caseSensitive }) {
@@ -90,7 +100,7 @@ async function executeSearchSource(
   const table = args.table;
   const caseSensitive = toBoolean(args['case-sensitive']);
   const maxResults = parseMaxResults(args['max-results']);
-  const filePattern = args['file-pattern'] || '*.{rpgle,rpg,clle,sql,dds,bnd}';
+  const filePattern = normalizeFilePattern(args['file-pattern']);
 
   if (!searchTerm && !member && !table) {
     throw new Error('Provide at least one search criterion: --search-term, --member, or --table');
@@ -150,9 +160,11 @@ async function executeSearchSource(
 }
 
 module.exports = {
+  DEFAULT_SOURCE_FILE_PATTERN,
   buildSearchRegex,
   escapeRegex,
   executeSearchSource,
   groupResultsByFile,
+  normalizeFilePattern,
   parseMaxResults,
 };

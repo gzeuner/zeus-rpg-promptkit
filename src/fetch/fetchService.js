@@ -195,6 +195,7 @@ async function fetchSources(options, services = {}) {
       if (strategy === 'sftp') {
         return downloadDirectoryFn({
           host: options.host,
+          port: options.port,
           user: options.user,
           password: options.password,
           remoteDir: options.ifsDir,

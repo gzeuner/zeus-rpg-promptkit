@@ -15,7 +15,15 @@ const fs = require('fs');
 const path = require('path');
 const SftpClient = require('ssh2-sftp-client');
 
-async function downloadDirectory({ host, user, password, remoteDir, localDir, verbose }) {
+async function downloadDirectory({
+  host,
+  user,
+  password,
+  port = 22,
+  remoteDir,
+  localDir,
+  verbose,
+}) {
   const client = new SftpClient();
   let downloadedCount = 0;
 
@@ -42,6 +50,7 @@ async function downloadDirectory({ host, user, password, remoteDir, localDir, ve
   try {
     await client.connect({
       host,
+      port,
       username: user,
       password,
       readyTimeout: 30000,
@@ -56,4 +65,3 @@ async function downloadDirectory({ host, user, password, remoteDir, localDir, ve
 module.exports = {
   downloadDirectory,
 };
-
