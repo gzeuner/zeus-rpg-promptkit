@@ -42,6 +42,7 @@ yarn-error.log*
 __pycache__/
 *.pyc
 scripts/__pycache__/
+scripts/create_issues_from_roadmap.py
 
 # -----------------------------
 # Secrets and local config
