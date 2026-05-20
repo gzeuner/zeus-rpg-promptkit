@@ -25,3 +25,20 @@ test('mcp transport parses line-delimited JSON messages', () => {
   assert.equal(JSON.parse(parsed.messages[0]).id, 2);
 });
 
+test('mcp transport keeps partial framed messages pending until complete', () => {
+  const payload = { jsonrpc: '2.0', id: 3, method: 'ping' };
+  const encoded = encodeJsonRpcMessage(payload);
+  const splitAt = Math.max(1, Math.floor(encoded.length / 2));
+
+  const firstChunk = encoded.slice(0, splitAt);
+  const secondChunk = encoded.slice(splitAt);
+
+  const firstPass = parseIncomingMessages(firstChunk);
+  assert.equal(firstPass.messages.length, 0);
+  assert.ok(firstPass.pending.length > 0);
+
+  const secondPass = parseIncomingMessages(secondChunk, firstPass.pending);
+  assert.equal(secondPass.messages.length, 1);
+  assert.deepEqual(JSON.parse(secondPass.messages[0]), payload);
+  assert.equal(secondPass.pending.length, 0);
+});

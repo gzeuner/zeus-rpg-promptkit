@@ -9,6 +9,44 @@ const {
   sanitizeValue,
 } = require('../src/security/secretMasking');
 
+function createPrng(seed = 123456789) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 0x100000000;
+  };
+}
+
+function pick(prng, entries) {
+  return entries[Math.floor(prng() * entries.length)];
+}
+
+function randomWord(prng, min = 4, max = 10) {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const length = min + Math.floor(prng() * (max - min + 1));
+  let result = '';
+  for (let i = 0; i < length; i += 1) {
+    result += alphabet[Math.floor(prng() * alphabet.length)];
+  }
+  return result;
+}
+
+function buildSecretLogLine(prng, secret) {
+  const variants = [
+    `password=${secret}`,
+    `token=${secret}`,
+    `secret=${secret}`,
+    `credentials="${secret}"`,
+    `token=\\"${secret}\\"`,
+    `authorization: Bearer ${secret}`,
+    `authorization bearer ${secret}`,
+    `user=${secret}`,
+  ];
+  const prefix = `${randomWord(prng)} ${randomWord(prng)}`;
+  const suffix = `${randomWord(prng)} ${randomWord(prng)}`;
+  return `${prefix} ${pick(prng, variants)} ${suffix}`;
+}
+
 test('sanitizeValue masks sensitive keys recursively', () => {
   const input = {
     db: {
@@ -48,6 +86,93 @@ test('maskSecretsInText redacts credential fields and jdbc query credentials', (
   assert.doesNotMatch(output, /\balice\b/i);
   assert.doesNotMatch(output, /\bsecret123\b/);
   assert.doesNotMatch(output, /\btop-secret\b/);
+});
+
+test('maskSecretsInText preserves JSON parseability while redacting inline tokens', () => {
+  const input = JSON.stringify({
+    rows: [
+      { NOTE: 'token=abc123', PASSWORD: 'top-secret' },
+    ],
+  });
+  const output = maskSecretsInText(input);
+
+  assert.doesNotThrow(() => JSON.parse(output));
+  assert.doesNotMatch(output, /\babc123\b/);
+});
+
+test('maskSecretsInText redacts quoted secret assignments without breaking JSON text', () => {
+  const input = JSON.stringify({
+    note: 'token="abc123" secret=\'xyz987\' password="p4ssw0rd"',
+  });
+  const output = maskSecretsInText(input);
+
+  assert.doesNotThrow(() => JSON.parse(output));
+  assert.doesNotMatch(output, /\babc123\b/);
+  assert.doesNotMatch(output, /\bxyz987\b/);
+  assert.doesNotMatch(output, /\bp4ssw0rd\b/);
+});
+
+test('maskSecretsInText redacts authorization bearer tokens with separators and multiline blobs', () => {
+  const input = [
+    'authorization: Bearer abc.def.ghi',
+    'authorization bearer mno.pqr.stu',
+    'detail token=\u00a0abc123',
+  ].join('\n');
+  const output = maskSecretsInText(input);
+
+  assert.doesNotMatch(output, /\babc\.def\.ghi\b/);
+  assert.doesNotMatch(output, /\bmno\.pqr\.stu\b/);
+  assert.doesNotMatch(output, /\babc123\b/);
+  assert.match(output, /\[REDACTED\]/);
+});
+
+test('maskSecretsInText redacts escaped quoted values without swallowing trailing text', () => {
+  const input = JSON.stringify({
+    note: 'token=\\"abc123\\" status=ok user=\\"alice\\"',
+  });
+  const output = maskSecretsInText(input);
+  const parsed = JSON.parse(output);
+
+  assert.equal(typeof parsed.note, 'string');
+  assert.match(parsed.note, /status=ok/);
+  assert.doesNotMatch(parsed.note, /\babc123\b/);
+  assert.doesNotMatch(parsed.note, /\balice\b/i);
+});
+
+test('maskSecretsInText seeded fuzz redacts random inline secret log variants', () => {
+  const prng = createPrng(20260520);
+  const cases = 250;
+
+  for (let index = 0; index < cases; index += 1) {
+    const secret = `S3CR3T_${index}_${randomWord(prng, 6, 10)}`;
+    const input = buildSecretLogLine(prng, secret);
+    const output = maskSecretsInText(input);
+
+    assert.doesNotMatch(output, new RegExp(secret.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(output, /\[REDACTED\]/);
+  }
+});
+
+test('maskSecretsInText seeded fuzz preserves JSON parseability for random log notes', () => {
+  const prng = createPrng(42424242);
+  const cases = 200;
+
+  for (let index = 0; index < cases; index += 1) {
+    const secret = `J_${index}_${randomWord(prng, 5, 9)}`;
+    const line = buildSecretLogLine(prng, secret);
+    const payload = JSON.stringify({
+      note: line,
+      status: pick(prng, ['ok', 'warn', 'info']),
+      seq: index,
+    });
+    const masked = maskSecretsInText(payload);
+
+    assert.doesNotThrow(() => JSON.parse(masked));
+    const parsed = JSON.parse(masked);
+    assert.equal(parsed.seq, index);
+    assert.doesNotMatch(parsed.note, new RegExp(secret.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(parsed.note, /\[REDACTED\]/);
+  }
 });
 
 test('collectSensitiveTermsFromEnv includes configured system/library/user values', () => {

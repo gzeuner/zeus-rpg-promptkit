@@ -69,7 +69,7 @@ function printMcpHelp() {
   console.log('  zeus mcp serve [--stdio true|false] [--allow-tools <name1,name2>] [--verbose]');
   console.log('');
   console.log('Notes:');
-  console.log('  - MVP currently exposes read-only tools: zeus.health, zeus.version, zeus.doctor, zeus.query-sql');
+  console.log('  - MVP currently exposes read-only tools: zeus.health, zeus.version, zeus.doctor, zeus.query-table, zeus.query-sql');
   console.log('  - Runs local-only over stdio transport.');
 }
 
