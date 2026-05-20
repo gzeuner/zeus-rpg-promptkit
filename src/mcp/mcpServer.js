@@ -137,6 +137,7 @@ function createMcpServer(runtime = {}) {
   const context = {
     cwd: runtime.cwd || process.cwd(),
     doctorRunner: typeof runtime.doctorRunner === 'function' ? runtime.doctorRunner : undefined,
+    queryTableRunner: typeof runtime.queryTableRunner === 'function' ? runtime.queryTableRunner : undefined,
     querySqlRunner: typeof runtime.querySqlRunner === 'function' ? runtime.querySqlRunner : undefined,
   };
   const stdioInput = runtime.stdioInput || process.stdin;

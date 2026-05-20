@@ -1,13 +1,13 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-05-17 09:14:08
+Last generated: 2026-05-20 21:38:01
 -->
 
 ---
 Title: Zeus RPG PromptKit Tool Catalog
 Description: Verbindlicher, sicherheitsklassifizierter Katalog aller CLI-Befehle und Workflow-Presets fuer Menschen und KI-Assistenten.
-Last Updated: 2026-05-17
+Last Updated: 2026-05-20
 ---
 
 # Zeus RPG PromptKit Tool Catalog
@@ -70,6 +70,8 @@ Related:
 | `bridge` | `S4` | Operator-gated | Bridge planning/staging/apply/compile/report flow; never implicit. | `node cli/zeus.js bridge plan --profile default --help` |
 | `pui-edit` | `S1` | Local | Apply structured UI edit operations to local display artifacts. | `node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json` |
 | `docs:generate-catalog` | `S0` | Local read-only | Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`. | `node cli/zeus.js docs:generate-catalog` |
+| `mcp` | `S0` | Local read-only | Start local MCP stdio server for safe read-only Zeus tool exposure with allowlist policy gating. | `node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql` |
+| `analyses` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js analyses` |
 
 ## Workflow Presets
 
