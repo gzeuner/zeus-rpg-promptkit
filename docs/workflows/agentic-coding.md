@@ -1,7 +1,7 @@
 ---
 Title: Agentic Coding with Zeus
 Description: Workflow-orientierte Leitfaeden fuer Analyse-, Review- und Agentenablaeufe.
-Last Updated: 2026-05-17
+Last Updated: 2026-05-20
 ---
 
 # Agentic Coding with Zeus
@@ -14,13 +14,13 @@ Use **Zeus language-model tools as the core integration contract**.
 
 That means:
 
-- Any capable chat session can use Zeus when the extension has registered the tools.
+- Any capable chat session can use Zeus when Zeus tools are exposed through your chosen integration layer (for example MCP, internal tool gateway, or script wrapper).
 - The product does not depend on any custom agent mode or prompt file.
-- The extension is the required integration layer because it registers the Zeus tools into chat.
+- The real behavior lives in Zeus CLI/API commands and generated artifacts.
 
 In practice the product shape is:
 
-1. Register the Zeus tools through the VS Code extension.
+1. Expose Zeus tools through one integration layer.
 2. Keep the real behavior in the tools.
 3. Use normal chat as the default entry point.
 
@@ -33,11 +33,10 @@ For rollout validation, see [`../ai/agent-validation-checklist.md`](../ai/agent-
 1. Run `npm install` in the repository root.
 2. Copy `config/profiles.example.json` to `config/local-only/profiles.json`.
 3. Set the required `ZEUS_*` environment variables.
-4. Start the extension.
-5. Run `Zeus: Select Profile`.
-6. Run `Zeus: Run Doctor`.
-7. Open Copilot Chat.
-8. Stay in your normal chat mode and ask the AI to use the Zeus tools.
+4. Run `node cli/zeus.js doctor --profile default --show-resolved`.
+5. Run `node cli/zeus.js analyze --profile default`.
+6. Open your AI client.
+7. Stay in your normal chat mode and ask the AI to use the Zeus tools.
 
 ## Recommended tool sequence
 
@@ -50,17 +49,17 @@ For most tasks the agent should do this:
 5. `zeus_query_table` only if DB2 metadata is needed
 6. `zeus_fetch_sources` only with explicit user confirmation
 
-## Why the VS Code extension is still necessary
+## Why a tool adapter is still necessary
 
-The extension is still required.
+An adapter layer is still required for direct tool calls from chat.
 
 It provides:
 
-- `languageModelTools` declarations in `vscode-extension/package.json`
-- runtime registration through `vscode.lm.registerTool()`
+- tool schema/registration for the AI runtime
+- runtime execution and safety enforcement
 - workspace-aware profile, environment, and CLI wiring
 
-Without the extension, Zeus commands exist only as CLI/API surfaces and are not directly callable from chat.
+Without an adapter, Zeus commands exist only as CLI/API surfaces and are not directly callable from chat.
 
 ## Example chat flow
 
