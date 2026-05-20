@@ -184,8 +184,8 @@ const COMMAND_METADATA = Object.freeze({
   mcp: Object.freeze({
     safety: 'S0',
     scope: 'Local read-only',
-    purpose: 'Start local MCP stdio server for safe Zeus tool exposure (MVP: health/version).',
-    example: 'node cli/zeus.js mcp serve --stdio true',
+    purpose: 'Start local MCP stdio server for safe read-only Zeus tool exposure with allowlist policy gating.',
+    example: 'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql',
   }),
 });
 

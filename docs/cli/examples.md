@@ -58,6 +58,13 @@ node cli/zeus.js bundle --program ORDERPGM --profile default --include-md --incl
 node cli/zeus.js serve --source-output-root ./output --host 127.0.0.1 --port 4782
 ```
 
+## MCP Local-Only Exposure
+
+```bash
+node cli/zeus.js mcp serve --verbose
+node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql
+```
+
 ## Controlled Write Commands (Explicit Approval Required)
 
 ```bash
@@ -65,4 +72,3 @@ node cli/zeus.js insert --profile default --sql "INSERT INTO APPDATA.APP_TABLE_0
 node cli/zeus.js update --profile default --sql "UPDATE APPDATA.APP_TABLE_00 SET STATUS='Y' WHERE ID=1"
 node cli/zeus.js upsert --profile default --sql "MERGE INTO ..."
 ```
-

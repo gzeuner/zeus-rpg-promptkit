@@ -16,7 +16,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 const { runDoctorChecks } = require('../cli/commands/doctorCommand');
-const { executeQuerySql } = require('../core/queryService');
+const { executeQuerySql, executeQueryTable } = require('../core/queryService');
 
 function readPackageVersion(cwd) {
   try {
@@ -65,6 +65,37 @@ function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Runtime profile name used for doctor checks.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.query-table',
+      description: 'Returns read-only table and column metadata for a profile/table lookup.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['profile', 'table'],
+        properties: {
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Runtime profile name with DB2 read access.',
+          },
+          table: {
+            type: 'string',
+            minLength: 1,
+            description: 'Table name to inspect.',
+          },
+          schema: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional schema override.',
+          },
+          filter: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional SQL LIKE pattern for column name filtering.',
           },
         },
       },
@@ -245,6 +276,85 @@ function executeMcpToolCall(name, args = {}, context = {}) {
       columns: Array.isArray(execution.columns) ? execution.columns : [],
       rows: Array.isArray(execution.rows) ? execution.rows : [],
       rowCount: Number(execution.rowCount || 0),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.query-table') {
+    const profile = args && typeof args.profile === 'string'
+      ? args.profile.trim()
+      : '';
+    const table = args && typeof args.table === 'string'
+      ? args.table.trim()
+      : '';
+    if (!profile) {
+      const error = new Error('Invalid arguments for zeus.query-table: profile is required.');
+      error.code = 'TOOL_INVALID_ARGUMENTS';
+      throw error;
+    }
+    if (!table) {
+      const error = new Error('Invalid arguments for zeus.query-table: table is required.');
+      error.code = 'TOOL_INVALID_ARGUMENTS';
+      throw error;
+    }
+
+    const queryTableRunner = typeof context.queryTableRunner === 'function'
+      ? context.queryTableRunner
+      : executeQueryTable;
+
+    const runnerArgs = {
+      profile,
+      table,
+      ...(args && typeof args.schema === 'string' && args.schema.trim()
+        ? { schema: args.schema.trim() }
+        : {}),
+      ...(args && typeof args.filter === 'string' && args.filter.trim()
+        ? { filter: args.filter.trim() }
+        : {}),
+    };
+
+    let execution;
+    try {
+      execution = queryTableRunner(runnerArgs, {
+        cwd: context.cwd || process.cwd(),
+      });
+    } catch (error) {
+      const invalidArgCodes = new Set([
+        'PROFILE_REQUIRED',
+        'TABLE_REQUIRED',
+        'DB2_CONFIG_INCOMPLETE',
+      ]);
+      if (
+        (error && error.code && invalidArgCodes.has(error.code))
+        || /invalid --schema/i.test(String(error && error.message ? error.message : ''))
+        || /invalid --table/i.test(String(error && error.message ? error.message : ''))
+        || /invalid --filter pattern/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    const tableInfoRows = Array.isArray(execution && execution.tableInfo && execution.tableInfo.rows)
+      ? execution.tableInfo.rows
+      : [];
+    const columnRows = Array.isArray(execution && execution.columns && execution.columns.rows)
+      ? execution.columns.rows
+      : [];
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      profile,
+      table: execution && execution.table ? String(execution.table) : table,
+      schema: execution && execution.schema ? String(execution.schema) : null,
+      requestedSchema: execution && execution.requestedSchema ? String(execution.requestedSchema) : null,
+      filter: execution && execution.filter ? String(execution.filter) : '',
+      discoveredSchema: execution && execution.discoveredSchema ? String(execution.discoveredSchema) : '',
+      tableInfo: tableInfoRows,
+      columns: columnRows,
+      tableCount: tableInfoRows.length,
+      columnCount: columnRows.length,
       timestamp: new Date().toISOString(),
     };
   }

@@ -9,6 +9,20 @@ MCP Support for Zeus RPG PromptKit (Secure Local-First MVP)
 ### Description
 Build a secure, local-first MCP server wrapper for Zeus RPG PromptKit that exposes high-value read-only workflows first, reuses existing CLI/core services, and enforces strict guardrails for sensitive environments.
 
+## Current Status Snapshot (2026-05-20)
+
+Completed (implemented + test-covered):
+- MCP server skeleton (`initialize`, `tools/list`, `tools/call`) over stdio
+- allowlist policy gate + known-name validation for `--allow-tools`
+- read-only MCP tools: `zeus.health`, `zeus.version`, `zeus.doctor`, `zeus.query-table`, `zeus.query-sql`
+- response/error redaction middleware (including seeded fuzz-style redaction regression tests)
+- append-only local MCP audit trail with explicit `schemaVersion`
+- audit compatibility reader for legacy JSONL entries without `schemaVersion`
+- expanded MCP contract suite (error mapping, stdio framing, redaction invariants, audit schema stability)
+
+Next prioritized topic:
+- Continue read-only adapter layer with next safe tool path (`impact` or constrained `analyze` subset), one path at a time with focused MCP tests.
+
 Success Criteria:
 - MCP server can execute a curated read-only toolset over stdio/local transport.
 - Existing Zeus validation/guardrails are reused (no duplicated policy logic).
@@ -148,4 +162,3 @@ Design-only spike (no default enablement) for guarded write access:
 Acceptance Criteria:
 - Technical design document with risks and rollback strategy.
 - No write enablement merged by default.
-
