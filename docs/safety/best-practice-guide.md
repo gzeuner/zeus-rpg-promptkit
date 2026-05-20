@@ -580,7 +580,7 @@ Examples:
 
 Use them as:
 
-- direct prompts in Copilot Chat, ChatGPT, Claude, local LLM CLIs, or internal model gateways
+- direct prompts in chat tools, ChatGPT, Claude, local LLM CLIs, or internal model gateways
 - starting points for iterative AI sessions
 - standardized team prompt packs with evidence already embedded
 
@@ -674,7 +674,7 @@ Use it for:
 
 The repository does not call a model provider. It prepares context and prompt artifacts. That makes it usable with any AI surface that can read files or pasted text.
 
-## 5.1 VS Code + GitHub Copilot
+## 5.1 Desktop Chat Client Workflow
 
 Recommended approach:
 
@@ -690,11 +690,11 @@ node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\out
 node .\cli\zeus.js serve --source-output-root .\output
 ```
 
-Best practice with Copilot Chat:
+Best practice in chat clients:
 
 - paste the relevant prompt artifact first
 - attach or quote only the supporting files needed for the current question
-- if Copilot starts generalizing, anchor it back to `canonical-analysis.json` or `db2-metadata.json`
+- if the model starts generalizing, anchor it back to `canonical-analysis.json` or `db2-metadata.json`
 
 Good usage pattern:
 
