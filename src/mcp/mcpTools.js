@@ -118,6 +118,67 @@ function normalizeJoblogToolError(error) {
   return error;
 }
 
+function isJoblogInfoUnavailableError(error) {
+  const message = error && error.message ? String(error.message) : String(error);
+  return /JOBLOG_INFO|SQL0204/i.test(message);
+}
+
+function buildHistoryLogFallbackSeverityClause(severity) {
+  if (severity === 'ERROR') {
+    return "(MESSAGE_TYPE IN ('ESCAPE', 'INQUIRY', 'NOTIFY') OR COALESCE(SEVERITY, 0) >= 30)";
+  }
+  if (severity === 'WARNING') {
+    return '(COALESCE(SEVERITY, 0) BETWEEN 1 AND 29)';
+  }
+  if (severity === 'INFO') {
+    return "(COALESCE(SEVERITY, 0) = 0 OR MESSAGE_TYPE IN ('INFORMATIONAL', 'COMPLETION', 'DIAGNOSTIC', 'SENDER', 'REQUEST', 'REPLY'))";
+  }
+  return null;
+}
+
+function buildHistoryLogFallbackQuery({ jobName, severity, maxMessages }) {
+  const whereClauses = [];
+  if (jobName) {
+    whereClauses.push(`FROM_JOB LIKE ${escapeSqlLiteral(`%/${jobName}%`)}`);
+  }
+  const severityClause = buildHistoryLogFallbackSeverityClause(severity);
+  if (severityClause) {
+    whereClauses.push(severityClause);
+  }
+  const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  return `
+    SELECT
+      FROM_JOB AS JOB_NAME,
+      MESSAGE_ID,
+      MESSAGE_TYPE,
+      MESSAGE_TEXT,
+      MESSAGE_TIMESTAMP
+    FROM TABLE(QSYS2.HISTORY_LOG_INFO(CURRENT TIMESTAMP - 1 DAY)) X
+    ${whereClause}
+    FETCH FIRST ${maxMessages} ROWS ONLY
+  `;
+}
+
+function summarizeJoblogRows({ profile, jobName, severity, maxMessages, result, backend }) {
+  const rows = Array.isArray(result && result.rows) ? result.rows : [];
+  const columns = Array.isArray(result && result.columns) ? result.columns : [];
+  const messageIds = new Set(rows.map((row) => (row && row.MESSAGE_ID ? String(row.MESSAGE_ID) : '')).filter(Boolean));
+
+  return {
+    profile,
+    job: jobName || null,
+    severity: severity || null,
+    maxMessages,
+    backend,
+    rowCount: rows.length,
+    uniqueMessageIdCount: messageIds.size,
+    limitReached: rows.length >= maxMessages,
+    columns,
+    rows,
+  };
+}
+
 function listMcpTools() {
   return [
     {
@@ -1012,31 +1073,43 @@ async function executeReadOnlyJoblog(args = {}, context = {}) {
     FETCH FIRST ${maxMessages} ROWS ONLY
   `;
 
-  let result;
   try {
-    result = runReadOnlyDb2Query({
+    const result = runReadOnlyDb2Query({
       dbConfig,
       query,
       maxRows: maxMessages,
     });
+    return summarizeJoblogRows({
+      profile,
+      jobName,
+      severity,
+      maxMessages,
+      result,
+      backend: 'JOBLOG_INFO',
+    });
   } catch (error) {
-    throw normalizeJoblogToolError(error);
-  }
-  const rows = Array.isArray(result && result.rows) ? result.rows : [];
-  const columns = Array.isArray(result && result.columns) ? result.columns : [];
-  const messageIds = new Set(rows.map((row) => (row && row.MESSAGE_ID ? String(row.MESSAGE_ID) : '')).filter(Boolean));
+    if (!isJoblogInfoUnavailableError(error)) {
+      throw error;
+    }
 
-  return {
-    profile,
-    job: jobName || null,
-    severity: severity || null,
-    maxMessages,
-    rowCount: rows.length,
-    uniqueMessageIdCount: messageIds.size,
-    limitReached: rows.length >= maxMessages,
-    columns,
-    rows,
-  };
+    try {
+      const fallbackResult = runReadOnlyDb2Query({
+        dbConfig,
+        query: buildHistoryLogFallbackQuery({ jobName, severity, maxMessages }),
+        maxRows: maxMessages,
+      });
+      return summarizeJoblogRows({
+        profile,
+        jobName,
+        severity,
+        maxMessages,
+        result: fallbackResult,
+        backend: 'HISTORY_LOG_INFO',
+      });
+    } catch (fallbackError) {
+      throw normalizeJoblogToolError(fallbackError);
+    }
+  }
 }
 
 function buildInspectObjectStatisticsQuery(lib, name, type, { journalOnly = false } = {}) {
@@ -2296,6 +2369,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       job: execution && execution.job ? String(execution.job) : null,
       severity: execution && execution.severity ? String(execution.severity) : null,
       maxMessages: Number(execution && execution.maxMessages ? execution.maxMessages : 0),
+      backend: execution && execution.backend ? String(execution.backend) : 'JOBLOG_INFO',
       rowCount: Number(execution && execution.rowCount ? execution.rowCount : 0),
       uniqueMessageIdCount: Number(execution && execution.uniqueMessageIdCount ? execution.uniqueMessageIdCount : 0),
       limitReached: Boolean(execution && execution.limitReached),
@@ -2435,9 +2509,13 @@ module.exports = {
   listMcpTools,
   readPackageVersion,
   __private: {
+    buildHistoryLogFallbackQuery,
+    buildHistoryLogFallbackSeverityClause,
     createInvalidCursorError,
     decodeMcpCursor,
     encodeMcpCursor,
+    isJoblogInfoUnavailableError,
     normalizeJoblogToolError,
+    summarizeJoblogRows,
   },
 };

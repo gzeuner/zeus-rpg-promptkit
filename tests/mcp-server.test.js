@@ -134,6 +134,26 @@ test('normalizeJoblogToolError rewrites missing JOBLOG_INFO failures into action
   assert.match(normalized.message, /QSYS2\.HISTORY_LOG_INFO/i);
 });
 
+test('buildHistoryLogFallbackSeverityClause maps MCP severities to HISTORY_LOG_INFO filters', () => {
+  assert.match(__private.buildHistoryLogFallbackSeverityClause('ERROR'), /ESCAPE/);
+  assert.match(__private.buildHistoryLogFallbackSeverityClause('WARNING'), /BETWEEN 1 AND 29/);
+  assert.match(__private.buildHistoryLogFallbackSeverityClause('INFO'), /INFORMATIONAL/);
+  assert.equal(__private.buildHistoryLogFallbackSeverityClause(null), null);
+});
+
+test('buildHistoryLogFallbackQuery creates a deterministic compatibility query', () => {
+  const query = __private.buildHistoryLogFallbackQuery({
+    jobName: 'QPADEV',
+    severity: 'ERROR',
+    maxMessages: 25,
+  });
+
+  assert.match(query, /QSYS2\.HISTORY_LOG_INFO/);
+  assert.match(query, /FROM_JOB AS JOB_NAME/);
+  assert.match(query, /%\/QPADEV%/);
+  assert.match(query, /FETCH FIRST 25 ROWS ONLY/);
+});
+
 test('mcp tools call rejects unknown tool', async () => {
   const server = createMcpServer({ cwd: process.cwd() });
   await assert.rejects(
@@ -1094,6 +1114,7 @@ test('mcp tools call joblog returns deterministic structured payload', async () 
   assert.equal(callResponse.result.structuredContent.job, 'QPADEV');
   assert.equal(callResponse.result.structuredContent.severity, 'ERROR');
   assert.equal(callResponse.result.structuredContent.maxMessages, 50);
+  assert.equal(callResponse.result.structuredContent.backend, 'JOBLOG_INFO');
   assert.equal(callResponse.result.structuredContent.rowCount, 2);
   assert.equal(callResponse.result.structuredContent.uniqueMessageIdCount, 2);
   assert.equal(callResponse.result.structuredContent.limitReached, false);
