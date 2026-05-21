@@ -78,8 +78,17 @@ test('mcp tools list and call health tool', async () => {
   assert.equal(callResponse.result.isError, false);
   assert.equal(callResponse.result.structuredContent.ok, true);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.doctor'), true);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.workflow'), true);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.bundle'), true);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.analyze'), true);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.impact'), true);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.assess-risk'), true);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-table'), true);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-sql'), true);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.search-source'), true);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.field-search'), true);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.joblog'), true);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.inspect-object'), true);
 });
 
 test('mcp tools call rejects unknown tool', async () => {
@@ -394,6 +403,1677 @@ test('mcp tools call query-sql rejects non-read-only SQL', async () => {
     (error) => {
       assert.equal(error.code, -32602);
       assert.match(error.message, /read-only sql query/i);
+      return true;
+    },
+  );
+});
+
+test('mcp tools call search-source returns deterministic structured payload', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    searchSourceRunner: () => ({
+      sourceRoot: '/tmp/src',
+      criteria: {
+        searchTerm: 'CHAIN(',
+        member: null,
+        table: null,
+        filePattern: '**/*.rpgle',
+        caseSensitive: false,
+        maxResults: 25,
+      },
+      noSourceFiles: false,
+      resultCount: 2,
+      matchedFileCount: 1,
+      limitReached: false,
+      matches: [
+        { file: 'QRPGLESRC/ORDERPGM.rpgle', lineNumber: 41, line: 'chain(e) CUSTID CUSTOMER;' },
+        { file: 'QRPGLESRC/ORDERPGM.rpgle', lineNumber: 88, line: 'chain ORDERKEY ORDERS;' },
+      ],
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 183,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.search-source',
+      arguments: {
+        sourceRoot: './src',
+        searchTerm: 'CHAIN(',
+        filePattern: '*.rpgle',
+        maxResults: 25,
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.isError, false);
+  assert.equal(callResponse.result.structuredContent.ok, true);
+  assert.equal(callResponse.result.structuredContent.sourceRoot, '/tmp/src');
+  assert.deepEqual(callResponse.result.structuredContent.criteria, {
+    searchTerm: 'CHAIN(',
+    member: null,
+    table: null,
+    filePattern: '**/*.rpgle',
+    caseSensitive: false,
+    maxResults: 25,
+  });
+  assert.equal(callResponse.result.structuredContent.noSourceFiles, false);
+  assert.equal(callResponse.result.structuredContent.resultCount, 2);
+  assert.equal(callResponse.result.structuredContent.matchedFileCount, 1);
+  assert.equal(callResponse.result.structuredContent.limitReached, false);
+  assert.deepEqual(callResponse.result.structuredContent.matches, [
+    { file: 'QRPGLESRC/ORDERPGM.rpgle', lineNumber: 41, line: 'chain(e) CUSTID CUSTOMER;' },
+    { file: 'QRPGLESRC/ORDERPGM.rpgle', lineNumber: 88, line: 'chain ORDERKEY ORDERS;' },
+  ]);
+  assert.match(callResponse.result.structuredContent.timestamp, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(
+    JSON.parse(callResponse.result.content[0].text),
+    callResponse.result.structuredContent,
+  );
+});
+
+test('mcp tools call search-source applies payload item cap deterministically', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    searchSourceRunner: () => ({
+      sourceRoot: '/tmp/src',
+      criteria: {
+        searchTerm: 'CHAIN(',
+        member: null,
+        table: null,
+        filePattern: '**/*.rpgle',
+        caseSensitive: false,
+        maxResults: 25,
+      },
+      noSourceFiles: false,
+      resultCount: 3,
+      maxPayloadItems: 1,
+      payloadResultCount: 1,
+      payloadTruncated: true,
+      matchedFileCount: 1,
+      limitReached: false,
+      matches: [
+        { file: 'QRPGLESRC/ORDERPGM.rpgle', lineNumber: 41, line: 'chain(e) CUSTID CUSTOMER;' },
+      ],
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 18301,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.search-source',
+      arguments: {
+        sourceRoot: './src',
+        searchTerm: 'CHAIN(',
+        maxPayloadItems: 1,
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.isError, false);
+  assert.equal(callResponse.result.structuredContent.resultCount, 3);
+  assert.equal(callResponse.result.structuredContent.maxPayloadItems, 1);
+  assert.equal(callResponse.result.structuredContent.payloadResultCount, 1);
+  assert.equal(callResponse.result.structuredContent.payloadTruncated, true);
+  assert.equal(callResponse.result.structuredContent.matches.length, 1);
+});
+
+test('mcp tools call search-source maps invalid arguments to -32602', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    searchSourceRunner: () => {
+      throw new Error('Provide at least one search criterion: --search-term, --member, or --table');
+    },
+  });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 1831,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.search-source',
+        arguments: {
+          sourceRoot: './src',
+        },
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /provide at least one search criterion/i);
+      return true;
+    },
+  );
+});
+
+test('mcp tools call search-source supports deterministic cursor pagination', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-search-source-'));
+  const sourceRoot = path.join(tempRoot, 'src');
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'CHAIN(E) CUSTID CUSTOMER;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceRoot, 'B.rpgle'), 'CHAIN ORDERKEY ORDERS;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceRoot, 'C.rpgle'), 'CHAIN ITEMID ITEMS;\n', 'utf8');
+
+  const server = createMcpServer({
+    cwd: process.cwd(),
+  });
+
+  try {
+    const page1 = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 18323,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.search-source',
+        arguments: {
+          sourceRoot,
+          searchTerm: 'CHAIN',
+          maxResults: 10,
+          maxPayloadItems: 2,
+        },
+      },
+    });
+
+    assert.equal(page1.result.isError, false);
+    assert.equal(page1.result.structuredContent.resultCount, 3);
+    assert.equal(page1.result.structuredContent.cursor, null);
+    assert.equal(page1.result.structuredContent.cursorOffset, 0);
+    assert.equal(page1.result.structuredContent.maxPayloadItems, 2);
+    assert.equal(page1.result.structuredContent.payloadResultCount, 2);
+    assert.equal(page1.result.structuredContent.payloadTruncated, true);
+    assert.equal(typeof page1.result.structuredContent.nextCursor, 'string');
+    assert.notEqual(page1.result.structuredContent.nextCursor, '2');
+    assert.equal(page1.result.structuredContent.matches.length, 2);
+
+    const page2 = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 18324,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.search-source',
+        arguments: {
+          sourceRoot,
+          searchTerm: 'CHAIN',
+          maxResults: 10,
+          maxPayloadItems: 2,
+          cursor: page1.result.structuredContent.nextCursor,
+        },
+      },
+    });
+
+    assert.equal(page2.result.isError, false);
+    assert.equal(page2.result.structuredContent.resultCount, 3);
+    assert.equal(page2.result.structuredContent.cursor, page1.result.structuredContent.nextCursor);
+    assert.equal(page2.result.structuredContent.cursorOffset, 2);
+    assert.equal(page2.result.structuredContent.maxPayloadItems, 2);
+    assert.equal(page2.result.structuredContent.payloadResultCount, 1);
+    assert.equal(page2.result.structuredContent.payloadTruncated, false);
+    assert.equal(page2.result.structuredContent.nextCursor, null);
+    assert.equal(page2.result.structuredContent.matches.length, 1);
+    assert.notEqual(
+      page2.result.structuredContent.matches[0].line,
+      page1.result.structuredContent.matches[0].line,
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp tools call search-source maps invalid cursor to -32602', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-search-source-'));
+  const sourceRoot = path.join(tempRoot, 'src');
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'CHAIN(E) CUSTID CUSTOMER;\n', 'utf8');
+
+  const server = createMcpServer({
+    cwd: process.cwd(),
+  });
+
+  try {
+    await assert.rejects(
+      () => server.handleRequest({
+        jsonrpc: '2.0',
+        id: 18322,
+        method: 'tools/call',
+        params: {
+          name: 'zeus.search-source',
+          arguments: {
+            sourceRoot,
+            searchTerm: 'CHAIN',
+            cursor: 'bad-cursor',
+          },
+        },
+      }),
+      (error) => {
+        assert.equal(error.code, -32602);
+        assert.match(error.message, /cursor/i);
+        return true;
+      },
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp tools call search-source still accepts legacy numeric cursor input', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-search-source-'));
+  const sourceRoot = path.join(tempRoot, 'src');
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'CHAIN(E) CUSTID CUSTOMER;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceRoot, 'B.rpgle'), 'CHAIN ORDERKEY ORDERS;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceRoot, 'C.rpgle'), 'CHAIN ITEMID ITEMS;\n', 'utf8');
+
+  const server = createMcpServer({
+    cwd: process.cwd(),
+  });
+
+  try {
+    const page = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 18325,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.search-source',
+        arguments: {
+          sourceRoot,
+          searchTerm: 'CHAIN',
+          maxResults: 10,
+          maxPayloadItems: 2,
+          cursor: '2',
+        },
+      },
+    });
+
+    assert.equal(page.result.isError, false);
+    assert.equal(page.result.structuredContent.cursor, '2');
+    assert.equal(page.result.structuredContent.cursorOffset, 2);
+    assert.equal(page.result.structuredContent.matches.length, 1);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp tools call search-source rejects legacy numeric cursor when fallback is disabled', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-search-source-'));
+  const sourceRoot = path.join(tempRoot, 'src');
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'CHAIN(E) CUSTID CUSTOMER;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceRoot, 'B.rpgle'), 'CHAIN ORDERKEY ORDERS;\n', 'utf8');
+
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    allowLegacyNumericCursor: false,
+  });
+
+  try {
+    await assert.rejects(
+      () => server.handleRequest({
+        jsonrpc: '2.0',
+        id: 18326,
+        method: 'tools/call',
+        params: {
+          name: 'zeus.search-source',
+          arguments: {
+            sourceRoot,
+            searchTerm: 'CHAIN',
+            cursor: '1',
+          },
+        },
+      }),
+      (error) => {
+        assert.equal(error.code, -32602);
+        assert.match(error.message, /legacy numeric cursor input is disabled/i);
+        return true;
+      },
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp tools call field-search returns deterministic structured payload', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    fieldSearchRunner: () => ({
+      sourceRoot: '/tmp/src',
+      field: 'CUSTID',
+      table: 'CUSTOMER',
+      maxResults: 50,
+      contextLines: 2,
+      fileCount: 3,
+      resultCount: 2,
+      matchedFileCount: 1,
+      truncated: false,
+      matches: [
+        {
+          file: 'QRPGLESRC/ORDERPGM.rpgle',
+          line: 21,
+          text: 'chain(e) CUSTID CUSTOMER;',
+          tableContexts: [{ table: 'CUSTOMER', intent: 'READS', role: 'FROM' }],
+          contextBefore: [{ lineNo: 20, text: 'if CUSTID > 0;' }],
+          contextAfter: [{ lineNo: 22, text: 'if %found(CUSTOMER);' }],
+        },
+        {
+          file: 'QRPGLESRC/ORDERPGM.rpgle',
+          line: 55,
+          text: 'update CUSTOMER set NAME = :NAME where CUSTID = :CUSTID;',
+          tableContexts: [{ table: 'CUSTOMER', intent: 'WRITES', role: 'SET' }],
+          contextBefore: [],
+          contextAfter: [],
+        },
+      ],
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 1832,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.field-search',
+      arguments: {
+        sourceRoot: './src',
+        field: 'custid',
+        table: 'customer',
+        maxResults: 50,
+        contextLines: 2,
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.isError, false);
+  assert.equal(callResponse.result.structuredContent.ok, true);
+  assert.equal(callResponse.result.structuredContent.sourceRoot, '/tmp/src');
+  assert.equal(callResponse.result.structuredContent.field, 'CUSTID');
+  assert.equal(callResponse.result.structuredContent.table, 'CUSTOMER');
+  assert.equal(callResponse.result.structuredContent.maxResults, 50);
+  assert.equal(callResponse.result.structuredContent.cursor, null);
+  assert.equal(callResponse.result.structuredContent.cursorOffset, 0);
+  assert.equal(callResponse.result.structuredContent.nextCursor, null);
+  assert.equal(callResponse.result.structuredContent.contextLines, 2);
+  assert.equal(callResponse.result.structuredContent.fileCount, 3);
+  assert.equal(callResponse.result.structuredContent.resultCount, 2);
+  assert.equal(callResponse.result.structuredContent.matchedFileCount, 1);
+  assert.equal(callResponse.result.structuredContent.truncated, false);
+  assert.deepEqual(callResponse.result.structuredContent.matches, [
+    {
+      file: 'QRPGLESRC/ORDERPGM.rpgle',
+      line: 21,
+      text: 'chain(e) CUSTID CUSTOMER;',
+      tableContexts: [{ table: 'CUSTOMER', intent: 'READS', role: 'FROM' }],
+      contextBefore: [{ lineNo: 20, text: 'if CUSTID > 0;' }],
+      contextAfter: [{ lineNo: 22, text: 'if %found(CUSTOMER);' }],
+    },
+    {
+      file: 'QRPGLESRC/ORDERPGM.rpgle',
+      line: 55,
+      text: 'update CUSTOMER set NAME = :NAME where CUSTID = :CUSTID;',
+      tableContexts: [{ table: 'CUSTOMER', intent: 'WRITES', role: 'SET' }],
+      contextBefore: [],
+      contextAfter: [],
+    },
+  ]);
+  assert.match(callResponse.result.structuredContent.timestamp, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(
+    JSON.parse(callResponse.result.content[0].text),
+    callResponse.result.structuredContent,
+  );
+});
+
+test('mcp tools call field-search maps invalid arguments to -32602', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    fieldSearchRunner: () => {
+      throw new Error('Field-search source root not found: /tmp/does-not-exist');
+    },
+  });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 1833,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.field-search',
+        arguments: {
+          sourceRoot: '/tmp/does-not-exist',
+          field: 'CUSTID',
+        },
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /field-search source root not found/i);
+      return true;
+    },
+  );
+});
+
+test('mcp tools call field-search maps invalid maxPayloadItems to -32602', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-field-search-'));
+  const sourceRoot = path.join(tempRoot, 'src');
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'ORDERPGM.rpgle'), 'chain(e) CUSTID CUSTOMER;\n', 'utf8');
+
+  const server = createMcpServer({
+    cwd: process.cwd(),
+  });
+
+  try {
+    await assert.rejects(
+      () => server.handleRequest({
+        jsonrpc: '2.0',
+        id: 18331,
+        method: 'tools/call',
+        params: {
+          name: 'zeus.field-search',
+          arguments: {
+            sourceRoot,
+            field: 'CUSTID',
+            maxPayloadItems: 0,
+          },
+        },
+      }),
+      (error) => {
+        assert.equal(error.code, -32602);
+        assert.match(error.message, /maxpayloaditems/i);
+        return true;
+      },
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp tools call field-search supports deterministic cursor pagination', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-field-search-'));
+  const sourceRoot = path.join(tempRoot, 'src');
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'chain(e) CUSTID CUSTOMER;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceRoot, 'B.rpgle'), 'if CUSTID > 0;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceRoot, 'C.rpgle'), 'where CUSTID = :CUSTID;\n', 'utf8');
+
+  const server = createMcpServer({
+    cwd: process.cwd(),
+  });
+
+  try {
+    const page1 = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 18332,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.field-search',
+        arguments: {
+          sourceRoot,
+          field: 'CUSTID',
+          maxResults: 10,
+          maxPayloadItems: 2,
+          contextLines: 0,
+        },
+      },
+    });
+
+    assert.equal(page1.result.isError, false);
+    assert.equal(page1.result.structuredContent.resultCount, 3);
+    assert.equal(page1.result.structuredContent.cursor, null);
+    assert.equal(page1.result.structuredContent.cursorOffset, 0);
+    assert.equal(page1.result.structuredContent.maxPayloadItems, 2);
+    assert.equal(page1.result.structuredContent.payloadResultCount, 2);
+    assert.equal(page1.result.structuredContent.payloadTruncated, true);
+    assert.equal(typeof page1.result.structuredContent.nextCursor, 'string');
+    assert.notEqual(page1.result.structuredContent.nextCursor, '2');
+    assert.equal(page1.result.structuredContent.matches.length, 2);
+
+    const page2 = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 18333,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.field-search',
+        arguments: {
+          sourceRoot,
+          field: 'CUSTID',
+          maxResults: 10,
+          maxPayloadItems: 2,
+          contextLines: 0,
+          cursor: page1.result.structuredContent.nextCursor,
+        },
+      },
+    });
+
+    assert.equal(page2.result.isError, false);
+    assert.equal(page2.result.structuredContent.resultCount, 3);
+    assert.equal(page2.result.structuredContent.cursor, page1.result.structuredContent.nextCursor);
+    assert.equal(page2.result.structuredContent.cursorOffset, 2);
+    assert.equal(page2.result.structuredContent.maxPayloadItems, 2);
+    assert.equal(page2.result.structuredContent.payloadResultCount, 1);
+    assert.equal(page2.result.structuredContent.payloadTruncated, false);
+    assert.equal(page2.result.structuredContent.nextCursor, null);
+    assert.equal(page2.result.structuredContent.matches.length, 1);
+    assert.notEqual(
+      page2.result.structuredContent.matches[0].text,
+      page1.result.structuredContent.matches[0].text,
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp tools call field-search maps invalid cursor to -32602', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-field-search-'));
+  const sourceRoot = path.join(tempRoot, 'src');
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'chain(e) CUSTID CUSTOMER;\n', 'utf8');
+
+  const server = createMcpServer({
+    cwd: process.cwd(),
+  });
+
+  try {
+    await assert.rejects(
+      () => server.handleRequest({
+        jsonrpc: '2.0',
+        id: 18334,
+        method: 'tools/call',
+        params: {
+          name: 'zeus.field-search',
+          arguments: {
+            sourceRoot,
+            field: 'CUSTID',
+            cursor: 'bad-cursor',
+          },
+        },
+      }),
+      (error) => {
+        assert.equal(error.code, -32602);
+        assert.match(error.message, /cursor/i);
+        return true;
+      },
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp tools call joblog returns deterministic structured payload', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    joblogRunner: () => ({
+      profile: 'default-shared',
+      job: 'QPADEV',
+      severity: 'ERROR',
+      maxMessages: 50,
+      rowCount: 2,
+      uniqueMessageIdCount: 2,
+      limitReached: false,
+      columns: ['JOB_NAME', 'MESSAGE_ID', 'MESSAGE_TYPE', 'MESSAGE_TEXT', 'MESSAGE_TIMESTAMP'],
+      rows: [
+        {
+          JOB_NAME: 'QPADEV0001',
+          MESSAGE_ID: 'CPF0001',
+          MESSAGE_TYPE: 'ERROR',
+          MESSAGE_TEXT: 'Failure on update',
+          MESSAGE_TIMESTAMP: '2026-05-21-11.20.00.000000',
+        },
+        {
+          JOB_NAME: 'QPADEV0002',
+          MESSAGE_ID: 'CPF0002',
+          MESSAGE_TYPE: 'ERROR',
+          MESSAGE_TEXT: 'Token=abc123',
+          MESSAGE_TIMESTAMP: '2026-05-21-11.19.00.000000',
+        },
+      ],
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 1834,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.joblog',
+      arguments: {
+        profile: 'default-shared',
+        job: 'qpadev',
+        severity: 'ERROR',
+        maxMessages: 50,
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.isError, false);
+  assert.equal(callResponse.result.structuredContent.ok, true);
+  assert.equal(callResponse.result.structuredContent.profile, 'default-shared');
+  assert.equal(callResponse.result.structuredContent.job, 'QPADEV');
+  assert.equal(callResponse.result.structuredContent.severity, 'ERROR');
+  assert.equal(callResponse.result.structuredContent.maxMessages, 50);
+  assert.equal(callResponse.result.structuredContent.rowCount, 2);
+  assert.equal(callResponse.result.structuredContent.uniqueMessageIdCount, 2);
+  assert.equal(callResponse.result.structuredContent.limitReached, false);
+  assert.deepEqual(callResponse.result.structuredContent.columns, ['JOB_NAME', 'MESSAGE_ID', 'MESSAGE_TYPE', 'MESSAGE_TEXT', 'MESSAGE_TIMESTAMP']);
+  assert.deepEqual(callResponse.result.structuredContent.rows, [
+    {
+      JOB_NAME: 'QPADEV0001',
+      MESSAGE_ID: 'CPF0001',
+      MESSAGE_TYPE: 'ERROR',
+      MESSAGE_TEXT: 'Failure on update',
+      MESSAGE_TIMESTAMP: '2026-05-21-11.20.00.000000',
+    },
+    {
+      JOB_NAME: 'QPADEV0002',
+      MESSAGE_ID: 'CPF0002',
+      MESSAGE_TYPE: 'ERROR',
+      MESSAGE_TEXT: 'Token=[REDACTED]',
+      MESSAGE_TIMESTAMP: '2026-05-21-11.19.00.000000',
+    },
+  ]);
+  assert.match(callResponse.result.structuredContent.timestamp, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(
+    JSON.parse(callResponse.result.content[0].text),
+    callResponse.result.structuredContent,
+  );
+  assert.doesNotMatch(callResponse.result.content[0].text, /abc123/);
+});
+
+test('mcp tools call joblog maps invalid arguments to -32602', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    joblogRunner: () => {
+      throw new Error('Invalid option: --severity must be one of WARNING, ERROR, INFO');
+    },
+  });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 1835,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.joblog',
+        arguments: {
+          profile: 'default-shared',
+          severity: 'FATAL',
+        },
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /--severity/);
+      return true;
+    },
+  );
+});
+
+test('mcp tools call inspect-object returns deterministic structured payload', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    inspectObjectRunner: () => ({
+      profile: 'default-shared',
+      lib: 'APPLIB',
+      name: 'ORDERPGM',
+      type: '*PGM',
+      journalOnly: false,
+      rowCount: 1,
+      columns: ['NAME', 'TYPE', 'LIBRARY', 'OWNER'],
+      rows: [
+        {
+          NAME: 'ORDERPGM',
+          TYPE: '*PGM',
+          LIBRARY: 'APPLIB',
+          OWNER: 'QPGMR',
+          TEXT: 'Order entry program',
+        },
+      ],
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 1836,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.inspect-object',
+      arguments: {
+        profile: 'default-shared',
+        lib: 'applib',
+        name: 'orderpgm',
+        type: '*PGM',
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.isError, false);
+  assert.equal(callResponse.result.structuredContent.ok, true);
+  assert.equal(callResponse.result.structuredContent.profile, 'default-shared');
+  assert.equal(callResponse.result.structuredContent.lib, 'APPLIB');
+  assert.equal(callResponse.result.structuredContent.name, 'ORDERPGM');
+  assert.equal(callResponse.result.structuredContent.type, '*PGM');
+  assert.equal(callResponse.result.structuredContent.journalOnly, false);
+  assert.equal(callResponse.result.structuredContent.rowCount, 1);
+  assert.deepEqual(callResponse.result.structuredContent.columns, ['NAME', 'TYPE', 'LIBRARY', 'OWNER']);
+  assert.deepEqual(callResponse.result.structuredContent.rows, [
+    {
+      NAME: 'ORDERPGM',
+      TYPE: '*PGM',
+      LIBRARY: 'APPLIB',
+      OWNER: 'QPGMR',
+      TEXT: 'Order entry program',
+    },
+  ]);
+  assert.match(callResponse.result.structuredContent.timestamp, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(
+    JSON.parse(callResponse.result.content[0].text),
+    callResponse.result.structuredContent,
+  );
+});
+
+test('mcp tools call inspect-object maps invalid arguments to -32602', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    inspectObjectRunner: () => {
+      throw new Error('Invalid arguments for zeus.inspect-object: type must be one of *PGM, *FILE.');
+    },
+  });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 1837,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.inspect-object',
+        arguments: {
+          profile: 'default-shared',
+          lib: 'APPLIB',
+          name: 'ORDERPGM',
+          type: '*BAD',
+        },
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /type must be one of/i);
+      return true;
+    },
+  );
+});
+
+test('mcp tools call workflow returns deterministic structured payload', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    workflowRunner: () => ({
+      profile: 'default-shared',
+      program: 'ORDERPGM',
+      schemaVersion: 1,
+      kind: 'workflow-run-manifest',
+      generatedAt: '2026-05-21T11:10:00.000Z',
+      preset: {
+        available: true,
+        name: 'modernization-review',
+        title: 'Modernization Review',
+        analyzeMode: 'modernization',
+        promptTemplateCount: 3,
+        workflowKeyCount: 2,
+        bundleArtifactCount: 4,
+        reviewWorkflow: {
+          intendedAudienceCount: 2,
+          keyQuestionsAnsweredCount: 3,
+          expectedDecisionsCount: 2,
+        },
+      },
+      analyzeRun: {
+        available: true,
+        status: 'succeeded',
+        completedAt: '2026-05-21T11:09:00.000Z',
+        generatedArtifactCount: 18,
+        safeSharingEnabled: true,
+        guidedModeName: 'modernization',
+      },
+      bundle: {
+        available: true,
+        zipPath: 'ORDERPGM-modernization-review-bundle.zip',
+        totalFiles: 12,
+        totalSizeBytes: 4096,
+      },
+      reproducibility: {
+        available: true,
+        enabled: true,
+        contentFingerprint: 'abc123',
+      },
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 184,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.workflow',
+      arguments: {
+        profile: 'default-shared',
+        program: 'orderpgm',
+        out: './output',
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.isError, false);
+  assert.equal(callResponse.result.structuredContent.ok, true);
+  assert.equal(callResponse.result.structuredContent.profile, 'default-shared');
+  assert.equal(callResponse.result.structuredContent.program, 'ORDERPGM');
+  assert.equal(callResponse.result.structuredContent.schemaVersion, 1);
+  assert.equal(callResponse.result.structuredContent.kind, 'workflow-run-manifest');
+  assert.equal(callResponse.result.structuredContent.generatedAt, '2026-05-21T11:10:00.000Z');
+  assert.deepEqual(callResponse.result.structuredContent.preset, {
+    available: true,
+    name: 'modernization-review',
+    title: 'Modernization Review',
+    analyzeMode: 'modernization',
+    promptTemplateCount: 3,
+    workflowKeyCount: 2,
+    bundleArtifactCount: 4,
+    reviewWorkflow: {
+      intendedAudienceCount: 2,
+      keyQuestionsAnsweredCount: 3,
+      expectedDecisionsCount: 2,
+    },
+  });
+  assert.deepEqual(callResponse.result.structuredContent.analyzeRun, {
+    available: true,
+    status: 'succeeded',
+    completedAt: '2026-05-21T11:09:00.000Z',
+    generatedArtifactCount: 18,
+    safeSharingEnabled: true,
+    guidedModeName: 'modernization',
+  });
+  assert.deepEqual(callResponse.result.structuredContent.bundle, {
+    available: true,
+    zipPath: 'ORDERPGM-modernization-review-bundle.zip',
+    totalFiles: 12,
+    totalSizeBytes: 4096,
+  });
+  assert.deepEqual(callResponse.result.structuredContent.reproducibility, {
+    available: true,
+    enabled: true,
+    contentFingerprint: 'abc123',
+  });
+  assert.match(callResponse.result.structuredContent.timestamp, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(
+    JSON.parse(callResponse.result.content[0].text),
+    callResponse.result.structuredContent,
+  );
+});
+
+test('mcp tools call workflow maps invalid arguments to -32602', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    workflowRunner: () => {
+      throw new Error('Workflow run manifest not found: /tmp/output/ORDERPGM/workflow-run-manifest.json. Run workflow first.');
+    },
+  });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 185,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.workflow',
+        arguments: {
+          program: 'ORDERPGM',
+        },
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /workflow run manifest not found/i);
+      return true;
+    },
+  );
+});
+
+test('mcp tools call bundle returns deterministic structured payload', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    bundleRunner: () => ({
+      profile: 'default-shared',
+      program: 'ORDERPGM',
+      manifest: {
+        schemaVersion: 1,
+        generatedAt: '2026-05-21T11:05:00.000Z',
+        summary: {
+          totalFiles: 12,
+          totalSizeBytes: 4096,
+          jsonFiles: 6,
+          markdownFiles: 5,
+          htmlFiles: 1,
+        },
+        safeSharing: {
+          enabled: true,
+          sourceDir: 'safe-sharing',
+          redactionManifestFile: 'safe-sharing/redaction-manifest.json',
+        },
+      },
+      files: {
+        count: 3,
+        paths: ['analysis-index.json', 'manifest.json', 'report.md'],
+      },
+      artifacts: {
+        count: 3,
+        totalSizeBytes: 3072,
+        kinds: {
+          json: 2,
+          markdown: 1,
+        },
+      },
+      analyzeRun: {
+        available: true,
+        status: 'succeeded',
+        completedAt: '2026-05-21T11:00:00.000Z',
+        artifactCount: 17,
+      },
+      sourceProvenance: {
+        available: true,
+        sourceLib: 'APPLIB',
+        transportUsed: 'sftp',
+        fileCount: 2,
+        exportedFileCount: 2,
+        failedFileCount: 0,
+        traceableFileCount: 2,
+      },
+      bundleOutputs: {
+        root: '/tmp/bundles',
+        analysisBundleFile: 'ORDERPGM-analysis-bundle.zip',
+        analysisBundleExists: true,
+        safeSharingBundleFile: 'ORDERPGM-safe-sharing-bundle.zip',
+        safeSharingBundleExists: true,
+      },
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 186,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.bundle',
+      arguments: {
+        profile: 'default-shared',
+        program: 'orderpgm',
+        sourceOutputRoot: './output',
+        output: './bundles',
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.isError, false);
+  assert.equal(callResponse.result.structuredContent.ok, true);
+  assert.equal(callResponse.result.structuredContent.profile, 'default-shared');
+  assert.equal(callResponse.result.structuredContent.program, 'ORDERPGM');
+  assert.deepEqual(callResponse.result.structuredContent.manifest, {
+    schemaVersion: 1,
+    generatedAt: '2026-05-21T11:05:00.000Z',
+    summary: {
+      totalFiles: 12,
+      totalSizeBytes: 4096,
+      jsonFiles: 6,
+      markdownFiles: 5,
+      htmlFiles: 1,
+    },
+    safeSharing: {
+      enabled: true,
+      sourceDir: 'safe-sharing',
+      redactionManifestFile: 'safe-sharing/redaction-manifest.json',
+    },
+  });
+  assert.deepEqual(callResponse.result.structuredContent.files, {
+    count: 3,
+    paths: ['analysis-index.json', 'manifest.json', 'report.md'],
+  });
+  assert.deepEqual(callResponse.result.structuredContent.artifacts, {
+    count: 3,
+    totalSizeBytes: 3072,
+    kinds: [
+      { kind: 'json', count: 2 },
+      { kind: 'markdown', count: 1 },
+    ],
+  });
+  assert.deepEqual(callResponse.result.structuredContent.analyzeRun, {
+    available: true,
+    status: 'succeeded',
+    completedAt: '2026-05-21T11:00:00.000Z',
+    artifactCount: 17,
+  });
+  assert.deepEqual(callResponse.result.structuredContent.sourceProvenance, {
+    available: true,
+    sourceLib: 'APPLIB',
+    transportUsed: 'sftp',
+    fileCount: 2,
+    exportedFileCount: 2,
+    failedFileCount: 0,
+    traceableFileCount: 2,
+  });
+  assert.deepEqual(callResponse.result.structuredContent.bundleOutputs, {
+    root: '/tmp/bundles',
+    analysisBundleFile: 'ORDERPGM-analysis-bundle.zip',
+    analysisBundleExists: true,
+    safeSharingBundleFile: 'ORDERPGM-safe-sharing-bundle.zip',
+    safeSharingBundleExists: true,
+  });
+  assert.match(callResponse.result.structuredContent.timestamp, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(
+    JSON.parse(callResponse.result.content[0].text),
+    callResponse.result.structuredContent,
+  );
+});
+
+test('mcp tools call bundle maps invalid arguments to -32602', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    bundleRunner: () => {
+      throw new Error('Bundle manifest not found: /tmp/output/ORDERPGM/bundle-manifest.json. Run bundle first.');
+    },
+  });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 187,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.bundle',
+        arguments: {
+          program: 'ORDERPGM',
+        },
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /bundle manifest not found/i);
+      return true;
+    },
+  );
+});
+
+test('mcp tools call analyze returns deterministic structured payload', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    analyzeRunner: () => ({
+      profile: 'default-shared',
+      program: 'ORDERPGM',
+      status: 'succeeded',
+      completedAt: '2026-05-21T11:00:00.000Z',
+      durationMs: 1234,
+      reproducible: true,
+      summary: {
+        stageCount: 8,
+        completedStageCount: 8,
+        failedStageCount: 0,
+        diagnosticCount: 2,
+        errorCount: 0,
+        warningCount: 1,
+        generatedArtifactCount: 17,
+        sourceFileCount: 3,
+      },
+      artifacts: {
+        count: 3,
+        files: ['analysis-index.json', 'canonical-analysis.json', 'program-call-tree.json'],
+      },
+      analysisIndex: {
+        available: true,
+        selectedMode: 'impact',
+        selectedPreset: 'impact-review',
+        taskCount: 7,
+        guidedModeCount: 5,
+      },
+      graph: {
+        available: true,
+        nodeCount: 12,
+        edgeCount: 18,
+        programCount: 7,
+        tableCount: 5,
+      },
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 188,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.analyze',
+      arguments: {
+        profile: 'default-shared',
+        program: 'orderpgm',
+        out: './output',
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.isError, false);
+  assert.equal(callResponse.result.structuredContent.ok, true);
+  assert.equal(callResponse.result.structuredContent.profile, 'default-shared');
+  assert.equal(callResponse.result.structuredContent.program, 'ORDERPGM');
+  assert.equal(callResponse.result.structuredContent.status, 'succeeded');
+  assert.equal(callResponse.result.structuredContent.completedAt, '2026-05-21T11:00:00.000Z');
+  assert.equal(callResponse.result.structuredContent.durationMs, 1234);
+  assert.equal(callResponse.result.structuredContent.reproducible, true);
+  assert.deepEqual(callResponse.result.structuredContent.summary, {
+    stageCount: 8,
+    completedStageCount: 8,
+    failedStageCount: 0,
+    diagnosticCount: 2,
+    errorCount: 0,
+    warningCount: 1,
+    generatedArtifactCount: 17,
+    sourceFileCount: 3,
+  });
+  assert.deepEqual(callResponse.result.structuredContent.artifacts, {
+    count: 3,
+    files: ['analysis-index.json', 'canonical-analysis.json', 'program-call-tree.json'],
+  });
+  assert.deepEqual(callResponse.result.structuredContent.analysisIndex, {
+    available: true,
+    selectedMode: 'impact',
+    selectedPreset: 'impact-review',
+    taskCount: 7,
+    guidedModeCount: 5,
+  });
+  assert.deepEqual(callResponse.result.structuredContent.graph, {
+    available: true,
+    nodeCount: 12,
+    edgeCount: 18,
+    programCount: 7,
+    tableCount: 5,
+  });
+  assert.match(callResponse.result.structuredContent.timestamp, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(
+    JSON.parse(callResponse.result.content[0].text),
+    callResponse.result.structuredContent,
+  );
+});
+
+test('mcp tools call analyze maps invalid arguments to -32602', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    analyzeRunner: () => {
+      throw new Error('Analyze run manifest not found: /tmp/output/ORDERPGM/analyze-run-manifest.json');
+    },
+  });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 189,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.analyze',
+        arguments: {
+          program: 'ORDERPGM',
+        },
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /analyze run manifest not found/i);
+      return true;
+    },
+  );
+});
+
+test('mcp tools call impact returns deterministic structured payload', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    impactRunner: () => ({
+      profile: 'default-shared',
+      target: 'ORDERPGM',
+      program: 'ORDERPGM',
+      graphPath: '/tmp/impact/program-call-tree.json',
+      outputProgramDir: '/tmp/impact/ORDERPGM',
+      result: {
+        target: 'ORDERPGM',
+        type: 'PROGRAM',
+        directCallers: ['CALLERA', 'CALLERB'],
+        indirectCallers: ['CALLERC'],
+        totalAffectedPrograms: 3,
+        ambiguity: {
+          targetAmbiguous: true,
+          targetUnresolved: false,
+          ambiguousPrograms: ['ORDERPGM'],
+          unresolvedPrograms: [],
+        },
+      },
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 190,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.impact',
+      arguments: {
+        profile: 'default-shared',
+        target: 'orderpgm',
+        program: 'orderpgm',
+        out: './output',
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.isError, false);
+  assert.equal(callResponse.result.structuredContent.ok, true);
+  assert.equal(callResponse.result.structuredContent.service, 'zeus-rpg-promptkit');
+  assert.equal(callResponse.result.structuredContent.profile, 'default-shared');
+  assert.equal(callResponse.result.structuredContent.target, 'ORDERPGM');
+  assert.equal(callResponse.result.structuredContent.program, 'ORDERPGM');
+  assert.equal(callResponse.result.structuredContent.type, 'PROGRAM');
+  assert.equal(callResponse.result.structuredContent.cursor, null);
+  assert.equal(callResponse.result.structuredContent.cursorOffset, 0);
+  assert.equal(callResponse.result.structuredContent.nextCursor, null);
+  assert.equal(callResponse.result.structuredContent.maxItems, 100);
+  assert.deepEqual(callResponse.result.structuredContent.directPrograms, []);
+  assert.deepEqual(callResponse.result.structuredContent.indirectPrograms, []);
+  assert.deepEqual(callResponse.result.structuredContent.directCallers, ['CALLERA', 'CALLERB']);
+  assert.deepEqual(callResponse.result.structuredContent.indirectCallers, ['CALLERC']);
+  assert.equal(callResponse.result.structuredContent.directProgramsCount, 0);
+  assert.equal(callResponse.result.structuredContent.indirectProgramsCount, 0);
+  assert.equal(callResponse.result.structuredContent.directCallersCount, 2);
+  assert.equal(callResponse.result.structuredContent.indirectCallersCount, 1);
+  assert.equal(callResponse.result.structuredContent.directProgramsTruncated, false);
+  assert.equal(callResponse.result.structuredContent.indirectProgramsTruncated, false);
+  assert.equal(callResponse.result.structuredContent.directCallersTruncated, false);
+  assert.equal(callResponse.result.structuredContent.indirectCallersTruncated, false);
+  assert.equal(callResponse.result.structuredContent.totalAffectedPrograms, 3);
+  assert.deepEqual(callResponse.result.structuredContent.ambiguity, {
+    targetAmbiguous: true,
+    targetUnresolved: false,
+    ambiguousPrograms: ['ORDERPGM'],
+    unresolvedPrograms: [],
+  });
+  assert.match(callResponse.result.structuredContent.timestamp, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(
+    JSON.parse(callResponse.result.content[0].text),
+    callResponse.result.structuredContent,
+  );
+});
+
+test('mcp tools call impact applies maxItems cap deterministically', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    impactRunner: () => ({
+      profile: 'default-shared',
+      target: 'ORDERPGM',
+      program: 'ORDERPGM',
+      result: {
+        type: 'PROGRAM',
+        directPrograms: ['DP1', 'DP2'],
+        indirectPrograms: ['IP1', 'IP2'],
+        directCallers: ['DC1', 'DC2'],
+        indirectCallers: ['IC1', 'IC2'],
+        totalAffectedPrograms: 8,
+        ambiguity: {
+          targetAmbiguous: false,
+          targetUnresolved: false,
+          ambiguousPrograms: [],
+          unresolvedPrograms: [],
+        },
+      },
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 1901,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.impact',
+      arguments: {
+        target: 'ORDERPGM',
+        maxItems: 1,
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.isError, false);
+  assert.equal(callResponse.result.structuredContent.cursor, null);
+  assert.equal(callResponse.result.structuredContent.cursorOffset, 0);
+  assert.equal(typeof callResponse.result.structuredContent.nextCursor, 'string');
+  assert.notEqual(callResponse.result.structuredContent.nextCursor, '1');
+  assert.equal(callResponse.result.structuredContent.maxItems, 1);
+  assert.deepEqual(callResponse.result.structuredContent.directPrograms, ['DP1']);
+  assert.deepEqual(callResponse.result.structuredContent.indirectPrograms, ['IP1']);
+  assert.deepEqual(callResponse.result.structuredContent.directCallers, ['DC1']);
+  assert.deepEqual(callResponse.result.structuredContent.indirectCallers, ['IC1']);
+  assert.equal(callResponse.result.structuredContent.directProgramsCount, 2);
+  assert.equal(callResponse.result.structuredContent.indirectProgramsCount, 2);
+  assert.equal(callResponse.result.structuredContent.directCallersCount, 2);
+  assert.equal(callResponse.result.structuredContent.indirectCallersCount, 2);
+  assert.equal(callResponse.result.structuredContent.directProgramsTruncated, true);
+  assert.equal(callResponse.result.structuredContent.indirectProgramsTruncated, true);
+  assert.equal(callResponse.result.structuredContent.directCallersTruncated, true);
+  assert.equal(callResponse.result.structuredContent.indirectCallersTruncated, true);
+});
+
+test('mcp tools call impact supports deterministic cursor pagination', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    impactRunner: () => ({
+      profile: 'default-shared',
+      target: 'ORDERPGM',
+      program: 'ORDERPGM',
+      result: {
+        type: 'PROGRAM',
+        directPrograms: ['DP1', 'DP2', 'DP3'],
+        indirectPrograms: ['IP1', 'IP2', 'IP3'],
+        directCallers: ['DC1', 'DC2', 'DC3'],
+        indirectCallers: ['IC1', 'IC2', 'IC3'],
+        totalAffectedPrograms: 12,
+        ambiguity: {
+          targetAmbiguous: false,
+          targetUnresolved: false,
+          ambiguousPrograms: [],
+          unresolvedPrograms: [],
+        },
+      },
+    }),
+  });
+
+  const page1 = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 1902,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.impact',
+      arguments: {
+        target: 'ORDERPGM',
+        maxItems: 2,
+      },
+    },
+  });
+
+  assert.equal(page1.result.isError, false);
+  assert.equal(page1.result.structuredContent.cursor, null);
+  assert.equal(page1.result.structuredContent.cursorOffset, 0);
+  assert.equal(typeof page1.result.structuredContent.nextCursor, 'string');
+  assert.notEqual(page1.result.structuredContent.nextCursor, '2');
+  assert.deepEqual(page1.result.structuredContent.directPrograms, ['DP1', 'DP2']);
+  assert.deepEqual(page1.result.structuredContent.indirectPrograms, ['IP1', 'IP2']);
+  assert.deepEqual(page1.result.structuredContent.directCallers, ['DC1', 'DC2']);
+  assert.deepEqual(page1.result.structuredContent.indirectCallers, ['IC1', 'IC2']);
+  assert.equal(page1.result.structuredContent.directProgramsTruncated, true);
+  assert.equal(page1.result.structuredContent.indirectProgramsTruncated, true);
+  assert.equal(page1.result.structuredContent.directCallersTruncated, true);
+  assert.equal(page1.result.structuredContent.indirectCallersTruncated, true);
+
+  const page2 = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 1903,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.impact',
+      arguments: {
+        target: 'ORDERPGM',
+        maxItems: 2,
+        cursor: page1.result.structuredContent.nextCursor,
+      },
+    },
+  });
+
+  assert.equal(page2.result.isError, false);
+  assert.equal(page2.result.structuredContent.cursor, page1.result.structuredContent.nextCursor);
+  assert.equal(page2.result.structuredContent.cursorOffset, 2);
+  assert.equal(page2.result.structuredContent.nextCursor, null);
+  assert.deepEqual(page2.result.structuredContent.directPrograms, ['DP3']);
+  assert.deepEqual(page2.result.structuredContent.indirectPrograms, ['IP3']);
+  assert.deepEqual(page2.result.structuredContent.directCallers, ['DC3']);
+  assert.deepEqual(page2.result.structuredContent.indirectCallers, ['IC3']);
+  assert.equal(page2.result.structuredContent.directProgramsTruncated, false);
+  assert.equal(page2.result.structuredContent.indirectProgramsTruncated, false);
+  assert.equal(page2.result.structuredContent.directCallersTruncated, false);
+  assert.equal(page2.result.structuredContent.indirectCallersTruncated, false);
+});
+
+test('mcp tools call impact maps invalid arguments to -32602', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    impactRunner: () => {
+      throw new Error('Output directory not found: /tmp/does-not-exist');
+    },
+  });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 191,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.impact',
+        arguments: {
+          target: 'ORDERPGM',
+        },
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /output directory not found/i);
+      return true;
+    },
+  );
+});
+
+test('mcp tools call impact maps invalid maxItems to -32602', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    impactRunner: () => ({
+      profile: 'default-shared',
+      target: 'ORDERPGM',
+      program: 'ORDERPGM',
+      result: {},
+    }),
+  });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 1911,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.impact',
+        arguments: {
+          target: 'ORDERPGM',
+          maxItems: 0,
+        },
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /maxitems/i);
+      return true;
+    },
+  );
+});
+
+test('mcp tools call impact maps invalid cursor to -32602', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    impactRunner: () => ({
+      profile: 'default-shared',
+      target: 'ORDERPGM',
+      program: 'ORDERPGM',
+      result: {},
+    }),
+  });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 1912,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.impact',
+        arguments: {
+          target: 'ORDERPGM',
+          cursor: 'bad-cursor',
+        },
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /cursor/i);
+      return true;
+    },
+  );
+});
+
+test('mcp tools call assess-risk returns deterministic structured payload', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    assessRiskRunner: () => ({
+      profile: 'default-shared',
+      program: 'ORDERPGM',
+      summary: {
+        riskLevel: 'HIGH',
+        distribution: '1 green / 2 yellow / 1 red',
+      },
+      riskMetrics: {
+        totalAccesses: 4,
+        greenCount: 1,
+        yellowCount: 2,
+        redCount: 1,
+      },
+      recommendations: [
+        'Review dynamic SQL usage around ORDERHDR.',
+      ],
+      accessPoints: [
+        {
+          type: 'IO',
+          subtype: 'CHAIN',
+          name: 'ORDERHDR',
+          intent: 'READ',
+          tables: ['ORDERHDR'],
+          assessment: {
+            risk: 'MEDIUM',
+            score: 65,
+            reason: 'Mixed validation pathways',
+          },
+          evidenceCount: 2,
+        },
+      ],
+      criticalPaths: [
+        {
+          type: 'DATA-FLOW',
+          reason: 'Unbounded data propagation',
+          tables: ['ORDERDTL'],
+          evidenceCount: 1,
+        },
+      ],
+      accessPointCount: 4,
+      criticalPathCount: 2,
+      accessPointsTruncated: true,
+      criticalPathsTruncated: false,
+      maxAccessPoints: 1,
+      maxCriticalPaths: 10,
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 192,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.assess-risk',
+      arguments: {
+        profile: 'default-shared',
+        program: 'orderpgm',
+        out: './output',
+        maxAccessPoints: 1,
+        maxCriticalPaths: 10,
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.isError, false);
+  assert.equal(callResponse.result.structuredContent.ok, true);
+  assert.equal(callResponse.result.structuredContent.service, 'zeus-rpg-promptkit');
+  assert.equal(callResponse.result.structuredContent.profile, 'default-shared');
+  assert.equal(callResponse.result.structuredContent.program, 'ORDERPGM');
+  assert.deepEqual(callResponse.result.structuredContent.summary, {
+    riskLevel: 'HIGH',
+    distribution: '1 green / 2 yellow / 1 red',
+  });
+  assert.deepEqual(callResponse.result.structuredContent.riskMetrics, {
+    totalAccesses: 4,
+    greenCount: 1,
+    yellowCount: 2,
+    redCount: 1,
+  });
+  assert.deepEqual(callResponse.result.structuredContent.recommendations, [
+    'Review dynamic SQL usage around ORDERHDR.',
+  ]);
+  assert.deepEqual(callResponse.result.structuredContent.accessPoints, [
+    {
+      type: 'IO',
+      subtype: 'CHAIN',
+      name: 'ORDERHDR',
+      intent: 'READ',
+      tables: ['ORDERHDR'],
+      assessment: {
+        risk: 'MEDIUM',
+        score: 65,
+        reason: 'Mixed validation pathways',
+      },
+      evidenceCount: 2,
+    },
+  ]);
+  assert.deepEqual(callResponse.result.structuredContent.criticalPaths, [
+    {
+      type: 'DATA-FLOW',
+      reason: 'Unbounded data propagation',
+      tables: ['ORDERDTL'],
+      evidenceCount: 1,
+    },
+  ]);
+  assert.equal(callResponse.result.structuredContent.accessPointCount, 4);
+  assert.equal(callResponse.result.structuredContent.criticalPathCount, 2);
+  assert.equal(callResponse.result.structuredContent.accessPointsTruncated, true);
+  assert.equal(callResponse.result.structuredContent.criticalPathsTruncated, false);
+  assert.equal(callResponse.result.structuredContent.maxAccessPoints, 1);
+  assert.equal(callResponse.result.structuredContent.maxCriticalPaths, 10);
+  assert.match(callResponse.result.structuredContent.timestamp, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(
+    JSON.parse(callResponse.result.content[0].text),
+    callResponse.result.structuredContent,
+  );
+});
+
+test('mcp tools call assess-risk maps invalid arguments to -32602', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    assessRiskRunner: () => {
+      throw new Error('Canonical analysis not found for program "ORDERPGM" at /tmp/output/ORDERPGM/canonical-analysis.json. Run analyze first.');
+    },
+  });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 193,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.assess-risk',
+        arguments: {
+          program: 'ORDERPGM',
+        },
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /canonical analysis not found/i);
       return true;
     },
   );
