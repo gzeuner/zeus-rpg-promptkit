@@ -59,7 +59,7 @@ function encodeMcpCursor(toolName, offset) {
 }
 
 function decodeMcpCursor(toolName, cursor, options = {}) {
-  const allowLegacyNumericCursor = options.allowLegacyNumericCursor !== false;
+  const allowLegacyNumericCursor = options.allowLegacyNumericCursor === true;
   const rawCursor = typeof cursor === 'string' ? cursor.trim() : '';
   if (!rawCursor) {
     return {
@@ -1262,7 +1262,7 @@ async function executeReadOnlySearchSource(args = {}, context = {}) {
     max: MAX_MCP_PAYLOAD_ITEMS,
   });
   const cursorState = decodeMcpCursor('zeus.search-source', args && args.cursor, {
-    allowLegacyNumericCursor: context.allowLegacyNumericCursor !== false,
+    allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
   });
 
   const execution = await executeSearchSource({
@@ -1406,7 +1406,7 @@ async function executeReadOnlyFieldSearch(args = {}, context = {}) {
     max: MAX_MCP_PAYLOAD_ITEMS,
   });
   const cursorState = decodeMcpCursor('zeus.field-search', args && args.cursor, {
-    allowLegacyNumericCursor: context.allowLegacyNumericCursor !== false,
+    allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
   });
   const contextLines = parseOptionalPositiveInteger(args && args.contextLines, {
     label: 'zeus.field-search contextLines',
@@ -1929,11 +1929,11 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         max: MAX_MCP_PAYLOAD_ITEMS,
       });
       cursorState = decodeMcpCursor('zeus.impact', args && args.cursor, {
-        allowLegacyNumericCursor: context.allowLegacyNumericCursor !== false,
+        allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
       });
       execution = impactRunner(args, {
         cwd: context.cwd || process.cwd(),
-        allowLegacyNumericCursor: context.allowLegacyNumericCursor !== false,
+        allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
       });
     } catch (error) {
       const invalidArgCodes = new Set([
@@ -2116,7 +2116,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     try {
       execution = await searchSourceRunner(args, {
         cwd: context.cwd || process.cwd(),
-        allowLegacyNumericCursor: context.allowLegacyNumericCursor !== false,
+        allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
       });
     } catch (error) {
       if (
@@ -2182,7 +2182,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     try {
       execution = await fieldSearchRunner(args, {
         cwd: context.cwd || process.cwd(),
-        allowLegacyNumericCursor: context.allowLegacyNumericCursor !== false,
+        allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
       });
     } catch (error) {
       if (

@@ -64,7 +64,7 @@ Behavior:
 - responses include `cursor`, `cursorOffset`, and `nextCursor`
 - `nextCursor` is an opaque versioned token
 - clients should treat cursor values as opaque and only replay them back to the same tool
-- legacy numeric cursor input remains accepted during the transition window
+- legacy numeric cursor input is rejected by default and can be temporarily re-enabled with `--legacy-cursor-fallback true`
 - deterministic ordering is preserved across pages for a stable request shape
 
 ## Deterministic Error Mapping
