@@ -658,7 +658,7 @@ test('mcp tools call search-source maps invalid cursor to -32602', async () => {
   }
 });
 
-test('mcp tools call search-source still accepts legacy numeric cursor input', async () => {
+test('mcp tools call search-source accepts legacy numeric cursor when compatibility mode is enabled', async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-search-source-'));
   const sourceRoot = path.join(tempRoot, 'src');
   fs.mkdirSync(sourceRoot, { recursive: true });
@@ -668,6 +668,7 @@ test('mcp tools call search-source still accepts legacy numeric cursor input', a
 
   const server = createMcpServer({
     cwd: process.cwd(),
+    allowLegacyNumericCursor: true,
   });
 
   try {
@@ -696,7 +697,7 @@ test('mcp tools call search-source still accepts legacy numeric cursor input', a
   }
 });
 
-test('mcp tools call search-source rejects legacy numeric cursor when fallback is disabled', async () => {
+test('mcp tools call search-source rejects legacy numeric cursor by default', async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-search-source-'));
   const sourceRoot = path.join(tempRoot, 'src');
   fs.mkdirSync(sourceRoot, { recursive: true });
@@ -705,7 +706,6 @@ test('mcp tools call search-source rejects legacy numeric cursor when fallback i
 
   const server = createMcpServer({
     cwd: process.cwd(),
-    allowLegacyNumericCursor: false,
   });
 
   try {

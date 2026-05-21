@@ -135,7 +135,7 @@ function createMcpServer(runtime = {}) {
   const redactor = createMcpRedactor(runtime);
   const auditLogger = createMcpAuditLogger(runtime, redactor);
   const context = {
-    allowLegacyNumericCursor: runtime.allowLegacyNumericCursor !== false,
+    allowLegacyNumericCursor: runtime.allowLegacyNumericCursor === true,
     cwd: runtime.cwd || process.cwd(),
     assessRiskRunner: typeof runtime.assessRiskRunner === 'function' ? runtime.assessRiskRunner : undefined,
     analyzeRunner: typeof runtime.analyzeRunner === 'function' ? runtime.analyzeRunner : undefined,

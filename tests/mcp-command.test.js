@@ -49,6 +49,28 @@ test('runMcp passes allowlisted tools into MCP server runtime', async () => {
   assert.deepEqual(capturedRuntime.allowlistedTools, ['zeus.health', 'zeus.version']);
 });
 
+test('runMcp defaults to strict cursor mode when flag is omitted', async () => {
+  let capturedRuntime = null;
+
+  await runMcp(
+    {
+      _: ['serve'],
+      stdio: true,
+    },
+    {
+      cwd: '/tmp/mcp-test-cwd-default',
+      createMcpServer: (runtime) => {
+        capturedRuntime = runtime;
+        return {
+          startStdio() {},
+        };
+      },
+    },
+  );
+
+  assert.equal(capturedRuntime.allowLegacyNumericCursor, false);
+});
+
 test('runMcp exits with code 2 for invalid allow-tools flag usage', async () => {
   const originalExit = process.exit;
   const originalError = console.error;

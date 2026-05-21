@@ -16,8 +16,8 @@ test('encodeMcpCursor and decodeMcpCursor round-trip opaque cursor state', () =>
   });
 });
 
-test('decodeMcpCursor accepts legacy numeric cursor input during transition', () => {
-  const decoded = __private.decodeMcpCursor('zeus.field-search', '7');
+test('decodeMcpCursor accepts legacy numeric cursor input when compatibility mode is enabled', () => {
+  const decoded = __private.decodeMcpCursor('zeus.field-search', '7', { allowLegacyNumericCursor: true });
   assert.deepEqual(decoded, {
     cursor: '7',
     offset: 7,
@@ -25,9 +25,9 @@ test('decodeMcpCursor accepts legacy numeric cursor input during transition', ()
   });
 });
 
-test('decodeMcpCursor can reject legacy numeric cursor input in strict mode', () => {
+test('decodeMcpCursor rejects legacy numeric cursor input by default', () => {
   assert.throws(
-    () => __private.decodeMcpCursor('zeus.field-search', '7', { allowLegacyNumericCursor: false }),
+    () => __private.decodeMcpCursor('zeus.field-search', '7'),
     /legacy numeric cursor input is disabled/i,
   );
 });
