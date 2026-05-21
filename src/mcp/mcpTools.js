@@ -164,6 +164,13 @@ function summarizeJoblogRows({ profile, jobName, severity, maxMessages, result, 
   const rows = Array.isArray(result && result.rows) ? result.rows : [];
   const columns = Array.isArray(result && result.columns) ? result.columns : [];
   const messageIds = new Set(rows.map((row) => (row && row.MESSAGE_ID ? String(row.MESSAGE_ID) : '')).filter(Boolean));
+  const compatibilityNote = backend === 'HISTORY_LOG_INFO'
+    ? (
+      severity
+        ? `Compatibility mode: results came from HISTORY_LOG_INFO, so the requested severity "${severity}" is best-effort and may not exactly match JOBLOG_INFO semantics.`
+        : 'Compatibility mode: results came from HISTORY_LOG_INFO because JOBLOG_INFO is unavailable on this system.'
+    )
+    : null;
 
   return {
     profile,
@@ -171,6 +178,7 @@ function summarizeJoblogRows({ profile, jobName, severity, maxMessages, result, 
     severity: severity || null,
     maxMessages,
     backend,
+    compatibilityNote,
     rowCount: rows.length,
     uniqueMessageIdCount: messageIds.size,
     limitReached: rows.length >= maxMessages,
@@ -2370,6 +2378,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       severity: execution && execution.severity ? String(execution.severity) : null,
       maxMessages: Number(execution && execution.maxMessages ? execution.maxMessages : 0),
       backend: execution && execution.backend ? String(execution.backend) : 'JOBLOG_INFO',
+      compatibilityNote: execution && execution.compatibilityNote ? String(execution.compatibilityNote) : null,
       rowCount: Number(execution && execution.rowCount ? execution.rowCount : 0),
       uniqueMessageIdCount: Number(execution && execution.uniqueMessageIdCount ? execution.uniqueMessageIdCount : 0),
       limitReached: Boolean(execution && execution.limitReached),

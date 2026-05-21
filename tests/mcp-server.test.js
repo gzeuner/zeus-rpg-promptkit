@@ -154,6 +154,23 @@ test('buildHistoryLogFallbackQuery creates a deterministic compatibility query',
   assert.match(query, /FETCH FIRST 25 ROWS ONLY/);
 });
 
+test('summarizeJoblogRows includes compatibility note for HISTORY_LOG_INFO backend', () => {
+  const summary = __private.summarizeJoblogRows({
+    profile: 'default-local',
+    jobName: 'QPADEV',
+    severity: 'ERROR',
+    maxMessages: 10,
+    backend: 'HISTORY_LOG_INFO',
+    result: {
+      columns: ['JOB_NAME', 'MESSAGE_ID'],
+      rows: [{ JOB_NAME: 'QPADEV0001', MESSAGE_ID: 'CPF0001' }],
+    },
+  });
+
+  assert.equal(summary.backend, 'HISTORY_LOG_INFO');
+  assert.match(summary.compatibilityNote, /best-effort/i);
+});
+
 test('mcp tools call rejects unknown tool', async () => {
   const server = createMcpServer({ cwd: process.cwd() });
   await assert.rejects(
@@ -1115,6 +1132,7 @@ test('mcp tools call joblog returns deterministic structured payload', async () 
   assert.equal(callResponse.result.structuredContent.severity, 'ERROR');
   assert.equal(callResponse.result.structuredContent.maxMessages, 50);
   assert.equal(callResponse.result.structuredContent.backend, 'JOBLOG_INFO');
+  assert.equal(callResponse.result.structuredContent.compatibilityNote, null);
   assert.equal(callResponse.result.structuredContent.rowCount, 2);
   assert.equal(callResponse.result.structuredContent.uniqueMessageIdCount, 2);
   assert.equal(callResponse.result.structuredContent.limitReached, false);
@@ -1141,6 +1159,50 @@ test('mcp tools call joblog returns deterministic structured payload', async () 
     callResponse.result.structuredContent,
   );
   assert.doesNotMatch(callResponse.result.content[0].text, /abc123/);
+});
+
+test('mcp tools call joblog exposes compatibility note when fallback backend is used', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    joblogRunner: () => ({
+      profile: 'default-local',
+      job: null,
+      severity: 'ERROR',
+      maxMessages: 10,
+      backend: 'HISTORY_LOG_INFO',
+      compatibilityNote: 'Compatibility mode: results came from HISTORY_LOG_INFO, so the requested severity "ERROR" is best-effort and may not exactly match JOBLOG_INFO semantics.',
+      rowCount: 1,
+      uniqueMessageIdCount: 1,
+      limitReached: false,
+      columns: ['JOB_NAME', 'MESSAGE_ID', 'MESSAGE_TYPE', 'MESSAGE_TEXT', 'MESSAGE_TIMESTAMP'],
+      rows: [
+        {
+          JOB_NAME: '477227/QSYS/QINTER',
+          MESSAGE_ID: 'CPI1133',
+          MESSAGE_TYPE: 'INFORMATIONAL',
+          MESSAGE_TEXT: 'All jobs at work station QPADEV003G disconnected.',
+          MESSAGE_TIMESTAMP: '2026-05-20 19:43:35.922190',
+        },
+      ],
+    }),
+  });
+
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 18341,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.joblog',
+      arguments: {
+        profile: 'default-local',
+        severity: 'ERROR',
+        maxMessages: 10,
+      },
+    },
+  });
+
+  assert.equal(callResponse.result.structuredContent.backend, 'HISTORY_LOG_INFO');
+  assert.match(callResponse.result.structuredContent.compatibilityNote, /best-effort/i);
 });
 
 test('mcp tools call joblog maps invalid arguments to -32602', async () => {
