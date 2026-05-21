@@ -71,7 +71,7 @@ function printMcpHelp() {
   console.log('Notes:');
   console.log('  - MVP currently exposes read-only tools: zeus.health, zeus.version, zeus.doctor, zeus.workflow, zeus.bundle, zeus.analyze, zeus.impact, zeus.assess-risk, zeus.query-table, zeus.query-sql, zeus.search-source, zeus.field-search, zeus.joblog, zeus.inspect-object');
   console.log('  - Runs local-only over stdio transport.');
-  console.log('  - Cursor-enabled tools return opaque versioned nextCursor tokens; legacy numeric cursor input remains accepted during transition unless --legacy-cursor-fallback false is set.');
+  console.log('  - Cursor-enabled tools return opaque versioned nextCursor tokens; legacy numeric cursor input is rejected by default and can be re-enabled with --legacy-cursor-fallback true.');
 }
 
 async function runMcp(args = {}, dependencies = {}) {
@@ -94,7 +94,7 @@ async function runMcp(args = {}, dependencies = {}) {
 
     const knownToolNames = listMcpTools().map((tool) => tool.name);
     const allowlistedTools = parseAllowlistedTools(args['allow-tools'], knownToolNames);
-    const allowLegacyNumericCursor = parseBoolean(args['legacy-cursor-fallback'], true);
+    const allowLegacyNumericCursor = parseBoolean(args['legacy-cursor-fallback'], false);
     const verbose = parseBoolean(args.verbose, false);
     const server = createServer({
       cwd,
@@ -108,8 +108,8 @@ async function runMcp(args = {}, dependencies = {}) {
       if (Array.isArray(allowlistedTools)) {
         console.error(`[mcp] allowlisted tools: ${allowlistedTools.join(', ')}`);
       }
-      if (!allowLegacyNumericCursor) {
-        console.error('[mcp] legacy numeric cursor fallback disabled');
+      if (allowLegacyNumericCursor) {
+        console.error('[mcp] legacy numeric cursor fallback enabled (compatibility mode)');
       }
     }
   } catch (error) {
