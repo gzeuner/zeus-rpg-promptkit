@@ -6,6 +6,7 @@ const path = require('path');
 const { PassThrough } = require('node:stream');
 
 const { createMcpServer } = require('../src/mcp/mcpServer');
+const { __private } = require('../src/mcp/mcpTools');
 const { MCP_AUDIT_SCHEMA_VERSION } = require('../src/mcp/mcpAuditLog');
 const { encodeJsonRpcMessage, parseIncomingMessages } = require('../src/mcp/stdioTransport');
 
@@ -89,6 +90,48 @@ test('mcp tools list and call health tool', async () => {
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.field-search'), true);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.joblog'), true);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.inspect-object'), true);
+});
+
+test('mcp redaction preserves public tool and service identifiers when env contains uppercase ZEUS term', async () => {
+  const server = createMcpServer({
+    cwd: process.cwd(),
+    env: {
+      ZEUS_FETCH_USER: 'ZEUS',
+    },
+  });
+
+  const initializeResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 9,
+    method: 'initialize',
+    params: {},
+  });
+  const listResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 10,
+    method: 'tools/list',
+  });
+  const callResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 11,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.health',
+      arguments: {},
+    },
+  });
+
+  assert.equal(initializeResponse.result.serverInfo.name, 'zeus-rpg-promptkit');
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.health'), true);
+  assert.equal(callResponse.result.structuredContent.service, 'zeus-rpg-promptkit');
+});
+
+test('normalizeJoblogToolError rewrites missing JOBLOG_INFO failures into actionable guidance', () => {
+  const error = new Error('DB2 diagnostic query failed: [SQL0204] JOBLOG_INFO in QSYS2 type *FILE not found.');
+  const normalized = __private.normalizeJoblogToolError(error);
+
+  assert.match(normalized.message, /requires QSYS2\.JOBLOG_INFO/i);
+  assert.match(normalized.message, /QSYS2\.HISTORY_LOG_INFO/i);
 });
 
 test('mcp tools call rejects unknown tool', async () => {

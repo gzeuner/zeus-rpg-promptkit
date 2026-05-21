@@ -69,8 +69,7 @@ function normalizeSensitiveTerms(input = []) {
   const terms = Array.isArray(input) ? input : [input];
   return Array.from(new Set(terms
     .map((entry) => String(entry || '').trim())
-    .filter((entry) => entry.length > 1)
-    .map((entry) => entry.toUpperCase())))
+    .filter((entry) => entry.length > 1)))
     .sort((left, right) => right.length - left.length || left.localeCompare(right));
 }
 
@@ -111,7 +110,7 @@ function maskSensitiveTermsInText(value, sensitiveTerms = []) {
   for (const term of normalizedTerms) {
     const escaped = escapeRegExp(term);
     text = text.replace(
-      new RegExp(`(^|[^A-Z0-9_#$@])(${escaped})(?=[^A-Z0-9_#$@]|$)`, 'gi'),
+      new RegExp(`(^|[^A-Z0-9_#$@])(${escaped})(?=[^A-Z0-9_#$@]|$)`, 'g'),
       `$1${REDACTED_VALUE}`,
     );
   }
