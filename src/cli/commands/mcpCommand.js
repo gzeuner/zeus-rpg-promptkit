@@ -66,11 +66,12 @@ function parseAllowlistedTools(value, knownToolNames = null) {
 
 function printMcpHelp() {
   console.log('MCP commands:');
-  console.log('  zeus mcp serve [--stdio true|false] [--allow-tools <name1,name2>] [--verbose]');
+  console.log('  zeus mcp serve [--stdio true|false] [--allow-tools <name1,name2>] [--legacy-cursor-fallback true|false] [--verbose]');
   console.log('');
   console.log('Notes:');
-  console.log('  - MVP currently exposes read-only tools: zeus.health, zeus.version, zeus.doctor, zeus.query-table, zeus.query-sql');
+  console.log('  - MVP currently exposes read-only tools: zeus.health, zeus.version, zeus.doctor, zeus.workflow, zeus.bundle, zeus.analyze, zeus.impact, zeus.assess-risk, zeus.query-table, zeus.query-sql, zeus.search-source, zeus.field-search, zeus.joblog, zeus.inspect-object');
   console.log('  - Runs local-only over stdio transport.');
+  console.log('  - Cursor-enabled tools return opaque versioned nextCursor tokens; legacy numeric cursor input remains accepted during transition unless --legacy-cursor-fallback false is set.');
 }
 
 async function runMcp(args = {}, dependencies = {}) {
@@ -93,9 +94,11 @@ async function runMcp(args = {}, dependencies = {}) {
 
     const knownToolNames = listMcpTools().map((tool) => tool.name);
     const allowlistedTools = parseAllowlistedTools(args['allow-tools'], knownToolNames);
+    const allowLegacyNumericCursor = parseBoolean(args['legacy-cursor-fallback'], true);
     const verbose = parseBoolean(args.verbose, false);
     const server = createServer({
       cwd,
+      allowLegacyNumericCursor,
       ...(Array.isArray(allowlistedTools) ? { allowlistedTools } : {}),
     });
     server.startStdio();
@@ -104,6 +107,9 @@ async function runMcp(args = {}, dependencies = {}) {
       console.error('[mcp] zeus MCP server started (stdio mode)');
       if (Array.isArray(allowlistedTools)) {
         console.error(`[mcp] allowlisted tools: ${allowlistedTools.join(', ')}`);
+      }
+      if (!allowLegacyNumericCursor) {
+        console.error('[mcp] legacy numeric cursor fallback disabled');
       }
     }
   } catch (error) {

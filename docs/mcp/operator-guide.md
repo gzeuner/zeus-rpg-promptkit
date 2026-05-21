@@ -1,7 +1,7 @@
 ---
 Title: MCP Operator Guide
 Description: Local-first MCP startup, policy boundaries, and troubleshooting for Zeus RPG PromptKit.
-Last Updated: 2026-05-20
+Last Updated: 2026-05-21
 ---
 
 # MCP Operator Guide
@@ -31,7 +31,7 @@ node cli/zeus.js mcp serve --stdio true --verbose
 Restrict exposed tools (recommended):
 
 ```bash
-node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql
+node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql,zeus.search-source
 ```
 
 ## Supported MCP Tools (Current)
@@ -39,8 +39,33 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,
 - `zeus.health`
 - `zeus.version`
 - `zeus.doctor`
+- `zeus.workflow`
+- `zeus.bundle`
+- `zeus.analyze`
+- `zeus.impact`
+- `zeus.assess-risk`
 - `zeus.query-table`
 - `zeus.query-sql`
+- `zeus.search-source`
+- `zeus.field-search`
+- `zeus.joblog`
+- `zeus.inspect-object`
+
+## Cursor Contract
+
+Cursor-enabled tools currently:
+
+- `zeus.search-source`
+- `zeus.field-search`
+- `zeus.impact`
+
+Behavior:
+
+- responses include `cursor`, `cursorOffset`, and `nextCursor`
+- `nextCursor` is an opaque versioned token
+- clients should treat cursor values as opaque and only replay them back to the same tool
+- legacy numeric cursor input remains accepted during the transition window
+- deterministic ordering is preserved across pages for a stable request shape
 
 ## Deterministic Error Mapping
 
