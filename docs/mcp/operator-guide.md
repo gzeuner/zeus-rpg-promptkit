@@ -51,6 +51,13 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,
 - `zeus.joblog`
 - `zeus.inspect-object`
 
+`zeus.joblog` note:
+
+- prefers `QSYS2.JOBLOG_INFO` when available
+- falls back to `QSYS2.HISTORY_LOG_INFO` on older or limited systems
+- when fallback is used, the MCP payload includes `backend = HISTORY_LOG_INFO`
+- severity filtering in fallback mode is best-effort and may not exactly match `JOBLOG_INFO` semantics
+
 ## Cursor Contract
 
 Cursor-enabled tools currently:
