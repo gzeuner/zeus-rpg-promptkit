@@ -135,10 +135,20 @@ function createMcpServer(runtime = {}) {
   const redactor = createMcpRedactor(runtime);
   const auditLogger = createMcpAuditLogger(runtime, redactor);
   const context = {
+    allowLegacyNumericCursor: runtime.allowLegacyNumericCursor !== false,
     cwd: runtime.cwd || process.cwd(),
+    assessRiskRunner: typeof runtime.assessRiskRunner === 'function' ? runtime.assessRiskRunner : undefined,
+    analyzeRunner: typeof runtime.analyzeRunner === 'function' ? runtime.analyzeRunner : undefined,
+    bundleRunner: typeof runtime.bundleRunner === 'function' ? runtime.bundleRunner : undefined,
     doctorRunner: typeof runtime.doctorRunner === 'function' ? runtime.doctorRunner : undefined,
+    fieldSearchRunner: typeof runtime.fieldSearchRunner === 'function' ? runtime.fieldSearchRunner : undefined,
+    impactRunner: typeof runtime.impactRunner === 'function' ? runtime.impactRunner : undefined,
+    inspectObjectRunner: typeof runtime.inspectObjectRunner === 'function' ? runtime.inspectObjectRunner : undefined,
+    joblogRunner: typeof runtime.joblogRunner === 'function' ? runtime.joblogRunner : undefined,
     queryTableRunner: typeof runtime.queryTableRunner === 'function' ? runtime.queryTableRunner : undefined,
     querySqlRunner: typeof runtime.querySqlRunner === 'function' ? runtime.querySqlRunner : undefined,
+    searchSourceRunner: typeof runtime.searchSourceRunner === 'function' ? runtime.searchSourceRunner : undefined,
+    workflowRunner: typeof runtime.workflowRunner === 'function' ? runtime.workflowRunner : undefined,
   };
   const stdioInput = runtime.stdioInput || process.stdin;
   const stdioOutput = runtime.stdioOutput || process.stdout;
@@ -205,7 +215,7 @@ function createMcpServer(runtime = {}) {
       }
       try {
         toolPolicy.assertToolAllowed(name);
-        const payload = executeMcpToolCall(name, callArgs, context);
+        const payload = await executeMcpToolCall(name, callArgs, context);
         try {
           auditLogger.appendToolCallEvent({
             toolName: name,

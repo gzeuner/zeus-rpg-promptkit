@@ -28,6 +28,7 @@ test('runMcp passes allowlisted tools into MCP server runtime', async () => {
       _: ['serve'],
       stdio: true,
       'allow-tools': 'zeus.health,zeus.version',
+      'legacy-cursor-fallback': 'false',
     },
     {
       cwd: '/tmp/mcp-test-cwd',
@@ -44,6 +45,7 @@ test('runMcp passes allowlisted tools into MCP server runtime', async () => {
 
   assert.equal(started, true);
   assert.equal(capturedRuntime.cwd, '/tmp/mcp-test-cwd');
+  assert.equal(capturedRuntime.allowLegacyNumericCursor, false);
   assert.deepEqual(capturedRuntime.allowlistedTools, ['zeus.health', 'zeus.version']);
 });
 
