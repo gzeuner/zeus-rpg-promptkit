@@ -106,6 +106,18 @@ function decodeMcpCursor(toolName, cursor, options = {}) {
   };
 }
 
+function normalizeJoblogToolError(error) {
+  const message = error && error.message ? String(error.message) : String(error);
+  if (/JOBLOG_INFO|SQL0204/i.test(message)) {
+    const wrapped = new Error(
+      'zeus.joblog requires QSYS2.JOBLOG_INFO on the target IBM i. This service is not available on the current system; use DSPJOBLOG in ACS or QSYS2.HISTORY_LOG_INFO as a fallback.',
+    );
+    wrapped.code = error && error.code ? error.code : undefined;
+    return wrapped;
+  }
+  return error;
+}
+
 function listMcpTools() {
   return [
     {
@@ -1000,11 +1012,16 @@ async function executeReadOnlyJoblog(args = {}, context = {}) {
     FETCH FIRST ${maxMessages} ROWS ONLY
   `;
 
-  const result = runReadOnlyDb2Query({
-    dbConfig,
-    query,
-    maxRows: maxMessages,
-  });
+  let result;
+  try {
+    result = runReadOnlyDb2Query({
+      dbConfig,
+      query,
+      maxRows: maxMessages,
+    });
+  } catch (error) {
+    throw normalizeJoblogToolError(error);
+  }
   const rows = Array.isArray(result && result.rows) ? result.rows : [];
   const columns = Array.isArray(result && result.columns) ? result.columns : [];
   const messageIds = new Set(rows.map((row) => (row && row.MESSAGE_ID ? String(row.MESSAGE_ID) : '')).filter(Boolean));
@@ -2421,5 +2438,6 @@ module.exports = {
     createInvalidCursorError,
     decodeMcpCursor,
     encodeMcpCursor,
+    normalizeJoblogToolError,
   },
 };

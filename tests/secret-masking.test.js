@@ -186,8 +186,8 @@ test('collectSensitiveTermsFromEnv includes configured system/library/user value
   assert.ok(terms.includes('DERSMT1'));
   assert.ok(terms.includes('WPT'));
   assert.ok(terms.includes('MYUSER'));
-  assert.ok(terms.includes('ALPHA'));
-  assert.ok(terms.includes('BETA'));
+  assert.ok(terms.includes('alpha'));
+  assert.ok(terms.includes('beta'));
 });
 
 test('maskSensitiveTermsInText redacts configured names in plain text', () => {
@@ -196,6 +196,14 @@ test('maskSensitiveTermsInText redacts configured names in plain text', () => {
   assert.doesNotMatch(output, /\bWPT\b/);
   assert.doesNotMatch(output, /\bMYUSER\b/);
   assert.match(output, /\[REDACTED\]/);
+});
+
+test('maskSensitiveTermsInText preserves lowercase identifiers when sensitive term case differs', () => {
+  const output = maskSensitiveTermsInText('tool zeus.health path /home/zeus/dev project zeus-rpg-promptkit', ['ZEUS']);
+  assert.match(output, /zeus\.health/);
+  assert.match(output, /\/home\/zeus\/dev/);
+  assert.match(output, /zeus-rpg-promptkit/);
+  assert.doesNotMatch(output, /\[REDACTED\]/);
 });
 
 test('sanitizeValue applies sensitive term masking recursively', () => {
