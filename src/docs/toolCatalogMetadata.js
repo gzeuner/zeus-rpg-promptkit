@@ -183,9 +183,9 @@ const COMMAND_METADATA = Object.freeze({
   }),
   mcp: Object.freeze({
     safety: 'S0',
-    scope: 'Local read-only',
-    purpose: 'Start local MCP stdio server for safe read-only Zeus tool exposure with allowlist policy gating and opaque cursor pagination on supported tools.',
-    example: 'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.workflow,zeus.bundle,zeus.analyze,zeus.impact,zeus.assess-risk,zeus.query-table,zeus.query-sql,zeus.search-source,zeus.field-search,zeus.joblog,zeus.inspect-object',
+    scope: 'Local read-mostly',
+    purpose: 'Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.',
+    example: 'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.workflow,zeus.bundle,zeus.analyze,zeus.impact,zeus.assess-risk,zeus.query-table,zeus.query-sql,zeus.write-sql,zeus.bridge,zeus.search-source,zeus.field-search,zeus.diff,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.analyses,zeus.fetch,zeus.test-run,zeus.copy-to-workspace,zeus.serve,zeus.joblog,zeus.inspect-object',
   }),
 });
 

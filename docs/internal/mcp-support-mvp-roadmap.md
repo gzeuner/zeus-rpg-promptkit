@@ -7,24 +7,31 @@ MCP Support for Zeus RPG PromptKit (Secure Local-First MVP)
 `epic`, `enhancement`, `api`, `priority:P1`
 
 ### Description
-Build a secure, local-first MCP server wrapper for Zeus RPG PromptKit that exposes high-value read-only workflows first, reuses existing CLI/core services, and enforces strict guardrails for sensitive environments.
+Build a secure, local-first MCP server wrapper for Zeus RPG PromptKit that exposes high-value read-mostly workflows first, reuses existing CLI/core services, and enforces strict guardrails for sensitive environments.
 
-## Current Status Snapshot (2026-05-20)
+## Current Status Snapshot (2026-05-22)
 
 Completed (implemented + test-covered):
 - MCP server skeleton (`initialize`, `tools/list`, `tools/call`) over stdio
 - allowlist policy gate + known-name validation for `--allow-tools`
-- read-only MCP tools: `zeus.health`, `zeus.version`, `zeus.doctor`, `zeus.query-table`, `zeus.query-sql`
+- read-mostly MCP tools: `zeus.health`, `zeus.version`, `zeus.doctor`, `zeus.workflow`, `zeus.bundle`, `zeus.analyze`, `zeus.impact`, `zeus.assess-risk`, `zeus.query-table`, `zeus.query-sql`, `zeus.search-source`, `zeus.field-search`, `zeus.diff`, `zeus.generate-test`, `zeus.generate-checklist`, `zeus.qa`, `zeus.analyses`, `zeus.fetch`, `zeus.test-run`, `zeus.copy-to-workspace`, `zeus.serve`, `zeus.joblog`, `zeus.inspect-object`
+- guarded write MCP tool: `zeus.write-sql` with staged `operation=plan|apply` safety gates
+- guarded bridge MCP preview tool: `zeus.bridge` with `plan|report` and dry-run-only `stage|compile-run`
 - response/error redaction middleware (including seeded fuzz-style redaction regression tests)
 - append-only local MCP audit trail with explicit `schemaVersion`
 - audit compatibility reader for legacy JSONL entries without `schemaVersion`
 - expanded MCP contract suite (error mapping, stdio framing, redaction invariants, audit schema stability)
+- bridge readiness checkpoint completed: CLI `bridge` is safe-by-default and currently supports preview/dry-run flows; non-dry-run mutation paths remain intentionally unimplemented/fail-closed
 
 Next prioritized topic:
-- Continue read-only adapter layer with next safe tool path (`impact` or constrained `analyze` subset), one path at a time with focused MCP tests.
+- Continue `zeus.write-sql` hardening (statement-level constraints + confirmation ergonomics), then decide staged MCP exposure strategy for `upsert`/`insert`/`update`.
+
+CLI-to-MCP parity snapshot:
+- remaining CLI commands not exposed as direct MCP tools: `upsert`, `upsert-sql`, `insert`, `update`, `pui-edit`, `docs:generate-catalog`
+- `workflow run` execution remains intentionally out of MCP scope; current MCP `zeus.workflow` is read-only introspection
 
 Success Criteria:
-- MCP server can execute a curated read-only toolset over stdio/local transport.
+- MCP server can execute a curated local toolset over stdio/local transport with explicit write gating.
 - Existing Zeus validation/guardrails are reused (no duplicated policy logic).
 - S3/S4 operations remain blocked or explicitly operator-gated.
 - Tool responses are deterministic and schema-stable for AI clients.
@@ -32,7 +39,7 @@ Success Criteria:
 
 Out of Scope (MVP):
 - Autonomous remote mutation via bridge/apply.
-- Direct write operations (`insert`, `update`, `upsert*`) through MCP.
+- Ungated write operations (`insert`, `update`, `upsert*`) through MCP.
 
 ## Issue Backlog
 
@@ -162,3 +169,9 @@ Design-only spike (no default enablement) for guarded write access:
 Acceptance Criteria:
 - Technical design document with risks and rollback strategy.
 - No write enablement merged by default.
+- Status update (2026-05-22): initial guarded pilot implemented for `zeus.write-sql` with default-off `apply` execution gates.
+- Status update (2026-05-22): profile/global `testData.allowTables` is now enforced for `zeus.write-sql apply` when configured.
+- Status update (2026-05-22): `zeus.write-sql apply` now rejects `UPDATE`/`DELETE` without top-level `WHERE`.
+- Status update (2026-05-22): `zeus.write-sql apply` now rejects trivial always-true predicates (for example `WHERE 1=1`).
+- Status update (2026-05-22): `zeus.write-sql apply` now enforces configurable row-safety preflight thresholds via `testData.writeSafety`.
+- Status update (2026-05-22): `zeus.write-sql apply` now rejects weak broad predicates (for example single-condition `IS NOT NULL`, `OR 1=1`).

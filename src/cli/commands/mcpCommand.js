@@ -66,12 +66,12 @@ function parseAllowlistedTools(value, knownToolNames = null) {
 
 function printMcpHelp() {
   console.log('MCP commands:');
-  console.log('  zeus mcp serve [--stdio true|false] [--allow-tools <name1,name2>] [--legacy-cursor-fallback true|false] [--verbose]');
+  console.log('  zeus mcp serve [--stdio true|false] [--allow-tools <name1,name2>] [--verbose]');
   console.log('');
   console.log('Notes:');
-  console.log('  - MVP currently exposes read-only tools: zeus.health, zeus.version, zeus.doctor, zeus.workflow, zeus.bundle, zeus.analyze, zeus.impact, zeus.assess-risk, zeus.query-table, zeus.query-sql, zeus.search-source, zeus.field-search, zeus.joblog, zeus.inspect-object');
+  console.log('  - MVP currently exposes mostly read-only tools plus gated write planning/execution: zeus.health, zeus.version, zeus.doctor, zeus.workflow, zeus.bundle, zeus.analyze, zeus.impact, zeus.assess-risk, zeus.query-table, zeus.query-sql, zeus.write-sql, zeus.bridge, zeus.search-source, zeus.field-search, zeus.diff, zeus.generate-test, zeus.generate-checklist, zeus.qa, zeus.analyses, zeus.fetch, zeus.test-run, zeus.copy-to-workspace, zeus.serve, zeus.joblog, zeus.inspect-object');
   console.log('  - Runs local-only over stdio transport.');
-  console.log('  - Cursor-enabled tools return opaque versioned nextCursor tokens; legacy numeric cursor input is rejected by default and can be re-enabled with --legacy-cursor-fallback true.');
+  console.log('  - Cursor-enabled tools return opaque versioned nextCursor tokens; legacy numeric cursor input is rejected and no longer supported.');
 }
 
 async function runMcp(args = {}, dependencies = {}) {
@@ -94,11 +94,12 @@ async function runMcp(args = {}, dependencies = {}) {
 
     const knownToolNames = listMcpTools().map((tool) => tool.name);
     const allowlistedTools = parseAllowlistedTools(args['allow-tools'], knownToolNames);
-    const allowLegacyNumericCursor = parseBoolean(args['legacy-cursor-fallback'], false);
+    if (Object.prototype.hasOwnProperty.call(args, 'legacy-cursor-fallback')) {
+      throw new Error('The --legacy-cursor-fallback option was removed. Numeric cursors are no longer supported; use opaque cursor tokens.');
+    }
     const verbose = parseBoolean(args.verbose, false);
     const server = createServer({
       cwd,
-      allowLegacyNumericCursor,
       ...(Array.isArray(allowlistedTools) ? { allowlistedTools } : {}),
     });
     server.startStdio();
@@ -107,9 +108,6 @@ async function runMcp(args = {}, dependencies = {}) {
       console.error('[mcp] zeus MCP server started (stdio mode)');
       if (Array.isArray(allowlistedTools)) {
         console.error(`[mcp] allowlisted tools: ${allowlistedTools.join(', ')}`);
-      }
-      if (allowLegacyNumericCursor) {
-        console.error('[mcp] legacy numeric cursor fallback enabled (compatibility mode)');
       }
     }
   } catch (error) {
