@@ -53,12 +53,23 @@ function createErrorResponse(id, error, redactor) {
   };
 }
 
-function normalizeToolCallResult(payload, redactor) {
+function normalizeToolCallResult(payload, redactor, options = {}) {
   const sanitizePayload = redactor && typeof redactor.sanitizePayload === 'function'
     ? redactor.sanitizePayload
     : (value) => value;
   const sanitizedPayload = sanitizePayload(payload);
   const text = JSON.stringify(sanitizedPayload, null, 2);
+  const maxResponseBytes = Number.isInteger(options.maxResponseBytes) && options.maxResponseBytes > 0
+    ? options.maxResponseBytes
+    : (1024 * 1024);
+  const responseBytes = Buffer.byteLength(text, 'utf8');
+  if (responseBytes > maxResponseBytes) {
+    const error = new Error(
+      `Tool result exceeds maximum response size (${responseBytes} bytes > ${maxResponseBytes} bytes). Narrow the query or reduce payload limits.`,
+    );
+    error.code = 'TOOL_RESPONSE_TOO_LARGE';
+    throw error;
+  }
   return {
     content: [
       {
@@ -94,6 +105,14 @@ function normalizeAllowlist(rawAllowlist) {
     .filter((entry) => entry.length > 0);
 
   return normalized.length > 0 ? Array.from(new Set(normalized)) : [];
+}
+
+function parsePositiveInteger(value, fallback) {
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return parsed;
 }
 
 function createToolPolicy(runtime, tools) {
@@ -135,25 +154,60 @@ function createMcpServer(runtime = {}) {
   const redactor = createMcpRedactor(runtime);
   const auditLogger = createMcpAuditLogger(runtime, redactor);
   const context = {
-    allowLegacyNumericCursor: runtime.allowLegacyNumericCursor === true,
     cwd: runtime.cwd || process.cwd(),
+    env: runtime.env || process.env,
     assessRiskRunner: typeof runtime.assessRiskRunner === 'function' ? runtime.assessRiskRunner : undefined,
+    analysesRunner: typeof runtime.analysesRunner === 'function' ? runtime.analysesRunner : undefined,
     analyzeRunner: typeof runtime.analyzeRunner === 'function' ? runtime.analyzeRunner : undefined,
+    bridgeRunner: typeof runtime.bridgeRunner === 'function' ? runtime.bridgeRunner : undefined,
     bundleRunner: typeof runtime.bundleRunner === 'function' ? runtime.bundleRunner : undefined,
+    copyToWorkspaceRunner: typeof runtime.copyToWorkspaceRunner === 'function' ? runtime.copyToWorkspaceRunner : undefined,
+    diffRunner: typeof runtime.diffRunner === 'function' ? runtime.diffRunner : undefined,
     doctorRunner: typeof runtime.doctorRunner === 'function' ? runtime.doctorRunner : undefined,
+    fetchRunner: typeof runtime.fetchRunner === 'function' ? runtime.fetchRunner : undefined,
     fieldSearchRunner: typeof runtime.fieldSearchRunner === 'function' ? runtime.fieldSearchRunner : undefined,
+    generateChecklistRunner: typeof runtime.generateChecklistRunner === 'function' ? runtime.generateChecklistRunner : undefined,
+    generateTestRunner: typeof runtime.generateTestRunner === 'function' ? runtime.generateTestRunner : undefined,
     impactRunner: typeof runtime.impactRunner === 'function' ? runtime.impactRunner : undefined,
     inspectObjectRunner: typeof runtime.inspectObjectRunner === 'function' ? runtime.inspectObjectRunner : undefined,
     joblogRunner: typeof runtime.joblogRunner === 'function' ? runtime.joblogRunner : undefined,
+    qaRunner: typeof runtime.qaRunner === 'function' ? runtime.qaRunner : undefined,
     queryTableRunner: typeof runtime.queryTableRunner === 'function' ? runtime.queryTableRunner : undefined,
     querySqlRunner: typeof runtime.querySqlRunner === 'function' ? runtime.querySqlRunner : undefined,
     searchSourceRunner: typeof runtime.searchSourceRunner === 'function' ? runtime.searchSourceRunner : undefined,
+    serveRunner: typeof runtime.serveRunner === 'function' ? runtime.serveRunner : undefined,
+    testRunRunner: typeof runtime.testRunRunner === 'function' ? runtime.testRunRunner : undefined,
+    writeSqlRunner: typeof runtime.writeSqlRunner === 'function' ? runtime.writeSqlRunner : undefined,
     workflowRunner: typeof runtime.workflowRunner === 'function' ? runtime.workflowRunner : undefined,
   };
   const stdioInput = runtime.stdioInput || process.stdin;
   const stdioOutput = runtime.stdioOutput || process.stdout;
+  const toolExecutionTimeoutMs = parsePositiveInteger(runtime.toolExecutionTimeoutMs, 30000);
+  const maxToolResponseBytes = parsePositiveInteger(runtime.maxToolResponseBytes, 1024 * 1024);
   const tools = listMcpTools();
   const toolPolicy = createToolPolicy(runtime, tools);
+
+  async function executeToolCallWithTimeout(name, callArgs) {
+    let timer = null;
+    try {
+      return await Promise.race([
+        executeMcpToolCall(name, callArgs, context),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => {
+            const timeoutError = new Error(
+              `Tool execution timed out after ${toolExecutionTimeoutMs}ms: ${name}`,
+            );
+            timeoutError.code = 'TOOL_TIMEOUT';
+            reject(timeoutError);
+          }, toolExecutionTimeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
+  }
 
   async function handleRequest(message) {
     assertJsonRpcRequest(message);
@@ -215,7 +269,7 @@ function createMcpServer(runtime = {}) {
       }
       try {
         toolPolicy.assertToolAllowed(name);
-        const payload = await executeMcpToolCall(name, callArgs, context);
+        const payload = await executeToolCallWithTimeout(name, callArgs);
         try {
           auditLogger.appendToolCallEvent({
             toolName: name,
@@ -228,7 +282,9 @@ function createMcpServer(runtime = {}) {
         } catch (_) {
           // Audit must never break MCP response handling.
         }
-        return respond(normalizeToolCallResult(payload, redactor));
+        return respond(normalizeToolCallResult(payload, redactor, {
+          maxResponseBytes: maxToolResponseBytes,
+        }));
       } catch (error) {
         let rpcError = null;
         let policyDecision = 'allowed';
@@ -241,6 +297,12 @@ function createMcpServer(runtime = {}) {
         }
         if (!rpcError && error && error.code === 'TOOL_NOT_FOUND') {
           rpcError = new RpcError(-32601, error.message);
+        }
+        if (!rpcError && error && error.code === 'TOOL_TIMEOUT') {
+          rpcError = new RpcError(-32000, error.message);
+        }
+        if (!rpcError && error && error.code === 'TOOL_RESPONSE_TOO_LARGE') {
+          rpcError = new RpcError(-32000, error.message);
         }
         if (!rpcError) {
           rpcError = new RpcError(-32000, error.message || 'Tool execution failed');
