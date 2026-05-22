@@ -1,7 +1,7 @@
 ---
 Title: MCP Operator Guide
 Description: Local-first MCP startup, policy boundaries, and troubleshooting for Zeus RPG PromptKit.
-Last Updated: 2026-05-21
+Last Updated: 2026-05-22
 ---
 
 # MCP Operator Guide
@@ -13,14 +13,17 @@ Expose a safe, local-only subset of Zeus capabilities over MCP stdio for AI clie
 ## Security Posture
 
 - Transport: stdio only (local process boundary)
-- Default behavior: read-only tool exposure
+- Default behavior: read-mostly tool exposure
 - Policy: allowlist gate (`--allow-tools`) for explicit tool surface control
 - Redaction: response/error masking for common secret patterns
 - Audit: append-only local JSONL audit trail for `tools/call`
+- Runtime guardrails: per-tool timeout and maximum response-size limits with deterministic `-32000` failures
+- Local path policy: relative path inputs for local source-root tools must remain inside the current workspace root
 
 Out of scope for MVP:
-- write/mutation commands (`insert`, `update`, `upsert*`)
 - remote apply/compile style operations
+- ungated write execution
+- bridge mutation execution (`apply` / non-dry-run compile paths)
 
 ## Start MCP Server
 
@@ -46,8 +49,19 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,
 - `zeus.assess-risk`
 - `zeus.query-table`
 - `zeus.query-sql`
+- `zeus.write-sql`
+- `zeus.bridge`
 - `zeus.search-source`
 - `zeus.field-search`
+- `zeus.diff`
+- `zeus.generate-test`
+- `zeus.generate-checklist`
+- `zeus.qa`
+- `zeus.analyses`
+- `zeus.fetch`
+- `zeus.test-run`
+- `zeus.copy-to-workspace`
+- `zeus.serve`
 - `zeus.joblog`
 - `zeus.inspect-object`
 
@@ -58,6 +72,26 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,
 - when fallback is used, the MCP payload includes `backend = HISTORY_LOG_INFO`
 - severity filtering in fallback mode is best-effort and may not exactly match `JOBLOG_INFO` semantics
 
+`zeus.write-sql` guardrails:
+
+- `operation=plan` is non-mutating (validation + readiness preview)
+- `operation=apply` is blocked unless `ZEUS_MCP_ENABLE_WRITES=true`
+- `operation=apply` requires `ZEUS_MCP_WRITE_CONFIRM_TOKEN` and matching `confirmToken` input
+- production profiles (`productionSystem=true`) remain hard-blocked for apply
+- if `testData.allowTables` is configured for the profile/global config, `operation=apply` is allowed only when SQL targets an allowlisted table
+- `operation=apply` rejects `UPDATE`/`DELETE` without a top-level `WHERE` clause
+- `operation=apply` also rejects trivial always-true `WHERE` predicates (for example `WHERE 1=1`)
+- `operation=apply` rejects additional weak broad predicates (for example single-condition `IS NOT NULL` or `OR 1=1`)
+- row-safety limits are configurable via `testData.writeSafety` (`enabled`, `maxRowsAffected`, `maxRowsByStatement`, `blockWhenCountUnavailable`)
+- callers can pass optional `maxRowsAffected` per request to tighten limits further (never loosen profile policy)
+
+Bridge status note:
+
+- MCP `zeus.bridge` is exposed as guarded preview tool
+- allowed operations: `plan`, `report`, `stage` (dry-run only), `compile-run` (dry-run only)
+- mutation/apply semantics are blocked by MCP policy with deterministic refusal errors
+- CLI `bridge` remains experimental/opt-in and non-dry-run mutation paths stay intentionally unimplemented/fail-closed
+
 ## Cursor Contract
 
 Cursor-enabled tools currently:
@@ -65,13 +99,15 @@ Cursor-enabled tools currently:
 - `zeus.search-source`
 - `zeus.field-search`
 - `zeus.impact`
+- `zeus.fetch` (operation=`files`)
+- `zeus.copy-to-workspace` (operation=`plan`)
 
 Behavior:
 
 - responses include `cursor`, `cursorOffset`, and `nextCursor`
 - `nextCursor` is an opaque versioned token
 - clients should treat cursor values as opaque and only replay them back to the same tool
-- legacy numeric cursor input is rejected by default and can be temporarily re-enabled with `--legacy-cursor-fallback true`
+- legacy numeric cursor input is rejected and no longer supported
 - deterministic ordering is preserved across pages for a stable request shape
 
 ## Deterministic Error Mapping
@@ -80,6 +116,12 @@ Behavior:
 - Invalid request / invalid params: `-32600` / `-32602`
 - Method/tool not found or policy refusal: `-32601`
 - Tool runtime failure: `-32000`
+
+Runtime failure notes:
+
+- DB-backed runtime failures from `zeus.joblog` and `zeus.inspect-object` are normalized to stable operator guidance (raw provider internals are not surfaced)
+- timed-out tools return deterministic timeout errors (`-32000`)
+- oversized tool payloads return deterministic response-size errors (`-32000`)
 
 ## Local Audit Trail
 

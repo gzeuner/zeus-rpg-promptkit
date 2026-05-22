@@ -16,19 +16,10 @@ test('encodeMcpCursor and decodeMcpCursor round-trip opaque cursor state', () =>
   });
 });
 
-test('decodeMcpCursor accepts legacy numeric cursor input when compatibility mode is enabled', () => {
-  const decoded = __private.decodeMcpCursor('zeus.field-search', '7', { allowLegacyNumericCursor: true });
-  assert.deepEqual(decoded, {
-    cursor: '7',
-    offset: 7,
-    isLegacyNumeric: true,
-  });
-});
-
-test('decodeMcpCursor rejects legacy numeric cursor input by default', () => {
+test('decodeMcpCursor rejects legacy numeric cursor input', () => {
   assert.throws(
     () => __private.decodeMcpCursor('zeus.field-search', '7'),
-    /legacy numeric cursor input is disabled/i,
+    /legacy numeric cursor input is no longer supported/i,
   );
 });
 
@@ -57,6 +48,6 @@ test('decodeMcpCursor rejects unsupported cursor version', () => {
 test('decodeMcpCursor rejects malformed opaque tokens', () => {
   assert.throws(
     () => __private.decodeMcpCursor('zeus.search-source', 'not-a-valid-token'),
-    /legacy numeric offset or an opaque versioned token/i,
+    /opaque versioned token/i,
   );
 });

@@ -13,26 +13,109 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { executeBridgeCommand } = require('../cli/commands/bridgeCommand');
 const { normalizeSeverity, parseMaxMessages } = require('../cli/commands/joblogCommand');
+const { validateWriteSql, resolveWriteMode } = require('../cli/commands/writeSqlCommand');
 const { runDoctorChecks } = require('../cli/commands/doctorCommand');
+const {
+  loadCanonicalAnalysis,
+  normalizeFormat: normalizeQaFormat,
+  normalizeStrict: normalizeQaStrict,
+} = require('../cli/commands/qaCommand');
+const { runQAPipeline, generateQAReport } = require('../qa/qaIntegration');
+const {
+  generateChangeTestScenario,
+  generateJestTestTemplate,
+  generateMarkdownTestPlan,
+} = require('../investigation/testScenarioGenerator');
+const {
+  estimateDeploymentTimeline,
+  generateDeploymentChecklist,
+  identifyRiskAreas,
+} = require('../report/deploymentChecklistBuilder');
+const { buildLineComparison, readLines, resolveDiffPaths } = require('../diff/workspaceDiffService');
+const { loadTestRunManifest } = require('../investigation/testRunTracker');
+const {
+  getImportManifestEntryExport,
+  getImportManifestEntryOrigin,
+  getImportManifestEntryValidation,
+  readImportManifest,
+  summarizeImportManifest,
+} = require('../fetch/importManifest');
+const {
+  listWorkspaces,
+  readWorkspaceById,
+  resolveRegistryPath,
+} = require('../workspace/analysisRegistryService');
+const { readWorkspaceIndex } = require('../workspace/workspaceIndexBuilder');
 const { findImpactGraph } = require('../cli/helpers/impactGraphResolver');
 const { readAnalyzeRunManifest } = require('../analyze/analyzeRunManifest');
-const { resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../config/runtimeConfig');
+const {
+  loadProfiles,
+  readWorkCopyConfig,
+  resolveAnalyzeConfig,
+  resolveAnalyzeDbConfig,
+  resolveBundleConfig,
+  resolveFetchConfig,
+  resolveProfile,
+} = require('../config/runtimeConfig');
 const { isDbConfigured } = require('../db2/db2Config');
 const { escapeSqlLiteral, runReadOnlyDb2Query, validateSqlIdentifier } = require('../db2/readOnlyQueryService');
+const { runWriteDb2Query } = require('../db2/writeQueryService');
 const { executeQuerySql, executeQueryTable } = require('../core/queryService');
 const { executeSearchSource, normalizeFilePattern } = require('../core/searchSourceService');
 const { analyzeImpactFromGraph, normalizeId } = require('../impact/impactAnalyzer');
 const { assessCanonicalModel } = require('../impact/riskAssessmentAnalyzer');
 const { WORKFLOW_RUN_MANIFEST_FILE } = require('../workflow/workflowRunManifest');
 const { searchLocalSources } = require('../investigation/fieldXrefService');
+const { listAnalysisRuns } = require('../ui/localUiDataApi');
+const { DEFAULT_UI_HOST, DEFAULT_UI_PORT } = require('../ui/localUiServer');
+const {
+  buildWorkCopyTargetName,
+  discoverFetchedSources,
+  parseMembersCsv: parseWorkCopyMembersCsv,
+} = require('../workspace/workCopyService');
 
 const SUPPORTED_INSPECT_OBJECT_TYPES = ['*PGM', '*SRVPGM', '*MODULE', '*FILE', '*CMD', '*DTAARA', '*JOBQ', '*OUTQ'];
 const DEFAULT_MCP_PAYLOAD_ITEMS = 100;
 const MAX_MCP_PAYLOAD_ITEMS = 1000;
 const MCP_CURSOR_VERSION = 1;
+
+function isPathWithinBase(targetPath, basePath) {
+  const resolvedBase = path.resolve(basePath);
+  const resolvedTarget = path.resolve(targetPath);
+  if (resolvedTarget === resolvedBase) {
+    return true;
+  }
+  const baseWithSep = resolvedBase.endsWith(path.sep)
+    ? resolvedBase
+    : `${resolvedBase}${path.sep}`;
+  return resolvedTarget.startsWith(baseWithSep);
+}
+
+function assertRelativePathWithinCwd({
+  toolName,
+  optionName,
+  rawValue,
+  resolvedPath,
+  cwd,
+}) {
+  const input = typeof rawValue === 'string' ? rawValue.trim() : '';
+  if (!input || path.isAbsolute(input)) {
+    return;
+  }
+  if (isPathWithinBase(resolvedPath, cwd)) {
+    return;
+  }
+  const error = new Error(
+    `Invalid arguments for ${toolName}: relative ${optionName} must resolve inside workspace root (${cwd}).`,
+  );
+  error.code = 'TOOL_INVALID_ARGUMENTS';
+  throw error;
+}
 
 function readPackageVersion(cwd) {
   try {
@@ -58,8 +141,7 @@ function encodeMcpCursor(toolName, offset) {
   }), 'utf8').toString('base64url');
 }
 
-function decodeMcpCursor(toolName, cursor, options = {}) {
-  const allowLegacyNumericCursor = options.allowLegacyNumericCursor === true;
+function decodeMcpCursor(toolName, cursor) {
   const rawCursor = typeof cursor === 'string' ? cursor.trim() : '';
   if (!rawCursor) {
     return {
@@ -69,21 +151,14 @@ function decodeMcpCursor(toolName, cursor, options = {}) {
     };
   }
   if (/^\d+$/.test(rawCursor)) {
-    if (!allowLegacyNumericCursor) {
-      throw createInvalidCursorError(toolName, 'legacy numeric cursor input is disabled; provide an opaque cursor token.');
-    }
-    return {
-      cursor: rawCursor,
-      offset: Number.parseInt(rawCursor, 10),
-      isLegacyNumeric: true,
-    };
+    throw createInvalidCursorError(toolName, 'legacy numeric cursor input is no longer supported; provide an opaque cursor token.');
   }
 
   let parsed;
   try {
     parsed = JSON.parse(Buffer.from(rawCursor, 'base64url').toString('utf8'));
   } catch (_) {
-    throw createInvalidCursorError(toolName, 'value must be a legacy numeric offset or an opaque versioned token.');
+    throw createInvalidCursorError(toolName, 'value must be an opaque versioned token.');
   }
 
   if (!parsed || typeof parsed !== 'object') {
@@ -116,6 +191,15 @@ function normalizeJoblogToolError(error) {
     return wrapped;
   }
   return error;
+}
+
+function normalizeMcpRuntimeToolError(toolName, error) {
+  const wrapped = new Error(
+    `${toolName} failed to query backend service. Verify profile connectivity and required IBM i service availability.`,
+  );
+  wrapped.code = 'TOOL_RUNTIME_FAILURE';
+  wrapped.cause = error;
+  return wrapped;
 }
 
 function isJoblogInfoUnavailableError(error) {
@@ -384,6 +468,371 @@ function listMcpTools() {
       },
     },
     {
+      name: 'zeus.diff',
+      description: 'Compares fetched source and workspace copy for a member and returns deterministic line diffs (read-only).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['profile', 'member'],
+        properties: {
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Runtime profile used to resolve fetch/workspace roots.',
+          },
+          member: {
+            type: 'string',
+            minLength: 1,
+            description: 'Member name to compare between fetched source and workspace copy.',
+          },
+          maxPayloadLines: {
+            type: 'integer',
+            minimum: 1,
+            maximum: MAX_MCP_PAYLOAD_ITEMS,
+            description: 'Optional cap for returned diff lines in MCP payload.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.generate-test',
+      description: 'Generates deterministic test-scenario content from existing canonical-analysis artifacts (read-only planning output).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['program'],
+        properties: {
+          program: {
+            type: 'string',
+            minLength: 1,
+            description: 'Program name with existing canonical-analysis artifacts.',
+          },
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional runtime profile used to resolve output root.',
+          },
+          out: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional output root override.',
+          },
+          output: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional alias for out.',
+          },
+          format: {
+            type: 'string',
+            enum: ['markdown', 'jest'],
+            description: 'Generated scenario format.',
+          },
+          critical: {
+            type: 'boolean',
+            description: 'When true, prioritize critical-path scenarios.',
+          },
+          change: {
+            type: 'boolean',
+            description: 'When true, append change-specific scenario scaffolding.',
+          },
+          table: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional table name used by change scenario mode.',
+          },
+          column: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional column name used by change scenario mode.',
+          },
+          oldType: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional previous type annotation for change scenario mode.',
+          },
+          newType: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional new type annotation for change scenario mode.',
+          },
+          affectedPrograms: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional comma-separated affected program names for change scenario mode.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.generate-checklist',
+      description: 'Generates deterministic deployment-checklist content from local analysis/risk artifacts (read-only planning output).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['program'],
+        properties: {
+          program: {
+            type: 'string',
+            minLength: 1,
+            description: 'Program name for checklist generation.',
+          },
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional runtime profile used to resolve output root.',
+          },
+          out: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional output root override.',
+          },
+          output: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional alias for out.',
+          },
+          type: {
+            type: 'string',
+            enum: ['DDL_CHANGE', 'CODE_CHANGE', 'BOTH'],
+            description: 'Checklist change type.',
+          },
+          impact: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional impact label override (for example HIGH/MEDIUM/LOW).',
+          },
+          table: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional table name referenced by the checklist.',
+          },
+          affected: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional comma-separated affected program names.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.qa',
+      description: 'Runs QA validation against canonical analysis artifacts and returns deterministic report output (read-only).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['input'],
+        properties: {
+          input: {
+            type: 'string',
+            minLength: 1,
+            description: 'Path to canonical-analysis.json or a directory containing canonical-analysis.json.',
+          },
+          format: {
+            type: 'string',
+            enum: ['jira', 'markdown', 'json'],
+            description: 'Report format.',
+          },
+          strict: {
+            type: 'string',
+            enum: ['LENIENT', 'STRICT'],
+            description: 'QA strictness mode.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.analyses',
+      description: 'Lists or shows registered analysis workspaces and index summaries (read-only).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['operation'],
+        properties: {
+          operation: {
+            type: 'string',
+            enum: ['list', 'show'],
+            description: 'Read-only analyses operation.',
+          },
+          id: {
+            type: 'string',
+            minLength: 1,
+            description: 'Workspace id (required for operation=show).',
+          },
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional runtime profile used to resolve analyses registry path.',
+          },
+          registryPath: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional analyses registry path override.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.fetch',
+      description: 'Reads existing fetch import manifest metadata and deterministic file summaries (read-only).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['operation'],
+        properties: {
+          operation: {
+            type: 'string',
+            enum: ['summary', 'files'],
+            description: 'Read-only fetch metadata operation.',
+          },
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional runtime profile used to resolve fetch output root.',
+          },
+          out: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional fetch output root override.',
+          },
+          maxPayloadItems: {
+            type: 'integer',
+            minimum: 1,
+            maximum: MAX_MCP_PAYLOAD_ITEMS,
+            description: 'Optional cap for returned file entries when operation=files.',
+          },
+          cursor: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional pagination cursor returned by a previous zeus.fetch call (operation=files).',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.test-run',
+      description: 'Reads existing test-run manifest metadata and rollback SQL previews (read-only).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['operation', 'manifest'],
+        properties: {
+          operation: {
+            type: 'string',
+            enum: ['show', 'rollback'],
+            description: 'Read-only test-run operation.',
+          },
+          manifest: {
+            type: 'string',
+            minLength: 1,
+            description: 'Path to test-run-manifest.json.',
+          },
+          maxPayloadItems: {
+            type: 'integer',
+            minimum: 1,
+            maximum: MAX_MCP_PAYLOAD_ITEMS,
+            description: 'Optional cap for returned rollback statements when operation=rollback.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.copy-to-workspace',
+      description: 'Builds a deterministic copy plan from fetched sources to workspace targets (read-only preview).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['operation', 'profile'],
+        properties: {
+          operation: {
+            type: 'string',
+            enum: ['plan'],
+            description: 'Read-only copy-to-workspace operation.',
+          },
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Runtime profile used to resolve fetch/work-copy roots.',
+          },
+          members: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional comma-separated member filter.',
+          },
+          force: {
+            type: 'boolean',
+            description: 'When true, existing targets are marked as will-overwrite in the plan.',
+          },
+          out: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional fetch output root override (same semantics as fetch --out).',
+          },
+          maxPayloadItems: {
+            type: 'integer',
+            minimum: 1,
+            maximum: MAX_MCP_PAYLOAD_ITEMS,
+            description: 'Optional cap for returned plan entries.',
+          },
+          cursor: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional pagination cursor returned by a previous zeus.copy-to-workspace call.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.serve',
+      description: 'Returns deterministic local UI serve metadata (config/routes/run counts) without starting a server (read-only).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['operation'],
+        properties: {
+          operation: {
+            type: 'string',
+            enum: ['summary'],
+            description: 'Read-only serve metadata operation.',
+          },
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional runtime profile used for output-root and registry resolution.',
+          },
+          host: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional UI host override (loopback only).',
+          },
+          port: {
+            type: 'integer',
+            minimum: 0,
+            description: 'Optional UI port override; 0 means ephemeral at runtime.',
+          },
+          registryPath: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional analyses registry path override.',
+          },
+          'registry-path': {
+            type: 'string',
+            minLength: 1,
+            description: 'Alias for registryPath.',
+          },
+          sourceOutputRoot: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional source output root override.',
+          },
+          'source-output-root': {
+            type: 'string',
+            minLength: 1,
+            description: 'Alias for sourceOutputRoot.',
+          },
+        },
+      },
+    },
+    {
       name: 'zeus.workflow',
       description: 'Reads existing workflow run manifest and returns deterministic workflow metadata (read-only).',
       inputSchema: {
@@ -596,6 +1045,147 @@ function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Optional comma-separated library list override.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.write-sql',
+      description: 'Plans or applies guarded DML statements (INSERT/UPDATE/DELETE/MERGE) with explicit MCP write gates.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['operation', 'profile', 'sql'],
+        properties: {
+          operation: {
+            type: 'string',
+            enum: ['plan', 'apply'],
+            description: 'Use plan for non-mutating validation/preview; apply executes the statement when all write gates pass.',
+          },
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Runtime profile name with DB2 write access.',
+          },
+          mode: {
+            type: 'string',
+            enum: ['upsert-sql', 'upsert', 'insert', 'update'],
+            description: 'Write mode guard for accepted DML statement shape.',
+          },
+          sql: {
+            type: 'string',
+            minLength: 1,
+            description: 'DML statement text to validate or execute.',
+          },
+          confirmToken: {
+            type: 'string',
+            minLength: 1,
+            description: 'Required for operation=apply; must match ZEUS_MCP_WRITE_CONFIRM_TOKEN.',
+          },
+          maxRowsAffected: {
+            type: 'integer',
+            minimum: 1,
+            description: 'Optional stricter row-safety cap for this call; cannot exceed configured profile policy.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.bridge',
+      description: 'Runs guarded bridge preview operations (plan/report and dry-run stage/compile-run) without remote mutation.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['operation', 'profile', 'program'],
+        properties: {
+          operation: {
+            type: 'string',
+            enum: ['plan', 'report', 'stage', 'compile-run'],
+            description: 'Bridge preview operation. Mutation/apply operations are intentionally blocked in MCP.',
+          },
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Runtime profile name with bridge configuration.',
+          },
+          program: {
+            type: 'string',
+            minLength: 1,
+            description: 'Program identifier for bridge artifacts.',
+          },
+          source: {
+            type: 'string',
+            minLength: 1,
+            description: 'Required when operation=plan; local source path.',
+          },
+          targetType: {
+            type: 'string',
+            enum: ['source-member', 'ifs-streamfile'],
+            description: 'Optional bridge target type (defaults to source-member).',
+          },
+          targetLib: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional target library (required for source-member plans).',
+          },
+          targetFile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional target source file (required for source-member plans).',
+          },
+          targetMember: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional target member (required for source-member plans).',
+          },
+          targetMemberType: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional target member type.',
+          },
+          targetIfs: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional IFS target path (required for ifs-streamfile plans).',
+          },
+          beforeHash: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional baseline content hash annotation for plan metadata.',
+          },
+          afterHash: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional proposed content hash annotation for plan metadata.',
+          },
+          diffSummary: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional human summary of intended bridge change.',
+          },
+          riskLevel: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional risk label for plan metadata (for example LOW/MEDIUM/HIGH).',
+          },
+          actorMode: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional actor mode annotation for bridge audit events.',
+          },
+          dryRun: {
+            type: 'boolean',
+            description: 'Required true for operation=stage and operation=compile-run in MCP.',
+          },
+          approvalFile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional approval artifact path used by stage/compile-run preview checks.',
+          },
+          template: {
+            type: 'string',
+            minLength: 1,
+            description: 'Required compile template id for operation=compile-run.',
           },
         },
       },
@@ -1330,7 +1920,2126 @@ async function executeReadOnlyAssessRisk(args = {}, context = {}) {
   };
 }
 
+function executeReadOnlyDiff(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const profileName = args && typeof args.profile === 'string'
+    ? args.profile.trim()
+    : '';
+  const member = args && typeof args.member === 'string'
+    ? args.member.trim()
+    : '';
+  if (!profileName) {
+    const error = new Error('Invalid arguments for zeus.diff: profile is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (!member) {
+    const error = new Error('Invalid arguments for zeus.diff: member is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const maxPayloadLines = parseOptionalPositiveInteger(args && args.maxPayloadLines, {
+    label: 'zeus.diff maxPayloadLines',
+    min: 1,
+    max: MAX_MCP_PAYLOAD_ITEMS,
+  });
+
+  const profiles = loadProfiles({ cwd, env, args });
+  const profile = resolveProfile(profiles, profileName, { env });
+  const analyzeConfig = resolveAnalyzeConfig(args, { cwd, env });
+  const fetchConfig = resolveFetchConfig(args, { cwd, env });
+  const workCopyConfig = readWorkCopyConfig(profile, env);
+  const fetchRootInput = String(fetchConfig.out || '').trim();
+  const workspaceRootInput = String(analyzeConfig.sourceRoot || workCopyConfig.root || '').trim();
+  const fetchRoot = path.resolve(cwd, fetchRootInput);
+  const workspaceRoot = path.resolve(cwd, workspaceRootInput);
+  assertRelativePathWithinCwd({
+    toolName: 'zeus.diff',
+    optionName: '--fetch-out',
+    rawValue: fetchRootInput,
+    resolvedPath: fetchRoot,
+    cwd,
+  });
+  assertRelativePathWithinCwd({
+    toolName: 'zeus.diff',
+    optionName: '--source-root',
+    rawValue: workspaceRootInput,
+    resolvedPath: workspaceRoot,
+    cwd,
+  });
+  const resolved = resolveDiffPaths({
+    member,
+    fetchRoot,
+    workspaceRoot,
+    workCopyMode: workCopyConfig.extension,
+  });
+  const comparison = buildLineComparison(
+    readLines(resolved.originalPath),
+    readLines(resolved.modifiedPath),
+  );
+  const payloadLimit = Number.isInteger(maxPayloadLines) ? maxPayloadLines : DEFAULT_MCP_PAYLOAD_ITEMS;
+  const payloadRows = comparison.rows.slice(0, payloadLimit);
+
+  return {
+    profile: profileName,
+    member: resolved.member,
+    fetchRoot,
+    workspaceRoot,
+    workCopyMode: String(workCopyConfig.extension || '').trim().toLowerCase(),
+    originalPath: resolved.originalPath,
+    modifiedPath: resolved.modifiedPath,
+    maxPayloadLines: payloadLimit,
+    payloadLineCount: payloadRows.length,
+    payloadTruncated: comparison.rows.length > payloadRows.length,
+    lineCount: comparison.rows.length,
+    changedLineCount: Number(comparison.changedCount || 0),
+    rows: payloadRows.map((row) => ({
+      line: Number(row && row.line ? row.line : 0),
+      marker: row && row.marker ? String(row.marker) : ' ',
+      original: row && row.original ? String(row.original) : '',
+      modified: row && row.modified ? String(row.modified) : '',
+    })),
+  };
+}
+
+function parseOptionalBooleanFlag(value, fallback = false) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['false', '0', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+  return fallback;
+}
+
+function parseCsvList(value) {
+  if (typeof value !== 'string') {
+    return [];
+  }
+  return value
+    .split(',')
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean);
+}
+
+async function executeReadOnlyGenerateTest(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const program = args && typeof args.program === 'string'
+    ? args.program.trim().toUpperCase()
+    : '';
+  if (!program) {
+    const error = new Error('Invalid arguments for zeus.generate-test: program is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  const format = args && typeof args.format === 'string'
+    ? args.format.trim().toLowerCase()
+    : 'markdown';
+  if (format !== 'markdown' && format !== 'jest') {
+    const error = new Error('Invalid arguments for zeus.generate-test: format must be markdown or jest.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const config = resolveAnalyzeConfig(args, { cwd, env });
+  const outputRootInput = String(config && config.outputRoot ? config.outputRoot : 'output').trim();
+  const outputRoot = path.resolve(cwd, outputRootInput || 'output');
+  const outArg = args && typeof args.out === 'string' && args.out.trim()
+    ? args.out.trim()
+    : (args && typeof args.output === 'string' && args.output.trim() ? args.output.trim() : '');
+  if (outArg) {
+    assertRelativePathWithinCwd({
+      toolName: 'zeus.generate-test',
+      optionName: '--out',
+      rawValue: outArg,
+      resolvedPath: outputRoot,
+      cwd,
+    });
+  }
+
+  const programDir = path.join(outputRoot, program);
+  const analysisPath = path.join(programDir, 'canonical-analysis.json');
+  if (!fs.existsSync(analysisPath)) {
+    const error = new Error(`canonical-analysis.json not found at: ${analysisPath}. Run analyze first.`);
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  let canonicalAnalysis;
+  try {
+    canonicalAnalysis = JSON.parse(fs.readFileSync(analysisPath, 'utf8'));
+  } catch (error) {
+    const wrapped = new Error(`Failed to parse canonical analysis JSON: ${error.message}`);
+    wrapped.code = 'TOOL_INVALID_ARGUMENTS';
+    throw wrapped;
+  }
+
+  const isCritical = parseOptionalBooleanFlag(args && args.critical, false);
+  let content;
+  let extension;
+  if (format === 'jest') {
+    content = generateJestTestTemplate(program, canonicalAnalysis, { isCritical });
+    extension = '.test.js';
+  } else {
+    content = generateMarkdownTestPlan(program, canonicalAnalysis, { isCriticalPath: isCritical });
+    extension = '.test-plan.md';
+  }
+
+  const includeChangeScenario = parseOptionalBooleanFlag(args && args.change, false);
+  if (includeChangeScenario) {
+    const affectedPrograms = parseCsvList(args && args.affectedPrograms).map((entry) => ({
+      name: entry,
+      accessType: 'UNKNOWN',
+    }));
+    const changeScenario = generateChangeTestScenario(program, {
+      table: args && typeof args.table === 'string' && args.table.trim() ? args.table.trim() : 'UNKNOWN',
+      column: args && typeof args.column === 'string' && args.column.trim() ? args.column.trim() : 'UNKNOWN',
+      oldType: args && typeof args.oldType === 'string' && args.oldType.trim() ? args.oldType.trim() : undefined,
+      newType: args && typeof args.newType === 'string' && args.newType.trim() ? args.newType.trim() : undefined,
+      affectedPrograms,
+    });
+    content = `${content}\n\n${changeScenario}`;
+  }
+
+  return {
+    program,
+    format,
+    isCritical,
+    includeChangeScenario,
+    analysisPath,
+    outputRoot,
+    outputPathSuggestion: path.join(programDir, `test-scenarios${extension}`),
+    content,
+    contentLength: content.length,
+  };
+}
+
+async function executeReadOnlyGenerateChecklist(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const program = args && typeof args.program === 'string'
+    ? args.program.trim().toUpperCase()
+    : '';
+  if (!program) {
+    const error = new Error('Invalid arguments for zeus.generate-checklist: program is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const changeType = args && typeof args.type === 'string'
+    ? args.type.trim().toUpperCase()
+    : 'CODE_CHANGE';
+  if (!['DDL_CHANGE', 'CODE_CHANGE', 'BOTH'].includes(changeType)) {
+    const error = new Error('Invalid arguments for zeus.generate-checklist: type must be DDL_CHANGE, CODE_CHANGE, or BOTH.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const config = resolveAnalyzeConfig(args, { cwd, env });
+  const outputRootInput = String(config && config.outputRoot ? config.outputRoot : 'output').trim();
+  const outputRoot = path.resolve(cwd, outputRootInput || 'output');
+  const outArg = args && typeof args.out === 'string' && args.out.trim()
+    ? args.out.trim()
+    : (args && typeof args.output === 'string' && args.output.trim() ? args.output.trim() : '');
+  if (outArg) {
+    assertRelativePathWithinCwd({
+      toolName: 'zeus.generate-checklist',
+      optionName: '--out',
+      rawValue: outArg,
+      resolvedPath: outputRoot,
+      cwd,
+    });
+  }
+
+  const programDir = path.join(outputRoot, program);
+  const analysisPath = path.join(programDir, 'canonical-analysis.json');
+  const riskPath = path.join(programDir, 'risk-assessment.json');
+  let canonicalAnalysis = null;
+  let riskAssessment = null;
+
+  if (fs.existsSync(analysisPath)) {
+    try {
+      canonicalAnalysis = JSON.parse(fs.readFileSync(analysisPath, 'utf8'));
+    } catch (error) {
+      const wrapped = new Error(`Failed to parse canonical analysis JSON: ${error.message}`);
+      wrapped.code = 'TOOL_INVALID_ARGUMENTS';
+      throw wrapped;
+    }
+  }
+  if (fs.existsSync(riskPath)) {
+    try {
+      riskAssessment = JSON.parse(fs.readFileSync(riskPath, 'utf8'));
+    } catch (error) {
+      const wrapped = new Error(`Failed to parse risk assessment JSON: ${error.message}`);
+      wrapped.code = 'TOOL_INVALID_ARGUMENTS';
+      throw wrapped;
+    }
+  }
+
+  const hasCriticalPath = Boolean(
+    riskAssessment
+    && riskAssessment.summary
+    && String(riskAssessment.summary.riskLevel || '').toUpperCase() === 'RED'
+  );
+  const affectedPrograms = parseCsvList(args && args.affected);
+  const affected = affectedPrograms.length > 0 ? affectedPrograms : [program];
+  const impact = args && typeof args.impact === 'string' && args.impact.trim()
+    ? args.impact.trim()
+    : (hasCriticalPath ? 'HIGH' : 'MEDIUM');
+
+  const checklist = generateDeploymentChecklist({
+    program,
+    table: args && typeof args.table === 'string' && args.table.trim() ? args.table.trim() : undefined,
+    changeType,
+    affectedPrograms: affected,
+    hasCriticalPath,
+    estimatedImpact: impact,
+  });
+  const timeline = estimateDeploymentTimeline({
+    changeType,
+    affectedProgramCount: affected.length,
+    hasCriticalPath,
+  });
+  const riskAreas = canonicalAnalysis
+    ? identifyRiskAreas(canonicalAnalysis, { program, changeType })
+    : [];
+
+  let document = checklist;
+  if (timeline) {
+    document += '\n## Timeline Estimate\n\n';
+    document += `**Total Time:** ${timeline.totalHours} hours (${timeline.workDays} working days)\n\n`;
+    document += '| Phase | Hours |\n';
+    document += '|-------|-------|\n';
+    Object.entries(timeline.hours || {}).forEach(([phase, hours]) => {
+      document += `| ${phase} | ${hours}h |\n`;
+    });
+    document += '\n';
+  }
+  if (riskAreas.length > 0) {
+    document += '\n## Identified Risk Areas\n\n';
+    riskAreas.forEach((risk) => {
+      const severity = risk && risk.severity ? String(risk.severity) : 'UNKNOWN';
+      document += `- ${severity}: ${risk && risk.description ? String(risk.description) : ''}\n`;
+      document += `  Mitigation: ${risk && risk.mitigation ? String(risk.mitigation) : ''}\n`;
+    });
+    document += '\n';
+  }
+
+  return {
+    program,
+    changeType,
+    impact,
+    affectedPrograms: affected,
+    hasCriticalPath,
+    outputRoot,
+    analysisPath: fs.existsSync(analysisPath) ? analysisPath : null,
+    riskPath: fs.existsSync(riskPath) ? riskPath : null,
+    outputPathSuggestion: path.join(programDir, 'deployment-checklist.md'),
+    timeline,
+    riskAreaCount: riskAreas.length,
+    content: document,
+    contentLength: document.length,
+  };
+}
+
+async function executeReadOnlyQa(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const input = args && typeof args.input === 'string'
+    ? args.input.trim()
+    : '';
+  if (!input) {
+    const error = new Error('Invalid arguments for zeus.qa: input is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  let format;
+  let strict;
+  try {
+    format = normalizeQaFormat(args && args.format);
+    strict = normalizeQaStrict(args && args.strict);
+  } catch (error) {
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const inputPath = path.resolve(cwd, input);
+  assertRelativePathWithinCwd({
+    toolName: 'zeus.qa',
+    optionName: '--input',
+    rawValue: input,
+    resolvedPath: inputPath,
+    cwd,
+  });
+  let canonicalAnalysis;
+  try {
+    canonicalAnalysis = loadCanonicalAnalysis(inputPath);
+  } catch (error) {
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const qaResults = await runQAPipeline({
+    canonicalAnalysis: canonicalAnalysis || {},
+    sourceFiles: [],
+    config: {},
+  }, {
+    qa: {
+      qaMode: true,
+      qaStrict: strict,
+    },
+  });
+
+  const report = qaResults && qaResults.status === 'SKIPPED'
+    ? {
+      status: 'SKIPPED',
+      message: qaResults.message || 'No QA report generated (QA mode not enabled)',
+    }
+    : generateQAReport(qaResults, { format });
+
+  return {
+    inputPath,
+    format,
+    strict,
+    qaStatus: qaResults && qaResults.status ? String(qaResults.status) : 'UNKNOWN',
+    durationMs: Number(qaResults && qaResults.duration ? qaResults.duration : 0),
+    stageCount: Number(qaResults && qaResults.stagesRun ? qaResults.stagesRun : 0),
+    failureCount: Array.isArray(qaResults && qaResults.failures) ? qaResults.failures.length : 0,
+    report: report && typeof report === 'object' ? report : { format, content: String(report || '') },
+  };
+}
+
+function resolveAnalysesRegistryPath(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const profileName = args && typeof args.profile === 'string'
+    ? args.profile.trim()
+    : '';
+  const registryPathArg = args && typeof args.registryPath === 'string'
+    ? args.registryPath.trim()
+    : '';
+
+  let profile = null;
+  if (profileName) {
+    const profiles = loadProfiles({ cwd, env, args });
+    profile = resolveProfile(profiles, profileName, { env });
+  }
+
+  const resolvedRegistryPath = resolveRegistryPath({
+    registryPath: registryPathArg || undefined,
+    cwd,
+    env,
+    profile,
+  });
+  if (registryPathArg) {
+    assertRelativePathWithinCwd({
+      toolName: 'zeus.analyses',
+      optionName: '--registry-path',
+      rawValue: registryPathArg,
+      resolvedPath: resolvedRegistryPath,
+      cwd,
+    });
+  }
+  return {
+    profileName: profileName || null,
+    registryPath: resolvedRegistryPath,
+  };
+}
+
+async function executeReadOnlyAnalyses(args = {}, context = {}) {
+  const operation = args && typeof args.operation === 'string'
+    ? args.operation.trim().toLowerCase()
+    : '';
+  if (!operation) {
+    const error = new Error('Invalid arguments for zeus.analyses: operation is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (operation !== 'list' && operation !== 'show') {
+    const error = new Error('Invalid arguments for zeus.analyses: operation must be list or show.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const resolved = resolveAnalysesRegistryPath(args, context);
+
+  if (operation === 'list') {
+    const workspaces = listWorkspaces(resolved.registryPath);
+    const entries = workspaces.map((workspace) => {
+      const index = readWorkspaceIndex(workspace.path);
+      const programs = index && Array.isArray(index.programs) ? index.programs : [];
+      return {
+        id: String(workspace.id || ''),
+        name: String(workspace.name || ''),
+        path: String(workspace.path || ''),
+        outputDir: String(workspace.outputDir || 'output'),
+        sourceDir: String(workspace.sourceDir || 'rpg_sources'),
+        system: String(workspace.system || ''),
+        library: String(workspace.library || ''),
+        profile: String(workspace.profile || ''),
+        tags: Array.isArray(workspace.tags) ? workspace.tags.map((tag) => String(tag)) : [],
+        registeredAt: workspace.registeredAt ? String(workspace.registeredAt) : null,
+        lastAccessedAt: workspace.lastAccessedAt ? String(workspace.lastAccessedAt) : null,
+        programCount: programs.length,
+      };
+    });
+    return {
+      operation: 'list',
+      profile: resolved.profileName,
+      registryPath: resolved.registryPath,
+      workspaceCount: entries.length,
+      workspaces: entries,
+    };
+  }
+
+  const workspaceId = args && typeof args.id === 'string'
+    ? args.id.trim()
+    : '';
+  if (!workspaceId) {
+    const error = new Error('Invalid arguments for zeus.analyses: id is required when operation=show.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  const workspace = readWorkspaceById(resolved.registryPath, workspaceId);
+  if (!workspace) {
+    const error = new Error(`Workspace not found: ${workspaceId}`);
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  const index = readWorkspaceIndex(workspace.path);
+  const programs = index && Array.isArray(index.programs) ? index.programs : [];
+  const sourceMembers = index && index.sourceMembers && typeof index.sourceMembers === 'object'
+    ? index.sourceMembers
+    : {};
+  const reports = index && Array.isArray(index.reports) ? index.reports : [];
+  return {
+    operation: 'show',
+    profile: resolved.profileName,
+    registryPath: resolved.registryPath,
+    workspace: {
+      id: String(workspace.id || ''),
+      name: String(workspace.name || ''),
+      description: String(workspace.description || ''),
+      path: String(workspace.path || ''),
+      outputDir: String(workspace.outputDir || 'output'),
+      sourceDir: String(workspace.sourceDir || 'rpg_sources'),
+      system: String(workspace.system || ''),
+      library: String(workspace.library || ''),
+      profile: String(workspace.profile || ''),
+      tags: Array.isArray(workspace.tags) ? workspace.tags.map((tag) => String(tag)) : [],
+      registeredAt: workspace.registeredAt ? String(workspace.registeredAt) : null,
+      lastAccessedAt: workspace.lastAccessedAt ? String(workspace.lastAccessedAt) : null,
+    },
+    index: {
+      available: Boolean(index),
+      generatedAt: index && index.generatedAt ? String(index.generatedAt) : null,
+      programCount: programs.length,
+      programs: programs.map((program) => ({
+        name: program && program.name ? String(program.name) : '',
+        outputDir: program && program.outputDir ? String(program.outputDir) : '',
+        analyzedAt: program && program.analyzedAt ? String(program.analyzedAt) : null,
+        workflowMode: program && program.workflowMode ? String(program.workflowMode) : null,
+        artifactCount: Number(program && program.artifactCount ? program.artifactCount : 0),
+      })),
+      sourceMembers,
+      reportCount: reports.length,
+      reports: reports.map((report) => ({
+        path: report && report.path ? String(report.path) : '',
+        title: report && report.title ? String(report.title) : '',
+        generatedAt: report && report.generatedAt ? String(report.generatedAt) : null,
+      })),
+    },
+  };
+}
+
+function resolveFetchManifest(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const profile = args && typeof args.profile === 'string'
+    ? args.profile.trim()
+    : '';
+  const out = args && typeof args.out === 'string'
+    ? args.out.trim()
+    : '';
+  const fetchArgs = {
+    ...(profile ? { profile } : {}),
+    ...(out ? { out } : {}),
+  };
+  const fetchConfig = resolveFetchConfig(fetchArgs, { cwd, env });
+  const fetchRootInput = String(fetchConfig.out || '').trim();
+  const fetchRoot = path.resolve(cwd, fetchRootInput || './rpg_sources');
+  assertRelativePathWithinCwd({
+    toolName: 'zeus.fetch',
+    optionName: '--out',
+    rawValue: fetchRootInput,
+    resolvedPath: fetchRoot,
+    cwd,
+  });
+  const manifestResult = readImportManifest(fetchRoot);
+  if (manifestResult && manifestResult.error) {
+    const error = new Error(
+      `Failed to parse fetch import manifest JSON at ${manifestResult.manifestPath}: ${manifestResult.error.message}`,
+    );
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (!manifestResult || !manifestResult.manifest) {
+    const error = new Error(`Fetch import manifest not found: ${manifestResult.manifestPath}. Run fetch first.`);
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  const summary = summarizeImportManifest(manifestResult.manifest, {
+    manifestPath: manifestResult.manifestPath,
+  });
+  if (!summary) {
+    const error = new Error(`Invalid fetch import manifest payload at ${manifestResult.manifestPath}.`);
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  return {
+    profile: profile || null,
+    fetchRoot,
+    manifestPath: manifestResult.manifestPath,
+    manifest: manifestResult.manifest,
+    summary,
+  };
+}
+
+async function executeReadOnlyFetch(args = {}, context = {}) {
+  const operation = args && typeof args.operation === 'string'
+    ? args.operation.trim().toLowerCase()
+    : '';
+  if (!operation) {
+    const error = new Error('Invalid arguments for zeus.fetch: operation is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (operation !== 'summary' && operation !== 'files') {
+    const error = new Error('Invalid arguments for zeus.fetch: operation must be summary or files.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const resolved = resolveFetchManifest(args, context);
+  if (operation === 'summary') {
+    return {
+      operation: 'summary',
+      profile: resolved.profile,
+      fetchRoot: resolved.fetchRoot,
+      manifestPath: resolved.manifestPath,
+      summary: resolved.summary,
+      cursor: null,
+      cursorOffset: 0,
+      nextCursor: null,
+      maxPayloadItems: DEFAULT_MCP_PAYLOAD_ITEMS,
+      payloadResultCount: 0,
+      payloadTruncated: false,
+      resultCount: Number(resolved.summary && resolved.summary.fileCount ? resolved.summary.fileCount : 0),
+      files: [],
+    };
+  }
+
+  const maxPayloadItems = parseOptionalPositiveInteger(args && args.maxPayloadItems, {
+    label: 'zeus.fetch maxPayloadItems',
+    min: 1,
+    max: MAX_MCP_PAYLOAD_ITEMS,
+  });
+  const cursorState = decodeMcpCursor('zeus.fetch', args && args.cursor);
+  const payloadLimit = Number.isInteger(maxPayloadItems) ? maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS;
+  const rawFiles = Array.isArray(resolved.manifest && resolved.manifest.files)
+    ? resolved.manifest.files
+    : [];
+  const files = rawFiles
+    .map((entry) => {
+      const origin = getImportManifestEntryOrigin(entry);
+      const exportInfo = getImportManifestEntryExport(entry, resolved.manifest);
+      const validation = getImportManifestEntryValidation(entry);
+      return {
+        sourceLib: origin.sourceLib ? String(origin.sourceLib) : '',
+        sourceFile: origin.sourceFile ? String(origin.sourceFile) : '',
+        member: origin.member ? String(origin.member) : '',
+        sourceType: origin.sourceType ? String(origin.sourceType) : '',
+        memberPath: origin.memberPath ? String(origin.memberPath) : '',
+        remotePath: origin.remotePath ? String(origin.remotePath) : '',
+        localPath: origin.localPath ? String(origin.localPath) : '',
+        export: {
+          status: exportInfo.status ? String(exportInfo.status) : 'unknown',
+          transportRequested: exportInfo.transportRequested ? String(exportInfo.transportRequested) : null,
+          transportUsed: exportInfo.transportUsed ? String(exportInfo.transportUsed) : null,
+          fallbackUsed: Boolean(exportInfo.fallbackUsed),
+          streamFileCcsid: Number(exportInfo.streamFileCcsid) || null,
+          encodingPolicy: exportInfo.encodingPolicy ? String(exportInfo.encodingPolicy) : null,
+        },
+        validation: {
+          status: validation.status ? String(validation.status) : 'invalid',
+          exists: Boolean(validation.exists),
+          sizeBytes: Number(validation.sizeBytes) || 0,
+          sha256: validation.sha256 ? String(validation.sha256) : null,
+          utf8Valid: Boolean(validation.utf8Valid),
+          newlineStyle: validation.newlineStyle ? String(validation.newlineStyle) : 'UNKNOWN',
+          messageCount: Array.isArray(validation.messages) ? validation.messages.length : 0,
+        },
+      };
+    })
+    .sort((left, right) => {
+      if (left.localPath !== right.localPath) {
+        return left.localPath.localeCompare(right.localPath);
+      }
+      if (left.sourceFile !== right.sourceFile) {
+        return left.sourceFile.localeCompare(right.sourceFile);
+      }
+      return left.member.localeCompare(right.member);
+    });
+
+  const offset = cursorState.offset;
+  if (!Number.isFinite(offset) || offset < 0 || offset > files.length) {
+    throw createInvalidCursorError('zeus.fetch', 'cursor is outside available result range.');
+  }
+  const payloadFiles = files.slice(offset, offset + payloadLimit);
+  const nextOffset = offset + payloadFiles.length;
+  const nextCursor = nextOffset < files.length
+    ? encodeMcpCursor('zeus.fetch', nextOffset)
+    : null;
+
+  return {
+    operation: 'files',
+    profile: resolved.profile,
+    fetchRoot: resolved.fetchRoot,
+    manifestPath: resolved.manifestPath,
+    summary: resolved.summary,
+    cursor: cursorState.cursor,
+    cursorOffset: offset,
+    nextCursor,
+    maxPayloadItems: payloadLimit,
+    payloadResultCount: payloadFiles.length,
+    payloadTruncated: nextCursor !== null,
+    resultCount: files.length,
+    files: payloadFiles,
+  };
+}
+
+function resolveTestRunManifestPath(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const manifestArg = args && typeof args.manifest === 'string'
+    ? args.manifest.trim()
+    : '';
+  if (!manifestArg) {
+    const error = new Error('Invalid arguments for zeus.test-run: manifest is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const manifestPath = path.resolve(cwd, manifestArg);
+  assertRelativePathWithinCwd({
+    toolName: 'zeus.test-run',
+    optionName: '--manifest',
+    rawValue: manifestArg,
+    resolvedPath: manifestPath,
+    cwd,
+  });
+  return manifestPath;
+}
+
+function buildTestRunSnapshotSummaryEntries(snapshots = {}) {
+  return Object.entries(snapshots)
+    .map(([tableKey, entry]) => {
+      const before = entry && entry.before && typeof entry.before === 'object'
+        ? entry.before
+        : null;
+      const after = entry && entry.after && typeof entry.after === 'object'
+        ? entry.after
+        : null;
+      const diff = entry && entry.diff && typeof entry.diff === 'object'
+        ? entry.diff
+        : null;
+      const changedRows = Array.isArray(diff && diff.changedRows) ? diff.changedRows : [];
+      return {
+        table: String(tableKey || ''),
+        beforeRowCount: before && Array.isArray(before.rows) ? before.rows.length : 0,
+        afterRowCount: after && Array.isArray(after.rows) ? after.rows.length : 0,
+        beforeCapturedAt: before && before.timestamp ? String(before.timestamp) : null,
+        afterCapturedAt: after && after.timestamp ? String(after.timestamp) : null,
+        afterHasError: Boolean(after && after.error),
+        changedRowCount: changedRows.length,
+      };
+    })
+    .sort((left, right) => left.table.localeCompare(right.table));
+}
+
+async function executeReadOnlyTestRun(args = {}, context = {}) {
+  const operation = args && typeof args.operation === 'string'
+    ? args.operation.trim().toLowerCase()
+    : '';
+  if (!operation) {
+    const error = new Error('Invalid arguments for zeus.test-run: operation is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (operation !== 'show' && operation !== 'rollback') {
+    const error = new Error('Invalid arguments for zeus.test-run: operation must be show or rollback.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const manifestPath = resolveTestRunManifestPath(args, context);
+  let manifest;
+  try {
+    manifest = loadTestRunManifest(manifestPath);
+  } catch (error) {
+    const wrapped = new Error(`Failed to read test-run manifest at ${manifestPath}: ${error.message}`);
+    wrapped.code = 'TOOL_INVALID_ARGUMENTS';
+    throw wrapped;
+  }
+  const snapshots = manifest && manifest.snapshots && typeof manifest.snapshots === 'object'
+    ? manifest.snapshots
+    : {};
+  const snapshotSummaries = buildTestRunSnapshotSummaryEntries(snapshots);
+  const rollbackSql = Array.isArray(manifest && manifest.rollbackSql)
+    ? manifest.rollbackSql.map((statement) => String(statement))
+    : [];
+
+  const base = {
+    profile: null,
+    manifestPath,
+    manifest: {
+      kind: manifest && manifest.kind ? String(manifest.kind) : null,
+      schemaVersion: Number(manifest && manifest.schemaVersion ? manifest.schemaVersion : 0),
+      runId: manifest && manifest.runId ? String(manifest.runId) : null,
+      label: manifest && manifest.label ? String(manifest.label) : null,
+      program: manifest && manifest.program ? String(manifest.program) : null,
+      status: manifest && manifest.status ? String(manifest.status) : null,
+      createdAt: manifest && manifest.createdAt ? String(manifest.createdAt) : null,
+      capturedAt: manifest && manifest.capturedAt ? String(manifest.capturedAt) : null,
+      tableCount: Array.isArray(manifest && manifest.tables) ? manifest.tables.length : 0,
+      tables: Array.isArray(manifest && manifest.tables)
+        ? manifest.tables.map((table) => String(table)).sort((left, right) => left.localeCompare(right))
+        : [],
+      snapshotCount: snapshotSummaries.length,
+      rollbackStatementCount: rollbackSql.length,
+    },
+    snapshots: snapshotSummaries,
+  };
+
+  if (operation === 'show') {
+    return {
+      operation: 'show',
+      ...base,
+      maxPayloadItems: DEFAULT_MCP_PAYLOAD_ITEMS,
+      payloadResultCount: 0,
+      payloadTruncated: false,
+      rollbackStatements: [],
+    };
+  }
+
+  const maxPayloadItems = parseOptionalPositiveInteger(args && args.maxPayloadItems, {
+    label: 'zeus.test-run maxPayloadItems',
+    min: 1,
+    max: MAX_MCP_PAYLOAD_ITEMS,
+  });
+  const payloadLimit = Number.isInteger(maxPayloadItems) ? maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS;
+  const payloadStatements = rollbackSql.slice(0, payloadLimit);
+  return {
+    operation: 'rollback',
+    ...base,
+    maxPayloadItems: payloadLimit,
+    payloadResultCount: payloadStatements.length,
+    payloadTruncated: rollbackSql.length > payloadStatements.length,
+    rollbackStatements: payloadStatements,
+  };
+}
+
+async function executeReadOnlyCopyToWorkspace(args = {}, context = {}) {
+  const operation = args && typeof args.operation === 'string'
+    ? args.operation.trim().toLowerCase()
+    : '';
+  if (!operation) {
+    const error = new Error('Invalid arguments for zeus.copy-to-workspace: operation is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (operation !== 'plan') {
+    const error = new Error('Invalid arguments for zeus.copy-to-workspace: operation must be plan.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const profileName = args && typeof args.profile === 'string'
+    ? args.profile.trim()
+    : '';
+  if (!profileName) {
+    const error = new Error('Missing required option: --profile <name>');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const profiles = loadProfiles({ cwd, env, args });
+  const profile = resolveProfile(profiles, profileName, { env });
+  const fetchConfig = resolveFetchConfig(args, { cwd, env });
+  const workCopyConfig = readWorkCopyConfig(profile, env);
+  const sourceRootInput = String(fetchConfig.out || '').trim();
+  const targetRootInput = String(workCopyConfig.root || '').trim();
+  const sourceRoot = path.resolve(cwd, sourceRootInput);
+  const targetRoot = path.resolve(cwd, targetRootInput);
+  assertRelativePathWithinCwd({
+    toolName: 'zeus.copy-to-workspace',
+    optionName: '--out',
+    rawValue: sourceRootInput,
+    resolvedPath: sourceRoot,
+    cwd,
+  });
+  assertRelativePathWithinCwd({
+    toolName: 'zeus.copy-to-workspace',
+    optionName: 'workCopy.root',
+    rawValue: targetRootInput,
+    resolvedPath: targetRoot,
+    cwd,
+  });
+  if (!fs.existsSync(sourceRoot)) {
+    const error = new Error(`Fetch output directory not found: ${sourceRoot}`);
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const workCopyMode = String(workCopyConfig.extension || '').trim().toLowerCase();
+  const force = Boolean(args && args.force === true);
+  const requestedMembers = parseWorkCopyMembersCsv(args && args.members);
+  const requestedMemberSet = new Set(requestedMembers);
+  const discovered = discoverFetchedSources(sourceRoot);
+  const selectedEntries = requestedMemberSet.size > 0
+    ? discovered.filter((entry) => requestedMemberSet.has(String(entry.member || '').toUpperCase()))
+    : discovered;
+
+  const planEntries = selectedEntries.map((entry) => {
+    const targetName = buildWorkCopyTargetName(entry, workCopyMode);
+    const targetPath = path.join(targetRoot, targetName);
+    const targetExists = fs.existsSync(targetPath);
+    let status = 'will copy';
+    let note = '';
+    if (targetExists && force) {
+      status = 'will overwrite';
+      note = 'Target exists and would be overwritten with --force.';
+    } else if (targetExists) {
+      status = 'already exists';
+      note = 'Use --force to overwrite.';
+    }
+    return {
+      status,
+      member: String(entry.member || ''),
+      source: String(entry.relativePath || ''),
+      target: path.relative(cwd, targetPath).replace(/\\/g, '/'),
+      note,
+    };
+  });
+
+  if (requestedMemberSet.size > 0) {
+    const selectedMemberSet = new Set(selectedEntries.map((entry) => String(entry.member || '').toUpperCase()));
+    for (const requestedMember of Array.from(requestedMemberSet).sort((left, right) => left.localeCompare(right))) {
+      if (selectedMemberSet.has(requestedMember)) {
+        continue;
+      }
+      planEntries.push({
+        status: 'skipped',
+        member: requestedMember,
+        source: '',
+        target: '',
+        note: 'No fetched source found for requested member.',
+      });
+    }
+  }
+
+  const sortedPlanEntries = planEntries.sort((left, right) => {
+    if (String(left.member || '') !== String(right.member || '')) {
+      return String(left.member || '').localeCompare(String(right.member || ''));
+    }
+    if (String(left.source || '') !== String(right.source || '')) {
+      return String(left.source || '').localeCompare(String(right.source || ''));
+    }
+    return String(left.target || '').localeCompare(String(right.target || ''));
+  });
+  const maxPayloadItems = parseOptionalPositiveInteger(args && args.maxPayloadItems, {
+    label: 'zeus.copy-to-workspace maxPayloadItems',
+    min: 1,
+    max: MAX_MCP_PAYLOAD_ITEMS,
+  });
+  const cursorState = decodeMcpCursor('zeus.copy-to-workspace', args && args.cursor);
+  const payloadLimit = Number.isInteger(maxPayloadItems) ? maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS;
+  const offset = cursorState.offset;
+  if (!Number.isFinite(offset) || offset < 0 || offset > sortedPlanEntries.length) {
+    throw createInvalidCursorError('zeus.copy-to-workspace', 'cursor is outside available result range.');
+  }
+  const payloadEntries = sortedPlanEntries.slice(offset, offset + payloadLimit);
+  const nextOffset = offset + payloadEntries.length;
+  const nextCursor = nextOffset < sortedPlanEntries.length
+    ? encodeMcpCursor('zeus.copy-to-workspace', nextOffset)
+    : null;
+
+  const counts = {
+    copyCandidateCount: sortedPlanEntries.filter((entry) => entry.status === 'will copy' || entry.status === 'will overwrite').length,
+    overwriteCount: sortedPlanEntries.filter((entry) => entry.status === 'will overwrite').length,
+    existingCount: sortedPlanEntries.filter((entry) => entry.status === 'already exists').length,
+    skippedCount: sortedPlanEntries.filter((entry) => entry.status === 'skipped').length,
+  };
+
+  return {
+    operation: 'plan',
+    profile: profileName,
+    sourceRoot,
+    targetRoot,
+    workCopyMode,
+    force,
+    requestedMemberCount: requestedMembers.length,
+    discoveredCount: discovered.length,
+    selectedCount: selectedEntries.length,
+    ...counts,
+    cursor: cursorState.cursor,
+    cursorOffset: offset,
+    nextCursor,
+    maxPayloadItems: payloadLimit,
+    payloadResultCount: payloadEntries.length,
+    payloadTruncated: nextCursor !== null,
+    resultCount: sortedPlanEntries.length,
+    entries: payloadEntries,
+  };
+}
+
+function normalizeServeHost(value) {
+  const normalized = String(value || DEFAULT_UI_HOST).trim();
+  if (!normalized || normalized === 'localhost') {
+    return DEFAULT_UI_HOST;
+  }
+  if (normalized === '127.0.0.1' || normalized === '::1') {
+    return normalized;
+  }
+  const error = new Error('Invalid arguments for zeus.serve: host must be localhost, 127.0.0.1, or ::1.');
+  error.code = 'TOOL_INVALID_ARGUMENTS';
+  throw error;
+}
+
+function parseServePort(value) {
+  if (value === undefined || value === null) {
+    return DEFAULT_UI_PORT;
+  }
+  const parsed = Number.parseInt(String(value).trim(), 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    const error = new Error('Invalid arguments for zeus.serve: port must be a non-negative integer.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  return parsed;
+}
+
+async function executeReadOnlyServe(args = {}, context = {}) {
+  const operation = args && typeof args.operation === 'string'
+    ? args.operation.trim().toLowerCase()
+    : '';
+  if (!operation) {
+    const error = new Error('Invalid arguments for zeus.serve: operation is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (operation !== 'summary') {
+    const error = new Error('Invalid arguments for zeus.serve: operation must be summary.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const profileName = args && typeof args.profile === 'string'
+    ? args.profile.trim()
+    : '';
+  const profiles = loadProfiles({ cwd, env, args });
+  const profile = profileName ? resolveProfile(profiles, profileName, { env }) : null;
+
+  const bundleConfig = resolveBundleConfig(args, { cwd, env });
+  const outputRootInput = String(bundleConfig && bundleConfig.sourceOutputRoot ? bundleConfig.sourceOutputRoot : 'output').trim();
+  const outputRoot = path.resolve(cwd, outputRootInput || 'output');
+  assertRelativePathWithinCwd({
+    toolName: 'zeus.serve',
+    optionName: '--source-output-root',
+    rawValue: outputRootInput,
+    resolvedPath: outputRoot,
+    cwd,
+  });
+
+  const host = normalizeServeHost(args && args.host);
+  const port = parseServePort(args && args.port);
+  const hasRegistryConfig = Boolean(
+    (args && (args.registryPath || args['registry-path']))
+    || env.ZEUS_ANALYSES_REGISTRY
+    || (profile && profile.analysesRegistryPath),
+  );
+  const registryPath = hasRegistryConfig
+    ? resolveRegistryPath({
+      registryPath: args && (args.registryPath || args['registry-path']) ? (args.registryPath || args['registry-path']) : undefined,
+      profile,
+      env,
+      cwd,
+    })
+    : null;
+  if (args && (typeof args.registryPath === 'string' || typeof args['registry-path'] === 'string')) {
+    const registryArg = typeof args.registryPath === 'string' ? args.registryPath : args['registry-path'];
+    assertRelativePathWithinCwd({
+      toolName: 'zeus.serve',
+      optionName: '--registry-path',
+      rawValue: registryArg,
+      resolvedPath: registryPath,
+      cwd,
+    });
+  }
+
+  const outputRootExists = fs.existsSync(outputRoot) && fs.statSync(outputRoot).isDirectory();
+  const runs = outputRootExists ? listAnalysisRuns(outputRoot) : [];
+  const workspaces = registryPath ? listWorkspaces(registryPath) : [];
+  const latestRun = runs.length > 0 ? runs[0] : null;
+  const bindUrl = port > 0
+    ? `http://${host === '::1' ? '[::1]' : host}:${port}`
+    : null;
+
+  return {
+    operation: 'summary',
+    profile: profileName || null,
+    outputRoot,
+    outputRootExists,
+    host,
+    port,
+    bindUrl,
+    registryPath,
+    registryConfigured: Boolean(registryPath),
+    registryExists: Boolean(registryPath && fs.existsSync(registryPath)),
+    workspaceCount: workspaces.length,
+    runCount: runs.length,
+    latestRun: latestRun
+      ? {
+        program: latestRun.program ? String(latestRun.program) : '',
+        status: latestRun.status ? String(latestRun.status) : null,
+        completedAt: latestRun.completedAt ? String(latestRun.completedAt) : null,
+        artifactCount: Number(latestRun.artifactCount || 0),
+        safeSharingEnabled: Boolean(latestRun.safeSharingEnabled),
+      }
+      : null,
+    apiRoutes: [
+      '/api/health',
+      '/api/runs',
+      '/api/runs/:program',
+      '/api/runs/:program/views',
+      '/api/runs/:program/artifacts/content',
+      '/api/analyses',
+      '/api/analyses/:workspaceId',
+      '/api/analyses/:workspaceId/index',
+      '/api/analyses/:workspaceId/touch',
+      '/api/prompt-builder/contracts',
+      '/api/prompt-builder/use-cases',
+      '/api/prompt-builder/modules',
+      '/api/prompt-builder/preview',
+      '/api/prompt-builder/templates',
+      '/api/prompt-builder/templates/:templateId',
+      '/api/prompt-builder/context-sources',
+      '/api/prompt-builder/context-sources/:program/prompts',
+      '/api/prompt-builder/context-sources/import',
+    ],
+  };
+}
+
+function parseBridgeOperation(operation) {
+  const normalized = typeof operation === 'string'
+    ? operation.trim().toLowerCase()
+    : '';
+  if (!normalized) {
+    const error = new Error('Invalid arguments for zeus.bridge: operation is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (!['plan', 'report', 'stage', 'compile-run'].includes(normalized)) {
+    const error = new Error('Invalid arguments for zeus.bridge: operation must be plan, report, stage, or compile-run.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  return normalized;
+}
+
+function normalizeBridgeDryRunFlag(args = {}) {
+  const value = Object.prototype.hasOwnProperty.call(args, 'dryRun')
+    ? args.dryRun
+    : args['dry-run'];
+  return parseOptionalBooleanFlag(value, true);
+}
+
+function assertBridgePreviewPolicy(operation, dryRun) {
+  if (operation === 'stage' || operation === 'compile-run') {
+    if (dryRun === true) {
+      return;
+    }
+    const error = new Error(
+      `Tool is not allowed by MCP policy: zeus.bridge operation=${operation} requires dryRun=true.`,
+    );
+    error.code = 'TOOL_NOT_ALLOWED';
+    throw error;
+  }
+}
+
+function normalizeBridgeRunnerError(error) {
+  if (error && (error.code === 'TOOL_NOT_ALLOWED' || error.code === 'TOOL_INVALID_ARGUMENTS')) {
+    throw error;
+  }
+
+  const code = error && error.code ? String(error.code) : '';
+  const message = String(error && error.message ? error.message : '');
+  if (code === 'BRIDGE_DISABLED' || code === 'TARGET_NOT_ALLOWLISTED' || code === 'BRIDGE_EXECUTION_NOT_IMPLEMENTED') {
+    const wrapped = new Error(message || 'Tool is not allowed by MCP policy: zeus.bridge refused by bridge policy.');
+    wrapped.code = 'TOOL_NOT_ALLOWED';
+    throw wrapped;
+  }
+
+  if (
+    error && error.name === 'BridgeRefusalError'
+  ) {
+    const wrapped = new Error(message || 'Bridge preview request was refused.');
+    wrapped.code = 'TOOL_INVALID_ARGUMENTS';
+    throw wrapped;
+  }
+
+  if (
+    /invalid arguments for zeus\.bridge/i.test(message)
+    || /missing required option: --/i.test(message)
+    || /unknown bridge subcommand/i.test(message)
+    || /profile ".+" not found/i.test(message)
+  ) {
+    const wrapped = new Error(message || 'Invalid arguments for zeus.bridge.');
+    wrapped.code = 'TOOL_INVALID_ARGUMENTS';
+    throw wrapped;
+  }
+
+  throw error;
+}
+
+async function executeReadOnlyBridge(args = {}, context = {}) {
+  const operation = parseBridgeOperation(args && args.operation);
+  const profile = args && typeof args.profile === 'string'
+    ? args.profile.trim()
+    : '';
+  const program = args && typeof args.program === 'string'
+    ? args.program.trim()
+    : '';
+  if (!profile) {
+    const error = new Error('Invalid arguments for zeus.bridge: profile is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (!program) {
+    const error = new Error('Invalid arguments for zeus.bridge: program is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (operation === 'plan') {
+    const source = args && typeof args.source === 'string' ? args.source.trim() : '';
+    if (!source) {
+      const error = new Error('Invalid arguments for zeus.bridge: source is required for operation=plan.');
+      error.code = 'TOOL_INVALID_ARGUMENTS';
+      throw error;
+    }
+  }
+
+  const dryRun = normalizeBridgeDryRunFlag(args);
+  assertBridgePreviewPolicy(operation, dryRun);
+
+  const bridgeRunner = typeof context.bridgeRunner === 'function'
+    ? context.bridgeRunner
+    : executeBridgeCommand;
+
+  const runnerArgs = {
+    _: [operation],
+    profile,
+    program,
+    ...(operation === 'stage' || operation === 'compile-run' ? { 'dry-run': true } : {}),
+    ...(args && typeof args.source === 'string' && args.source.trim() ? { source: args.source.trim() } : {}),
+    ...(args && typeof args.targetType === 'string' && args.targetType.trim() ? { 'target-type': args.targetType.trim() } : {}),
+    ...(args && typeof args.targetLib === 'string' && args.targetLib.trim() ? { 'target-lib': args.targetLib.trim() } : {}),
+    ...(args && typeof args.targetFile === 'string' && args.targetFile.trim() ? { 'target-file': args.targetFile.trim() } : {}),
+    ...(args && typeof args.targetMember === 'string' && args.targetMember.trim() ? { 'target-member': args.targetMember.trim() } : {}),
+    ...(args && typeof args.targetMemberType === 'string' && args.targetMemberType.trim() ? { 'target-member-type': args.targetMemberType.trim() } : {}),
+    ...(args && typeof args.targetIfs === 'string' && args.targetIfs.trim() ? { 'target-ifs': args.targetIfs.trim() } : {}),
+    ...(args && typeof args.beforeHash === 'string' && args.beforeHash.trim() ? { 'before-hash': args.beforeHash.trim() } : {}),
+    ...(args && typeof args.afterHash === 'string' && args.afterHash.trim() ? { 'after-hash': args.afterHash.trim() } : {}),
+    ...(args && typeof args.diffSummary === 'string' && args.diffSummary.trim() ? { 'diff-summary': args.diffSummary.trim() } : {}),
+    ...(args && typeof args.riskLevel === 'string' && args.riskLevel.trim() ? { 'risk-level': args.riskLevel.trim() } : {}),
+    ...(args && typeof args.actorMode === 'string' && args.actorMode.trim() ? { 'actor-mode': args.actorMode.trim() } : {}),
+    ...(args && typeof args.approvalFile === 'string' && args.approvalFile.trim() ? { 'approval-file': args.approvalFile.trim() } : {}),
+    ...(args && typeof args.template === 'string' && args.template.trim() ? { template: args.template.trim() } : {}),
+  };
+
+  let execution;
+  try {
+    execution = await bridgeRunner(runnerArgs, {
+      cwd: context.cwd || process.cwd(),
+      env: context.env || process.env,
+    });
+  } catch (error) {
+    normalizeBridgeRunnerError(error);
+  }
+
+  const approval = execution && execution.approval && typeof execution.approval === 'object'
+    ? execution.approval
+    : null;
+  return {
+    operation,
+    profile,
+    program: execution && execution.program ? String(execution.program) : program.toUpperCase(),
+    dryRun: operation === 'stage' || operation === 'compile-run' ? true : null,
+    status: execution && execution.status ? String(execution.status) : (operation === 'report' ? 'reported' : 'planned'),
+    plan: execution && execution.plan && typeof execution.plan === 'object'
+      ? {
+        planId: execution.plan.planId ? String(execution.plan.planId) : null,
+        planHash: execution.plan.planHash ? String(execution.plan.planHash) : null,
+        riskLevel: execution.plan.riskLevel ? String(execution.plan.riskLevel) : null,
+        targetType: execution.plan.targetType ? String(execution.plan.targetType) : null,
+        remoteTarget: execution.plan.remoteTarget && typeof execution.plan.remoteTarget === 'object'
+          ? execution.plan.remoteTarget
+          : null,
+      }
+      : null,
+    compileTemplateId: execution && execution.compileTemplateId ? String(execution.compileTemplateId) : null,
+    reason: execution && execution.reason ? String(execution.reason) : null,
+    approval: approval
+      ? {
+        required: Boolean(approval.required),
+        status: approval.status ? String(approval.status) : null,
+        code: approval.code ? String(approval.code) : null,
+        message: approval.message ? String(approval.message) : null,
+        planPath: approval.planPath ? String(approval.planPath) : null,
+        approvalPath: approval.approvalPath ? String(approval.approvalPath) : null,
+        planId: approval.planId ? String(approval.planId) : null,
+        planHash: approval.planHash ? String(approval.planHash) : null,
+      }
+      : null,
+    artifacts: execution && execution.artifacts && typeof execution.artifacts === 'object'
+      ? {
+        jsonPath: execution.artifacts.jsonPath ? String(execution.artifacts.jsonPath) : null,
+        mdPath: execution.artifacts.mdPath ? String(execution.artifacts.mdPath) : null,
+      }
+      : null,
+    expectedArtifacts: execution && execution.expectedArtifacts && typeof execution.expectedArtifacts === 'object'
+      ? execution.expectedArtifacts
+      : null,
+    auditPath: execution && execution.auditPath ? String(execution.auditPath) : null,
+  };
+}
+
+function parseWriteSqlMode(mode) {
+  const normalized = mode === undefined || mode === null
+    ? 'upsert'
+    : String(mode).trim().toLowerCase();
+  if (!['upsert-sql', 'upsert', 'insert', 'update'].includes(normalized)) {
+    const error = new Error('Invalid arguments for zeus.write-sql: mode must be one of upsert-sql, upsert, insert, update.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  return resolveWriteMode(normalized).command;
+}
+
+function parseWriteOperation(operation) {
+  const normalized = typeof operation === 'string'
+    ? operation.trim().toLowerCase()
+    : '';
+  if (!normalized) {
+    const error = new Error('Invalid arguments for zeus.write-sql: operation is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (normalized !== 'plan' && normalized !== 'apply') {
+    const error = new Error('Invalid arguments for zeus.write-sql: operation must be plan or apply.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  return normalized;
+}
+
+function isTruthyEnvFlag(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
+function parseConfigBoolean(value, fallback) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+  return fallback;
+}
+
+function parsePositiveIntegerOrNull(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  const parsed = Number.parseInt(String(value).trim(), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+}
+
+function parseOptionalMaxRowsAffectedArg(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  const parsed = Number.parseInt(String(value).trim(), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    const error = new Error('Invalid arguments for zeus.write-sql: maxRowsAffected must be a positive integer.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  return parsed;
+}
+
+function hashSql(sql) {
+  return crypto.createHash('sha256').update(String(sql || ''), 'utf8').digest('hex');
+}
+
+function detectSqlStatementType(sql) {
+  const match = String(sql || '').trim().match(/^([A-Za-z]+)/);
+  return match ? String(match[1]).toUpperCase() : 'UNKNOWN';
+}
+
+function normalizeSqlIdentifier(value) {
+  const input = String(value || '').trim();
+  if (!input) {
+    return '';
+  }
+  if (
+    (input.startsWith('"') && input.endsWith('"'))
+    || (input.startsWith('`') && input.endsWith('`'))
+    || (input.startsWith('[') && input.endsWith(']'))
+  ) {
+    const inner = input.slice(1, -1);
+    return inner.replace(/""/g, '"').toUpperCase();
+  }
+  return input.toUpperCase();
+}
+
+function parseQualifiedTableIdentifier(rawIdentifier) {
+  const token = String(rawIdentifier || '').trim().replace(/[;,]+$/g, '');
+  if (!token) {
+    return null;
+  }
+  const compactToken = token.replace(/\s+/g, '');
+  if (!compactToken) {
+    return null;
+  }
+  const parts = compactToken
+    .split('.')
+    .map((entry) => normalizeSqlIdentifier(entry))
+    .filter(Boolean);
+  if (parts.length === 0) {
+    return null;
+  }
+  const table = parts[parts.length - 1];
+  const schema = parts.length > 1 ? parts[parts.length - 2] : null;
+  if (!table) {
+    return null;
+  }
+  return {
+    schema,
+    table,
+    qualifiedName: schema ? `${schema}.${table}` : table,
+  };
+}
+
+function resolveWriteTargetTable(sql) {
+  const normalizedSql = String(sql || '').trim();
+  const patterns = [
+    /^\s*INSERT\s+INTO\s+([^\s(]+)/i,
+    /^\s*UPDATE\s+([^\s(]+)/i,
+    /^\s*DELETE\s+FROM\s+([^\s(]+)/i,
+    /^\s*MERGE\s+INTO\s+([^\s(]+)/i,
+  ];
+  for (const pattern of patterns) {
+    const match = normalizedSql.match(pattern);
+    if (match && match[1]) {
+      const parsed = parseQualifiedTableIdentifier(match[1]);
+      if (parsed) {
+        return parsed;
+      }
+    }
+  }
+  return null;
+}
+
+function normalizeWriteTableAllowlist(rawAllowTables) {
+  if (!Array.isArray(rawAllowTables)) {
+    return [];
+  }
+  const dedupe = new Set();
+  const normalized = [];
+  for (const entry of rawAllowTables) {
+    const parsed = parseQualifiedTableIdentifier(entry);
+    if (!parsed || !parsed.table) {
+      continue;
+    }
+    if (dedupe.has(parsed.qualifiedName)) {
+      continue;
+    }
+    dedupe.add(parsed.qualifiedName);
+    normalized.push(parsed);
+  }
+  return normalized;
+}
+
+function evaluateWriteTableAllowlist({ sql, allowTables }) {
+  const normalizedAllowTables = normalizeWriteTableAllowlist(allowTables);
+  const target = resolveWriteTargetTable(sql);
+  const allowlistEnabled = normalizedAllowTables.length > 0;
+  let tableAllowed = true;
+  let blockReason = null;
+
+  if (allowlistEnabled) {
+    if (!target || !target.table) {
+      tableAllowed = false;
+      blockReason = 'Unable to resolve target table from SQL while write-table allowlist is active.';
+    } else {
+      tableAllowed = normalizedAllowTables.some((entry) => {
+        if (entry.table !== target.table) {
+          return false;
+        }
+        if (!target.schema) {
+          return !entry.schema;
+        }
+        if (!entry.schema) {
+          return true;
+        }
+        return entry.schema === target.schema;
+      });
+      if (!tableAllowed) {
+        blockReason = `Target table ${target.qualifiedName} is not allowlisted for this profile.`;
+      }
+    }
+  }
+
+  return {
+    allowlistEnabled,
+    tableAllowed,
+    blockReason,
+    targetSchema: target && target.schema ? target.schema : null,
+    targetTable: target && target.table ? target.table : null,
+    targetQualifiedName: target && target.qualifiedName ? target.qualifiedName : null,
+    allowTables: normalizedAllowTables.map((entry) => entry.qualifiedName),
+  };
+}
+
+function tokenizeTopLevelSqlKeywords(sql) {
+  const text = String(sql || '');
+  const tokens = [];
+  let depth = 0;
+  let index = 0;
+  while (index < text.length) {
+    const char = text[index];
+    const next = text[index + 1] || '';
+
+    if (char === '\'' ) {
+      index += 1;
+      while (index < text.length) {
+        if (text[index] === '\'' && text[index + 1] === '\'') {
+          index += 2;
+          continue;
+        }
+        if (text[index] === '\'') {
+          index += 1;
+          break;
+        }
+        index += 1;
+      }
+      continue;
+    }
+
+    if (char === '"' ) {
+      index += 1;
+      while (index < text.length) {
+        if (text[index] === '"' && text[index + 1] === '"') {
+          index += 2;
+          continue;
+        }
+        if (text[index] === '"') {
+          index += 1;
+          break;
+        }
+        index += 1;
+      }
+      continue;
+    }
+
+    if (char === '-' && next === '-') {
+      index += 2;
+      while (index < text.length && text[index] !== '\n') {
+        index += 1;
+      }
+      continue;
+    }
+
+    if (char === '/' && next === '*') {
+      index += 2;
+      while (index < text.length) {
+        if (text[index] === '*' && text[index + 1] === '/') {
+          index += 2;
+          break;
+        }
+        index += 1;
+      }
+      continue;
+    }
+
+    if (char === '(') {
+      depth += 1;
+      index += 1;
+      continue;
+    }
+    if (char === ')') {
+      depth = Math.max(0, depth - 1);
+      index += 1;
+      continue;
+    }
+
+    if (/[A-Za-z_]/.test(char)) {
+      let end = index + 1;
+      while (end < text.length && /[A-Za-z0-9_$#]/.test(text[end])) {
+        end += 1;
+      }
+      const keyword = text.slice(index, end).toUpperCase();
+      if (depth === 0) {
+        tokens.push(keyword);
+      }
+      index = end;
+      continue;
+    }
+
+    index += 1;
+  }
+  return tokens;
+}
+
+function extractTopLevelWhereClause(sql) {
+  const text = String(sql || '');
+  let depth = 0;
+  let index = 0;
+  let whereStart = -1;
+  while (index < text.length) {
+    const char = text[index];
+    const next = text[index + 1] || '';
+
+    if (char === '\'') {
+      index += 1;
+      while (index < text.length) {
+        if (text[index] === '\'' && text[index + 1] === '\'') {
+          index += 2;
+          continue;
+        }
+        if (text[index] === '\'') {
+          index += 1;
+          break;
+        }
+        index += 1;
+      }
+      continue;
+    }
+    if (char === '"') {
+      index += 1;
+      while (index < text.length) {
+        if (text[index] === '"' && text[index + 1] === '"') {
+          index += 2;
+          continue;
+        }
+        if (text[index] === '"') {
+          index += 1;
+          break;
+        }
+        index += 1;
+      }
+      continue;
+    }
+    if (char === '-' && next === '-') {
+      index += 2;
+      while (index < text.length && text[index] !== '\n') {
+        index += 1;
+      }
+      continue;
+    }
+    if (char === '/' && next === '*') {
+      index += 2;
+      while (index < text.length) {
+        if (text[index] === '*' && text[index + 1] === '/') {
+          index += 2;
+          break;
+        }
+        index += 1;
+      }
+      continue;
+    }
+    if (char === '(') {
+      depth += 1;
+      index += 1;
+      continue;
+    }
+    if (char === ')') {
+      depth = Math.max(0, depth - 1);
+      index += 1;
+      continue;
+    }
+    if (depth === 0 && /[A-Za-z_]/.test(char)) {
+      let end = index + 1;
+      while (end < text.length && /[A-Za-z0-9_$#]/.test(text[end])) {
+        end += 1;
+      }
+      const keyword = text.slice(index, end).toUpperCase();
+      if (keyword === 'WHERE') {
+        whereStart = index;
+        break;
+      }
+      index = end;
+      continue;
+    }
+    index += 1;
+  }
+
+  if (whereStart < 0) {
+    return '';
+  }
+  const whereKeywordLength = 5;
+  return text.slice(whereStart + whereKeywordLength).trim();
+}
+
+function isTrivialAlwaysTrueWhereClause(whereClause) {
+  const compact = String(whereClause || '')
+    .replace(/[;\s]+$/g, '')
+    .trim()
+    .replace(/^\(+/, '')
+    .replace(/\)+$/, '')
+    .replace(/\s+/g, '')
+    .toUpperCase();
+
+  if (!compact) {
+    return true;
+  }
+  return compact === '1=1'
+    || compact === '0=0'
+    || compact === 'TRUE'
+    || compact === '1<>0'
+    || compact === '0<>1'
+    || compact === '1<=1'
+    || compact === '1>=1';
+}
+
+function stripSingleQuotedSqlLiterals(text) {
+  const input = String(text || '');
+  let output = '';
+  let index = 0;
+  while (index < input.length) {
+    const char = input[index];
+    if (char !== '\'') {
+      output += char;
+      index += 1;
+      continue;
+    }
+    index += 1;
+    while (index < input.length) {
+      if (input[index] === '\'' && input[index + 1] === '\'') {
+        index += 2;
+        continue;
+      }
+      if (input[index] === '\'') {
+        index += 1;
+        break;
+      }
+      index += 1;
+    }
+    output += '\'\'';
+  }
+  return output;
+}
+
+function detectWeakWherePredicate(whereClause) {
+  const raw = String(whereClause || '').trim().replace(/[;]+$/g, '');
+  if (!raw) {
+    return null;
+  }
+  const sanitized = stripSingleQuotedSqlLiterals(raw).toUpperCase();
+  const collapsed = sanitized.replace(/\s+/g, ' ').trim();
+
+  if (/\bOR\s+1\s*=\s*1\b/.test(collapsed) || /\bOR\s+TRUE\b/.test(collapsed)) {
+    return 'Predicate is too weak for MCP apply (contains OR tautology such as OR 1=1).';
+  }
+
+  if (/^\(*\s*[A-Z0-9_.$#@\[\]"]+\s+IS\s+NOT\s+NULL\s*\)*$/.test(collapsed)) {
+    return 'Predicate is too weak for MCP apply (single-column IS NOT NULL filter).';
+  }
+
+  if (/^\(*\s*[A-Z0-9_.$#@\[\]"]+\s+LIKE\s+'%+'\s*\)*$/i.test(raw)) {
+    return "Predicate is too weak for MCP apply (LIKE '%' matches broadly).";
+  }
+
+  return null;
+}
+
+function resolveWriteRowSafetyPolicy({ config, requestedMaxRowsAffected, statementType }) {
+  const rowSafety = config
+    && config.testData
+    && config.testData.writeSafety
+    && typeof config.testData.writeSafety === 'object'
+    ? config.testData.writeSafety
+    : {};
+  const normalizedStatementType = String(statementType || '').trim().toUpperCase();
+  const enabled = parseConfigBoolean(rowSafety.enabled, true);
+  const baseLimit = parsePositiveIntegerOrNull(rowSafety.maxRowsAffected);
+  const byStatement = rowSafety && typeof rowSafety.maxRowsByStatement === 'object'
+    ? rowSafety.maxRowsByStatement
+    : {};
+  const byStatementLimit = parsePositiveIntegerOrNull(byStatement[normalizedStatementType.toLowerCase()])
+    || parsePositiveIntegerOrNull(byStatement[normalizedStatementType]);
+  const defaultLimit = (normalizedStatementType === 'UPDATE' || normalizedStatementType === 'DELETE') ? 100 : null;
+  const configuredMaxRowsAffected = byStatementLimit || baseLimit || defaultLimit;
+  const effectiveMaxRowsAffected = requestedMaxRowsAffected && configuredMaxRowsAffected
+    ? Math.min(requestedMaxRowsAffected, configuredMaxRowsAffected)
+    : (requestedMaxRowsAffected || configuredMaxRowsAffected);
+
+  return {
+    enabled,
+    configuredMaxRowsAffected,
+    requestedMaxRowsAffected,
+    effectiveMaxRowsAffected: enabled ? effectiveMaxRowsAffected : null,
+    clampApplied: Boolean(
+      enabled
+      && requestedMaxRowsAffected
+      && configuredMaxRowsAffected
+      && requestedMaxRowsAffected > configuredMaxRowsAffected
+    ),
+    blockWhenCountUnavailable: parseConfigBoolean(rowSafety.blockWhenCountUnavailable, true),
+  };
+}
+
+function readCountValueFromQueryResult(result) {
+  const rows = Array.isArray(result && result.rows) ? result.rows : [];
+  if (rows.length === 0) {
+    return null;
+  }
+  const row = rows[0];
+  if (row && typeof row === 'object' && !Array.isArray(row)) {
+    const direct = row.ROW_COUNT !== undefined ? row.ROW_COUNT : (row.row_count !== undefined ? row.row_count : row.count);
+    if (direct !== undefined) {
+      const parsed = Number(direct);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    const firstValue = Object.values(row)[0];
+    const parsed = Number(firstValue);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  if (Array.isArray(row) && row.length > 0) {
+    const parsed = Number(row[0]);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  const parsed = Number(row);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function buildRowSafetyPreflightCountQuery({ targetQualifiedName, whereClause }) {
+  const target = String(targetQualifiedName || '').trim();
+  const predicate = String(whereClause || '').trim().replace(/[;]+$/g, '');
+  if (!target || !predicate) {
+    return null;
+  }
+  return `SELECT COUNT(*) AS ROW_COUNT FROM ${target} WHERE ${predicate}`;
+}
+
+function evaluateWriteStatementGuard({ statementType, sql }) {
+  const normalizedType = String(statementType || '').trim().toUpperCase();
+  const whereRequired = normalizedType === 'UPDATE' || normalizedType === 'DELETE';
+  if (!whereRequired) {
+    return {
+      whereRequired: false,
+      wherePresent: true,
+      predicateSafe: true,
+      blockReason: null,
+    };
+  }
+  const tokens = tokenizeTopLevelSqlKeywords(sql);
+  const wherePresent = tokens.includes('WHERE');
+  const whereClause = wherePresent ? extractTopLevelWhereClause(sql) : '';
+  const weakPredicateReason = wherePresent ? detectWeakWherePredicate(whereClause) : null;
+  const predicateSafe = wherePresent
+    ? !isTrivialAlwaysTrueWhereClause(whereClause) && !weakPredicateReason
+    : false;
+  let blockReason = null;
+  if (!wherePresent) {
+    blockReason = `${normalizedType} statements require a top-level WHERE clause for MCP apply.`;
+  } else if (!predicateSafe) {
+    blockReason = weakPredicateReason
+      || `${normalizedType} statements require a non-trivial WHERE predicate for MCP apply.`;
+  }
+  return {
+    whereRequired: true,
+    wherePresent,
+    predicateSafe,
+    blockReason,
+    whereClause,
+  };
+}
+
+async function executeWriteSql(args = {}, context = {}) {
+  const operation = parseWriteOperation(args && args.operation);
+  const profileName = args && typeof args.profile === 'string'
+    ? args.profile.trim()
+    : '';
+  const sql = args && typeof args.sql === 'string'
+    ? args.sql.trim()
+    : '';
+  if (!profileName) {
+    const error = new Error('Invalid arguments for zeus.write-sql: profile is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (!sql) {
+    const error = new Error('Invalid arguments for zeus.write-sql: sql is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  const mode = parseWriteSqlMode(args && args.mode);
+  const requestedMaxRowsAffected = parseOptionalMaxRowsAffectedArg(args && args.maxRowsAffected);
+  try {
+    validateWriteSql(sql, { mode });
+  } catch (error) {
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const profiles = loadProfiles({ cwd, env, args });
+  const profile = resolveProfile(profiles, profileName, { env });
+  const productionSystem = Boolean(profile && profile.productionSystem);
+  const config = resolveAnalyzeConfig(args, { cwd, env });
+  const dbConfig = resolveAnalyzeDbConfig(config, 'metadata');
+  if (!isDbConfigured(dbConfig)) {
+    const error = new Error('DB2 connection configuration is incomplete for the selected profile.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const sqlFingerprint = hashSql(sql);
+  const statementType = detectSqlStatementType(sql);
+  const tableAllowlistPolicy = evaluateWriteTableAllowlist({
+    sql,
+    allowTables: config && config.testData && Array.isArray(config.testData.allowTables)
+      ? config.testData.allowTables
+      : [],
+  });
+  const statementGuard = evaluateWriteStatementGuard({
+    statementType,
+    sql,
+  });
+  const rowSafetyPolicy = resolveWriteRowSafetyPolicy({
+    config,
+    requestedMaxRowsAffected,
+    statementType,
+  });
+  const writesEnabled = isTruthyEnvFlag(env.ZEUS_MCP_ENABLE_WRITES);
+  const expectedConfirmToken = typeof env.ZEUS_MCP_WRITE_CONFIRM_TOKEN === 'string'
+    ? env.ZEUS_MCP_WRITE_CONFIRM_TOKEN
+    : '';
+  const providedConfirmToken = args && typeof args.confirmToken === 'string' && args.confirmToken.trim()
+    ? args.confirmToken.trim()
+    : (args && typeof args['confirm-token'] === 'string' ? args['confirm-token'].trim() : '');
+  const confirmationRequired = operation === 'apply';
+  const applyGateReasons = [];
+  if (!writesEnabled) {
+    applyGateReasons.push('MCP write execution is disabled. Set ZEUS_MCP_ENABLE_WRITES=true to enable apply.');
+  }
+  if (!expectedConfirmToken) {
+    applyGateReasons.push('Missing ZEUS_MCP_WRITE_CONFIRM_TOKEN in MCP server environment.');
+  }
+  if (productionSystem) {
+    applyGateReasons.push('Selected profile is marked as productionSystem=true; write execution is blocked.');
+  }
+  if (tableAllowlistPolicy.allowlistEnabled && !tableAllowlistPolicy.tableAllowed) {
+    applyGateReasons.push(tableAllowlistPolicy.blockReason || 'Target table is not allowlisted for write execution.');
+  }
+  if (statementGuard.whereRequired && !statementGuard.wherePresent) {
+    applyGateReasons.push(statementGuard.blockReason || 'Statement policy blocked write execution.');
+  }
+  if (statementGuard.whereRequired && statementGuard.wherePresent && !statementGuard.predicateSafe) {
+    applyGateReasons.push(statementGuard.blockReason || 'Statement policy blocked write execution.');
+  }
+  const tokenReady = Boolean(expectedConfirmToken && providedConfirmToken && providedConfirmToken === expectedConfirmToken);
+  const tokenMismatch = Boolean(expectedConfirmToken && providedConfirmToken && providedConfirmToken !== expectedConfirmToken);
+  const canApply = applyGateReasons.length === 0 && tokenReady;
+
+  const blockReasons = [];
+  if (operation === 'apply' && !writesEnabled) {
+    blockReasons.push('MCP write execution is disabled. Set ZEUS_MCP_ENABLE_WRITES=true to enable apply.');
+  }
+  if (operation === 'apply' && !expectedConfirmToken) {
+    blockReasons.push('Missing ZEUS_MCP_WRITE_CONFIRM_TOKEN in MCP server environment.');
+  }
+  if (operation === 'apply' && expectedConfirmToken && providedConfirmToken !== expectedConfirmToken) {
+    blockReasons.push('Invalid confirm token for zeus.write-sql apply.');
+  }
+  if (operation === 'apply' && productionSystem) {
+    blockReasons.push('Selected profile is marked as productionSystem=true; write execution is blocked.');
+  }
+  if (operation === 'apply' && tableAllowlistPolicy.allowlistEnabled && !tableAllowlistPolicy.tableAllowed) {
+    blockReasons.push(tableAllowlistPolicy.blockReason || 'Target table is not allowlisted for write execution.');
+  }
+  if (operation === 'apply' && statementGuard.whereRequired && !statementGuard.wherePresent) {
+    blockReasons.push(statementGuard.blockReason || 'Statement policy blocked write execution.');
+  }
+  if (operation === 'apply' && statementGuard.whereRequired && statementGuard.wherePresent && !statementGuard.predicateSafe) {
+    blockReasons.push(statementGuard.blockReason || 'Statement policy blocked write execution.');
+  }
+
+  if (operation === 'plan') {
+    return {
+      operation: 'plan',
+      profile: profileName,
+      mode,
+      statementType,
+      sqlLength: sql.length,
+      sqlFingerprint,
+      productionSystem,
+      writesEnabled,
+      confirmationRequired: false,
+      tableAllowlistEnabled: tableAllowlistPolicy.allowlistEnabled,
+      tableAllowed: tableAllowlistPolicy.tableAllowed,
+      targetSchema: tableAllowlistPolicy.targetSchema,
+      targetTable: tableAllowlistPolicy.targetTable,
+      targetQualifiedName: tableAllowlistPolicy.targetQualifiedName,
+      allowTables: tableAllowlistPolicy.allowTables,
+      whereRequired: statementGuard.whereRequired,
+      wherePresent: statementGuard.wherePresent,
+      predicateSafe: statementGuard.predicateSafe,
+      rowSafetyEnabled: rowSafetyPolicy.enabled,
+      rowSafetyConfiguredMaxRowsAffected: rowSafetyPolicy.configuredMaxRowsAffected,
+      rowSafetyRequestedMaxRowsAffected: rowSafetyPolicy.requestedMaxRowsAffected,
+      rowSafetyEffectiveMaxRowsAffected: rowSafetyPolicy.effectiveMaxRowsAffected,
+      rowSafetyClampApplied: rowSafetyPolicy.clampApplied,
+      rowSafetyPreflightRequired: Boolean(
+        rowSafetyPolicy.enabled
+        && rowSafetyPolicy.effectiveMaxRowsAffected
+        && (statementType === 'UPDATE' || statementType === 'DELETE')
+      ),
+      canApply,
+      blockReasons: [
+        ...applyGateReasons,
+        ...(tokenMismatch ? ['Provided confirm token does not match ZEUS_MCP_WRITE_CONFIRM_TOKEN.'] : []),
+        ...(!providedConfirmToken ? ['Apply requires confirmToken input.'] : []),
+      ],
+    };
+  }
+
+  if (blockReasons.length > 0) {
+    const error = new Error(`Tool is not allowed by MCP policy: zeus.write-sql apply blocked. ${blockReasons.join(' ')}`);
+    error.code = 'TOOL_NOT_ALLOWED';
+    throw error;
+  }
+
+  let preflightRowEstimate = null;
+  if (
+    rowSafetyPolicy.enabled
+    && rowSafetyPolicy.effectiveMaxRowsAffected
+    && (statementType === 'UPDATE' || statementType === 'DELETE')
+  ) {
+    const preflightQuery = buildRowSafetyPreflightCountQuery({
+      targetQualifiedName: tableAllowlistPolicy.targetQualifiedName,
+      whereClause: statementGuard.whereClause,
+    });
+    if (!preflightQuery) {
+      const error = new Error(
+        'Tool is not allowed by MCP policy: zeus.write-sql apply blocked. Row-safety preflight could not resolve target table/predicate.',
+      );
+      error.code = 'TOOL_NOT_ALLOWED';
+      throw error;
+    }
+    try {
+      const preflightResult = runReadOnlyDb2Query({
+        dbConfig,
+        query: preflightQuery,
+        maxRows: 1,
+      });
+      preflightRowEstimate = readCountValueFromQueryResult(preflightResult);
+    } catch (error) {
+      if (rowSafetyPolicy.blockWhenCountUnavailable) {
+        const blocked = new Error(
+          'Tool is not allowed by MCP policy: zeus.write-sql apply blocked. Row-safety preflight count query failed.',
+        );
+        blocked.code = 'TOOL_NOT_ALLOWED';
+        throw blocked;
+      }
+    }
+    if (Number.isFinite(preflightRowEstimate) && preflightRowEstimate > rowSafetyPolicy.effectiveMaxRowsAffected) {
+      const error = new Error(
+        `Tool is not allowed by MCP policy: zeus.write-sql apply blocked. Estimated affected rows (${preflightRowEstimate}) exceed row-safety limit (${rowSafetyPolicy.effectiveMaxRowsAffected}).`,
+      );
+      error.code = 'TOOL_NOT_ALLOWED';
+      throw error;
+    }
+  }
+
+  const result = runWriteDb2Query({
+    dbConfig,
+    sql,
+  });
+  return {
+    operation: 'apply',
+    profile: profileName,
+    mode,
+    statementType,
+    sqlLength: sql.length,
+    sqlFingerprint,
+    productionSystem,
+    writesEnabled,
+    confirmationRequired,
+    tableAllowlistEnabled: tableAllowlistPolicy.allowlistEnabled,
+    tableAllowed: tableAllowlistPolicy.tableAllowed,
+    targetSchema: tableAllowlistPolicy.targetSchema,
+    targetTable: tableAllowlistPolicy.targetTable,
+    targetQualifiedName: tableAllowlistPolicy.targetQualifiedName,
+    allowTables: tableAllowlistPolicy.allowTables,
+    whereRequired: statementGuard.whereRequired,
+    wherePresent: statementGuard.wherePresent,
+    predicateSafe: statementGuard.predicateSafe,
+    rowSafetyEnabled: rowSafetyPolicy.enabled,
+    rowSafetyConfiguredMaxRowsAffected: rowSafetyPolicy.configuredMaxRowsAffected,
+    rowSafetyRequestedMaxRowsAffected: rowSafetyPolicy.requestedMaxRowsAffected,
+    rowSafetyEffectiveMaxRowsAffected: rowSafetyPolicy.effectiveMaxRowsAffected,
+    rowSafetyClampApplied: rowSafetyPolicy.clampApplied,
+    rowSafetyPreflightRequired: Boolean(
+      rowSafetyPolicy.enabled
+      && rowSafetyPolicy.effectiveMaxRowsAffected
+      && (statementType === 'UPDATE' || statementType === 'DELETE')
+    ),
+    preflightRowEstimate: Number.isFinite(preflightRowEstimate) ? Number(preflightRowEstimate) : null,
+    rowsAffected: Number(result && result.rowsAffected ? result.rowsAffected : 0),
+  };
+}
+
 async function executeReadOnlySearchSource(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
   const sourceRoot = args && typeof args.sourceRoot === 'string'
     ? args.sourceRoot.trim()
     : '';
@@ -1354,17 +4063,23 @@ async function executeReadOnlySearchSource(args = {}, context = {}) {
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
+  const resolvedSourceRoot = path.resolve(cwd, sourceRoot);
+  assertRelativePathWithinCwd({
+    toolName: 'zeus.search-source',
+    optionName: '--source-root',
+    rawValue: sourceRoot,
+    resolvedPath: resolvedSourceRoot,
+    cwd,
+  });
   const maxPayloadItems = parseOptionalPositiveInteger(args && args.maxPayloadItems, {
     label: 'zeus.search-source maxPayloadItems',
     min: 1,
     max: MAX_MCP_PAYLOAD_ITEMS,
   });
-  const cursorState = decodeMcpCursor('zeus.search-source', args && args.cursor, {
-    allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
-  });
+  const cursorState = decodeMcpCursor('zeus.search-source', args && args.cursor);
 
   const execution = await executeSearchSource({
-    'source-root': sourceRoot,
+    'source-root': resolvedSourceRoot,
     ...(searchTerm ? { 'search-term': searchTerm } : {}),
     ...(member ? { member } : {}),
     ...(table ? { table } : {}),
@@ -1375,7 +4090,7 @@ async function executeReadOnlySearchSource(args = {}, context = {}) {
     ...(args && args.caseSensitive === true ? { 'case-sensitive': 'true' } : {}),
     verbose: false,
   }, {
-    cwd: context.cwd || process.cwd(),
+    cwd,
   });
 
   const results = Array.isArray(execution && execution.results) ? execution.results : [];
@@ -1490,6 +4205,13 @@ async function executeReadOnlyFieldSearch(args = {}, context = {}) {
   }
 
   const sourceRoot = path.resolve(cwd, sourceRootArg);
+  assertRelativePathWithinCwd({
+    toolName: 'zeus.field-search',
+    optionName: '--source-root',
+    rawValue: sourceRootArg,
+    resolvedPath: sourceRoot,
+    cwd,
+  });
   if (!fs.existsSync(sourceRoot)) {
     throw new Error(`Field-search source root not found: ${sourceRoot}`);
   }
@@ -1503,9 +4225,7 @@ async function executeReadOnlyFieldSearch(args = {}, context = {}) {
     min: 1,
     max: MAX_MCP_PAYLOAD_ITEMS,
   });
-  const cursorState = decodeMcpCursor('zeus.field-search', args && args.cursor, {
-    allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
-  });
+  const cursorState = decodeMcpCursor('zeus.field-search', args && args.cursor);
   const contextLines = parseOptionalPositiveInteger(args && args.contextLines, {
     label: 'zeus.field-search contextLines',
     min: 0,
@@ -1609,6 +4329,90 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       payload.node = process.version;
     }
     return payload;
+  }
+
+  if (name === 'zeus.bridge') {
+    const bridgeRunner = typeof context.bridgeRunner === 'function'
+      ? context.bridgeRunner
+      : executeReadOnlyBridge;
+
+    let execution;
+    try {
+      execution = await bridgeRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_NOT_ALLOWED')
+      ) {
+        throw error;
+      }
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.bridge/i.test(String(error && error.message ? error.message : ''))
+        || /missing required option: --/i.test(String(error && error.message ? error.message : ''))
+        || /unknown bridge subcommand/i.test(String(error && error.message ? error.message : ''))
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+        throw error;
+      }
+      throw normalizeMcpRuntimeToolError('zeus.bridge', error);
+    }
+
+    const plan = execution && execution.plan && typeof execution.plan === 'object'
+      ? execution.plan
+      : {};
+    const approval = execution && execution.approval && typeof execution.approval === 'object'
+      ? execution.approval
+      : {};
+    const artifacts = execution && execution.artifacts && typeof execution.artifacts === 'object'
+      ? execution.artifacts
+      : {};
+    const expectedArtifacts = execution && execution.expectedArtifacts && typeof execution.expectedArtifacts === 'object'
+      ? execution.expectedArtifacts
+      : null;
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      operation: execution && execution.operation ? String(execution.operation) : '',
+      profile: execution && execution.profile ? String(execution.profile) : null,
+      program: execution && execution.program ? String(execution.program) : '',
+      dryRun: execution && execution.dryRun !== null && execution.dryRun !== undefined
+        ? Boolean(execution.dryRun)
+        : null,
+      status: execution && execution.status ? String(execution.status) : 'unknown',
+      reason: execution && execution.reason ? String(execution.reason) : null,
+      plan: {
+        planId: plan.planId ? String(plan.planId) : null,
+        planHash: plan.planHash ? String(plan.planHash) : null,
+        riskLevel: plan.riskLevel ? String(plan.riskLevel) : null,
+        targetType: plan.targetType ? String(plan.targetType) : null,
+        remoteTarget: plan.remoteTarget && typeof plan.remoteTarget === 'object'
+          ? plan.remoteTarget
+          : null,
+      },
+      compileTemplateId: execution && execution.compileTemplateId ? String(execution.compileTemplateId) : null,
+      approval: {
+        required: Boolean(approval.required),
+        status: approval.status ? String(approval.status) : null,
+        code: approval.code ? String(approval.code) : null,
+        message: approval.message ? String(approval.message) : null,
+        planPath: approval.planPath ? String(approval.planPath) : null,
+        approvalPath: approval.approvalPath ? String(approval.approvalPath) : null,
+        planId: approval.planId ? String(approval.planId) : null,
+        planHash: approval.planHash ? String(approval.planHash) : null,
+      },
+      artifacts: {
+        jsonPath: artifacts.jsonPath ? String(artifacts.jsonPath) : null,
+        mdPath: artifacts.mdPath ? String(artifacts.mdPath) : null,
+      },
+      expectedArtifacts,
+      auditPath: execution && execution.auditPath ? String(execution.auditPath) : null,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   if (name === 'zeus.workflow') {
@@ -2026,12 +4830,9 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         min: 1,
         max: MAX_MCP_PAYLOAD_ITEMS,
       });
-      cursorState = decodeMcpCursor('zeus.impact', args && args.cursor, {
-        allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
-      });
+      cursorState = decodeMcpCursor('zeus.impact', args && args.cursor);
       execution = impactRunner(args, {
         cwd: context.cwd || process.cwd(),
-        allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
       });
     } catch (error) {
       const invalidArgCodes = new Set([
@@ -2205,6 +5006,503 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     };
   }
 
+  if (name === 'zeus.diff') {
+    const diffRunner = typeof context.diffRunner === 'function'
+      ? context.diffRunner
+      : executeReadOnlyDiff;
+
+    let execution;
+    try {
+      execution = await diffRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.diff/i.test(String(error && error.message ? error.message : ''))
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        || /no fetched source found for member/i.test(String(error && error.message ? error.message : ''))
+        || /no workspace copy found for member/i.test(String(error && error.message ? error.message : ''))
+        || /analyze\.sourceRoot must be a string/i.test(String(error && error.message ? error.message : ''))
+        || /analyze\.outputRoot must be a string/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    const rows = Array.isArray(execution && execution.rows) ? execution.rows : [];
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      profile: execution && execution.profile ? String(execution.profile) : '',
+      member: execution && execution.member ? String(execution.member) : '',
+      fetchRoot: execution && execution.fetchRoot ? String(execution.fetchRoot) : '',
+      workspaceRoot: execution && execution.workspaceRoot ? String(execution.workspaceRoot) : '',
+      workCopyMode: execution && execution.workCopyMode ? String(execution.workCopyMode) : '',
+      originalPath: execution && execution.originalPath ? String(execution.originalPath) : '',
+      modifiedPath: execution && execution.modifiedPath ? String(execution.modifiedPath) : '',
+      maxPayloadLines: Number(execution && execution.maxPayloadLines ? execution.maxPayloadLines : DEFAULT_MCP_PAYLOAD_ITEMS),
+      payloadLineCount: Number(execution && execution.payloadLineCount ? execution.payloadLineCount : rows.length),
+      payloadTruncated: Boolean(execution && execution.payloadTruncated),
+      lineCount: Number(execution && execution.lineCount ? execution.lineCount : rows.length),
+      changedLineCount: Number(execution && execution.changedLineCount ? execution.changedLineCount : 0),
+      rows: rows.map((row) => ({
+        line: Number(row && row.line ? row.line : 0),
+        marker: row && row.marker ? String(row.marker) : ' ',
+        original: row && row.original ? String(row.original) : '',
+        modified: row && row.modified ? String(row.modified) : '',
+      })),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.generate-test') {
+    const generateTestRunner = typeof context.generateTestRunner === 'function'
+      ? context.generateTestRunner
+      : executeReadOnlyGenerateTest;
+
+    let execution;
+    try {
+      execution = await generateTestRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.generate-test/i.test(String(error && error.message ? error.message : ''))
+        || /canonical-analysis\.json not found at:/i.test(String(error && error.message ? error.message : ''))
+        || /failed to parse canonical analysis json:/i.test(String(error && error.message ? error.message : ''))
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      program: execution && execution.program ? String(execution.program) : '',
+      format: execution && execution.format ? String(execution.format) : 'markdown',
+      isCritical: Boolean(execution && execution.isCritical),
+      includeChangeScenario: Boolean(execution && execution.includeChangeScenario),
+      analysisPath: execution && execution.analysisPath ? String(execution.analysisPath) : '',
+      outputRoot: execution && execution.outputRoot ? String(execution.outputRoot) : '',
+      outputPathSuggestion: execution && execution.outputPathSuggestion ? String(execution.outputPathSuggestion) : '',
+      contentLength: Number(execution && execution.contentLength ? execution.contentLength : 0),
+      content: execution && execution.content ? String(execution.content) : '',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.generate-checklist') {
+    const generateChecklistRunner = typeof context.generateChecklistRunner === 'function'
+      ? context.generateChecklistRunner
+      : executeReadOnlyGenerateChecklist;
+
+    let execution;
+    try {
+      execution = await generateChecklistRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.generate-checklist/i.test(String(error && error.message ? error.message : ''))
+        || /failed to parse canonical analysis json:/i.test(String(error && error.message ? error.message : ''))
+        || /failed to parse risk assessment json:/i.test(String(error && error.message ? error.message : ''))
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      program: execution && execution.program ? String(execution.program) : '',
+      changeType: execution && execution.changeType ? String(execution.changeType) : 'CODE_CHANGE',
+      impact: execution && execution.impact ? String(execution.impact) : 'MEDIUM',
+      affectedPrograms: Array.isArray(execution && execution.affectedPrograms) ? execution.affectedPrograms.map((entry) => String(entry)) : [],
+      hasCriticalPath: Boolean(execution && execution.hasCriticalPath),
+      outputRoot: execution && execution.outputRoot ? String(execution.outputRoot) : '',
+      analysisPath: execution && execution.analysisPath ? String(execution.analysisPath) : null,
+      riskPath: execution && execution.riskPath ? String(execution.riskPath) : null,
+      outputPathSuggestion: execution && execution.outputPathSuggestion ? String(execution.outputPathSuggestion) : '',
+      timeline: execution && execution.timeline && typeof execution.timeline === 'object' ? execution.timeline : null,
+      riskAreaCount: Number(execution && execution.riskAreaCount ? execution.riskAreaCount : 0),
+      contentLength: Number(execution && execution.contentLength ? execution.contentLength : 0),
+      content: execution && execution.content ? String(execution.content) : '',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.qa') {
+    const qaRunner = typeof context.qaRunner === 'function'
+      ? context.qaRunner
+      : executeReadOnlyQa;
+
+    let execution;
+    try {
+      execution = await qaRunner(args, {
+        cwd: context.cwd || process.cwd(),
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.qa/i.test(String(error && error.message ? error.message : ''))
+        || /invalid option: --format/i.test(String(error && error.message ? error.message : ''))
+        || /invalid option: --strict/i.test(String(error && error.message ? error.message : ''))
+        || /input path not found:/i.test(String(error && error.message ? error.message : ''))
+        || /canonical-analysis\.json not found at:/i.test(String(error && error.message ? error.message : ''))
+        || /failed to parse canonical analysis json:/i.test(String(error && error.message ? error.message : ''))
+        || /invalid canonical analysis payload/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    const report = execution && execution.report && typeof execution.report === 'object'
+      ? execution.report
+      : {};
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      inputPath: execution && execution.inputPath ? String(execution.inputPath) : '',
+      format: execution && execution.format ? String(execution.format) : 'markdown',
+      strict: execution && execution.strict ? String(execution.strict) : 'LENIENT',
+      qaStatus: execution && execution.qaStatus ? String(execution.qaStatus) : 'UNKNOWN',
+      durationMs: Number(execution && execution.durationMs ? execution.durationMs : 0),
+      stageCount: Number(execution && execution.stageCount ? execution.stageCount : 0),
+      failureCount: Number(execution && execution.failureCount ? execution.failureCount : 0),
+      report,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.analyses') {
+    const analysesRunner = typeof context.analysesRunner === 'function'
+      ? context.analysesRunner
+      : executeReadOnlyAnalyses;
+
+    let execution;
+    try {
+      execution = await analysesRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.analyses/i.test(String(error && error.message ? error.message : ''))
+        || /workspace not found:/i.test(String(error && error.message ? error.message : ''))
+        || /invalid workspace id:/i.test(String(error && error.message ? error.message : ''))
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      operation: execution && execution.operation ? String(execution.operation) : '',
+      profile: execution && typeof execution.profile === 'string' ? execution.profile : null,
+      registryPath: execution && execution.registryPath ? String(execution.registryPath) : '',
+      workspaceCount: Number(execution && execution.workspaceCount ? execution.workspaceCount : 0),
+      workspaces: Array.isArray(execution && execution.workspaces) ? execution.workspaces : [],
+      workspace: execution && execution.workspace && typeof execution.workspace === 'object'
+        ? execution.workspace
+        : null,
+      index: execution && execution.index && typeof execution.index === 'object'
+        ? execution.index
+        : null,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.fetch') {
+    const fetchRunner = typeof context.fetchRunner === 'function'
+      ? context.fetchRunner
+      : executeReadOnlyFetch;
+
+    let execution;
+    try {
+      execution = await fetchRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.fetch/i.test(String(error && error.message ? error.message : ''))
+        || /fetch import manifest not found:/i.test(String(error && error.message ? error.message : ''))
+        || /failed to parse fetch import manifest json at/i.test(String(error && error.message ? error.message : ''))
+        || /invalid fetch import manifest payload/i.test(String(error && error.message ? error.message : ''))
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        || /invalid configuration: fetch\./i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      operation: execution && execution.operation ? String(execution.operation) : '',
+      profile: execution && typeof execution.profile === 'string' ? execution.profile : null,
+      fetchRoot: execution && execution.fetchRoot ? String(execution.fetchRoot) : '',
+      manifestPath: execution && execution.manifestPath ? String(execution.manifestPath) : '',
+      summary: execution && execution.summary && typeof execution.summary === 'object'
+        ? execution.summary
+        : null,
+      cursor: execution && typeof execution.cursor === 'string' && execution.cursor
+        ? execution.cursor
+        : null,
+      cursorOffset: Number(execution && execution.cursorOffset ? execution.cursorOffset : 0),
+      nextCursor: execution && typeof execution.nextCursor === 'string' && execution.nextCursor
+        ? execution.nextCursor
+        : null,
+      maxPayloadItems: Number(execution && execution.maxPayloadItems ? execution.maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS),
+      payloadResultCount: Number(execution && execution.payloadResultCount ? execution.payloadResultCount : 0),
+      payloadTruncated: Boolean(execution && execution.payloadTruncated),
+      resultCount: Number(execution && execution.resultCount ? execution.resultCount : 0),
+      files: Array.isArray(execution && execution.files) ? execution.files : [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.test-run') {
+    const testRunRunner = typeof context.testRunRunner === 'function'
+      ? context.testRunRunner
+      : executeReadOnlyTestRun;
+
+    let execution;
+    try {
+      execution = await testRunRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.test-run/i.test(String(error && error.message ? error.message : ''))
+        || /failed to read test-run manifest at/i.test(String(error && error.message ? error.message : ''))
+        || /datei ist kein test-run-manifest/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      operation: execution && execution.operation ? String(execution.operation) : '',
+      profile: execution && typeof execution.profile === 'string' ? execution.profile : null,
+      manifestPath: execution && execution.manifestPath ? String(execution.manifestPath) : '',
+      manifest: execution && execution.manifest && typeof execution.manifest === 'object'
+        ? execution.manifest
+        : null,
+      snapshots: Array.isArray(execution && execution.snapshots) ? execution.snapshots : [],
+      maxPayloadItems: Number(execution && execution.maxPayloadItems ? execution.maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS),
+      payloadResultCount: Number(execution && execution.payloadResultCount ? execution.payloadResultCount : 0),
+      payloadTruncated: Boolean(execution && execution.payloadTruncated),
+      rollbackStatements: Array.isArray(execution && execution.rollbackStatements) ? execution.rollbackStatements : [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.copy-to-workspace') {
+    const copyToWorkspaceRunner = typeof context.copyToWorkspaceRunner === 'function'
+      ? context.copyToWorkspaceRunner
+      : executeReadOnlyCopyToWorkspace;
+
+    let execution;
+    try {
+      execution = await copyToWorkspaceRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.copy-to-workspace/i.test(String(error && error.message ? error.message : ''))
+        || /missing required option: --profile <name>/i.test(String(error && error.message ? error.message : ''))
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        || /fetch output directory not found:/i.test(String(error && error.message ? error.message : ''))
+        || /invalid configuration: fetch\./i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      operation: execution && execution.operation ? String(execution.operation) : '',
+      profile: execution && execution.profile ? String(execution.profile) : null,
+      sourceRoot: execution && execution.sourceRoot ? String(execution.sourceRoot) : '',
+      targetRoot: execution && execution.targetRoot ? String(execution.targetRoot) : '',
+      workCopyMode: execution && execution.workCopyMode ? String(execution.workCopyMode) : '',
+      force: Boolean(execution && execution.force),
+      requestedMemberCount: Number(execution && execution.requestedMemberCount ? execution.requestedMemberCount : 0),
+      discoveredCount: Number(execution && execution.discoveredCount ? execution.discoveredCount : 0),
+      selectedCount: Number(execution && execution.selectedCount ? execution.selectedCount : 0),
+      copyCandidateCount: Number(execution && execution.copyCandidateCount ? execution.copyCandidateCount : 0),
+      overwriteCount: Number(execution && execution.overwriteCount ? execution.overwriteCount : 0),
+      existingCount: Number(execution && execution.existingCount ? execution.existingCount : 0),
+      skippedCount: Number(execution && execution.skippedCount ? execution.skippedCount : 0),
+      cursor: execution && typeof execution.cursor === 'string' && execution.cursor
+        ? execution.cursor
+        : null,
+      cursorOffset: Number(execution && execution.cursorOffset ? execution.cursorOffset : 0),
+      nextCursor: execution && typeof execution.nextCursor === 'string' && execution.nextCursor
+        ? execution.nextCursor
+        : null,
+      maxPayloadItems: Number(execution && execution.maxPayloadItems ? execution.maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS),
+      payloadResultCount: Number(execution && execution.payloadResultCount ? execution.payloadResultCount : 0),
+      payloadTruncated: Boolean(execution && execution.payloadTruncated),
+      resultCount: Number(execution && execution.resultCount ? execution.resultCount : 0),
+      entries: Array.isArray(execution && execution.entries) ? execution.entries : [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.serve') {
+    const serveRunner = typeof context.serveRunner === 'function'
+      ? context.serveRunner
+      : executeReadOnlyServe;
+
+    let execution;
+    try {
+      execution = await serveRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.serve/i.test(String(error && error.message ? error.message : ''))
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        || /invalid configuration: bundle\./i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      operation: execution && execution.operation ? String(execution.operation) : '',
+      profile: execution && typeof execution.profile === 'string' ? execution.profile : null,
+      outputRoot: execution && execution.outputRoot ? String(execution.outputRoot) : '',
+      outputRootExists: Boolean(execution && execution.outputRootExists),
+      host: execution && execution.host ? String(execution.host) : DEFAULT_UI_HOST,
+      port: Number(execution && execution.port !== undefined ? execution.port : DEFAULT_UI_PORT),
+      bindUrl: execution && execution.bindUrl ? String(execution.bindUrl) : null,
+      registryPath: execution && execution.registryPath ? String(execution.registryPath) : null,
+      registryConfigured: Boolean(execution && execution.registryConfigured),
+      registryExists: Boolean(execution && execution.registryExists),
+      workspaceCount: Number(execution && execution.workspaceCount ? execution.workspaceCount : 0),
+      runCount: Number(execution && execution.runCount ? execution.runCount : 0),
+      latestRun: execution && execution.latestRun && typeof execution.latestRun === 'object'
+        ? execution.latestRun
+        : null,
+      apiRoutes: Array.isArray(execution && execution.apiRoutes) ? execution.apiRoutes.map((entry) => String(entry)) : [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.write-sql') {
+    const writeSqlRunner = typeof context.writeSqlRunner === 'function'
+      ? context.writeSqlRunner
+      : executeWriteSql;
+
+    let execution;
+    try {
+      execution = await writeSqlRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_NOT_ALLOWED')
+      ) {
+        throw error;
+      }
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.write-sql/i.test(String(error && error.message ? error.message : ''))
+        || /missing required option: --profile/i.test(String(error && error.message ? error.message : ''))
+        || /only accepts dml statements/i.test(String(error && error.message ? error.message : ''))
+        || /db2 connection configuration is incomplete/i.test(String(error && error.message ? error.message : ''))
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+        throw error;
+      }
+      throw normalizeMcpRuntimeToolError('zeus.write-sql', error);
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      operation: execution && execution.operation ? String(execution.operation) : '',
+      profile: execution && execution.profile ? String(execution.profile) : null,
+      mode: execution && execution.mode ? String(execution.mode) : 'upsert',
+      statementType: execution && execution.statementType ? String(execution.statementType) : 'UNKNOWN',
+      sqlLength: Number(execution && execution.sqlLength ? execution.sqlLength : 0),
+      sqlFingerprint: execution && execution.sqlFingerprint ? String(execution.sqlFingerprint) : '',
+      productionSystem: Boolean(execution && execution.productionSystem),
+      writesEnabled: Boolean(execution && execution.writesEnabled),
+      confirmationRequired: Boolean(execution && execution.confirmationRequired),
+      tableAllowlistEnabled: Boolean(execution && execution.tableAllowlistEnabled),
+      tableAllowed: Boolean(execution && execution.tableAllowed),
+      targetSchema: execution && execution.targetSchema ? String(execution.targetSchema) : null,
+      targetTable: execution && execution.targetTable ? String(execution.targetTable) : null,
+      targetQualifiedName: execution && execution.targetQualifiedName ? String(execution.targetQualifiedName) : null,
+      allowTables: Array.isArray(execution && execution.allowTables) ? execution.allowTables.map((entry) => String(entry)) : [],
+      whereRequired: Boolean(execution && execution.whereRequired),
+      wherePresent: Boolean(execution && execution.wherePresent),
+      predicateSafe: Boolean(execution && execution.predicateSafe),
+      rowSafetyEnabled: Boolean(execution && execution.rowSafetyEnabled),
+      rowSafetyConfiguredMaxRowsAffected:
+        execution && execution.rowSafetyConfiguredMaxRowsAffected !== undefined && execution.rowSafetyConfiguredMaxRowsAffected !== null
+          ? Number(execution.rowSafetyConfiguredMaxRowsAffected)
+          : null,
+      rowSafetyRequestedMaxRowsAffected:
+        execution && execution.rowSafetyRequestedMaxRowsAffected !== undefined && execution.rowSafetyRequestedMaxRowsAffected !== null
+          ? Number(execution.rowSafetyRequestedMaxRowsAffected)
+          : null,
+      rowSafetyEffectiveMaxRowsAffected:
+        execution && execution.rowSafetyEffectiveMaxRowsAffected !== undefined && execution.rowSafetyEffectiveMaxRowsAffected !== null
+          ? Number(execution.rowSafetyEffectiveMaxRowsAffected)
+          : null,
+      rowSafetyClampApplied: Boolean(execution && execution.rowSafetyClampApplied),
+      rowSafetyPreflightRequired: Boolean(execution && execution.rowSafetyPreflightRequired),
+      preflightRowEstimate:
+        execution && execution.preflightRowEstimate !== undefined && execution.preflightRowEstimate !== null
+          ? Number(execution.preflightRowEstimate)
+          : null,
+      canApply: Boolean(execution && execution.canApply),
+      blockReasons: Array.isArray(execution && execution.blockReasons) ? execution.blockReasons.map((entry) => String(entry)) : [],
+      rowsAffected: Number(execution && execution.rowsAffected ? execution.rowsAffected : 0),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   if (name === 'zeus.search-source') {
     const searchSourceRunner = typeof context.searchSourceRunner === 'function'
       ? context.searchSourceRunner
@@ -2214,7 +5512,6 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     try {
       execution = await searchSourceRunner(args, {
         cwd: context.cwd || process.cwd(),
-        allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
       });
     } catch (error) {
       if (
@@ -2280,7 +5577,6 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     try {
       execution = await fieldSearchRunner(args, {
         cwd: context.cwd || process.cwd(),
-        allowLegacyNumericCursor: context.allowLegacyNumericCursor === true,
       });
     } catch (error) {
       if (
@@ -2364,6 +5660,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
+      } else {
+        throw normalizeMcpRuntimeToolError('zeus.joblog', error);
       }
       throw error;
     }
@@ -2407,6 +5705,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
+      } else {
+        throw normalizeMcpRuntimeToolError('zeus.inspect-object', error);
       }
       throw error;
     }
@@ -2522,6 +5822,9 @@ module.exports = {
     buildHistoryLogFallbackSeverityClause,
     createInvalidCursorError,
     decodeMcpCursor,
+    evaluateWriteTableAllowlist,
+    evaluateWriteStatementGuard,
+    resolveWriteRowSafetyPolicy,
     encodeMcpCursor,
     isJoblogInfoUnavailableError,
     normalizeJoblogToolError,

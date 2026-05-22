@@ -33,6 +33,15 @@
     "maskColumns": ["NAME", "EMAIL", "PHONE"],
     "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
     "denyTables": ["MYLIB.AUDITLOG"],
+    "writeSafety": {
+      "enabled": true,
+      "maxRowsAffected": 100,
+      "maxRowsByStatement": {
+        "update": 100,
+        "delete": 50
+      },
+      "blockWhenCountUnavailable": true
+    },
     "maskRules": [
       {
         "table": "CUSTOMERS",
