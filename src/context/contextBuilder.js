@@ -21,6 +21,7 @@ const {
   defaultGraphSummary,
   defaultIfsPathReport,
   defaultNativeFileUsage,
+  defaultPuiPatterns,
   defaultSearchResults,
   defaultSqlAnalysis,
   summarizeSqlStatements,
@@ -236,6 +237,9 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
     diagnosticPacks: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.diagnosticPacks
       ? canonicalAnalysis.enrichments.diagnosticPacks
       : defaultDiagnosticPackReport(),
+    puiPatterns: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.puiPatterns
+      ? canonicalAnalysis.enrichments.puiPatterns
+      : defaultPuiPatterns(),
     analysisCache: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.analysisCache
       ? canonicalAnalysis.enrichments.analysisCache
       : defaultAnalysisCache(),

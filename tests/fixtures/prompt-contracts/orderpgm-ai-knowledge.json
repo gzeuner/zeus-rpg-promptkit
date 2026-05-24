@@ -279,6 +279,138 @@
         ],
         "dependencyGraphSummary": { "nodeCount": 6, "edgeCount": 5 },
         "testData": { "status": "skipped" }
+      },
+      "modernization": {
+        "summary": "Program ORDERPGM mixes dynamic SQL, native file updates, and external calls that should be separated behind safer modernization seams.",
+        "tables": [
+          { "name": "CUSTOMER", "kind": "TABLE" },
+          { "name": "ORDERHDR", "kind": "TABLE" }
+        ],
+        "programCalls": [
+          { "name": "VALIDATEP", "kind": "PROGRAM" }
+        ],
+        "copyMembers": [
+          { "name": "QCPYSRC,ORDCOPY" }
+        ],
+        "sqlStatements": [
+          {
+            "id": "SQL:SELECT:1",
+            "type": "SELECT",
+            "intent": "READ",
+            "text": "select custno from customer where status = :status",
+            "tables": ["CUSTOMER"],
+            "dynamic": false,
+            "unresolved": false,
+            "evidenceRefs": ["EV0001"]
+          },
+          {
+            "id": "SQL:PREPARE:2",
+            "type": "PREPARE",
+            "intent": "OTHER",
+            "text": "prepare S1 from :stmt_001",
+            "tables": [],
+            "dynamic": true,
+            "unresolved": true,
+            "evidenceRefs": ["EV0002"]
+          }
+        ],
+        "nativeFiles": [
+          {
+            "name": "CUSTFILE",
+            "kind": "DISK",
+            "keyed": true,
+            "mutating": true,
+            "interactive": false,
+            "recordFormats": ["CUSFMT"],
+            "evidenceRefs": ["EV0003"]
+          }
+        ],
+        "riskMarkers": ["Dynamic SQL detected", "Mutating native file I/O detected"],
+        "uncertaintyMarkers": ["DYNAMIC_SQL"],
+        "tokenBudget": 2400,
+        "estimatedTokens": 1180,
+        "evidencePacks": {
+          "sql": [
+            {
+              "rank": 1,
+              "score": 150,
+              "label": "PREPARE SQL",
+              "file": "ORDERPGM.sqlrpgle",
+              "startLine": 18,
+              "endLine": 18,
+              "snippet": "exec sql prepare S1 from :stmt_001;",
+              "ref": "EV0002",
+              "category": "sql"
+            }
+          ],
+          "calls": [
+            {
+              "rank": 2,
+              "score": 110,
+              "label": "Program Call VALIDATEP",
+              "file": "ORDERPGM.sqlrpgle",
+              "startLine": 26,
+              "endLine": 26,
+              "snippet": "callp VALIDATEP(orderId);",
+              "ref": "EV0004",
+              "category": "calls"
+            }
+          ],
+          "fileUsage": [
+            {
+              "rank": 3,
+              "score": 105,
+              "label": "Native File CUSTFILE",
+              "file": "ORDERPGM.sqlrpgle",
+              "startLine": 11,
+              "endLine": 11,
+              "snippet": "update CUSFMT;",
+              "ref": "EV0003",
+              "category": "fileUsage"
+            }
+          ],
+          "conditionals": [],
+          "errorPaths": []
+        },
+        "evidenceHighlights": [
+          {
+            "rank": 1,
+            "score": 150,
+            "label": "PREPARE SQL",
+            "file": "ORDERPGM.sqlrpgle",
+            "startLine": 18,
+            "endLine": 18,
+            "snippet": "exec sql prepare S1 from :stmt_001;",
+            "ref": "EV0002",
+            "category": "sql"
+          },
+          {
+            "rank": 2,
+            "score": 105,
+            "label": "Native File CUSTFILE",
+            "file": "ORDERPGM.sqlrpgle",
+            "startLine": 11,
+            "endLine": 11,
+            "snippet": "update CUSFMT;",
+            "ref": "EV0003",
+            "category": "fileUsage"
+          }
+        ],
+        "rankedEvidence": [
+          {
+            "rank": 1,
+            "score": 150,
+            "label": "PREPARE SQL",
+            "file": "ORDERPGM.sqlrpgle",
+            "startLine": 18,
+            "endLine": 18,
+            "snippet": "exec sql prepare S1 from :stmt_001;",
+            "ref": "EV0002",
+            "category": "sql"
+          }
+        ],
+        "dependencyGraphSummary": { "nodeCount": 6, "edgeCount": 5 },
+        "testData": { "status": "skipped" }
       }
     }
   },
