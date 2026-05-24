@@ -172,3 +172,153 @@ test('pui-edit inserts DDS lines into requested --sfl-record', async () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 });
+
+test('pui-edit export-json writes DDDL wrapper with embedded puiJson', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-export-dddl-'));
+  const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
+  const outPath = path.join(tempDir, 'display.dddl.json');
+
+  try {
+    writeSyntheticDisplay(filePath);
+    await run({
+      file: filePath,
+      action: 'export-json',
+      out: outPath,
+      format: 'dddl',
+    });
+
+    const exported = JSON.parse(fs.readFileSync(outPath, 'utf8'));
+    assert.equal(exported.kind, 'zeus-pui-dddl');
+    assert.equal(typeof exported.version, 'number');
+    assert.ok(exported.puiJson);
+    assert.ok(Array.isArray(exported.puiJson.items));
+    assert.ok(exported.ddsJsonGroup.segmentCount > 0);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('pui-edit import-json applies pretty JSON back into DDS', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-import-pretty-'));
+  const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
+  const inPath = path.join(tempDir, 'pretty.json');
+
+  try {
+    writeSyntheticDisplay(filePath);
+    const before = readDisplayJson(filePath);
+    before.screen = before.screen || {};
+    before.screen.overlay = true;
+
+    fs.writeFileSync(inPath, JSON.stringify(before, null, 2), 'utf8');
+    await run({
+      file: filePath,
+      action: 'import-json',
+      in: inPath,
+      confirm: true,
+    });
+
+    const after = readDisplayJson(filePath);
+    assert.equal(after.screen.overlay, true);
+    assert.ok(fs.existsSync(`${filePath}.bak`));
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('pui-edit import-json migrates legacy dddl payload and applies it', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-import-legacy-dddl-'));
+  const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
+  const inPath = path.join(tempDir, 'legacy.dddl.json');
+
+  try {
+    writeSyntheticDisplay(filePath);
+    const before = readDisplayJson(filePath);
+    before.screen = before.screen || {};
+    before.screen.overlay = true;
+
+    fs.writeFileSync(inPath, JSON.stringify({
+      kind: 'zeus-pui-dddl-v0',
+      version: 0,
+      source: {
+        file: 'DISPLAY_SAMPLE.MBR',
+        path: filePath,
+      },
+      ddsJsonGroup: {
+        segmentCount: 1,
+        compactSourceLength: 100,
+      },
+      json: before,
+    }, null, 2), 'utf8');
+
+    await run({
+      file: filePath,
+      action: 'import-json',
+      in: inPath,
+      confirm: true,
+    });
+
+    const after = readDisplayJson(filePath);
+    assert.equal(after.screen.overlay, true);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('pui-edit validate-json accepts plain PUI JSON without --file', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-validate-plain-'));
+  const inPath = path.join(tempDir, 'plain.json');
+  const logs = [];
+  const originalLog = console.log;
+
+  try {
+    fs.writeFileSync(inPath, JSON.stringify({ items: [] }, null, 2), 'utf8');
+    console.log = (...args) => logs.push(args.join(' '));
+
+    await run({
+      action: 'validate-json',
+      in: inPath,
+    });
+
+    assert.equal(logs.some((line) => line.includes('Valid plain PUI JSON object')), true);
+  } finally {
+    console.log = originalLog;
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('pui-edit validate-json accepts legacy dddl and reports migrations', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-validate-dddl-'));
+  const inPath = path.join(tempDir, 'legacy.dddl.json');
+  const logs = [];
+  const originalLog = console.log;
+
+  try {
+    fs.writeFileSync(inPath, JSON.stringify({
+      kind: 'zeus-pui-dddl-v0',
+      version: 0,
+      source: {
+        file: 'DISPLAY_SAMPLE.MBR',
+        path: '/tmp/DISPLAY_SAMPLE.MBR',
+      },
+      ddsJsonGroup: {
+        segmentCount: 1,
+        compactSourceLength: 42,
+      },
+      json: {
+        items: [],
+      },
+    }, null, 2), 'utf8');
+    console.log = (...args) => logs.push(args.join(' '));
+
+    await run({
+      action: 'validate-json',
+      in: inPath,
+    });
+
+    assert.equal(logs.some((line) => line.includes('Valid DDDL')), true);
+    assert.equal(logs.some((line) => line.includes('Applied migrations:') && !line.endsWith('none')), true);
+  } finally {
+    console.log = originalLog;
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});

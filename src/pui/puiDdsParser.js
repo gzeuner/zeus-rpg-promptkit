@@ -260,16 +260,31 @@ function findJsonSegmentGroup(parsed) {
 
   if (startIdx < 0) return null;
 
-  // Finde das letzte zusammenhängende HTML-Segment das endet mit '}'
-  let endIdx = startIdx;
-  for (let i = startIdx + 1; i < parsed.segments.length; i++) {
+  // Inkrementell JSON aufbauen und sobald parsebar beenden.
+  // Das ist robuster als Prefix-Heuristiken (z.B. Chunk beginnt mit "Q...").
+  let combined = '';
+  for (let i = startIdx; i < parsed.segments.length; i++) {
     const seg = parsed.segments[i];
     if (seg.kind !== 'html') break;
-    // Wenn vorheriges Segment PUI-Steuerstring war, stopp
-    if (seg.content.trimStart().startsWith('{') || seg.content.trimStart().startsWith('Q')) break;
-    endIdx = i;
+    combined += seg.content;
+    try {
+      JSON.parse(combined);
+      return {
+        segments: parsed.segments.slice(startIdx, i + 1),
+        startIdx,
+        endIdx: i,
+      };
+    } catch {
+      // Noch nicht komplett, weiter sammeln.
+    }
   }
 
+  // Fallback: zusammenhängende HTML-Segmente ab Start zurückgeben.
+  let endIdx = startIdx;
+  for (let i = startIdx + 1; i < parsed.segments.length; i++) {
+    if (parsed.segments[i].kind !== 'html') break;
+    endIdx = i;
+  }
   return {
     segments: parsed.segments.slice(startIdx, endIdx + 1),
     startIdx,
@@ -287,7 +302,14 @@ function parseJsonFromGroup(group) {
   try {
     return JSON.parse(fullContent);
   } catch {
-    return null;
+    // Recovery path for legacy dumps containing invalid C0 control chars
+    // (for example 0x1A) inside string literals.
+    const sanitized = fullContent.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+    try {
+      return JSON.parse(sanitized);
+    } catch {
+      return null;
+    }
   }
 }
 
