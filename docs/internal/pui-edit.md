@@ -12,6 +12,9 @@ Last Updated: 2026-05-17
 
 - `roundtrip-check` validates that parse and serialize preserve the file shape.
 - `dump-json` prints the embedded PUI JSON document.
+- `validate-json` validates plain JSON or `dddl` payloads without modifying DDS files.
+- `export-json` writes embedded PUI JSON to a file as `pretty`, `compact`, or `dddl` wrapper format.
+- `import-json` reads `pretty`/`compact` JSON or `dddl` wrapper and writes it back into DDS (with backup, requires `--confirm`).
 - `plan` previews a declarative change set without writing the file.
 - `apply` applies a declarative change set after `--confirm`.
 - `grid-add-column` keeps the existing specialized grid workflow for local display files.
@@ -22,6 +25,13 @@ Last Updated: 2026-05-17
 2. Review the preview output and the matched items.
 3. Run `apply --confirm` only after the change set is approved.
 4. Keep the generated `.bak` backup until the change has been validated.
+
+## DDDL contract
+
+- `dddl` uses `kind: "zeus-pui-dddl"` with `version: 1`.
+- Strict validation is enforced on import (unknown keys fail fast in strict mode).
+- Legacy payloads (`kind: "zeus-pui-dddl-v0"` or `version: 0` with `json`) are migrated to v1 before validation.
+- `dddl` is a local raw interchange format only. It is not a toolkit knowledgebase format, not MCP-safe, and must not be promoted into reusable project knowledge.
 
 ## Change set format
 

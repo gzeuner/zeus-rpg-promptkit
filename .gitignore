@@ -104,3 +104,9 @@ java/lib/
 config/analyses-registry.json
 # Optional in-repo analyses workspaces
 analyses/
+
+# -----------------------------
+# Local knowledge / evidence artifacts
+# -----------------------------
+
+.zeus/

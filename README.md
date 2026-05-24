@@ -128,6 +128,26 @@ Praktisch bedeutet das:
 
 ---
 
+## Projektneutrale Knowledge-Pipeline
+
+Zeus bereitet eine sichere, projektneutrale Knowledge-Pipeline für zukünftige KI-gestützte Modernisierungs-Workflows vor.
+
+Der aktuelle Stand ist bewusst nur ein Skeleton mit klaren Vertragsgrenzen unter `src/knowledge/`:
+
+- `raw/` für sensitive Roh-Evidenz
+- `sanitized/` für redaktierte Kandidaten
+- `final/` für projektneutrale Katalog-Verträge
+- `privacy/` für fail-closed Privacy-Gates
+
+Wichtig:
+
+- Rohdaten oder source-abgeleitete Projektdaten werden **nie** als wiederverwendbares Toolkit-Wissen behandelt.
+- CLI-/MCP-/API-Exposure bleibt deaktiviert, bis ein finaler Katalog die Privacy-Validierung bestanden hat.
+- Der frühere experimentelle DDDL-/Template-/Registry-Pfad wurde zurückgesetzt.
+- DDDL bleibt nur ein lokales Roh-Austauschformat für interne Tooling-Schritte, keine sichere wiederverwendbare Knowledgebase.
+
+---
+
 ## Lokale MCP-Unterstützung (experimentelles MVP)
 
 Dieser Branch enthält eine **lokale MCP-Server-Integration** für kontrollierten Tool-Zugriff über `stdio`.
@@ -161,41 +181,20 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,
 | Policy | default-deny / Tool-Allowlist |
 | Allowlist | `--allow-tools` |
 | Redaction | Maskierung von Response- und Error-Payloads |
-| Audit | append-only JSONL unter `.local/mcp/audit/mcp-audit.jsonl` |
+| Audit | lokales append-only JSONL unter `.local/mcp/audit/mcp-audit.jsonl` |
 | Guardrails | Timeouts, Antwortgrößenlimits, deterministische Fehlercodes |
 | Pfade | lokale Pfade müssen innerhalb des Workspace bleiben |
 
 ### Aktuelle MCP-Tool-Oberfläche
 
-Je nach Branch-Stand können diese Tools registriert sein:
+Die MCP-Tool-Oberfläche ist experimentell und kann sich zwischen Branches/Versionen ändern.  
+Die verbindliche Referenz ist `docs/tool-catalog.md`.
 
-- `zeus.health`
-- `zeus.version`
-- `zeus.doctor`
-- `zeus.workflow`
-- `zeus.bundle`
-- `zeus.analyze`
-- `zeus.impact`
-- `zeus.assess-risk`
-- `zeus.query-table`
-- `zeus.query-sql`
-- `zeus.write-sql`
-- `zeus.bridge`
-- `zeus.search-source`
-- `zeus.field-search`
-- `zeus.diff`
-- `zeus.generate-test`
-- `zeus.generate-checklist`
-- `zeus.qa`
-- `zeus.analyses`
-- `zeus.fetch`
-- `zeus.test-run`
-- `zeus.copy-to-workspace`
-- `zeus.serve`
-- `zeus.joblog`
-- `zeus.inspect-object`
+Hinweise:
 
-Für KI-Clients gilt: nicht blind alle Tools freigeben. Besser pro Aufgabe eine kleine Allowlist wählen.
+- `zeus.knowledge` ist nicht Teil der aktuellen Tool-Oberfläche.
+- Audit-Dateien unter `.local/mcp/audit/` sind lokal, disposabel und potenziell sensibel.
+- Für KI-Clients immer nur die kleinste notwendige Tool-Allowlist freigeben.
 
 ### MCP Write-Guardrails
 
@@ -476,7 +475,7 @@ Wichtige Dateien:
 | `report.md` | Programm-Zusammenfassung |
 | `architecture-report.md` | Struktur, Call-Tree, Abhängigkeiten |
 | `canonical-analysis.json` | vollständiges Entitäts- und Evidenzmodell |
-| `ai-knowledge.json` | token-optimierter KI-Kontext |
+| `ai-knowledge.json` | token-optimierter KI-Kontext für genau diesen Analyse-Run, **keine** persistente projektneutrale Toolkit-Knowledgebase |
 | `ai_prompt_documentation.md` | fertiger Prompt für Erklärung und Dokumentation |
 | `dependency-graph.mmd` | Mermaid-Abhängigkeitsgraph |
 | `analyze-run-manifest.json` | Laufprotokoll und Artefaktübersicht |
@@ -666,18 +665,13 @@ LICENSE
 
 Die Apache License 2.0 ist eine permissive Open-Source-Lizenz. Sie erlaubt Nutzung, Änderung und Weiterverteilung, enthält aber Bedingungen zu Lizenzhinweisen, Copyright-Hinweisen und ggf. NOTICE-Dateien. Außerdem enthält sie eine ausdrückliche Patentlizenz.
 
-### Dependency-Hinweis
+### Hinweis zu JTOpen / JT400
 
-Die npm-Abhängigkeiten dieses Projekts sind nach aktuellem Stand permissiv lizenziert, unter anderem MIT, ISC, BSD-3-Clause, Apache-2.0 oder dual lizenziert als Apache-2.0/MIT.
+Für IBM i-/DB2-nahe Funktionen kann JTOpen / IBM Toolbox for Java erforderlich sein.
 
-Falls `jt400.jar` / JTOpen mit dem Projekt ausgeliefert wird, sollte dessen Lizenz separat dokumentiert werden. JTOpen / IBM Toolbox for Java steht nach IBM-Angaben unter der IBM Public License. Wenn das JAR nur lokal vom User bereitgestellt wird und nicht Bestandteil des Repositories ist, reicht in der README ein klarer Hinweis auf die externe Komponente.
+JTOpen / JT400 ist nicht Bestandteil dieses Projekts und wird nicht mit Zeus RPG PromptKit ausgeliefert. Es wird bei Bedarf vom User lokal bereitgestellt oder über die jeweilige Projekt-/Build-Konfiguration eingebunden.
 
-Empfehlung:
-
-- `LICENSE` mit vollständigem Apache-2.0-Text im Repo behalten.
-- optional `NOTICE` anlegen, wenn eigene oder fremde Hinweise aufgenommen werden müssen.
-- Dependency-Lizenzen regelmäßig mit einem License-Checker prüfen.
-- Bei Distribution von Drittanbieter-JARs deren Lizenztexte beilegen.
+Weitere Informationen: https://github.com/IBM/JTOpen
 
 ---
 
@@ -785,6 +779,26 @@ In practice:
 
 ---
 
+## Project-neutral knowledge pipeline
+
+Zeus is preparing a safe, project-neutral knowledge pipeline for future AI-assisted modernization workflows.
+
+The current implementation is intentionally only a skeleton with explicit contract boundaries under `src/knowledge/`:
+
+- `raw/` for sensitive raw evidence
+- `sanitized/` for redacted candidates
+- `final/` for project-neutral catalog contracts
+- `privacy/` for fail-closed privacy gates
+
+Important:
+
+- Raw or source-derived project data is **never** treated as reusable toolkit knowledge.
+- CLI/MCP/API exposure remains disabled until a final catalog passes privacy validation.
+- The former experimental DDDL/template/registry path has been reset.
+- DDDL remains a local raw interchange format for internal tooling only, not a safe reusable knowledgebase.
+
+---
+
 ## Local MCP support (experimental MVP)
 
 This branch includes a **local MCP server integration** for controlled tool access over `stdio`.
@@ -818,41 +832,20 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,
 | Policy | default-deny / tool allowlist |
 | Allowlist | `--allow-tools` |
 | Redaction | response and error payload masking |
-| Audit | append-only JSONL at `.local/mcp/audit/mcp-audit.jsonl` |
+| Audit | local append-only JSONL at `.local/mcp/audit/mcp-audit.jsonl` |
 | Guardrails | timeouts, response-size limits, deterministic error codes |
 | Paths | local paths must remain inside the workspace |
 
 ### Current MCP tool surface
 
-Depending on branch state, these tools may be registered:
+The MCP tool surface is experimental and may change between branches/releases.  
+The authoritative reference is `docs/tool-catalog.md`.
 
-- `zeus.health`
-- `zeus.version`
-- `zeus.doctor`
-- `zeus.workflow`
-- `zeus.bundle`
-- `zeus.analyze`
-- `zeus.impact`
-- `zeus.assess-risk`
-- `zeus.query-table`
-- `zeus.query-sql`
-- `zeus.write-sql`
-- `zeus.bridge`
-- `zeus.search-source`
-- `zeus.field-search`
-- `zeus.diff`
-- `zeus.generate-test`
-- `zeus.generate-checklist`
-- `zeus.qa`
-- `zeus.analyses`
-- `zeus.fetch`
-- `zeus.test-run`
-- `zeus.copy-to-workspace`
-- `zeus.serve`
-- `zeus.joblog`
-- `zeus.inspect-object`
+Notes:
 
-For AI clients, do not expose all tools blindly. Prefer a narrow allowlist per task.
+- `zeus.knowledge` is not part of the current tool surface.
+- audit files under `.local/mcp/audit/` are local, disposable and potentially sensitive.
+- for AI clients, always allowlist the minimum required tool set per task.
 
 ### MCP write guardrails
 
@@ -1133,7 +1126,7 @@ Important files:
 | `report.md` | program summary |
 | `architecture-report.md` | structure, call tree and dependencies |
 | `canonical-analysis.json` | full entity and evidence model |
-| `ai-knowledge.json` | token-optimized AI context |
+| `ai-knowledge.json` | token-optimized AI context for that specific analysis run, **not** a persistent project-neutral toolkit knowledgebase |
 | `ai_prompt_documentation.md` | ready-to-use explanation/documentation prompt |
 | `dependency-graph.mmd` | Mermaid dependency graph |
 | `analyze-run-manifest.json` | run manifest and artifact inventory |
@@ -1323,15 +1316,10 @@ LICENSE
 
 Apache License 2.0 is a permissive open-source license. It allows use, modification and redistribution, subject to conditions such as preserving license notices, copyright notices and, where applicable, NOTICE files. It also includes an express patent license.
 
-### Dependency note
+### JTOpen / JT400 note
 
-The npm dependencies of this project are currently permissively licensed, including MIT, ISC, BSD-3-Clause, Apache-2.0 or dual Apache-2.0/MIT licensing.
+IBM i / DB2 related features may require JTOpen / IBM Toolbox for Java.
 
-If `jt400.jar` / JTOpen is distributed with this project, its license should be documented separately. According to IBM, JTOpen / IBM Toolbox for Java is licensed under the IBM Public License. If the JAR is only provided locally by the user and is not part of the repository, a clear external-component note in the README is sufficient.
+JTOpen / JT400 is not part of this project and is not distributed with Zeus RPG PromptKit. When needed, it is provided locally by the user or through the respective project/build configuration.
 
-Recommended:
-
-- keep `LICENSE` with the full Apache-2.0 text in the repository
-- optionally add `NOTICE` if project-specific or third-party notices are required
-- regularly check dependency licenses with a license checker
-- include third-party license texts when distributing third-party JARs
+More information: https://github.com/IBM/JTOpen

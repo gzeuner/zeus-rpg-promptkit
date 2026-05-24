@@ -92,12 +92,21 @@ function readArtifact(profile, program, artifactPath, options = {}) {
   }, runtime);
 }
 
+function readKnowledge(options = {}) {
+  return {
+    available: false,
+    status: 'disabled',
+    reason: 'Knowledge API is disabled until a final privacy-gated project-neutral catalog exists.',
+  };
+}
+
 module.exports = {
   analyze,
   fetch,
   listRuns,
   queryTable,
   readArtifact,
+  readKnowledge,
   readRun,
   readRunViews,
   runWorkflow,

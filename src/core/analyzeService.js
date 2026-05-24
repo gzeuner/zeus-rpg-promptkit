@@ -168,6 +168,8 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
       searchMaxResults,
       diagnosticPacks,
       diagnosticParameterString,
+      cwd,
+      env: process.env,
       ibmiConfig: config.ibmi,
       reproducibility,
       logVerbose,

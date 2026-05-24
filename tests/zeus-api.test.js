@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { analyze, listRuns, runWorkflow } = require('../src/api/zeusApi');
+const { analyze, listRuns, readKnowledge, runWorkflow } = require('../src/api/zeusApi');
 
 const fixtureRoot = path.join(__dirname, 'fixtures', 'v1-smoke', 'src');
 
@@ -92,4 +92,16 @@ test('zeusApi resolves run explorer output roots from the selected profile', () 
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
+});
+
+test('zeusApi knowledge access is disabled until a privacy-gated catalog exists', () => {
+  const knowledge = readKnowledge({
+    runtime: {
+      cwd: process.cwd(),
+      env: {},
+    },
+  });
+  assert.equal(knowledge.available, false);
+  assert.equal(knowledge.status, 'disabled');
+  assert.match(knowledge.reason, /privacy-gated project-neutral catalog/i);
 });

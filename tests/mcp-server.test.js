@@ -95,6 +95,7 @@ test('mcp tools list and call health tool', async () => {
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.generate-checklist'), true);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.qa'), true);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.analyses'), true);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.knowledge'), false);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.fetch'), true);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.test-run'), true);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.copy-to-workspace'), true);
@@ -1474,6 +1475,26 @@ test('mcp tools call analyses maps invalid arguments to -32602', async () => {
     (error) => {
       assert.equal(error.code, -32602);
       assert.match(error.message, /operation must be list or show/i);
+      return true;
+    },
+  );
+});
+
+test('mcp knowledge tool is disabled after the privacy reset', async () => {
+  const server = createMcpServer({ cwd: process.cwd() });
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 1833,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.knowledge',
+        arguments: {},
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32601);
+      assert.match(error.message, /tool is not allowed by mcp policy: zeus\.knowledge/i);
       return true;
     },
   );

@@ -7,6 +7,9 @@
  * Aktionen:
  *   grid-add-column    Fügt eine neue Spalte in ein Grid ein
  *   dump-json          Gibt den geparsten JSON-Inhalt des Hauptformats aus
+ *   validate-json      Validiert eine JSON/DDDL-Datei (ohne DDS-Schreibzugriff)
+ *   export-json        Exportiert PUI-JSON als pretty|compact|dddl Datei
+ *   import-json        Importiert PUI-JSON (pretty/compact/dddl) zurück in DDS
  *   roundtrip-check    Parst + serialisiert und prüft ob die Ausgabe identisch ist
  *   plan               Validiert ein deklaratives Change-Set ohne zu schreiben
  *   apply              Wendet ein deklaratives Change-Set nach --confirm an
@@ -50,9 +53,22 @@ const {
   cloneJson,
   normalizeChangeSet,
 } = require('../../pui/puiEditEngine');
+const {
+  buildPuiDddlPayloadV1,
+  parsePuiDddlPayload,
+} = require('../../pui/puiDddl');
 
 async function run(args) {
   try {
+    const action = args.action || args.a;
+    if (!action) {
+      throw new Error('--action ist erforderlich (roundtrip-check | dump-json | validate-json | export-json | import-json | plan | apply | grid-add-column)');
+    }
+
+    if (action === 'validate-json') {
+      return actionValidateJson(args);
+    }
+
     const file = args.file || args.f;
     if (!file) {
       throw new Error('--file ist erforderlich');
@@ -63,11 +79,6 @@ async function run(args) {
       throw new Error(`Datei nicht gefunden: ${filePath}`);
     }
 
-    const action = args.action || args.a;
-    if (!action) {
-      throw new Error('--action ist erforderlich (roundtrip-check | dump-json | plan | apply | grid-add-column)');
-    }
-
     const content = fs.readFileSync(filePath, 'utf8');
     const parsed = parseDds(content);
 
@@ -76,6 +87,10 @@ async function run(args) {
         return actionRoundtripCheck(parsed, content, filePath);
       case 'dump-json':
         return actionDumpJson(parsed);
+      case 'export-json':
+        return actionExportJson(parsed, args, filePath);
+      case 'import-json':
+        return actionImportJson(parsed, args, filePath);
       case 'plan':
         return actionChangeSetPreview(parsed, args, filePath);
       case 'apply':
@@ -83,7 +98,7 @@ async function run(args) {
       case 'grid-add-column':
         return actionGridAddColumn(parsed, args, filePath);
       default:
-        throw new Error(`Unbekannte Aktion: ${action}. Erlaubt: roundtrip-check, dump-json, plan, apply, grid-add-column`);
+        throw new Error(`Unbekannte Aktion: ${action}. Erlaubt: roundtrip-check, dump-json, validate-json, export-json, import-json, plan, apply, grid-add-column`);
     }
   } catch (error) {
     console.error(error.message);
@@ -126,20 +141,155 @@ function actionRoundtripCheck(parsed, original, filePath) {
 // ─── Aktion: JSON dumpen ─────────────────────────────────────────────────────
 
 function actionDumpJson(parsed) {
+  const { obj } = readJsonFromParsed(parsed);
+  console.log(JSON.stringify(obj, null, 2));
+}
+
+function actionValidateJson(args) {
+  const inPath = args.in || args.input || args['json-file'];
+  if (!inPath) {
+    throw new Error('--in ist erforderlich fuer --action validate-json');
+  }
+
+  const resolvedInput = path.resolve(String(inPath));
+  if (!fs.existsSync(resolvedInput)) {
+    throw new Error(`Input-Datei nicht gefunden: ${resolvedInput}`);
+  }
+
+  const payload = JSON.parse(fs.readFileSync(resolvedInput, 'utf8'));
+  const parsedDddl = parsePuiDddlPayload(payload, {
+    strict: true,
+    allowMigration: true,
+  });
+
+  if (parsedDddl.recognized) {
+    if (!parsedDddl.validation.valid) {
+      throw new Error(`Ungueltiges DDDL-Format: ${parsedDddl.validation.errors.join('; ')}`);
+    }
+    console.log(`Valid DDDL (${parsedDddl.payload.kind} v${parsedDddl.payload.version})`);
+    if (parsedDddl.migrations.length > 0) {
+      console.log(`Applied migrations: ${parsedDddl.migrations.join(', ')}`);
+    } else {
+      console.log('Applied migrations: none');
+    }
+    return;
+  }
+
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('JSON-Datei muss entweder ein gueltiges DDDL-Objekt oder ein PUI root object sein.');
+  }
+
+  console.log('Valid plain PUI JSON object');
+}
+
+function actionExportJson(parsed, args, filePath) {
+  const outPath = args.out || args.output;
+  if (!outPath) {
+    throw new Error('--out ist erforderlich fuer --action export-json');
+  }
+  const { group, obj, compactSource } = readJsonFromParsed(parsed);
+  const format = String(args.format || 'pretty').trim().toLowerCase();
+  const resolvedOutput = path.resolve(String(outPath));
+  fs.mkdirSync(path.dirname(resolvedOutput), { recursive: true });
+
+  let payload;
+  if (format === 'pretty') {
+    payload = JSON.stringify(obj, null, 2);
+  } else if (format === 'compact') {
+    payload = JSON.stringify(obj);
+  } else if (format === 'dddl') {
+    payload = JSON.stringify(buildDddlPayload({
+      filePath,
+      group,
+      obj,
+      compactSource,
+    }), null, 2);
+  } else {
+    throw new Error('--format muss pretty, compact oder dddl sein');
+  }
+
+  fs.writeFileSync(resolvedOutput, `${payload}\n`, 'utf8');
+  console.log(`Export geschrieben: ${resolvedOutput}`);
+  console.log(`Format: ${format}`);
+}
+
+function actionImportJson(parsed, args, filePath) {
+  const inPath = args.in || args.input || args['json-file'];
+  if (!inPath) {
+    throw new Error('--in ist erforderlich fuer --action import-json');
+  }
+  const confirm = parseBoolean(args.confirm || args.yes || args.write, false);
+  if (!confirm) {
+    throw new Error('Fuer --action import-json ist --confirm erforderlich.');
+  }
+
+  const resolvedInput = path.resolve(String(inPath));
+  if (!fs.existsSync(resolvedInput)) {
+    throw new Error(`Input-Datei nicht gefunden: ${resolvedInput}`);
+  }
+
+  const payload = JSON.parse(fs.readFileSync(resolvedInput, 'utf8'));
+  const importedJson = unwrapImportedPuiJson(payload);
+  if (!importedJson || typeof importedJson !== 'object' || Array.isArray(importedJson)) {
+    throw new Error('Import-JSON muss ein Objekt sein (PUI root object).');
+  }
+
   const group = findJsonSegmentGroup(parsed);
   if (!group) {
-    console.error('Kein JSON-Segment gefunden');
-    process.exitCode = 1;
-    return;
+    throw new Error('Kein JSON-Segment in der Datei gefunden');
   }
+  serializeJsonToGroup(parsed, group, importedJson);
+  const output = serializeDds(parsed);
+  writeDisplayWithBackup(filePath, output);
+  console.log(`PUI-JSON importiert aus: ${resolvedInput}`);
+}
+
+function buildDddlPayload({ filePath, group, obj, compactSource }) {
+  return buildPuiDddlPayloadV1({
+    filePath,
+    group,
+    puiJson: obj,
+    compactSource,
+  });
+}
+
+function unwrapImportedPuiJson(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return null;
+  }
+
+  const parsedDddl = parsePuiDddlPayload(payload, {
+    strict: true,
+    allowMigration: true,
+  });
+  if (parsedDddl.recognized) {
+    if (!parsedDddl.validation.valid) {
+      throw new Error(`Ungueltiges DDDL-Format: ${parsedDddl.validation.errors.join('; ')}`);
+    }
+    return parsedDddl.payload.puiJson;
+  }
+  return payload;
+}
+
+function readJsonFromParsed(parsed) {
+  const group = findJsonSegmentGroup(parsed);
+  if (!group) {
+    throw new Error('Kein JSON-Segment gefunden');
+  }
+  const compactSource = group.segments.map((s) => s.content).join('');
   const obj = parseJsonFromGroup(group);
   if (!obj) {
-    console.error('JSON-Parsing fehlgeschlagen');
-    console.error('Roher Inhalt (erste 200 Zeichen):', group.segments.map((s) => s.content).join('').slice(0, 200));
-    process.exitCode = 1;
-    return;
+    throw new Error(`JSON-Parsing fehlgeschlagen. Segment-Vorschau: ${compactSource.slice(0, 200)}`);
   }
-  console.log(JSON.stringify(obj, null, 2));
+  return { group, obj, compactSource };
+}
+
+function writeDisplayWithBackup(filePath, output) {
+  const backupPath = filePath + '.bak';
+  fs.copyFileSync(filePath, backupPath);
+  console.log(`Backup erstellt: ${backupPath}`);
+  fs.writeFileSync(filePath, output, 'utf8');
+  console.log(`Datei aktualisiert: ${filePath}`);
 }
 
 // ─── Aktion: Change-Set Vorschau / Anwendung ────────────────────────────────
@@ -167,13 +317,7 @@ function actionChangeSetApply(parsed, args, filePath) {
 
   serializeJsonToGroup(parsed, jsonGroup, preview.after);
   const output = serializeDds(parsed);
-
-  const backupPath = filePath + '.bak';
-  fs.copyFileSync(filePath, backupPath);
-  console.log(`Backup erstellt: ${backupPath}`);
-
-  fs.writeFileSync(filePath, output, 'utf8');
-  console.log(`Datei aktualisiert: ${filePath}`);
+  writeDisplayWithBackup(filePath, output);
 }
 
 function buildChangeSetPreview(parsed, changeSet) {
@@ -182,10 +326,7 @@ function buildChangeSetPreview(parsed, changeSet) {
     throw new Error('Kein JSON-Segment in der Datei gefunden');
   }
 
-  const json = parseJsonFromGroup(jsonGroup);
-  if (!json) {
-    throw new Error('JSON-Parsing fehlgeschlagen — Datei möglicherweise beschädigt');
-  }
+  const { obj: json } = readJsonFromParsed(parsed);
 
   const workingCopy = cloneJson(json);
   const applied = applyChangeSetToJson(workingCopy, changeSet);
@@ -274,8 +415,7 @@ function actionGridAddColumn(parsed, args, filePath) {
   const jsonGroup = findJsonSegmentGroup(parsed);
   if (!jsonGroup) throw new Error('Kein JSON-Segment in der Datei gefunden');
 
-  const json = parseJsonFromGroup(jsonGroup);
-  if (!json) throw new Error('JSON-Parsing fehlgeschlagen — Datei möglicherweise beschädigt');
+  const { obj: json } = readJsonFromParsed(parsed);
 
   // Grid-Element finden
   const grid = (json.items || []).find((item) => item.id === gridId);
@@ -345,14 +485,8 @@ function actionGridAddColumn(parsed, args, filePath) {
     return;
   }
 
-  // Backup der Originaldatei
-  const backupPath = filePath + '.bak';
-  fs.copyFileSync(filePath, backupPath);
-  console.log(`Backup erstellt: ${backupPath}`);
-
-  // Neue Datei schreiben
-  fs.writeFileSync(filePath, output, 'utf8');
-  console.log(`Datei aktualisiert: ${filePath}`);
+  // Backup der Originaldatei + neue Datei schreiben
+  writeDisplayWithBackup(filePath, output);
   console.log(`Spalte "${colHeading}" an Position ${colPos} eingefügt (${oldCount} → ${oldCount + 1} Spalten)`);
 
   if (sflFields.length > 0) {
