@@ -599,6 +599,7 @@ Die Tests decken unter anderem Scanner, Analyseverträge, Runtime-Konfiguration,
 - KI-Antworten immer gegen `canonical-analysis.json`, Reports und DB2-Metadaten prüfen.
 - MCP-Tools nur minimal allowlisten.
 - Audit-Dateien und generierte Artefakte als potenziell sensibel behandeln.
+- Lokale Arbeitsdaten unter `.local/`, `output/` oder `.zeus/` sind keine Knowledgebase. Sie können sensible Analyse-, Audit- oder Scratch-Daten enthalten. Siehe `docs/safety/local-workspace-policy.md`.
 - Für externe Weitergabe `--safe-sharing` nutzen.
 
 ---
@@ -1250,6 +1251,7 @@ The test suite covers scanners, analysis contracts, runtime configuration, profi
 - Validate AI answers against `canonical-analysis.json`, reports and DB2 metadata.
 - Allowlist only the minimum MCP tools required for the task.
 - Treat audit files and generated artifacts as potentially sensitive.
+- Local workspace data under `.local/`, `output/` or `.zeus/` is not a knowledgebase. It may contain sensitive analysis, audit or scratch data. See `docs/safety/local-workspace-policy.md`.
 - Use `--safe-sharing` for external review.
 
 ---
