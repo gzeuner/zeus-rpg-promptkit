@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-17T07:14:08.380Z",
+  "generatedAt": "2026-05-22T11:24:29.888Z",
   "commandRows": [
     {
       "command": "doctor",
@@ -27,11 +27,12 @@
       "purpose": "Fetch source members/IFS content into the local workspace.",
       "example": "node cli/zeus.js fetch --profile default-fetch",
       "usage": [
-        "[--config <path>] fetch --host <hostname> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--profile <name>] [--verbose]"
+        "[--config <path>] fetch --host <hostname> --port <n> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--profile <name>] [--verbose]"
       ],
       "options": [
         "--config",
         "--host",
+        "--port",
         "--user",
         "--password",
         "--source-lib",
@@ -646,6 +647,42 @@
         "--output",
         "--format",
         "--json-output"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "mcp",
+      "safety": "S0",
+      "scope": "Local read-mostly",
+      "purpose": "Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.",
+      "example": "node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.workflow,zeus.bundle,zeus.analyze,zeus.impact,zeus.assess-risk,zeus.query-table,zeus.query-sql,zeus.write-sql,zeus.bridge,zeus.search-source,zeus.field-search,zeus.diff,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.analyses,zeus.fetch,zeus.test-run,zeus.copy-to-workspace,zeus.serve,zeus.joblog,zeus.inspect-object",
+      "usage": [
+        "[--config <path>] mcp <serve|help> [--stdio true|false] [--verbose]"
+      ],
+      "options": [
+        "--config",
+        "--stdio",
+        "--verbose"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "analyses",
+      "safety": "S0",
+      "scope": "Local",
+      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
+      "example": "node cli/zeus.js analyses",
+      "usage": [
+        "[--config <path>] analyses <list|register|index|open|show|unregister> [options]"
+      ],
+      "options": [
+        "--config"
       ],
       "source": {
         "routeDetected": true,

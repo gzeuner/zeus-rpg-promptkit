@@ -14,6 +14,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const REDACTED_VALUE = '[REDACTED]';
 const SENSITIVE_KEY_PATTERN = /(^|[_-])(password|passwd|pwd|pass|secret|token|api[_-]?key|key|authorization|auth|credential|credentials)$/i;
 const USER_KEY_PATTERN = /^(user|username)$/i;
+const INLINE_SENSITIVE_KEYS = new Set([
+  'password',
+  'passwd',
+  'pwd',
+  'pass',
+  'secret',
+  'token',
+  'apikey',
+  'key',
+  'authorization',
+  'auth',
+  'credential',
+  'credentials',
+  'user',
+  'username',
+]);
 const SENSITIVE_ENV_KEYS = Object.freeze([
   'ZEUS_DB_HOST',
   'ZEUS_DB_USER',
@@ -53,8 +69,7 @@ function normalizeSensitiveTerms(input = []) {
   const terms = Array.isArray(input) ? input : [input];
   return Array.from(new Set(terms
     .map((entry) => String(entry || '').trim())
-    .filter((entry) => entry.length > 1)
-    .map((entry) => entry.toUpperCase())))
+    .filter((entry) => entry.length > 1)))
     .sort((left, right) => right.length - left.length || left.localeCompare(right));
 }
 
@@ -95,7 +110,7 @@ function maskSensitiveTermsInText(value, sensitiveTerms = []) {
   for (const term of normalizedTerms) {
     const escaped = escapeRegExp(term);
     text = text.replace(
-      new RegExp(`(^|[^A-Z0-9_#$@])(${escaped})(?=[^A-Z0-9_#$@]|$)`, 'gi'),
+      new RegExp(`(^|[^A-Z0-9_#$@])(${escaped})(?=[^A-Z0-9_#$@]|$)`, 'g'),
       `$1${REDACTED_VALUE}`,
     );
   }
@@ -103,25 +118,134 @@ function maskSensitiveTermsInText(value, sensitiveTerms = []) {
   return text;
 }
 
+function isInlineWhitespace(char) {
+  return char === '\u00A0' || /\s/u.test(char);
+}
+
+function isInlineKeyChar(char) {
+  return /[a-z0-9_-]/i.test(char);
+}
+
+function isInlineValueTerminator(char) {
+  return (
+    isInlineWhitespace(char)
+    || char === ','
+    || char === ';'
+    || char === '\n'
+    || char === '\r'
+    || char === ')'
+    || char === '}'
+    || char === ']'
+    || char === '"'
+    || char === '\''
+    || char === '\\'
+  );
+}
+
+function normalizeInlineKey(value) {
+  return String(value || '').toLowerCase().replace(/[_-]/g, '');
+}
+
+function maskDelimitedSecretAssignments(value) {
+  const text = String(value === undefined || value === null ? '' : value);
+  let output = '';
+  let index = 0;
+
+  while (index < text.length) {
+    const startChar = text[index];
+    if (!/[a-z]/i.test(startChar)) {
+      output += startChar;
+      index += 1;
+      continue;
+    }
+
+    const keyStart = index;
+    index += 1;
+    while (index < text.length && isInlineKeyChar(text[index])) {
+      index += 1;
+    }
+    const keyEnd = index;
+    const key = text.slice(keyStart, keyEnd);
+    const normalizedKey = normalizeInlineKey(key);
+
+    if (!INLINE_SENSITIVE_KEYS.has(normalizedKey)) {
+      output += text.slice(keyStart, keyEnd);
+      continue;
+    }
+
+    let cursor = keyEnd;
+    while (cursor < text.length && isInlineWhitespace(text[cursor])) {
+      cursor += 1;
+    }
+    if (cursor >= text.length || (text[cursor] !== '=' && text[cursor] !== ':')) {
+      output += text.slice(keyStart, keyEnd);
+      continue;
+    }
+
+    cursor += 1;
+    while (cursor < text.length && isInlineWhitespace(text[cursor])) {
+      cursor += 1;
+    }
+    if (cursor >= text.length) {
+      output += text.slice(keyStart, cursor);
+      break;
+    }
+
+    if (text[cursor] === '\\' || text[cursor] === '"' || text[cursor] === '\'') {
+      output += text.slice(keyStart, keyEnd);
+      continue;
+    }
+
+    let valueEnd = cursor;
+
+    if (
+      (normalizedKey === 'authorization' || normalizedKey === 'auth')
+      && /^bearer\b/i.test(text.slice(cursor))
+    ) {
+      valueEnd = cursor + 6;
+      while (valueEnd < text.length && isInlineWhitespace(text[valueEnd])) {
+        valueEnd += 1;
+      }
+    }
+    while (valueEnd < text.length && !isInlineValueTerminator(text[valueEnd])) {
+      valueEnd += 1;
+    }
+
+    output += `${text.slice(keyStart, cursor)}${REDACTED_VALUE}`;
+    index = valueEnd;
+  }
+
+  return output;
+}
+
 function maskSecretsInText(value) {
   let text = String(value === undefined || value === null ? '' : value);
 
+  text = maskDelimitedSecretAssignments(text);
+
   text = text
     .replace(/(\bjdbc:[a-z0-9]+:\/\/)([^:\s/;,@]+):([^@\s/;]+)@/gi, `$1${REDACTED_VALUE}:${REDACTED_VALUE}@`)
-    .replace(/(\bjdbc:[^\s?;]+[?;][^\r\n]*?\buser\s*=\s*)([^;&\s]+)/gi, `$1${REDACTED_VALUE}`)
-    .replace(/(\bjdbc:[^\s?;]+[?;][^\r\n]*?\b(password|passwd|pwd|pass)\s*=\s*)([^;&\s]+)/gi, `$1${REDACTED_VALUE}`)
-    .replace(/(\bjdbc:[^\r\n]*?\b(user|username)\s*=\s*)([^;\s]+)/gi, `$1${REDACTED_VALUE}`)
-    .replace(/(\bjdbc:[^\r\n]*?\b(password|passwd|pwd|pass)\s*=\s*)([^;\s]+)/gi, `$1${REDACTED_VALUE}`)
-    .replace(/\b(password|passwd|pwd)\s*=\s*([^;\s]+)/gi, `$1=${REDACTED_VALUE}`)
-    .replace(/\b(pass)\s*=\s*([^;\s]+)/gi, `$1=${REDACTED_VALUE}`)
-    .replace(/\b(credential|credentials)\s*[:=]\s*([^\s,;]+)/gi, `$1=${REDACTED_VALUE}`)
-    .replace(/\b(password|passwd|pwd)\s*:\s*([^\s,]+)/gi, `$1: ${REDACTED_VALUE}`)
-    .replace(/\b(pass)\s*:\s*([^\s,]+)/gi, `$1: ${REDACTED_VALUE}`)
-    .replace(/\b(token|secret|api[_-]?key|authorization|auth|key)\s*[:=]\s*([^\s,;]+)/gi, `$1=${REDACTED_VALUE}`)
+    .replace(/(\bjdbc:[^\s?;]+[?;][^\r\n]*?\buser\s*=\s*)([^;&\s"']+)/gi, `$1${REDACTED_VALUE}`)
+    .replace(/(\bjdbc:[^\s?;]+[?;][^\r\n]*?\b(password|passwd|pwd|pass)\s*=\s*)([^;&\s"']+)/gi, `$1${REDACTED_VALUE}`)
+    .replace(/(\bjdbc:[^\r\n]*?\b(user|username)\s*=\s*)([^;\s"']+)/gi, `$1${REDACTED_VALUE}`)
+    .replace(/(\bjdbc:[^\r\n]*?\b(password|passwd|pwd|pass)\s*=\s*)([^;\s"']+)/gi, `$1${REDACTED_VALUE}`)
+    .replace(/\b(password|passwd|pwd|pass|credential|credentials|token|secret|api[_-]?key|authorization|auth|key|user|username)\s*[:=]\s*\\+"(?:\\.|[^"\\\r\n])*?\\+"/gi, `$1=${REDACTED_VALUE}`)
+    .replace(/\b(password|passwd|pwd|pass|credential|credentials|token|secret|api[_-]?key|authorization|auth|key|user|username)\s*[:=]\s*\\+'(?:\\.|[^'\\\r\n])*?\\+'/gi, `$1=${REDACTED_VALUE}`)
+    .replace(/\b(password|passwd|pwd|pass|credential|credentials|token|secret|api[_-]?key|authorization|auth|key)\s*[:=]\s*\\\"(?:\\.|[^"\\\r\n])*\\\"/gi, `$1=${REDACTED_VALUE}`)
+    .replace(/\b(password|passwd|pwd|pass|credential|credentials|token|secret|api[_-]?key|authorization|auth|key)\s*[:=]\s*\\'(?:\\.|[^'\\\r\n])*\\'/gi, `$1=${REDACTED_VALUE}`)
+    .replace(/\b(password|passwd|pwd|pass|credential|credentials|token|secret|api[_-]?key|authorization|auth|key)\s*[:=]\s*"(?:\\.|[^"\\\r\n])*"/gi, `$1=${REDACTED_VALUE}`)
+    .replace(/\b(password|passwd|pwd|pass|credential|credentials|token|secret|api[_-]?key|authorization|auth|key)\s*[:=]\s*'(?:\\.|[^'\\\r\n])*'/gi, `$1=${REDACTED_VALUE}`)
+    .replace(/\b(password|passwd|pwd)\s*=\s*([^\s,;"'\\]+)/gi, `$1=${REDACTED_VALUE}`)
+    .replace(/\b(pass)\s*=\s*([^\s,;"'\\]+)/gi, `$1=${REDACTED_VALUE}`)
+    .replace(/\b(credential|credentials)\s*[:=]\s*([^\s,;"'\\]+)/gi, `$1=${REDACTED_VALUE}`)
+    .replace(/\b(password|passwd|pwd)\s*:\s*([^\s,;"'\\]+)/gi, `$1: ${REDACTED_VALUE}`)
+    .replace(/\b(pass)\s*:\s*([^\s,;"'\\]+)/gi, `$1: ${REDACTED_VALUE}`)
+    .replace(/\b(authorization)\s*[:=]?\s*bearer\s+([a-z0-9._~+/-]+=*)/gi, `$1 Bearer ${REDACTED_VALUE}`)
+    .replace(/\b(token|secret|api[_-]?key|authorization|auth|key)\s*[:=]\s*([^\s,;"'\\]+)/gi, `$1=${REDACTED_VALUE}`)
     .replace(/\b(authorization)\s+bearer\s+[a-z0-9._~+/-]+=*/gi, `$1 Bearer ${REDACTED_VALUE}`);
 
   if (/\b(password|passwd|pwd|pass|token|secret|api[_-]?key|authorization|auth|key|credential|credentials)\b/i.test(text)) {
-    text = text.replace(/\b(user|username)\s*[:=]\s*([^\s,;]+)/gi, `$1=${REDACTED_VALUE}`);
+    text = text.replace(/\b(user|username)\s*[:=]\s*([^\s,;"'\\]+)/gi, `$1=${REDACTED_VALUE}`);
   }
 
   return text;

@@ -91,6 +91,8 @@ function writeAnalyzeArtifacts(state) {
     context,
     optimizedContext,
     sourceTextByRelativePath: normalizedSourceTextByRelativePath,
+    cwd: state.cwd,
+    env: state.env,
   });
 
   const generatedPromptFiles = selectedPromptTemplates.map((templateName) => getPromptContract(templateName).outputFileName);
