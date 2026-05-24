@@ -39,6 +39,7 @@ const { runSearchSource } = require('../src/cli/commands/searchSourceCommand');
 const { runJoblog } = require('../src/cli/commands/joblogCommand');
 const { runDocsGenerateCatalog } = require('./commands/generate-tool-catalog');
 const { run: runAnalyses } = require('../src/cli/commands/analysesCommand');
+const { runMcp } = require('../src/cli/commands/mcpCommand');
 
 function printHelp() {
   console.log('Usage:');
@@ -69,9 +70,10 @@ function printHelp() {
   console.log('  zeus [--config <path>] inspect-object --profile <name> --lib <lib> --name <name> [--type *PGM|*FILE|*SRVPGM|*MODULE] [--journal]');
   console.log('  zeus [--config <path>] test-run <start|capture|show|rollback> --profile <name> [options]');
   console.log('  zeus [--config <path>] bridge <plan|stage|apply|compile-plan|compile-run|report> --profile <name> [options]');
-  console.log('  zeus pui-edit --file <path> --action <roundtrip-check|dump-json|plan|apply|grid-add-column> [--changes-file <path>] [--confirm] [--sfl-record <name>] [--sfl-field "<DDS line>"]');
+  console.log('  zeus pui-edit --file <path> --action <roundtrip-check|dump-json|validate-json|export-json|import-json|plan|apply|grid-add-column> [--changes-file <path>] [--out <path>] [--in <path>] [--format pretty|compact|dddl] [--confirm] [--sfl-record <name>] [--sfl-field "<DDS line>"]');
   console.log('  zeus [--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>]');
   console.log('  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>]');
+  console.log('  zeus [--config <path>] mcp <serve|help> [--stdio true|false] [--verbose]');
 }
 
 function parseArgs(argv) {
@@ -293,6 +295,11 @@ async function main() {
       await runDocsGenerateCatalog(args);
       return;
     }
+  }
+
+  if (command === 'mcp') {
+    await runMcp(args);
+    return;
   }
 
   printHelp();

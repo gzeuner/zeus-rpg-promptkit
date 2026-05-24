@@ -110,6 +110,7 @@ function updateOptimizedContext(optimizedContext, context, patch = {}) {
     ifsPaths: context.ifsPaths,
     searchResults: context.searchResults,
     diagnosticPacks: context.diagnosticPacks,
+    puiPatterns: context.puiPatterns,
     db2Metadata: context.db2Metadata,
     testData: context.testData,
     notes: context.notes,
@@ -316,6 +317,7 @@ function buildContextStage(state) {
     generatedAt: resolveTimestamp(state.reproducibility),
   });
   let context = buildContext({ canonicalAnalysis });
+  const stageDiagnostics = [];
 
   const graph = buildDependencyGraph(context);
   const crossProgramGraph = buildCrossProgramGraph({
@@ -374,7 +376,10 @@ function buildContextStage(state) {
       scanCache: scanCache ? scanCache.getStats() : null,
       sourceSnippetFound: Boolean(sourceSnippet),
     },
-    stageDiagnostics: crossProgramGraph.diagnostics || [],
+    stageDiagnostics: [
+      ...(crossProgramGraph.diagnostics || []),
+      ...stageDiagnostics,
+    ],
   };
 }
 
@@ -463,6 +468,8 @@ function optimizeContextStage(state) {
     canonicalAnalysis,
     context,
     optimizedContext: null,
+    cwd: state.cwd,
+    env: state.env,
   });
   const optimizedContext = optimizeContext(context, config.contextOptimizer, baseAiProjection);
   const optimizedTokens = estimateTokensFromObject(optimizedContext);

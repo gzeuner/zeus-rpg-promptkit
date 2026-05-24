@@ -257,6 +257,102 @@ function projectNativeFiles(context, canonicalAnalysis, evidenceIndex) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function projectUiPatterns(context) {
+  const puiPatterns = context && context.puiPatterns && typeof context.puiPatterns === 'object'
+    ? context.puiPatterns
+    : null;
+  if (!puiPatterns || !puiPatterns.enabled) {
+    return {
+      enabled: false,
+      summary: {},
+      elements: {
+        familiesTop: [],
+        typesTop: [],
+        usageMatrix: [],
+      },
+      interactionModel: {
+        runtimePatterns: [],
+        responseSignals: [],
+        backendActions: [],
+        flowPatterns: [],
+      },
+      subfileLifecycleModel: {
+        phases: [],
+        controls: [],
+        gridCapabilities: [],
+      },
+      stateMachineModel: {
+        states: [],
+        transitions: [],
+      },
+    };
+  }
+
+  return {
+    enabled: true,
+    sourceFile: puiPatterns.sourceFile || null,
+    sourceVersion: puiPatterns.sourceVersion || null,
+    generatedAt: puiPatterns.generatedAt || null,
+    summary: puiPatterns.summary || {},
+    elements: puiPatterns.elements || {
+      familiesTop: [],
+      typesTop: [],
+      usageMatrix: [],
+    },
+    interactionModel: puiPatterns.interactionModel || {
+      runtimePatterns: [],
+      responseSignals: [],
+      backendActions: [],
+      flowPatterns: [],
+    },
+    subfileLifecycleModel: puiPatterns.subfileLifecycleModel || {
+      phases: [],
+      controls: [],
+      gridCapabilities: [],
+    },
+    stateMachineModel: puiPatterns.stateMachineModel || {
+      states: [],
+      transitions: [],
+    },
+  };
+}
+
+function projectUiPatternKnowledge({ cwd = process.cwd(), env = process.env } = {}) {
+  return {
+    enabled: false,
+    status: 'disabled',
+    reason: 'Project-neutral knowledge catalog is not implemented yet. Source-derived local knowledge paths were removed during the privacy reset.',
+    libraryId: null,
+    knowledgeBaseId: null,
+    generatedAt: null,
+    summary: {
+      elementTypeCount: 0,
+      elementFamilyCount: 0,
+      runtimePatternCount: 0,
+      transitionCount: 0,
+      dddlTemplateCount: 0,
+      dddlTemplateCardCount: 0,
+    },
+    domains: {
+      familiesTop: [],
+      runtimePatterns: [],
+      responseSignals: [],
+      backendActions: [],
+      flowPatterns: [],
+      subfileControls: [],
+      gridCapabilities: [],
+      stateTransitions: [],
+    },
+    retrieval: {
+      strategy: 'disabled',
+      availableCardTypes: [],
+      notes: [
+        'MCP/API knowledge surfaces remain disabled until a privacy-gated final catalog exists.',
+      ],
+    },
+  };
+}
+
 function projectBinding(context, canonicalAnalysis, evidenceIndex) {
   const bindingAnalysis = (context && context.bindingAnalysis) || {};
   const moduleEntities = new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.modules)
@@ -425,7 +521,9 @@ function cloneEntityList(items, mapper) {
 function buildWorkflow(name, context, projection, payload = {}) {
   return {
     name,
-    summary: context && context.summary ? context.summary.text : '',
+    summary: typeof payload.summary === 'string'
+      ? payload.summary
+      : (context && context.summary ? context.summary.text : ''),
     tables: cloneEntityList(payload.tables && payload.tables.length > 0 ? payload.tables : projection.entities.tables),
     programCalls: cloneEntityList(payload.programCalls && payload.programCalls.length > 0 ? payload.programCalls : projection.entities.programCalls),
     procedureCalls: cloneEntityList(payload.procedureCalls && payload.procedureCalls.length > 0 ? payload.procedureCalls : projection.entities.procedureCalls),
@@ -582,7 +680,14 @@ function buildWorkflowPayload(workflowName, optimizedContext, fallbackSqlStateme
   };
 }
 
-function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedContext = null, sourceTextByRelativePath = null }) {
+function buildAiKnowledgeProjection({
+  canonicalAnalysis,
+  context,
+  optimizedContext = null,
+  sourceTextByRelativePath = null,
+  cwd = process.cwd(),
+  env = process.env,
+}) {
   if (!canonicalAnalysis || canonicalAnalysis.kind !== 'canonical-analysis') {
     throw new Error('AI knowledge projection requires canonical analysis input.');
   }
@@ -622,6 +727,8 @@ function buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedConte
       ifsPaths: projectIfsPaths(context, evidenceIndex),
       searchFindings: projectSearchFindings(context),
       diagnosticPacks: projectDiagnosticPacks(context),
+      uiPatterns: projectUiPatterns(context),
+      uiPatternKnowledge: projectUiPatternKnowledge({ cwd, env }),
       binding: projectBinding(context, canonicalAnalysis, evidenceIndex),
       modules: asArray(canonicalAnalysis.entities && canonicalAnalysis.entities.modules).map((entry) => ({
         name: entry.name,
