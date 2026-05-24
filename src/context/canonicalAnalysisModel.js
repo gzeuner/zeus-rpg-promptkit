@@ -1400,6 +1400,57 @@ function defaultDiagnosticPackReport() {
   };
 }
 
+function defaultPuiPatterns() {
+  return {
+    enabled: false,
+    importedAt: null,
+    sourceFile: null,
+    sourceKind: null,
+    sourceVersion: null,
+    generatedAt: null,
+    scope: {
+      scannedFiles: 0,
+      puiCandidateDdsFiles: 0,
+      parsedPuiJsonFiles: 0,
+      jsonParseErrors: 0,
+    },
+    summary: {
+      totalItems: 0,
+      elementTypeCount: 0,
+      elementFamilyCount: 0,
+      interactionPatternCount: 0,
+      dialogPatternCount: 0,
+      handlerBindings: 0,
+      runtimeGateChecks: 0,
+      profoundUiLibraryBindings: 0,
+    },
+    elements: {
+      familiesTop: [],
+      typesTop: [],
+      usageMatrix: [],
+    },
+    interactionModel: {
+      runtimePatterns: [],
+      responseSignals: [],
+      backendActions: [],
+      flowPatterns: [],
+    },
+    subfileLifecycleModel: {
+      phases: [],
+      controls: [],
+      gridCapabilities: [],
+    },
+    stateMachineModel: {
+      states: [],
+      transitions: [],
+    },
+    redactionPolicy: {
+      classification: null,
+      literalSignalsRedacted: 0,
+    },
+  };
+}
+
 function defaultAnalysisCache() {
   return {
     enabled: false,
@@ -1558,6 +1609,7 @@ function buildCanonicalAnalysisModel({
       ifsPaths: defaultIfsPathReport(),
       searchResults: defaultSearchResults(),
       diagnosticPacks: defaultDiagnosticPackReport(),
+      puiPatterns: defaultPuiPatterns(),
       analysisCache: defaultAnalysisCache(),
       db2Metadata: null,
       testData: null,
@@ -1652,6 +1704,7 @@ function enrichCanonicalAnalysisModel(model, updates = {}) {
       ...(updates.ifsPaths !== undefined ? { ifsPaths: mergeObject(model.enrichments.ifsPaths, updates.ifsPaths) } : {}),
       ...(updates.searchResults !== undefined ? { searchResults: mergeObject(model.enrichments.searchResults, updates.searchResults) } : {}),
       ...(updates.diagnosticPacks !== undefined ? { diagnosticPacks: mergeObject(model.enrichments.diagnosticPacks, updates.diagnosticPacks) } : {}),
+      ...(updates.puiPatterns !== undefined ? { puiPatterns: mergeObject(model.enrichments.puiPatterns, updates.puiPatterns) } : {}),
       ...(updates.analysisCache !== undefined ? { analysisCache: mergeObject(model.enrichments.analysisCache, updates.analysisCache) } : {}),
       ...(updates.db2Metadata !== undefined ? { db2Metadata: updates.db2Metadata } : {}),
       ...(updates.testData !== undefined ? { testData: updates.testData } : {}),
@@ -1794,6 +1847,7 @@ module.exports = {
   defaultGraphSummary,
   defaultIfsPathReport,
   defaultDiagnosticPackReport,
+  defaultPuiPatterns,
   defaultAnalysisCache,
   defaultNativeFileUsage,
   defaultSearchResults,

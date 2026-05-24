@@ -14,7 +14,7 @@ test('prompt registry exposes contract metadata for supported templates', () => 
   assert.ok(contracts.some((entry) => entry.name === 'defect-analysis'));
   assert.ok(contracts.some((entry) => entry.name === 'modernization'));
   assert.equal(getPromptContract('documentation').version, 1);
-  assert.equal(getPromptContract('modernization').workflow, 'documentation');
+  assert.equal(getPromptContract('modernization').workflow, 'modernization');
 });
 
 test('prompt validation reports missing required inputs clearly', () => {

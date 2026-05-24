@@ -62,6 +62,8 @@ test('buildAiKnowledgeProjection emits a versioned prompt-ready projection with 
     assert.ok(projection.evidenceIndex.length >= 2);
     assert.ok(projection.riskMarkers.includes('Dynamic SQL detected'));
     assert.ok(projection.uncertaintyMarkers.includes('DYNAMIC_SQL'));
+    assert.equal(typeof projection.entities.uiPatternKnowledge, 'object');
+    assert.equal(typeof projection.entities.uiPatternKnowledge.enabled, 'boolean');
     assert.equal(projection.workflows.documentation.sqlStatements.length, 1);
     assert.ok(projection.workflows.documentation.tokenBudget >= 1);
     assert.ok(Array.isArray(projection.workflows.documentation.evidencePacks.sql));
@@ -210,6 +212,43 @@ test('buildAiKnowledgeProjection carries DB2 metadata and test data links into w
     assert.ok(projection.entities.db2Tables[0].evidenceRefs.length >= 1);
     assert.equal(projection.workflows.documentation.db2Tables.length, 1);
     assert.equal(projection.workflows.documentation.testData.tables.length, 1);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('buildAiKnowledgeProjection keeps uiPatternKnowledge disabled after knowledge reset', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-ai-projection-cwd-'));
+  const workspaceRoot = path.join(tempRoot, 'workspace');
+  const otherRoot = path.join(tempRoot, 'other');
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+  fs.mkdirSync(otherRoot, { recursive: true });
+
+  const canonicalAnalysis = buildCanonicalAnalysisModel({
+    program: 'ORDERPGM',
+    sourceRoot: workspaceRoot,
+    sourceFiles: [],
+    dependencies: {},
+    notes: [],
+  });
+  const context = buildContext({ canonicalAnalysis });
+
+  try {
+    const previousCwd = process.cwd();
+    process.chdir(otherRoot);
+    try {
+      const projection = buildAiKnowledgeProjection({
+        canonicalAnalysis,
+        context,
+        cwd: workspaceRoot,
+        env: process.env,
+      });
+      assert.equal(projection.entities.uiPatternKnowledge.enabled, false);
+      assert.equal(projection.entities.uiPatternKnowledge.status, 'disabled');
+      assert.match(projection.entities.uiPatternKnowledge.reason, /privacy reset/i);
+    } finally {
+      process.chdir(previousCwd);
+    }
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

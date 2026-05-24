@@ -279,6 +279,138 @@
         ],
         "dependencyGraphSummary": { "nodeCount": 6, "edgeCount": 5 },
         "testData": { "status": "skipped" }
+      },
+      "modernization": {
+        "summary": "Program PROGRAM_001 mixes dynamic SQL, native file updates, and external calls that should be separated behind safer modernization seams.",
+        "tables": [
+          { "name": "TABLE_001", "kind": "TABLE" },
+          { "name": "TABLE_002", "kind": "TABLE" }
+        ],
+        "programCalls": [
+          { "name": "PROGRAM_002", "kind": "PROGRAM" }
+        ],
+        "copyMembers": [
+          { "name": "QCPYSRC,RULECOPY" }
+        ],
+        "sqlStatements": [
+          {
+            "id": "SQL:SELECT:1",
+            "type": "SELECT",
+            "intent": "READ",
+            "text": "select column_001 from table_001 where status = :status",
+            "tables": ["TABLE_001"],
+            "dynamic": false,
+            "unresolved": false,
+            "evidenceRefs": ["EV0001"]
+          },
+          {
+            "id": "SQL:PREPARE:2",
+            "type": "PREPARE",
+            "intent": "OTHER",
+            "text": "prepare S1 from :stmt_001",
+            "tables": [],
+            "dynamic": true,
+            "unresolved": true,
+            "evidenceRefs": ["EV0002"]
+          }
+        ],
+        "nativeFiles": [
+          {
+            "name": "FILE_001",
+            "kind": "DISK",
+            "keyed": true,
+            "mutating": true,
+            "interactive": false,
+            "recordFormats": ["FORMAT_001"],
+            "evidenceRefs": ["EV0003"]
+          }
+        ],
+        "riskMarkers": ["Dynamic SQL detected", "Mutating native file I/O detected"],
+        "uncertaintyMarkers": ["DYNAMIC_SQL"],
+        "tokenBudget": 2400,
+        "estimatedTokens": 1180,
+        "evidencePacks": {
+          "sql": [
+            {
+              "rank": 1,
+              "score": 150,
+              "label": "PREPARE SQL",
+              "file": "SOURCE_FILE_001.sqlrpgle",
+              "startLine": 18,
+              "endLine": 18,
+              "snippet": "exec sql prepare S1 from :stmt_001;",
+              "ref": "EV0002",
+              "category": "sql"
+            }
+          ],
+          "calls": [
+            {
+              "rank": 2,
+              "score": 110,
+              "label": "Program Call PROGRAM_002",
+              "file": "SOURCE_FILE_001.sqlrpgle",
+              "startLine": 26,
+              "endLine": 26,
+              "snippet": "callp PROGRAM_002(entryId);",
+              "ref": "EV0004",
+              "category": "calls"
+            }
+          ],
+          "fileUsage": [
+            {
+              "rank": 3,
+              "score": 105,
+              "label": "Native File FILE_001",
+              "file": "SOURCE_FILE_001.sqlrpgle",
+              "startLine": 11,
+              "endLine": 11,
+              "snippet": "update FORMAT_001;",
+              "ref": "EV0003",
+              "category": "fileUsage"
+            }
+          ],
+          "conditionals": [],
+          "errorPaths": []
+        },
+        "evidenceHighlights": [
+          {
+            "rank": 1,
+            "score": 150,
+            "label": "PREPARE SQL",
+            "file": "SOURCE_FILE_001.sqlrpgle",
+            "startLine": 18,
+            "endLine": 18,
+            "snippet": "exec sql prepare S1 from :stmt_001;",
+            "ref": "EV0002",
+            "category": "sql"
+          },
+          {
+            "rank": 2,
+            "score": 105,
+            "label": "Native File FILE_001",
+            "file": "SOURCE_FILE_001.sqlrpgle",
+            "startLine": 11,
+            "endLine": 11,
+            "snippet": "update FORMAT_001;",
+            "ref": "EV0003",
+            "category": "fileUsage"
+          }
+        ],
+        "rankedEvidence": [
+          {
+            "rank": 1,
+            "score": 150,
+            "label": "PREPARE SQL",
+            "file": "SOURCE_FILE_001.sqlrpgle",
+            "startLine": 18,
+            "endLine": 18,
+            "snippet": "exec sql prepare S1 from :stmt_001;",
+            "ref": "EV0002",
+            "category": "sql"
+          }
+        ],
+        "dependencyGraphSummary": { "nodeCount": 6, "edgeCount": 5 },
+        "testData": { "status": "skipped" }
       }
     }
   },
