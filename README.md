@@ -167,7 +167,10 @@ Ziel ist nicht „Agent darf alles“, sondern:
 node cli/zeus.js mcp serve --verbose
 ```
 
-Empfohlen: Tool-Oberfläche explizit begrenzen:
+Ohne `--allow-tools` exponiert MCP nur die minimale sichere Default-Oberfläche: `zeus.health`, `zeus.version`, `zeus.doctor`.
+Auch read-only DB2/IBM-i-Tools bleiben explizites Opt-in, weil read-only trotzdem sensible Daten offenlegen kann.
+
+Empfohlen: Tool-Oberfläche für echte Workflows explizit begrenzen:
 
 ```bash
 node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql,zeus.search-source
@@ -178,12 +181,12 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,
 | Bereich | Verhalten |
 |---|---|
 | Transport | lokal über `stdio` |
-| Policy | default-deny / Tool-Allowlist |
+| Policy | minimale sichere Default-Oberfläche plus explizite Tool-Allowlist |
 | Allowlist | `--allow-tools` |
 | Redaction | Maskierung von Response- und Error-Payloads |
 | Audit | lokales append-only JSONL unter `.local/mcp/audit/mcp-audit.jsonl` |
 | Guardrails | Timeouts, Antwortgrößenlimits, deterministische Fehlercodes |
-| Pfade | lokale Pfade müssen innerhalb des Workspace bleiben |
+| Pfade | lokale Pfade müssen innerhalb des Workspace bleiben, auch absolute Pfade |
 
 ### Aktuelle MCP-Tool-Oberfläche
 
@@ -819,7 +822,10 @@ The goal is not “let the agent do everything”. The goal is:
 node cli/zeus.js mcp serve --verbose
 ```
 
-Recommended: restrict the exposed tool surface explicitly:
+Without `--allow-tools`, MCP exposes only the minimal safe default surface: `zeus.health`, `zeus.version`, and `zeus.doctor`.
+Remote read-only DB2 / IBM i tools still require explicit opt-in because read-only access can still expose sensitive data.
+
+Recommended: restrict the exposed tool surface explicitly for real workflows:
 
 ```bash
 node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql,zeus.search-source
@@ -830,12 +836,12 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,
 | Area | Behavior |
 |---|---|
 | Transport | local `stdio` |
-| Policy | default-deny / tool allowlist |
+| Policy | minimal safe default surface plus explicit tool allowlist |
 | Allowlist | `--allow-tools` |
 | Redaction | response and error payload masking |
 | Audit | local append-only JSONL at `.local/mcp/audit/mcp-audit.jsonl` |
 | Guardrails | timeouts, response-size limits, deterministic error codes |
-| Paths | local paths must remain inside the workspace |
+| Paths | local paths must remain inside the workspace, including absolute paths |
 
 ### Current MCP tool surface
 
