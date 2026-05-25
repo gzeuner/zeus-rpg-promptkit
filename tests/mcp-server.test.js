@@ -5,13 +5,23 @@ const os = require('os');
 const path = require('path');
 const { PassThrough } = require('node:stream');
 
-const { createMcpServer } = require('../src/mcp/mcpServer');
-const { __private } = require('../src/mcp/mcpTools');
+const { createMcpServer, DEFAULT_MCP_SAFE_TOOL_NAMES } = require('../src/mcp/mcpServer');
+const { listMcpTools, __private } = require('../src/mcp/mcpTools');
 const { MCP_AUDIT_SCHEMA_VERSION } = require('../src/mcp/mcpAuditLog');
 const { encodeJsonRpcMessage, parseIncomingMessages } = require('../src/mcp/stdioTransport');
 
+const ALL_TEST_TOOL_NAMES = listMcpTools().map((tool) => tool.name);
+
+function createTestServer(runtime = {}) {
+  return createMcpServer({
+    cwd: process.cwd(),
+    allowlistedTools: ALL_TEST_TOOL_NAMES,
+    ...runtime,
+  });
+}
+
 test('mcp initialize returns protocol and capabilities', async () => {
-  const server = createMcpServer({ cwd: process.cwd() });
+  const server = createTestServer({ cwd: process.cwd() });
   const response = await server.handleRequest({
     jsonrpc: '2.0',
     id: 1,
@@ -26,7 +36,7 @@ test('mcp initialize returns protocol and capabilities', async () => {
 });
 
 test('mcp rejects invalid JSON-RPC version with deterministic -32600 error', async () => {
-  const server = createMcpServer({ cwd: process.cwd() });
+  const server = createTestServer({ cwd: process.cwd() });
   await assert.rejects(
     () => server.handleRequest({
       jsonrpc: '1.0',
@@ -42,7 +52,7 @@ test('mcp rejects invalid JSON-RPC version with deterministic -32600 error', asy
 });
 
 test('mcp maps unknown methods to deterministic -32601 errors', async () => {
-  const server = createMcpServer({ cwd: process.cwd() });
+  const server = createTestServer({ cwd: process.cwd() });
   await assert.rejects(
     () => server.handleRequest({
       jsonrpc: '2.0',
@@ -57,15 +67,25 @@ test('mcp maps unknown methods to deterministic -32601 errors', async () => {
   );
 });
 
-test('mcp tools list and call health tool', async () => {
+test('mcp tools list defaults to the minimal safe surface and excludes risky tools', async () => {
   const server = createMcpServer({ cwd: process.cwd() });
   const listResponse = await server.handleRequest({
     jsonrpc: '2.0',
     id: 10,
     method: 'tools/list',
   });
+
   assert.equal(Array.isArray(listResponse.result.tools), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.health'), true);
+  assert.deepEqual(
+    listResponse.result.tools.map((tool) => tool.name),
+    DEFAULT_MCP_SAFE_TOOL_NAMES,
+  );
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.write-sql'), false);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.bridge'), false);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-sql'), false);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-table'), false);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.search-source'), false);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.knowledge'), false);
 
   const callResponse = await server.handleRequest({
     jsonrpc: '2.0',
@@ -78,34 +98,10 @@ test('mcp tools list and call health tool', async () => {
   });
   assert.equal(callResponse.result.isError, false);
   assert.equal(callResponse.result.structuredContent.ok, true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.doctor'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.workflow'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.bundle'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.analyze'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.impact'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.assess-risk'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-table'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-sql'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.write-sql'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.bridge'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.search-source'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.field-search'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.diff'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.generate-test'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.generate-checklist'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.qa'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.analyses'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.knowledge'), false);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.fetch'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.test-run'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.copy-to-workspace'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.serve'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.joblog'), true);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.inspect-object'), true);
 });
 
 test('mcp redaction preserves public tool and service identifiers when env contains uppercase ZEUS term', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     env: {
       ZEUS_FETCH_USER: 'ZEUS',
@@ -328,7 +324,7 @@ test('resolveWriteRowSafetyPolicy disables limits when explicitly turned off', (
 });
 
 test('mcp tools call rejects unknown tool', async () => {
-  const server = createMcpServer({ cwd: process.cwd() });
+  const server = createTestServer({ cwd: process.cwd() });
   await assert.rejects(
     () => server.handleRequest({
       jsonrpc: '2.0',
@@ -342,10 +338,9 @@ test('mcp tools call rejects unknown tool', async () => {
   );
 });
 
-test('mcp tools list only includes allowlisted tools', async () => {
-  const server = createMcpServer({
-    cwd: process.cwd(),
-    allowlistedTools: ['zeus.health'],
+test('mcp tools list only includes explicitly allowlisted tools', async () => {
+  const server = createTestServer({
+    allowlistedTools: ['zeus.health', 'zeus.search-source'],
   });
 
   const listResponse = await server.handleRequest({
@@ -356,13 +351,28 @@ test('mcp tools list only includes allowlisted tools', async () => {
 
   assert.deepEqual(
     listResponse.result.tools.map((tool) => tool.name),
-    ['zeus.health'],
+    ['zeus.health', 'zeus.search-source'],
   );
 });
 
-test('mcp tools call rejects tool outside allowlist', async () => {
-  const server = createMcpServer({
-    cwd: process.cwd(),
+test('mcp tools call rejects non-default tool when no explicit allowlist is provided', async () => {
+  const server = createMcpServer({ cwd: process.cwd() });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 14,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.search-source',
+      },
+    }),
+    /not allowed/i,
+  );
+});
+
+test('mcp tools call rejects tool outside explicit allowlist', async () => {
+  const server = createTestServer({
     allowlistedTools: ['zeus.health'],
   });
 
@@ -380,7 +390,7 @@ test('mcp tools call rejects tool outside allowlist', async () => {
 });
 
 test('mcp tools call doctor returns status-only checks without raw details', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     doctorRunner: () => ({
       hasCriticalFailure: true,
@@ -420,7 +430,7 @@ test('mcp tools call doctor returns status-only checks without raw details', asy
 });
 
 test('mcp tools call doctor requires profile argument', async () => {
-  const server = createMcpServer({ cwd: process.cwd() });
+  const server = createTestServer({ cwd: process.cwd() });
   await assert.rejects(
     () => server.handleRequest({
       jsonrpc: '2.0',
@@ -436,7 +446,7 @@ test('mcp tools call doctor requires profile argument', async () => {
 });
 
 test('mcp tools call query-sql returns deterministic structured rows', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     querySqlRunner: () => ({
       defaultSchema: 'QIWS',
@@ -485,7 +495,7 @@ test('mcp tools call query-sql returns deterministic structured rows', async () 
 });
 
 test('mcp tools call query-table returns deterministic table/column metadata', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     queryTableRunner: () => ({
       table: 'APP_TABLE_00',
@@ -585,7 +595,7 @@ test('mcp tools call query-table returns deterministic table/column metadata', a
 });
 
 test('mcp tools call query-table maps invalid filter pattern to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     queryTableRunner: () => {
       throw new Error('Invalid --filter pattern: BAD-!');
@@ -615,7 +625,7 @@ test('mcp tools call query-table maps invalid filter pattern to -32602', async (
 });
 
 test('mcp tools call query-sql rejects non-read-only SQL', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     querySqlRunner: () => {
       const error = new Error('Read-only SQL query must start with SELECT or WITH.');
@@ -645,7 +655,7 @@ test('mcp tools call query-sql rejects non-read-only SQL', async () => {
 });
 
 test('mcp tools call write-sql plan returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     writeSqlRunner: () => ({
       operation: 'plan',
@@ -692,7 +702,7 @@ test('mcp tools call write-sql plan returns deterministic structured payload', a
 });
 
 test('mcp tools call write-sql apply can execute when gates pass', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     writeSqlRunner: () => ({
       operation: 'apply',
@@ -734,8 +744,8 @@ test('mcp tools call write-sql apply can execute when gates pass', async () => {
 });
 
 test('mcp tools call write-sql maps policy-gated apply to -32601', async () => {
-  const server = createMcpServer({
-    cwd: process.cwd(),
+  const server = createTestServer({
+    allowlistedTools: ['zeus.write-sql'],
     writeSqlRunner: () => {
       const error = new Error('Tool is not allowed by MCP policy: zeus.write-sql apply blocked. MCP write execution is disabled.');
       error.code = 'TOOL_NOT_ALLOWED';
@@ -767,7 +777,7 @@ test('mcp tools call write-sql maps policy-gated apply to -32601', async () => {
 });
 
 test('mcp tools call write-sql maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     writeSqlRunner: () => {
       throw new Error('Invalid arguments for zeus.write-sql: operation must be plan or apply.');
@@ -797,7 +807,7 @@ test('mcp tools call write-sql maps invalid arguments to -32602', async () => {
 });
 
 test('mcp tools call bridge plan returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     bridgeRunner: () => ({
       operation: 'plan',
@@ -860,7 +870,7 @@ test('mcp tools call bridge plan returns deterministic structured payload', asyn
 });
 
 test('mcp tools call bridge maps disallowed operation to -32601 policy refusal', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
   });
 
@@ -888,7 +898,7 @@ test('mcp tools call bridge maps disallowed operation to -32601 policy refusal',
 });
 
 test('mcp tools call bridge maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
   });
 
@@ -922,7 +932,7 @@ test('mcp tools call search-source rejects relative source-root traversal outsid
   fs.mkdirSync(outsideRoot, { recursive: true });
   fs.writeFileSync(path.join(outsideRoot, 'A.rpgle'), 'CHAIN(E) CUSTID CUSTOMER;\n', 'utf8');
 
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: workspaceRoot,
   });
 
@@ -942,7 +952,78 @@ test('mcp tools call search-source rejects relative source-root traversal outsid
       }),
       (error) => {
         assert.equal(error.code, -32602);
-        assert.match(error.message, /relative --source-root must resolve inside workspace root/i);
+        assert.match(error.message, /--source-root must resolve inside workspace root/i);
+        return true;
+      },
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp tools call search-source allows relative source-root inside workspace', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-search-source-inside-'));
+  const workspaceRoot = path.join(tempRoot, 'workspace');
+  const sourceRoot = path.join(workspaceRoot, 'src');
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'CHAIN(E) CUSTID CUSTOMER;\n', 'utf8');
+
+  const server = createTestServer({
+    cwd: workspaceRoot,
+  });
+
+  try {
+    const response = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 182015,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.search-source',
+        arguments: {
+          sourceRoot: 'src',
+          searchTerm: 'CHAIN',
+        },
+      },
+    });
+
+    assert.equal(response.result.isError, false);
+    assert.equal(response.result.structuredContent.ok, true);
+    assert.equal(response.result.structuredContent.resultCount, 1);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp tools call search-source rejects absolute source-root outside workspace without leaking the escaped path', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-search-source-abs-guard-'));
+  const workspaceRoot = path.join(tempRoot, 'workspace');
+  const outsideRoot = path.join(tempRoot, 'outside');
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+  fs.mkdirSync(outsideRoot, { recursive: true });
+  fs.writeFileSync(path.join(outsideRoot, 'A.rpgle'), 'CHAIN(E) CUSTID CUSTOMER;\n', 'utf8');
+
+  const server = createTestServer({
+    cwd: workspaceRoot,
+  });
+
+  try {
+    await assert.rejects(
+      () => server.handleRequest({
+        jsonrpc: '2.0',
+        id: 182016,
+        method: 'tools/call',
+        params: {
+          name: 'zeus.search-source',
+          arguments: {
+            sourceRoot: outsideRoot,
+            searchTerm: 'CHAIN',
+          },
+        },
+      }),
+      (error) => {
+        assert.equal(error.code, -32602);
+        assert.match(error.message, /--source-root must resolve inside workspace root/i);
+        assert.doesNotMatch(error.message, new RegExp(outsideRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
         return true;
       },
     );
@@ -959,7 +1040,7 @@ test('mcp tools call field-search rejects relative source-root traversal outside
   fs.mkdirSync(outsideRoot, { recursive: true });
   fs.writeFileSync(path.join(outsideRoot, 'A.rpgle'), 'CHAIN(E) CUSTID CUSTOMER;\n', 'utf8');
 
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: workspaceRoot,
   });
 
@@ -979,7 +1060,7 @@ test('mcp tools call field-search rejects relative source-root traversal outside
       }),
       (error) => {
         assert.equal(error.code, -32602);
-        assert.match(error.message, /relative --source-root must resolve inside workspace root/i);
+        assert.match(error.message, /--source-root must resolve inside workspace root/i);
         return true;
       },
     );
@@ -988,8 +1069,41 @@ test('mcp tools call field-search rejects relative source-root traversal outside
   }
 });
 
+test('mcp tools call field-search allows absolute source-root inside workspace', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-field-search-inside-'));
+  const workspaceRoot = path.join(tempRoot, 'workspace');
+  const sourceRoot = path.join(workspaceRoot, 'src');
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'chain(e) CUSTID CUSTOMER;\n', 'utf8');
+
+  const server = createTestServer({
+    cwd: workspaceRoot,
+  });
+
+  try {
+    const response = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 182025,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.field-search',
+        arguments: {
+          sourceRoot,
+          field: 'CUSTID',
+        },
+      },
+    });
+
+    assert.equal(response.result.isError, false);
+    assert.equal(response.result.structuredContent.ok, true);
+    assert.equal(response.result.structuredContent.resultCount, 1);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test('mcp tools call diff returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     diffRunner: () => ({
       profile: 'default-shared',
@@ -1051,7 +1165,7 @@ test('mcp tools call diff returns deterministic structured payload', async () =>
 });
 
 test('mcp tools call diff maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     diffRunner: () => {
       throw new Error('No fetched source found for member "ORDERPGM" under /tmp/missing-fetch.');
@@ -1080,7 +1194,7 @@ test('mcp tools call diff maps invalid arguments to -32602', async () => {
 });
 
 test('mcp tools call generate-test returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     generateTestRunner: () => ({
       program: 'ORDERPGM',
@@ -1120,7 +1234,7 @@ test('mcp tools call generate-test returns deterministic structured payload', as
 });
 
 test('mcp tools call generate-test maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     generateTestRunner: () => {
       throw new Error('Invalid arguments for zeus.generate-test: program is required.');
@@ -1148,7 +1262,7 @@ test('mcp tools call generate-test maps invalid arguments to -32602', async () =
 });
 
 test('mcp tools call generate-checklist returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     generateChecklistRunner: () => ({
       program: 'ORDERPGM',
@@ -1194,7 +1308,7 @@ test('mcp tools call generate-checklist returns deterministic structured payload
 });
 
 test('mcp tools call generate-checklist maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     generateChecklistRunner: () => {
       throw new Error('Invalid arguments for zeus.generate-checklist: type must be DDL_CHANGE, CODE_CHANGE, or BOTH.');
@@ -1223,7 +1337,7 @@ test('mcp tools call generate-checklist maps invalid arguments to -32602', async
 });
 
 test('mcp tools call qa returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     qaRunner: () => ({
       inputPath: '/tmp/output/ORDERPGM/canonical-analysis.json',
@@ -1290,7 +1404,7 @@ test('mcp tools call qa returns deterministic structured payload', async () => {
 });
 
 test('mcp tools call qa maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     qaRunner: () => {
       throw new Error('Invalid option: --format must be one of jira, markdown, json');
@@ -1319,7 +1433,7 @@ test('mcp tools call qa maps invalid arguments to -32602', async () => {
 });
 
 test('mcp tools call analyses list returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     analysesRunner: () => ({
       operation: 'list',
@@ -1383,7 +1497,7 @@ test('mcp tools call analyses list returns deterministic structured payload', as
 });
 
 test('mcp tools call analyses show returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     analysesRunner: () => ({
       operation: 'show',
@@ -1453,7 +1567,7 @@ test('mcp tools call analyses show returns deterministic structured payload', as
 });
 
 test('mcp tools call analyses maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     analysesRunner: () => {
       throw new Error('Invalid arguments for zeus.analyses: operation must be list or show.');
@@ -1481,7 +1595,7 @@ test('mcp tools call analyses maps invalid arguments to -32602', async () => {
 });
 
 test('mcp knowledge tool is disabled after the privacy reset', async () => {
-  const server = createMcpServer({ cwd: process.cwd() });
+  const server = createTestServer({ cwd: process.cwd() });
   await assert.rejects(
     () => server.handleRequest({
       jsonrpc: '2.0',
@@ -1501,7 +1615,7 @@ test('mcp knowledge tool is disabled after the privacy reset', async () => {
 });
 
 test('mcp tools call fetch summary returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     fetchRunner: () => ({
       operation: 'summary',
@@ -1629,7 +1743,7 @@ test('mcp tools call fetch files supports deterministic cursor pagination', asyn
     o: 1,
   }), 'utf8').toString('base64url');
 
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     fetchRunner: (args) => {
       const incomingCursor = args && typeof args.cursor === 'string' ? args.cursor : null;
@@ -1712,7 +1826,7 @@ test('mcp tools call fetch files supports deterministic cursor pagination', asyn
 });
 
 test('mcp tools call fetch maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     fetchRunner: () => {
       throw new Error('Invalid arguments for zeus.fetch: operation must be summary or files.');
@@ -1740,7 +1854,7 @@ test('mcp tools call fetch maps invalid arguments to -32602', async () => {
 });
 
 test('mcp tools call test-run show returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     testRunRunner: () => ({
       operation: 'show',
@@ -1803,7 +1917,7 @@ test('mcp tools call test-run show returns deterministic structured payload', as
 });
 
 test('mcp tools call test-run rollback applies payload cap deterministically', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     testRunRunner: () => ({
       operation: 'rollback',
@@ -1858,7 +1972,7 @@ test('mcp tools call test-run rollback applies payload cap deterministically', a
 });
 
 test('mcp tools call test-run maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     testRunRunner: () => {
       throw new Error('Invalid arguments for zeus.test-run: operation must be show or rollback.');
@@ -1887,7 +2001,7 @@ test('mcp tools call test-run maps invalid arguments to -32602', async () => {
 });
 
 test('mcp tools call copy-to-workspace plan returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     copyToWorkspaceRunner: () => ({
       operation: 'plan',
@@ -1962,7 +2076,7 @@ test('mcp tools call copy-to-workspace plan supports deterministic cursor pagina
     o: 1,
   }), 'utf8').toString('base64url');
 
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     copyToWorkspaceRunner: (args) => {
       const incomingCursor = args && typeof args.cursor === 'string' ? args.cursor : null;
@@ -2076,7 +2190,7 @@ test('mcp tools call copy-to-workspace plan supports deterministic cursor pagina
 });
 
 test('mcp tools call copy-to-workspace maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     copyToWorkspaceRunner: () => {
       throw new Error('Invalid arguments for zeus.copy-to-workspace: operation must be plan.');
@@ -2105,7 +2219,7 @@ test('mcp tools call copy-to-workspace maps invalid arguments to -32602', async 
 });
 
 test('mcp tools call serve summary returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     serveRunner: () => ({
       operation: 'summary',
@@ -2157,7 +2271,7 @@ test('mcp tools call serve summary returns deterministic structured payload', as
 });
 
 test('mcp tools call serve maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     serveRunner: () => {
       throw new Error('Invalid arguments for zeus.serve: operation must be summary.');
@@ -2185,7 +2299,7 @@ test('mcp tools call serve maps invalid arguments to -32602', async () => {
 });
 
 test('mcp tools call joblog sanitizes backend runtime failures into deterministic tool error', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     joblogRunner: () => {
       throw new Error('SQLSTATE=08001 password=super-secret host=prod.example.internal');
@@ -2214,7 +2328,7 @@ test('mcp tools call joblog sanitizes backend runtime failures into deterministi
 });
 
 test('mcp tools call inspect-object sanitizes backend runtime failures into deterministic tool error', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     inspectObjectRunner: () => {
       throw new Error('JDBC handshake failure for host=prod.example.internal token=abc123');
@@ -2245,7 +2359,7 @@ test('mcp tools call inspect-object sanitizes backend runtime failures into dete
 });
 
 test('mcp tools call enforces tool execution timeout guardrail', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     toolExecutionTimeoutMs: 10,
     diffRunner: async () => {
@@ -2291,7 +2405,7 @@ test('mcp tools call enforces tool execution timeout guardrail', async () => {
 });
 
 test('mcp tools call enforces maximum response-size guardrail', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     maxToolResponseBytes: 180,
     diffRunner: () => ({
@@ -2336,7 +2450,7 @@ test('mcp tools call enforces maximum response-size guardrail', async () => {
 });
 
 test('mcp tools call search-source returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     searchSourceRunner: () => ({
       sourceRoot: '/tmp/src',
@@ -2401,7 +2515,7 @@ test('mcp tools call search-source returns deterministic structured payload', as
 });
 
 test('mcp tools call search-source applies payload item cap deterministically', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     searchSourceRunner: () => ({
       sourceRoot: '/tmp/src',
@@ -2449,7 +2563,7 @@ test('mcp tools call search-source applies payload item cap deterministically', 
 });
 
 test('mcp tools call search-source maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     searchSourceRunner: () => {
       throw new Error('Provide at least one search criterion: --search-term, --member, or --table');
@@ -2484,8 +2598,8 @@ test('mcp tools call search-source supports deterministic cursor pagination', as
   fs.writeFileSync(path.join(sourceRoot, 'B.rpgle'), 'CHAIN ORDERKEY ORDERS;\n', 'utf8');
   fs.writeFileSync(path.join(sourceRoot, 'C.rpgle'), 'CHAIN ITEMID ITEMS;\n', 'utf8');
 
-  const server = createMcpServer({
-    cwd: process.cwd(),
+  const server = createTestServer({
+    cwd: tempRoot,
   });
 
   try {
@@ -2555,8 +2669,8 @@ test('mcp tools call search-source maps invalid cursor to -32602', async () => {
   fs.mkdirSync(sourceRoot, { recursive: true });
   fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'CHAIN(E) CUSTID CUSTOMER;\n', 'utf8');
 
-  const server = createMcpServer({
-    cwd: process.cwd(),
+  const server = createTestServer({
+    cwd: tempRoot,
   });
 
   try {
@@ -2592,8 +2706,8 @@ test('mcp tools call search-source rejects legacy numeric cursor by default', as
   fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'CHAIN(E) CUSTID CUSTOMER;\n', 'utf8');
   fs.writeFileSync(path.join(sourceRoot, 'B.rpgle'), 'CHAIN ORDERKEY ORDERS;\n', 'utf8');
 
-  const server = createMcpServer({
-    cwd: process.cwd(),
+  const server = createTestServer({
+    cwd: tempRoot,
   });
 
   try {
@@ -2623,7 +2737,7 @@ test('mcp tools call search-source rejects legacy numeric cursor by default', as
 });
 
 test('mcp tools call field-search returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     fieldSearchRunner: () => ({
       sourceRoot: '/tmp/src',
@@ -2712,8 +2826,8 @@ test('mcp tools call field-search returns deterministic structured payload', asy
 });
 
 test('mcp tools call field-search maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
-    cwd: process.cwd(),
+  const server = createTestServer({
+    cwd: '/tmp',
     fieldSearchRunner: () => {
       throw new Error('Field-search source root not found: /tmp/does-not-exist');
     },
@@ -2746,8 +2860,8 @@ test('mcp tools call field-search maps invalid maxPayloadItems to -32602', async
   fs.mkdirSync(sourceRoot, { recursive: true });
   fs.writeFileSync(path.join(sourceRoot, 'ORDERPGM.rpgle'), 'chain(e) CUSTID CUSTOMER;\n', 'utf8');
 
-  const server = createMcpServer({
-    cwd: process.cwd(),
+  const server = createTestServer({
+    cwd: tempRoot,
   });
 
   try {
@@ -2784,8 +2898,8 @@ test('mcp tools call field-search supports deterministic cursor pagination', asy
   fs.writeFileSync(path.join(sourceRoot, 'B.rpgle'), 'if CUSTID > 0;\n', 'utf8');
   fs.writeFileSync(path.join(sourceRoot, 'C.rpgle'), 'where CUSTID = :CUSTID;\n', 'utf8');
 
-  const server = createMcpServer({
-    cwd: process.cwd(),
+  const server = createTestServer({
+    cwd: tempRoot,
   });
 
   try {
@@ -2857,8 +2971,8 @@ test('mcp tools call field-search maps invalid cursor to -32602', async () => {
   fs.mkdirSync(sourceRoot, { recursive: true });
   fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'chain(e) CUSTID CUSTOMER;\n', 'utf8');
 
-  const server = createMcpServer({
-    cwd: process.cwd(),
+  const server = createTestServer({
+    cwd: tempRoot,
   });
 
   try {
@@ -2894,8 +3008,8 @@ test('mcp tools call field-search rejects legacy numeric cursor by default', asy
   fs.writeFileSync(path.join(sourceRoot, 'A.rpgle'), 'chain(e) CUSTID CUSTOMER;\n', 'utf8');
   fs.writeFileSync(path.join(sourceRoot, 'B.rpgle'), 'if CUSTID > 0;\n', 'utf8');
 
-  const server = createMcpServer({
-    cwd: process.cwd(),
+  const server = createTestServer({
+    cwd: tempRoot,
   });
 
   try {
@@ -2925,7 +3039,7 @@ test('mcp tools call field-search rejects legacy numeric cursor by default', asy
 });
 
 test('mcp tools call joblog returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     joblogRunner: () => ({
       profile: 'default-shared',
@@ -3007,7 +3121,7 @@ test('mcp tools call joblog returns deterministic structured payload', async () 
 });
 
 test('mcp tools call joblog exposes compatibility note when fallback backend is used', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     joblogRunner: () => ({
       profile: 'default-local',
@@ -3051,7 +3165,7 @@ test('mcp tools call joblog exposes compatibility note when fallback backend is 
 });
 
 test('mcp tools call joblog maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     joblogRunner: () => {
       throw new Error('Invalid option: --severity must be one of WARNING, ERROR, INFO');
@@ -3080,7 +3194,7 @@ test('mcp tools call joblog maps invalid arguments to -32602', async () => {
 });
 
 test('mcp tools call inspect-object returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     inspectObjectRunner: () => ({
       profile: 'default-shared',
@@ -3143,7 +3257,7 @@ test('mcp tools call inspect-object returns deterministic structured payload', a
 });
 
 test('mcp tools call inspect-object maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     inspectObjectRunner: () => {
       throw new Error('Invalid arguments for zeus.inspect-object: type must be one of *PGM, *FILE.');
@@ -3174,7 +3288,7 @@ test('mcp tools call inspect-object maps invalid arguments to -32602', async () 
 });
 
 test('mcp tools call workflow returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     workflowRunner: () => ({
       profile: 'default-shared',
@@ -3280,7 +3394,7 @@ test('mcp tools call workflow returns deterministic structured payload', async (
 });
 
 test('mcp tools call workflow maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     workflowRunner: () => {
       throw new Error('Workflow run manifest not found: /tmp/output/ORDERPGM/workflow-run-manifest.json. Run workflow first.');
@@ -3308,7 +3422,7 @@ test('mcp tools call workflow maps invalid arguments to -32602', async () => {
 });
 
 test('mcp tools call bundle returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     bundleRunner: () => ({
       profile: 'default-shared',
@@ -3443,7 +3557,7 @@ test('mcp tools call bundle returns deterministic structured payload', async () 
 });
 
 test('mcp tools call bundle maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     bundleRunner: () => {
       throw new Error('Bundle manifest not found: /tmp/output/ORDERPGM/bundle-manifest.json. Run bundle first.');
@@ -3471,7 +3585,7 @@ test('mcp tools call bundle maps invalid arguments to -32602', async () => {
 });
 
 test('mcp tools call analyze returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     analyzeRunner: () => ({
       profile: 'default-shared',
@@ -3569,7 +3683,7 @@ test('mcp tools call analyze returns deterministic structured payload', async ()
 });
 
 test('mcp tools call analyze maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     analyzeRunner: () => {
       throw new Error('Analyze run manifest not found: /tmp/output/ORDERPGM/analyze-run-manifest.json');
@@ -3597,7 +3711,7 @@ test('mcp tools call analyze maps invalid arguments to -32602', async () => {
 });
 
 test('mcp tools call impact returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     impactRunner: () => ({
       profile: 'default-shared',
@@ -3674,7 +3788,7 @@ test('mcp tools call impact returns deterministic structured payload', async () 
 });
 
 test('mcp tools call impact applies maxItems cap deterministically', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     impactRunner: () => ({
       profile: 'default-shared',
@@ -3731,7 +3845,7 @@ test('mcp tools call impact applies maxItems cap deterministically', async () =>
 });
 
 test('mcp tools call impact supports deterministic cursor pagination', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     impactRunner: () => ({
       profile: 'default-shared',
@@ -3810,7 +3924,7 @@ test('mcp tools call impact supports deterministic cursor pagination', async () 
 });
 
 test('mcp tools call impact maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     impactRunner: () => {
       throw new Error('Output directory not found: /tmp/does-not-exist');
@@ -3838,7 +3952,7 @@ test('mcp tools call impact maps invalid arguments to -32602', async () => {
 });
 
 test('mcp tools call impact maps invalid maxItems to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     impactRunner: () => ({
       profile: 'default-shared',
@@ -3870,7 +3984,7 @@ test('mcp tools call impact maps invalid maxItems to -32602', async () => {
 });
 
 test('mcp tools call impact maps invalid cursor to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     impactRunner: () => ({
       profile: 'default-shared',
@@ -3902,7 +4016,7 @@ test('mcp tools call impact maps invalid cursor to -32602', async () => {
 });
 
 test('mcp tools call impact rejects legacy numeric cursor by default', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     impactRunner: () => ({
       profile: 'default-shared',
@@ -3947,7 +4061,7 @@ test('mcp tools call impact rejects legacy numeric cursor by default', async () 
 });
 
 test('mcp tools call assess-risk returns deterministic structured payload', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     assessRiskRunner: () => ({
       profile: 'default-shared',
@@ -4068,7 +4182,7 @@ test('mcp tools call assess-risk returns deterministic structured payload', asyn
 });
 
 test('mcp tools call assess-risk maps invalid arguments to -32602', async () => {
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     assessRiskRunner: () => {
       throw new Error('Canonical analysis not found for program "ORDERPGM" at /tmp/output/ORDERPGM/canonical-analysis.json. Run analyze first.');
@@ -4101,7 +4215,7 @@ test('mcp stdio returns deterministic parse errors for malformed JSON payloads',
   const outputChunks = [];
   output.on('data', (chunk) => outputChunks.push(Buffer.from(chunk)));
 
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     stdioInput: input,
     stdioOutput: output,
@@ -4132,7 +4246,7 @@ test('mcp stdio returns deterministic error for denied tools/call', async () => 
   const outputChunks = [];
   output.on('data', (chunk) => outputChunks.push(Buffer.from(chunk)));
 
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     allowlistedTools: ['zeus.health'],
     stdioInput: input,
@@ -4173,7 +4287,7 @@ test('mcp stdio allows an allowlisted tools/call and returns deterministic resul
   const outputChunks = [];
   output.on('data', (chunk) => outputChunks.push(Buffer.from(chunk)));
 
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     allowlistedTools: ['zeus.health'],
     stdioInput: input,
@@ -4214,7 +4328,7 @@ test('mcp stdio maps missing tools/call name to deterministic -32602 payload', a
   const outputChunks = [];
   output.on('data', (chunk) => outputChunks.push(Buffer.from(chunk)));
 
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     stdioInput: input,
     stdioOutput: output,
@@ -4255,7 +4369,7 @@ test('mcp stdio redacts secret-bearing error messages', async () => {
   const outputChunks = [];
   output.on('data', (chunk) => outputChunks.push(Buffer.from(chunk)));
 
-  const server = createMcpServer({
+  const server = createTestServer({
     cwd: process.cwd(),
     querySqlRunner: () => {
       throw new Error('DB failure password=super-secret token=abc123 user=MYUSER');
@@ -4301,7 +4415,7 @@ test('mcp audit trail writes allowed and refused tools/call events', async () =>
   const auditPath = path.join(tempRoot, 'audit', 'mcp-audit.jsonl');
 
   try {
-    const server = createMcpServer({
+    const server = createTestServer({
       cwd: tempRoot,
       auditPath,
       allowlistedTools: ['zeus.health'],
@@ -4395,7 +4509,7 @@ test('mcp audit trail redacts secret-bearing error fields', async () => {
   const auditPath = path.join(tempRoot, 'audit', 'mcp-audit.jsonl');
 
   try {
-    const server = createMcpServer({
+    const server = createTestServer({
       cwd: tempRoot,
       auditPath,
       querySqlRunner: () => {
@@ -4447,7 +4561,7 @@ test('mcp audit trail supports explicit schema version override', async () => {
   const auditPath = path.join(tempRoot, 'audit', 'mcp-audit.jsonl');
 
   try {
-    const server = createMcpServer({
+    const server = createTestServer({
       cwd: tempRoot,
       auditPath,
       auditSchemaVersion: 'mcp.tools.call.v1-local',
