@@ -20,6 +20,11 @@ const { createStdioTransport } = require('./stdioTransport');
 
 const JSONRPC_VERSION = '2.0';
 const MCP_PROTOCOL_VERSION = '2024-11-05';
+const DEFAULT_MCP_SAFE_TOOL_NAMES = Object.freeze([
+  'zeus.health',
+  'zeus.version',
+  'zeus.doctor',
+]);
 
 class RpcError extends Error {
   constructor(code, message, data) {
@@ -116,7 +121,8 @@ function parsePositiveInteger(value, fallback) {
 }
 
 function createToolPolicy(runtime, tools) {
-  const defaultAllowlist = tools.map((tool) => tool.name);
+  const knownToolNames = new Set(tools.map((tool) => tool.name));
+  const defaultAllowlist = DEFAULT_MCP_SAFE_TOOL_NAMES.filter((toolName) => knownToolNames.has(toolName));
   const rawAllowlist = runtime && Object.prototype.hasOwnProperty.call(runtime, 'allowlistedTools')
     ? runtime.allowlistedTools
     : defaultAllowlist;
@@ -362,5 +368,6 @@ function createMcpServer(runtime = {}) {
 
 module.exports = {
   createMcpServer,
+  DEFAULT_MCP_SAFE_TOOL_NAMES,
   RpcError,
 };

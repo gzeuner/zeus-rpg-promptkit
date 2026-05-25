@@ -69,8 +69,10 @@ function printMcpHelp() {
   console.log('  zeus mcp serve [--stdio true|false] [--allow-tools <name1,name2>] [--verbose]');
   console.log('');
   console.log('Notes:');
-  console.log('  - MVP currently exposes mostly read-only tools plus gated write planning/execution: zeus.health, zeus.version, zeus.doctor, zeus.workflow, zeus.bundle, zeus.analyze, zeus.impact, zeus.assess-risk, zeus.query-table, zeus.query-sql, zeus.write-sql, zeus.bridge, zeus.search-source, zeus.field-search, zeus.diff, zeus.generate-test, zeus.generate-checklist, zeus.qa, zeus.analyses, zeus.fetch, zeus.test-run, zeus.copy-to-workspace, zeus.serve, zeus.joblog, zeus.inspect-object');
+  console.log('  - Without --allow-tools, MCP exposes only the minimal safe default surface: zeus.health, zeus.version, zeus.doctor.');
+  console.log('  - Use --allow-tools to opt into additional read tools or operator-gated tools. Dangerous and remote-read tools are never part of the default surface.');
   console.log('  - Runs local-only over stdio transport.');
+  console.log('  - Local path inputs are workspace-bounded, including absolute paths.');
   console.log('  - Cursor-enabled tools return opaque versioned nextCursor tokens; legacy numeric cursor input is rejected and no longer supported.');
 }
 
