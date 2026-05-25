@@ -21,6 +21,7 @@ These locations are local-workshop surfaces and may be sensitive:
 - `.local/` may contain operator notes, MCP audit traces, session notes, scratch files, and debugging output.
 - `output/` may contain generated analysis artifacts for review and troubleshooting.
 - `.zeus/` may contain local runtime/experimental data.
+- `.local/internal-tools/knowledge-lab/` is an internal-only experiment space and not a product/runtime surface.
 
 ## What These Locations Are Not
 
@@ -35,6 +36,8 @@ These locations are local-workshop surfaces and may be sensitive:
 - Treat `.local/`, `output/`, and `.zeus/` content as potentially sensitive unless proven synthetic.
 - Do not migrate local audit/session notes into `src/knowledge/final`.
 - Do not promote local DDDL/template artifacts into reusable toolkit knowledge.
+- Do not treat local AI classifier/prompt output as final knowledge.
+- Do not train or fine-tune models on real customer/project source evidence.
 - Do not copy local examples into public docs/tests unless content is intentionally synthetic and reviewed.
 - Purge old knowledge-transfer notes, old `zeus.knowledge` traces, and old DDDL/template artifacts unless clearly synthetic and still needed.
 

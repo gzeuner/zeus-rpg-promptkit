@@ -30,3 +30,12 @@ Local risk handling:
 - `.local` audit/session-note files that preserve removed knowledge paths are local risk artifacts and should be purged unless proven synthetic
 - raw exports outside `.zeus/knowledge` (for example old `output/pui-dddl/*`) must be treated as unsafe local evidence, not reusable knowledge
 - DDDL is local raw interchange only and must not be promoted to final project-neutral knowledge
+
+Internal knowledge-lab note:
+
+- internal lab tooling may exist locally under `.local/internal-tools/knowledge-lab/`
+- this lab is local-only and not a CLI/MCP/API product feature
+- raw/intermediate lab outputs are sensitive and disposable
+- lab outputs must not be treated as final project-neutral knowledge
+- only privacy-passed final catalog objects may cross into runtime surfaces
+- policy reference: `docs/internal/knowledge-lab.md`
