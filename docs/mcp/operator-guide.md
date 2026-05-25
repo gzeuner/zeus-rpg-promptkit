@@ -1,7 +1,7 @@
 ---
 Title: MCP Operator Guide
 Description: Local-first MCP startup, policy boundaries, and troubleshooting for Zeus RPG PromptKit.
-Last Updated: 2026-05-22
+Last Updated: 2026-05-25
 ---
 
 # MCP Operator Guide
@@ -13,12 +13,12 @@ Expose a safe, local-only subset of Zeus capabilities over MCP stdio for AI clie
 ## Security Posture
 
 - Transport: stdio only (local process boundary)
-- Default behavior: read-mostly tool exposure
-- Policy: allowlist gate (`--allow-tools`) for explicit tool surface control
+- Default behavior: minimal safe default surface (`zeus.health`, `zeus.version`, `zeus.doctor`)
+- Policy: explicit allowlist gate (`--allow-tools`) for any broader tool surface
 - Redaction: response/error masking for common secret patterns
 - Audit: append-only local JSONL audit trail for `tools/call`
 - Runtime guardrails: per-tool timeout and maximum response-size limits with deterministic `-32000` failures
-- Local path policy: relative path inputs for local source-root tools must remain inside the current workspace root
+- Local path policy: local path inputs for local source-root tools must resolve inside the current workspace root, including absolute paths
 
 Out of scope for MVP:
 - remote apply/compile style operations
@@ -31,13 +31,17 @@ Out of scope for MVP:
 node cli/zeus.js mcp serve --stdio true --verbose
 ```
 
-Restrict exposed tools (recommended):
+Without `--allow-tools`, MCP exposes only `zeus.health`, `zeus.version`, and `zeus.doctor`.
+
+Restrict exposed tools explicitly for real workflows (recommended):
 
 ```bash
 node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql,zeus.search-source
 ```
 
 ## Supported MCP Tools (Current)
+
+Only the minimal safe default surface is exposed automatically. Everything else below requires explicit `--allow-tools`, including remote read-only DB2 / IBM i tools because read-only access can still expose sensitive data.
 
 - `zeus.health`
 - `zeus.version`

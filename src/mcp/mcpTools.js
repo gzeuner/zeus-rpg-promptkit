@@ -85,8 +85,8 @@ const MAX_MCP_PAYLOAD_ITEMS = 1000;
 const MCP_CURSOR_VERSION = 1;
 
 function isPathWithinBase(targetPath, basePath) {
-  const resolvedBase = path.resolve(basePath);
-  const resolvedTarget = path.resolve(targetPath);
+  const resolvedBase = resolvePathForBoundary(basePath);
+  const resolvedTarget = resolvePathForBoundary(targetPath);
   if (resolvedTarget === resolvedBase) {
     return true;
   }
@@ -96,7 +96,18 @@ function isPathWithinBase(targetPath, basePath) {
   return resolvedTarget.startsWith(baseWithSep);
 }
 
-function assertRelativePathWithinCwd({
+function resolvePathForBoundary(targetPath) {
+  const resolvedPath = path.resolve(targetPath);
+  try {
+    return fs.realpathSync.native(resolvedPath);
+  } catch (_) {
+    // TODO: Non-existent targets still fall back to lexical containment.
+    // A follow-up hardening pass should resolve existing parent segments to close symlink escapes for not-yet-created paths.
+    return resolvedPath;
+  }
+}
+
+function assertPathWithinCwd({
   toolName,
   optionName,
   rawValue,
@@ -104,14 +115,14 @@ function assertRelativePathWithinCwd({
   cwd,
 }) {
   const input = typeof rawValue === 'string' ? rawValue.trim() : '';
-  if (!input || path.isAbsolute(input)) {
+  if (!input) {
     return;
   }
   if (isPathWithinBase(resolvedPath, cwd)) {
     return;
   }
   const error = new Error(
-    `Invalid arguments for ${toolName}: relative ${optionName} must resolve inside workspace root (${cwd}).`,
+    `Invalid arguments for ${toolName}: ${optionName} must resolve inside workspace root (${cwd}).`,
   );
   error.code = 'TOOL_INVALID_ARGUMENTS';
   throw error;
@@ -1955,14 +1966,14 @@ function executeReadOnlyDiff(args = {}, context = {}) {
   const workspaceRootInput = String(analyzeConfig.sourceRoot || workCopyConfig.root || '').trim();
   const fetchRoot = path.resolve(cwd, fetchRootInput);
   const workspaceRoot = path.resolve(cwd, workspaceRootInput);
-  assertRelativePathWithinCwd({
+  assertPathWithinCwd({
     toolName: 'zeus.diff',
     optionName: '--fetch-out',
     rawValue: fetchRootInput,
     resolvedPath: fetchRoot,
     cwd,
   });
-  assertRelativePathWithinCwd({
+  assertPathWithinCwd({
     toolName: 'zeus.diff',
     optionName: '--source-root',
     rawValue: workspaceRootInput,
@@ -2058,7 +2069,7 @@ async function executeReadOnlyGenerateTest(args = {}, context = {}) {
     ? args.out.trim()
     : (args && typeof args.output === 'string' && args.output.trim() ? args.output.trim() : '');
   if (outArg) {
-    assertRelativePathWithinCwd({
+    assertPathWithinCwd({
       toolName: 'zeus.generate-test',
       optionName: '--out',
       rawValue: outArg,
@@ -2152,7 +2163,7 @@ async function executeReadOnlyGenerateChecklist(args = {}, context = {}) {
     ? args.out.trim()
     : (args && typeof args.output === 'string' && args.output.trim() ? args.output.trim() : '');
   if (outArg) {
-    assertRelativePathWithinCwd({
+    assertPathWithinCwd({
       toolName: 'zeus.generate-checklist',
       optionName: '--out',
       rawValue: outArg,
@@ -2274,7 +2285,7 @@ async function executeReadOnlyQa(args = {}, context = {}) {
   }
 
   const inputPath = path.resolve(cwd, input);
-  assertRelativePathWithinCwd({
+  assertPathWithinCwd({
     toolName: 'zeus.qa',
     optionName: '--input',
     rawValue: input,
@@ -2342,7 +2353,7 @@ function resolveAnalysesRegistryPath(args = {}, context = {}) {
     profile,
   });
   if (registryPathArg) {
-    assertRelativePathWithinCwd({
+    assertPathWithinCwd({
       toolName: 'zeus.analyses',
       optionName: '--registry-path',
       rawValue: registryPathArg,
@@ -2478,7 +2489,7 @@ function resolveFetchManifest(args = {}, context = {}) {
   const fetchConfig = resolveFetchConfig(fetchArgs, { cwd, env });
   const fetchRootInput = String(fetchConfig.out || '').trim();
   const fetchRoot = path.resolve(cwd, fetchRootInput || './rpg_sources');
-  assertRelativePathWithinCwd({
+  assertPathWithinCwd({
     toolName: 'zeus.fetch',
     optionName: '--out',
     rawValue: fetchRootInput,
@@ -2641,7 +2652,7 @@ function resolveTestRunManifestPath(args = {}, context = {}) {
   }
 
   const manifestPath = path.resolve(cwd, manifestArg);
-  assertRelativePathWithinCwd({
+  assertPathWithinCwd({
     toolName: 'zeus.test-run',
     optionName: '--manifest',
     rawValue: manifestArg,
@@ -2793,14 +2804,14 @@ async function executeReadOnlyCopyToWorkspace(args = {}, context = {}) {
   const targetRootInput = String(workCopyConfig.root || '').trim();
   const sourceRoot = path.resolve(cwd, sourceRootInput);
   const targetRoot = path.resolve(cwd, targetRootInput);
-  assertRelativePathWithinCwd({
+  assertPathWithinCwd({
     toolName: 'zeus.copy-to-workspace',
     optionName: '--out',
     rawValue: sourceRootInput,
     resolvedPath: sourceRoot,
     cwd,
   });
-  assertRelativePathWithinCwd({
+  assertPathWithinCwd({
     toolName: 'zeus.copy-to-workspace',
     optionName: 'workCopy.root',
     rawValue: targetRootInput,
@@ -2967,7 +2978,7 @@ async function executeReadOnlyServe(args = {}, context = {}) {
   const bundleConfig = resolveBundleConfig(args, { cwd, env });
   const outputRootInput = String(bundleConfig && bundleConfig.sourceOutputRoot ? bundleConfig.sourceOutputRoot : 'output').trim();
   const outputRoot = path.resolve(cwd, outputRootInput || 'output');
-  assertRelativePathWithinCwd({
+  assertPathWithinCwd({
     toolName: 'zeus.serve',
     optionName: '--source-output-root',
     rawValue: outputRootInput,
@@ -2992,7 +3003,7 @@ async function executeReadOnlyServe(args = {}, context = {}) {
     : null;
   if (args && (typeof args.registryPath === 'string' || typeof args['registry-path'] === 'string')) {
     const registryArg = typeof args.registryPath === 'string' ? args.registryPath : args['registry-path'];
-    assertRelativePathWithinCwd({
+    assertPathWithinCwd({
       toolName: 'zeus.serve',
       optionName: '--registry-path',
       rawValue: registryArg,
@@ -4064,7 +4075,7 @@ async function executeReadOnlySearchSource(args = {}, context = {}) {
     throw error;
   }
   const resolvedSourceRoot = path.resolve(cwd, sourceRoot);
-  assertRelativePathWithinCwd({
+  assertPathWithinCwd({
     toolName: 'zeus.search-source',
     optionName: '--source-root',
     rawValue: sourceRoot,
@@ -4205,7 +4216,7 @@ async function executeReadOnlyFieldSearch(args = {}, context = {}) {
   }
 
   const sourceRoot = path.resolve(cwd, sourceRootArg);
-  assertRelativePathWithinCwd({
+  assertPathWithinCwd({
     toolName: 'zeus.field-search',
     optionName: '--source-root',
     rawValue: sourceRootArg,
