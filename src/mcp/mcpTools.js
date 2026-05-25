@@ -101,6 +101,8 @@ function resolvePathForBoundary(targetPath) {
   try {
     return fs.realpathSync.native(resolvedPath);
   } catch (_) {
+    // TODO: Non-existent targets still fall back to lexical containment.
+    // A follow-up hardening pass should resolve existing parent segments to close symlink escapes for not-yet-created paths.
     return resolvedPath;
   }
 }
