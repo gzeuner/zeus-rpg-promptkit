@@ -11,6 +11,8 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
+const fs = require('fs');
+const path = require('path');
 const { renderAsciiTable } = require('../helpers/asciiTable');
 const { renderCsv } = require('../helpers/csvRenderer');
 const { resolveProfile, loadProfiles } = require('../../config/runtimeConfig');
@@ -23,6 +25,24 @@ const {
 } = require('../../core/queryService');
 
 async function runQuerySql(args) {
+  const watchSec = args.watch ? parseInt(String(args.watch), 10) : 0;
+  if (watchSec > 0 && !isNaN(watchSec)) {
+    // --watch: Query wiederholen bis Ctrl+C
+    const watchArgs = { ...args, watch: undefined };
+    console.log(`[watch] Starte Watch-Modus (alle ${watchSec}s). Ctrl+C zum Beenden.`);
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      process.stdout.write('\x1B[2J\x1B[0f'); // clear screen
+      await runSingleQuery(watchArgs);
+      process.stdout.write(`\n[watch] ${new Date().toLocaleTimeString()} | naechste Aktualisierung in ${watchSec}s\n`);
+      await new Promise((resolve) => setTimeout(resolve, watchSec * 1000));
+    }
+  } else {
+    await runSingleQuery(args);
+  }
+}
+
+async function runSingleQuery(args) {
   let output;
   try {
     output = normalizeOutput(args.output);
@@ -51,6 +71,38 @@ async function runQuerySql(args) {
     const execution = executeQuerySql(args);
 
     const { sql, defaultSchema, columns, matrix } = execution;
+
+    // --save: Ergebnis in Datei schreiben (CSV oder JSON)
+    if (args.save && String(args.save).trim()) {
+      const savePath = path.resolve(process.cwd(), String(args.save).trim());
+      const ext = path.extname(savePath).toLowerCase();
+      let content;
+      if (ext === '.json') {
+        const rows = matrix.map((row) =>
+          Object.fromEntries(columns.map((col, i) => [col, Array.isArray(row) ? row[i] : row[col]]))
+        );
+        content = JSON.stringify(rows, null, 2) + '\n';
+      } else {
+        content = renderCsv(columns, matrix);
+      }
+      fs.mkdirSync(path.dirname(savePath), { recursive: true });
+      fs.writeFileSync(savePath, content, 'utf8');
+      if (output !== 'csv') {
+        console.log(`Gespeichert: ${savePath} (${matrix.length} Zeile(n))`);
+      }
+      if (output === 'csv') {
+        process.stdout.write(content);
+        return;
+      }
+    }
+
+    if (output === 'json') {
+      const rows = matrix.map((row) =>
+        Object.fromEntries(columns.map((col, i) => [col, Array.isArray(row) ? row[i] : row[col]]))
+      );
+      process.stdout.write(JSON.stringify(rows, null, 2) + '\n');
+      return;
+    }
 
     if (output === 'csv') {
       process.stdout.write(renderCsv(columns, matrix));

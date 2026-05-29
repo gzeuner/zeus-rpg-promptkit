@@ -18,6 +18,18 @@ const ALLOWED_WORKFLOW_STEPS = new Set(['fetch', 'copy', 'analyze', 'impact', 'q
 const ALLOWED_BRIDGE_MODES = new Set(['plan-only', 'plan-stage-apply', 'plan-stage-apply-compile']);
 const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits', 'presets']);
 const PROFILES_METADATA_KEY = Symbol('zeusProfilesMetadata');
+
+/**
+ * Profile deren Name mit diesem Präfix beginnt gelten als "Mixin"-Profile
+ * (abstrakte Bausteine, die nur über `extends` eingebunden werden).
+ * Sie werden in der Profilauflistung (doctor, help) nicht als aufrufbare Profile angezeigt.
+ */
+const MIXIN_PROFILE_PREFIX = '_';
+
+/** Gibt an ob ein Profilname ein Mixin/abstraktes Profil ist. */
+function isMixinProfile(profileName) {
+  return typeof profileName === 'string' && profileName.startsWith(MIXIN_PROFILE_PREFIX);
+}
 const DEFAULT_WORK_COPY = Object.freeze({
   root: 'source/',
   extension: 'txt',
@@ -46,6 +58,8 @@ module.exports = {
   DEFAULT_WORKFLOW_STEPS,
   DEFAULT_WORK_COPY,
   GLOBAL_PROFILE_KEYS,
+  isMixinProfile,
+  MIXIN_PROFILE_PREFIX,
   PROFILES_METADATA_KEY,
   TOKEN_BUDGET_KEY_ALIASES,
 };

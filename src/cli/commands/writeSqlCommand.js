@@ -18,6 +18,9 @@ const path = require('path');
 const { resolveAnalyzeConfig, resolveAnalyzeDbConfig, loadProfiles, resolveProfile } = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
 const { runWriteDb2Query } = require('../../db2/writeQueryService');
+const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
+
+const PREFLIGHT_OPERATIONS = /^\s*(DELETE|UPDATE)\s+/i;
 
 const WRITE_MODES = Object.freeze({
   'upsert-sql': {
@@ -39,6 +42,16 @@ const WRITE_MODES = Object.freeze({
     command: 'update',
     pattern: /^\s*UPDATE\s+/i,
     accepted: 'UPDATE',
+  },
+  delete: {
+    command: 'delete',
+    pattern: /^\s*DELETE\s+/i,
+    accepted: 'DELETE',
+  },
+  'write-sql': {
+    command: 'write-sql',
+    pattern: /^\s*(INSERT|UPDATE|DELETE|MERGE)\s+/i,
+    accepted: 'INSERT, UPDATE, DELETE, MERGE',
   },
 });
 
@@ -74,6 +87,47 @@ function resolveSqlText(args, { cwd = process.cwd() } = {}) {
   const error = new Error('Missing required option: --sql "<DML ...>" or --file <path>');
   error.code = 'SQL_REQUIRED';
   throw error;
+}
+
+function extractTargetTable(sql) {
+  // DELETE FROM <schema.table> or UPDATE <schema.table>
+  const m = sql.match(/^\s*(?:DELETE\s+FROM|UPDATE)\s+([\w$.]+)/i);
+  return m ? m[1].toUpperCase() : null;
+}
+
+function buildPreflightCountSql(sql) {
+  const table = extractTargetTable(sql);
+  if (!table) return null;
+
+  // DELETE FROM <table> [WHERE ...]
+  const deleteWhere = sql.match(/^\s*DELETE\s+FROM\s+[\w$.]+(?:\s+(WHERE\s+[\s\S]+?))?\s*$/i);
+  if (deleteWhere) {
+    const where = deleteWhere[1] ? deleteWhere[1].trim() : null;
+    return where
+      ? `SELECT COUNT(*) AS ANZAHL FROM ${table} ${where}`
+      : `SELECT COUNT(*) AS ANZAHL FROM ${table}`;
+  }
+
+  // UPDATE <table> SET ... [WHERE ...]
+  const updateWhere = sql.match(/^\s*UPDATE\s+[\w$.]+\s+SET\s+[\s\S]+?(?:\s+(WHERE\s+[\s\S]+?))?\s*$/i);
+  if (updateWhere) {
+    const where = updateWhere[1] ? updateWhere[1].trim() : null;
+    return where
+      ? `SELECT COUNT(*) AS ANZAHL FROM ${table} ${where}`
+      : `SELECT COUNT(*) AS ANZAHL FROM ${table}`;
+  }
+
+  return `SELECT COUNT(*) AS ANZAHL FROM ${table}`;
+}
+
+function buildBackupSql(targetTable, schema) {
+  const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+  const parts = targetTable.split('.');
+  const tableName = parts[parts.length - 1].slice(0, 15); // IBM i max 18 chars total
+  const backupSchema = schema || (parts.length > 1 ? parts[0] : null);
+  const backupName = `_BAK_${tableName}_${ts}`.slice(0, 18);
+  const backupFqn = backupSchema ? `${backupSchema}.${backupName}` : backupName;
+  return `CREATE TABLE ${backupFqn} AS (SELECT * FROM ${targetTable}) WITH DATA`;
 }
 
 async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
@@ -127,6 +181,56 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
   console.log(`SQL: ${sql}`);
   console.log('');
 
+  // Pre-flight: Row-Count für DELETE/UPDATE anzeigen und ggf. auf --confirm warten
+  if (PREFLIGHT_OPERATIONS.test(sql)) {
+    const countSql = buildPreflightCountSql(sql);
+    if (countSql) {
+      let rowCount = '?';
+      try {
+        const countResult = runReadOnlyDb2Query({ dbConfig, query: countSql, maxRows: 1 });
+        const row = (countResult.rows || [])[0];
+        rowCount = row ? (row.ANZAHL || row.anzahl || Object.values(row)[0] || '?') : '?';
+      } catch (_) {
+        // Count-Fehler ist nicht kritisch — weiter ohne Zahl
+      }
+      console.log(`[preflight] Betroffene Zeilen: ${rowCount}`);
+      if (args['dry-run']) {
+        console.log('');
+        console.log('[dry-run] Kein SQL ausgef\u00fchrt. Beende mit --confirm oder --force um tats\u00e4chlich auszuf\u00fchren.');
+        process.exit(0);
+      }
+      if (!args.confirm && !args.force) {
+        console.error('');
+        console.error('[preflight] Abbruch \u2014 bitte --confirm zum Ausf\u00fchren oder --force zum \u00dcberspringen der Pr\u00fcfung angeben.');
+        process.exit(4);
+      }
+      console.log('');
+    }
+  }
+
+  // Backup: vor DELETE/UPDATE eine Sicherungskopie der Zieltabelle anlegen
+  if (args.backup) {
+    const targetTable = extractTargetTable(sql);
+    if (!targetTable) {
+      console.error('[backup] Zieltabelle konnte nicht aus SQL ermittelt werden — Backup übersprungen.');
+    } else {
+      const config = resolveAnalyzeConfig(args, { cwd: process.cwd() });
+      const backupSql = buildBackupSql(targetTable, config.db && config.db.defaultSchema);
+      console.log(`[backup] Sichere Tabelle: ${targetTable}`);
+      console.log(`[backup] CREATE-Statement: ${backupSql}`);
+      try {
+        const backupDbConfig = resolveAnalyzeDbConfig(config, 'metadata');
+        runWriteDb2Query({ dbConfig: backupDbConfig, sql: backupSql });
+        console.log('[backup] Backup-Tabelle erfolgreich angelegt.');
+      } catch (err) {
+        console.error(`[backup] FEHLER beim Anlegen der Backup-Tabelle: ${err.message}`);
+        console.error('[backup] Abbruch — SQL wurde NICHT ausgeführt.');
+        process.exit(1);
+      }
+    }
+    console.log('');
+  }
+
   let result;
   try {
     result = runWriteDb2Query({ dbConfig, sql });
@@ -150,4 +254,8 @@ async function runUpdateSql(args) {
   await runWriteSql(args, { mode: 'update' });
 }
 
-module.exports = { runUpsertSql, runInsertSql, runUpdateSql, validateWriteSql, resolveWriteMode };
+async function runDeleteSql(args) {
+  await runWriteSql(args, { mode: 'delete' });
+}
+
+module.exports = { runUpsertSql, runInsertSql, runUpdateSql, runDeleteSql, validateWriteSql, resolveWriteMode };

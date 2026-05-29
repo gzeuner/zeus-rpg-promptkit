@@ -93,10 +93,10 @@ function parseMaxRows(value) {
 
 function normalizeOutput(value) {
   const normalized = String(value || 'table').trim().toLowerCase();
-  if (normalized === 'table' || normalized === 'csv') {
+  if (normalized === 'table' || normalized === 'csv' || normalized === 'json') {
     return normalized;
   }
-  throw new Error('Invalid option: --output must be one of: table, csv');
+  throw new Error('Invalid option: --output must be one of: table, csv, json');
 }
 
 function validateDefaultSchema(value) {

@@ -18,7 +18,11 @@
     "maxSQLStatements": 30,
     "maxSourceSnippets": 40,
     "maxSnippetLines": 20,
-    "softTokenLimit": 10000
+    "softTokenLimit": 10000,
+    "workflowTokenBudgets": {
+      "documentation": 8000,
+      "defectAnalysis": 6000
+    }
   },
   "analysisLimits": {
     "maxProgramDepth": 25,
@@ -31,8 +35,8 @@
   "testData": {
     "limit": 50,
     "maskColumns": ["NAME", "EMAIL", "PHONE"],
-    "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
-    "denyTables": ["MYLIB.AUDITLOG"],
+    "allowTables": ["DATA_EXAMPLE.CUSTOMERS", "DATA_EXAMPLE.ORDERS"],
+    "denyTables": ["DATA_EXAMPLE.AUDIT_LOG"],
     "writeSafety": {
       "enabled": true,
       "maxRowsAffected": 100,
@@ -44,13 +48,22 @@
     },
     "maskRules": [
       {
+        "schema": "DATA_EXAMPLE",
         "table": "CUSTOMERS",
         "columns": ["PHONE"],
         "value": "MASKED_PHONE"
       }
     ]
   },
+  "presets": {
+    "shared-readonly-analysis": {
+      "steps": ["analyze", "report"],
+      "analyzeModes": ["documentation"],
+      "continueOnError": false
+    }
+  },
   "default-shared": {
+    "_comment": "Shared public defaults. Copy this template into your private profile file and replace placeholder values there only.",
     "outputRoot": "${env:ZEUS_OUTPUT_ROOT}",
     "analysesRegistryPath": "${env:ZEUS_ANALYSES_REGISTRY}",
     "defaultWorkspaceRoot": "${env:ZEUS_ANALYSES_ROOT}",
@@ -61,7 +74,8 @@
       "user": "${env:ZEUS_DB_USER}",
       "password": "${env:ZEUS_DB_PASSWORD}",
       "defaultLibrary": "${env:ZEUS_DB_DEFAULT_LIBRARY}",
-      "defaultSchema": "${env:ZEUS_DB_DEFAULT_SCHEMA}"
+      "defaultSchema": "${env:ZEUS_DB_DEFAULT_SCHEMA}",
+      "schemaPreference": ["DATA_EXAMPLE", "REPORTING_EXAMPLE"]
     },
     "dbRoles": {
       "metadata": {
@@ -70,7 +84,8 @@
         "user": "${env:ZEUS_METADATA_DB_USER}",
         "password": "${env:ZEUS_METADATA_DB_PASSWORD}",
         "defaultLibrary": "${env:ZEUS_METADATA_DB_DEFAULT_LIBRARY}",
-        "defaultSchema": "${env:ZEUS_METADATA_DB_DEFAULT_SCHEMA}"
+        "defaultSchema": "${env:ZEUS_METADATA_DB_DEFAULT_SCHEMA}",
+        "schemaPreference": ["REPORTING_EXAMPLE", "DATA_EXAMPLE"]
       },
       "testData": {
         "host": "${env:ZEUS_TESTDATA_DB_HOST}",
@@ -78,7 +93,8 @@
         "user": "${env:ZEUS_TESTDATA_DB_USER}",
         "password": "${env:ZEUS_TESTDATA_DB_PASSWORD}",
         "defaultLibrary": "${env:ZEUS_TESTDATA_DB_DEFAULT_LIBRARY}",
-        "defaultSchema": "${env:ZEUS_TESTDATA_DB_DEFAULT_SCHEMA}"
+        "defaultSchema": "${env:ZEUS_TESTDATA_DB_DEFAULT_SCHEMA}",
+        "schemaPreference": ["DATA_EXAMPLE", "REPORTING_EXAMPLE"]
       }
     },
     "bridge": {
@@ -88,25 +104,26 @@
       "allowAutoApprove": false,
       "auditLog": true,
       "allowedTargets": {
-        "libraries": [],
-        "sourceFiles": [],
-        "ifsPaths": []
+        "libraries": ["STAGING_EXAMPLE"],
+        "sourceFiles": ["QCLLESRC"],
+        "ifsPaths": ["/ifs/staging/example"]
       },
       "staging": {
         "enabled": true,
-        "library": "",
-        "sourceFile": "",
-        "ifsPath": ""
+        "library": "STAGING_EXAMPLE",
+        "sourceFile": "QCLLESRC",
+        "ifsPath": "/ifs/staging/example"
       },
       "compile": {
         "enabled": false,
-        "allowedTemplates": [],
+        "allowedTemplates": ["CRTRPGPGM"],
         "requirePlan": true,
         "requireApproval": true
       }
     }
   },
   "default-fetch": {
+    "_comment": "Fetch defaults wired through environment variables for teams that do not want credentials in profile files.",
     "extends": "default-shared",
     "fetch": {
       "host": "${env:ZEUS_FETCH_HOST}",
@@ -115,22 +132,49 @@
       "sourceLibrary": "${env:ZEUS_FETCH_SOURCE_LIBRARY}",
       "ifsDir": "${env:ZEUS_FETCH_IFS_DIR}",
       "out": "${env:ZEUS_FETCH_OUT}",
+      "port": 22,
       "sourceFiles": ["QRPGLESRC", "QSRVSRC", "QCPYSRC", "QCLLESRC", "QCLSRC", "QSQLSRC", "SQLTBLSRC", "SQLVIEWSRC", "SQLIDXSRC", "FORMSRC", "QDDSSRC"],
+      "members": ["ORDERPGM", "CUSTSRV"],
       "streamFileCcsid": 1208,
       "replace": true,
-      "transport": "auto"
+      "transport": "auto",
+      "networkType": "internet",
+      "preferTransport": "sftp",
+      "diagnoseTransport": true,
+      "encrypted": true,
+      "transportTimeoutMs": 30000
     }
   },
   "default-local": {
+    "_comment": "Local analysis defaults when source already exists in the workspace.",
     "extends": "default-shared",
     "sourceRoot": "${env:ZEUS_SOURCE_ROOT}",
     "workflow": {
       "outputRoot": "analysis",
-      "defaultPreset": "legacy-rpg-analysis",
+      "defaultPreset": "shared-readonly-analysis",
+      "continueOnError": false,
+      "members": ["ORDERPGM"],
       "analyzeModes": ["documentation", "defect-analysis"],
+      "tables": [
+        {
+          "schema": "DATA_EXAMPLE",
+          "table": "CUSTOMERS",
+          "filter": "CUST%"
+        }
+      ],
+      "impact": [
+        {
+          "target": "CUSTOMER_ID",
+          "field": "CUSTOMER_ID",
+          "program": "ORDERPGM",
+          "member": "ORDERPGM"
+        }
+      ],
       "presets": {
         "legacy-rpg-analysis": {
-          "steps": ["fetch", "copy", "analyze", "report"]
+          "steps": ["fetch", "copy", "analyze", "report"],
+          "analyzeModes": ["documentation", "defect-analysis"],
+          "continueOnError": false
         }
       }
     }
@@ -160,10 +204,64 @@
       "maxPrograms": 1000
     }
   },
-  "sample-db2": {
-    "sourceRoot": "./rpg",
-    "outputRoot": "./output",
-    "extensions": [".rpgle", ".rpg"],
+  "_example-systems": {
+    "_comment": "Mixin profile for multi-system routing via { \"system\": \"name\" } references in db, dbRoles, and fetch.",
+    "systems": {
+      "dev": {
+        "_comment": "Development or integration IBM i used for source fetch and safe read-only analysis.",
+        "host": "YOUR_DEV_IBM_I_HOST",
+        "user": "YOUR_IBM_I_USER",
+        "password": "YOUR_IBM_I_PASSWORD",
+        "defaultLibrary": "DATA_EXAMPLE",
+        "defaultSchema": "DATA_EXAMPLE"
+      },
+      "readonly": {
+        "_comment": "Read-only production-like IBM i for metadata and query access only.",
+        "host": "YOUR_READONLY_IBM_I_HOST",
+        "user": "YOUR_READONLY_IBM_I_USER",
+        "password": "YOUR_READONLY_IBM_I_PASSWORD",
+        "defaultLibrary": "REPORTING_EXAMPLE",
+        "defaultSchema": "REPORTING_EXAMPLE"
+      }
+    }
+  },
+  "dev": {
+    "_comment": "Daily development profile. Fetch, query, and analyze against the same non-production system.",
+    "extends": ["default-shared", "_example-systems"],
+    "sourceRoot": "./workspace/source",
+    "outputRoot": "./workspace/output",
+    "db": {
+      "system": "dev",
+      "schemaPreference": ["DATA_EXAMPLE", "REPORTING_EXAMPLE"]
+    },
+    "dbRoles": {
+      "metadata": {
+        "system": "dev"
+      },
+      "testData": {
+        "system": "dev"
+      }
+    },
+    "fetch": {
+      "system": "dev",
+      "sourceLib": "SOURCE_EXAMPLE",
+      "ifsDir": "/ifs/source-export/dev",
+      "out": "./fetched-source/dev",
+      "files": ["QRPGLESRC", "QCPYSRC", "QCLLESRC", "QCLSRC", "QSRVSRC", "QSQLSRC", "QDDSSRC"],
+      "members": ["ORDERPGM", "CUSTSRV"],
+      "replace": true,
+      "streamFileCcsid": 1208,
+      "transport": "auto",
+      "networkType": "local",
+      "preferTransport": "jt400",
+      "diagnoseTransport": true,
+      "encrypted": true,
+      "transportTimeoutMs": 20000
+    },
+    "workCopy": {
+      "root": "workspace-source/",
+      "extension": "suffixed"
+    },
     "tokenBudget": {
       "documentation": 6000,
       "error-analysis": 4000,
@@ -171,96 +269,233 @@
       "security": 4000,
       "modernization": 6000
     },
-    "db": {
-      "host": "${env:ZEUS_DB_HOST}",
-      "url": "${env:ZEUS_DB_URL}",
-      "user": "${env:ZEUS_DB_USER}",
-      "password": "${env:ZEUS_DB_PASSWORD}",
-      "defaultSchema": "${env:ZEUS_DB_DEFAULT_SCHEMA}"
-    },
-    "dbRoles": {
-      "metadata": {
-        "host": "${env:ZEUS_METADATA_DB_HOST}",
-        "user": "${env:ZEUS_METADATA_DB_USER}",
-        "password": "${env:ZEUS_METADATA_DB_PASSWORD}",
-        "defaultSchema": "${env:ZEUS_METADATA_DB_DEFAULT_SCHEMA}"
-      },
-      "testData": {
-        "host": "${env:ZEUS_TESTDATA_DB_HOST}",
-        "user": "${env:ZEUS_TESTDATA_DB_USER}",
-        "password": "${env:ZEUS_TESTDATA_DB_PASSWORD}",
-        "defaultSchema": "${env:ZEUS_TESTDATA_DB_DEFAULT_SCHEMA}"
+    "presets": {
+      "local-risk-review": {
+        "steps": ["copy", "analyze", "report"],
+        "analyzeModes": ["defect-analysis"],
+        "continueOnError": false
       }
     },
-    "testData": {
-      "limit": 50,
-      "maskColumns": ["NAME", "EMAIL", "PHONE"],
-      "allowTables": ["MYLIB.CUSTOMERS", "MYLIB.ORDERS"],
-      "denyTables": ["MYLIB.AUDITLOG"],
-      "maskRules": [
-        {
-          "schema": "MYLIB",
-          "table": "CUSTOMERS",
-          "columns": ["PHONE"],
-          "value": "MASKED_PHONE"
-        }
-      ]
-    }
-  },
-  "sample-fetch": {
-    "fetch": {
-      "host": "${env:ZEUS_FETCH_HOST}",
-      "user": "${env:ZEUS_FETCH_USER}",
-      "password": "${env:ZEUS_FETCH_PASSWORD}",
-      "sourceLib": "${env:ZEUS_FETCH_SOURCE_LIB}",
-      "ifsDir": "${env:ZEUS_FETCH_IFS_DIR}",
-      "out": "${env:ZEUS_FETCH_OUT}",
-      "files": ["QRPGLESRC", "QCPYSRC", "QCLLESRC", "QCLSRC", "QSRVSRC", "QSQLSRC", "QDDSSRC"],
-      "streamFileCcsid": 1208,
-      "replace": true,
-      "transport": "auto"
-    },
-    "workCopy": {
-      "root": "source/",
-      "extension": "txt"
-    },
     "workflow": {
-      "outputRoot": "analysis",
-      "defaultPreset": "legacy-rpg-analysis",
+      "outputRoot": "analysis/dev",
+      "defaultPreset": "dev-end-to-end",
+      "continueOnError": true,
+      "members": ["ORDERPGM", "CUSTSRV"],
+      "analyzeModes": ["documentation", "defect-analysis"],
       "tables": [
         {
-          "schema": "MYLIB",
-          "table": "CUSTOMERS"
+          "schema": "DATA_EXAMPLE",
+          "table": "CUSTOMERS",
+          "filter": "CUST%"
         }
       ],
       "impact": [
         {
+          "target": "CUSTOMER_ID",
           "field": "CUSTOMER_ID",
+          "program": "ORDERPGM",
           "member": "ORDERPGM"
         }
       ],
       "presets": {
-        "legacy-rpg-analysis": {
-          "steps": ["fetch", "copy", "analyze", "impact", "query-table", "report"]
+        "dev-end-to-end": {
+          "steps": ["fetch", "copy", "analyze", "query-table", "report"],
+          "members": ["ORDERPGM", "CUSTSRV"],
+          "analyzeModes": ["documentation", "defect-analysis"],
+          "tables": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "CUSTOMERS",
+              "filter": "CUST%"
+            }
+          ],
+          "impact": [
+            {
+              "field": "CUSTOMER_ID",
+              "member": "ORDERPGM"
+            }
+          ],
+          "continueOnError": true
+        }
+      }
+    }
+  },
+  "demo": {
+    "_comment": "Fully local demo profile without IBM i credentials. Useful for repository smoke checks and onboarding.",
+    "extends": "default-local",
+    "sourceRoot": "./examples/demo-rpg-mini-system/source",
+    "outputRoot": "./examples/demo-rpg-mini-system/output",
+    "workCopy": {
+      "root": "demo-workspace/",
+      "extension": "original"
+    },
+    "tokenBudget": {
+      "documentation": 3000,
+      "error-analysis": 2500,
+      "defect-analysis": 2500
+    }
+  },
+  "sftp-fetch": {
+    "_comment": "Fetch-only profile for teams that always use SFTP over a network-accessible IBM i.",
+    "extends": "default-fetch",
+    "fetch": {
+      "host": "example.ibm.local",
+      "user": "YOUR_IBM_I_USER",
+      "password": "YOUR_IBM_I_PASSWORD",
+      "sourceLib": "SOURCE_EXAMPLE",
+      "sourceLibrary": "SOURCE_EXAMPLE",
+      "ifsDir": "/ifs/source-export/example",
+      "out": "./fetched-source/sftp",
+      "port": 22,
+      "files": ["QRPGLESRC", "QSRVSRC"],
+      "members": ["ORDERPGM"],
+      "replace": true,
+      "streamFileCcsid": 1208,
+      "transport": "sftp",
+      "networkType": "internet",
+      "preferTransport": "sftp",
+      "diagnoseTransport": true,
+      "encrypted": true,
+      "transportTimeoutMs": 45000
+    }
+  },
+  "readonly-db2": {
+    "_comment": "Read-only DB2 profile. Suitable for query-sql, query-table, doctor, and metadata export against protected systems.",
+    "extends": ["default-shared", "_example-systems"],
+    "db": {
+      "system": "readonly",
+      "schema": "REPORTING_EXAMPLE",
+      "library": "REPORTING_EXAMPLE",
+      "schemaPreference": ["REPORTING_EXAMPLE", "DATA_EXAMPLE"]
+    },
+    "dbRoles": {
+      "metadata": {
+        "system": "readonly",
+        "schema": "REPORTING_EXAMPLE"
+      },
+      "testData": {
+        "system": "readonly",
+        "schema": "DATA_EXAMPLE"
+      }
+    },
+    "productionSystem": true
+  },
+  "combined-fetch-and-query": {
+    "_comment": "End-to-end example that combines fetch, query, workflow, work-copy, and runtime context settings in one profile.",
+    "extends": "dev",
+    "sourceRoot": "./workspace/combined-source",
+    "outputRoot": "./workspace/combined-output",
+    "db": {
+      "system": "dev",
+      "defaultSchema": "DATA_EXAMPLE",
+      "schemaPreference": ["DATA_EXAMPLE", "REPORTING_EXAMPLE"]
+    },
+    "dbRoles": {
+      "metadata": {
+        "system": "readonly",
+        "defaultSchema": "REPORTING_EXAMPLE"
+      },
+      "testData": {
+        "system": "dev",
+        "defaultSchema": "DATA_EXAMPLE"
+      }
+    },
+    "fetch": {
+      "system": "dev",
+      "sourceLib": "SOURCE_EXAMPLE",
+      "sourceLibrary": "SOURCE_EXAMPLE",
+      "ifsDir": "/ifs/source-export/combined",
+      "out": "./fetched-source/combined",
+      "files": ["QRPGLESRC", "QSQLSRC", "QDDSSRC"],
+      "members": ["ORDERPGM", "ORDERSQL"],
+      "replace": true,
+      "streamFileCcsid": 1208,
+      "transport": "auto",
+      "networkType": "internet",
+      "preferTransport": "sftp",
+      "diagnoseTransport": true,
+      "encrypted": true,
+      "transportTimeoutMs": 30000
+    },
+    "workflow": {
+      "outputRoot": "analysis/combined",
+      "defaultPreset": "combined-review",
+      "continueOnError": true,
+      "members": ["ORDERPGM", "ORDERSQL"],
+      "analyzeModes": ["documentation", "security", "modernization"],
+      "tables": [
+        {
+          "schema": "DATA_EXAMPLE",
+          "table": "ORDERS",
+          "filter": "ORDER%"
+        }
+      ],
+      "impact": [
+        {
+          "target": "ORDER_ID",
+          "field": "ORDER_ID",
+          "program": "ORDERPGM",
+          "member": "ORDERPGM"
+        }
+      ],
+      "presets": {
+        "combined-review": {
+          "steps": ["fetch", "copy", "analyze", "query-table", "report"],
+          "members": ["ORDERPGM", "ORDERSQL"],
+          "analyzeModes": ["documentation", "security", "modernization"],
+          "tables": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "ORDERS",
+              "filter": "ORDER%"
+            }
+          ],
+          "impact": [
+            {
+              "field": "ORDER_ID",
+              "member": "ORDERPGM"
+            }
+          ],
+          "continueOnError": true
         },
         "security-check": {
           "steps": ["fetch", "analyze", "report"],
-          "analyzeMode": "security"
+          "analyzeModes": ["security"],
+          "continueOnError": false
         },
         "modernization-check": {
-          "steps": ["fetch", "analyze", "report"],
-          "analyzeMode": "modernization"
+          "steps": ["fetch", "copy", "analyze", "report"],
+          "analyzeModes": ["modernization"],
+          "continueOnError": false
         }
       }
     },
     "runtimeContext": {
-      "_comment": "runtimeContext: Laufzeit-Metadaten über das IBM i System — wird von 'zeus doctor' und 'inspect-object' ausgewertet.",
-      "compiledProgramLib": "APPLIB",
-      "activeLibraries": ["APPLIB", "APPDATA"],
+      "_comment": "Runtime context currently supports journaledTables for doctor reporting.",
       "journaledTables": [
-        "APPDATA.CUSTOMERS",
-        "APPLIB.CUSTOMERS"
+        "DATA_EXAMPLE.CUSTOMERS",
+        "REPORTING_EXAMPLE.ORDERS"
       ]
     }
+  },
+  "sample-db2": {
+    "_comment": "Backward-compatible alias for documentation that expects a DB2-enabled example profile.",
+    "extends": "combined-fetch-and-query"
+  },
+  "sample-fetch": {
+    "_comment": "Backward-compatible alias for documentation that expects a fetch-focused example profile.",
+    "extends": "sftp-fetch"
+  },
+  "sample-dev": {
+    "_comment": "Backward-compatible alias for documentation that expects a development profile name.",
+    "extends": "dev"
+  },
+  "sample-dev-prod-meta": {
+    "_comment": "Backward-compatible alias for split routing: source/test on dev, metadata on read-only system.",
+    "extends": "combined-fetch-and-query"
+  },
+  "sample-prod-ro": {
+    "_comment": "Backward-compatible alias for documentation that expects a read-only production profile name.",
+    "extends": "readonly-db2"
   }
 }

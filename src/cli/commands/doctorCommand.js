@@ -21,6 +21,7 @@ const {
   resolveAnalyzeConfig,
   resolveFetchConfig,
   resolveProfile,
+  resolveProfilesConfigPaths,
 } = require('../../config/runtimeConfig');
 const {
   ensureJavaSourcesCompiled,
@@ -104,7 +105,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_URL`],
     fallbackValue: fallbackConfig && fallbackConfig.url,
     required: false,
-    hint: 'jdbc:as400://mein-ibmi-host;naming=system;libraries=APPDATA',
+    hint: 'jdbc:as400://example.ibm.local;naming=system;libraries=DATA_EXAMPLE',
   });
   addEnvCheck(checks, {
     name: `${envPrefix}_HOST`,
@@ -112,7 +113,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_HOST`],
     fallbackValue: fallbackConfig && fallbackConfig.host,
     required: !usesUrl,
-    hint: 'mein-ibmi-host',
+    hint: 'example.ibm.local',
   });
   addEnvCheck(checks, {
     name: `${envPrefix}_USER`,
@@ -120,7 +121,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_USER`],
     fallbackValue: fallbackConfig && fallbackConfig.user,
     required: true,
-    hint: 'MEINUSER',
+    hint: 'YOUR_IBM_I_USER',
   });
   addEnvCheck(checks, {
     name: `${envPrefix}_PASSWORD`,
@@ -128,7 +129,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_PASSWORD`],
     fallbackValue: fallbackConfig && fallbackConfig.password,
     required: true,
-    hint: 'mein-passwort',
+    hint: 'YOUR_IBM_I_PASSWORD',
   });
   addEnvCheck(checks, {
     name: `${envPrefix}_DEFAULT_LIBRARY`,
@@ -136,7 +137,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_DEFAULT_LIBRARY`],
     fallbackValue: fallbackConfig && fallbackConfig.defaultLibrary,
     required: false,
-    hint: requiredLabelPrefix || 'APPDATA',
+    hint: requiredLabelPrefix || 'DATA_EXAMPLE',
   });
   addEnvCheck(checks, {
     name: `${envPrefix}_DEFAULT_SCHEMA`,
@@ -144,7 +145,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_DEFAULT_SCHEMA`],
     fallbackValue: fallbackConfig && fallbackConfig.defaultSchema,
     required: false,
-    hint: requiredLabelPrefix || 'APPDATA',
+    hint: requiredLabelPrefix || 'DATA_EXAMPLE',
   });
 }
 
@@ -162,7 +163,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       env,
       envPrefix: 'ZEUS_DB',
       fallbackConfig: dbProfile,
-      requiredLabelPrefix: 'APPDATA',
+      requiredLabelPrefix: 'DATA_EXAMPLE',
     });
   }
 
@@ -171,7 +172,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       env,
       envPrefix: 'ZEUS_METADATA_DB',
       fallbackConfig: analyzeConfig && analyzeConfig.dbRoles ? analyzeConfig.dbRoles.metadata : {},
-      requiredLabelPrefix: 'APPDATA',
+      requiredLabelPrefix: 'DATA_EXAMPLE',
     });
   }
 
@@ -180,7 +181,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       env,
       envPrefix: 'ZEUS_TESTDATA_DB',
       fallbackConfig: analyzeConfig && analyzeConfig.dbRoles ? analyzeConfig.dbRoles.testData : {},
-      requiredLabelPrefix: 'APPDATA',
+      requiredLabelPrefix: 'DATA_EXAMPLE',
     });
   }
 
@@ -191,7 +192,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       envValue: env.ZEUS_FETCH_HOST,
       fallbackValue: fetchProfile.host,
       required: true,
-      hint: 'mein-ibmi-host',
+      hint: 'example.ibm.local',
     });
     addEnvCheck(checks, {
       name: 'ZEUS_FETCH_USER',
@@ -199,7 +200,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       envValue: env.ZEUS_FETCH_USER,
       fallbackValue: fetchProfile.user,
       required: true,
-      hint: 'MEINUSER',
+      hint: 'YOUR_IBM_I_USER',
     });
     addEnvCheck(checks, {
       name: 'ZEUS_FETCH_PASSWORD',
@@ -207,7 +208,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       envValue: env.ZEUS_FETCH_PASSWORD,
       fallbackValue: fetchProfile.password,
       required: true,
-      hint: 'mein-passwort',
+      hint: 'YOUR_IBM_I_PASSWORD',
     });
     addEnvCheck(checks, {
       name: 'ZEUS_FETCH_SOURCE_LIB',
@@ -215,7 +216,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       envValue: env.ZEUS_FETCH_SOURCE_LIB,
       fallbackValue: fetchProfile.sourceLib,
       required: true,
-      hint: 'SOURCEN',
+      hint: 'SOURCE_EXAMPLE',
     });
     addEnvCheck(checks, {
       name: 'ZEUS_FETCH_IFS_DIR',
@@ -223,7 +224,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       envValue: env.ZEUS_FETCH_IFS_DIR,
       fallbackValue: fetchProfile.ifsDir,
       required: true,
-      hint: '/home/zeus/rpg_sources',
+      hint: '/ifs/source-export/example',
     });
     addEnvCheck(checks, {
       name: 'ZEUS_FETCH_OUT',
@@ -231,7 +232,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       envValue: env.ZEUS_FETCH_OUT,
       fallbackValue: fetchProfile.out,
       required: true,
-      hint: 'C:/Projekte/ticket/zeus-fetch',
+      hint: './fetched-source/example',
     });
   }
 
@@ -241,7 +242,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
     envValue: env.ZEUS_OUTPUT_ROOT,
     fallbackValue: profile && profile.outputRoot,
     required: false,
-    hint: 'C:/Projekte/ticket/zeus-output',
+    hint: './workspace/output',
   });
   addEnvCheck(checks, {
     name: 'ZEUS_SOURCE_ROOT',
@@ -249,7 +250,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
     envValue: env.ZEUS_SOURCE_ROOT,
     fallbackValue: profile && profile.sourceRoot,
     required: false,
-    hint: 'C:/Projekte/ticket/zeus-source',
+    hint: './workspace/source',
   });
   addEnvCheck(checks, {
     name: 'ZEUS_ANALYSES_REGISTRY',
@@ -257,7 +258,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
     envValue: env.ZEUS_ANALYSES_REGISTRY,
     fallbackValue: profile && profile.analysesRegistryPath,
     required: false,
-    hint: 'C:/Projekte/analyses/_registry.json',
+    hint: './analysis/_registry.json',
   });
 
   return checks;
@@ -287,10 +288,24 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
     });
   } catch (error) {
     hasCriticalFailure = true;
+    let profileFailDetails = error.message;
+    try {
+      const configPaths = resolveProfilesConfigPaths({ args, cwd, env });
+      const searchedPaths = (configPaths.attemptedPaths || [
+        configPaths.preferredPath,
+        configPaths.secondaryPath,
+        configPaths.fallbackPath,
+      ]).filter(Boolean);
+      if (searchedPaths.length > 0) {
+        const pathList = searchedPaths
+          .map((p, i) => `  ${i + 1}. ${path.relative(cwd, p).replace(/\\/g, '/')}`)          .join('\n');
+        profileFailDetails = `${error.message}\nGesuchte Pfade:\n${pathList}\nTipp: config/local-only/profiles.json anlegen (basierend auf config/profiles.example.json)`;
+      }
+    } catch { /* Pfad-Auflösung optional — Fehler ignorieren */ }
     checks.push({
       name: 'Config/Profile',
       status: 'FAIL',
-      details: error.message,
+      details: profileFailDetails,
     });
   }
 
@@ -353,6 +368,24 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
       status: 'FAIL',
       details: error.message,
     });
+  }
+
+  // npm-Abhängigkeiten prüfen: Pakete, die erst bei Verwendung benötigt werden,
+  // aber nach einem frischen Clone fehlen können.
+  const NPM_OPTIONAL_MODULES = [
+    { name: 'ssh2-sftp-client', hint: 'Wird für SFTP-Transport benötigt.' },
+  ];
+  for (const mod of NPM_OPTIONAL_MODULES) {
+    try {
+      require.resolve(mod.name, { paths: [cwd] });
+      checks.push({ name: `npm: ${mod.name}`, status: 'PASS', details: 'Installiert.' });
+    } catch {
+      checks.push({
+        name: `npm: ${mod.name}`,
+        status: 'WARN',
+        details: `Nicht installiert. ${mod.hint} → npm install`,
+      });
+    }
   }
 
   if (!resolvedAnalyzeConfig) {
@@ -565,6 +598,35 @@ async function runDoctor(args) {
       if (profObj.productionSystem) {
         resolvedChecks.push({ name: 'Produktionssystem', status: 'WARN', details: 'Dieses Profil ist als productionSystem=true markiert!' });
       }
+
+      // Systems-Block anzeigen (wenn vorhanden)
+      if (profObj.systems && typeof profObj.systems === 'object') {
+        const systemNames = Object.keys(profObj.systems);
+        resolvedChecks.push({
+          name: 'systems (Def.)',
+          status: 'INFO',
+          details: systemNames.map((s) => {
+            const sys = profObj.systems[s];
+            return `${s}: ${sys.host || '?'}`;
+          }).join(' | '),
+        });
+        // Welche Rollen auf welches System zeigen
+        const roleMap = {};
+        if (profObj.db && typeof profObj.db.host === 'string') roleMap['db'] = profObj.db.host;
+        if (profObj.dbRoles) {
+          for (const [role, cfg] of Object.entries(profObj.dbRoles)) {
+            if (cfg && typeof cfg.host === 'string') roleMap[`dbRoles.${role}`] = cfg.host;
+          }
+        }
+        if (Object.keys(roleMap).length > 0) {
+          resolvedChecks.push({
+            name: 'systems (Routing)',
+            status: 'INFO',
+            details: Object.entries(roleMap).map(([role, host]) => `${role}→${host}`).join(' | '),
+          });
+        }
+      }
+
     } catch (err) {
       resolvedChecks.push({ name: 'show-resolved', status: 'FAIL', details: err.message });
     }
