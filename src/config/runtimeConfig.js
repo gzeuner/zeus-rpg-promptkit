@@ -27,6 +27,7 @@ const {
   DEFAULT_WORKFLOW_STEPS,
   DEFAULT_WORK_COPY,
   GLOBAL_PROFILE_KEYS,
+  isMixinProfile,
   TOKEN_BUDGET_KEY_ALIASES,
 } = require('./runtimeConfigDefaults');
 const {
@@ -45,7 +46,7 @@ const {
   readWorkflowConfig: readWorkflowConfigModule,
   resolveWorkflowPresetConfig: resolveWorkflowPresetConfigModule,
 } = require('./runtimeConfigWorkflow');
-const { mergeConfigLayers } = require('./runtimeConfigCore');
+const { mergeConfigLayers, resolveSystemReferences } = require('./runtimeConfigCore');
 const {
   applyDbEnvOverrides,
   parseBoolean,
@@ -105,6 +106,14 @@ function resolveProfile(profiles, profileName, options = {}) {
     throw new Error(`Profile "${profileName}" not found in ${describeProfilesLocation(profiles)}`);
   }
 
+  // Mixin-Profile (beginnen mit '_') sind nur als extends-Ziel gedacht.
+  // Direktaufruf ist technisch möglich, wird aber als WARN behandelt.
+  if (isMixinProfile(profileName) && stack.length === 0) {
+    process.stderr.write(
+      `[WARN] Profil "${profileName}" ist ein Mixin-Profil (beginnt mit '_') und sollte nur über 'extends' eingebunden werden.\n`,
+    );
+  }
+
   const parents = normalizeExtendsList(profile.extends);
   const inherited = parents.reduce((merged, parentName) => mergeConfigLayers(
     merged,
@@ -113,9 +122,20 @@ function resolveProfile(profiles, profileName, options = {}) {
       stack: [...stack, profileName],
     }),
   ), {});
-  const resolved = mergeConfigLayers(inherited, profile);
-  delete resolved.extends;
-  return resolveEnvPlaceholdersDeep(resolved, env);
+  const merged = mergeConfigLayers(inherited, profile);
+  delete merged.extends;
+  const withEnv = resolveEnvPlaceholdersDeep(merged, env);
+
+  // System-Referenzen nur beim Top-Level-Aufruf auflösen (stack.length === 0).
+  // Eltern-Profile behalten ihre { system: '...' }-Referenzen bis zur finalen
+  // Auflösung, damit Kind-Profile diese noch überschreiben können.
+  // Beispiel: dersmt1-ase hat metadata: { system: 'test' }
+  //            dersmt1-ase-prod-meta überschreibt metadata: { system: 'prod' }
+  //            → erst beim Top-Level-Aufruf wird prod-Host eingesetzt.
+  if (stack.length === 0) {
+    return resolveSystemReferences(withEnv);
+  }
+  return withEnv;
 }
 
 function readWorkCopyConfig(profile, env) {

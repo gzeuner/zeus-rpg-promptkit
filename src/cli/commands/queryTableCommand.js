@@ -11,7 +11,10 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
+const fs = require('fs');
+const path = require('path');
 const { renderAsciiTable } = require('../helpers/asciiTable');
+const { renderCsv } = require('../helpers/csvRenderer');
 const {
   buildQueryTableQueries,
   executeQueryTable,
@@ -57,17 +60,36 @@ async function runQueryTable(args) {
   }
 
   console.log('Columns');
+  const COLUMN_HEADERS = ['TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME', 'DATA_TYPE', 'LENGTH', 'NUMERIC_SCALE', 'IS_NULLABLE'];
+  const columnRows = columns.rows.map((row) => [
+    row.TABLE_SCHEMA,
+    row.TABLE_NAME,
+    row.COLUMN_NAME,
+    row.DATA_TYPE,
+    row.LENGTH,
+    row.NUMERIC_SCALE,
+    row.IS_NULLABLE,
+  ]);
+
+  // --save: Ergebnis in Datei schreiben (CSV oder JSON)
+  if (args.save && String(args.save).trim()) {
+    const savePath = path.resolve(process.cwd(), String(args.save).trim());
+    const ext = path.extname(savePath).toLowerCase();
+    let content;
+    if (ext === '.json') {
+      const rows = columnRows.map((row) => Object.fromEntries(COLUMN_HEADERS.map((h, i) => [h, row[i]])));
+      content = JSON.stringify(rows, null, 2) + '\n';
+    } else {
+      content = renderCsv(COLUMN_HEADERS, columnRows);
+    }
+    fs.mkdirSync(path.dirname(savePath), { recursive: true });
+    fs.writeFileSync(savePath, content, 'utf8');
+    console.log(`Gespeichert: ${savePath} (${columnRows.length} Spalte(n))`);
+  }
+
   console.log(renderAsciiTable(
-    ['TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME', 'DATA_TYPE', 'LENGTH', 'NUMERIC_SCALE', 'IS_NULLABLE'],
-    columns.rows.map((row) => [
-      row.TABLE_SCHEMA,
-      row.TABLE_NAME,
-      row.COLUMN_NAME,
-      row.DATA_TYPE,
-      row.LENGTH,
-      row.NUMERIC_SCALE,
-      row.IS_NULLABLE,
-    ]),
+    COLUMN_HEADERS,
+    columnRows,
     { maxCellWidth: 40 },
   ));
 }
