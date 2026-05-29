@@ -18,6 +18,7 @@ const { runAnalyze } = require('../src/cli/commands/analyzeCommand');
 const { runImpact } = require('../src/cli/commands/impactCommand');
 const { runBundle } = require('../src/cli/commands/bundleCommand');
 const { runFetch } = require('../src/cli/commands/fetchCommand');
+const { runFetchMember } = require('../src/cli/commands/fetchMemberCommand');
 const { runWorkflow } = require('../src/cli/commands/workflowCommand');
 const { runServe } = require('../src/cli/commands/serveCommand');
 const { runDoctor } = require('../src/cli/commands/doctorCommand');
@@ -40,6 +41,7 @@ const { runJoblog } = require('../src/cli/commands/joblogCommand');
 const { runDocsGenerateCatalog } = require('./commands/generate-tool-catalog');
 const { run: runAnalyses } = require('../src/cli/commands/analysesCommand');
 const { runMcp } = require('../src/cli/commands/mcpCommand');
+const { runProfiles } = require('../src/cli/commands/profilesCommand');
 
 function printHelp() {
   console.log('Usage:');
@@ -51,17 +53,23 @@ function printHelp() {
   console.log('  zeus [--config <path>] assess-risk --program <name> [--out <path>] [--verbose]');
   console.log('  zeus [--config <path>] generate-test --program <name> [--format jest|markdown] [--critical] [--change] [--table <name>] [--column <name>] [--out <path>] [--verbose]');
   console.log('  zeus [--config <path>] generate-checklist --program <name> [--type DDL_CHANGE|CODE_CHANGE|BOTH] [--affected <P1,P2,...>] [--table <name>] [--impact LOW|MEDIUM|HIGH] [--out <path>] [--verbose]');
-  console.log('  zeus [--config <path>] fetch --host <hostname> --port <n> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--profile <name>] [--verbose]');
+  console.log('  zeus [--config <path>] fetch --host <hostname> --port <n> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--clean-remote] [--profile <name>] [--verbose]');
+  console.log('  zeus [--config <path>] fetch-member --profile <name> --lib <library> --member <name>[,<name>,...] [--file <QRPGLESRC>] [--out <dir>] [--verbose]  # Einzel- oder Mehrfach-Member-Download');
   console.log('  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
   console.log('  zeus [--config <path>] analyses <list|register|index|open|show|unregister> [options]');
   console.log('  zeus [--config <path>] doctor --profile <name> [--show-resolved]');
-  console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>]');
-  console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ..." | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv]');
+  console.log('  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; --show-env zeigt Env-Var-Status');
+  console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>] [--save <datei.csv|datei.json>]');
+  console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ..." | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv|json] [--save <datei.csv|datei.json>] [--watch <sek>]');
   console.log('  zeus [--config <path>] joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>]');
-  console.log('  zeus [--config <path>] upsert --profile <name> (--sql "INSERT/UPDATE/DELETE/MERGE ..." | --file <path>)');
-  console.log('  zeus [--config <path>] upsert-sql --profile <name> (--sql "INSERT/UPDATE/DELETE ..." | --file <path>)');
-  console.log('  zeus [--config <path>] insert --profile <name> (--sql "INSERT ..." | --file <path>)');
-  console.log('  zeus [--config <path>] update --profile <name> (--sql "UPDATE ..." | --file <path>)');
+  console.log('  zeus [--config <path>] write-sql --profile <name> (--sql "INSERT/UPDATE/DELETE/MERGE ..." | --file <path>) [--confirm] [--force] [--dry-run] [--backup]  # allgemeiner DML-Befehl');
+  console.log('  zeus [--config <path>] insert  --profile <name> (--sql "INSERT ..."              | --file <path>)');
+  console.log('  zeus [--config <path>] update  --profile <name> (--sql "UPDATE ..."              | --file <path>) [--confirm] [--force] [--dry-run] [--backup]');
+  console.log('  zeus [--config <path>] delete  --profile <name> (--sql "DELETE ..."              | --file <path>) [--confirm] [--force] [--dry-run] [--backup]');
+  console.log('    --confirm    Bestaetigt Ausfuehrung nach Row-Count-Pruefung (erforderlich fuer DELETE/UPDATE)');
+  console.log('    --force      Ueberspringt Row-Count-Pruefung (kein --confirm noetig)');
+  console.log('    --dry-run    Zeigt nur Row-Count, fuehrt NICHTS aus');
+  console.log('    --backup     Legt Backup-Tabelle an bevor DELETE/UPDATE ausgefuehrt wird');
   console.log('  zeus [--config <path>] search-source --source-root <path> (--search-term <term> | --member <name> | --table <name>) [--file-pattern <glob>] [--case-sensitive] [--max-results <n>]');
   console.log('  zeus [--config <path>] copy-to-workspace --profile <name> [--members <M1,M2,...>] [--force]');
   console.log('  zeus [--config <path>] diff --profile <name> --member <name>');
@@ -79,10 +87,24 @@ function printHelp() {
 function parseArgs(argv) {
   const args = { _: [] };
   const multiValueKeys = new Set(['sfl-field']);
+
+  // Bekannte Flag-Aliases: singular â†’ kanonische Form
+  const FLAG_ALIASES = {
+    'member': 'members',  // --member war hÃ¤ufige Fehleingabe statt --members
+  };
+
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];
     if (token.startsWith('--')) {
-      const key = token.slice(2);
+      let key = token.slice(2);
+
+      // Alias auflÃ¶sen + Warnung ausgeben
+      if (Object.prototype.hasOwnProperty.call(FLAG_ALIASES, key)) {
+        const canonical = FLAG_ALIASES[key];
+        process.stderr.write(`[WARN] --${key} ist kein bekannter Flag â€” meinten Sie --${canonical}? Wird automatisch als --${canonical} behandelt.\n`);
+        key = canonical;
+      }
+
       if (key === 'liblist') {
         const values = [];
         while (argv[i + 1] && !argv[i + 1].startsWith('--')) {
@@ -136,6 +158,31 @@ function splitCommandArgs(argv) {
   };
 }
 
+// Befehle die DB2 oder IBM i Verbindung brauchen â€” Env-Check wird nur fÃ¼r diese ausgefÃ¼hrt
+const COMMANDS_NEEDING_ENV = new Set([
+  'query-sql', 'query-table', 'fetch', 'fetch-member', 'analyze', 'workflow',
+  'upsert', 'upsert-sql', 'write-sql', 'insert', 'update', 'delete',
+  'joblog', 'inspect-object', 'diff', 'field-search', 'bridge', 'test-run',
+]);
+
+const DB_ENV_VARS = ['ZEUS_DB_USER', 'ZEUS_DB_PASSWORD', 'ZEUS_DB_HOST', 'ZEUS_DB_URL'];
+const FETCH_ENV_VARS = ['ZEUS_FETCH_USER', 'ZEUS_FETCH_PASSWORD', 'ZEUS_FETCH_HOST'];
+
+function checkEnvLoaded(command) {
+  if (!COMMANDS_NEEDING_ENV.has(command)) return;
+  const missingDb = DB_ENV_VARS.filter(v => !process.env[v]);
+  const missingFetch = command.startsWith('fetch') ? FETCH_ENV_VARS.filter(v => !process.env[v]) : [];
+  const missing = [...new Set([...missingDb, ...missingFetch])];
+  if (missing.length > 0) {
+    process.stderr.write(
+      `[WARN] Umgebungsvariablen nicht geladen: ${missing.join(', ')}\n`
+      + '       Bitte zuerst ausfÃ¼hren:\n'
+      + '       . .\\config\\load-env.ps1 -Environment <name>\n'
+      + '       Ohne Env-Load werden falsche/leere Credentials verwendet â†’ Kontosperre mÃ¶glich!\n\n',
+    );
+  }
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   if (argv.length === 0) {
@@ -148,6 +195,8 @@ async function main() {
     printHelp();
     process.exit(1);
   }
+
+  checkEnvLoaded(command);
 
   if (command === 'analyze') {
     runAnalyze(args);
@@ -174,6 +223,11 @@ async function main() {
     return;
   }
 
+  if (command === 'fetch-member') {
+    await runFetchMember(args);
+    return;
+  }
+
   if (command === 'serve') {
     await runServe(args);
     return;
@@ -186,6 +240,11 @@ async function main() {
 
   if (command === 'doctor') {
     await runDoctor(args);
+    return;
+  }
+
+  if (command === 'profiles') {
+    await runProfiles(args);
     return;
   }
 
@@ -214,6 +273,11 @@ async function main() {
     return;
   }
 
+  if (command === 'write-sql') {
+    await runUpsertSql(args);
+    return;
+  }
+
   if (command === 'insert') {
     await runInsertSql(args);
     return;
@@ -221,6 +285,11 @@ async function main() {
 
   if (command === 'update') {
     await runUpdateSql(args);
+    return;
+  }
+
+  if (command === 'delete') {
+    await runDeleteSql(args);
     return;
   }
 

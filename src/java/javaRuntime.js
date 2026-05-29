@@ -133,9 +133,26 @@ function ensureJavaSourcesCompiled({ cwd = process.cwd(), verbose = false } = {}
   };
 }
 
-function runJavaClass(className, args, { cwd = process.cwd() } = {}) {
+const HEARTBEAT_CLASSES = new Set([
+  'Db2DiagnosticQueryRunner',
+  'Db2WriteQueryRunner',
+  'Db2MetadataExporter',
+  'Db2TestDataExtractor',
+]);
+
+function runJavaClass(className, args, { cwd = process.cwd(), heartbeat = false } = {}) {
   const classpath = resolveJavaClasspath({ cwd });
-  return runProcess('java', ['-cp', classpath, className, ...args], `Failed to run Java helper ${className}`);
+  const showHeartbeat = heartbeat || HEARTBEAT_CLASSES.has(className);
+  if (showHeartbeat) {
+    process.stderr.write(`[zeus] ${className}: Verbindung aufbauen...\n`);
+  }
+  const t0 = Date.now();
+  const result = runProcess('java', ['-cp', classpath, className, ...args], `Failed to run Java helper ${className}`);
+  if (showHeartbeat) {
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+    process.stderr.write(`[zeus] ${className}: fertig (${elapsed}s)\n`);
+  }
+  return result;
 }
 
 module.exports = {

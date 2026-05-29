@@ -84,6 +84,33 @@ When starting work, do this first:
 2) Run `node cli/zeus.js doctor --profile <profile> --show-resolved`.
 3) Propose an execution plan with risk labels.
 
+Standard fetch-analyse workflow (mit --source-lib und --prefer-transport):
+```powershell
+# 1. Env laden (per-session, kein Admin noetig)
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+. .\config\load-env.ps1 -Environment <env>
+
+# 2. Environment prüfen
+node cli/zeus.js doctor --profile <profile>
+
+# 3. Quellen holen (sourceLib explizit setzen — ENV-Var kann Profilwert überschreiben!)
+node cli/zeus.js fetch --profile <profile> --source-lib <LIB> --prefer-transport jt400 --verbose
+
+# 4. In Workspace kopieren
+node cli/zeus.js copy-to-workspace --profile <profile>
+
+# 5. Analyse starten
+node cli/zeus.js analyze --profile <profile> --program <PROGRAM> --verbose
+```
+
+**Wichtige Fallstricke:**
+- `ZEUS_FETCH_SOURCE_LIB` in .env überschreibt `sourceLib` im Profil **lautlos**.
+  Immer `--source-lib <LIB>` explizit angeben, wenn Profil und ENV abweichen.
+  Mit `--verbose` erscheint eine `[WARN]`-Zeile wenn ein solcher Override erkannt wird.
+- `--prefer-transport jt400` spart 30 s SFTP-Timeout bei IBM i Umgebungen ohne externen SSH-Zugang.
+- Nach frischem Clone: `npm install` ausführen — `ssh2-sftp-client` ist optional,
+  fehlt es, zeigt `doctor` eine `[WARN]`-Zeile für `npm: ssh2-sftp-client`.
+
 Now proceed with this session goal:
 [INSERT USER GOAL HERE]
 ```
