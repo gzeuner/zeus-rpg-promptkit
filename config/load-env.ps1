@@ -4,17 +4,23 @@
 # Einmalige Freigabe (kein Admin noetig, nur fuer den aktuellen User):
 #   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 #
+# Per-Session-Bypass (kein Admin, keine dauerhafte Policy-Aenderung, Standardweg im Team):
+#   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+#   . .\config\load-env.ps1 -Environment ders
+#   HINWEIS: Diese Einstellung gilt nur fuer das aktuelle Terminalfenster.
+#            Bei jedem neuen Terminal wiederholen.
+#
 # Verwendung danach (Dot-Sourcing, damit die Variablen in der Session bleiben):
 #   . .\config\load-env.ps1                    # Laedt config/.env.local
 #   . .\config\load-env.ps1 -Environment project  # Laedt config/.env.project.local
 #
-# Multi-Maschinen-Setup (Sourcen SYS_TEST, Daten SYS_PROD):
-#   In .env.project.local einfach ZEUS_METADATA_DB_HOST=SYS_PROD setzen.
+# Multi-Maschinen-Setup (Sourcen von DEV_IBM_I_HOST, Metadaten von READONLY_IBM_I_HOST):
+#   In .env.project.local einfach ZEUS_METADATA_DB_HOST=READONLY_IBM_I_HOST setzen.
 #   Da Env-Vars immer Vorrang vor Profilwerten haben, genuegt das.
 #   Beispiel:
-#     ZEUS_FETCH_HOST=SYS_TEST        <- Sourcen von Testsystem
-#     ZEUS_DB_HOST=SYS_TEST           <- DB-Default (Fallback)
-#     ZEUS_METADATA_DB_HOST=SYS_PROD  <- Metadaten/Analysen von Prod
+#     ZEUS_FETCH_HOST=DEV_IBM_I_HOST       <- Sourcen von Entwicklungs- oder Testsystem
+#     ZEUS_DB_HOST=DEV_IBM_I_HOST          <- DB-Default (Fallback)
+#     ZEUS_METADATA_DB_HOST=READONLY_IBM_I_HOST  <- Metadaten/Analysen von Read-only-System
 #     ZEUS_METADATA_DB_USER=IBMI_USER
 #     ZEUS_METADATA_DB_PASSWORD=***
 #
@@ -107,7 +113,7 @@ $criticalVars = @(
 
 if ($Environment -eq "project") {
     $criticalVars = @(
-        # Fetch (Sourcen von IBM i holen) — typisch SYS_TEST
+        # Fetch (Sourcen von IBM i holen) — typisch DEV_IBM_I_HOST
         "ZEUS_FETCH_HOST",
         "ZEUS_FETCH_PORT",
         "ZEUS_FETCH_USER",
@@ -119,7 +125,7 @@ if ($Environment -eq "project") {
         "ZEUS_DB_USER",
         "ZEUS_DB_PASSWORD"
         # Hinweis: ZEUS_METADATA_DB_HOST ist optional fuer Multi-Maschinen-Setup
-        # (z.B. SYS_PROD fuer Metadaten) — kein Pflichtfeld, da Fallback auf ZEUS_DB_HOST
+        # (z.B. READONLY_IBM_I_HOST fuer Metadaten) — kein Pflichtfeld, da Fallback auf ZEUS_DB_HOST
     )
 }
 

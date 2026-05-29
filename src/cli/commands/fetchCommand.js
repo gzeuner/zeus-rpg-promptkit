@@ -13,9 +13,65 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
 const { executeFetch } = require('../../core/fetchService');
+const { resolveFetchConfig } = require('../../config/runtimeConfig');
+const { runClCommand } = require('../../fetch/jt400CommandRunner');
+
+/**
+ * --clean-remote: löscht das IFS-Arbeitsverzeichnis auf IBM i vor dem Fetch.
+ * Verhindert, dass ein abgebrochener Bulk-Fetch nachfolgende Downloads verlangsamt.
+ */
+async function cleanRemoteIfsDir(args, verbose) {
+  let fetchConfig;
+  try {
+    fetchConfig = resolveFetchConfig(args, { cwd: process.cwd() });
+  } catch (err) {
+    throw new Error(`Konfigurationsfehler für --clean-remote: ${err.message}`);
+  }
+
+  const ifsDir = fetchConfig.ifsDir;
+  if (!ifsDir) {
+    throw new Error('--clean-remote: ifsDir konnte nicht ermittelt werden (ZEUS_FETCH_IFS_DIR oder --ifs-dir setzen).');
+  }
+
+  // CL-Befehl: Verzeichnis und Inhalt löschen, dann neu anlegen
+  const rmCmd = `RMV IFS OBJ('${ifsDir}/*') SUBTREE(*ALL)`;
+  if (verbose) {
+    console.log(`[verbose] --clean-remote: ${rmCmd}`);
+  }
+  console.log(`Bereinige IFS-Verzeichnis: ${ifsDir} ...`);
+
+  const result = runClCommand({
+    host: fetchConfig.host,
+    user: fetchConfig.user,
+    password: fetchConfig.password,
+    command: rmCmd,
+    verbose,
+  });
+
+  // CPFA0A9 = Objekt nicht gefunden — kein Fehler, Verzeichnis war leer
+  const isNotFound = (result.stderr || '').includes('CPFA0A9')
+    || (result.messages || []).some(m => String(m).includes('CPFA0A9'));
+
+  if (!result.ok && !isNotFound) {
+    const msgs = (result.messages || []).join('; ') || result.stderr || 'Unbekannter Fehler';
+    throw new Error(`--clean-remote fehlgeschlagen: ${msgs}`);
+  }
+
+  console.log('IFS-Verzeichnis bereinigt.');
+}
 
 async function runFetch(args) {
   const verbose = Boolean(args.verbose);
+
+  if (args['clean-remote']) {
+    try {
+      await cleanRemoteIfsDir(args, verbose);
+    } catch (err) {
+      console.error(err.message);
+      process.exit(2);
+    }
+  }
+
   try {
     const { config, summary } = await executeFetch(args);
 
@@ -23,6 +79,13 @@ async function runFetch(args) {
       console.log(`[verbose] Fetch host: ${config.host}`);
       console.log(`[verbose] Fetch port: ${config.port}`);
       console.log(`[verbose] Object library: ${config.sourceLib}`);
+      if (config.sourceLibEnvOverride) {
+        console.warn(
+          `[WARN] ZEUS_FETCH_SOURCE_LIB="${config.sourceLibEnvOverride.envValue}" überschreibt`
+          + ` Profil-Wert "${config.sourceLibEnvOverride.profileValue}".`
+          + ' Benutze --source-lib <LIB> zum expliziten Setzen.',
+        );
+      }
       console.log(`[verbose] Source files: ${config.files.join(', ')}`);
       console.log(`[verbose] IFS dir: ${config.ifsDir}`);
       console.log(`[verbose] Local out: ${path.resolve(process.cwd(), config.out)}`);

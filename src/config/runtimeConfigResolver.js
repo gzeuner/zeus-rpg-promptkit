@@ -150,12 +150,25 @@ function resolveFetchConfig(
   const profiles = loadProfiles({ cwd, env, args });
   const profile = resolveProfile(profiles, args.profile, { env });
   const fetchProfile = profile ? resolveEnvPlaceholdersDeep(profile.fetch || profile, env) : {};
-  const sourceLibrary = args['source-library']
-    || args['source-lib']
-    || env.ZEUS_FETCH_SOURCE_LIBRARY
-    || env.ZEUS_FETCH_SOURCE_LIB
-    || fetchProfile.sourceLibrary
-    || fetchProfile.sourceLib;
+
+  // Auflösungsreihenfolge für sourceLib verfolgen, damit beim Überschreiben durch
+  // eine ENV-Variable eine Warnung ausgegeben werden kann.
+  const cliSourceLib = args['source-library'] || args['source-lib'];
+  const envSourceLib = env.ZEUS_FETCH_SOURCE_LIBRARY || env.ZEUS_FETCH_SOURCE_LIB;
+  const profileSourceLib = fetchProfile.sourceLibrary || fetchProfile.sourceLib;
+  const sourceLibrary = cliSourceLib || envSourceLib || profileSourceLib;
+
+  // Wenn ENV-Variable das Profil überschreibt (und kein CLI-Arg gesetzt), Warnung merken.
+  // fetchCommand.js greift auf config.sourceLibEnvOverride zu und zeigt den Hinweis an.
+  const sourceLibEnvOverride = (
+    !cliSourceLib
+    && envSourceLib
+    && profileSourceLib
+    && String(envSourceLib).toUpperCase() !== String(profileSourceLib).toUpperCase()
+  )
+    ? { envValue: String(envSourceLib).toUpperCase(), profileValue: String(profileSourceLib).toUpperCase() }
+    : null;
+
   const sourceFiles = args['source-files']
     || args.files
     || env.ZEUS_FETCH_SOURCE_FILES
@@ -169,6 +182,7 @@ function resolveFetchConfig(
     password: args.password || env.ZEUS_FETCH_PASSWORD || fetchProfile.password,
     sourceLib: String(sourceLibrary || '').toUpperCase(),
     sourceLibrary: String(sourceLibrary || '').toUpperCase(),
+    sourceLibEnvOverride,
     ifsDir: args['ifs-dir'] || env.ZEUS_FETCH_IFS_DIR || fetchProfile.ifsDir,
     out: args.out || env.ZEUS_FETCH_OUT || fetchProfile.out || './rpg_sources',
     port: Number.parseInt(

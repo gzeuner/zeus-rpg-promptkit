@@ -53,6 +53,7 @@ scripts/create_issues_from_roadmap.py
 
 .env.local
 .env.*.local
+*Kopie.local
 *.secret
 *.secrets
 *.credentials
@@ -77,6 +78,7 @@ Thumbs.db
 
 output/*
 !output/.gitkeep
+analysis/zeus-fetch/
 bundles/
 *.zip
 *.7z

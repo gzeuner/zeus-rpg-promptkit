@@ -13,7 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
-const SftpClient = require('ssh2-sftp-client');
+
+// Lazy-require: ssh2-sftp-client wird erst beim ersten SFTP-Aufruf geladen.
+// Dadurch startet zeus.js auch ohne installierte npm-Abhängigkeiten (z. B. nach
+// frischem Clone vor "npm install"). Der Fehler erscheint erst wenn SFTP wirklich
+// benötigt wird — statt beim Laden aller Module.
+let _SftpClientClass;
+function getSftpClient() {
+  if (!_SftpClientClass) {
+    try {
+      _SftpClientClass = require('ssh2-sftp-client');
+    } catch (_err) {
+      throw new Error(
+        'SFTP transport benötigt das Paket "ssh2-sftp-client". Ausführen: npm install',
+      );
+    }
+  }
+  return _SftpClientClass;
+}
 
 async function downloadDirectory({
   host,
@@ -24,7 +41,7 @@ async function downloadDirectory({
   localDir,
   verbose,
 }) {
-  const client = new SftpClient();
+  const client = new (getSftpClient())();
   let downloadedCount = 0;
 
   async function walk(remotePath, localPath) {
