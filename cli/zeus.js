@@ -58,7 +58,7 @@ function printHelp() {
   console.log('  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
   console.log('  zeus [--config <path>] analyses <list|register|index|open|show|unregister> [options]');
   console.log('  zeus [--config <path>] doctor --profile <name> [--show-resolved]');
-  console.log('  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; --show-env zeigt Env-Var-Status');
+  console.log('  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query');
   console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>] [--save <datei.csv|datei.json>]');
   console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ..." | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv|json] [--save <datei.csv|datei.json>] [--watch <sek>]');
   console.log('  zeus [--config <path>] joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>]');

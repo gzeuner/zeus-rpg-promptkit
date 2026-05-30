@@ -22,6 +22,8 @@ Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 | `ai/` | KI-Verträge, Session-Patterns, Validierung | [`ai/session-prompt.md`](ai/session-prompt.md) | AI Agents, Prompt Engineers |
 | `cli/` | Referenz und praxisnahe Kommando-Beispiele | [`cli/reference.md`](cli/reference.md) | Entwickler:innen, Operatoren |
 | `quickstart/` | Schneller produktiver Einstieg | [`quickstart/5-minutes.md`](quickstart/5-minutes.md) | Neue Teammitglieder |
+| `architecture/` | Runtime-, Config- und Systemmodell-Reviews | [`architecture/runtime-config-model-review.md`](architecture/runtime-config-model-review.md) | Maintainer, GUI Engineers |
+| `gui/` | GUI-Fundament und Extensibility-Planung | [`gui/gui-extensibility-plan.md`](gui/gui-extensibility-plan.md) | UI Engineers, Product/UX |
 | `mcp/` | Lokaler MCP-Betrieb, Policy-Grenzen und Troubleshooting | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Operatoren, AI-Integratoren |
 | `workflows/` | Geführte Analyse- und Agenten-Workflows | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Analysten, Architekten |
 | `safety/` | Safety-Guidance, Governance, Sharing | [`safety/best-practice-guide.md`](safety/best-practice-guide.md) | Reviewer, Security, Leads |
@@ -37,6 +39,8 @@ Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 | Session bootstrap | [`ai/session-prompt.md`](ai/session-prompt.md) | Standardisierte Arbeitsweise mit Safety-Gates |
 | Prompt schema and constraints | [`ai/prompt-contracts.md`](ai/prompt-contracts.md) | Verhindert inkonsistente Prompt-Ausgaben |
 | Workflow options | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Zeigt Opt-in Vertiefungsfeatures |
+| Runtime config architecture | [`architecture/runtime-config-model-review.md`](architecture/runtime-config-model-review.md) | Erklaert Prioritaeten, Profilstruktur und GUI-relevante Konfiguration |
+| GUI extensibility direction | [`gui/gui-extensibility-plan.md`](gui/gui-extensibility-plan.md) | Praktischer Fahrplan fuer modulare, weniger ueberladene GUI-Flows |
 | Safe sharing guidance | [`safety/safe-sharing.md`](safety/safe-sharing.md) | Reduktions-/Sanitization-Regeln für externe Nutzung |
 | CLI examples | [`cli/examples.md`](cli/examples.md) | Schnell nutzbare, reproduzierbare Befehlsmuster |
 | MCP operator setup | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Start-/Policy-/Audit-Referenz fuer lokalen MCP-Betrieb |
@@ -53,6 +57,8 @@ flowchart TD
     A --> E[docs/ai]
     A --> F[docs/cli]
     A --> G[docs/quickstart]
+    A --> G2[docs/architecture]
+    A --> G3[docs/gui]
     A --> H[docs/mcp]
     A --> I[docs/workflows]
     A --> J[docs/safety]
