@@ -336,6 +336,55 @@ input[type="search"]{
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
   gap:12px;
 }
+.workflow-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+}
+.workflow-card{
+  padding:16px;
+  display:grid;
+  gap:10px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(226,244,248,.78));
+}
+.workflow-card h4{
+  font-size:16px;
+}
+.workflow-meta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.configure-layout{
+  display:grid;
+  grid-template-columns:minmax(220px,280px) minmax(0,1fr);
+  gap:14px;
+}
+.section-list{
+  display:grid;
+  gap:8px;
+}
+.section-btn{
+  width:100%;
+  text-align:left;
+}
+.field-list{
+  display:grid;
+  gap:10px;
+}
+.field-item{
+  padding:12px 14px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  display:grid;
+  gap:6px;
+}
+.field-item strong{
+  font-size:15px;
+}
 .home-card{
   padding:16px;
   display:grid;
@@ -431,6 +480,7 @@ input[type="search"]{
   .main{padding:18px}
   .hero{padding:18px}
   .metrics,.two,.three{grid-template-columns:1fr}
+  .configure-layout{grid-template-columns:1fr}
   .view.active>.sub:not(:first-child){border-left:0;border-top:1px solid rgba(194,219,226,.7)}
   .run-list,.item-list{max-height:none}
 }
@@ -469,9 +519,10 @@ input[type="search"]{
     </div>
 
     <div id="metrics" class="metrics"><div class="panel metric"><div>Runs</div><strong>0</strong></div><div class="panel metric"><div>Next Step</div><strong>Open Workbench</strong></div><div class="panel metric"><div>Output Root</div><strong>./output</strong></div><div class="panel metric"><div>Mode</div><strong>PromptKit UI</strong></div></div>
-    <div id="tabs" class="panel tabs"><button class="tab active">Home</button><button class="tab">Graph</button><button class="tab">DB2/Test Data</button><button class="tab">Prompt Compare</button><button class="tab">Prompt Workbench</button><button class="tab">Artifacts</button></div>
+    <div id="tabs" class="panel tabs"><button class="tab active">Home</button><button class="tab">Configure</button><button class="tab">Graph</button><button class="tab">DB2/Test Data</button><button class="tab">Prompt Compare</button><button class="tab">Prompt Workbench</button><button class="tab">Artifacts</button></div>
 
     <div id="home" class="panel view two active"><div class="sub"><div class="home-callout"><h2>Start Here</h2><p>No analysis runs are loaded yet. You can still open Prompt Workbench now, or create your first run and refresh this screen.</p><div class="tokens"><div class="token">Runs: 0</div><div class="token">Local-only UI</div></div></div><h3>Quick Actions</h3><div class="home-grid"><div class="home-card"><strong>Open Prompt Workbench</strong><p>Build or refine prompts directly in the browser with guided use cases.</p></div><div class="home-card"><strong>Create an analysis run</strong><p>Generate artifacts under <code>./output</code> so the explorers have something to show.</p><div class="command-block"><pre>zeus analyze --source ./src --program ORDERPGM --out ./output</pre></div></div><div class="home-card"><strong>Use a guided workflow</strong><p>Generate richer prompt packs and workflow-specific output.</p><div class="command-block"><pre>zeus workflow --preset modernization-review --source ./src --program ORDERPGM --out ./output</pre></div></div></div></div><div class="sub"><h2>What You Can Do Here</h2><p>The home screen gives you the fastest path into the tool, even before the first run exists.</p><div class="hint-list"><div class="hint-item"><strong>1. Create output</strong><p>Use <code>zeus analyze</code> or <code>zeus workflow</code> so this UI has artifacts to browse.</p></div><div class="hint-item"><strong>2. Refresh runs</strong><p>Once output exists, reload the run list and switch into graph, DB2, prompts, or artifacts.</p></div><div class="hint-item"><strong>3. Start with Prompt Workbench</strong><p>Use the guided prompt canvas immediately, even if your first analysis run is still being prepared.</p></div></div></div></div>
+    <div id="configure" class="panel view two"></div>
     <div id="graph" class="panel view two"></div>
     <div id="db2" class="panel view two"></div>
     <div id="prompts" class="panel view three"></div>
@@ -483,6 +534,12 @@ input[type="search"]{
 <script>
 const s={
   runs:[],detail:null,program:null,tab:'home',artifact:null,node:null,table:null,left:null,right:null,cache:new Map(),
+  uiMetadata:{
+    loading:false,
+    error:null,
+    payload:null,
+    selectedConfigSection:'profile'
+  },
   promptBuilder:{
     loading:false,
     loaded:false,
@@ -519,6 +576,7 @@ const s={
 
 const tabs=[
   ['home','Home'],
+  ['configure','Configure'],
   ['graph','Graph'],
   ['db2','DB2/Test Data'],
   ['prompts','Prompt Compare'],
@@ -656,6 +714,66 @@ function promptWorkbenchHighlights(){
   return '<div class="home-grid">'+useCases.map((entry)=>'<div class="home-card"><strong>'+esc(entry.title)+'</strong><p>'+esc(entry.description||'')+'</p><div class="actions"><button class="btn" data-home-workbench="'+esc(entry.id)+'">Open In Workbench</button></div></div>').join('')+'</div>';
 }
 
+function fallbackWorkflowCards(){
+  return [
+    { id:'configure', title:'Configure', description:'Review profile and environment metadata.', badge:'configure', status:'Not checked yet', primaryActionLabel:'Open Configure', recommendedNext:'doctor' },
+    { id:'fetch-sources', title:'Fetch Sources', description:'Prepare source evidence from IBM i.', badge:'fetch', status:'Not checked yet', primaryActionLabel:'Prepare Fetch', recommendedNext:'copy-to-workspace' },
+    { id:'analyze-workspace', title:'Analyze Workspace', description:'Run analysis and generate artifacts.', badge:'analyze', status:'Not checked yet', primaryActionLabel:'Review Analyze', recommendedNext:'serve' },
+    { id:'query-db2', title:'Query DB2', description:'Run read-only DB2 query workflows.', badge:'query', status:'Not checked yet', primaryActionLabel:'Review Queries', recommendedNext:'query-table' },
+    { id:'review-reports', title:'Review Reports', description:'Inspect report and artifact output.', badge:'review', status:'Not checked yet', primaryActionLabel:'Open Artifacts', recommendedNext:'bundle' },
+    { id:'generate-ai-context', title:'Generate AI Context', description:'Bundle and refine AI context artifacts.', badge:'context', status:'Not checked yet', primaryActionLabel:'Open Workbench', recommendedNext:'bundle' }
+  ];
+}
+
+function workflowCards(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  const cards=payload&&Array.isArray(payload.workflowCards)?payload.workflowCards:[];
+  return cards.length>0?cards:fallbackWorkflowCards();
+}
+
+function metadataSections(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  const sections=payload&&payload.config&&Array.isArray(payload.config.sections)?payload.config.sections:[];
+  return sections.length>0?sections:[];
+}
+
+function metadataFields(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  const fields=payload&&payload.config&&Array.isArray(payload.config.fields)?payload.config.fields:[];
+  return fields.length>0?fields:[];
+}
+
+function defaultConfigSection(){
+  const sections=metadataSections();
+  return sections[0]&&sections[0].id?sections[0].id:'profile';
+}
+
+function cardToHomeTarget(cardId){
+  if(cardId==='configure') return 'configure';
+  if(cardId==='fetch-sources') return 'configure';
+  if(cardId==='analyze-workspace') return 'refresh';
+  if(cardId==='query-db2') return 'db2';
+  if(cardId==='review-reports') return 'artifacts';
+  if(cardId==='generate-ai-context') return 'workbench';
+  return 'home';
+}
+
+async function loadUiMetadata(){
+  s.uiMetadata.loading=true;
+  s.uiMetadata.error=null;
+  try{
+    const payload=await getJson('/api/ui-metadata');
+    s.uiMetadata.payload=payload;
+    if(!metadataSections().some((section)=>section.id===s.uiMetadata.selectedConfigSection)){
+      s.uiMetadata.selectedConfigSection=defaultConfigSection();
+    }
+  }catch(error){
+    s.uiMetadata.error=error.message||String(error);
+  }finally{
+    s.uiMetadata.loading=false;
+  }
+}
+
 async function refreshRuns(){
   const currentProgram=s.program;
   s.runs=await getJson('/api/runs');
@@ -689,6 +807,12 @@ async function openHomeTarget(target,options){
     return;
   }
 
+  if(target==='configure'){
+    s.tab='configure';
+    await render();
+    return;
+  }
+
   if(target==='workbench'){
     s.tab='workbench';
     await render();
@@ -703,7 +827,7 @@ async function openHomeTarget(target,options){
     return;
   }
 
-  if(!s.detail&&s.runs.length>0){
+  if((target==='graph'||target==='db2'||target==='prompts'||target==='artifacts')&&!s.detail&&s.runs.length>0){
     await selectRun(s.runs[0].program);
   }
   s.tab=target;
@@ -759,51 +883,20 @@ function renderHome(){
   root.classList.toggle('active',s.tab==='home');
   if(s.tab!=='home') return;
 
+  const cards=workflowCards();
   const hasRun=Boolean(s.detail);
   const summary=hasRun?s.detail.summary:null;
-  const promptCount=hasRun?s.detail.views.prompts.artifacts.length:0;
-  const graphCount=hasRun?s.detail.views.summary.graphNodeCount||0:0;
-  const tableCount=hasRun?s.detail.views.summary.db2TableCount||0:0;
-  const runStatus=summary?(summary.status||'unknown'):'No run selected';
-  const workflowLabel=summary?(summary.workflowPreset||summary.workflowMode||'standard'):'Analyze output pending';
-  ensureStarterDefaults();
-  const starterUseCases=(s.promptBuilder.useCases||[]).slice(0,4);
+  const nextHint=summary
+    ? 'Selected run: '+summary.program+' ('+String(summary.workflowPreset||summary.workflowMode||'standard')+').'
+    : 'No run selected yet. Start with Configure, then run doctor/fetch/analyze from CLI.';
 
-  root.innerHTML='<div class="sub"><div class="home-callout">'+
-    (hasRun
-      ? '<h2>Start with '+esc(summary.program)+'</h2><p>Your latest selected run is ready. Choose where you want to continue, or open Prompt Workbench for guided prompt creation.</p><div class="tokens"><div class="token">Status: '+esc(runStatus)+'</div><div class="token">Workflow: '+esc(workflowLabel)+'</div><div class="token">Artifacts: '+esc(String(summary.artifactCount||0))+'</div></div>'
-      : '<h2>Start Here</h2><p>No analysis runs are loaded yet. You can still open Prompt Workbench now, or create your first run and refresh this screen.</p><div class="tokens"><div class="token">Runs: '+esc(String(s.runs.length||0))+'</div><div class="token">'+esc(s.promptBuilder.loading?'Workbench loading':s.promptBuilder.error?'Workbench issue':'Workbench ready')+'</div></div>'
+  root.innerHTML='<div class="sub"><div class="home-callout"><h2>Workflow Shell</h2><p>A calmer entry point: pick one workflow card, then move to the next recommended step.</p><div class="tokens"><div class="token">Cards: '+esc(String(cards.length))+'</div><div class="token">Metadata: '+esc(s.uiMetadata.error?'degraded fallback':'live API')+'</div><div class="token">'+esc(nextHint)+'</div></div></div><h3>Workflow Cards</h3>'+
+    (s.uiMetadata.loading
+      ? '<div class="empty">Loading UI metadata...</div>'
+      : '<div class="workflow-grid">'+cards.map((card)=>'<div class="workflow-card"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description||'')+'</p><div class="workflow-meta"><div class="token">'+esc(card.badge||card.category||'workflow')+'</div><div class="token">'+esc(card.status||'Not checked yet')+'</div><div class="token">Commands: '+esc(String(card.commandCount||0))+'</div></div><p><strong>Next:</strong> '+esc(card.recommendedNext||'TBD')+'</p><div class="actions"><button class="btn primary" data-home-target="'+esc(cardToHomeTarget(card.id))+'">'+esc(card.primaryActionLabel||'Open')+'</button></div></div>').join('')+'</div>'
     )+
-    '</div><h3>Quick Actions</h3><div class="home-grid">'+
-      (hasRun
-        ? [
-          ['Graph Explorer','Follow calls, tables, and related artifacts.','graph','Open Graph'],
-          ['DB2 / Test Data','Check metadata, evidence, and masking.','db2','Open DB2'],
-          ['Prompt Compare','Compare generated prompt packs side by side.','prompts','Compare Prompts'],
-          ['Artifact Explorer','Browse reports, JSON, HTML, and safe-sharing output.','artifacts','Browse Artifacts']
-        ].map(([title,desc,target,label])=>'<div class="home-card"><strong>'+esc(title)+'</strong><p>'+esc(desc)+'</p><div class="actions"><button class="btn" data-home-target="'+esc(target)+'">'+esc(label)+'</button></div></div>').join('')
-        : [
-          '<div class="home-card"><strong>Create an analysis run</strong><p>Generate output under <code>./output</code>, then reload the run list here.</p>'+renderCommandBlock(['zeus analyze --source ./src --program ORDERPGM --out ./output'])+'</div>',
-          '<div class="home-card"><strong>Use a guided workflow</strong><p>Run a preset when you want richer artifacts and prompt packs.</p>'+renderCommandBlock(['zeus workflow --preset modernization-review --source ./src --program ORDERPGM --out ./output'])+'</div>'
-        ].join('')
-      )+
-    '</div><h3>From first start to finished analysis</h3><div class="step-list"><div class="step-item"><strong>Step 1</strong><p>Pick a template and describe your goal in one sentence.</p></div><div class="step-item"><strong>Step 2</strong><p>Run analyze/workflow once to generate output under <code>./output</code>.</p></div><div class="step-item"><strong>Step 3</strong><p>Review Graph, DB2/Test Data, Prompts, and artifacts in tabs.</p></div><div class="step-item"><strong>Step 4</strong><p>Compare/export final prompt and share report artifacts.</p></div></div><div class="actions"><button class="btn primary" data-home-starter-open="1">Start With Template</button><button class="btn" data-home-target="workbench">Open Prompt Workbench</button><button class="btn" data-home-target="refresh">Refresh Runs</button></div></div>'+
-    '<div class="sub"><h2>'+(hasRun?'Recommended Next Steps':'What You Can Do Here')+'</h2><p>'+(hasRun
-      ? 'Pick a focused entry point or jump straight into a Prompt Workbench use case.'
-      : 'Even before the first run exists, Prompt Workbench can be used as a guided starting point.')+'</p>'+
-      '<div class="hint-list">'+
-        (hasRun
-          ? '<div class="hint-item"><strong>'+esc(summary.program)+'</strong><p>'+esc('Graph nodes: '+String(graphCount)+' • DB2 tables: '+String(tableCount)+' • Prompt packs: '+String(promptCount))+'.</p></div><div class="hint-item"><strong>Select another run from the left sidebar</strong><p>The home screen stays as your landing area, while the tabs take you into the focused explorers.</p></div><div class="hint-item"><strong>Need a different prompt?</strong><p>Open Prompt Workbench to assemble a use case, import an existing ai_prompt artifact, and refine the preview live.</p></div>'
-          : '<div class="hint-item"><strong>1. Create output</strong><p>Use <code>zeus analyze</code> or <code>zeus workflow</code> so this UI has artifacts to browse.</p></div><div class="hint-item"><strong>2. Refresh runs</strong><p>Keep the local UI open, then use <code>Refresh Runs</code> instead of restarting the server.</p></div><div class="hint-item"><strong>3. Start with Prompt Workbench</strong><p>Use the guided prompt canvas immediately, even if your first analysis run is still being prepared.</p></div>'
-        )+
-      '</div><h3>Template Starter</h3>'+
-      (s.promptBuilder.loading
-        ? '<div class="empty">Loading starter templates...</div>'
-        : s.promptBuilder.error
-          ? '<div class="empty">Starter unavailable: '+esc(s.promptBuilder.error)+'</div>'
-          : '<div class="step-list"><div class="step-item"><strong>Step 1</strong><p>Choose a ready template.</p><select id="starterUseCase">'+((s.promptBuilder.useCases||[]).map((entry)=>'<option value="'+esc(entry.id)+'"'+(entry.id===s.promptBuilder.starterUseCaseId?' selected':'')+'>'+esc(entry.title)+'</option>').join(''))+'</select></div><div class="step-item"><strong>Step 2</strong><p>Describe what you want to do. We prefill the template.</p><textarea id="starterGoal" style="min-height:120px" placeholder="What do you want to analyze?">'+esc(s.promptBuilder.starterGoal||'')+'</textarea></div><div class="step-item"><strong>Step 3</strong><p>Select response language and open Workbench.</p><select id="starterLanguage"><option value="German"'+((s.promptBuilder.starterLanguage||'German')==='German'?' selected':'')+'>German</option><option value="English"'+((s.promptBuilder.starterLanguage||'German')==='English'?' selected':'')+'>English</option></select><div class="actions"><button class="btn primary" data-home-starter-open="1">Open Filled Template</button></div></div></div><div class="chips">'+starterUseCases.map((entry)=>'<button class="btn" data-home-workbench="'+esc(entry.id)+'">'+esc(entry.title)+'</button>').join('')+'</div>'
-      )+
-      '<h3>Prompt Workbench Choices</h3>'+promptWorkbenchHighlights()+'</div>';
+    '<div class="actions"><button class="btn" data-home-target="configure">Open Configure</button><button class="btn" data-home-target="refresh">Refresh Runs</button><button class="btn" data-home-target="workbench">Open Prompt Workbench</button></div></div>'+
+    '<div class="sub"><h2>Command Guidance</h2><p>The shell remains read-only for configuration values. Use CLI commands for execution until explicit safe execution wiring is added.</p><div class="hint-list"><div class="hint-item"><strong>Recommended sequence</strong><p>Configure -> doctor -> fetch -> analyze -> review -> bundle/context.</p></div><div class="hint-item"><strong>Analyze starter</strong><p>Run <code>zeus analyze --source ./src --program ORDERPGM --out ./output</code>, then click Refresh Runs.</p></div><div class="hint-item"><strong>Workflow starter</strong><p>Run <code>zeus workflow --preset modernization-review --source ./src --program ORDERPGM --out ./output</code> for richer prompt packs.</p></div></div><h3>Prompt Workbench Choices</h3>'+promptWorkbenchHighlights()+'</div>';
 
   for(const b of root.querySelectorAll('[data-home-target]')){
     b.onclick=()=>openHomeTarget(b.dataset.homeTarget);
@@ -811,20 +904,63 @@ function renderHome(){
   for(const b of root.querySelectorAll('[data-home-workbench]')){
     b.onclick=()=>openHomeTarget('workbench',{useCaseId:b.dataset.homeWorkbench});
   }
-  for(const b of root.querySelectorAll('[data-home-starter-open]')){
-    b.onclick=()=>startWorkbenchFromStarter();
+}
+
+function renderConfigure(){
+  const root=q('configure');
+  root.classList.toggle('active',s.tab==='configure');
+  if(s.tab!=='configure') return;
+
+  const sections=metadataSections();
+  const fields=metadataFields();
+  const selectedSection=s.uiMetadata.selectedConfigSection||defaultConfigSection();
+  const selectedFields=fields.filter((field)=>field.section===selectedSection);
+  const sectionMeta=sections.find((section)=>section.id===selectedSection)||{ label:selectedSection };
+
+  const statusLine=s.uiMetadata.loading
+    ? 'Loading metadata...'
+    : (s.uiMetadata.error
+      ? ('Metadata API unavailable: '+s.uiMetadata.error)
+      : 'Metadata loaded from /api/ui-metadata');
+
+  root.innerHTML='<div class="sub"><h2>Configure (Read-only)</h2><p>This view renders config metadata only. No resolved env/profile values are shown.</p><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Sections: '+esc(String(sections.length||0))+'</div><div class="token">Fields: '+esc(String(fields.length||0))+'</div></div><div class="actions"><button class="btn primary" data-config-doctor="1">Check Readiness (Doctor)</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div><div class="hint-list"><div class="hint-item"><strong>Doctor action</strong><p>Run this in terminal: <code>zeus doctor --profile dev --show-resolved</code>.</p></div><div class="hint-item"><strong>Safety</strong><p>Browser execution wiring is intentionally deferred to avoid unsafe command execution from arbitrary input.</p></div></div></div>'+
+    '<div class="sub"><h2>'+esc(sectionMeta.label||selectedSection)+'</h2><div class="configure-layout"><div class="section-list">'+
+      sections.map((section)=>'<button class="btn section-btn'+(section.id===selectedSection?' active':'')+'" data-config-section="'+esc(section.id)+'">'+esc(section.label||section.id)+'</button>').join('')+
+    '</div><div class="field-list">'+
+      (selectedFields.length>0
+        ? selectedFields.map((field)=>'<div class="field-item"><strong>'+esc(field.label||field.key)+'</strong><p>'+esc(field.description||'')+'</p><div class="workflow-meta"><div class="token">key: '+esc(field.key)+'</div><div class="token">type: '+esc(field.type||'string')+'</div><div class="token">'+esc(field.sensitive?'sensitive':'non-sensitive')+'</div></div><div class="small">placeholder: '+esc(field.placeholder||'(none)')+'</div><div class="small">example: '+esc(field.example||'(none)')+'</div><div class="small">env: '+esc(field.envVar||'(none)')+'</div><div class="small">profile path: '+esc(field.profilePath||'(none)')+'</div></div>').join('')
+        : '<div class="empty">No fields for this section.</div>')+
+    '</div></div></div>';
+
+  for(const button of root.querySelectorAll('[data-config-section]')){
+    button.onclick=()=>{
+      s.uiMetadata.selectedConfigSection=button.dataset.configSection;
+      renderConfigure();
+    };
   }
-  const starterUseCase=q('starterUseCase');
-  if(starterUseCase){
-    starterUseCase.onchange=(e)=>{s.promptBuilder.starterUseCaseId=e.target.value||'';};
+  const doctorButton=root.querySelector('[data-config-doctor]');
+  if(doctorButton){
+    doctorButton.onclick=async ()=>{
+      const cmd='zeus doctor --profile dev --show-resolved';
+      if(navigator&&navigator.clipboard&&navigator.clipboard.writeText){
+        try{
+          await navigator.clipboard.writeText(cmd);
+          doctorButton.textContent='Doctor Command Copied';
+          return;
+        }catch(_err){
+          // Clipboard may be blocked by browser permissions.
+        }
+      }
+      doctorButton.textContent=cmd;
+    };
   }
-  const starterGoal=q('starterGoal');
-  if(starterGoal){
-    starterGoal.oninput=(e)=>{s.promptBuilder.starterGoal=e.target.value;};
-  }
-  const starterLanguage=q('starterLanguage');
-  if(starterLanguage){
-    starterLanguage.onchange=(e)=>{s.promptBuilder.starterLanguage=e.target.value||'German';};
+  const refreshButton=root.querySelector('[data-config-refresh]');
+  if(refreshButton){
+    refreshButton.onclick=async ()=>{
+      await loadUiMetadata();
+      renderConfigure();
+      if(s.tab==='home') renderHome();
+    };
   }
 }
 
@@ -1716,6 +1852,7 @@ async function selectTab(tab){
 async function render(){
   renderTabs();
   renderHome();
+  renderConfigure();
   renderGraph();
   renderDb2();
   await renderPrompts();
@@ -1746,7 +1883,9 @@ async function selectRun(program){
 async function boot(){
   renderHero();
   renderTabs();
+  await loadUiMetadata();
   renderHome();
+  renderConfigure();
   await loadPromptBuilderData();
   await refreshRuns();
 }
