@@ -135,6 +135,18 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     const health = await fetch(`${started.url}/api/health`).then((response) => response.json());
     assert.equal(health.ok, true);
 
+    const uiMetadata = await fetch(`${started.url}/api/ui-metadata`).then((response) => response.json());
+    assert.equal(uiMetadata.schemaVersion, 1);
+    assert.equal(uiMetadata.uiMode, 'metadata-workflow-shell');
+    assert.ok(Array.isArray(uiMetadata.config.sections));
+    assert.ok(Array.isArray(uiMetadata.config.fields));
+    assert.ok(Array.isArray(uiMetadata.commands.entries));
+    assert.ok(Array.isArray(uiMetadata.workflowCards));
+    assert.equal(uiMetadata.workflowCards.length, 6);
+    const sensitiveFields = uiMetadata.config.fields.filter((field) => field.sensitive === true);
+    assert.ok(sensitiveFields.length >= 2);
+    assert.equal(Object.prototype.hasOwnProperty.call(sensitiveFields[0], 'value'), false);
+
     const analyses = await fetch(`${started.url}/api/analyses`).then((response) => response.json());
     assert.equal(Array.isArray(analyses.workspaces), true);
     assert.equal(analyses.workspaces.length, 1);
@@ -175,6 +187,9 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     const shellHtml = await fetch(`${started.url}/`).then((response) => response.text());
     assert.match(shellHtml, /Zeus RPG PromptKit/);
     assert.match(shellHtml, /Home/);
+    assert.match(shellHtml, /Configure/);
+    assert.match(shellHtml, /Workflow Shell/);
+    assert.match(shellHtml, /Workflow Cards/);
     assert.match(shellHtml, /Graph Explorer|Graph/);
     assert.match(shellHtml, /DB2\/Test Data/);
     assert.match(shellHtml, /Prompt Compare/);
