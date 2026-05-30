@@ -30,7 +30,7 @@ const WORKFLOW_CARD_DEFINITIONS = Object.freeze([
     title: 'Configure',
     description: 'Review profile, connection, and workspace metadata before running workflows.',
     category: 'configure',
-    primaryActionLabel: 'Open Configure View',
+    primaryActionLabel: 'Check Readiness',
   }),
   Object.freeze({
     id: 'fetch-sources',

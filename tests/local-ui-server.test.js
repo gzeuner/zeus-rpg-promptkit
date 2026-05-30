@@ -130,6 +130,20 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
       outputRoot,
       port: 0,
       templateStorePath,
+      actionServiceOptions: {
+        doctorExecutor: (args) => {
+          if (args.profile === 'explode') {
+            throw new Error('unexpected internal failure');
+          }
+          return {
+            hasCriticalFailure: false,
+            checks: [
+              { name: 'Config/Profile', status: 'PASS', details: 'Loaded profile "dev".' },
+              { name: 'Java', status: 'WARN', details: 'Java runtime optional for this test.' },
+            ],
+          };
+        },
+      },
     });
 
     const health = await fetch(`${started.url}/api/health`).then((response) => response.json());
@@ -146,6 +160,83 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     const sensitiveFields = uiMetadata.config.fields.filter((field) => field.sensitive === true);
     assert.ok(sensitiveFields.length >= 2);
     assert.equal(Object.prototype.hasOwnProperty.call(sensitiveFields[0], 'value'), false);
+
+    const doctorResponse = await fetch(`${started.url}/api/ui-actions/doctor`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        showResolved: false,
+      }),
+    });
+    assert.equal(doctorResponse.status, 200);
+    assert.match(doctorResponse.headers.get('content-type') || '', /application\/json/);
+    const doctorPayload = await doctorResponse.json();
+    assert.equal(doctorPayload.action, 'doctor');
+    assert.ok(['ready', 'warning', 'failed'].includes(doctorPayload.status));
+    assert.equal(doctorPayload.input.profile, 'dev');
+    assert.equal(doctorPayload.input.showResolved, false);
+    assert.equal(Object.prototype.hasOwnProperty.call(doctorPayload, 'resolvedValues'), false);
+
+    const doctorUnknownKey = await fetch(`${started.url}/api/ui-actions/doctor`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        command: 'rm -rf /',
+      }),
+    });
+    assert.equal(doctorUnknownKey.status, 400);
+
+    for (const unsafeProfile of ['../dev', 'dev;rm -rf', 'dev && echo hacked', 'dev test', '"dev"']) {
+      const unsafeResponse = await fetch(`${started.url}/api/ui-actions/doctor`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          profile: unsafeProfile,
+        }),
+      });
+      assert.equal(unsafeResponse.status, 400);
+    }
+
+    const unknownAction = await fetch(`${started.url}/api/ui-actions/fetch`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+      }),
+    });
+    assert.equal(unknownAction.status, 404);
+
+    const nonJsonAction = await fetch(`${started.url}/api/ui-actions/doctor`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'text/plain',
+      },
+      body: 'profile=dev',
+    });
+    assert.equal(nonJsonAction.status, 400);
+
+    const unexpectedFailure = await fetch(`${started.url}/api/ui-actions/doctor`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'explode',
+      }),
+    });
+    assert.equal(unexpectedFailure.status, 500);
+    const unexpectedFailurePayload = await unexpectedFailure.json();
+    assert.equal(unexpectedFailurePayload.error, 'Internal server error');
 
     const analyses = await fetch(`${started.url}/api/analyses`).then((response) => response.json());
     assert.equal(Array.isArray(analyses.workspaces), true);
@@ -190,6 +281,7 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /Configure/);
     assert.match(shellHtml, /Workflow Shell/);
     assert.match(shellHtml, /Workflow Cards/);
+    assert.match(shellHtml, /Check Readiness/);
     assert.match(shellHtml, /Graph Explorer|Graph/);
     assert.match(shellHtml, /DB2\/Test Data/);
     assert.match(shellHtml, /Prompt Compare/);
