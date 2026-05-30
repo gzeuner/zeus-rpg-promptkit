@@ -16,6 +16,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const { loadProfiles, getProfilesMetadata, resolveProfile } = require('../../config/runtimeConfig');
 
 const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits', 'presets']);
+const PREFERRED_PROFILE_ORDER = ['dev', 'demo', 'sftp-fetch', 'readonly-db2', 'combined-fetch-and-query'];
 
 // Env-Vars die ein Profil mit DB-Konfiguration braucht
 const DB_ENV_VARS = [
@@ -58,6 +59,15 @@ function describeProfileEntry(name, profile) {
   return lines.join('\n');
 }
 
+function orderProfileNames(profileNames) {
+  const nameSet = new Set(profileNames);
+  const preferred = PREFERRED_PROFILE_ORDER.filter((name) => nameSet.has(name));
+  const remaining = profileNames
+    .filter((name) => !preferred.includes(name))
+    .sort((left, right) => left.localeCompare(right));
+  return [...preferred, ...remaining];
+}
+
 async function runProfiles(args) {
   let profiles;
   try {
@@ -73,14 +83,14 @@ async function runProfiles(args) {
   }
   console.log('');
 
-  const names = Object.keys(profiles).filter((k) => !GLOBAL_PROFILE_KEYS.has(k));
+  const names = Object.keys(profiles).filter((k) => !GLOBAL_PROFILE_KEYS.has(k) && !k.startsWith('_'));
   if (names.length === 0) {
     console.log('Keine Profile gefunden.');
     return;
   }
 
   const filterName = args.profile ? String(args.profile).trim() : null;
-  const toShow = filterName ? names.filter((n) => n === filterName) : names;
+  const toShow = filterName ? names.filter((n) => n === filterName) : orderProfileNames(names);
 
   if (toShow.length === 0) {
     console.error(`Profil "${filterName}" nicht gefunden. Verfuegbar: ${names.join(', ')}`);
@@ -88,6 +98,15 @@ async function runProfiles(args) {
   }
 
   const showEnv = Boolean(args['show-env']);
+
+  if (!filterName) {
+    const preferred = PREFERRED_PROFILE_ORDER.filter((name) => names.includes(name));
+    if (preferred.length > 0) {
+      console.log(`Empfohlene Startprofile: ${preferred.join(', ')}`);
+      console.log('Legacy-Profile (sample-*) bleiben als Alias weiterhin unterstuetzt.');
+      console.log('');
+    }
+  }
 
   for (const name of toShow) {
     let resolved;
