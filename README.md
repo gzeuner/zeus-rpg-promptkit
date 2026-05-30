@@ -316,16 +316,17 @@ source ./config/load-env.sh
 # . .\config\load-env.ps1
 
 # 4. Setup prüfen
-node cli/zeus.js doctor --profile default --show-resolved
+node cli/zeus.js doctor --profile dev --show-resolved
 
 # 5. Quellen holen
-node cli/zeus.js fetch --profile default-fetch
+node cli/zeus.js fetch --profile sftp-fetch
 
 # 6. Quellen analysieren
-node cli/zeus.js analyze --profile default --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
+node cli/zeus.js analyze --profile dev --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
 ```
 
 Ohne IBM i-Anbindung können RPG-, CL- und DDS-Dateien einfach in `rpg_sources/` abgelegt und direkt mit `analyze` verarbeitet werden.
+Empfohlene Profilnamen im Public-Contract: `dev`, `demo`, `sftp-fetch`, `readonly-db2`, `combined-fetch-and-query` (Legacy-Aliase `sample-*` bleiben unterstützt).
 
 ---
 
@@ -363,7 +364,7 @@ Die verbindliche Referenz ist `docs/tool-catalog.md`.
 Beispiele:
 
 ```bash
-node cli/zeus.js doctor --profile default --show-resolved
+node cli/zeus.js doctor --profile dev --show-resolved
 node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output
 node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output
 node cli/zeus.js serve --source-output-root ./output
@@ -423,8 +424,18 @@ Copy-Item config/profiles.example.json config/local-only/profiles.json
 Danach prüfen:
 
 ```bash
-node cli/zeus.js doctor --profile default --show-resolved
+node cli/zeus.js doctor --profile dev --show-resolved
 ```
+
+Empfohlene Startprofile:
+
+- `dev` fuer taegliche Entwicklung
+- `demo` fuer lokale Smoke-Checks ohne IBM i
+- `sftp-fetch` fuer reinen Fetch-Workflow
+- `readonly-db2` fuer geschuetzte Read-only Queries
+- `combined-fetch-and-query` fuer End-to-End Beispiele
+
+Legacy `sample-*` Profile bleiben als Rueckwaertskompatibilitaets-Aliase erhalten.
 
 ### Typische Env-Variablen
 
@@ -971,16 +982,17 @@ source ./config/load-env.sh
 # . .\config\load-env.ps1
 
 # 4. Validate setup
-node cli/zeus.js doctor --profile default --show-resolved
+node cli/zeus.js doctor --profile dev --show-resolved
 
 # 5. Fetch sources
-node cli/zeus.js fetch --profile default-fetch
+node cli/zeus.js fetch --profile sftp-fetch
 
 # 6. Analyze sources
-node cli/zeus.js analyze --profile default --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
+node cli/zeus.js analyze --profile dev --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
 ```
 
 Without IBM i access, place RPG, CL and DDS files in `rpg_sources/` and run `analyze` directly.
+Recommended public profile names: `dev`, `demo`, `sftp-fetch`, `readonly-db2`, `combined-fetch-and-query` (`sample-*` aliases remain supported).
 
 ---
 
@@ -1018,7 +1030,7 @@ The authoritative reference is `docs/tool-catalog.md`.
 Examples:
 
 ```bash
-node cli/zeus.js doctor --profile default --show-resolved
+node cli/zeus.js doctor --profile dev --show-resolved
 node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output
 node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output
 node cli/zeus.js serve --source-output-root ./output
@@ -1078,8 +1090,18 @@ Copy-Item config/profiles.example.json config/local-only/profiles.json
 Then validate:
 
 ```bash
-node cli/zeus.js doctor --profile default --show-resolved
+node cli/zeus.js doctor --profile dev --show-resolved
 ```
+
+Recommended starter profiles:
+
+- `dev` for day-to-day development
+- `demo` for local smoke checks without IBM i
+- `sftp-fetch` for fetch-first workflows
+- `readonly-db2` for protected read-only query use cases
+- `combined-fetch-and-query` for end-to-end examples
+
+Legacy `sample-*` profiles remain available as backward-compatible aliases.
 
 ### Common env variables
 
