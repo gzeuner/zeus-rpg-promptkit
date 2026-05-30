@@ -25,6 +25,7 @@ Behavior:
 
 - `GET /api/health`
 - `GET /api/ui-metadata`
+- `POST /api/ui-actions/doctor`
 - `GET /api/runs`
 - `GET /api/runs/:program`
 - `GET /api/runs/:program/views`
@@ -68,3 +69,23 @@ Large-output behavior:
 - the shell uses simple filtering instead of eager full-page rendering of every artifact body
 
 This is the API-and-shell foundation for future richer views. It is not yet the full interactive exploration layer described in the later UI issues.
+
+## Allowlisted UI actions
+
+The local UI action surface is intentionally explicit and small:
+
+- only allowlisted actions are supported
+- arbitrary command execution is not supported
+- raw shell command payloads are rejected
+- payload keys are strictly validated
+- unknown action names return deterministic errors
+
+Current supported action:
+
+- `doctor` readiness check via `POST /api/ui-actions/doctor`
+
+Security behavior:
+
+- request and response format is JSON only
+- server-side validation blocks unsafe profile values
+- responses keep diagnostics structured and do not expose resolved secret values or raw env values

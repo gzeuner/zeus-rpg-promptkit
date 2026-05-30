@@ -540,6 +540,14 @@ const s={
     payload:null,
     selectedConfigSection:'profile'
   },
+  uiActions:{
+    doctor:{
+      profile:'dev',
+      running:false,
+      error:null,
+      result:null
+    }
+  },
   promptBuilder:{
     loading:false,
     loaded:false,
@@ -774,6 +782,24 @@ async function loadUiMetadata(){
   }
 }
 
+async function runDoctorReadinessAction(){
+  const profile=String(s.uiActions.doctor.profile||'dev').trim()||'dev';
+  s.uiActions.doctor.running=true;
+  s.uiActions.doctor.error=null;
+  try{
+    const payload=await sendJson('POST','/api/ui-actions/doctor',{
+      profile,
+      showResolved:false
+    });
+    s.uiActions.doctor.result=payload;
+  }catch(error){
+    s.uiActions.doctor.error=error.message||String(error);
+    s.uiActions.doctor.result=null;
+  }finally{
+    s.uiActions.doctor.running=false;
+  }
+}
+
 async function refreshRuns(){
   const currentProgram=s.program;
   s.runs=await getJson('/api/runs');
@@ -923,7 +949,31 @@ function renderConfigure(){
       ? ('Metadata API unavailable: '+s.uiMetadata.error)
       : 'Metadata loaded from /api/ui-metadata');
 
-  root.innerHTML='<div class="sub"><h2>Configure (Read-only)</h2><p>This view renders config metadata only. No resolved env/profile values are shown.</p><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Sections: '+esc(String(sections.length||0))+'</div><div class="token">Fields: '+esc(String(fields.length||0))+'</div></div><div class="actions"><button class="btn primary" data-config-doctor="1">Check Readiness (Doctor)</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div><div class="hint-list"><div class="hint-item"><strong>Doctor action</strong><p>Run this in terminal: <code>zeus doctor --profile dev --show-resolved</code>.</p></div><div class="hint-item"><strong>Safety</strong><p>Browser execution wiring is intentionally deferred to avoid unsafe command execution from arbitrary input.</p></div></div></div>'+
+  const doctorState=s.uiActions.doctor||{};
+  const doctorResult=doctorState.result;
+  const doctorSummary=doctorResult&&doctorResult.result&&doctorResult.result.summary;
+  const doctorStatus=doctorResult&&doctorResult.status
+    ? String(doctorResult.status)
+    : (doctorState.running?'running':doctorState.error?'error':'not-run');
+  const doctorTone=statusToneClass(doctorStatus);
+  const doctorStatusLabel=doctorState.running
+    ? 'running'
+    : (doctorState.error?'error':(doctorResult&&doctorResult.status?doctorResult.status:'not-run'));
+  const doctorHint=doctorState.error
+    ? doctorState.error
+    : (doctorResult
+      ? ('last run: '+String(fmt(doctorResult.finishedAt||doctorResult.startedAt||'')))
+      : 'No readiness check executed yet.');
+  const doctorDetails=doctorResult&&doctorResult.result&&Array.isArray(doctorResult.result.checks)
+    ? doctorResult.result.checks
+      .map((entry)=>String(entry.status||'')+' | '+String(entry.name||'')+' | '+String(entry.details||''))
+      .join('\\n')
+    : '';
+
+  root.innerHTML='<div class="sub"><h2>Configure (Read-only)</h2><p>This view renders config metadata only. No resolved env/profile values are shown.</p><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Sections: '+esc(String(sections.length||0))+'</div><div class="token">Fields: '+esc(String(fields.length||0))+'</div></div><div class="hint-list"><div class="hint-item"><strong>Doctor action is allowlisted</strong><p>Only <code>doctor readiness</code> is supported from UI actions. Arbitrary command execution is intentionally blocked.</p></div><div class="hint-item"><strong>Safety</strong><p>Action payload is strictly validated server-side and responses are JSON-only.</p></div></div><h3>Readiness Check</h3><div class="field-grid"><label>Profile Name<input id="configDoctorProfile" value="'+escAttr(doctorState.profile||'dev')+'" placeholder="dev"></label></div><div class="actions"><button class="btn primary" data-config-doctor="1">'+esc(doctorState.running?'Checking...':'Check Readiness')+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div><div class="tokens"><div class="token '+esc(doctorTone)+'">Doctor: '+esc(doctorStatusLabel)+'</div><div class="token">profile: '+esc(doctorState.profile||'dev')+'</div>'+(doctorResult?'<div class="token">duration: '+esc(String(doctorResult.durationMs||0))+' ms</div>':'')+'</div>'+
+    (doctorSummary?'<div class="hint-list"><div class="hint-item"><strong>Summary</strong><p>pass '+esc(String(doctorSummary.pass||0))+' • warn '+esc(String(doctorSummary.warn||0))+' • fail '+esc(String(doctorSummary.fail||0))+' • skip '+esc(String(doctorSummary.skip||0))+'</p><p class="small">'+esc(doctorHint)+'</p></div></div>':'<div class="hint-list"><div class="hint-item"><strong>Status</strong><p>'+esc(doctorHint)+'</p></div></div>')+
+    (doctorDetails?'<details><summary>Show checks</summary><div class="preview"><pre>'+esc(doctorDetails)+'</pre></div></details>':'')+
+    '</div>'+
     '<div class="sub"><h2>'+esc(sectionMeta.label||selectedSection)+'</h2><div class="configure-layout"><div class="section-list">'+
       sections.map((section)=>'<button class="btn section-btn'+(section.id===selectedSection?' active':'')+'" data-config-section="'+esc(section.id)+'">'+esc(section.label||section.id)+'</button>').join('')+
     '</div><div class="field-list">'+
@@ -938,20 +988,21 @@ function renderConfigure(){
       renderConfigure();
     };
   }
+  const profileInput=root.querySelector('#configDoctorProfile');
+  if(profileInput){
+    profileInput.oninput=(event)=>{
+      s.uiActions.doctor.profile=String(event.target.value||'').trim();
+    };
+  }
   const doctorButton=root.querySelector('[data-config-doctor]');
   if(doctorButton){
     doctorButton.onclick=async ()=>{
-      const cmd='zeus doctor --profile dev --show-resolved';
-      if(navigator&&navigator.clipboard&&navigator.clipboard.writeText){
-        try{
-          await navigator.clipboard.writeText(cmd);
-          doctorButton.textContent='Doctor Command Copied';
-          return;
-        }catch(_err){
-          // Clipboard may be blocked by browser permissions.
-        }
+      const profileInput=q('configDoctorProfile');
+      if(profileInput){
+        s.uiActions.doctor.profile=String(profileInput.value||'').trim()||'dev';
       }
-      doctorButton.textContent=cmd;
+      await runDoctorReadinessAction();
+      renderConfigure();
     };
   }
   const refreshButton=root.querySelector('[data-config-refresh]');
