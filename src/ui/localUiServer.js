@@ -23,6 +23,7 @@ const {
 const { listAnalysisRuns } = require('./localUiDataApi');
 const { renderLocalUiShell } = require('./localUiShell');
 const { buildUiMetadataPayload } = require('./uiMetadataService');
+const { UiActionError, createLocalUiActionService } = require('./localUiActionService');
 const { createPromptWorkbenchService } = require('./promptWorkbenchService');
 const { collectSensitiveTermsFromEnv, maskSensitiveTermsInText, sanitizeValue } = require('../security/secretMasking');
 const { listWorkspaces, readWorkspaceById, touchWorkspace } = require('../workspace/analysisRegistryService');
@@ -123,6 +124,54 @@ function readJsonBody(request, options = {}) {
 
     request.on('error', reject);
   });
+}
+
+function requireJsonRequest(request) {
+  const contentType = String(request.headers['content-type'] || '').toLowerCase();
+  if (!contentType.startsWith('application/json')) {
+    throw new UiActionError('Invalid request: content-type must be application/json', 400);
+  }
+}
+
+async function handleUiActionRequest({
+  request,
+  response,
+  pathname,
+  segments,
+  actionService,
+  sensitiveTerms = [],
+}) {
+  if (!pathname.startsWith('/api/ui-actions')) {
+    return false;
+  }
+
+  if (segments[0] !== 'api' || segments[1] !== 'ui-actions' || segments.length < 3) {
+    sendJson(response, 404, { error: `Route not found: ${pathname}` }, { sensitiveTerms });
+    return true;
+  }
+
+  const actionName = segments[2];
+  if (request.method !== 'POST') {
+    sendMethodNotAllowed(response, ['POST']);
+    return true;
+  }
+
+  try {
+    requireJsonRequest(request);
+    const payload = await readJsonBody(request);
+    const result = await actionService.executeAction(actionName, payload);
+    sendJson(response, 200, result, { sensitiveTerms });
+  } catch (error) {
+    const statusCode = Number.isInteger(error.statusCode)
+      ? error.statusCode
+      : /^invalid json body:|^request body exceeds/i.test(String(error && error.message))
+        ? 400
+        : 500;
+    sendJson(response, statusCode, {
+      error: statusCode === 500 ? 'Internal server error' : (error.message || 'Action failed'),
+    }, { sensitiveTerms });
+  }
+  return true;
 }
 
 async function handlePromptBuilderRequest({
@@ -364,11 +413,13 @@ async function handleAnalysesRequest({
 function createLocalUiRequestHandler({
   outputRoot,
   promptWorkbenchService,
+  actionService,
   registryPath = null,
   sensitiveTerms = [],
 }) {
   const resolvedOutputRoot = path.resolve(outputRoot);
   const service = promptWorkbenchService || createPromptWorkbenchService();
+  const uiActionService = actionService || createLocalUiActionService();
 
   return async function handleRequest(request, response) {
     const url = new URL(request.url, 'http://127.0.0.1');
@@ -398,6 +449,18 @@ function createLocalUiRequestHandler({
         sensitiveTerms,
       });
       if (promptBuilderHandled) {
+        return;
+      }
+
+      const uiActionHandled = await handleUiActionRequest({
+        request,
+        response,
+        pathname,
+        segments,
+        actionService: uiActionService,
+        sensitiveTerms,
+      });
+      if (uiActionHandled) {
         return;
       }
 
@@ -480,6 +543,8 @@ async function startLocalUiServer({
   host = DEFAULT_UI_HOST,
   port = DEFAULT_UI_PORT,
   templateStorePath,
+  actionService,
+  actionServiceOptions = {},
   registryPath = null,
   sensitiveTerms = [],
 } = {}) {
@@ -490,10 +555,16 @@ async function startLocalUiServer({
     templateStorePath,
     outputRoot: resolvedOutputRoot,
   });
+  const uiActionService = actionService || createLocalUiActionService({
+    cwd: actionServiceOptions.cwd || process.cwd(),
+    env: actionServiceOptions.env || process.env,
+    doctorExecutor: actionServiceOptions.doctorExecutor,
+  });
   const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(process.env, sensitiveTerms);
   const server = http.createServer(createLocalUiRequestHandler({
     outputRoot: resolvedOutputRoot,
     promptWorkbenchService,
+    actionService: uiActionService,
     registryPath: registryPath ? path.resolve(registryPath) : null,
     sensitiveTerms: resolvedSensitiveTerms,
   }));

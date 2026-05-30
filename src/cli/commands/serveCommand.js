@@ -57,7 +57,7 @@ async function runServe(args) {
     if (verbose) {
       console.log(`[verbose] Output root: ${result.outputRoot}`);
       console.log(`[verbose] Registry path: ${registryPath || 'not configured (fallback workspace mode)'}`);
-      console.log('[verbose] API routes: /api/health, /api/ui-metadata, /api/runs, /api/runs/:program, /api/runs/:program/artifacts/content, /api/analyses*, /api/prompt-builder/*');
+      console.log('[verbose] API routes: /api/health, /api/ui-metadata, /api/ui-actions/doctor, /api/runs, /api/runs/:program, /api/runs/:program/artifacts/content, /api/analyses*, /api/prompt-builder/*');
     }
 
     console.log(`Zeus local UI available at: ${result.url}`);
