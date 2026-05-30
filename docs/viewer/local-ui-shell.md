@@ -24,6 +24,7 @@ Behavior:
 ## API endpoints
 
 - `GET /api/health`
+- `GET /api/ui-metadata`
 - `GET /api/runs`
 - `GET /api/runs/:program`
 - `GET /api/runs/:program/views`
@@ -42,6 +43,14 @@ The browser shell consumes only those endpoints. It does not parse output direct
 
 ## Current shell scope
 
+- metadata-driven workflow shell landing with six workflow cards:
+  - Configure
+  - Fetch Sources
+  - Analyze Workspace
+  - Query DB2
+  - Review Reports
+  - Generate AI Context
+- metadata-driven read-only Configure panel (section-grouped field contract preview)
 - list analysis runs under the configured output root
 - show manifest-derived run summary details
 - provide a graph explorer with node-level links to related artifacts and prompts

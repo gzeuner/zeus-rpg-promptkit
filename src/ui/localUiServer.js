@@ -22,6 +22,7 @@ const {
 } = require('../core/runExplorerService');
 const { listAnalysisRuns } = require('./localUiDataApi');
 const { renderLocalUiShell } = require('./localUiShell');
+const { buildUiMetadataPayload } = require('./uiMetadataService');
 const { createPromptWorkbenchService } = require('./promptWorkbenchService');
 const { collectSensitiveTermsFromEnv, maskSensitiveTermsInText, sanitizeValue } = require('../security/secretMasking');
 const { listWorkspaces, readWorkspaceById, touchWorkspace } = require('../workspace/analysisRegistryService');
@@ -415,6 +416,11 @@ function createLocalUiRequestHandler({
           ok: true,
           outputRoot: resolvedOutputRoot,
         }, { sensitiveTerms });
+        return;
+      }
+
+      if (pathname === '/api/ui-metadata') {
+        sendJson(response, 200, buildUiMetadataPayload(), { sensitiveTerms });
         return;
       }
 
