@@ -533,7 +533,7 @@ input[type="search"]{
 
 <script>
 const s={
-  runs:[],detail:null,program:null,tab:'home',artifact:null,node:null,table:null,left:null,right:null,cache:new Map(),
+  runs:[],detail:null,program:null,tab:'home',homePanel:'guide',artifact:null,node:null,table:null,left:null,right:null,cache:new Map(),
   uiMetadata:{
     loading:false,
     error:null,
@@ -543,6 +543,15 @@ const s={
   uiActions:{
     doctor:{
       profile:'dev',
+      running:false,
+      error:null,
+      result:null
+    },
+    analyze:{
+      profile:'dev',
+      program:'',
+      member:'',
+      safeSharing:true,
       running:false,
       error:null,
       result:null
@@ -726,7 +735,7 @@ function fallbackWorkflowCards(){
   return [
     { id:'configure', title:'Configure', description:'Review profile and environment metadata.', badge:'configure', status:'Not checked yet', primaryActionLabel:'Open Configure', recommendedNext:'doctor' },
     { id:'fetch-sources', title:'Fetch Sources', description:'Prepare source evidence from IBM i.', badge:'fetch', status:'Not checked yet', primaryActionLabel:'Prepare Fetch', recommendedNext:'copy-to-workspace' },
-    { id:'analyze-workspace', title:'Analyze Workspace', description:'Run analysis and generate artifacts.', badge:'analyze', status:'Not checked yet', primaryActionLabel:'Review Analyze', recommendedNext:'serve' },
+    { id:'analyze-workspace', title:'Analyze Workspace', description:'Run analysis and generate artifacts.', badge:'analyze', status:'Not checked yet', primaryActionLabel:'Analyze Workspace', recommendedNext:'serve' },
     { id:'query-db2', title:'Query DB2', description:'Run read-only DB2 query workflows.', badge:'query', status:'Not checked yet', primaryActionLabel:'Review Queries', recommendedNext:'query-table' },
     { id:'review-reports', title:'Review Reports', description:'Inspect report and artifact output.', badge:'review', status:'Not checked yet', primaryActionLabel:'Open Artifacts', recommendedNext:'bundle' },
     { id:'generate-ai-context', title:'Generate AI Context', description:'Bundle and refine AI context artifacts.', badge:'context', status:'Not checked yet', primaryActionLabel:'Open Workbench', recommendedNext:'bundle' }
@@ -759,7 +768,7 @@ function defaultConfigSection(){
 function cardToHomeTarget(cardId){
   if(cardId==='configure') return 'configure';
   if(cardId==='fetch-sources') return 'configure';
-  if(cardId==='analyze-workspace') return 'refresh';
+  if(cardId==='analyze-workspace') return 'analyze-workspace';
   if(cardId==='query-db2') return 'db2';
   if(cardId==='review-reports') return 'artifacts';
   if(cardId==='generate-ai-context') return 'workbench';
@@ -800,6 +809,29 @@ async function runDoctorReadinessAction(){
   }
 }
 
+async function runAnalyzeExistingWorkspaceAction(){
+  const profile=String(s.uiActions.analyze.profile||'dev').trim()||'dev';
+  const program=String(s.uiActions.analyze.program||'').trim();
+  const member=String(s.uiActions.analyze.member||'').trim();
+  s.uiActions.analyze.running=true;
+  s.uiActions.analyze.error=null;
+  try{
+    const payload={profile,safeSharing:s.uiActions.analyze.safeSharing!==false};
+    if(program) payload.program=program;
+    if(member) payload.member=member;
+    const result=await sendJson('POST','/api/ui-actions/analyze-existing-workspace',payload);
+    s.uiActions.analyze.result=result;
+    if(result&&result.output&&result.output.program&&(result.status==='completed'||result.status==='warning')){
+      await refreshRuns(result.output.program);
+    }
+  }catch(error){
+    s.uiActions.analyze.error=error.message||String(error);
+    s.uiActions.analyze.result=null;
+  }finally{
+    s.uiActions.analyze.running=false;
+  }
+}
+
 function normalizeDoctorDiagnostics(result){
   const diagnostics=result&&Array.isArray(result.diagnostics)?result.diagnostics:[];
   return diagnostics.filter((entry)=>entry&&typeof entry==='object');
@@ -827,8 +859,73 @@ function renderDoctorDiagnostics(result){
   if(errorCount>0) summaryParts.push('error '+String(errorCount));
   return '<div class="hint-list"><div class="hint-item"><strong>'+esc(heading)+'</strong><p>'+(warningCount>0?'These warnings explain why the selected profile and the active environment may point to different DB targets.':'Doctor returned structured diagnostics for review.')+'</p>'+(summaryParts.length?'<p class="small">'+esc(summaryParts.join(' • '))+'</p>':'')+'</div>'+diagnostics.map((entry)=>renderDoctorDiagnosticEntry(entry)).join('')+'</div>';
 }
-async function refreshRuns(){
-  const currentProgram=s.program;
+
+function normalizeAnalyzeActionDiagnostics(result){
+  const diagnostics=result&&Array.isArray(result.diagnostics)?result.diagnostics:[];
+  return diagnostics.filter((entry)=>entry&&typeof entry==='object');
+}
+
+function isSafeLocalUiReportUrl(value){
+  const normalized=String(value||'').trim();
+  return normalized.startsWith('/runs/')
+    && normalized.includes('/artifacts/raw?path=')
+    && !/[<>"'\\s]/.test(normalized);
+}
+
+function renderAnalyzeActionDiagnostics(result){
+  const diagnostics=normalizeAnalyzeActionDiagnostics(result);
+  if(!diagnostics.length) return '';
+  return '<div class="hint-list">'+diagnostics.map((entry)=>{
+    const severity=String(entry.severity||'').trim().toUpperCase()||'INFO';
+    return '<div class="hint-item"><strong>'+esc(String(entry.code||'ANALYZE_DIAGNOSTIC'))+'</strong><div class="tokens"><div class="token '+esc(statusToneClass(severity))+'">'+esc(severity)+'</div></div><p>'+(entry.message?esc(String(entry.message)):'No additional details.')+'</p></div>';
+  }).join('')+'</div>';
+}
+
+function renderAnalyzeWorkspacePanel(){
+  const analyzeState=s.uiActions.analyze||{};
+  const analyzeResult=analyzeState.result;
+  const analyzeSummary=analyzeResult&&analyzeResult.result&&analyzeResult.result.summary;
+  const analyzeStatus=analyzeResult&&analyzeResult.status
+    ? String(analyzeResult.status)
+    : (analyzeState.running?'running':analyzeState.error?'error':'not-run');
+  const analyzeTone=statusToneClass(analyzeStatus);
+  const analyzeStatusLabel=analyzeState.running
+    ? 'running'
+    : (analyzeState.error?'error':(analyzeResult&&analyzeResult.status?analyzeResult.status:'not-run'));
+  const analyzeHint=analyzeState.error
+    ? analyzeState.error
+    : (analyzeResult
+      ? ('last run: '+String(fmt(analyzeResult.finishedAt||analyzeResult.startedAt||'')))
+      : 'Uses the selected profile source root. Browser-provided filesystem paths are not accepted.');
+  const workspace=analyzeResult&&analyzeResult.workspace?analyzeResult.workspace:null;
+  const sourceRoot=workspace&&workspace.sourceRoot?String(workspace.sourceRoot):'profile-defined';
+  const outputRoot=workspace&&workspace.outputRoot?String(workspace.outputRoot):'profile-defined';
+  const safeReportUrl=analyzeResult&&analyzeResult.output&&isSafeLocalUiReportUrl(analyzeResult.output.reportUrl)
+    ? String(analyzeResult.output.reportUrl)
+    : '';
+  const rawResult=analyzeResult
+    ? JSON.stringify({
+      output:analyzeResult.output||null,
+      result:analyzeResult.result||null,
+      diagnostics:analyzeResult.diagnostics||[],
+      notes:analyzeResult.notes||[],
+    },null,2)
+    : '';
+
+  return '<div class="sub"><h2>Analyze Workspace</h2><p>Run the existing local analyze pipeline against the selected profile workspace. This action stays local-only: no remote fetch, no DB2 query execution, and no browser-provided commands.</p><div class="tokens"><div class="token '+esc(analyzeTone)+'">Analyze: '+esc(analyzeStatusLabel)+'</div><div class="token">source root: '+esc(sourceRoot)+'</div><div class="token">output: '+esc(outputRoot)+'</div>'+(analyzeResult?'<div class="token">duration: '+esc(String(analyzeResult.durationMs||0))+' ms</div>':'')+'</div><div class="field-grid"><label>Profile Name<input id="analyzeProfile" value="'+escAttr(analyzeState.profile||'dev')+'" placeholder="dev"></label><label>Program Name<input id="analyzeProgram" value="'+escAttr(analyzeState.program||'')+'" placeholder="ORDERPGM"></label><label>Member Name<input id="analyzeMember" value="'+escAttr(analyzeState.member||'')+'" placeholder="ORDERPGM"></label></div><div class="actions"><button class="btn primary" data-analyze-run="1">'+esc(analyzeState.running?'Analyzing...':'Analyze Workspace')+'</button><button class="btn" data-analyze-toggle-safe-sharing="1">Safe Sharing: '+esc(analyzeState.safeSharing===false?'off':'on')+'</button><button class="btn" data-home-target="guide">Back To Guidance</button></div><div class="hint-list"><div class="hint-item"><strong>Input rules</strong><p>Provide a safe profile name plus either a program or a member. The source root comes from the selected profile.</p><p class="small">'+esc(analyzeHint)+'</p></div>'+(analyzeResult&&analyzeResult.notes&&analyzeResult.notes.length?'<div class="hint-item"><strong>Notes</strong><p>'+esc(analyzeResult.notes.join(' '))+'</p></div>':'')+'</div>'+
+    (analyzeSummary?'<div class="hint-list"><div class="hint-item"><strong>Summary</strong><p>stages '+esc(String(analyzeSummary.stageCount||0))+' • source files '+esc(String(analyzeSummary.sourceFileCount||0))+' • artifacts '+esc(String(analyzeSummary.generatedArtifactCount||0))+' • warnings '+esc(String(analyzeSummary.warningCount||0))+' • errors '+esc(String(analyzeSummary.errorCount||0))+'</p></div></div>':'')+
+    renderAnalyzeActionDiagnostics(analyzeResult)+
+    ((safeReportUrl||(analyzeResult&&analyzeResult.output&&analyzeResult.output.program))?'<div class="actions">'+(safeReportUrl?'<a class="btn" href="'+escAttr(safeReportUrl)+'" target="_blank" rel="noopener noreferrer">Open analysis report</a>':'')+((analyzeResult&&analyzeResult.output&&analyzeResult.output.program)?'<button class="btn" data-analyze-open-artifacts="'+esc(String(analyzeResult.output.program))+'">Open In Artifacts</button>':'')+'</div>':'')+
+    (rawResult?'<details><summary>Show raw result</summary><div class="preview"><pre>'+esc(rawResult)+'</pre></div></details>':'')+
+    '</div>';
+}
+
+function renderHomeGuidePanel(){
+  return '<div class="sub"><h2>Workflow Guidance</h2><p>Only allowlisted local UI actions are executable here. Configure and Analyze Workspace are wired into the shell; fetch, DB2, and arbitrary commands remain outside the browser.</p><div class="hint-list"><div class="hint-item"><strong>Recommended sequence</strong><p>Configure -> doctor -> analyze -> review -> bundle/context.</p></div><div class="hint-item"><strong>Analyze starter</strong><p>Use the Analyze Workspace card to run the local analyzer against the selected profile source root.</p></div><div class="hint-item"><strong>Workflow starter</strong><p>Prompt Workbench remains available immediately, even before your first analysis run is generated.</p></div></div><h3>Prompt Workbench Choices</h3>'+promptWorkbenchHighlights()+'</div>';
+}
+
+async function refreshRuns(preferredProgram){
+  const currentProgram=preferredProgram||s.program;
   s.runs=await getJson('/api/runs');
   renderRuns();
 
@@ -857,6 +954,20 @@ async function openHomeTarget(target,options){
   const opts=options||{};
   if(target==='refresh'){
     await refreshRuns();
+    return;
+  }
+
+  if(target==='guide'){
+    s.tab='home';
+    s.homePanel='guide';
+    await render();
+    return;
+  }
+
+  if(target==='analyze-workspace'){
+    s.tab='home';
+    s.homePanel='analyze-workspace';
+    await render();
     return;
   }
 
@@ -941,21 +1052,73 @@ function renderHome(){
   const summary=hasRun?s.detail.summary:null;
   const nextHint=summary
     ? 'Selected run: '+summary.program+' ('+String(summary.workflowPreset||summary.workflowMode||'standard')+').'
-    : 'No run selected yet. Start with Configure, then run doctor/fetch/analyze from CLI.';
+    : 'No run selected yet. Start with Configure, then use Analyze Workspace or refresh existing runs.';
 
   root.innerHTML='<div class="sub"><div class="home-callout"><h2>Workflow Shell</h2><p>A calmer entry point: pick one workflow card, then move to the next recommended step.</p><div class="tokens"><div class="token">Cards: '+esc(String(cards.length))+'</div><div class="token">Metadata: '+esc(s.uiMetadata.error?'degraded fallback':'live API')+'</div><div class="token">'+esc(nextHint)+'</div></div></div><h3>Workflow Cards</h3>'+
     (s.uiMetadata.loading
       ? '<div class="empty">Loading UI metadata...</div>'
       : '<div class="workflow-grid">'+cards.map((card)=>'<div class="workflow-card"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description||'')+'</p><div class="workflow-meta"><div class="token">'+esc(card.badge||card.category||'workflow')+'</div><div class="token">'+esc(card.status||'Not checked yet')+'</div><div class="token">Commands: '+esc(String(card.commandCount||0))+'</div></div><p><strong>Next:</strong> '+esc(card.recommendedNext||'TBD')+'</p><div class="actions"><button class="btn primary" data-home-target="'+esc(cardToHomeTarget(card.id))+'">'+esc(card.primaryActionLabel||'Open')+'</button></div></div>').join('')+'</div>'
     )+
-    '<div class="actions"><button class="btn" data-home-target="configure">Open Configure</button><button class="btn" data-home-target="refresh">Refresh Runs</button><button class="btn" data-home-target="workbench">Open Prompt Workbench</button></div></div>'+
-    '<div class="sub"><h2>Command Guidance</h2><p>The shell remains read-only for configuration values. Use CLI commands for execution until explicit safe execution wiring is added.</p><div class="hint-list"><div class="hint-item"><strong>Recommended sequence</strong><p>Configure -> doctor -> fetch -> analyze -> review -> bundle/context.</p></div><div class="hint-item"><strong>Analyze starter</strong><p>Run <code>zeus analyze --source ./src --program ORDERPGM --out ./output</code>, then click Refresh Runs.</p></div><div class="hint-item"><strong>Workflow starter</strong><p>Run <code>zeus workflow --preset modernization-review --source ./src --program ORDERPGM --out ./output</code> for richer prompt packs.</p></div></div><h3>Prompt Workbench Choices</h3>'+promptWorkbenchHighlights()+'</div>';
+    '<div class="actions"><button class="btn" data-home-target="configure">Open Configure</button><button class="btn" data-home-target="analyze-workspace">Open Analyze Workspace</button><button class="btn" data-home-target="refresh">Refresh Runs</button><button class="btn" data-home-target="workbench">Open Prompt Workbench</button></div></div>'+
+    (s.homePanel==='analyze-workspace'?renderAnalyzeWorkspacePanel():renderHomeGuidePanel());
 
   for(const b of root.querySelectorAll('[data-home-target]')){
     b.onclick=()=>openHomeTarget(b.dataset.homeTarget);
   }
   for(const b of root.querySelectorAll('[data-home-workbench]')){
     b.onclick=()=>openHomeTarget('workbench',{useCaseId:b.dataset.homeWorkbench});
+  }
+  const analyzeProfileInput=root.querySelector('#analyzeProfile');
+  if(analyzeProfileInput){
+    analyzeProfileInput.oninput=(event)=>{
+      s.uiActions.analyze.profile=String(event.target.value||'').trim();
+    };
+  }
+  const analyzeProgramInput=root.querySelector('#analyzeProgram');
+  if(analyzeProgramInput){
+    analyzeProgramInput.oninput=(event)=>{
+      s.uiActions.analyze.program=String(event.target.value||'').trim();
+    };
+  }
+  const analyzeMemberInput=root.querySelector('#analyzeMember');
+  if(analyzeMemberInput){
+    analyzeMemberInput.oninput=(event)=>{
+      s.uiActions.analyze.member=String(event.target.value||'').trim();
+    };
+  }
+  const analyzeRunButton=root.querySelector('[data-analyze-run]');
+  if(analyzeRunButton){
+    analyzeRunButton.onclick=async ()=>{
+      const profileInput=q('analyzeProfile');
+      const programInput=q('analyzeProgram');
+      const memberInput=q('analyzeMember');
+      if(profileInput){
+        s.uiActions.analyze.profile=String(profileInput.value||'').trim()||'dev';
+      }
+      if(programInput){
+        s.uiActions.analyze.program=String(programInput.value||'').trim();
+      }
+      if(memberInput){
+        s.uiActions.analyze.member=String(memberInput.value||'').trim();
+      }
+      renderHome();
+      await runAnalyzeExistingWorkspaceAction();
+      renderHome();
+    };
+  }
+  const analyzeToggleButton=root.querySelector('[data-analyze-toggle-safe-sharing]');
+  if(analyzeToggleButton){
+    analyzeToggleButton.onclick=()=>{
+      s.uiActions.analyze.safeSharing=s.uiActions.analyze.safeSharing===false;
+      renderHome();
+    };
+  }
+  for(const b of root.querySelectorAll('[data-analyze-open-artifacts]')){
+    b.onclick=async ()=>{
+      await selectRun(b.dataset.analyzeOpenArtifacts);
+      s.tab='artifacts';
+      await render();
+    };
   }
 }
 

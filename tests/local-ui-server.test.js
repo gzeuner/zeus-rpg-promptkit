@@ -155,6 +155,35 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
             ],
           };
         },
+        analyzeConfigResolver: () => ({
+          sourceRoot: './workspace',
+          outputRoot: './output',
+        }),
+        analyzeExecutor: (args) => {
+          if (args.profile === 'explode-analyze') {
+            throw new Error('unexpected analyze failure');
+          }
+          return {
+            program: args.program || args.member || 'ORDERPGM',
+            analyzeManifest: {
+              run: {
+                status: 'succeeded',
+              },
+              summary: {
+                stageCount: 8,
+                diagnosticCount: 0,
+                warningCount: 0,
+                errorCount: 0,
+                generatedArtifactCount: 3,
+                sourceFileCount: 2,
+              },
+              artifacts: [
+                { path: 'report.md' },
+                { path: 'context.json' },
+              ],
+            },
+          };
+        },
       },
     });
 
@@ -234,6 +263,50 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     });
     assert.equal(unknownAction.status, 404);
 
+    const analyzeResponse = await fetch(`${started.url}/api/ui-actions/analyze-existing-workspace`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        member: 'orderpgm',
+      }),
+    });
+    assert.equal(analyzeResponse.status, 200);
+    const analyzePayload = await analyzeResponse.json();
+    assert.equal(analyzePayload.action, 'analyze-existing-workspace');
+    assert.equal(analyzePayload.status, 'completed');
+    assert.equal(analyzePayload.input.member, 'ORDERPGM');
+    assert.equal(analyzePayload.input.safeSharing, true);
+    assert.equal(analyzePayload.workspace.sourceRoot, './workspace');
+    assert.match(analyzePayload.output.reportUrl, /^\/runs\/ORDERPGM\/artifacts\/raw\?path=report\.md$/);
+
+    const analyzeInvalidPayload = await fetch(`${started.url}/api/ui-actions/analyze-existing-workspace`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        member: 'ORDERPGM',
+        command: 'rm -rf /',
+      }),
+    });
+    assert.equal(analyzeInvalidPayload.status, 400);
+
+    const analyzeUnsafePayload = await fetch(`${started.url}/api/ui-actions/analyze-existing-workspace`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        member: '../ORDERPGM',
+      }),
+    });
+    assert.equal(analyzeUnsafePayload.status, 400);
+
     const nonJsonAction = await fetch(`${started.url}/api/ui-actions/doctor`, {
       method: 'POST',
       headers: {
@@ -255,6 +328,20 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.equal(unexpectedFailure.status, 500);
     const unexpectedFailurePayload = await unexpectedFailure.json();
     assert.equal(unexpectedFailurePayload.error, 'Internal server error');
+
+    const unexpectedAnalyzeFailure = await fetch(`${started.url}/api/ui-actions/analyze-existing-workspace`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'explode-analyze',
+        program: 'ORDERPGM',
+      }),
+    });
+    assert.equal(unexpectedAnalyzeFailure.status, 500);
+    const unexpectedAnalyzeFailurePayload = await unexpectedAnalyzeFailure.json();
+    assert.equal(unexpectedAnalyzeFailurePayload.error, 'Internal server error');
 
     const analyses = await fetch(`${started.url}/api/analyses`).then((response) => response.json());
     assert.equal(Array.isArray(analyses.workspaces), true);
@@ -300,6 +387,10 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /Workflow Shell/);
     assert.match(shellHtml, /Workflow Cards/);
     assert.match(shellHtml, /Check Readiness/);
+    assert.match(shellHtml, /Analyze Workspace/);
+    assert.match(shellHtml, /Open analysis report/);
+    assert.match(shellHtml, /Show raw result/);
+    assert.match(shellHtml, /\/api\/ui-actions\/analyze-existing-workspace/);
     assert.match(shellHtml, /Configuration warnings/);
     assert.match(shellHtml, /Selected profile and environment point to different DB targets/);
     assert.match(shellHtml, /Graph Explorer|Graph/);
