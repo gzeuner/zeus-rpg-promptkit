@@ -14,8 +14,8 @@ test('buildEnvironmentChecks flags missing env vars with concrete set hints', ()
     env: {},
   });
 
-  assert.ok(checks.some((entry) => entry.name === 'ZEUS_DB_HOST' && entry.status === 'FAIL' && /set ZEUS_DB_HOST=mein-ibmi-host/.test(entry.details)));
-  assert.ok(checks.some((entry) => entry.name === 'ZEUS_FETCH_OUT' && entry.status === 'FAIL' && /set ZEUS_FETCH_OUT=C:\/Projekte\/ticket\/zeus-fetch/.test(entry.details)));
+  assert.ok(checks.some((entry) => entry.name === 'ZEUS_DB_HOST' && entry.status === 'FAIL' && /set ZEUS_DB_HOST=primary-system/.test(entry.details)));
+  assert.ok(checks.some((entry) => entry.name === 'ZEUS_FETCH_OUT' && entry.status === 'FAIL' && /set ZEUS_FETCH_OUT=\.\/fetched-source\/demo/.test(entry.details)));
   assert.ok(checks.some((entry) => entry.name === 'ZEUS_OUTPUT_ROOT' && entry.status === 'WARN'));
   assert.ok(checks.some((entry) => entry.name === 'ZEUS_ANALYSES_REGISTRY' && entry.status === 'WARN'));
 });
