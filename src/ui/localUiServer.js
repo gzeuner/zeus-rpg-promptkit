@@ -559,6 +559,8 @@ async function startLocalUiServer({
     cwd: actionServiceOptions.cwd || process.cwd(),
     env: actionServiceOptions.env || process.env,
     doctorExecutor: actionServiceOptions.doctorExecutor,
+    analyzeExecutor: actionServiceOptions.analyzeExecutor,
+    analyzeConfigResolver: actionServiceOptions.analyzeConfigResolver,
   });
   const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(process.env, sensitiveTerms);
   const server = http.createServer(createLocalUiRequestHandler({

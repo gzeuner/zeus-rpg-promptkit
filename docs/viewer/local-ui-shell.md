@@ -1,12 +1,12 @@
 ---
 Title: Local UI Shell
 Description: Dokumentation zur lokalen Viewer- und UI-Shell fuer erzeugte Analyseartefakte.
-Last Updated: 2026-05-17
+Last Updated: 2026-06-02
 ---
 
 # Local UI Shell
 
-The local UI keeps the run explorer read-only while also exposing local-only Prompt Workbench actions such as preview generation, template persistence, and prompt-seed import. It still avoids introducing a separate parsing layer in the browser.
+The local UI keeps the run explorer mostly read-only while also exposing a small allowlisted local action surface: Doctor readiness checks, Analyze Workspace for existing local source trees, and Prompt Workbench actions such as preview generation, template persistence, and prompt-seed import. It still avoids introducing a separate parsing layer in the browser.
 
 ## Command
 
@@ -18,7 +18,8 @@ Behavior:
 
 - binds to loopback only (`127.0.0.1` by default)
 - serves a local HTML shell plus local-only JSON routes
-- reads existing analyze output directories; it does not run analysis itself
+- reads existing analyze output directories
+- can trigger allowlisted local analysis for an already configured workspace source root
 - reuses the current manifest and artifact contracts instead of introducing a parallel storage model
 
 ## API endpoints
@@ -26,6 +27,7 @@ Behavior:
 - `GET /api/health`
 - `GET /api/ui-metadata`
 - `POST /api/ui-actions/doctor`
+- `POST /api/ui-actions/analyze-existing-workspace`
 - `GET /api/runs`
 - `GET /api/runs/:program`
 - `GET /api/runs/:program/views`
@@ -83,14 +85,27 @@ The local UI action surface is intentionally explicit and small:
 Current supported action:
 
 - `doctor` readiness check via `POST /api/ui-actions/doctor`
+- `analyze-existing-workspace` via `POST /api/ui-actions/analyze-existing-workspace`
 
 Security behavior:
 
 - request and response format is JSON only
 - server-side validation blocks unsafe profile values
+- `analyze-existing-workspace` accepts only `profile`, `program`, `member`, and `safeSharing`
+- browser payloads do not provide `sourceRoot`; the action always uses the selected profile's configured local source root
+- browser payloads cannot provide arbitrary shell commands, absolute paths, or traversal-style filesystem input
 - responses keep diagnostics structured and do not expose resolved secret values or raw env values
 - runtime guardrail conflicts between profile DB targets and env overrides are surfaced as warnings, not automatic aborts
 - conflict diagnostics remain allowlisted and redacted; the UI never exposes passwords or full credential-bearing JDBC URLs
+
+Analyze Workspace behavior:
+
+- runs the existing local `analyze` core against an already available local workspace/source root
+- does not fetch remote sources
+- does not connect to IBM i, DB2, SFTP, or other remote systems
+- returns structured status values such as `completed`, `warning`, and `failed`
+- can link back to the generated run summary and `report.md` when that artifact exists
+- keeps raw action details collapsed in the browser by default
 
 ## Doctor readiness diagnostics
 
@@ -115,4 +130,4 @@ Example meaning:
 - environment override: `ZEUS_DB_HOST`
 - effective target: `secondary-system`
 
-The Local UI still does not execute arbitrary browser commands. It only invokes the allowlisted `doctor` readiness action and renders the resulting diagnostics as escaped text.
+The Local UI still does not execute arbitrary browser commands. It only invokes the allowlisted `doctor` and `analyze-existing-workspace` actions and renders the resulting diagnostics as escaped text.
