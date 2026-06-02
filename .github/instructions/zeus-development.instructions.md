@@ -220,6 +220,14 @@ const query = `SELECT TABLE_SCHEMA FROM QSYS2.SYSTABLES
                ORDER BY TABLE_SCHEMA`;
 ```
 
+**QSYS2 UDTF syntax (do not treat table functions like tables):**
+```sql
+SELECT OBJNAME, OBJLIB, OBJCREATED, CHANGE_TIMESTAMP, LAST_USED_TIMESTAMP, SOURCE_MEMBER, OBJSIZE
+FROM TABLE(QSYS2.OBJECT_STATISTICS('*ALLUSR', '*PGM', 'MYPGM')) AS X
+```
+
+If the object library is unknown, start with `*ALLUSR`. Never guess or invent a library name.
+
 **Safe SQL identifiers:** Use `validateSqlIdentifier()` and `escapeSqlLiteral()` from `readOnlyQueryService.js`.
 
 **Never use:** `ROW_COUNT`, `NUMBER_ROWS` in `QSYS2.SYSTABLES` — not universally available on IBM i.
@@ -291,6 +299,8 @@ EXPORT SYMBOL('<symbol>')     → exported symbol (in binder source)
 | CCSID encoding | Local analysis contract = UTF-8 (CCSID 1208) only |
 | Duplicate members | Source file name + member name = identity, not just member name |
 | Service program source | Check BOUND_MODULE_INFO → fallback OBJECT_STATISTICS → fallback member convention |
+| QSYS2 UDTFs | Call `QSYS2.OBJECT_STATISTICS` and similar services via `FROM TABLE(...) AS X`, never `FROM QSYS2.OBJECT_STATISTICS` |
+| Unknown object library | If the library is unknown, search `*ALLUSR` first and never guess a library name |
 | Source file priority | QRPGLESRC → QSRVSRC → QCPYSRC → QCLLESRC → QCLSRC → QSQLSRC → QDDSSRC |
 | Column name aliases | Short IBM i names diverge from logical names — validate against SYSCOLUMNS first |
 | Commitment control | SQLSTATE 55019 = commitment control error — read-only queries use `WITH NC` hint |

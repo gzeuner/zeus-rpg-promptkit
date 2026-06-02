@@ -11,6 +11,8 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
+const { buildResolvedDbConfig } = require('./dbRuntimeConfigDiagnostics');
+
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -57,19 +59,17 @@ function resolveEnvPlaceholdersDeep(value, env) {
 // Env-var overrides always win over profile values (env = deployment-specific, profile = defaults).
 // This enables multi-machine setups: e.g. ZEUS_METADATA_DB_HOST=SYS_PROD overrides a profile
 // that defaults to SYS_TEST, without changing the profile file.
-function applyDbEnvOverrides(dbConfig, env, prefix = 'ZEUS_DB', rawConfig = null) {
-  const merged = { ...(dbConfig || {}) };
-  const schemaOverride = env[`${prefix}_DEFAULT_SCHEMA`] || env[`${prefix}_DEFAULT_LIBRARY`] || env[`${prefix}_SCHEMA`] || env[`${prefix}_LIBRARY`];
-
-  // Env-vars take precedence over profile values (including literal values).
-  // This supports dynamic multi-machine routing at runtime.
-  if (env[`${prefix}_HOST`]) merged.host = env[`${prefix}_HOST`];
-  if (env[`${prefix}_URL`])  merged.url  = env[`${prefix}_URL`];
-  if (env[`${prefix}_USER`]) merged.user = env[`${prefix}_USER`];
-  if (env[`${prefix}_PASSWORD`] !== undefined) merged.password = env[`${prefix}_PASSWORD`];
-  if (schemaOverride) merged.defaultSchema = schemaOverride;
-
-  return Object.keys(merged).length > 0 ? merged : null;
+function applyDbEnvOverrides(dbConfig, env, prefix = 'ZEUS_DB', rawConfig = null, options = {}) {
+  return buildResolvedDbConfig({
+    baseConfig: options.baseConfig || null,
+    baseMetadata: options.baseMetadata || null,
+    profileConfig: dbConfig,
+    rawProfileConfig: rawConfig,
+    env,
+    prefix,
+    scope: options.scope || 'db',
+    mergeConfigLayers: options.mergeConfigLayers,
+  });
 }
 
 module.exports = {

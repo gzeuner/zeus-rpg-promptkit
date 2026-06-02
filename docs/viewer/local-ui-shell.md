@@ -89,3 +89,30 @@ Security behavior:
 - request and response format is JSON only
 - server-side validation blocks unsafe profile values
 - responses keep diagnostics structured and do not expose resolved secret values or raw env values
+- runtime guardrail conflicts between profile DB targets and env overrides are surfaced as warnings, not automatic aborts
+- conflict diagnostics remain allowlisted and redacted; the UI never exposes passwords or full credential-bearing JDBC URLs
+
+## Doctor readiness diagnostics
+
+The Configure panel can surface safe runtime guardrail diagnostics after `Check Readiness`.
+
+Behavior:
+
+- `ready` means no doctor failures or guardrail warnings were detected
+- `warning` means doctor passed but surfaced one or more structured warnings such as env/profile target conflicts
+- `failed` means doctor checks reported critical failure
+- `error` means the UI action endpoint itself failed
+
+Current structured runtime diagnostic:
+
+- `ENV_PROFILE_CONFLICT`
+
+Example meaning:
+
+- selected profile: `primary-readonly`
+- profile field: `db.host`
+- profile target: `primary-system`
+- environment override: `ZEUS_DB_HOST`
+- effective target: `secondary-system`
+
+The Local UI still does not execute arbitrary browser commands. It only invokes the allowlisted `doctor` readiness action and renders the resulting diagnostics as escaped text.

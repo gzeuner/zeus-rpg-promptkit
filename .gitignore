@@ -95,6 +95,7 @@ java/lib/
 # Local planning
 # -----------------------------
 
+local/
 .local/
 .local-roadmap/
 

@@ -141,6 +141,18 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
               { name: 'Config/Profile', status: 'PASS', details: 'Loaded profile "dev".' },
               { name: 'Java', status: 'WARN', details: 'Java runtime optional for this test.' },
             ],
+            diagnostics: [
+              {
+                code: 'ENV_PROFILE_CONFLICT',
+                severity: 'WARN',
+                path: 'db.host',
+                profile: 'primary-readonly',
+                profileValue: 'primary-system',
+                envVar: 'ZEUS_DB_HOST',
+                effectiveValue: 'secondary-system',
+                message: '<strong>unsafe</strong>',
+              },
+            ],
           };
         },
       },
@@ -176,9 +188,15 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     const doctorPayload = await doctorResponse.json();
     assert.equal(doctorPayload.action, 'doctor');
     assert.ok(['ready', 'warning', 'failed'].includes(doctorPayload.status));
+    assert.equal(doctorPayload.status, 'warning');
     assert.equal(doctorPayload.input.profile, 'dev');
     assert.equal(doctorPayload.input.showResolved, false);
     assert.equal(Object.prototype.hasOwnProperty.call(doctorPayload, 'resolvedValues'), false);
+    assert.equal(Array.isArray(doctorPayload.diagnostics), true);
+    assert.equal(doctorPayload.diagnostics.length, 1);
+    assert.equal(doctorPayload.diagnostics[0].code, 'ENV_PROFILE_CONFLICT');
+    assert.equal(doctorPayload.diagnostics[0].message.includes('<strong>'), false);
+    assert.equal(JSON.stringify(doctorPayload).includes('PASSWORD'), false);
 
     const doctorUnknownKey = await fetch(`${started.url}/api/ui-actions/doctor`, {
       method: 'POST',
@@ -282,6 +300,8 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /Workflow Shell/);
     assert.match(shellHtml, /Workflow Cards/);
     assert.match(shellHtml, /Check Readiness/);
+    assert.match(shellHtml, /Configuration warnings/);
+    assert.match(shellHtml, /Selected profile and environment point to different DB targets/);
     assert.match(shellHtml, /Graph Explorer|Graph/);
     assert.match(shellHtml, /DB2\/Test Data/);
     assert.match(shellHtml, /Prompt Compare/);
@@ -292,6 +312,7 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     const scriptMatch = shellHtml.match(/<script>([\s\S]*)<\/script>/);
     assert.ok(scriptMatch);
     assert.doesNotThrow(() => new Function(scriptMatch[1]));
+    assert.match(scriptMatch[1], /esc\(message\)/);
 
     const promptContracts = await fetch(`${started.url}/api/prompt-builder/contracts`).then((response) => response.json());
     assert.equal(promptContracts.version, 1);

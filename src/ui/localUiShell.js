@@ -609,7 +609,7 @@ const statusToneClass=(value)=>{
   const normalized=String(value||'').trim().toLowerCase();
   if(!normalized) return '';
   if(/fail|error|unavailable|not found/.test(normalized)) return 'status-err';
-  if(/loading|refreshing|saving|deleting|importing|select |nothing to|no ai_prompt|empty/.test(normalized)) return 'status-warn';
+  if(/warn|warning|loading|refreshing|saving|deleting|importing|select |nothing to|no ai_prompt|empty/.test(normalized)) return 'status-warn';
   return 'status-ok';
 };
 
@@ -800,6 +800,34 @@ async function runDoctorReadinessAction(){
   }
 }
 
+function normalizeDoctorDiagnostics(result){
+  const diagnostics=result&&Array.isArray(result.diagnostics)?result.diagnostics:[];
+  return diagnostics.filter((entry)=>entry&&typeof entry==='object');
+}
+
+function renderDoctorDiagnosticEntry(diagnostic){
+  const code=String(diagnostic.code||'').trim().toUpperCase();
+  const severity=String(diagnostic.severity||'').trim().toUpperCase()||'INFO';
+  const tone=statusToneClass(severity);
+  const message=String(diagnostic.message||'').trim();
+  if(code==='ENV_PROFILE_CONFLICT'){
+    return '<div class="hint-item"><strong>Selected profile and environment point to different DB targets.</strong><div class="tokens"><div class="token '+esc(tone)+'">'+esc(severity)+'</div>'+(diagnostic.profile?'<div class="token">Profile: '+esc(String(diagnostic.profile))+'</div>':'')+'</div><p class="small">Field: '+esc(String(diagnostic.path||''))+'</p><p class="small">Profile value: '+esc(String(diagnostic.profileValue||''))+'</p><p class="small">Environment override: '+esc(String(diagnostic.envVar||''))+' -> '+esc(String(diagnostic.effectiveValue||''))+'</p><p class="small">Effective target: '+esc(String(diagnostic.effectiveValue||''))+'</p>'+(message?'<p class="small">'+esc(message)+'</p>':'')+'</div>';
+  }
+  return '<div class="hint-item"><strong>'+esc(code||'Diagnostic')+'</strong><div class="tokens"><div class="token '+esc(tone)+'">'+esc(severity)+'</div>'+(diagnostic.path?'<div class="token">'+esc(String(diagnostic.path))+'</div>':'')+'</div><p>'+(message?esc(message):'No additional details.')+'</p></div>';
+}
+
+function renderDoctorDiagnostics(result){
+  const diagnostics=normalizeDoctorDiagnostics(result);
+  if(!diagnostics.length) return '';
+  const warningCount=diagnostics.filter((entry)=>String(entry.severity||'').toUpperCase()==='WARN'||String(entry.severity||'').toUpperCase()==='WARNING').length;
+  const errorCount=diagnostics.filter((entry)=>/ERROR|FAIL/.test(String(entry.severity||'').toUpperCase())).length;
+  const heading=warningCount>0?'Configuration warnings':'Configuration issues';
+  const summaryParts=[];
+  if(warningCount>0) summaryParts.push('warn '+String(warningCount));
+  if(errorCount>0) summaryParts.push('error '+String(errorCount));
+  return '<div class="hint-list"><div class="hint-item"><strong>'+esc(heading)+'</strong><p>'+(warningCount>0?'These warnings explain why the selected profile and the active environment may point to different DB targets.':'Doctor returned structured diagnostics for review.')+'</p>'+(summaryParts.length?'<p class="small">'+esc(summaryParts.join(' • '))+'</p>':'')+'</div>'+diagnostics.map((entry)=>renderDoctorDiagnosticEntry(entry)).join('')+'</div>';
+}
+
 async function refreshRuns(){
   const currentProgram=s.program;
   s.runs=await getJson('/api/runs');
@@ -969,9 +997,11 @@ function renderConfigure(){
       .map((entry)=>String(entry.status||'')+' | '+String(entry.name||'')+' | '+String(entry.details||''))
       .join('\\n')
     : '';
+  const doctorDiagnosticsPanel=renderDoctorDiagnostics(doctorResult);
 
   root.innerHTML='<div class="sub"><h2>Configure (Read-only)</h2><p>This view renders config metadata only. No resolved env/profile values are shown.</p><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Sections: '+esc(String(sections.length||0))+'</div><div class="token">Fields: '+esc(String(fields.length||0))+'</div></div><div class="hint-list"><div class="hint-item"><strong>Doctor action is allowlisted</strong><p>Only <code>doctor readiness</code> is supported from UI actions. Arbitrary command execution is intentionally blocked.</p></div><div class="hint-item"><strong>Safety</strong><p>Action payload is strictly validated server-side and responses are JSON-only.</p></div></div><h3>Readiness Check</h3><div class="field-grid"><label>Profile Name<input id="configDoctorProfile" value="'+escAttr(doctorState.profile||'dev')+'" placeholder="dev"></label></div><div class="actions"><button class="btn primary" data-config-doctor="1">'+esc(doctorState.running?'Checking...':'Check Readiness')+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div><div class="tokens"><div class="token '+esc(doctorTone)+'">Doctor: '+esc(doctorStatusLabel)+'</div><div class="token">profile: '+esc(doctorState.profile||'dev')+'</div>'+(doctorResult?'<div class="token">duration: '+esc(String(doctorResult.durationMs||0))+' ms</div>':'')+'</div>'+
     (doctorSummary?'<div class="hint-list"><div class="hint-item"><strong>Summary</strong><p>pass '+esc(String(doctorSummary.pass||0))+' • warn '+esc(String(doctorSummary.warn||0))+' • fail '+esc(String(doctorSummary.fail||0))+' • skip '+esc(String(doctorSummary.skip||0))+'</p><p class="small">'+esc(doctorHint)+'</p></div></div>':'<div class="hint-list"><div class="hint-item"><strong>Status</strong><p>'+esc(doctorHint)+'</p></div></div>')+
+    doctorDiagnosticsPanel+
     (doctorDetails?'<details><summary>Show checks</summary><div class="preview"><pre>'+esc(doctorDetails)+'</pre></div></details>':'')+
     '</div>'+
     '<div class="sub"><h2>'+esc(sectionMeta.label||selectedSection)+'</h2><div class="configure-layout"><div class="section-list">'+
