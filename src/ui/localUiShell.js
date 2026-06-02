@@ -827,7 +827,6 @@ function renderDoctorDiagnostics(result){
   if(errorCount>0) summaryParts.push('error '+String(errorCount));
   return '<div class="hint-list"><div class="hint-item"><strong>'+esc(heading)+'</strong><p>'+(warningCount>0?'These warnings explain why the selected profile and the active environment may point to different DB targets.':'Doctor returned structured diagnostics for review.')+'</p>'+(summaryParts.length?'<p class="small">'+esc(summaryParts.join(' • '))+'</p>':'')+'</div>'+diagnostics.map((entry)=>renderDoctorDiagnosticEntry(entry)).join('')+'</div>';
 }
-
 async function refreshRuns(){
   const currentProgram=s.program;
   s.runs=await getJson('/api/runs');
