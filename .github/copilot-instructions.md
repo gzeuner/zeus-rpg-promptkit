@@ -192,6 +192,8 @@ Key test categories:
 | Column names | Short IBM i names diverge from logical names — use COLUMN_ALIASES + resolveColumn |
 | No ROW_COUNT in SYSTABLES | Neither ROW_COUNT nor NUMBER_ROWS are universal — omit both |
 | SQL qualifier syntax | Use SCHEMA.TABLE not LIBRARY/FILE in SQL contexts |
+| QSYS2 UDTFs | Call `QSYS2.OBJECT_STATISTICS` via `FROM TABLE(...) AS X`, never as a plain table |
+| Unknown object library | If the library is unknown, search `*ALLUSR` first and never guess a library |
 | Service program source | BOUND_MODULE_INFO → fallback to OBJECT_STATISTICS → fallback to member convention |
 | Fixed-format RPG columns | Column 6 = indicator area, col 7 = form type (C/F/D/P/…), col 8–80 = spec |
 | Free-format RPG | Starts with `/FREE` or uses `**FREE` header; column layout does not apply |
@@ -200,7 +202,7 @@ Key test categories:
 
 ## 8. Safety Rules (always enforce)
 
-- **Read-only on ALL IBM i systems by default** — test system (SYS_TEST) and production (SYS_PROD) alike.
+- **Read-only on ALL IBM i systems by default** — `secondary-system` and `primary-system` alike.
 - **Code changes go into the local workspace copy only** — never write directly to IBM i source members.
   After every local edit, show the user a clear diff (file, line, before/after) so they can transfer it manually.
 - Never deploy, compile, or push objects to IBM i without explicit user approval.
@@ -228,8 +230,8 @@ Any operation that could change data, objects, or structure on IBM i **must** fo
 CALL on production, CRTPGM, CRTRPGMOD, CRTSQLRPGI, CPYF, DLTOBJ, or any
 CL command that changes objects or data.
 
-**SYS_PROD (production system) is never touched with write operations — ever.**
-**SYS_TEST (test system) requires the same confirmation protocol for all write operations.**
+**`primary-system` is never touched with write operations — ever.**
+**`secondary-system` requires the same confirmation protocol for all write operations.**
 
 ---
 
@@ -266,11 +268,11 @@ Standard env load for project development sessions:
 ```powershell
 cd C:\Users\Developer.User\Tools\zeus-rpg-promptkit
 . .\config\load-env.ps1 -Environment project   # loads .env.local + .env.project.local
-node cli/zeus.js doctor --profile sample-dev --show-resolved
+node cli/zeus.js doctor --profile development --show-resolved
 ```
 
 Systems:
-- **SYS_TEST** — test system, active development, profile `sample-dev`
-- **SYS_PROD** — production system, metadata read-only, NEVER write
+- **secondary-system** — active development / read-oriented integration system, profile `development`
+- **primary-system** — protected system, metadata read-only, NEVER write
 
 Session prompt template: `docs/ai/session-prompt.md`

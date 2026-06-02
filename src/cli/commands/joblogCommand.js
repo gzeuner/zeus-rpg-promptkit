@@ -17,6 +17,7 @@ const { renderAsciiTable } = require('../helpers/asciiTable');
 const { resolveAnalyzeConfig, resolveAnalyzeDbConfig, loadProfiles, resolveProfile } = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query, escapeSqlLiteral } = require('../../db2/readOnlyQueryService');
+const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
 
 /**
  * zeus joblog
@@ -79,6 +80,7 @@ async function runJoblog(args) {
 
     const config = resolveAnalyzeConfig(args, { cwd: process.cwd() });
     const dbConfig = resolveAnalyzeDbConfig(config, 'metadata');
+    printDbRuntimeConflictWarnings(dbConfig);
     if (!isDbConfigured(dbConfig)) {
       console.error('DB2 connection configuration is incomplete for the selected profile.');
       process.exit(2);

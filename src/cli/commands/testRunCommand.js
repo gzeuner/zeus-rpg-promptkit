@@ -31,6 +31,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const path = require('path');
 const { resolveProfile, loadProfiles, resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
+const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
 const {
   captureSnapshot,
   writeTestRunManifest,
@@ -173,6 +174,7 @@ async function run(args) {
   }
 
   const dbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
+  printDbRuntimeConflictWarnings(dbConfig);
   if (!isDbConfigured(dbConfig)) {
     console.error('Fehler: DB2-Verbindung nicht konfiguriert. Prüfe: zeus doctor --profile <name>');
     process.exit(2);

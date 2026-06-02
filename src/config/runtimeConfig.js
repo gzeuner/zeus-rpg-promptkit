@@ -53,6 +53,7 @@ const {
   parseCsv,
   resolveEnvPlaceholdersDeep,
 } = require('./runtimeConfigEnv');
+const { getRuntimeConfigMetadata } = require('./dbRuntimeConfigDiagnostics');
 const {
   buildAnalyzeConnectionRoles: buildAnalyzeConnectionRolesModule,
   resolveAnalyzeConfig: resolveAnalyzeConfigModule,
@@ -92,7 +93,11 @@ function loadProfiles(options = {}) {
 }
 
 function resolveProfile(profiles, profileName, options = {}) {
-  const { env = process.env, stack = [] } = options;
+  const {
+    env = process.env,
+    stack = [],
+    expandEnvPlaceholders = true,
+  } = options;
   if (!profileName) {
     return null;
   }
@@ -124,7 +129,9 @@ function resolveProfile(profiles, profileName, options = {}) {
   ), {});
   const merged = mergeConfigLayers(inherited, profile);
   delete merged.extends;
-  const withEnv = resolveEnvPlaceholdersDeep(merged, env);
+  const resolved = expandEnvPlaceholders
+    ? resolveEnvPlaceholdersDeep(merged, env)
+    : merged;
 
   // System-Referenzen nur beim Top-Level-Aufruf auflösen (stack.length === 0).
   // Eltern-Profile behalten ihre { system: '...' }-Referenzen bis zur finalen
@@ -133,9 +140,9 @@ function resolveProfile(profiles, profileName, options = {}) {
   //            dersmt1-ase-prod-meta überschreibt metadata: { system: 'prod' }
   //            → erst beim Top-Level-Aufruf wird prod-Host eingesetzt.
   if (stack.length === 0) {
-    return resolveSystemReferences(withEnv);
+    return resolveSystemReferences(resolved);
   }
-  return withEnv;
+  return resolved;
 }
 
 function readWorkCopyConfig(profile, env) {
@@ -238,10 +245,12 @@ function isEnvPlaceholder(value) {
   return typeof value === 'string' && /^\$\{env:[^}]+\}$/.test(value.trim());
 }
 
-function resolveAnalyzeDbRoleConfigs(profile, env) {
+function resolveAnalyzeDbRoleConfigs(profile, env, options = {}) {
   return resolveAnalyzeDbRoleConfigsModule(profile, env, {
     applyDbEnvOverrides,
+    getRuntimeConfigMetadata,
     mergeConfigLayers,
+    rawProfile: options.rawProfile || null,
     resolveEnvPlaceholdersDeep,
   });
 }

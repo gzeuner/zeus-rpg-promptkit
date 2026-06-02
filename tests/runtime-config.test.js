@@ -22,6 +22,7 @@ const {
   resolveWorkflowPresetConfig,
   validateProfiles,
 } = require('../src/config/runtimeConfig');
+const { getRuntimeConfigMetadata } = require('../src/config/dbRuntimeConfigDiagnostics');
 
 function createTempProject(profiles) {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-runtime-config-'));
@@ -356,9 +357,9 @@ test('resolveAnalyzeConfig applies environment overrides for DB credentials', ()
   const tempRoot = createTempProject({
     sample: {
       db: {
-        host: 'profile-host',
+        host: 'primary-system',
         user: 'profile-user',
-        password: 'profile-pass',
+        password: '${env:ZEUS_DB_PASSWORD}',
         defaultSchema: 'profilelib',
       },
     },
@@ -370,7 +371,7 @@ test('resolveAnalyzeConfig applies environment overrides for DB credentials', ()
       {
         cwd: tempRoot,
         env: {
-          ZEUS_DB_HOST: 'env-host',
+          ZEUS_DB_HOST: 'secondary-system',
           ZEUS_DB_USER: 'env-user',
           ZEUS_DB_PASSWORD: 'env-pass',
           ZEUS_DB_DEFAULT_SCHEMA: 'ENVLIB',
@@ -379,11 +380,54 @@ test('resolveAnalyzeConfig applies environment overrides for DB credentials', ()
     );
 
     assert.deepEqual(config.db, {
-      host: 'env-host',
+      host: 'secondary-system',
       user: 'env-user',
       password: 'env-pass',
       defaultSchema: 'ENVLIB',
     });
+    const metadata = getRuntimeConfigMetadata(config.db);
+    assert.equal(metadata.fields.host.origin, 'env');
+    assert.equal(metadata.fields.user.origin, 'env');
+    assert.equal(metadata.fields.password.origin, 'profile-env-placeholder');
+    assert.equal(metadata.fields.defaultSchema.origin, 'env');
+    assert.equal(metadata.warnings.length, 1);
+    assert.equal(metadata.warnings[0].field, 'host');
+    assert.equal(metadata.warnings[0].envKey, 'ZEUS_DB_HOST');
+    assert.equal(metadata.warnings[0].profileValue, 'primary-system');
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveAnalyzeConfig does not flag delegated env placeholders as runtime conflicts', () => {
+  const tempRoot = createTempProject({
+    sample: {
+      db: {
+        host: '${env:ZEUS_DB_HOST}',
+        user: '${env:ZEUS_DB_USER}',
+        password: '${env:ZEUS_DB_PASSWORD}',
+      },
+    },
+  });
+
+  try {
+    const config = resolveAnalyzeConfig(
+      { profile: 'sample' },
+      {
+        cwd: tempRoot,
+        env: {
+          ZEUS_DB_HOST: 'primary-system',
+          ZEUS_DB_USER: 'readonly-user',
+          ZEUS_DB_PASSWORD: 'readonly-pass',
+        },
+      },
+    );
+
+    const metadata = getRuntimeConfigMetadata(config.db);
+    assert.equal(metadata.fields.host.origin, 'profile-env-placeholder');
+    assert.equal(metadata.fields.user.origin, 'profile-env-placeholder');
+    assert.equal(metadata.fields.password.origin, 'profile-env-placeholder');
+    assert.deepEqual(metadata.warnings, []);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

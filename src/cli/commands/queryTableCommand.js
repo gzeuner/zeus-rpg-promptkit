@@ -15,15 +15,19 @@ const fs = require('fs');
 const path = require('path');
 const { renderAsciiTable } = require('../helpers/asciiTable');
 const { renderCsv } = require('../helpers/csvRenderer');
+const { resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../../config/runtimeConfig');
 const {
   buildQueryTableQueries,
   executeQueryTable,
   validateFilterPattern,
 } = require('../../core/queryService');
+const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
 
 async function runQueryTable(args) {
   let execution;
   try {
+    const config = resolveAnalyzeConfig(args, { cwd: process.cwd(), env: process.env });
+    printDbRuntimeConflictWarnings(resolveAnalyzeDbConfig(config, 'metadata'));
     execution = executeQueryTable(args);
   } catch (error) {
     console.error(error.message);

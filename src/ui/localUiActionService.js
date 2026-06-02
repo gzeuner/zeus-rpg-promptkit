@@ -12,9 +12,14 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const { runDoctorChecks } = require('../cli/commands/doctorCommand');
+const {
+  buildEnvProfileConflictMessage,
+  summarizeTargetValue,
+} = require('../cli/helpers/runtimeConfigWarnings');
 
 const ALLOWED_DOCTOR_KEYS = new Set(['profile', 'showResolved']);
 const PROFILE_NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
+const SECRET_LIKE_PATTERN = /(PASS|PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY|CREDENTIAL|PWD)/i;
 
 class UiActionError extends Error {
   constructor(message, statusCode = 400) {
@@ -80,9 +85,75 @@ function summarizeDoctorChecks(checks = []) {
   return summary;
 }
 
-function mapDoctorOutcome({ hasCriticalFailure, summary }) {
+function summarizeDoctorDiagnostics(diagnostics = []) {
+  const summary = {
+    total: diagnostics.length,
+    warn: 0,
+    error: 0,
+  };
+  for (const diagnostic of diagnostics) {
+    const severity = String((diagnostic && diagnostic.severity) || '').toUpperCase();
+    if (severity === 'ERROR' || severity === 'FAIL') summary.error += 1;
+    else if (severity === 'WARN' || severity === 'WARNING') summary.warn += 1;
+  }
+  return summary;
+}
+
+function isSensitiveDiagnosticField(path, envVar) {
+  const normalizedPath = String(path || '').trim();
+  const normalizedEnvVar = String(envVar || '').trim();
+  return /password|secret|token|key|credential|pwd/i.test(normalizedPath)
+    || SECRET_LIKE_PATTERN.test(normalizedEnvVar);
+}
+
+function normalizeDoctorDiagnostics(diagnostics = []) {
+  if (!Array.isArray(diagnostics)) {
+    return [];
+  }
+
+  return diagnostics
+    .filter((entry) => isPlainObject(entry))
+    .map((entry) => {
+      const code = String(entry.code || '').trim() || 'DOCTOR_DIAGNOSTIC';
+      const severity = String(entry.severity || '').trim().toUpperCase() || 'INFO';
+      const path = String(entry.path || '').trim();
+      const profile = String(entry.profile || '').trim();
+      const envVar = String(entry.envVar || '').trim();
+      const sensitive = isSensitiveDiagnosticField(path, envVar);
+      const profileValue = sensitive
+        ? '(redacted)'
+        : summarizeTargetValue(path, entry.profileValue);
+      const effectiveValue = sensitive
+        ? '(redacted)'
+        : summarizeTargetValue(path, entry.effectiveValue);
+      const message = code === 'ENV_PROFILE_CONFLICT'
+        ? buildEnvProfileConflictMessage({
+          profile,
+          path,
+          profileValue,
+          envVar,
+          effectiveValue,
+        })
+        : String(entry.message || '').trim();
+
+      return {
+        code,
+        severity,
+        path,
+        profile,
+        profileValue,
+        envVar,
+        effectiveValue,
+        message,
+      };
+    })
+    .filter((entry) => entry.message || entry.code || entry.path);
+}
+
+function mapDoctorOutcome({ hasCriticalFailure, summary, diagnosticsSummary }) {
   if (hasCriticalFailure) return 'failed';
-  if (summary.warn > 0) return 'warning';
+  if ((diagnosticsSummary && diagnosticsSummary.error > 0) || summary.fail > 0) return 'failed';
+  if ((diagnosticsSummary && diagnosticsSummary.warn > 0) || summary.warn > 0) return 'warning';
   return 'ready';
 }
 
@@ -105,7 +176,9 @@ function createLocalUiActionService({
 
     const doctorResult = await Promise.resolve(doctorExecutor(args, { cwd, env }));
     const checks = Array.isArray(doctorResult && doctorResult.checks) ? doctorResult.checks : [];
+    const diagnostics = normalizeDoctorDiagnostics(doctorResult && doctorResult.diagnostics);
     const summary = summarizeDoctorChecks(checks);
+    const diagnosticsSummary = summarizeDoctorDiagnostics(diagnostics);
     const finishedAt = new Date();
 
     return {
@@ -113,14 +186,17 @@ function createLocalUiActionService({
       status: mapDoctorOutcome({
         hasCriticalFailure: Boolean(doctorResult && doctorResult.hasCriticalFailure),
         summary,
+        diagnosticsSummary,
       }),
       startedAt: startedAt.toISOString(),
       finishedAt: finishedAt.toISOString(),
       durationMs: finishedAt.getTime() - startedAt.getTime(),
       input: payload,
+      diagnostics,
       result: {
         hasCriticalFailure: Boolean(doctorResult && doctorResult.hasCriticalFailure),
         summary,
+        diagnosticsSummary,
         checks: checks.map((entry) => ({
           name: entry.name,
           status: entry.status,
@@ -157,5 +233,6 @@ module.exports = {
   UiActionError,
   createLocalUiActionService,
   normalizeDoctorPayload,
+  normalizeDoctorDiagnostics,
   validateProfileName,
 };

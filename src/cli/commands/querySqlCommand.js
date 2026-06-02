@@ -15,7 +15,13 @@ const fs = require('fs');
 const path = require('path');
 const { renderAsciiTable } = require('../helpers/asciiTable');
 const { renderCsv } = require('../helpers/csvRenderer');
-const { resolveProfile, loadProfiles } = require('../../config/runtimeConfig');
+const {
+  loadProfiles,
+  resolveAnalyzeConfig,
+  resolveAnalyzeDbConfig,
+  resolveProfile,
+} = require('../../config/runtimeConfig');
+const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
 const {
   DEFAULT_MAX_ROWS,
   executeQuerySql,
@@ -66,6 +72,13 @@ async function runSingleQuery(args) {
       } catch (_) {
         // Profilfehler wird von executeQuerySql behandelt
       }
+    }
+
+    try {
+      const config = resolveAnalyzeConfig(args, { cwd: process.cwd(), env: process.env });
+      printDbRuntimeConflictWarnings(resolveAnalyzeDbConfig(config, 'metadata'));
+    } catch (_) {
+      // Konfigurationsfehler wird von executeQuerySql behandelt
     }
 
     const execution = executeQuerySql(args);

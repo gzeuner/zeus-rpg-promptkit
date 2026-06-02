@@ -16,32 +16,51 @@ function resolveAnalyzeDbRoleConfigs(
   env,
   {
     applyDbEnvOverrides,
+    getRuntimeConfigMetadata,
     mergeConfigLayers,
+    rawProfile = null,
     resolveEnvPlaceholdersDeep,
   } = {},
 ) {
-  const rawDb = profile && profile.db ? profile.db : null;
+  const rawDb = rawProfile && rawProfile.db ? rawProfile.db : (profile && profile.db ? profile.db : null);
+  const resolvedDb = rawDb ? resolveEnvPlaceholdersDeep(rawDb, env) : null;
   const baseDbConfig = applyDbEnvOverrides(
-    rawDb ? resolveEnvPlaceholdersDeep(rawDb, env) : null,
+    resolvedDb,
     env,
     'ZEUS_DB',
     rawDb,
+    {
+      scope: 'db',
+      mergeConfigLayers,
+    },
   );
-  const rawRoleConfigs = profile && profile.dbRoles ? profile.dbRoles : {};
+  const rawRoleConfigs = rawProfile && rawProfile.dbRoles ? rawProfile.dbRoles : {};
   const roleConfigs = resolveEnvPlaceholdersDeep(rawRoleConfigs, env);
   const rawMetadata = rawRoleConfigs && rawRoleConfigs.metadata ? rawRoleConfigs.metadata : null;
   const metadataDb = applyDbEnvOverrides(
     mergeConfigLayers(baseDbConfig || {}, roleConfigs && roleConfigs.metadata ? roleConfigs.metadata : undefined),
     env,
     'ZEUS_METADATA_DB',
-    rawMetadata || rawDb,
+    rawMetadata,
+    {
+      baseMetadata: getRuntimeConfigMetadata(baseDbConfig),
+      baseConfig: baseDbConfig,
+      scope: 'dbRoles.metadata',
+      mergeConfigLayers,
+    },
   );
   const rawTestData = rawRoleConfigs && rawRoleConfigs.testData ? rawRoleConfigs.testData : null;
   const testDataDb = applyDbEnvOverrides(
     mergeConfigLayers(metadataDb || baseDbConfig || {}, roleConfigs && roleConfigs.testData ? roleConfigs.testData : undefined),
     env,
     'ZEUS_TESTDATA_DB',
-    rawTestData || rawMetadata || rawDb,
+    rawTestData,
+    {
+      baseMetadata: getRuntimeConfigMetadata(metadataDb || baseDbConfig),
+      baseConfig: metadataDb || baseDbConfig,
+      scope: 'dbRoles.testData',
+      mergeConfigLayers,
+    },
   );
 
   return {
@@ -104,8 +123,12 @@ function resolveAnalyzeConfig(
 ) {
   const profiles = loadProfiles({ cwd, env, args });
   const profile = resolveProfile(profiles, args.profile, { env });
+  const rawProfile = resolveProfile(profiles, args.profile, {
+    env,
+    expandEnvPlaceholders: false,
+  });
   const fetchProfile = profile ? (profile.fetch || {}) : {};
-  const analyzeDbRoles = resolveAnalyzeDbRoleConfigs(profile, env);
+  const analyzeDbRoles = resolveAnalyzeDbRoleConfigs(profile, env, { rawProfile });
 
   const extensions = args.extensions
     ? parseCsv(args.extensions, DEFAULT_EXTENSIONS)

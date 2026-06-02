@@ -23,6 +23,7 @@ const {
   resolveProfile,
   resolveProfilesConfigPaths,
 } = require('../../config/runtimeConfig');
+const { getRuntimeConfigMetadata } = require('../../config/dbRuntimeConfigDiagnostics');
 const {
   ensureJavaSourcesCompiled,
   listJavaSourceFiles,
@@ -33,6 +34,10 @@ const { isDbConfigured, resolveDefaultSchema } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
 const { getIbmiOsVersion } = require('../../db2/ibmiPlatformInfo');
 const { renderAsciiTable } = require('../helpers/asciiTable');
+const {
+  buildDbRuntimeConflictDiagnostics,
+  getDbRuntimeConflictWarnings,
+} = require('../helpers/runtimeConfigWarnings');
 
 function formatStatus(status) {
   if (status === 'PASS') return '[PASS]';
@@ -105,7 +110,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_URL`],
     fallbackValue: fallbackConfig && fallbackConfig.url,
     required: false,
-    hint: 'jdbc:as400://example.ibm.local;naming=system;libraries=DATA_EXAMPLE',
+    hint: 'jdbc:as400://primary-system;naming=system;libraries=DEMO',
   });
   addEnvCheck(checks, {
     name: `${envPrefix}_HOST`,
@@ -113,7 +118,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_HOST`],
     fallbackValue: fallbackConfig && fallbackConfig.host,
     required: !usesUrl,
-    hint: 'example.ibm.local',
+    hint: 'primary-system',
   });
   addEnvCheck(checks, {
     name: `${envPrefix}_USER`,
@@ -137,7 +142,7 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_DEFAULT_LIBRARY`],
     fallbackValue: fallbackConfig && fallbackConfig.defaultLibrary,
     required: false,
-    hint: requiredLabelPrefix || 'DATA_EXAMPLE',
+    hint: requiredLabelPrefix || 'DEMO',
   });
   addEnvCheck(checks, {
     name: `${envPrefix}_DEFAULT_SCHEMA`,
@@ -145,8 +150,91 @@ function addDbEnvironmentChecks(checks, {
     envValue: env[`${envPrefix}_DEFAULT_SCHEMA`],
     fallbackValue: fallbackConfig && fallbackConfig.defaultSchema,
     required: false,
-    hint: requiredLabelPrefix || 'DATA_EXAMPLE',
+    hint: requiredLabelPrefix || 'DEMO',
   });
+}
+
+function formatResolvedValue(value, { secret = false } = {}) {
+  if (!isSet(value)) {
+    return '(leer)';
+  }
+  if (secret) {
+    return '(gesetzt)';
+  }
+  return String(value);
+}
+
+function formatOrigin(metadataField) {
+  if (!metadataField) {
+    return '';
+  }
+  if (metadataField.origin === 'env') {
+    return metadataField.envKey ? `env: ${metadataField.envKey}` : 'env';
+  }
+  if (metadataField.origin === 'profile-env-placeholder') {
+    if (metadataField.profileField && metadataField.placeholderEnvKey) {
+      return `profile placeholder: ${metadataField.profileField} -> ${metadataField.placeholderEnvKey}`;
+    }
+    return 'profile env placeholder';
+  }
+  if (metadataField.origin === 'profile') {
+    return metadataField.profileField ? `profile: ${metadataField.profileField}` : 'profile';
+  }
+  return String(metadataField.origin || '');
+}
+
+function appendDbRuntimeConflictChecks(checks, dbConfig, label = 'DB Runtime Override') {
+  for (const warning of getDbRuntimeConflictWarnings(dbConfig)) {
+    checks.push({
+      name: label,
+      status: 'WARN',
+      details: `${warning.envKey}="${warning.envValue}" überschreibt ${warning.profileField}="${warning.profileValue}".`,
+    });
+  }
+}
+
+function appendResolvedDbChecks(checks, namePrefix, dbConfig, { buildJdbcUrl, resolveDefaultSchema } = {}) {
+  const metadata = getRuntimeConfigMetadata(dbConfig);
+  const warningsByField = new Set(
+    getDbRuntimeConflictWarnings(dbConfig).map((warning) => warning.field),
+  );
+  const fields = [
+    { key: 'url', label: 'url', secret: false },
+    { key: 'host', label: 'host', secret: false },
+    { key: 'user', label: 'user', secret: false },
+    { key: 'password', label: 'password', secret: true },
+    { key: 'defaultSchema', label: 'defaultSchema', secret: false },
+  ];
+
+  for (const field of fields) {
+    const fieldMetadata = metadata && metadata.fields ? metadata.fields[field.key] : null;
+    const value = field.key === 'defaultSchema'
+      ? (dbConfig && (dbConfig.defaultSchema || dbConfig.defaultLibrary || dbConfig.schema || dbConfig.library))
+      : (dbConfig && dbConfig[field.key]);
+    checks.push({
+      name: `${namePrefix}.${field.label}`,
+      status: warningsByField.has(field.key) ? 'WARN' : 'INFO',
+      value: formatResolvedValue(value, { secret: field.secret }),
+      origin: formatOrigin(fieldMetadata),
+    });
+  }
+
+  checks.push({
+    name: `${namePrefix}.jdbcUrl`,
+    status: 'INFO',
+    value: dbConfig ? buildJdbcUrl(dbConfig, resolveDefaultSchema(dbConfig)) || '(leer)' : '(nicht konfiguriert)',
+    origin: 'derived',
+  });
+}
+
+function hasExplicitTestDataRole(profile, env) {
+  return Boolean(
+    (profile && profile.dbRoles && profile.dbRoles.testData)
+    || env.ZEUS_TESTDATA_DB_HOST
+    || env.ZEUS_TESTDATA_DB_URL
+    || env.ZEUS_TESTDATA_DB_USER
+    || env.ZEUS_TESTDATA_DB_PASSWORD !== undefined,
+  );
 }
 
 function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
@@ -163,7 +251,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       env,
       envPrefix: 'ZEUS_DB',
       fallbackConfig: dbProfile,
-      requiredLabelPrefix: 'DATA_EXAMPLE',
+      requiredLabelPrefix: 'DEMO',
     });
   }
 
@@ -172,7 +260,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       env,
       envPrefix: 'ZEUS_METADATA_DB',
       fallbackConfig: analyzeConfig && analyzeConfig.dbRoles ? analyzeConfig.dbRoles.metadata : {},
-      requiredLabelPrefix: 'DATA_EXAMPLE',
+      requiredLabelPrefix: 'DEMO',
     });
   }
 
@@ -181,7 +269,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       env,
       envPrefix: 'ZEUS_TESTDATA_DB',
       fallbackConfig: analyzeConfig && analyzeConfig.dbRoles ? analyzeConfig.dbRoles.testData : {},
-      requiredLabelPrefix: 'DATA_EXAMPLE',
+      requiredLabelPrefix: 'DEMO',
     });
   }
 
@@ -192,7 +280,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       envValue: env.ZEUS_FETCH_HOST,
       fallbackValue: fetchProfile.host,
       required: true,
-      hint: 'example.ibm.local',
+      hint: 'primary-system',
     });
     addEnvCheck(checks, {
       name: 'ZEUS_FETCH_USER',
@@ -216,7 +304,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       envValue: env.ZEUS_FETCH_SOURCE_LIB,
       fallbackValue: fetchProfile.sourceLib,
       required: true,
-      hint: 'SOURCE_EXAMPLE',
+      hint: 'FETCH_SOURCE',
     });
     addEnvCheck(checks, {
       name: 'ZEUS_FETCH_IFS_DIR',
@@ -232,7 +320,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       envValue: env.ZEUS_FETCH_OUT,
       fallbackValue: fetchProfile.out,
       required: true,
-      hint: './fetched-source/example',
+      hint: './fetched-source/demo',
     });
   }
 
@@ -266,6 +354,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
 
 function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) {
   const checks = [];
+  const diagnostics = [];
   let hasCriticalFailure = false;
   let resolvedAnalyzeConfig = null;
   let resolvedFetchConfig = null;
@@ -318,6 +407,20 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
   checks.push(...envChecks);
   if (envChecks.some((entry) => entry.status === 'FAIL')) {
     hasCriticalFailure = true;
+  }
+  if (resolvedAnalyzeConfig) {
+    const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
+    const testDataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'testData');
+    appendDbRuntimeConflictChecks(checks, metadataDbConfig);
+    diagnostics.push(...buildDbRuntimeConflictDiagnostics(metadataDbConfig, {
+      profile: args.profile,
+    }));
+    if (hasExplicitTestDataRole(resolvedProfile, env)) {
+      appendDbRuntimeConflictChecks(checks, testDataDbConfig, 'DB Runtime Override (testData)');
+      diagnostics.push(...buildDbRuntimeConflictDiagnostics(testDataDbConfig, {
+        profile: args.profile,
+      }));
+    }
   }
 
   const javaResult = spawnSync('java', ['-version'], {
@@ -489,15 +592,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
     }
   }
 
-  const hasExplicitTestDataRole = Boolean(
-    (resolvedProfile && resolvedProfile.dbRoles && resolvedProfile.dbRoles.testData)
-    || env.ZEUS_TESTDATA_DB_HOST
-    || env.ZEUS_TESTDATA_DB_URL
-    || env.ZEUS_TESTDATA_DB_USER
-    || env.ZEUS_TESTDATA_DB_PASSWORD !== undefined,
-  );
-
-  if (resolvedAnalyzeConfig && hasExplicitTestDataRole) {
+  if (resolvedAnalyzeConfig && hasExplicitTestDataRole(resolvedProfile, env)) {
     const testDataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'testData');
     if (!isDbConfigured(testDataDbConfig)) {
       checks.push({
@@ -530,6 +625,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
 
   return {
     checks,
+    diagnostics,
     hasCriticalFailure,
   };
 }
@@ -547,56 +643,58 @@ async function runDoctor(args) {
       const profiles = loadProfiles({ cwd, env, args });
       const resolvedProfile = resolveProfile(profiles, args.profile, { env });
       const resolvedAnalyzeConfig = resolveAnalyzeConfig(args, { cwd, env });
-      const dbConfig = resolvedAnalyzeConfig && resolvedAnalyzeConfig.db;
-      const jdbcUrl = dbConfig ? buildJdbcUrl(dbConfig, resolveDefaultSchema(dbConfig)) : '(nicht konfiguriert)';
-      resolvedChecks.push({ name: 'db.host', status: 'INFO', details: (dbConfig && dbConfig.host) || '(leer)' });
-      resolvedChecks.push({ name: 'db.user', status: 'INFO', details: (dbConfig && dbConfig.user) || '(leer)' });
-      resolvedChecks.push({ name: 'db.defaultLibrary', status: 'INFO', details: (dbConfig && dbConfig.defaultLibrary) || '(leer)' });
-      resolvedChecks.push({ name: 'JDBC URL', status: 'INFO', details: jdbcUrl });
+      const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
+      const testDataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'testData');
+      appendResolvedDbChecks(resolvedChecks, 'db', metadataDbConfig, { buildJdbcUrl, resolveDefaultSchema });
+      if (testDataDbConfig && testDataDbConfig !== metadataDbConfig) {
+        appendResolvedDbChecks(resolvedChecks, 'testDataDb', testDataDbConfig, { buildJdbcUrl, resolveDefaultSchema });
+      }
 
       // CURRENT_SERVER Sanity-Check
       const { isDbConfigured } = require('../../db2/db2Config');
       const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
       const { getIbmiOsVersion } = require('../../db2/ibmiPlatformInfo');
-      if (dbConfig && isDbConfigured(dbConfig)) {
+      if (metadataDbConfig && isDbConfigured(metadataDbConfig)) {
         try {
           const serverResult = runReadOnlyDb2Query({
-            dbConfig,
+            dbConfig: metadataDbConfig,
             query: 'SELECT CURRENT_SERVER AS SYS FROM SYSIBM.SYSDUMMY1',
             maxRows: 1,
           });
           const currentServer = serverResult.rows && serverResult.rows[0] && (serverResult.rows[0].SYS || serverResult.rows[0].sys || Object.values(serverResult.rows[0])[0]);
-          const configuredHost = String(dbConfig.host || '').toUpperCase();
+          const configuredHost = String(metadataDbConfig.host || '').toUpperCase();
           const reportedServer = String(currentServer || '').trim().toUpperCase();
           const mismatch = configuredHost && reportedServer && configuredHost !== reportedServer;
           resolvedChecks.push({
             name: 'CURRENT_SERVER',
             status: mismatch ? 'WARN' : 'PASS',
-            details: mismatch
+            value: mismatch
               ? `System meldet "${reportedServer}" — konfiguriert ist "${configuredHost}". Prüfe ob der Hostname korrekt ist!`
               : `${reportedServer} ✓`,
+            origin: '',
           });
         } catch (err) {
-          resolvedChecks.push({ name: 'CURRENT_SERVER', status: 'WARN', details: `Konnte nicht abgefragt werden: ${err.message}` });
+          resolvedChecks.push({ name: 'CURRENT_SERVER', status: 'WARN', value: `Konnte nicht abgefragt werden: ${err.message}`, origin: '' });
         }
 
         // IBM i OS-Version anzeigen
         try {
-          const versionInfo = getIbmiOsVersion(dbConfig);
+          const versionInfo = getIbmiOsVersion(metadataDbConfig);
           resolvedChecks.push({
             name: 'IBM i OS-Version',
             status: 'INFO',
-            details: versionInfo.versionString,
+            value: versionInfo.versionString,
+            origin: '',
           });
         } catch (_err) {
-          resolvedChecks.push({ name: 'IBM i OS-Version', status: 'WARN', details: 'Nicht ermittelbar' });
+          resolvedChecks.push({ name: 'IBM i OS-Version', status: 'WARN', value: 'Nicht ermittelbar', origin: '' });
         }
       }
 
       // productionSystem-Warnung
       const profObj = resolvedProfile || {};
       if (profObj.productionSystem) {
-        resolvedChecks.push({ name: 'Produktionssystem', status: 'WARN', details: 'Dieses Profil ist als productionSystem=true markiert!' });
+        resolvedChecks.push({ name: 'Produktionssystem', status: 'WARN', value: 'Dieses Profil ist als productionSystem=true markiert!', origin: '' });
       }
 
       // Systems-Block anzeigen (wenn vorhanden)
@@ -605,10 +703,11 @@ async function runDoctor(args) {
         resolvedChecks.push({
           name: 'systems (Def.)',
           status: 'INFO',
-          details: systemNames.map((s) => {
+          value: systemNames.map((s) => {
             const sys = profObj.systems[s];
             return `${s}: ${sys.host || '?'}`;
           }).join(' | '),
+          origin: '',
         });
         // Welche Rollen auf welches System zeigen
         const roleMap = {};
@@ -622,19 +721,20 @@ async function runDoctor(args) {
           resolvedChecks.push({
             name: 'systems (Routing)',
             status: 'INFO',
-            details: Object.entries(roleMap).map(([role, host]) => `${role}→${host}`).join(' | '),
+            value: Object.entries(roleMap).map(([role, host]) => `${role}→${host}`).join(' | '),
+            origin: '',
           });
         }
       }
 
     } catch (err) {
-      resolvedChecks.push({ name: 'show-resolved', status: 'FAIL', details: err.message });
+      resolvedChecks.push({ name: 'show-resolved', status: 'FAIL', value: err.message, origin: '' });
     }
 
     console.log('\n--- Aufgelöste Verbindung ---');
     console.log(renderAsciiTable(
-      ['Status', 'Parameter', 'Wert'],
-      resolvedChecks.map((c) => [formatStatus(c.status), c.name, c.details]),
+      ['Status', 'Parameter', 'Wert', 'Origin'],
+      resolvedChecks.map((c) => [formatStatus(c.status), c.name, c.value || '', c.origin || '']),
     ));
   }
 

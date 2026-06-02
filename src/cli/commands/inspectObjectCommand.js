@@ -32,6 +32,7 @@ const { isDbConfigured } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
 const { validateSqlIdentifier, escapeSqlLiteral } = require('../../db2/readOnlyQueryService');
 const { renderAsciiTable } = require('../helpers/asciiTable');
+const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
 
 const SUPPORTED_TYPES = ['*PGM', '*SRVPGM', '*MODULE', '*FILE', '*CMD', '*DTAARA', '*JOBQ', '*OUTQ'];
 
@@ -172,6 +173,7 @@ async function runInspectObject(args) {
   }
 
   const dbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
+  printDbRuntimeConflictWarnings(dbConfig);
   if (!isDbConfigured(dbConfig)) {
     console.error('Fehler: DB2-Verbindung nicht konfiguriert. Prüfe das Profil mit: zeus doctor --profile <name>');
     process.exit(2);
