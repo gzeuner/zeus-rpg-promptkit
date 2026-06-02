@@ -44,7 +44,7 @@ const WORKFLOW_CARD_DEFINITIONS = Object.freeze([
     title: 'Analyze Workspace',
     description: 'Run analysis and generate evidence artifacts for graph, DB2, and prompts.',
     category: 'analyze',
-    primaryActionLabel: 'Review Analyze Commands',
+    primaryActionLabel: 'Analyze Workspace',
   }),
   Object.freeze({
     id: 'query-db2',
