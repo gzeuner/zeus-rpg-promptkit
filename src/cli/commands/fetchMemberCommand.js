@@ -32,17 +32,12 @@ async function runFetchMember(args) {
 
   const members = memberArg.split(',').map((m) => m.trim().toUpperCase()).filter(Boolean);
 
-  const sourceLib = String(args.lib || args['source-lib'] || '').trim().toUpperCase();
-  if (!sourceLib) {
-    console.error('Missing required option: --lib <library>');
-    process.exit(2);
-  }
-
   const sourceFile = String(args.file || args['source-file'] || DEFAULT_SOURCE_FILE).trim().toUpperCase();
 
+  let fetchConfig;
   let outDir;
   try {
-    const fetchConfig = resolveFetchConfig(args, { cwd: process.cwd() });
+    fetchConfig = resolveFetchConfig(args, { cwd: process.cwd() });
     outDir = String(args.out || fetchConfig.out || '.').trim();
   } catch (_) {
     outDir = String(args.out || '.').trim();
@@ -50,12 +45,18 @@ async function runFetchMember(args) {
 
   let host, user, password;
   try {
-    const fetchConfig = resolveFetchConfig(args, { cwd: process.cwd() });
+    fetchConfig = fetchConfig || resolveFetchConfig(args, { cwd: process.cwd() });
     host = fetchConfig.host;
     user = fetchConfig.user;
     password = fetchConfig.password;
   } catch (err) {
     console.error('Konfigurationsfehler: ' + err.message);
+    process.exit(2);
+  }
+
+  const sourceLib = String(args.lib || args['source-lib'] || (fetchConfig && (fetchConfig.sourceLib || fetchConfig.sourceLibrary)) || '').trim().toUpperCase();
+  if (!sourceLib) {
+    console.error('Missing required option: --lib <library> oder Profilwert fetch.sourceLib/fetch.sourceLibrary');
     process.exit(2);
   }
 

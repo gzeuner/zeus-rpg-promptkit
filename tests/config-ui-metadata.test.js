@@ -85,4 +85,10 @@ test('config UI metadata supports section and capability filtering', () => {
   const profileField = getConfigUiField('runtime.profile');
   assert.ok(profileField);
   assert.equal(profileField.section, 'profile');
+
+  assert.ok(getConfigUiField('profile.systems'));
+  assert.ok(getConfigUiField('profile.workflow.members'));
+  assert.ok(getConfigUiField('profile.workflow.tables'));
+  assert.ok(getConfigUiField('profile.workflow.impact'));
+  assert.ok(getConfigUiField('profile.runtimeContext.journaledTables'));
 });

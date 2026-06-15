@@ -79,6 +79,13 @@ async function runFetch(args) {
       console.log(`[verbose] Fetch host: ${config.host}`);
       console.log(`[verbose] Fetch port: ${config.port}`);
       console.log(`[verbose] Object library: ${config.sourceLib}`);
+      if (config.hostEnvOverride) {
+        console.warn(
+          `[WARN] ZEUS_FETCH_HOST="${config.hostEnvOverride.envValue}" überschreibt`
+          + ` Profil-Wert "${config.hostEnvOverride.profileValue}".`
+          + ' Benutze --host <HOST> zum expliziten Setzen.',
+        );
+      }
       if (config.sourceLibEnvOverride) {
         console.warn(
           `[WARN] ZEUS_FETCH_SOURCE_LIB="${config.sourceLibEnvOverride.envValue}" überschreibt`
