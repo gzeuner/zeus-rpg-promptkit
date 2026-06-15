@@ -78,7 +78,7 @@ function isDbConfigured(dbConfig) {
   const hasUrl = Boolean(String(dbConfig.url || '').trim());
   const hasHost = Boolean(String(dbConfig.host || '').trim());
   const hasUser = Boolean(String(dbConfig.user || '').trim());
-  const hasPassword = dbConfig.password !== undefined && dbConfig.password !== null;
+  const hasPassword = Boolean(String(dbConfig.password || '').trim());
   return (hasUrl || hasHost) && hasUser && hasPassword;
 }
 

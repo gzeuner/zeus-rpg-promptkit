@@ -15,6 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const { buildJdbcUrl, isDbConfigured, resolveDefaultSchema } = require('./db2Config');
 const { runJavaHelper } = require('../fetch/jt400CommandRunner');
+const { ensureDb2ConnectionGuard } = require('../security/connectionGuards');
 
 /**
  * Executes a single DML statement (INSERT, UPDATE, DELETE) against IBM i DB2.
@@ -23,11 +24,7 @@ const { runJavaHelper } = require('../fetch/jt400CommandRunner');
  * Returns { rowsAffected: number }.
  * Throws on SQL error or configuration problems.
  */
-function runWriteDb2Query({ dbConfig, sql, runtime = {} }) {
-  if (!isDbConfigured(dbConfig)) {
-    throw new Error('DB2 connection configuration is incomplete.');
-  }
-
+function executeWriteDb2QueryRaw({ dbConfig, sql, runtime = {} }) {
   const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
   const jdbcUrl = buildJdbcUrl(dbConfig, resolveDefaultSchema(dbConfig));
   const result = runJavaHelperFn('Db2WriteQueryRunner', [
@@ -51,4 +48,34 @@ function runWriteDb2Query({ dbConfig, sql, runtime = {} }) {
   return { rowsAffected: Number(parsed.rowsAffected) };
 }
 
-module.exports = { runWriteDb2Query };
+function runWriteDb2Query({ dbConfig, sql, runtime = {} }) {
+  if (!isDbConfigured(dbConfig)) {
+    throw new Error('DB2 connection configuration is incomplete.');
+  }
+
+  if (!runtime.skipConnectionGuard) {
+    ensureDb2ConnectionGuard({
+      dbConfig,
+      scopeLabel: runtime.scopeLabel || 'DB2 write connection',
+      probe: ({ query, maxRows }) => {
+        const { executeReadOnlyDb2QueryRaw } = require('./readOnlyQueryService');
+        return executeReadOnlyDb2QueryRaw({
+          dbConfig,
+          query,
+          maxRows,
+          runtime: {
+            skipConnectionGuard: true,
+            runJavaHelper: runtime.runJavaHelper,
+          },
+        });
+      },
+    });
+  }
+
+  return executeWriteDb2QueryRaw({ dbConfig, sql, runtime });
+}
+
+module.exports = {
+  executeWriteDb2QueryRaw,
+  runWriteDb2Query,
+};

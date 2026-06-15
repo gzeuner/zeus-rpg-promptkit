@@ -27,6 +27,7 @@ test('command UI metadata validates and includes workflow-card categories', () =
     'analyze',
     'impact',
     'workflow run',
+    'resolve-object',
     'query-table',
     'query-sql',
     'serve',

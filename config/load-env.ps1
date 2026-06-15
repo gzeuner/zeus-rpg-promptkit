@@ -44,6 +44,35 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Stop-LoadEnv {
+    param(
+        [string]$Message,
+        [int]$ExitCode = 1
+    )
+
+    $global:LASTEXITCODE = $ExitCode
+    Write-Error $Message
+    throw $Message
+}
+
+function Test-NonEmptyEnvVar {
+    param(
+        [string]$Name
+    )
+
+    $value = [System.Environment]::GetEnvironmentVariable($Name, "Process")
+    return -not [string]::IsNullOrWhiteSpace($value)
+}
+
+$effectiveExecutionPolicy = (Get-ExecutionPolicy) 2>$null
+if ($effectiveExecutionPolicy) {
+    Write-Host "ExecutionPolicy: $effectiveExecutionPolicy" -ForegroundColor DarkCyan
+    if ($effectiveExecutionPolicy -in @("Restricted", "AllSigned")) {
+        Write-Warning "Die aktuelle ExecutionPolicy ($effectiveExecutionPolicy) kann das Laden dieses Skripts blockieren oder teilweise verhindern."
+        Write-Host "Tipp fuer diese Session: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force" -ForegroundColor Yellow
+    }
+}
+
 # ── Datei-Pfade bestimmen
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
@@ -74,7 +103,7 @@ if (-not (Test-Path $envFile)) {
     $exampleHint = if (Test-Path $exampleInConfig) { $exampleInConfig } else { $exampleInRoot }
     Write-Host "Beispiel-Datei vorhanden: $exampleHint" -ForegroundColor Yellow
     Write-Host "Bitte als '$envFileName' in config/ ablegen und Werte befuellen." -ForegroundColor Yellow
-    return
+    Stop-LoadEnv "Env-Datei fehlt: $envFileName" 2
 }
 
 function Load-EnvFile($filePath) {
@@ -106,9 +135,12 @@ Load-EnvFile $envFile
 $criticalVars = @(
     "ZEUS_OUTPUT_ROOT",
     "ZEUS_SOURCE_ROOT",
-    "ZEUS_DB_HOST",
     "ZEUS_DB_USER",
     "ZEUS_DB_PASSWORD"
+)
+
+$alternativeCriticalGroups = @(
+    @{ Label = "ZEUS_DB_HOST|ZEUS_DB_URL"; Variables = @("ZEUS_DB_HOST", "ZEUS_DB_URL") }
 )
 
 if ($Environment -eq "project") {
@@ -121,34 +153,50 @@ if ($Environment -eq "project") {
         "ZEUS_FETCH_IFS_DIR",
         "ZEUS_FETCH_OUT",
         # DB-Standardverbindung
-        "ZEUS_DB_HOST",
         "ZEUS_DB_USER",
         "ZEUS_DB_PASSWORD"
         # Hinweis: ZEUS_METADATA_DB_HOST ist optional fuer Multi-Maschinen-Setup
         # (z.B. READONLY_IBM_I_HOST fuer Metadaten) — kein Pflichtfeld, da Fallback auf ZEUS_DB_HOST
     )
+
+    $alternativeCriticalGroups = @(
+        @{ Label = "ZEUS_DB_HOST|ZEUS_DB_URL"; Variables = @("ZEUS_DB_HOST", "ZEUS_DB_URL") }
+    )
 }
 
 $missing = @()
 foreach ($var in $criticalVars) {
-    $value = [System.Environment]::GetEnvironmentVariable($var, "Process")
-    if (-not $value -or $value -eq "") {
+    if (-not (Test-NonEmptyEnvVar $var)) {
         $missing += $var
     }
 }
 
+foreach ($group in $alternativeCriticalGroups) {
+    $hasValue = $false
+    foreach ($candidate in $group.Variables) {
+        if (Test-NonEmptyEnvVar $candidate) {
+            $hasValue = $true
+            break
+        }
+    }
+    if (-not $hasValue) {
+        $missing += $group.Label
+    }
+}
+
 if ($Environment -eq "project") {
-    $sourceLib = [System.Environment]::GetEnvironmentVariable("ZEUS_FETCH_SOURCE_LIB", "Process")
-    $sourceLibrary = [System.Environment]::GetEnvironmentVariable("ZEUS_FETCH_SOURCE_LIBRARY", "Process")
-    if ((-not $sourceLib -or $sourceLib -eq "") -and (-not $sourceLibrary -or $sourceLibrary -eq "")) {
+    if ((-not (Test-NonEmptyEnvVar "ZEUS_FETCH_SOURCE_LIB")) -and (-not (Test-NonEmptyEnvVar "ZEUS_FETCH_SOURCE_LIBRARY"))) {
         $missing += "ZEUS_FETCH_SOURCE_LIB|ZEUS_FETCH_SOURCE_LIBRARY"
     }
 }
 
 if ($missing.Count -gt 0) {
-    Write-Warning "Kritische Variablen nicht gesetzt:"
+    Write-Warning "Kritische Variablen fehlen oder sind leer:"
     $missing | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
-    Write-Host "`nBitte .env-Datei ueberpruefen!`n" -ForegroundColor Yellow
+    Write-Host "`nBitte .env-Datei und ggf. ExecutionPolicy pruefen." -ForegroundColor Yellow
+    Write-Host "Falls das Skript wegen PowerShell-Richtlinien nicht sauber geladen wurde:" -ForegroundColor Yellow
+    Write-Host "  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force" -ForegroundColor Yellow
+    Stop-LoadEnv "Pflichtvariablen fehlen oder sind leer. Secrets wurden nicht ausgegeben." 3
 } else {
     Write-Host "Alle kritischen Variablen sind gesetzt. KI-Chat kann jetzt verwendet werden." -ForegroundColor Green
 }
