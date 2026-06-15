@@ -8,6 +8,7 @@ const {
   resolveProfile,
   validateProfiles,
 } = require('../src/config/runtimeConfig');
+const { getConnectionTargetMetadata } = require('../src/config/connectionTargetMetadata');
 
 const projectRoot = path.resolve(__dirname, '..');
 const examplePath = path.join(projectRoot, 'config', 'profiles.example.json');
@@ -27,6 +28,8 @@ test('profiles.example.json is strict JSON, validates, and exposes the public pr
     'sftp-fetch',
     'readonly-db2',
     'combined-fetch-and-query',
+    'sample-source',
+    'sample-preprod',
     'sample-dev',
     'sample-fetch',
     'sample-prod-ro',
@@ -66,12 +69,23 @@ test('public example profiles resolve mixins and workflow presets without local-
   const profiles = loadProfiles({ cwd: projectRoot, env: {} });
   const devProfile = resolveProfile(profiles, 'dev', { env: {} });
   const combinedProfile = resolveProfile(profiles, 'combined-fetch-and-query', { env: {} });
+  const sampleSourceProfile = resolveProfile(profiles, 'sample-source', { env: {} });
 
   assert.equal(devProfile.db.host, 'YOUR_DEV_IBM_I_HOST');
   assert.equal(devProfile.fetch.sourceLib, 'SOURCE_EXAMPLE');
+  assert.equal(sampleSourceProfile.fetch.sourceLib, 'SOURCEN');
   assert.deepEqual(combinedProfile.workflow.presets['security-check'].analyzeModes, ['security']);
   assert.deepEqual(combinedProfile.runtimeContext.journaledTables, [
     'DATA_EXAMPLE.CUSTOMERS',
     'REPORTING_EXAMPLE.ORDERS',
   ]);
+  assert.deepEqual(getConnectionTargetMetadata(devProfile.db), {
+    kind: 'connection-target',
+    source: 'system-ref',
+    systemKey: 'dev',
+    systemName: 'SYSDEV',
+    displayName: 'Development IBM i',
+    aliases: ['DEVBOX', 'SYS_TEST'],
+    configuredNames: ['DEV', 'SYSDEV', 'DEVBOX', 'SYS_TEST', 'YOUR_DEV_IBM_I_HOST'],
+  });
 });
