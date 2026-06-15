@@ -167,8 +167,126 @@ ORDER BY ORDINAL_POSITION`;
   };
 }
 
+function buildResolveObjectsQuery({ name, schema, includeSystemTableName = true }) {
+  const resolvedName = validateSqlIdentifier(name, '--table');
+  const whereClauses = [
+    includeSystemTableName
+      ? `(SYSTEM_TABLE_NAME = ${escapeSqlLiteral(resolvedName)} OR TABLE_NAME = ${escapeSqlLiteral(resolvedName)})`
+      : `TABLE_NAME = ${escapeSqlLiteral(resolvedName)}`,
+  ];
+
+  if (schema) {
+    whereClauses.push(`TABLE_SCHEMA = ${escapeSqlLiteral(validateSqlIdentifier(schema, '--schema'))}`);
+  }
+
+  const selectedColumns = includeSystemTableName
+    ? 'SYSTEM_TABLE_NAME, TABLE_NAME AS SQL_TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE'
+    : 'TABLE_NAME AS SQL_TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE';
+
+  return `SELECT ${selectedColumns}
+FROM QSYS2.SYSTABLES
+WHERE ${whereClauses.join(' AND ')}
+ORDER BY TABLE_SCHEMA, TABLE_NAME`;
+}
+
+function normalizeRequiredColumns(columns = []) {
+  return Array.from(new Set((columns || []).map((column) => validateSqlIdentifier(column, '--require-column'))));
+}
+
+function resolveObjectsByName(
+  dbConfig,
+  tableNameOrAlias,
+  {
+    schema = null,
+    requireColumns = [],
+    includeRowCount = false,
+    runtime = {},
+  } = {},
+) {
+  const normalizedName = validateSqlIdentifier(tableNameOrAlias, '--table');
+  const normalizedSchema = schema ? validateSqlIdentifier(schema, '--schema') : null;
+  const requiredColumns = normalizeRequiredColumns(requireColumns);
+
+  const result = executeReadOnlyDb2QueryWithFallback({
+    dbConfig,
+    query: buildResolveObjectsQuery({
+      name: normalizedName,
+      schema: normalizedSchema,
+      includeSystemTableName: true,
+    }),
+    maxRows: 100,
+    runtime,
+    degradedMode: 'empty',
+    retryHandlers: {
+      '42703': () => ({
+        name: 'without-system-table-name',
+        query: buildResolveObjectsQuery({
+          name: normalizedName,
+          schema: normalizedSchema,
+          includeSystemTableName: false,
+        }),
+      }),
+    },
+  });
+
+  const objects = (result.rows || []).map((row) => {
+    const normalized = normalizeTableRow(row);
+    let columnInfo = null;
+    let rowCount = null;
+    let rowCountError = '';
+
+    if (requiredColumns.length > 0) {
+      columnInfo = resolveColumnsWithName(dbConfig, normalized.schema, normalized.sqlName, runtime);
+    }
+
+    if (includeRowCount) {
+      try {
+        const rowCountResult = runReadOnlyDb2Query({
+          dbConfig,
+          query: `SELECT COUNT(*) AS ROW_COUNT FROM ${normalized.schema}.${normalized.sqlName}`,
+          maxRows: 1,
+          runtime: {
+            ...runtime,
+            scopeLabel: 'DB2 resolve-object row-count connection',
+          },
+        });
+        const row = (rowCountResult.rows || [])[0];
+        rowCount = row ? Number(row.ROW_COUNT || row.row_count || Object.values(row)[0] || 0) : 0;
+      } catch (error) {
+        rowCountError = String(error.message || error);
+      }
+    }
+
+    const availableColumns = columnInfo ? columnInfo.columns.map((column) => column.name) : [];
+    const missingRequiredColumns = requiredColumns.filter((column) => !availableColumns.includes(column));
+
+    return {
+      ...normalized,
+      requiredColumns,
+      availableColumns,
+      missingRequiredColumns,
+      allRequiredColumnsPresent: missingRequiredColumns.length === 0,
+      rowCount,
+      rowCountError,
+    };
+  });
+
+  return {
+    searched: {
+      tableNameOrAlias: normalizedName,
+      schema: normalizedSchema,
+      requireColumns: requiredColumns,
+      includeRowCount: Boolean(includeRowCount),
+    },
+    found: objects.length > 0,
+    objects,
+    count: objects.length,
+  };
+}
+
 module.exports = {
   listTablesInSchema,
+  resolveObjectsByName,
   resolveColumnsWithName,
   resolveTableNameBothDirections,
 };

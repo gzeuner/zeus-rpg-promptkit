@@ -21,6 +21,9 @@ const { runWriteDb2Query } = require('../../db2/writeQueryService');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
 
 const PREFLIGHT_OPERATIONS = /^\s*(DELETE|UPDATE)\s+/i;
+const BACKUP_PREFIX = 'BAK';
+const BACKUP_TIMESTAMP_LENGTH = 12;
+const BACKUP_NAME_MAX_LENGTH = 18;
 
 const WRITE_MODES = Object.freeze({
   'upsert-sql': {
@@ -121,13 +124,86 @@ function buildPreflightCountSql(sql) {
 }
 
 function buildBackupSql(targetTable, schema) {
-  const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
   const parts = targetTable.split('.');
-  const tableName = parts[parts.length - 1].slice(0, 15); // IBM i max 18 chars total
+  const tableName = parts[parts.length - 1];
   const backupSchema = schema || (parts.length > 1 ? parts[0] : null);
-  const backupName = `_BAK_${tableName}_${ts}`.slice(0, 18);
+  const backupName = buildBackupObjectName(tableName);
   const backupFqn = backupSchema ? `${backupSchema}.${backupName}` : backupName;
   return `CREATE TABLE ${backupFqn} AS (SELECT * FROM ${targetTable}) WITH DATA`;
+}
+
+function sanitizeBackupNameSegment(value) {
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_]/g, '');
+  return normalized.replace(/^_+/, '');
+}
+
+function formatBackupTimestamp(now = new Date()) {
+  return new Date(now)
+    .toISOString()
+    .replace(/[-:T]/g, '')
+    .slice(2, 2 + BACKUP_TIMESTAMP_LENGTH);
+}
+
+function buildBackupObjectName(tableName, { now = new Date() } = {}) {
+  const timestamp = formatBackupTimestamp(now);
+  const maxTableLength = Math.max(1, BACKUP_NAME_MAX_LENGTH - BACKUP_PREFIX.length - BACKUP_TIMESTAMP_LENGTH);
+  const tableSegment = sanitizeBackupNameSegment(tableName).slice(0, maxTableLength) || 'T';
+  return `${BACKUP_PREFIX}${tableSegment}${timestamp}`.slice(0, BACKUP_NAME_MAX_LENGTH);
+}
+
+function resolveBackupSchema(args, config, targetTable) {
+  if (args['backup-schema']) {
+    return String(args['backup-schema']).trim().toUpperCase();
+  }
+  if (config && config.db && config.db.defaultSchema) {
+    return String(config.db.defaultSchema).trim().toUpperCase();
+  }
+  const parts = String(targetTable || '').split('.');
+  return parts.length > 1 ? String(parts[0]).trim().toUpperCase() : null;
+}
+
+function ensureBackupCreated({
+  args,
+  config,
+  dbConfig,
+  sql,
+  services = {},
+}) {
+  const shouldBackup = Boolean(args.backup || args['require-backup']);
+  if (!shouldBackup) {
+    return null;
+  }
+
+  const runWriteDb2QueryFn = services.runWriteDb2Query || runWriteDb2Query;
+  const targetTable = extractTargetTable(sql);
+  if (!targetTable) {
+    if (args['require-backup']) {
+      throw new Error('Zieltabelle konnte nicht aus SQL ermittelt werden. --require-backup verhindert die Schreiboperation.');
+    }
+    console.error('[backup] Zieltabelle konnte nicht aus SQL ermittelt werden — Backup übersprungen.');
+    return null;
+  }
+
+  const backupSchema = resolveBackupSchema(args, config, targetTable);
+  const backupSql = buildBackupSql(targetTable, backupSchema);
+  console.log(`[backup] Sichere Tabelle: ${targetTable}`);
+  console.log(`[backup] CREATE-Statement: ${backupSql}`);
+  runWriteDb2QueryFn({
+    dbConfig,
+    sql: backupSql,
+    runtime: {
+      scopeLabel: 'DB2 backup connection',
+    },
+  });
+  console.log('[backup] Backup-Tabelle erfolgreich angelegt.');
+  return {
+    targetTable,
+    backupSchema,
+    backupSql,
+  };
 }
 
 async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
@@ -187,7 +263,14 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
     if (countSql) {
       let rowCount = '?';
       try {
-        const countResult = runReadOnlyDb2Query({ dbConfig, query: countSql, maxRows: 1 });
+        const countResult = runReadOnlyDb2Query({
+          dbConfig,
+          query: countSql,
+          maxRows: 1,
+          runtime: {
+            scopeLabel: 'DB2 preflight read-only connection',
+          },
+        });
         const row = (countResult.rows || [])[0];
         rowCount = row ? (row.ANZAHL || row.anzahl || Object.values(row)[0] || '?') : '?';
       } catch (_) {
@@ -209,31 +292,31 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
   }
 
   // Backup: vor DELETE/UPDATE eine Sicherungskopie der Zieltabelle anlegen
-  if (args.backup) {
-    const targetTable = extractTargetTable(sql);
-    if (!targetTable) {
-      console.error('[backup] Zieltabelle konnte nicht aus SQL ermittelt werden — Backup übersprungen.');
-    } else {
-      const config = resolveAnalyzeConfig(args, { cwd: process.cwd() });
-      const backupSql = buildBackupSql(targetTable, config.db && config.db.defaultSchema);
-      console.log(`[backup] Sichere Tabelle: ${targetTable}`);
-      console.log(`[backup] CREATE-Statement: ${backupSql}`);
-      try {
-        const backupDbConfig = resolveAnalyzeDbConfig(config, 'metadata');
-        runWriteDb2Query({ dbConfig: backupDbConfig, sql: backupSql });
-        console.log('[backup] Backup-Tabelle erfolgreich angelegt.');
-      } catch (err) {
-        console.error(`[backup] FEHLER beim Anlegen der Backup-Tabelle: ${err.message}`);
-        console.error('[backup] Abbruch — SQL wurde NICHT ausgeführt.');
-        process.exit(1);
-      }
+  if (args.backup || args['require-backup']) {
+    try {
+      ensureBackupCreated({
+        args,
+        config,
+        dbConfig,
+        sql,
+      });
+    } catch (err) {
+      console.error(`[backup] FEHLER beim Anlegen der Backup-Tabelle: ${err.message}`);
+      console.error('[backup] Abbruch — SQL wurde NICHT ausgeführt.');
+      process.exit(1);
     }
     console.log('');
   }
 
   let result;
   try {
-    result = runWriteDb2Query({ dbConfig, sql });
+    result = runWriteDb2Query({
+      dbConfig,
+      sql,
+      runtime: {
+        scopeLabel: 'DB2 write connection',
+      },
+    });
   } catch (err) {
     console.error(`Fehler bei der Ausführung: ${err.message}`);
     process.exit(1);
@@ -258,4 +341,17 @@ async function runDeleteSql(args) {
   await runWriteSql(args, { mode: 'delete' });
 }
 
-module.exports = { runUpsertSql, runInsertSql, runUpdateSql, runDeleteSql, validateWriteSql, resolveWriteMode };
+module.exports = {
+  buildBackupObjectName,
+  buildBackupSql,
+  ensureBackupCreated,
+  extractTargetTable,
+  formatBackupTimestamp,
+  resolveSqlText,
+  resolveWriteMode,
+  runDeleteSql,
+  runInsertSql,
+  runUpdateSql,
+  runUpsertSql,
+  validateWriteSql,
+};

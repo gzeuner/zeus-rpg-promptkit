@@ -1,7 +1,7 @@
 ---
 Title: Sichere Umgebungskonfiguration für Zeus RPG PromptKit
 Description: Interne technische Dokumentation zu Architektur, Vertragen und Implementierungsdetails.
-Last Updated: 2026-05-17
+Last Updated: 2026-06-15
 ---
 
 # Sichere Umgebungskonfiguration für Zeus RPG PromptKit
@@ -59,8 +59,10 @@ Das Skript:
 - Liest `config/.env.local`
 - Setzt die Variablen in der aktuellen PowerShell-Session (`$env:VARIABLE`)
 - Maskiert Passwords in der Konsole (*** statt Klartext)
-- Validiert kritische Variablen
-- Meldet, ob alles bereit ist
+- Validiert kritische Variablen nach dem Laden
+- bricht bei leeren Pflichtwerten mit non-zero Fehler ab
+- warnt frueh bei `Restricted` oder `AllSigned`
+- gibt einen `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force`-Hinweis aus, wenn eine PowerShell-Richtlinie plausibel stoert
 
 ### 3. Verwendung mit Profilen
 
@@ -130,6 +132,29 @@ $env:ZEUS_DB_USER
 
 # Falls leer: .env-Datei bearbeiten und neues PowerShell-Fenster oeffnen
 ```
+
+## Manuelle Smoke-Tests fuer `load-env.ps1`
+
+```powershell
+# 1. Erwarteter Erfolgsfall
+. .\config\load-env.ps1 -Environment project
+$LASTEXITCODE
+
+# 2. Erwarteter Fehlerfall: Passwort temporaer leeren
+#    ZEUS_DB_PASSWORD=   in config\.env.project.local setzen
+. .\config\load-env.ps1 -Environment project
+$LASTEXITCODE
+
+# 3. Falls ExecutionPolicy blockiert oder signierte Skripte verlangt
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+. .\config\load-env.ps1 -Environment project
+```
+
+Erwartung:
+
+- Test 1 meldet erfolgreiche Validierung.
+- Test 2 nennt die fehlenden Pflichtvariablen, zeigt keine Secrets und bricht laut ab.
+- Test 3 ist der schnelle Session-scope Workaround fuer `Restricted` oder `AllSigned`.
 
 ### Multi-Maschinen-Setup (z.B. SYS_TEST + SYS_PROD)
 

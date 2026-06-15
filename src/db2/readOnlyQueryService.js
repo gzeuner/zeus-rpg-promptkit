@@ -17,6 +17,7 @@ const {
   executeWithAdaptiveRetry,
   normalizeSqlState,
 } = require('./adaptiveQueryService');
+const { ensureDb2ConnectionGuard } = require('../security/connectionGuards');
 
 const SQL_IDENTIFIER_PATTERN = /^[A-Z][A-Z0-9_#$@]*$/;
 const FORBIDDEN_SQL_PATTERN = /\b(INSERT|UPDATE|DELETE|MERGE|ALTER|DROP|CREATE|TRUNCATE|CALL|GRANT|REVOKE)\b/i;
@@ -81,12 +82,7 @@ function escapeSqlLiteral(value) {
   return `'${String(value || '').replace(/'/g, "''")}'`;
 }
 
-function runReadOnlyDb2Query({ dbConfig, query, maxRows = 50, runtime = {} }) {
-  if (!isDbConfigured(dbConfig)) {
-    throw new Error('DB2 connection configuration is incomplete.');
-  }
-
-  validateReadOnlySql(query);
+function executeReadOnlyDb2QueryRaw({ dbConfig, query, maxRows = 50, runtime = {} }) {
   const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
   const jdbcUrl = buildJdbcUrl(dbConfig, resolveDefaultSchema(dbConfig));
   const result = runJavaHelperFn('Db2DiagnosticQueryRunner', [
@@ -102,6 +98,32 @@ function runReadOnlyDb2Query({ dbConfig, query, maxRows = 50, runtime = {} }) {
   }
 
   return parseReadOnlyQueryResult(result.stdout);
+}
+
+function runReadOnlyDb2Query({ dbConfig, query, maxRows = 50, runtime = {} }) {
+  if (!isDbConfigured(dbConfig)) {
+    throw new Error('DB2 connection configuration is incomplete.');
+  }
+
+  validateReadOnlySql(query);
+
+  if (!runtime.skipConnectionGuard) {
+    ensureDb2ConnectionGuard({
+      dbConfig,
+      scopeLabel: runtime.scopeLabel || 'DB2 read-only connection',
+      probe: ({ query: probeQuery, maxRows: probeMaxRows }) => executeReadOnlyDb2QueryRaw({
+        dbConfig,
+        query: probeQuery,
+        maxRows: probeMaxRows,
+        runtime: {
+          ...runtime,
+          skipConnectionGuard: true,
+        },
+      }),
+    });
+  }
+
+  return executeReadOnlyDb2QueryRaw({ dbConfig, query, maxRows, runtime });
 }
 
 function executeReadOnlyDb2QueryWithFallback({
@@ -193,6 +215,7 @@ module.exports = {
   extractSqlState,
   parseReadOnlyQueryResult,
   runReadOnlyDb2Query,
+  executeReadOnlyDb2QueryRaw,
   SQL_IDENTIFIER_PATTERN,
   validateReadOnlySql,
   validateSqlIdentifier,
