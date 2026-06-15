@@ -30,6 +30,7 @@ const {
   listClasspathJarEntries,
   resolveJavaPaths,
 } = require('../../java/javaRuntime');
+const { executeClCommandRaw } = require('../../fetch/jt400CommandRunner');
 const { isDbConfigured, resolveDefaultSchema } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
 const { getIbmiOsVersion } = require('../../db2/ibmiPlatformInfo');
@@ -352,13 +353,28 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
   return checks;
 }
 
-function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) {
+function buildProbeRow({ system, profile, functionName, status, details }) {
+  return {
+    system,
+    profile,
+    functionName,
+    status,
+    details,
+  };
+}
+
+function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, services = {} } = {}) {
   const checks = [];
   const diagnostics = [];
+  const probeRows = [];
   let hasCriticalFailure = false;
   let resolvedAnalyzeConfig = null;
   let resolvedFetchConfig = null;
   let resolvedProfile = null;
+  const probeEnabled = Boolean(args.probe);
+  const runReadOnlyDb2QueryFn = services.runReadOnlyDb2Query || runReadOnlyDb2Query;
+  const executeClCommandRawFn = services.executeClCommandRaw || executeClCommandRaw;
+  const getIbmiOsVersionFn = services.getIbmiOsVersion || getIbmiOsVersion;
 
   if (!args.profile || !String(args.profile).trim()) {
     throw new Error('Missing required option: --profile <name>');
@@ -491,6 +507,66 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
     }
   }
 
+  if (!probeEnabled) {
+    checks.push({
+      name: 'Probe Mode',
+      status: 'INFO',
+      details: 'Live smoke tests are disabled. Run doctor with --probe to execute read-only remote checks.',
+    });
+  }
+
+  if (resolvedFetchConfig) {
+    if (!probeEnabled) {
+      checks.push({
+        name: 'Fetch Probe',
+        status: 'SKIP',
+        details: 'Skipped because --probe was not requested.',
+      });
+    } else {
+      try {
+        const fetchProbe = executeClCommandRawFn({
+          host: resolvedFetchConfig.host,
+          user: resolvedFetchConfig.user,
+          password: resolvedFetchConfig.password,
+          command: 'CHKOBJ OBJ(QSYS/QSYS) OBJTYPE(*LIB)',
+          verbose: false,
+          runtime: {
+            skipConnectionGuard: true,
+          },
+        });
+        if (!fetchProbe.ok) {
+          throw new Error(fetchProbe.messages.join('; ') || fetchProbe.stderr || 'IBM i fetch probe failed.');
+        }
+        checks.push({
+          name: 'Fetch Probe',
+          status: 'PASS',
+          details: `IBM i fetch login succeeded (${resolvedFetchConfig.host}).`,
+        });
+        probeRows.push(buildProbeRow({
+          system: resolvedFetchConfig.host || '(host unknown)',
+          profile: args.profile,
+          functionName: 'fetch',
+          status: 'OK',
+          details: `Read-only CL probe succeeded; configured stream file CCSID ${resolvedFetchConfig.streamFileCcsid || 'unknown'}.`,
+        }));
+      } catch (error) {
+        hasCriticalFailure = true;
+        checks.push({
+          name: 'Fetch Probe',
+          status: 'FAIL',
+          details: error.message,
+        });
+        probeRows.push(buildProbeRow({
+          system: resolvedFetchConfig.host || '(host unknown)',
+          profile: args.profile,
+          functionName: 'fetch',
+          status: 'FAIL',
+          details: error.message,
+        }));
+      }
+    }
+  }
+
   if (!resolvedAnalyzeConfig) {
     checks.push({
       name: 'JDBC',
@@ -503,19 +579,35 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
       status: 'SKIP',
       details: 'DB2 credentials are not fully configured.',
     });
+  } else if (!probeEnabled) {
+    checks.push({
+      name: 'JDBC Metadata',
+      status: 'SKIP',
+      details: 'Skipped because --probe was not requested.',
+    });
   } else {
     try {
       const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
-      runReadOnlyDb2Query({
+      runReadOnlyDb2QueryFn({
         dbConfig: metadataDbConfig,
         query: 'SELECT 1 AS HEALTHCHECK FROM SYSIBM.SYSDUMMY1',
         maxRows: 1,
+        runtime: {
+          scopeLabel: 'doctor metadata probe connection',
+        },
       });
       checks.push({
         name: 'JDBC Metadata',
         status: 'PASS',
         details: `Read-only query succeeded${resolveDefaultSchema(metadataDbConfig) ? ` (default schema ${resolveDefaultSchema(metadataDbConfig)})` : ''}.`,
       });
+      probeRows.push(buildProbeRow({
+        system: metadataDbConfig.host || metadataDbConfig.url || '(db target unknown)',
+        profile: args.profile,
+        functionName: 'metadata-db',
+        status: 'OK',
+        details: `SELECT 1 succeeded${resolveDefaultSchema(metadataDbConfig) ? `; default schema ${resolveDefaultSchema(metadataDbConfig)}` : ''}.`,
+      }));
     } catch (error) {
       hasCriticalFailure = true;
       checks.push({
@@ -523,14 +615,22 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
         status: 'FAIL',
         details: error.message,
       });
+      const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
+      probeRows.push(buildProbeRow({
+        system: (metadataDbConfig && (metadataDbConfig.host || metadataDbConfig.url)) || '(db target unknown)',
+        profile: args.profile,
+        functionName: 'metadata-db',
+        status: 'FAIL',
+        details: error.message,
+      }));
     }
   }
 
   // IBM i OS-Version Check
-  if (resolvedAnalyzeConfig && isDbConfigured(resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata'))) {
+  if (probeEnabled && resolvedAnalyzeConfig && isDbConfigured(resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata'))) {
     try {
       const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
-      const versionInfo = getIbmiOsVersion(metadataDbConfig);
+      const versionInfo = getIbmiOsVersionFn(metadataDbConfig);
       checks.push({
         name: 'IBM i OS-Version',
         status: versionInfo.versionString !== 'UNKNOWN' ? 'PASS' : 'WARN',
@@ -549,6 +649,8 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
 
   // Journal-Status Check für runtimeContext-Tabellen
   if (
+    probeEnabled
+    &&
     resolvedAnalyzeConfig
     && isDbConfigured(resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata'))
     && resolvedProfile
@@ -600,18 +702,34 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
         status: 'SKIP',
         details: 'Test-data DB2 credentials are not fully configured.',
       });
+    } else if (!probeEnabled) {
+      checks.push({
+        name: 'JDBC Test Data',
+        status: 'SKIP',
+        details: 'Skipped because --probe was not requested.',
+      });
     } else {
       try {
-        runReadOnlyDb2Query({
+        runReadOnlyDb2QueryFn({
           dbConfig: testDataDbConfig,
           query: 'SELECT 1 AS HEALTHCHECK FROM SYSIBM.SYSDUMMY1',
           maxRows: 1,
+          runtime: {
+            scopeLabel: 'doctor test-data probe connection',
+          },
         });
         checks.push({
           name: 'JDBC Test Data',
           status: 'PASS',
           details: `Read-only query succeeded${resolveDefaultSchema(testDataDbConfig) ? ` (default schema ${resolveDefaultSchema(testDataDbConfig)})` : ''}.`,
         });
+        probeRows.push(buildProbeRow({
+          system: testDataDbConfig.host || testDataDbConfig.url || '(db target unknown)',
+          profile: args.profile,
+          functionName: 'testdata-db',
+          status: 'OK',
+          details: `SELECT 1 succeeded${resolveDefaultSchema(testDataDbConfig) ? `; default schema ${resolveDefaultSchema(testDataDbConfig)}` : ''}.`,
+        }));
       } catch (error) {
         hasCriticalFailure = true;
         checks.push({
@@ -619,6 +737,13 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
           status: 'FAIL',
           details: error.message,
         });
+        probeRows.push(buildProbeRow({
+          system: testDataDbConfig.host || testDataDbConfig.url || '(db target unknown)',
+          profile: args.profile,
+          functionName: 'testdata-db',
+          status: 'FAIL',
+          details: error.message,
+        }));
       }
     }
   }
@@ -627,6 +752,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env } = {}) 
     checks,
     diagnostics,
     hasCriticalFailure,
+    probeRows,
   };
 }
 
@@ -654,12 +780,15 @@ async function runDoctor(args) {
       const { isDbConfigured } = require('../../db2/db2Config');
       const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
       const { getIbmiOsVersion } = require('../../db2/ibmiPlatformInfo');
-      if (metadataDbConfig && isDbConfigured(metadataDbConfig)) {
+      if (args.probe && metadataDbConfig && isDbConfigured(metadataDbConfig)) {
         try {
           const serverResult = runReadOnlyDb2Query({
             dbConfig: metadataDbConfig,
             query: 'SELECT CURRENT_SERVER AS SYS FROM SYSIBM.SYSDUMMY1',
             maxRows: 1,
+            runtime: {
+              scopeLabel: 'doctor show-resolved probe connection',
+            },
           });
           const currentServer = serverResult.rows && serverResult.rows[0] && (serverResult.rows[0].SYS || serverResult.rows[0].sys || Object.values(serverResult.rows[0])[0]);
           const configuredHost = String(metadataDbConfig.host || '').toUpperCase();
@@ -689,6 +818,13 @@ async function runDoctor(args) {
         } catch (_err) {
           resolvedChecks.push({ name: 'IBM i OS-Version', status: 'WARN', value: 'Nicht ermittelbar', origin: '' });
         }
+      } else if (!args.probe) {
+        resolvedChecks.push({
+          name: 'CURRENT_SERVER',
+          status: 'INFO',
+          value: 'Nicht abgefragt. Fuer Live-Abgleich doctor --probe verwenden.',
+          origin: '',
+        });
       }
 
       // productionSystem-Warnung
@@ -743,6 +879,15 @@ async function runDoctor(args) {
     result.checks.map((check) => [formatStatus(check.status), check.name, check.details]),
   ));
 
+  if (args.probe && result.probeRows.length > 0) {
+    console.log('\n--- Probe Matrix ---');
+    console.log(renderAsciiTable(
+      ['System', 'Profile', 'Function', 'Status', 'Hint'],
+      result.probeRows.map((row) => [row.system, row.profile, row.functionName, row.status, row.details]),
+      { maxCellWidth: 50 },
+    ));
+  }
+
   if (result.hasCriticalFailure) {
     process.exit(1);
   }
@@ -750,6 +895,7 @@ async function runDoctor(args) {
 
 module.exports = {
   buildEnvironmentChecks,
+  buildProbeRow,
   runDoctor,
   runDoctorChecks,
 };

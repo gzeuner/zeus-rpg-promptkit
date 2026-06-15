@@ -38,6 +38,7 @@ const { runBridge } = require('../src/cli/commands/bridgeCommand');
 const { run: runPuiEdit } = require('../src/cli/commands/puiEditCommand');
 const { runSearchSource } = require('../src/cli/commands/searchSourceCommand');
 const { runJoblog } = require('../src/cli/commands/joblogCommand');
+const { runResolveObject } = require('../src/cli/commands/resolveObjectCommand');
 const { runDocsGenerateCatalog } = require('./commands/generate-tool-catalog');
 const { run: runAnalyses } = require('../src/cli/commands/analysesCommand');
 const { runMcp } = require('../src/cli/commands/mcpCommand');
@@ -57,19 +58,21 @@ function printHelp() {
   console.log('  zeus [--config <path>] fetch-member --profile <name> --lib <library> --member <name>[,<name>,...] [--file <QRPGLESRC>] [--out <dir>] [--verbose]  # Einzel- oder Mehrfach-Member-Download');
   console.log('  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
   console.log('  zeus [--config <path>] analyses <list|register|index|open|show|unregister> [options]');
-  console.log('  zeus [--config <path>] doctor --profile <name> [--show-resolved]');
+  console.log('  zeus [--config <path>] doctor --profile <name> [--probe] [--show-resolved]');
   console.log('  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query');
   console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>] [--save <datei.csv|datei.json>]');
   console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ..." | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv|json] [--save <datei.csv|datei.json>] [--watch <sek>]');
+  console.log('  zeus [--config <path>] resolve-object --profile <name> --table <name> [--schema <name>] [--require-column <COLUMN>] [--include-row-count]');
   console.log('  zeus [--config <path>] joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>]');
-  console.log('  zeus [--config <path>] write-sql --profile <name> (--sql "INSERT/UPDATE/DELETE/MERGE ..." | --file <path>) [--confirm] [--force] [--dry-run] [--backup]  # allgemeiner DML-Befehl');
+  console.log('  zeus [--config <path>] write-sql --profile <name> (--sql "INSERT/UPDATE/DELETE/MERGE ..." | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup] [--backup-schema <schema>]  # allgemeiner DML-Befehl');
   console.log('  zeus [--config <path>] insert  --profile <name> (--sql "INSERT ..."              | --file <path>)');
-  console.log('  zeus [--config <path>] update  --profile <name> (--sql "UPDATE ..."              | --file <path>) [--confirm] [--force] [--dry-run] [--backup]');
-  console.log('  zeus [--config <path>] delete  --profile <name> (--sql "DELETE ..."              | --file <path>) [--confirm] [--force] [--dry-run] [--backup]');
+  console.log('  zeus [--config <path>] update  --profile <name> (--sql "UPDATE ..."              | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup]');
+  console.log('  zeus [--config <path>] delete  --profile <name> (--sql "DELETE ..."              | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup]');
   console.log('    --confirm    Bestaetigt Ausfuehrung nach Row-Count-Pruefung (erforderlich fuer DELETE/UPDATE)');
   console.log('    --force      Ueberspringt Row-Count-Pruefung (kein --confirm noetig)');
   console.log('    --dry-run    Zeigt nur Row-Count, fuehrt NICHTS aus');
   console.log('    --backup     Legt Backup-Tabelle an bevor DELETE/UPDATE ausgefuehrt wird');
+  console.log('    --require-backup  Bricht ab, wenn die Sicherung nicht angelegt werden kann');
   console.log('  zeus [--config <path>] search-source --source-root <path> (--search-term <term> | --member <name> | --table <name>) [--file-pattern <glob>] [--case-sensitive] [--max-results <n>]');
   console.log('  zeus [--config <path>] copy-to-workspace --profile <name> [--members <M1,M2,...>] [--force]');
   console.log('  zeus [--config <path>] diff --profile <name> --member <name>');
@@ -86,7 +89,7 @@ function printHelp() {
 
 function parseArgs(argv) {
   const args = { _: [] };
-  const multiValueKeys = new Set(['sfl-field']);
+  const multiValueKeys = new Set(['require-column', 'sfl-field']);
 
   // Bekannte Flag-Aliases: singular â†’ kanonische Form
   const FLAG_ALIASES = {
@@ -163,6 +166,7 @@ const COMMANDS_NEEDING_ENV = new Set([
   'query-sql', 'query-table', 'fetch', 'fetch-member', 'analyze', 'workflow',
   'upsert', 'upsert-sql', 'write-sql', 'insert', 'update', 'delete',
   'joblog', 'inspect-object', 'diff', 'field-search', 'bridge', 'test-run',
+  'resolve-object',
 ]);
 
 const DB_ENV_VARS = ['ZEUS_DB_USER', 'ZEUS_DB_PASSWORD', 'ZEUS_DB_HOST', 'ZEUS_DB_URL'];
@@ -255,6 +259,11 @@ async function main() {
 
   if (command === 'query-sql') {
     await runQuerySql(args);
+    return;
+  }
+
+  if (command === 'resolve-object') {
+    await runResolveObject(args);
     return;
   }
 

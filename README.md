@@ -302,27 +302,30 @@ output/ORDERPGM/analyze-run-manifest.json
 
 ## Quickstart: IBM i-Fetch mit Profilen
 
-```bash
+```powershell
 # 1. Lokales Profil anlegen
-cp config/profiles.example.json config/local-only/profiles.json
+Copy-Item config/profiles.example.json config/local-only/profiles.json
 
 # 2. Profil bearbeiten
 # config/local-only/profiles.json
 
 # 3. Env-Variablen laden
-source ./config/load-env.sh
+. .\config\load-env.ps1 -Environment project
 
-# Windows PowerShell:
-# . .\config\load-env.ps1
+# Bei ExecutionPolicy-Problemen nur fuer diese Session:
+# Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
-# 4. Setup prüfen
-node cli/zeus.js doctor --profile dev --show-resolved
+# 4. Setup pruefen
+node .\cli\zeus.js doctor --profile dev --probe --show-resolved
 
-# 5. Quellen holen
-node cli/zeus.js fetch --profile sftp-fetch
+# 5. Objekt-/Tabellenname sauber aufloesen
+node .\cli\zeus.js resolve-object --profile readonly-db2 --table APP_TABLE_00 --require-column CASE_ID
 
-# 6. Quellen analysieren
-node cli/zeus.js analyze --profile dev --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
+# 6. Quellen holen
+node .\cli\zeus.js fetch --profile sftp-fetch
+
+# 7. Quellen analysieren
+node .\cli\zeus.js analyze --profile dev --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context
 ```
 
 Ohne IBM i-Anbindung können RPG-, CL- und DDS-Dateien einfach in `rpg_sources/` abgelegt und direkt mit `analyze` verarbeitet werden.
@@ -347,6 +350,7 @@ Die verbindliche Referenz ist `docs/tool-catalog.md`.
 | `generate-checklist` | `S1` | Deployment- und Change-Checklisten erzeugen |
 | `query-table` | `S2` | DB2-Tabellenmetadaten lesen |
 | `query-sql` | `S2` | read-only SQL ausführen (`SELECT` / `WITH`) |
+| `resolve-object` | `S2` | SQL-Langname, Systemname und Schema read-only auflösen |
 | `joblog` | `S2` | IBM i-Joblog-Informationen lesen |
 | `field-search` | `S0/S2` | Feld- und Tabellenverwendung lokal oder remote suchen |
 | `search-source` | `S0` | lokale Source-Suche durchführen |
@@ -365,6 +369,8 @@ Beispiele:
 
 ```bash
 node cli/zeus.js doctor --profile dev --show-resolved
+node cli/zeus.js doctor --profile dev --probe --show-resolved
+node cli/zeus.js resolve-object --profile readonly-db2 --table APP_TABLE_00 --require-column CASE_ID --include-row-count
 node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output
 node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output
 node cli/zeus.js serve --source-output-root ./output
@@ -389,11 +395,12 @@ Empfohlene AI-Arbeitsfolge:
 
 1. `doctor` ausführen
 2. bei Bedarf und Freigabe `fetch` nutzen
-3. `analyze` oder `workflow --preset ...` starten
-4. mit `query-table`, `query-sql`, `joblog`, `field-search`, `search-source` oder `inspect-object` Evidenz vertiefen
-5. mit `impact`, `assess-risk`, `generate-test`, `generate-checklist` oder `qa` planen und validieren
-6. mit `bundle` oder `serve` reviewfähige Ergebnisse erzeugen
-7. `upsert`, `insert`, `update` oder `bridge` nur nach expliziter menschlicher Freigabe verwenden
+3. mit `doctor --probe` und `resolve-object` Remote-Ziele read-only verifizieren
+4. `analyze` oder `workflow --preset ...` starten
+5. mit `query-table`, `query-sql`, `joblog`, `field-search`, `search-source` oder `inspect-object` Evidenz vertiefen
+6. mit `impact`, `assess-risk`, `generate-test`, `generate-checklist` oder `qa` planen und validieren
+7. mit `bundle` oder `serve` reviewfähige Ergebnisse erzeugen
+8. `upsert`, `insert`, `update` oder `bridge` nur nach expliziter menschlicher Freigabe verwenden
 
 ---
 

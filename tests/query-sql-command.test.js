@@ -17,13 +17,10 @@ test('parseMaxRows defaults to the larger read-only query budget', () => {
   );
 });
 
-test('normalizeOutput accepts table and csv only', () => {
+test('normalizeOutput accepts table, csv, and json', () => {
   assert.equal(normalizeOutput(undefined), 'table');
   assert.equal(normalizeOutput('csv'), 'csv');
-  assert.throws(
-    () => normalizeOutput('json'),
-    /--output must be one of: table, csv/,
-  );
+  assert.equal(normalizeOutput('json'), 'json');
 });
 
 test('toRowMatrix preserves column order for object rows', () => {
