@@ -159,6 +159,28 @@ function validateDbRoleConfig(value, label) {
   }
 }
 
+function validateSystemDefinition(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  validateDbConfig(value, label);
+  assertOptionalString(value.displayName, `${label}.displayName`);
+  assertOptionalString(value.systemName, `${label}.systemName`);
+  if (value.aliases !== undefined) {
+    assertStringArray(value.aliases, `${label}.aliases`);
+  }
+}
+
+function validateSystemsConfig(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+
+  for (const [key, systemDefinition] of Object.entries(value)) {
+    validateSystemDefinition(systemDefinition, `${label}.${key}`);
+  }
+}
+
 function validateFetchProfile(value, label) {
   if (!isPlainObject(value)) {
     failValidation(`${label} must be an object`);
@@ -406,6 +428,15 @@ function validateBridgeProfile(value, label) {
   }
 }
 
+function validateRuntimeContextConfig(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  if (value.journaledTables !== undefined) {
+    assertStringArray(value.journaledTables, `${label}.journaledTables`);
+  }
+}
+
 function validateNamedProfile(profile, label) {
   if (!isPlainObject(profile)) {
     failValidation(`${label} must be an object`);
@@ -431,6 +462,9 @@ function validateNamedProfile(profile, label) {
   if (profile.dbRoles !== undefined) {
     validateDbRoleConfig(profile.dbRoles, `${label}.dbRoles`);
   }
+  if (profile.systems !== undefined) {
+    validateSystemsConfig(profile.systems, `${label}.systems`);
+  }
   if (profile.fetch !== undefined) {
     validateFetchProfile(profile.fetch, `${label}.fetch`);
   }
@@ -448,6 +482,12 @@ function validateNamedProfile(profile, label) {
   }
   if (profile.bridge !== undefined) {
     validateBridgeProfile(profile.bridge, `${label}.bridge`);
+  }
+  if (profile.runtimeContext !== undefined) {
+    validateRuntimeContextConfig(profile.runtimeContext, `${label}.runtimeContext`);
+  }
+  if (profile.productionSystem !== undefined && typeof profile.productionSystem !== 'boolean') {
+    failValidation(`${label}.productionSystem must be a boolean`);
   }
 }
 
