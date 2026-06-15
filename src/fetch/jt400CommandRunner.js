@@ -12,6 +12,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const { ensureJavaSourcesCompiled, runJavaClass } = require('../java/javaRuntime');
+const { ensureFetchConnectionGuard } = require('../security/connectionGuards');
 
 function ensureJavaHelperCompiled() {
   return ensureJavaSourcesCompiled();
@@ -34,13 +35,14 @@ function runJavaHelper(className, args) {
   return runJavaClass(className, args);
 }
 
-function runClCommand({ host, user, password, command, verbose }) {
+function executeClCommandRaw({ host, user, password, command, verbose, runtime = {} }) {
   ensureJavaHelperCompiled();
   if (verbose) {
     console.log(`[verbose] CL command: ${command}`);
   }
 
-  const result = runJavaHelper('IbmiCommandRunner', [host, user, password, command]);
+  const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
+  const result = runJavaHelperFn('IbmiCommandRunner', [host, user, password, command]);
   const parsed = parseJsonResult(result.stdout, {
     ok: result.status === 0,
     command,
@@ -55,13 +57,38 @@ function runClCommand({ host, user, password, command, verbose }) {
   };
 }
 
-function listMembers({ host, user, password, sourceLib, sourceFile, verbose }) {
+function runClCommand({ host, user, password, command, verbose, runtime = {} }) {
+  if (!runtime.skipConnectionGuard) {
+    ensureFetchConnectionGuard({
+      fetchConfig: { host, user, password },
+      scopeLabel: runtime.scopeLabel || 'IBM i command connection',
+      probe: (probeOptions) => {
+        const result = executeClCommandRaw({
+          ...probeOptions,
+          runtime: {
+            ...runtime,
+            skipConnectionGuard: true,
+          },
+        });
+        if (!result.ok) {
+          throw new Error(result.messages.join('; ') || result.stderr || 'IBM i command probe failed.');
+        }
+        return result;
+      },
+    });
+  }
+
+  return executeClCommandRaw({ host, user, password, command, verbose, runtime });
+}
+
+function executeListMembersRaw({ host, user, password, sourceLib, sourceFile, verbose, runtime = {} }) {
   ensureJavaHelperCompiled();
   if (verbose) {
     console.log(`[verbose] Listing members in ${sourceLib}/${sourceFile}`);
   }
 
-  const result = runJavaHelper('IbmiMemberLister', [host, user, password, sourceLib, sourceFile]);
+  const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
+  const result = runJavaHelperFn('IbmiMemberLister', [host, user, password, sourceLib, sourceFile]);
   const parsed = parseJsonResult(result.stdout, {
     ok: false,
     members: [],
@@ -78,7 +105,31 @@ function listMembers({ host, user, password, sourceLib, sourceFile, verbose }) {
   };
 }
 
-function exportSourceMemberViaJdbc({
+function listMembers({ host, user, password, sourceLib, sourceFile, verbose, runtime = {} }) {
+  if (!runtime.skipConnectionGuard) {
+    ensureFetchConnectionGuard({
+      fetchConfig: { host, user, password },
+      scopeLabel: runtime.scopeLabel || 'IBM i fetch connection',
+      probe: (probeOptions) => {
+        const result = executeClCommandRaw({
+          ...probeOptions,
+          runtime: {
+            ...runtime,
+            skipConnectionGuard: true,
+          },
+        });
+        if (!result.ok) {
+          throw new Error(result.messages.join('; ') || result.stderr || 'IBM i fetch probe failed.');
+        }
+        return result;
+      },
+    });
+  }
+
+  return executeListMembersRaw({ host, user, password, sourceLib, sourceFile, verbose, runtime });
+}
+
+function executeExportSourceMemberViaJdbcRaw({
   host,
   user,
   password,
@@ -88,13 +139,15 @@ function exportSourceMemberViaJdbc({
   targetPath,
   streamFileCcsid,
   verbose,
+  runtime = {},
 }) {
   ensureJavaHelperCompiled();
   if (verbose) {
     console.log(`[verbose] JDBC source export fallback for ${sourceLib}/${sourceFile}(${member}) -> ${targetPath}`);
   }
 
-  const result = runJavaHelper('IbmiSourceMemberExporter', [
+  const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
+  const result = runJavaHelperFn('IbmiSourceMemberExporter', [
     host,
     user,
     password,
@@ -121,7 +174,56 @@ function exportSourceMemberViaJdbc({
   };
 }
 
+function exportSourceMemberViaJdbc({
+  host,
+  user,
+  password,
+  sourceLib,
+  sourceFile,
+  member,
+  targetPath,
+  streamFileCcsid,
+  verbose,
+  runtime = {},
+}) {
+  if (!runtime.skipConnectionGuard) {
+    ensureFetchConnectionGuard({
+      fetchConfig: { host, user, password },
+      scopeLabel: runtime.scopeLabel || 'IBM i member export connection',
+      probe: (probeOptions) => {
+        const result = executeClCommandRaw({
+          ...probeOptions,
+          runtime: {
+            ...runtime,
+            skipConnectionGuard: true,
+          },
+        });
+        if (!result.ok) {
+          throw new Error(result.messages.join('; ') || result.stderr || 'IBM i member export probe failed.');
+        }
+        return result;
+      },
+    });
+  }
+
+  return executeExportSourceMemberViaJdbcRaw({
+    host,
+    user,
+    password,
+    sourceLib,
+    sourceFile,
+    member,
+    targetPath,
+    streamFileCcsid,
+    verbose,
+    runtime,
+  });
+}
+
 module.exports = {
+  executeClCommandRaw,
+  executeExportSourceMemberViaJdbcRaw,
+  executeListMembersRaw,
   ensureJavaHelperCompiled,
   runJavaHelper,
   runClCommand,

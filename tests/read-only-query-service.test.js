@@ -31,6 +31,7 @@ test('executeReadOnlyDb2QueryWithFallback retries with the handler-provided quer
       }),
     },
     runtime: {
+      skipConnectionGuard: true,
       runJavaHelper(_className, args) {
         calls.push(args[3]);
         if (calls.length === 1) {

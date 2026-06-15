@@ -3,14 +3,27 @@ const assert = require('node:assert/strict');
 
 const {
   listTablesInSchema,
+  resolveObjectsByName,
   resolveColumnsWithName,
   resolveTableNameBothDirections,
 } = require('../src/db2/tableNameResolutionService');
+const { resetConnectionGuardState } = require('../src/security/connectionGuards');
 
 function createRuntimeWithRows(rows, queryChecks = []) {
   return {
     runJavaHelper(_className, args) {
       const query = args[3];
+      if (/SYSIBM\.SYSDUMMY1/.test(query)) {
+        return {
+          status: 0,
+          stdout: JSON.stringify({
+            columns: ['HEALTHCHECK'],
+            rows: [{ HEALTHCHECK: 1 }],
+            rowCount: 1,
+          }),
+          stderr: '',
+        };
+      }
       for (const check of queryChecks) {
         check(query);
       }
@@ -32,6 +45,17 @@ function createRuntimeWithFallbackSequence(sequence) {
   return {
     runJavaHelper(_className, args) {
       const query = args[3];
+      if (/SYSIBM\.SYSDUMMY1/.test(query)) {
+        return {
+          status: 0,
+          stdout: JSON.stringify({
+            columns: ['HEALTHCHECK'],
+            rows: [{ HEALTHCHECK: 1 }],
+            rowCount: 1,
+          }),
+          stderr: '',
+        };
+      }
       const step = sequence[index];
       index += 1;
       if (typeof step.check === 'function') {
@@ -67,6 +91,7 @@ function sampleDbConfig() {
 }
 
 test('resolveTableNameBothDirections resolves system and SQL names in schema', () => {
+  resetConnectionGuardState();
   const runtime = createRuntimeWithRows(
     [
       {
@@ -91,6 +116,7 @@ test('resolveTableNameBothDirections resolves system and SQL names in schema', (
 });
 
 test('resolveTableNameBothDirections falls back when SYSTEM_TABLE_NAME is unavailable', () => {
+  resetConnectionGuardState();
   const runtime = createRuntimeWithFallbackSequence([
     {
       check(query) {
@@ -120,6 +146,7 @@ test('resolveTableNameBothDirections falls back when SYSTEM_TABLE_NAME is unavai
 });
 
 test('resolveTableNameBothDirections returns found=false when no match exists', () => {
+  resetConnectionGuardState();
   const runtime = createRuntimeWithRows([]);
   const resolved = resolveTableNameBothDirections(sampleDbConfig(), 'TABLE_X', 'SCHEMA_A', runtime);
   assert.equal(resolved.found, false);
@@ -130,6 +157,7 @@ test('resolveTableNameBothDirections returns found=false when no match exists', 
 });
 
 test('listTablesInSchema returns normalized table metadata', () => {
+  resetConnectionGuardState();
   const runtime = createRuntimeWithRows([
     {
       SYSTEM_TABLE_NAME: 'TAB_SYS_A',
@@ -151,6 +179,7 @@ test('listTablesInSchema returns normalized table metadata', () => {
 });
 
 test('listTablesInSchema falls back when SYSTEM_TABLE_NAME is unavailable', () => {
+  resetConnectionGuardState();
   const runtime = createRuntimeWithFallbackSequence([
     {
       check(query) {
@@ -185,6 +214,7 @@ test('listTablesInSchema falls back when SYSTEM_TABLE_NAME is unavailable', () =
 });
 
 test('resolveColumnsWithName returns typed column metadata', () => {
+  resetConnectionGuardState();
   const runtime = createRuntimeWithRows([
     {
       COLUMN_NAME: 'COL_A',
@@ -210,4 +240,73 @@ test('resolveColumnsWithName returns typed column metadata', () => {
     nullable: false,
     ordinal: 1,
   });
+});
+
+test('resolveObjectsByName matches SQL and system names across schemas and validates required columns', () => {
+  resetConnectionGuardState();
+  const queries = [];
+  const runtime = {
+    runJavaHelper(_className, args) {
+      const query = args[3];
+      queries.push(query);
+      if (/FROM QSYS2\.SYSTABLES/.test(query)) {
+        return {
+          status: 0,
+          stdout: JSON.stringify({
+            columns: [],
+            rows: [
+              {
+                SYSTEM_TABLE_NAME: 'ORDHDRP',
+                SQL_TABLE_NAME: 'ORDER_HEADER',
+                TABLE_SCHEMA: 'APPDATA',
+                TABLE_TYPE: 'T',
+              },
+            ],
+            rowCount: 1,
+          }),
+          stderr: '',
+        };
+      }
+      if (/FROM QSYS2\.SYSCOLUMNS/.test(query)) {
+        return {
+          status: 0,
+          stdout: JSON.stringify({
+            columns: [],
+            rows: [
+              { COLUMN_NAME: 'ORDER_ID', DATA_TYPE: 'DECIMAL', LENGTH: 9, NUMERIC_SCALE: 0, IS_NULLABLE: 'NO', ORDINAL_POSITION: 1 },
+              { COLUMN_NAME: 'CUSTOMER_ID', DATA_TYPE: 'DECIMAL', LENGTH: 9, NUMERIC_SCALE: 0, IS_NULLABLE: 'NO', ORDINAL_POSITION: 2 },
+            ],
+            rowCount: 2,
+          }),
+          stderr: '',
+        };
+      }
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          columns: ['ROW_COUNT'],
+          rows: [{ ROW_COUNT: 42 }],
+          rowCount: 1,
+        }),
+        stderr: '',
+      };
+    },
+  };
+
+  const resolved = resolveObjectsByName(sampleDbConfig(), 'ORDHDRP', {
+    requireColumns: ['ORDER_ID', 'CASE_ID'],
+    includeRowCount: true,
+    runtime,
+  });
+
+  assert.equal(resolved.found, true);
+  assert.equal(resolved.count, 1);
+  assert.equal(resolved.objects[0].schema, 'APPDATA');
+  assert.equal(resolved.objects[0].sqlName, 'ORDER_HEADER');
+  assert.equal(resolved.objects[0].systemName, 'ORDHDRP');
+  assert.equal(resolved.objects[0].allRequiredColumnsPresent, false);
+  assert.deepEqual(resolved.objects[0].missingRequiredColumns, ['CASE_ID']);
+  assert.equal(resolved.objects[0].rowCount, 42);
+  assert.ok(queries.some((query) => /FROM QSYS2\.SYSTABLES/.test(query)));
+  assert.ok(queries.some((query) => /FROM QSYS2\.SYSCOLUMNS/.test(query)));
 });
