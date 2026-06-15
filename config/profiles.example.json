@@ -209,6 +209,9 @@
     "systems": {
       "dev": {
         "_comment": "Development or integration IBM i used for source fetch and safe read-only analysis.",
+        "displayName": "Development IBM i",
+        "systemName": "SYSDEV",
+        "aliases": ["DEVBOX", "SYS_TEST"],
         "host": "YOUR_DEV_IBM_I_HOST",
         "user": "YOUR_IBM_I_USER",
         "password": "YOUR_IBM_I_PASSWORD",
@@ -217,6 +220,9 @@
       },
       "readonly": {
         "_comment": "Read-only production-like IBM i for metadata and query access only.",
+        "displayName": "Read-only IBM i",
+        "systemName": "SYSPROD",
+        "aliases": ["PRODRO", "SYS_PROD"],
         "host": "YOUR_READONLY_IBM_I_HOST",
         "user": "YOUR_READONLY_IBM_I_USER",
         "password": "YOUR_READONLY_IBM_I_PASSWORD",
@@ -481,6 +487,24 @@
   "sample-db2": {
     "_comment": "Backward-compatible alias for documentation that expects a DB2-enabled example profile.",
     "extends": "combined-fetch-and-query"
+  },
+  "sample-source": {
+    "_comment": "Backward-compatible alias for a production-close source baseline profile.",
+    "extends": "combined-fetch-and-query",
+    "fetch": {
+      "system": "dev",
+      "sourceLib": "SOURCEN",
+      "sourceLibrary": "SOURCEN"
+    }
+  },
+  "sample-preprod": {
+    "_comment": "Backward-compatible alias for changed or pre-production sources in APPLIB.",
+    "extends": "combined-fetch-and-query",
+    "fetch": {
+      "system": "dev",
+      "sourceLib": "APPLIB",
+      "sourceLibrary": "APPLIB"
+    }
   },
   "sample-fetch": {
     "_comment": "Backward-compatible alias for documentation that expects a fetch-focused example profile.",

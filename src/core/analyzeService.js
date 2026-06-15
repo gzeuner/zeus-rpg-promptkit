@@ -203,14 +203,20 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
           source: config.connections.source ? {
             kind: config.connections.source.kind,
             profileKey: config.connections.source.profileKey,
+            target: config.connections.source.target,
+            acceptedNames: config.connections.source.acceptedNames,
           } : null,
           metadata: config.connections.metadata ? {
             kind: config.connections.metadata.kind,
             profileKey: config.connections.metadata.profileKey,
+            target: config.connections.metadata.target,
+            acceptedNames: config.connections.metadata.acceptedNames,
           } : null,
           testData: config.connections.testData ? {
             kind: config.connections.testData.kind,
             profileKey: config.connections.testData.profileKey,
+            target: config.connections.testData.target,
+            acceptedNames: config.connections.testData.acceptedNames,
           } : null,
         } : null,
         reproducibility,
@@ -279,14 +285,20 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
           source: config.connections.source ? {
             kind: config.connections.source.kind,
             profileKey: config.connections.source.profileKey,
+            target: config.connections.source.target,
+            acceptedNames: config.connections.source.acceptedNames,
           } : null,
           metadata: config.connections.metadata ? {
             kind: config.connections.metadata.kind,
             profileKey: config.connections.metadata.profileKey,
+            target: config.connections.metadata.target,
+            acceptedNames: config.connections.metadata.acceptedNames,
           } : null,
           testData: config.connections.testData ? {
             kind: config.connections.testData.kind,
             profileKey: config.connections.testData.profileKey,
+            target: config.connections.testData.target,
+            acceptedNames: config.connections.testData.acceptedNames,
           } : null,
         } : null,
         reproducibility,

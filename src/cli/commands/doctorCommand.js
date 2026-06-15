@@ -23,6 +23,11 @@ const {
   resolveProfile,
   resolveProfilesConfigPaths,
 } = require('../../config/runtimeConfig');
+const {
+  describeConnectionTarget,
+  listConnectionTargetNames,
+  matchesConnectionTargetName,
+} = require('../../config/connectionTargetMetadata');
 const { getRuntimeConfigMetadata } = require('../../config/dbRuntimeConfigDiagnostics');
 const {
   ensureJavaSourcesCompiled,
@@ -226,6 +231,63 @@ function appendResolvedDbChecks(checks, namePrefix, dbConfig, { buildJdbcUrl, re
     value: dbConfig ? buildJdbcUrl(dbConfig, resolveDefaultSchema(dbConfig)) || '(leer)' : '(nicht konfiguriert)',
     origin: 'derived',
   });
+  checks.push({
+    name: `${namePrefix}.target`,
+    status: 'INFO',
+    value: describeConnectionTarget(dbConfig),
+    origin: 'system-ref',
+  });
+  const acceptedNames = listConnectionTargetNames(dbConfig);
+  if (acceptedNames.length > 0) {
+    checks.push({
+      name: `${namePrefix}.acceptedNames`,
+      status: 'INFO',
+      value: acceptedNames.join(', '),
+      origin: 'derived',
+    });
+  }
+}
+
+function appendResolvedFetchChecks(checks, fetchConfig) {
+  if (!fetchConfig || typeof fetchConfig !== 'object') {
+    return;
+  }
+
+  const fields = [
+    { key: 'host', secret: false },
+    { key: 'user', secret: false },
+    { key: 'password', secret: true },
+    { key: 'sourceLib', secret: false },
+    { key: 'ifsDir', secret: false },
+    { key: 'out', secret: false },
+    { key: 'transport', secret: false },
+  ];
+
+  for (const field of fields) {
+    checks.push({
+      name: `fetch.${field.key}`,
+      status: 'INFO',
+      value: formatResolvedValue(fetchConfig[field.key], { secret: field.secret }),
+      origin: '',
+    });
+  }
+
+  checks.push({
+    name: 'fetch.target',
+    status: 'INFO',
+    value: describeConnectionTarget(fetchConfig),
+    origin: 'system-ref',
+  });
+
+  const acceptedNames = listConnectionTargetNames(fetchConfig);
+  if (acceptedNames.length > 0) {
+    checks.push({
+      name: 'fetch.acceptedNames',
+      status: 'INFO',
+      value: acceptedNames.join(', '),
+      origin: 'derived',
+    });
+  }
 }
 
 function hasExplicitTestDataRole(profile, env) {
@@ -275,11 +337,12 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
   }
 
   if (profileHasFetch) {
+    const fetchFallback = fetchConfig || fetchProfile;
     addEnvCheck(checks, {
       name: 'ZEUS_FETCH_HOST',
       expected: true,
       envValue: env.ZEUS_FETCH_HOST,
-      fallbackValue: fetchProfile.host,
+      fallbackValue: fetchFallback.host,
       required: true,
       hint: 'primary-system',
     });
@@ -287,7 +350,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       name: 'ZEUS_FETCH_USER',
       expected: true,
       envValue: env.ZEUS_FETCH_USER,
-      fallbackValue: fetchProfile.user,
+      fallbackValue: fetchFallback.user,
       required: true,
       hint: 'YOUR_IBM_I_USER',
     });
@@ -295,15 +358,15 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       name: 'ZEUS_FETCH_PASSWORD',
       expected: true,
       envValue: env.ZEUS_FETCH_PASSWORD,
-      fallbackValue: fetchProfile.password,
+      fallbackValue: fetchFallback.password,
       required: true,
       hint: 'YOUR_IBM_I_PASSWORD',
     });
     addEnvCheck(checks, {
-      name: 'ZEUS_FETCH_SOURCE_LIB',
+      name: 'ZEUS_FETCH_SOURCE_LIB|ZEUS_FETCH_SOURCE_LIBRARY',
       expected: true,
-      envValue: env.ZEUS_FETCH_SOURCE_LIB,
-      fallbackValue: fetchProfile.sourceLib,
+      envValue: env.ZEUS_FETCH_SOURCE_LIB || env.ZEUS_FETCH_SOURCE_LIBRARY,
+      fallbackValue: fetchFallback.sourceLib || fetchFallback.sourceLibrary,
       required: true,
       hint: 'FETCH_SOURCE',
     });
@@ -311,7 +374,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       name: 'ZEUS_FETCH_IFS_DIR',
       expected: true,
       envValue: env.ZEUS_FETCH_IFS_DIR,
-      fallbackValue: fetchProfile.ifsDir,
+      fallbackValue: fetchFallback.ifsDir,
       required: true,
       hint: '/ifs/source-export/example',
     });
@@ -319,7 +382,7 @@ function buildEnvironmentChecks({ profile, analyzeConfig, fetchConfig, env }) {
       name: 'ZEUS_FETCH_OUT',
       expected: true,
       envValue: env.ZEUS_FETCH_OUT,
-      fallbackValue: fetchProfile.out,
+      fallbackValue: fetchFallback.out,
       required: true,
       hint: './fetched-source/demo',
     });
@@ -438,6 +501,20 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
       }));
     }
   }
+  if (resolvedFetchConfig && resolvedFetchConfig.hostEnvOverride) {
+    checks.push({
+      name: 'Fetch Runtime Override (host)',
+      status: 'WARN',
+      details: `ZEUS_FETCH_HOST="${resolvedFetchConfig.hostEnvOverride.envValue}" überschreibt fetch.host="${resolvedFetchConfig.hostEnvOverride.profileValue}".`,
+    });
+  }
+  if (resolvedFetchConfig && resolvedFetchConfig.sourceLibEnvOverride) {
+    checks.push({
+      name: 'Fetch Runtime Override (sourceLib)',
+      status: 'WARN',
+      details: `ZEUS_FETCH_SOURCE_LIB="${resolvedFetchConfig.sourceLibEnvOverride.envValue}" überschreibt fetch.sourceLib="${resolvedFetchConfig.sourceLibEnvOverride.profileValue}".`,
+    });
+  }
 
   const javaResult = spawnSync('java', ['-version'], {
     cwd,
@@ -540,10 +617,10 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
         checks.push({
           name: 'Fetch Probe',
           status: 'PASS',
-          details: `IBM i fetch login succeeded (${resolvedFetchConfig.host}).`,
+          details: `IBM i fetch login succeeded (${describeConnectionTarget(resolvedFetchConfig)}).`,
         });
         probeRows.push(buildProbeRow({
-          system: resolvedFetchConfig.host || '(host unknown)',
+          system: describeConnectionTarget(resolvedFetchConfig),
           profile: args.profile,
           functionName: 'fetch',
           status: 'OK',
@@ -557,7 +634,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
           details: error.message,
         });
         probeRows.push(buildProbeRow({
-          system: resolvedFetchConfig.host || '(host unknown)',
+          system: describeConnectionTarget(resolvedFetchConfig),
           profile: args.profile,
           functionName: 'fetch',
           status: 'FAIL',
@@ -602,7 +679,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
         details: `Read-only query succeeded${resolveDefaultSchema(metadataDbConfig) ? ` (default schema ${resolveDefaultSchema(metadataDbConfig)})` : ''}.`,
       });
       probeRows.push(buildProbeRow({
-        system: metadataDbConfig.host || metadataDbConfig.url || '(db target unknown)',
+        system: describeConnectionTarget(metadataDbConfig),
         profile: args.profile,
         functionName: 'metadata-db',
         status: 'OK',
@@ -617,7 +694,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
       });
       const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
       probeRows.push(buildProbeRow({
-        system: (metadataDbConfig && (metadataDbConfig.host || metadataDbConfig.url)) || '(db target unknown)',
+        system: describeConnectionTarget(metadataDbConfig),
         profile: args.profile,
         functionName: 'metadata-db',
         status: 'FAIL',
@@ -724,7 +801,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
           details: `Read-only query succeeded${resolveDefaultSchema(testDataDbConfig) ? ` (default schema ${resolveDefaultSchema(testDataDbConfig)})` : ''}.`,
         });
         probeRows.push(buildProbeRow({
-          system: testDataDbConfig.host || testDataDbConfig.url || '(db target unknown)',
+          system: describeConnectionTarget(testDataDbConfig),
           profile: args.profile,
           functionName: 'testdata-db',
           status: 'OK',
@@ -738,7 +815,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
           details: error.message,
         });
         probeRows.push(buildProbeRow({
-          system: testDataDbConfig.host || testDataDbConfig.url || '(db target unknown)',
+          system: describeConnectionTarget(testDataDbConfig),
           profile: args.profile,
           functionName: 'testdata-db',
           status: 'FAIL',
@@ -769,12 +846,14 @@ async function runDoctor(args) {
       const profiles = loadProfiles({ cwd, env, args });
       const resolvedProfile = resolveProfile(profiles, args.profile, { env });
       const resolvedAnalyzeConfig = resolveAnalyzeConfig(args, { cwd, env });
+      const resolvedFetchConfig = resolvedProfile && resolvedProfile.fetch ? resolveFetchConfig(args, { cwd, env }) : null;
       const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
       const testDataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'testData');
       appendResolvedDbChecks(resolvedChecks, 'db', metadataDbConfig, { buildJdbcUrl, resolveDefaultSchema });
       if (testDataDbConfig && testDataDbConfig !== metadataDbConfig) {
         appendResolvedDbChecks(resolvedChecks, 'testDataDb', testDataDbConfig, { buildJdbcUrl, resolveDefaultSchema });
       }
+      appendResolvedFetchChecks(resolvedChecks, resolvedFetchConfig);
 
       // CURRENT_SERVER Sanity-Check
       const { isDbConfigured } = require('../../db2/db2Config');
@@ -791,14 +870,16 @@ async function runDoctor(args) {
             },
           });
           const currentServer = serverResult.rows && serverResult.rows[0] && (serverResult.rows[0].SYS || serverResult.rows[0].sys || Object.values(serverResult.rows[0])[0]);
-          const configuredHost = String(metadataDbConfig.host || '').toUpperCase();
+          const configuredHost = String(metadataDbConfig.host || metadataDbConfig.url || '').toUpperCase();
           const reportedServer = String(currentServer || '').trim().toUpperCase();
-          const mismatch = configuredHost && reportedServer && configuredHost !== reportedServer;
+          const targetMatched = matchesConnectionTargetName(metadataDbConfig, reportedServer);
+          const hasExplicitNames = listConnectionTargetNames(metadataDbConfig).length > 0;
+          const mismatch = reportedServer && (hasExplicitNames ? !targetMatched : (configuredHost && configuredHost !== reportedServer));
           resolvedChecks.push({
             name: 'CURRENT_SERVER',
             status: mismatch ? 'WARN' : 'PASS',
             value: mismatch
-              ? `System meldet "${reportedServer}" — konfiguriert ist "${configuredHost}". Prüfe ob der Hostname korrekt ist!`
+              ? `System meldet "${reportedServer}" — erwartet wird ${describeConnectionTarget(metadataDbConfig)}. Prüfe Alias-/Target-Konfiguration.`
               : `${reportedServer} ✓`,
             origin: '',
           });
@@ -841,23 +922,26 @@ async function runDoctor(args) {
           status: 'INFO',
           value: systemNames.map((s) => {
             const sys = profObj.systems[s];
-            return `${s}: ${sys.host || '?'}`;
+            const aliases = Array.isArray(sys.aliases) && sys.aliases.length > 0 ? ` aliases=${sys.aliases.join(',')}` : '';
+            const systemName = sys.systemName ? ` name=${sys.systemName}` : '';
+            return `${s}: ${sys.displayName || sys.host || '?'}${systemName}${aliases}`;
           }).join(' | '),
           origin: '',
         });
         // Welche Rollen auf welches System zeigen
         const roleMap = {};
-        if (profObj.db && typeof profObj.db.host === 'string') roleMap['db'] = profObj.db.host;
+        if (profObj.db) roleMap.db = describeConnectionTarget(profObj.db);
         if (profObj.dbRoles) {
           for (const [role, cfg] of Object.entries(profObj.dbRoles)) {
-            if (cfg && typeof cfg.host === 'string') roleMap[`dbRoles.${role}`] = cfg.host;
+            if (cfg) roleMap[`dbRoles.${role}`] = describeConnectionTarget(cfg);
           }
         }
+        if (profObj.fetch) roleMap.fetch = describeConnectionTarget(profObj.fetch);
         if (Object.keys(roleMap).length > 0) {
           resolvedChecks.push({
             name: 'systems (Routing)',
             status: 'INFO',
-            value: Object.entries(roleMap).map(([role, host]) => `${role}→${host}`).join(' | '),
+            value: Object.entries(roleMap).map(([role, target]) => `${role}→${target}`).join(' | '),
             origin: '',
           });
         }

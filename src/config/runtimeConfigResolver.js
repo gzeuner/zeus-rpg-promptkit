@@ -11,6 +11,14 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
+const {
+  attachConnectionTargetMetadata,
+  cloneConnectionTargetMetadata,
+  describeConnectionTarget,
+  getConnectionTargetMetadata,
+  listConnectionTargetNames,
+} = require('./connectionTargetMetadata');
+
 function resolveAnalyzeDbRoleConfigs(
   profile,
   env,
@@ -24,6 +32,7 @@ function resolveAnalyzeDbRoleConfigs(
 ) {
   const rawDb = rawProfile && rawProfile.db ? rawProfile.db : (profile && profile.db ? profile.db : null);
   const resolvedDb = rawDb ? resolveEnvPlaceholdersDeep(rawDb, env) : null;
+  const rawDbTargetMetadata = getConnectionTargetMetadata(rawDb);
   const baseDbConfig = applyDbEnvOverrides(
     resolvedDb,
     env,
@@ -34,9 +43,11 @@ function resolveAnalyzeDbRoleConfigs(
       mergeConfigLayers,
     },
   );
+  attachConnectionTargetMetadata(baseDbConfig, cloneConnectionTargetMetadata(rawDbTargetMetadata));
   const rawRoleConfigs = rawProfile && rawProfile.dbRoles ? rawProfile.dbRoles : {};
   const roleConfigs = resolveEnvPlaceholdersDeep(rawRoleConfigs, env);
   const rawMetadata = rawRoleConfigs && rawRoleConfigs.metadata ? rawRoleConfigs.metadata : null;
+  const rawMetadataTargetMetadata = getConnectionTargetMetadata(rawMetadata) || rawDbTargetMetadata;
   const metadataDb = applyDbEnvOverrides(
     mergeConfigLayers(baseDbConfig || {}, roleConfigs && roleConfigs.metadata ? roleConfigs.metadata : undefined),
     env,
@@ -49,7 +60,9 @@ function resolveAnalyzeDbRoleConfigs(
       mergeConfigLayers,
     },
   );
+  attachConnectionTargetMetadata(metadataDb, cloneConnectionTargetMetadata(rawMetadataTargetMetadata));
   const rawTestData = rawRoleConfigs && rawRoleConfigs.testData ? rawRoleConfigs.testData : null;
+  const rawTestDataTargetMetadata = getConnectionTargetMetadata(rawTestData) || rawMetadataTargetMetadata || rawDbTargetMetadata;
   const testDataDb = applyDbEnvOverrides(
     mergeConfigLayers(metadataDb || baseDbConfig || {}, roleConfigs && roleConfigs.testData ? roleConfigs.testData : undefined),
     env,
@@ -62,6 +75,7 @@ function resolveAnalyzeDbRoleConfigs(
       mergeConfigLayers,
     },
   );
+  attachConnectionTargetMetadata(testDataDb, cloneConnectionTargetMetadata(rawTestDataTargetMetadata));
 
   return {
     metadata: metadataDb,
@@ -71,15 +85,20 @@ function resolveAnalyzeDbRoleConfigs(
 
 function buildAnalyzeConnectionRoles(profile, analyzeDbRoles) {
   const hasFetchProfile = Boolean(profile && profile.fetch);
+  const fetchTarget = hasFetchProfile ? profile.fetch : null;
   return {
     source: {
       kind: hasFetchProfile ? 'fetch' : 'local',
       profileKey: hasFetchProfile ? 'fetch' : 'sourceRoot',
+      target: hasFetchProfile ? describeConnectionTarget(fetchTarget) : 'local workspace',
+      acceptedNames: hasFetchProfile ? listConnectionTargetNames(fetchTarget) : [],
     },
     metadata: {
       kind: 'db2',
       profileKey: profile && profile.dbRoles && profile.dbRoles.metadata ? 'dbRoles.metadata' : 'db',
       dbConfig: analyzeDbRoles.metadata,
+      target: describeConnectionTarget(analyzeDbRoles.metadata),
+      acceptedNames: listConnectionTargetNames(analyzeDbRoles.metadata),
     },
     testData: {
       kind: 'db2',
@@ -87,6 +106,8 @@ function buildAnalyzeConnectionRoles(profile, analyzeDbRoles) {
         ? 'dbRoles.testData'
         : (profile && profile.dbRoles && profile.dbRoles.metadata ? 'dbRoles.metadata' : 'db'),
       dbConfig: analyzeDbRoles.testData,
+      target: describeConnectionTarget(analyzeDbRoles.testData),
+      acceptedNames: listConnectionTargetNames(analyzeDbRoles.testData),
     },
   };
 }
@@ -172,7 +193,16 @@ function resolveFetchConfig(
 ) {
   const profiles = loadProfiles({ cwd, env, args });
   const profile = resolveProfile(profiles, args.profile, { env });
+  const rawProfile = resolveProfile(profiles, args.profile, {
+    env,
+    expandEnvPlaceholders: false,
+  });
   const fetchProfile = profile ? resolveEnvPlaceholdersDeep(profile.fetch || profile, env) : {};
+  const rawFetchProfile = rawProfile ? (rawProfile.fetch || rawProfile) : {};
+  const rawFetchTargetMetadata = getConnectionTargetMetadata(rawFetchProfile);
+  const cliHost = args.host;
+  const envHost = env.ZEUS_FETCH_HOST;
+  const profileHost = fetchProfile.host;
 
   // Auflösungsreihenfolge für sourceLib verfolgen, damit beim Überschreiben durch
   // eine ENV-Variable eine Warnung ausgegeben werden kann.
@@ -191,6 +221,14 @@ function resolveFetchConfig(
   )
     ? { envValue: String(envSourceLib).toUpperCase(), profileValue: String(profileSourceLib).toUpperCase() }
     : null;
+  const hostEnvOverride = (
+    !cliHost
+    && envHost
+    && profileHost
+    && String(envHost).trim().toUpperCase() !== String(profileHost).trim().toUpperCase()
+  )
+    ? { envValue: String(envHost).trim(), profileValue: String(profileHost).trim() }
+    : null;
 
   const sourceFiles = args['source-files']
     || args.files
@@ -205,6 +243,7 @@ function resolveFetchConfig(
     password: args.password || env.ZEUS_FETCH_PASSWORD || fetchProfile.password,
     sourceLib: String(sourceLibrary || '').toUpperCase(),
     sourceLibrary: String(sourceLibrary || '').toUpperCase(),
+    hostEnvOverride,
     sourceLibEnvOverride,
     ifsDir: args['ifs-dir'] || env.ZEUS_FETCH_IFS_DIR || fetchProfile.ifsDir,
     out: args.out || env.ZEUS_FETCH_OUT || fetchProfile.out || './rpg_sources',
@@ -247,6 +286,7 @@ function resolveFetchConfig(
       10,
     ),
   };
+  attachConnectionTargetMetadata(resolved, cloneConnectionTargetMetadata(rawFetchTargetMetadata));
   validateFetchConfig(resolved);
   return resolved;
 }

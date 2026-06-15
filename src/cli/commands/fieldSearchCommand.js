@@ -16,7 +16,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const fs = require('fs');
 const path = require('path');
-const { resolveProfile, loadProfiles } = require('../../config/runtimeConfig');
+const {
+  loadProfiles,
+  resolveAnalyzeConfig,
+  resolveAnalyzeDbConfig,
+  resolveFetchConfig,
+  resolveProfile,
+} = require('../../config/runtimeConfig');
 const { renderAsciiTable } = require('../helpers/asciiTable');
 const {
   searchLocalSources,
@@ -221,9 +227,15 @@ async function runFieldSearch(args) {
 
   // Load profile
   let profile;
+  let fetchConfig = null;
+  let analyzeConfig = null;
   try {
     const profiles = loadProfiles({ cwd: process.cwd(), env: process.env, args });
     profile = resolveProfile(profiles, args.profile, { env: process.env });
+    if (profile && profile.fetch) {
+      fetchConfig = resolveFetchConfig(args, { cwd: process.cwd(), env: process.env });
+    }
+    analyzeConfig = resolveAnalyzeConfig(args, { cwd: process.cwd(), env: process.env });
   } catch (err) {
     console.error(`Profil-Fehler: ${err.message}`);
     process.exit(2);
@@ -255,19 +267,18 @@ async function runFieldSearch(args) {
 
   // ── Stufe 2: Remote-Suche via IbmiSourceSearcher ────────────────────────
   if (runRemote) {
-    const dbConfig = resolveDbConfig(profile);
-    const host = dbConfig && dbConfig.host ? dbConfig.host : null;
-    const user = dbConfig && dbConfig.user ? dbConfig.user : null;
-    const password = dbConfig && dbConfig.password ? dbConfig.password : null;
-    const sourceLib = args['source-lib'] || null;
+    const host = fetchConfig && fetchConfig.host ? fetchConfig.host : null;
+    const user = fetchConfig && fetchConfig.user ? fetchConfig.user : null;
+    const password = fetchConfig && fetchConfig.password ? fetchConfig.password : null;
+    const sourceLib = String(args['source-lib'] || (fetchConfig && (fetchConfig.sourceLib || fetchConfig.sourceLibrary)) || '').trim().toUpperCase();
     const sourceFile = args['source-file'] || 'QRPGLESRC';
 
     if (!host || !user || !password) {
-      console.log('\n[Stufe 2] Keine Datenbankverbindung konfiguriert — übersprungen.');
-      console.log('  Hinweis: --profile mit db.host/user/password konfigurieren.');
+      console.log('\n[Stufe 2] Keine Fetch-Verbindung konfiguriert — übersprungen.');
+      console.log('  Hinweis: --profile mit fetch.host/user/password konfigurieren.');
     } else if (!sourceLib) {
       console.log('\n[Stufe 2] --source-lib fehlt — übersprungen.');
-      console.log('  Hinweis: --source-lib <LIB> (z.B. APPLIB) angeben.');
+      console.log('  Hinweis: --source-lib <LIB> angeben oder fetch.sourceLib im Profil setzen.');
     } else {
       console.log(`\n[Stufe 2] Starte Remote-Suche auf ${host}: ${sourceLib}/${sourceFile}...`);
       try {
@@ -283,7 +294,7 @@ async function runFieldSearch(args) {
 
   // ── Stufe 3: Datei-Querverweise via SQL (QSYS2.SYSDEPEND) ────────────────
   if (runXref && table) {
-    const dbConfig = resolveDbConfig(profile);
+    const dbConfig = resolveAnalyzeDbConfig(analyzeConfig, 'metadata') || resolveDbConfig(profile);
     const hasDb = dbConfig && dbConfig.host && dbConfig.user && dbConfig.password;
 
     if (!hasDb) {
