@@ -15,6 +15,11 @@ function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+const {
+  attachConnectionTargetMetadata,
+  buildConnectionTargetMetadata,
+} = require('./connectionTargetMetadata');
+
 /**
  * Löst `systems`-Referenzen in einem Profil auf.
  *
@@ -52,7 +57,18 @@ function resolveSystemReferences(profile) {
     const cleanOverrides = Object.fromEntries(
       Object.entries(overrides).filter(([, v]) => v !== null && v !== undefined && v !== ''),
     );
-    return { ...sysDef, ...cleanOverrides };
+    const {
+      displayName: _displayName,
+      systemName: _systemName,
+      aliases: _aliases,
+      ...systemConnectionFields
+    } = sysDef;
+    const resolved = { ...systemConnectionFields, ...cleanOverrides };
+    return attachConnectionTargetMetadata(resolved, buildConnectionTargetMetadata({
+      systemKey: sysName,
+      systemDefinition: sysDef,
+      resolvedConfig: resolved,
+    }));
   }
 
   const result = { ...profile };
