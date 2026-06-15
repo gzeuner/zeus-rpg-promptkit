@@ -100,7 +100,6 @@ if [ "${environment}" = "project" ]; then
     ZEUS_FETCH_PASSWORD
     ZEUS_FETCH_IFS_DIR
     ZEUS_FETCH_OUT
-    ZEUS_DB_HOST
     ZEUS_DB_USER
     ZEUS_DB_PASSWORD
   )
@@ -108,7 +107,6 @@ else
   required_vars=(
     ZEUS_OUTPUT_ROOT
     ZEUS_SOURCE_ROOT
-    ZEUS_DB_HOST
     ZEUS_DB_USER
     ZEUS_DB_PASSWORD
   )
@@ -120,6 +118,10 @@ for key in "${required_vars[@]}"; do
   fi
 done
 
+if ! is_set "ZEUS_DB_HOST" && ! is_set "ZEUS_DB_URL"; then
+  missing_vars+=("ZEUS_DB_HOST|ZEUS_DB_URL")
+fi
+
 if [ "${environment}" = "project" ]; then
   if ! is_set "ZEUS_FETCH_SOURCE_LIB" && ! is_set "ZEUS_FETCH_SOURCE_LIBRARY"; then
     missing_vars+=("ZEUS_FETCH_SOURCE_LIB|ZEUS_FETCH_SOURCE_LIBRARY")
@@ -128,10 +130,11 @@ fi
 
 if [ "${#missing_vars[@]}" -gt 0 ]; then
   echo
-  echo "Warning: critical variables are missing:"
+  echo "Critical variables are missing:"
   for key in "${missing_vars[@]}"; do
     echo "  - ${key}"
   done
+  return 3
 else
   echo
   echo "All critical variables are set."

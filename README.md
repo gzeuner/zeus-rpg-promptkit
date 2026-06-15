@@ -331,6 +331,10 @@ node .\cli\zeus.js analyze --profile dev --source .\rpg_sources --program ORDERP
 Ohne IBM i-Anbindung können RPG-, CL- und DDS-Dateien einfach in `rpg_sources/` abgelegt und direkt mit `analyze` verarbeitet werden.
 Empfohlene Profilnamen im Public-Contract: `dev`, `demo`, `sftp-fetch`, `readonly-db2`, `combined-fetch-and-query` (Legacy-Aliase `sample-*` bleiben unterstützt).
 
+Für Mehrsystem-Setups können Profile benannte `systems` mit `displayName`, `systemName` und `aliases` definieren.
+Damit bleibt auch bei Host-Alias, DNS-CNAME oder abweichendem `CURRENT_SERVER` klar, welche Verbindung für Fetch, Metadaten und Testdaten gedacht ist.
+`doctor --profile <name> --probe --show-resolved` zeigt diese Zuordnung explizit an.
+
 ---
 
 ## Wichtige CLI-Befehle
@@ -1000,6 +1004,10 @@ node cli/zeus.js analyze --profile dev --source ./rpg_sources --program ORDERPGM
 
 Without IBM i access, place RPG, CL and DDS files in `rpg_sources/` and run `analyze` directly.
 Recommended public profile names: `dev`, `demo`, `sftp-fetch`, `readonly-db2`, `combined-fetch-and-query` (`sample-*` aliases remain supported).
+
+For multi-system setups, profiles can define named `systems` with `displayName`, `systemName`, and `aliases`.
+That keeps fetch, metadata, and test-data routing explicit even when host aliases or `CURRENT_SERVER` names differ.
+Run `doctor --profile <name> --probe --show-resolved` to inspect the resolved routing.
 
 ---
 

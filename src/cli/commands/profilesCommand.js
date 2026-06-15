@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 'use strict';
 
 const { loadProfiles, getProfilesMetadata, resolveProfile } = require('../../config/runtimeConfig');
+const { describeConnectionTarget } = require('../../config/connectionTargetMetadata');
 
 const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits', 'presets']);
 const PREFERRED_PROFILE_ORDER = ['dev', 'demo', 'sftp-fetch', 'readonly-db2', 'combined-fetch-and-query'];
@@ -30,10 +31,13 @@ const FETCH_ENV_VARS = [
   { name: 'ZEUS_FETCH_HOST', hint: 'IBM i Hostname fuer Source-Fetch', required: true },
   { name: 'ZEUS_FETCH_USER', hint: 'Fetch-Username', required: true },
   { name: 'ZEUS_FETCH_PASSWORD', hint: 'Fetch-Passwort', required: true },
+  { name: 'ZEUS_FETCH_SOURCE_LIB|ZEUS_FETCH_SOURCE_LIBRARY', hint: 'Source-Library fuer Fetch', required: true },
 ];
 
 function checkEnvStatus(name) {
-  const val = process.env[name];
+  const val = name.includes('|')
+    ? name.split('|').map((entry) => process.env[entry]).find((entry) => entry && entry.trim())
+    : process.env[name];
   if (val && val.trim()) return '[PASS] gesetzt';
   return '[FAIL] nicht gesetzt';
 }
@@ -45,17 +49,20 @@ function maskSecret(value) {
 }
 
 function describeProfileEntry(name, profile) {
-  const db = profile.db || (profile.dbRoles && profile.dbRoles.metadata) || {};
+  const metadataDb = (profile.dbRoles && profile.dbRoles.metadata) || profile.db || {};
+  const testDataDb = (profile.dbRoles && profile.dbRoles.testData) || metadataDb;
   const fetch = profile.fetch || {};
-  const host = db.host || db.url || '(kein DB)';
-  const user = db.user || '?';
-  const password = maskSecret(db.password);
-  const fetchHost = fetch.host || null;
   const isProd = profile.productionSystem ? ' [PROD]' : '';
   const extendsTag = profile.extends ? ` extends: ${Array.isArray(profile.extends) ? profile.extends.join(', ') : profile.extends}` : '';
   const lines = [`  Profil: ${name}${isProd}${extendsTag}`];
-  lines.push(`    DB:      Host=${host}  User=${user}  Password=${password}`);
-  if (fetchHost) lines.push(`    Fetch:   Host=${fetchHost}`);
+  lines.push(`    Metadata DB: ${describeConnectionTarget(metadataDb)}  User=${metadataDb.user || '?'}  Password=${maskSecret(metadataDb.password)}`);
+  if (testDataDb && testDataDb !== metadataDb) {
+    lines.push(`    Test Data:   ${describeConnectionTarget(testDataDb)}  User=${testDataDb.user || '?'}  Password=${maskSecret(testDataDb.password)}`);
+  }
+  if (fetch && (fetch.host || fetch.url || fetch.sourceLib || fetch.sourceLibrary)) {
+    const sourceLib = fetch.sourceLib || fetch.sourceLibrary || '(keine Source-Library)';
+    lines.push(`    Fetch:       ${describeConnectionTarget(fetch)}  SourceLib=${sourceLib}`);
+  }
   return lines.join('\n');
 }
 
@@ -78,8 +85,8 @@ async function runProfiles(args) {
   }
 
   const meta = getProfilesMetadata(profiles);
-  if (meta && meta.configPath) {
-    console.log(`Konfigurationsdatei: ${meta.configPath}`);
+  if (meta && (meta.sourceFileLabel || meta.profilePath || meta.description)) {
+    console.log(`Konfigurationsdatei: ${meta.sourceFileLabel || meta.profilePath || meta.description}`);
   }
   console.log('');
 
@@ -120,10 +127,24 @@ async function runProfiles(args) {
     if (showEnv) {
       const profile = resolved || profiles[name] || {};
       const hasDb = Boolean(profile.db || (profile.dbRoles && profile.dbRoles.metadata));
+      const hasMetadataDb = Boolean(profile.dbRoles && profile.dbRoles.metadata);
+      const hasTestDataDb = Boolean(profile.dbRoles && profile.dbRoles.testData);
       const hasFetch = Boolean(profile.fetch);
       console.log('    Env-Vars:');
       const envVarsToCheck = [
         ...(hasDb ? DB_ENV_VARS : []),
+        ...(hasMetadataDb ? [
+          { name: 'ZEUS_METADATA_DB_HOST', hint: 'Metadata-DB Hostname', required: true },
+          { name: 'ZEUS_METADATA_DB_USER', hint: 'Metadata-DB Username', required: true },
+          { name: 'ZEUS_METADATA_DB_PASSWORD', hint: 'Metadata-DB Passwort', required: true },
+          { name: 'ZEUS_METADATA_DB_URL', hint: 'Metadata-DB JDBC-URL (optional)', required: false },
+        ] : []),
+        ...(hasTestDataDb ? [
+          { name: 'ZEUS_TESTDATA_DB_HOST', hint: 'TestData-DB Hostname', required: true },
+          { name: 'ZEUS_TESTDATA_DB_USER', hint: 'TestData-DB Username', required: true },
+          { name: 'ZEUS_TESTDATA_DB_PASSWORD', hint: 'TestData-DB Passwort', required: true },
+          { name: 'ZEUS_TESTDATA_DB_URL', hint: 'TestData-DB JDBC-URL (optional)', required: false },
+        ] : []),
         ...(hasFetch ? FETCH_ENV_VARS : []),
         ...(!hasDb && !hasFetch ? DB_ENV_VARS : []),
       ];
