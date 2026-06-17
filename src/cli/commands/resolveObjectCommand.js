@@ -19,6 +19,29 @@ function normalizeRequireColumns(value) {
     .filter(Boolean);
 }
 
+function buildResolveObjectDiagnosticLines(result) {
+  const diagnostics = result && result.diagnostics ? result.diagnostics : null;
+  if (!diagnostics) {
+    return [];
+  }
+
+  const lines = [
+    `Search mode: ${diagnostics.searchMode}${diagnostics.schemaProvided ? '' : ' (all visible schemas)'}`,
+    `Catalog attempts: ${diagnostics.attemptCount}`,
+    `Elapsed: ${diagnostics.elapsedMs} ms`,
+  ];
+
+  if (diagnostics.fallbackUsed && diagnostics.catalogVariant) {
+    lines.push(`Catalog fallback: ${diagnostics.catalogVariant}`);
+  }
+
+  for (const recommendation of diagnostics.recommendations || []) {
+    lines.push(`Hint: ${recommendation}`);
+  }
+
+  return lines;
+}
+
 async function runResolveObject(args) {
   if (!args.profile || !String(args.profile).trim()) {
     console.error('Missing required option: --profile <name>');
@@ -71,6 +94,7 @@ async function runResolveObject(args) {
   if (requireColumns.length > 0) {
     console.log(`Required columns: ${requireColumns.map((entry) => entry.toUpperCase()).join(', ')}`);
   }
+  buildResolveObjectDiagnosticLines(result).forEach((line) => console.log(line));
   console.log('');
 
   if (!result.found) {
@@ -109,6 +133,7 @@ async function runResolveObject(args) {
 }
 
 module.exports = {
+  buildResolveObjectDiagnosticLines,
   normalizeRequireColumns,
   runResolveObject,
 };

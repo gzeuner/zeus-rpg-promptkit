@@ -561,6 +561,7 @@ async function startLocalUiServer({
     doctorExecutor: actionServiceOptions.doctorExecutor,
     analyzeExecutor: actionServiceOptions.analyzeExecutor,
     analyzeConfigResolver: actionServiceOptions.analyzeConfigResolver,
+    fetchConfigResolver: actionServiceOptions.fetchConfigResolver,
   });
   const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(process.env, sensitiveTerms);
   const server = http.createServer(createLocalUiRequestHandler({
