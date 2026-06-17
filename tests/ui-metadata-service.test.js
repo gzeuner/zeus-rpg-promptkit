@@ -18,6 +18,10 @@ test('ui metadata payload exposes config, command, and workflow card contracts',
   assert.ok(payload.commands);
   assert.ok(Array.isArray(payload.commands.categories));
   assert.ok(Array.isArray(payload.commands.entries));
+  assert.ok(payload.guidedConfiguration);
+  assert.ok(Array.isArray(payload.guidedConfiguration.steps));
+  assert.ok(Array.isArray(payload.guidedConfiguration.intents));
+  assert.ok(Array.isArray(payload.guidedConfiguration.discoveryActions));
   assert.ok(Array.isArray(payload.workflowCards));
   assert.equal(payload.workflowCards.length, 6);
 });

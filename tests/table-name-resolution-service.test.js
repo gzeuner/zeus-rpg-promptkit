@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  buildResolveObjectDiagnostics,
   listTablesInSchema,
   resolveObjectsByName,
   resolveColumnsWithName,
@@ -307,6 +308,44 @@ test('resolveObjectsByName matches SQL and system names across schemas and valid
   assert.equal(resolved.objects[0].allRequiredColumnsPresent, false);
   assert.deepEqual(resolved.objects[0].missingRequiredColumns, ['CASE_ID']);
   assert.equal(resolved.objects[0].rowCount, 42);
+  assert.equal(resolved.diagnostics.schemaProvided, false);
+  assert.equal(resolved.diagnostics.searchMode, 'schema-discovery');
+  assert.equal(resolved.diagnostics.attemptCount, 1);
+  assert.match(resolved.diagnostics.recommendations.join('\n'), /Use --schema APPDATA/);
   assert.ok(queries.some((query) => /FROM QSYS2\.SYSTABLES/.test(query)));
   assert.ok(queries.some((query) => /FROM QSYS2\.SYSCOLUMNS/.test(query)));
+});
+
+test('buildResolveObjectDiagnostics reports fallback usage and scoped recommendations', () => {
+  const diagnostics = buildResolveObjectDiagnostics({
+    catalogResult: {
+      meta: {
+        attemptCount: 2,
+        usedVariant: 'without-system-table-name',
+      },
+    },
+    elapsedMs: 3987,
+    normalizedSchema: null,
+    objects: [
+      {
+        schema: 'ZEUS1',
+      },
+    ],
+  });
+
+  assert.deepEqual(diagnostics, {
+    elapsedMs: 3987,
+    schemaProvided: false,
+    schemaFilter: null,
+    searchMode: 'schema-discovery',
+    scope: 'all-visible-schemas',
+    attemptCount: 2,
+    catalogVariant: 'without-system-table-name',
+    fallbackUsed: true,
+    recommendations: [
+      'Schema-free resolution searches across visible schemas and can be slower on shared systems.',
+      'Use --schema ZEUS1 for faster follow-up checks.',
+      'A catalog fallback query variant was used because some QSYS2 columns were unavailable.',
+    ],
+  });
 });

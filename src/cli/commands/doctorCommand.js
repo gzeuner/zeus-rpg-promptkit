@@ -109,21 +109,30 @@ function addDbEnvironmentChecks(checks, {
   fallbackConfig,
   requiredLabelPrefix,
 }) {
-  const usesUrl = isSet(env[`${envPrefix}_URL`]);
-  addEnvCheck(checks, {
-    name: `${envPrefix}_URL`,
-    expected: true,
-    envValue: env[`${envPrefix}_URL`],
-    fallbackValue: fallbackConfig && fallbackConfig.url,
-    required: false,
-    hint: 'jdbc:as400://primary-system;naming=system;libraries=DEMO',
-  });
+  const urlValue = env[`${envPrefix}_URL`];
+  const hostValue = env[`${envPrefix}_HOST`];
+  const fallbackUrl = fallbackConfig && fallbackConfig.url;
+  const fallbackHost = fallbackConfig && fallbackConfig.host;
+  const hasUrl = isSet(urlValue) || isSet(fallbackUrl);
+  const hasHost = isSet(hostValue) || isSet(fallbackHost);
+
+  if (hasUrl) {
+    addEnvCheck(checks, {
+      name: `${envPrefix}_URL`,
+      expected: true,
+      envValue: urlValue,
+      fallbackValue: fallbackUrl,
+      required: false,
+      hint: 'jdbc:as400://primary-system;naming=system;libraries=DEMO',
+    });
+  }
+
   addEnvCheck(checks, {
     name: `${envPrefix}_HOST`,
-    expected: true,
-    envValue: env[`${envPrefix}_HOST`],
-    fallbackValue: fallbackConfig && fallbackConfig.host,
-    required: !usesUrl,
+    expected: !hasUrl || hasHost,
+    envValue: hostValue,
+    fallbackValue: fallbackHost,
+    required: !hasUrl,
     hint: 'primary-system',
   });
   addEnvCheck(checks, {

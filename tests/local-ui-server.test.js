@@ -159,6 +159,13 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
           sourceRoot: './workspace',
           outputRoot: './output',
         }),
+        fetchConfigResolver: () => ({
+          sourceLibrary: 'APPLIB',
+          files: ['QRPGLESRC', 'QCLSRC'],
+          members: ['ORDERPGM'],
+          out: './rpg_sources',
+          sourceLibEnvOverride: null,
+        }),
         analyzeExecutor: (args) => {
           if (args.profile === 'explode-analyze') {
             throw new Error('unexpected analyze failure');
@@ -198,6 +205,11 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.ok(Array.isArray(uiMetadata.commands.entries));
     assert.ok(Array.isArray(uiMetadata.workflowCards));
     assert.equal(uiMetadata.workflowCards.length, 6);
+    assert.equal(uiMetadata.guidedConfiguration.schemaVersion, 1);
+    assert.ok(Array.isArray(uiMetadata.guidedConfiguration.steps));
+    assert.ok(uiMetadata.guidedConfiguration.steps.length >= 7);
+    assert.ok(Array.isArray(uiMetadata.guidedConfiguration.discoveryActions));
+    assert.ok(uiMetadata.guidedConfiguration.discoveryActions.some((entry) => entry.id === 'discover-source-libraries'));
     const sensitiveFields = uiMetadata.config.fields.filter((field) => field.sensitive === true);
     assert.ok(sensitiveFields.length >= 2);
     assert.equal(Object.prototype.hasOwnProperty.call(sensitiveFields[0], 'value'), false);
@@ -238,6 +250,44 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
       }),
     });
     assert.equal(doctorUnknownKey.status, 400);
+
+    const discoveryResponse = await fetch(`${started.url}/api/ui-actions/discovery-preview`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        actionId: 'discover-db2-tables',
+      }),
+    });
+    assert.equal(discoveryResponse.status, 200);
+    const discoveryPayload = await discoveryResponse.json();
+    assert.equal(discoveryPayload.action, 'discovery-preview');
+    assert.equal(discoveryPayload.status, 'not-ready');
+    assert.equal(discoveryPayload.result.implemented, false);
+    assert.equal(discoveryPayload.result.readOnly, true);
+    assert.equal(Array.isArray(discoveryPayload.result.commandPreview), true);
+
+    const sourcePreviewResponse = await fetch(`${started.url}/api/ui-actions/discovery-preview`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        actionId: 'discover-source-physical-files',
+      }),
+    });
+    assert.equal(sourcePreviewResponse.status, 200);
+    const sourcePreviewPayload = await sourcePreviewResponse.json();
+    assert.equal(sourcePreviewPayload.action, 'discovery-preview');
+    assert.equal(sourcePreviewPayload.status, 'config-preview-ready');
+    assert.equal(sourcePreviewPayload.result.previewKind, 'config-derived-local-preview');
+    assert.equal(sourcePreviewPayload.result.implemented, true);
+    assert.equal(sourcePreviewPayload.result.readOnly, true);
+    assert.ok(Array.isArray(sourcePreviewPayload.result.candidates));
+    assert.equal(sourcePreviewPayload.result.candidates[0].value, 'QRPGLESRC');
 
     for (const unsafeProfile of ['../dev', 'dev;rm -rf', 'dev && echo hacked', 'dev test', '"dev"']) {
       const unsafeResponse = await fetch(`${started.url}/api/ui-actions/doctor`, {
