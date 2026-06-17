@@ -1,7 +1,7 @@
 ---
 Title: AI Knowledge Projection
 Description: KI-bezogene Arbeitsvertraege, Prompt-Richtlinien und Validierungsleitlinien fuer Zeus.
-Last Updated: 2026-05-17
+Last Updated: 2026-06-17
 ---
 
 # AI Knowledge Projection
@@ -44,6 +44,7 @@ Current `entities` blocks include:
 - `diagnosticPacks`
 - `binding`
 - `modules`
+- `knownFacts`
 
 Each section is prompt-oriented and may carry:
 
@@ -72,6 +73,8 @@ Each section is prompt-oriented and may carry:
 `programCalls` and `procedureCalls` also carry `resolutionSource` plus catalog classification fields when Zeus resolved an external reference through IBM i object metadata rather than local source.
 
 `externalObjects` is the prompt-facing projection of catalog-resolved IBM i programs, service programs, modules, or related objects that were linked to unresolved source references.
+
+`knownFacts` is the prompt-facing projection of the explicit local-only known-facts opt-in. It preserves whether the feature is `disabled`, `missing`, `expired`, or `ready`, carries the selected profile and version-marker metadata, and exposes facts only when the local store was loaded successfully.
 
 ## Workflow Sections
 

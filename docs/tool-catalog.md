@@ -1,13 +1,13 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-05-22 13:24:29
+Last generated: 2026-06-17 07:15:53
 -->
 
 ---
 Title: Zeus RPG PromptKit Tool Catalog
 Description: Verbindlicher, sicherheitsklassifizierter Katalog aller CLI-Befehle und Workflow-Presets fuer Menschen und KI-Assistenten.
-Last Updated: 2026-05-22
+Last Updated: 2026-06-17
 ---
 
 # Zeus RPG PromptKit Tool Catalog
@@ -43,7 +43,9 @@ Related:
 | Command | Safety | Scope | Purpose | Example |
 |---|---|---|---|---|
 | `doctor` | `S0` | Local | Validate runtime, profiles, Java/runtime wiring, and env contracts. | `node cli/zeus.js doctor --profile default --show-resolved` |
+| `profiles` | `S0` | Local | List profiles and show masked runtime defaults and resolved routing hints. | `node cli/zeus.js profiles --profile default --show-env` |
 | `fetch` | `S2` | IBM i read | Fetch source members/IFS content into the local workspace. | `node cli/zeus.js fetch --profile default-fetch` |
+| `fetch-member` | `S2` | IBM i read | Fetch one or more specific source members into a local output directory. | `node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM` |
 | `analyze` | `S1` | Local | Analyze RPG/CL/DDS and generate evidence artifacts. | `node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context` |
 | `workflow` | `S1` | Local | Run preset-guided analyze and bundle flow. | `node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output` |
 | `workflow run` | `S1` | Local | Run workflow definitions from profile/runtime configuration. | `node cli/zeus.js workflow run --profile default --preset onboarding --out ./output` |
@@ -53,6 +55,7 @@ Related:
 | `generate-test` | `S1` | Local | Generate test plan or test template artifacts. | `node cli/zeus.js generate-test --program ORDERPGM --format markdown --out ./output` |
 | `generate-checklist` | `S1` | Local | Generate deployment and change checklist artifacts. | `node cli/zeus.js generate-checklist --program ORDERPGM --type BOTH --impact HIGH --out ./output` |
 | `query-table` | `S2` | DB2 read | Query DB2 table metadata. | `node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA` |
+| `resolve-object` | `S2` | DB2 read | Resolve SQL/system object names and optionally verify required columns. | `node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS` |
 | `query-sql` | `S2` | DB2 read | Run read-only SQL statements (SELECT/WITH). | `node cli/zeus.js query-sql --profile default --sql "SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY"` |
 | `joblog` | `S2` | IBM i read | Inspect IBM i joblog messages. | `node cli/zeus.js joblog --profile default --severity ERROR --max-messages 100` |
 | `field-search` | `S0/S2` | Local + IBM i read | Find field/table usage in local sources and or remote members. | `node cli/zeus.js field-search --profile default --field FIELD_ALPHA --table APP_TABLE --source ./rpg_sources --mode all` |
@@ -63,15 +66,17 @@ Related:
 | `qa` | `S1` | Local | Render QA validations/checks to jira, markdown, or json. | `node cli/zeus.js qa --input ./output/ORDERPGM --format markdown --strict STRICT` |
 | `inspect-object` | `S2` | IBM i read | Read object metadata and journaling details. | `node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_00 --type *FILE --journal` |
 | `test-run` | `S2/S1` | DB2 read + local | Capture before and after test snapshots plus rollback SQL text. | `node cli/zeus.js test-run start --profile default --program ORDERPGM --table APPLIB.APP_TABLE_00 --key ID=1` |
+| `write-sql` | `S3` | DB2 write | Execute guarded DML with confirmation, backup, and safety preflight options. | `node cli/zeus.js write-sql --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'" --confirm --backup` |
 | `upsert` | `S3` | DB2 write | DML wrapper for INSERT/UPDATE/DELETE/MERGE with guardrails. | `node cli/zeus.js upsert --profile default --sql "UPDATE APPDATA.APP_TABLE_00 SET STATUS='X' WHERE ID=1"` |
 | `upsert-sql` | `S3` | DB2 write | Backward-compatible alias for the upsert flow. | `node cli/zeus.js upsert-sql --profile default --sql "INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)"` |
 | `insert` | `S3` | DB2 write | Strict insert-only DML command. | `node cli/zeus.js insert --profile default --sql "INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)"` |
 | `update` | `S3` | DB2 write | Strict update-only DML command. | `node cli/zeus.js update --profile default --sql "UPDATE APPDATA.APP_TABLE_00 SET STATUS='Y' WHERE ID=1"` |
+| `delete` | `S3` | DB2 write | Strict delete-only DML command with the shared write-safety guardrails. | `node cli/zeus.js delete --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'" --confirm --backup` |
+| `analyses` | `S1` | Local | List, register, inspect, and open locally tracked analysis artifacts. | `node cli/zeus.js analyses list --profile default` |
 | `bridge` | `S4` | Operator-gated | Bridge planning/staging/apply/compile/report flow; never implicit. | `node cli/zeus.js bridge plan --profile default --help` |
 | `pui-edit` | `S1` | Local | Apply structured UI edit operations to local display artifacts. | `node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json` |
 | `docs:generate-catalog` | `S0` | Local read-only | Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`. | `node cli/zeus.js docs:generate-catalog` |
 | `mcp` | `S0` | Local read-mostly | Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools. | `node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.workflow,zeus.bundle,zeus.analyze,zeus.impact,zeus.assess-risk,zeus.query-table,zeus.query-sql,zeus.write-sql,zeus.bridge,zeus.search-source,zeus.field-search,zeus.diff,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.analyses,zeus.fetch,zeus.test-run,zeus.copy-to-workspace,zeus.serve,zeus.joblog,zeus.inspect-object` |
-| `analyses` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js analyses` |
 
 ## Workflow Presets
 
