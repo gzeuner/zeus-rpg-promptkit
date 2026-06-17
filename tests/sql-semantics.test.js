@@ -132,3 +132,149 @@ end-proc;
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
+
+test('static select statements expose driver table, joins, filters, and canonical join relations', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-sql-joins-'));
+  const sourceFile = path.join(tempRoot, 'ORDERPGM.sqlrpgle');
+
+  fs.writeFileSync(sourceFile, `**FREE
+dcl-s status char(10);
+dcl-s customerId packed(7);
+
+dcl-proc main;
+  exec sql
+    select o.ORDER_ID, c.CUSTOMER_NAME
+      from ORDERS o
+      join CUSTOMERS c
+        on o.CUSTOMER_ID = c.CUSTOMER_ID
+     where o.STATUS = :status
+       and o.CUSTOMER_ID = :customerId;
+end-proc;
+`, 'utf8');
+
+  try {
+    const scanSummary = scanSourceFiles([sourceFile]);
+    const statement = scanSummary.sqlStatements[0];
+
+    assert.equal(statement.driverTable, 'ORDERS');
+    assert.equal(statement.confidence, 'HIGH');
+    assert.deepEqual(statement.joins, [{
+      table: 'CUSTOMERS',
+      alias: 'C',
+      joinType: 'INNER',
+      condition: 'o.CUSTOMER_ID = c.CUSTOMER_ID',
+      hostVariables: [],
+    }]);
+    assert.deepEqual(statement.filters, [
+      { text: 'o.STATUS = :status', hostVariables: ['STATUS'] },
+      { text: 'o.CUSTOMER_ID = :customerId;', hostVariables: ['CUSTOMERID'] },
+    ]);
+
+    const canonicalAnalysis = buildCanonicalAnalysisModel({
+      program: 'ORDERPGM',
+      sourceRoot: tempRoot,
+      sourceFiles: scanSummary.sourceFiles,
+      dependencies: {
+        tables: scanSummary.tables,
+        calls: scanSummary.calls,
+        copyMembers: scanSummary.copyMembers,
+        sqlStatements: scanSummary.sqlStatements,
+        procedures: scanSummary.procedures,
+        prototypes: scanSummary.prototypes,
+        procedureCalls: scanSummary.procedureCalls,
+        nativeFiles: scanSummary.nativeFiles,
+        nativeFileAccesses: scanSummary.nativeFileAccesses,
+        modules: scanSummary.modules,
+        bindingDirectories: scanSummary.bindingDirectories,
+        servicePrograms: scanSummary.servicePrograms,
+      },
+      notes: [],
+    });
+    const context = buildContext({ canonicalAnalysis });
+
+    assert.equal(context.sql.statements[0].driverTable, 'ORDERS');
+    assert.equal(context.sql.statements[0].confidence, 'HIGH');
+    assert.equal(context.sql.statements[0].joins[0].table, 'CUSTOMERS');
+    assert.equal(context.sql.statements[0].filters.length, 2);
+    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'DRIVES' && entry.from === 'SQL:0001' && entry.to === 'TABLE:ORDERS'));
+    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'JOINS_VIA'
+      && entry.from === 'TABLE:ORDERS'
+      && entry.to === 'TABLE:CUSTOMERS'
+      && entry.attributes.joinType === 'INNER'));
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('declare cursor select statements keep static join semantics and driver relations', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-sql-cursor-joins-'));
+  const sourceFile = path.join(tempRoot, 'ORDERPGM.sqlrpgle');
+
+  fs.writeFileSync(sourceFile, `**FREE
+dcl-s status char(10);
+
+dcl-proc main;
+  exec sql
+    declare C1 cursor for
+      select o.ORDER_ID, c.CUSTOMER_NAME
+        from ORDERS o
+        left join CUSTOMERS c
+          on o.CUSTOMER_ID = c.CUSTOMER_ID
+       where o.STATUS = :status;
+end-proc;
+`, 'utf8');
+
+  try {
+    const scanSummary = scanSourceFiles([sourceFile]);
+    const statement = scanSummary.sqlStatements[0];
+
+    assert.equal(statement.type, 'DECLARE_CURSOR');
+    assert.equal(statement.intent, 'READ');
+    assert.equal(statement.driverTable, 'ORDERS');
+    assert.equal(statement.confidence, 'HIGH');
+    assert.deepEqual(statement.cursors, [{ name: 'C1', action: 'DECLARE' }]);
+    assert.deepEqual(statement.joins, [{
+      table: 'CUSTOMERS',
+      alias: 'C',
+      joinType: 'LEFT',
+      condition: 'o.CUSTOMER_ID = c.CUSTOMER_ID',
+      hostVariables: [],
+    }]);
+
+    const canonicalAnalysis = buildCanonicalAnalysisModel({
+      program: 'ORDERPGM',
+      sourceRoot: tempRoot,
+      sourceFiles: scanSummary.sourceFiles,
+      dependencies: {
+        tables: scanSummary.tables,
+        calls: scanSummary.calls,
+        copyMembers: scanSummary.copyMembers,
+        sqlStatements: scanSummary.sqlStatements,
+        procedures: scanSummary.procedures,
+        prototypes: scanSummary.prototypes,
+        procedureCalls: scanSummary.procedureCalls,
+        nativeFiles: scanSummary.nativeFiles,
+        nativeFileAccesses: scanSummary.nativeFileAccesses,
+        modules: scanSummary.modules,
+        bindingDirectories: scanSummary.bindingDirectories,
+        servicePrograms: scanSummary.servicePrograms,
+      },
+      notes: [],
+    });
+    const context = buildContext({ canonicalAnalysis });
+
+    assert.equal(context.sql.statements[0].type, 'DECLARE_CURSOR');
+    assert.equal(context.sql.statements[0].driverTable, 'ORDERS');
+    assert.equal(context.sql.statements[0].joins[0].joinType, 'LEFT');
+    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'DRIVES'
+      && entry.from === 'SQL:0001'
+      && entry.to === 'TABLE:ORDERS'));
+    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'JOINS_VIA'
+      && entry.from === 'TABLE:ORDERS'
+      && entry.to === 'TABLE:CUSTOMERS'
+      && entry.attributes.sqlStatementId === 'SQL:0001'
+      && entry.attributes.joinType === 'LEFT'));
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});

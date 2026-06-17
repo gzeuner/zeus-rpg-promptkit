@@ -143,6 +143,8 @@ test('buildCanonicalAnalysisModel creates a validated semantic core with provena
   assert.equal(projectedContext.sql.summary.statementCount, 1);
   assert.equal(projectedContext.sql.summary.readStatementCount, 1);
   assert.equal(projectedContext.sql.statements[0].evidence[0].file, 'ORDERPGM.rpgle');
+  assert.equal(projectedContext.knownFacts.enabled, false);
+  assert.equal(projectedContext.knownFacts.status, 'disabled');
 });
 
 test('enrichCanonicalAnalysisModel updates enrichments while keeping the model valid', () => {
@@ -164,10 +166,18 @@ test('enrichCanonicalAnalysisModel updates enrichments while keeping the model v
       nodeCount: 4,
       edgeCount: 3,
     },
+    knownFacts: {
+      enabled: true,
+      status: 'ready',
+      profile: 'dev',
+      factCount: 1,
+    },
     notes: ['DB2 export skipped'],
   });
 
   assert.equal(enriched.enrichments.graph.nodeCount, 4);
+  assert.equal(enriched.enrichments.knownFacts.enabled, true);
+  assert.equal(enriched.enrichments.knownFacts.profile, 'dev');
   assert.deepEqual(enriched.notes, ['DB2 export skipped']);
   assert.equal(validateCanonicalAnalysisModel(enriched).valid, true);
 });

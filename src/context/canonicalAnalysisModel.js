@@ -102,6 +102,51 @@ function inferSqlIntent(type) {
   return 'OTHER';
 }
 
+function normalizeSqlJoins(joins) {
+  const normalized = [];
+  const seen = new Set();
+
+  for (const join of joins || []) {
+    if (!join || typeof join !== 'object') continue;
+    const table = normalizeName(join.table);
+    if (!table) continue;
+    const entry = {
+      table,
+      alias: normalizeName(join.alias) || null,
+      joinType: normalizeName(join.joinType || 'INNER') || 'INNER',
+      condition: String(join.condition || '').trim() || null,
+      hostVariables: uniqueSortedStrings((join.hostVariables || []).map((name) => normalizeName(name)).filter(Boolean)),
+    };
+    const marker = JSON.stringify(entry);
+    if (seen.has(marker)) continue;
+    seen.add(marker);
+    normalized.push(entry);
+  }
+
+  return normalized;
+}
+
+function normalizeSqlFilters(filters) {
+  const normalized = [];
+  const seen = new Set();
+
+  for (const filter of filters || []) {
+    if (!filter || typeof filter !== 'object') continue;
+    const text = String(filter.text || '').trim();
+    if (!text) continue;
+    const entry = {
+      text,
+      hostVariables: uniqueSortedStrings((filter.hostVariables || []).map((name) => normalizeName(name)).filter(Boolean)),
+    };
+    const marker = JSON.stringify(entry);
+    if (seen.has(marker)) continue;
+    seen.add(marker);
+    normalized.push(entry);
+  }
+
+  return normalized;
+}
+
 function sortSqlStatements(statements, sourceRoot) {
   const normalized = (statements || []).map((statement) => {
     const evidence = normalizeEvidenceList(statement.evidence || [], sourceRoot);
@@ -131,6 +176,10 @@ function sortSqlStatements(statements, sourceRoot) {
           if (a.name !== b.name) return a.name.localeCompare(b.name);
           return a.action.localeCompare(b.action);
         }),
+      driverTable: normalizeName(statement.driverTable) || null,
+      joins: normalizeSqlJoins(statement.joins),
+      filters: normalizeSqlFilters(statement.filters),
+      confidence: normalizeName(statement.confidence) || null,
       readsData: Boolean(readsData),
       writesData: Boolean(writesData),
       dynamic: Boolean(statement.dynamic),
@@ -1199,6 +1248,10 @@ function buildRelations(
         writesData: Boolean(statement.writesData),
         dynamic: Boolean(statement.dynamic),
         unresolved: Boolean(statement.unresolved),
+        driverTable: statement.driverTable || null,
+        joinCount: Array.isArray(statement.joins) ? statement.joins.length : 0,
+        filterCount: Array.isArray(statement.filters) ? statement.filters.length : 0,
+        confidence: statement.confidence || null,
         hostVariables: statement.hostVariables || [],
         cursorNames: (statement.cursors || []).map((cursor) => cursor.name),
         uncertainty: statement.uncertainty || [],
@@ -1214,6 +1267,44 @@ function buildRelations(
         evidence: statement.evidence || [],
       });
     }
+
+    if (statement.driverTable) {
+      relations.push({
+        id: createRelationId('DRIVES', statementId, createEntityId('TABLE', statement.driverTable)),
+        type: 'DRIVES',
+        from: statementId,
+        to: createEntityId('TABLE', statement.driverTable),
+        evidence: statement.evidence || [],
+        attributes: {
+          confidence: statement.confidence || null,
+          uncertainty: statement.uncertainty || [],
+        },
+      });
+    }
+
+    (statement.joins || []).forEach((join, joinIndex) => {
+      if (!statement.driverTable || !join || !join.table) {
+        return;
+      }
+
+      relations.push({
+        id: `${createRelationId('JOINS_VIA', createEntityId('TABLE', statement.driverTable), createEntityId('TABLE', join.table))}:${statementId}:${String(joinIndex + 1).padStart(2, '0')}`,
+        type: 'JOINS_VIA',
+        from: createEntityId('TABLE', statement.driverTable),
+        to: createEntityId('TABLE', join.table),
+        evidence: statement.evidence || [],
+        attributes: {
+          sqlStatementId: statementId,
+          driverTable: statement.driverTable,
+          joinedTable: join.table,
+          joinType: join.joinType || 'INNER',
+          condition: join.condition || null,
+          hostVariables: join.hostVariables || [],
+          confidence: statement.confidence || null,
+          uncertainty: statement.uncertainty || [],
+        },
+      });
+    });
   });
 
   for (const call of procedureCalls || []) {
@@ -1451,6 +1542,25 @@ function defaultPuiPatterns() {
   };
 }
 
+function defaultKnownFacts() {
+  return {
+    enabled: false,
+    status: 'disabled',
+    mode: 'local-only',
+    profile: null,
+    storePath: null,
+    factCount: 0,
+    versionMarker: {
+      toolVersion: null,
+      updatedAt: null,
+      expiresAt: null,
+      ttlDays: null,
+    },
+    facts: [],
+    notes: [],
+  };
+}
+
 function defaultAnalysisCache() {
   return {
     enabled: false,
@@ -1610,6 +1720,7 @@ function buildCanonicalAnalysisModel({
       searchResults: defaultSearchResults(),
       diagnosticPacks: defaultDiagnosticPackReport(),
       puiPatterns: defaultPuiPatterns(),
+      knownFacts: defaultKnownFacts(),
       analysisCache: defaultAnalysisCache(),
       db2Metadata: null,
       testData: null,
@@ -1705,6 +1816,7 @@ function enrichCanonicalAnalysisModel(model, updates = {}) {
       ...(updates.searchResults !== undefined ? { searchResults: mergeObject(model.enrichments.searchResults, updates.searchResults) } : {}),
       ...(updates.diagnosticPacks !== undefined ? { diagnosticPacks: mergeObject(model.enrichments.diagnosticPacks, updates.diagnosticPacks) } : {}),
       ...(updates.puiPatterns !== undefined ? { puiPatterns: mergeObject(model.enrichments.puiPatterns, updates.puiPatterns) } : {}),
+      ...(updates.knownFacts !== undefined ? { knownFacts: mergeObject(model.enrichments.knownFacts, updates.knownFacts) } : {}),
       ...(updates.analysisCache !== undefined ? { analysisCache: mergeObject(model.enrichments.analysisCache, updates.analysisCache) } : {}),
       ...(updates.db2Metadata !== undefined ? { db2Metadata: updates.db2Metadata } : {}),
       ...(updates.testData !== undefined ? { testData: updates.testData } : {}),
@@ -1848,6 +1960,7 @@ module.exports = {
   defaultIfsPathReport,
   defaultDiagnosticPackReport,
   defaultPuiPatterns,
+  defaultKnownFacts,
   defaultAnalysisCache,
   defaultNativeFileUsage,
   defaultSearchResults,

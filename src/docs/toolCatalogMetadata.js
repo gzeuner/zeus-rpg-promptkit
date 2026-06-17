@@ -19,11 +19,23 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Validate runtime, profiles, Java/runtime wiring, and env contracts.',
     example: 'node cli/zeus.js doctor --profile default --show-resolved',
   }),
+  profiles: Object.freeze({
+    safety: 'S0',
+    scope: 'Local',
+    purpose: 'List profiles and show masked runtime defaults and resolved routing hints.',
+    example: 'node cli/zeus.js profiles --profile default --show-env',
+  }),
   fetch: Object.freeze({
     safety: 'S2',
     scope: 'IBM i read',
     purpose: 'Fetch source members/IFS content into the local workspace.',
     example: 'node cli/zeus.js fetch --profile default-fetch',
+  }),
+  'fetch-member': Object.freeze({
+    safety: 'S2',
+    scope: 'IBM i read',
+    purpose: 'Fetch one or more specific source members into a local output directory.',
+    example: 'node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM',
   }),
   analyze: Object.freeze({
     safety: 'S1',
@@ -78,6 +90,12 @@ const COMMAND_METADATA = Object.freeze({
     scope: 'DB2 read',
     purpose: 'Query DB2 table metadata.',
     example: 'node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA',
+  }),
+  'resolve-object': Object.freeze({
+    safety: 'S2',
+    scope: 'DB2 read',
+    purpose: 'Resolve SQL/system object names and optionally verify required columns.',
+    example: 'node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS',
   }),
   'query-sql': Object.freeze({
     safety: 'S2',
@@ -139,6 +157,12 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Capture before and after test snapshots plus rollback SQL text.',
     example: 'node cli/zeus.js test-run start --profile default --program ORDERPGM --table APPLIB.APP_TABLE_00 --key ID=1',
   }),
+  'write-sql': Object.freeze({
+    safety: 'S3',
+    scope: 'DB2 write',
+    purpose: 'Execute guarded DML with confirmation, backup, and safety preflight options.',
+    example: 'node cli/zeus.js write-sql --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS=\'X\'" --confirm --backup',
+  }),
   upsert: Object.freeze({
     safety: 'S3',
     scope: 'DB2 write',
@@ -162,6 +186,18 @@ const COMMAND_METADATA = Object.freeze({
     scope: 'DB2 write',
     purpose: 'Strict update-only DML command.',
     example: 'node cli/zeus.js update --profile default --sql "UPDATE APPDATA.APP_TABLE_00 SET STATUS=\'Y\' WHERE ID=1"',
+  }),
+  delete: Object.freeze({
+    safety: 'S3',
+    scope: 'DB2 write',
+    purpose: 'Strict delete-only DML command with the shared write-safety guardrails.',
+    example: 'node cli/zeus.js delete --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS=\'X\'" --confirm --backup',
+  }),
+  analyses: Object.freeze({
+    safety: 'S1',
+    scope: 'Local',
+    purpose: 'List, register, inspect, and open locally tracked analysis artifacts.',
+    example: 'node cli/zeus.js analyses list --profile default',
   }),
   bridge: Object.freeze({
     safety: 'S4',
@@ -191,7 +227,9 @@ const COMMAND_METADATA = Object.freeze({
 
 const COMMAND_ORDER = Object.freeze([
   'doctor',
+  'profiles',
   'fetch',
+  'fetch-member',
   'analyze',
   'workflow',
   'workflow run',
@@ -201,6 +239,7 @@ const COMMAND_ORDER = Object.freeze([
   'generate-test',
   'generate-checklist',
   'query-table',
+  'resolve-object',
   'query-sql',
   'joblog',
   'field-search',
@@ -211,10 +250,13 @@ const COMMAND_ORDER = Object.freeze([
   'qa',
   'inspect-object',
   'test-run',
+  'write-sql',
   'upsert',
   'upsert-sql',
   'insert',
   'update',
+  'delete',
+  'analyses',
   'bridge',
   'pui-edit',
   'docs:generate-catalog',

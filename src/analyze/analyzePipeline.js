@@ -34,11 +34,12 @@ const { pickSourceSnippet } = require('../cli/helpers/sourceSnippet');
 const { runStages } = require('./runStages');
 const { writeAnalyzeArtifacts } = require('./analyzeArtifactWriter');
 const { readImportManifest } = require('../fetch/importManifest');
-const { validateSourceFiles } = require('../source/sourceIntegrity');
+const { normalizeRelativePath, validateSourceFiles } = require('../source/sourceIntegrity');
 const { scanIfsPaths } = require('../investigation/ifsPathScanner');
 const { runFullTextSearch } = require('../investigation/fullTextSearch');
 const { runDiagnosticPacks } = require('../investigation/diagnosticPackRunner');
 const { resolveAnalyzeDbConfig } = require('../config/runtimeConfig');
+const { readKnownFactsStore } = require('../knowledge/localKnownFactsStore');
 const {
   ANALYSIS_ARTIFACT_CACHE_FILE,
   buildDb2MetadataCacheKey,
@@ -111,6 +112,7 @@ function updateOptimizedContext(optimizedContext, context, patch = {}) {
     searchResults: context.searchResults,
     diagnosticPacks: context.diagnosticPacks,
     puiPatterns: context.puiPatterns,
+    knownFacts: context.knownFacts,
     db2Metadata: context.db2Metadata,
     testData: context.testData,
     notes: context.notes,
@@ -380,6 +382,99 @@ function buildContextStage(state) {
       ...(crossProgramGraph.diagnostics || []),
       ...stageDiagnostics,
     ],
+  };
+}
+
+function loadKnownFactsStage(state) {
+  const {
+    canonicalAnalysis,
+    context,
+    optimizedContext,
+    loadKnownFactsEnabled,
+    knownFactsProfile,
+    knownFactsStorePath,
+    cwd,
+    reproducibility,
+  } = state;
+
+  if (!loadKnownFactsEnabled) {
+    return {
+      ...state,
+      stageMetadata: {
+        enabled: false,
+        status: 'disabled',
+        profile: null,
+        factCount: 0,
+      },
+      stageDiagnostics: [],
+    };
+  }
+
+  const profile = String(knownFactsProfile || state.profile || 'default').trim();
+  const readResult = readKnownFactsStore(profile, {
+    cwd: cwd || process.cwd(),
+    storePath: knownFactsStorePath || '',
+    now: resolveTimestamp(reproducibility),
+  });
+  const store = readResult.store || {};
+  const storePath = normalizeRelativePath(cwd || process.cwd(), readResult.path);
+  const notes = [];
+
+  if (readResult.status === 'missing') {
+    notes.push(`Known facts store not found for profile "${profile}": ${storePath}`);
+  } else if (readResult.status === 'expired') {
+    notes.push(`Known facts store expired for profile "${profile}": ${storePath}`);
+  }
+
+  const knownFacts = {
+    enabled: readResult.status === 'ready',
+    status: readResult.status,
+    mode: store.mode || 'local-only',
+    profile: store.profile || profile,
+    storePath,
+    factCount: readResult.status === 'ready' && Array.isArray(store.facts) ? store.facts.length : 0,
+    versionMarker: store.versionMarker || {
+      toolVersion: null,
+      updatedAt: null,
+      expiresAt: null,
+      ttlDays: null,
+    },
+    facts: readResult.status === 'ready' && Array.isArray(store.facts) ? store.facts : [],
+    notes,
+  };
+
+  const nextCanonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
+    knownFacts,
+    notes,
+  });
+  const nextContext = buildContext({ canonicalAnalysis: nextCanonicalAnalysis });
+  const nextOptimizedContext = updateOptimizedContext(optimizedContext, nextContext, {
+    knownFacts,
+  });
+
+  return {
+    ...state,
+    canonicalAnalysis: nextCanonicalAnalysis,
+    context: nextContext,
+    optimizedContext: nextOptimizedContext,
+    promptContext: resolvePromptContext(nextContext, nextOptimizedContext),
+    stageMetadata: {
+      enabled: true,
+      status: knownFacts.status,
+      profile: knownFacts.profile,
+      storePath,
+      factCount: knownFacts.factCount,
+      expired: Boolean(readResult.expired),
+    },
+    stageDiagnostics: notes.map((message) => ({
+      severity: 'warning',
+      code: readResult.status === 'expired' ? 'KNOWN_FACTS_EXPIRED' : 'KNOWN_FACTS_MISSING',
+      message,
+      details: {
+        profile,
+        storePath,
+      },
+    })),
   };
 }
 
@@ -854,11 +949,19 @@ function registerCoreAnalyzeStages(registry) {
     run: buildContextStage,
   });
   registry.registerStage({
+    id: 'load-known-facts',
+    title: 'Load local known facts',
+    description: 'Optionally reads profile-scoped local known facts and folds them into the local analysis context.',
+    category: 'analysis',
+    after: 'build-context',
+    run: loadKnownFactsStage,
+  });
+  registry.registerStage({
     id: 'investigate-sources',
     title: 'Run source investigations',
     description: 'Applies optional IFS-path, full-text search, and similar source investigations.',
     category: 'investigation',
-    after: 'build-context',
+    after: 'load-known-facts',
     run: investigateSourcesStage,
   });
   registry.registerStage({

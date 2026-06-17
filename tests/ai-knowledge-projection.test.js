@@ -64,11 +64,16 @@ test('buildAiKnowledgeProjection emits a versioned prompt-ready projection with 
     assert.ok(projection.uncertaintyMarkers.includes('DYNAMIC_SQL'));
     assert.equal(typeof projection.entities.uiPatternKnowledge, 'object');
     assert.equal(typeof projection.entities.uiPatternKnowledge.enabled, 'boolean');
+    assert.equal(typeof projection.entities.knownFacts, 'object');
+    assert.equal(projection.entities.knownFacts.enabled, false);
     assert.equal(projection.workflows.documentation.sqlStatements.length, 1);
     assert.ok(projection.workflows.documentation.tokenBudget >= 1);
     assert.ok(Array.isArray(projection.workflows.documentation.evidencePacks.sql));
     assert.ok(projection.entities.sqlStatements.some((entry) => entry.dynamic === true));
     assert.ok(projection.entities.sqlStatements.some((entry) => entry.evidenceRefs.length > 0));
+    assert.ok(projection.entities.sqlStatements.every((entry) => Object.prototype.hasOwnProperty.call(entry, 'driverTable')));
+    assert.ok(projection.entities.sqlStatements.every((entry) => Array.isArray(entry.joins)));
+    assert.ok(projection.entities.sqlStatements.every((entry) => Array.isArray(entry.filters)));
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

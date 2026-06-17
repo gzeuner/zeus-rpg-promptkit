@@ -20,6 +20,13 @@ node .\cli\zeus.js fetch --profile default-fetch
 node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context
 ```
 
+Optional local known facts can be folded into the analyze context only via explicit opt-in:
+
+```powershell
+node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --profile default --out .\output --with-known-facts
+node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --with-known-facts --known-facts-path .\config\local-only\known-facts\default.json
+```
+
 ## Preset-Driven Workflows
 
 ```powershell
