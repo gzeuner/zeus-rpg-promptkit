@@ -60,6 +60,24 @@ test('buildEnvironmentChecks downgrades to warnings when the profile already pro
   assert.ok(checks.some((entry) => entry.name === 'ZEUS_OUTPUT_ROOT' && entry.status === 'WARN'));
 });
 
+test('buildEnvironmentChecks does not warn about ZEUS_DB_URL when ZEUS_DB_HOST is already configured', () => {
+  const checks = buildEnvironmentChecks({
+    profile: {
+      db: {
+        host: 'profile-host',
+        user: 'profile-user',
+        password: 'profile-pass',
+      },
+    },
+    analyzeConfig: null,
+    fetchConfig: null,
+    env: {},
+  });
+
+  assert.ok(checks.some((entry) => entry.name === 'ZEUS_DB_HOST'));
+  assert.equal(checks.some((entry) => entry.name === 'ZEUS_DB_URL'), false);
+});
+
 test('buildEnvironmentChecks includes dedicated metadata and test-data DB role variables when configured', () => {
   const checks = buildEnvironmentChecks({
     profile: {

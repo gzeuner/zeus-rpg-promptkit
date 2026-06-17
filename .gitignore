@@ -51,6 +51,12 @@ scripts/create_issues_from_roadmap.py
 # Ignore local:   .env.local, local-only profiles (user credentials)
 # ────────────────────────────
 
+.env
+.env.*
+!.env.example
+config/.env
+config/.env.*
+!config/.env.example
 .env.local
 .env.*.local
 *Kopie.local

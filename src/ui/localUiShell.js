@@ -538,11 +538,20 @@ const s={
     loading:false,
     error:null,
     payload:null,
-    selectedConfigSection:'profile'
+    selectedConfigSection:'profile',
+    selectedGuidedStep:'workspace',
+    selectedGuidedIntent:'onboarding'
   },
   uiActions:{
     doctor:{
       profile:'dev',
+      running:false,
+      error:null,
+      result:null
+    },
+    discovery:{
+      profile:'dev',
+      actionId:'discover-source-libraries',
       running:false,
       error:null,
       result:null
@@ -760,6 +769,43 @@ function metadataFields(){
   return fields.length>0?fields:[];
 }
 
+function guidedConfiguration(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.guidedConfiguration&&typeof payload.guidedConfiguration==='object'
+    ? payload.guidedConfiguration
+    : null;
+}
+
+function guidedConfigSteps(){
+  const payload=guidedConfiguration();
+  return payload&&Array.isArray(payload.steps)?payload.steps:[];
+}
+
+function guidedConfigIntents(){
+  const payload=guidedConfiguration();
+  return payload&&Array.isArray(payload.intents)?payload.intents:[];
+}
+
+function guidedDiscoveryActions(){
+  const payload=guidedConfiguration();
+  return payload&&Array.isArray(payload.discoveryActions)?payload.discoveryActions:[];
+}
+
+function guidedPurposeLabels(){
+  const payload=guidedConfiguration();
+  return payload&&Array.isArray(payload.purposeLabels)?payload.purposeLabels:[];
+}
+
+function defaultGuidedStep(){
+  const steps=guidedConfigSteps();
+  return steps[0]&&steps[0].id?steps[0].id:'workspace';
+}
+
+function defaultGuidedIntent(){
+  const intents=guidedConfigIntents();
+  return intents[0]&&intents[0].id?intents[0].id:'onboarding';
+}
+
 function defaultConfigSection(){
   const sections=metadataSections();
   return sections[0]&&sections[0].id?sections[0].id:'profile';
@@ -784,6 +830,15 @@ async function loadUiMetadata(){
     if(!metadataSections().some((section)=>section.id===s.uiMetadata.selectedConfigSection)){
       s.uiMetadata.selectedConfigSection=defaultConfigSection();
     }
+    if(!guidedConfigSteps().some((step)=>step.id===s.uiMetadata.selectedGuidedStep)){
+      s.uiMetadata.selectedGuidedStep=defaultGuidedStep();
+    }
+    if(!guidedConfigIntents().some((intent)=>intent.id===s.uiMetadata.selectedGuidedIntent)){
+      s.uiMetadata.selectedGuidedIntent=defaultGuidedIntent();
+    }
+    if(!guidedDiscoveryActions().some((action)=>action.id===s.uiActions.discovery.actionId)){
+      s.uiActions.discovery.actionId=(guidedDiscoveryActions()[0]&&guidedDiscoveryActions()[0].id)||'discover-source-libraries';
+    }
   }catch(error){
     s.uiMetadata.error=error.message||String(error);
   }finally{
@@ -806,6 +861,25 @@ async function runDoctorReadinessAction(){
     s.uiActions.doctor.result=null;
   }finally{
     s.uiActions.doctor.running=false;
+  }
+}
+
+async function runDiscoveryPreviewAction(){
+  const profile=String(s.uiActions.discovery.profile||s.uiActions.doctor.profile||'dev').trim()||'dev';
+  const actionId=String(s.uiActions.discovery.actionId||'').trim()||'discover-source-libraries';
+  s.uiActions.discovery.running=true;
+  s.uiActions.discovery.error=null;
+  try{
+    const payload=await sendJson('POST','/api/ui-actions/discovery-preview',{
+      profile,
+      actionId
+    });
+    s.uiActions.discovery.result=payload;
+  }catch(error){
+    s.uiActions.discovery.error=error.message||String(error);
+    s.uiActions.discovery.result=null;
+  }finally{
+    s.uiActions.discovery.running=false;
   }
 }
 
@@ -858,6 +932,75 @@ function renderDoctorDiagnostics(result){
   if(warningCount>0) summaryParts.push('warn '+String(warningCount));
   if(errorCount>0) summaryParts.push('error '+String(errorCount));
   return '<div class="hint-list"><div class="hint-item"><strong>'+esc(heading)+'</strong><p>'+(warningCount>0?'These warnings explain why the selected profile and the active environment may point to different DB targets.':'Doctor returned structured diagnostics for review.')+'</p>'+(summaryParts.length?'<p class="small">'+esc(summaryParts.join(' • '))+'</p>':'')+'</div>'+diagnostics.map((entry)=>renderDoctorDiagnosticEntry(entry)).join('')+'</div>';
+}
+
+function selectedGuidedIntent(){
+  const intents=guidedConfigIntents();
+  return intents.find((entry)=>entry.id===s.uiMetadata.selectedGuidedIntent)||intents[0]||null;
+}
+
+function selectedGuidedStep(){
+  const steps=guidedConfigSteps();
+  return steps.find((entry)=>entry.id===s.uiMetadata.selectedGuidedStep)||steps[0]||null;
+}
+
+function renderGuidedCliPreview(intent,profile){
+  const previewLines=intent&&Array.isArray(intent.cliPreviewTemplate)?intent.cliPreviewTemplate:[];
+  if(!previewLines.length){
+    return '<div class="empty">No CLI preview available yet.</div>';
+  }
+  const safeProfile=String(profile||'dev').trim()||'dev';
+  const rendered=previewLines.map((line)=>String(line||'')
+    .replace(/\{\{profile\}\}/g,safeProfile)
+    .replace(/\{\{sourceRoot\}\}/g,'./workspace/source')
+    .replace(/\{\{outputRoot\}\}/g,'./workspace/output')
+    .replace(/\{\{program\}\}/g,'ORDERPGM'));
+  return '<div class="preview"><pre>'+esc(rendered.join('\\n'))+'</pre></div>';
+}
+
+function renderGuidedDiscoveryPreview(result){
+  const preview=result&&result.result?result.result:null;
+  if(!preview) return '';
+  const candidates=Array.isArray(preview.candidates)?preview.candidates:[];
+  const warnings=Array.isArray(preview.warnings)?preview.warnings:[];
+  const resolvedScope=preview&&preview.resolvedScope&&typeof preview.resolvedScope==='object'?preview.resolvedScope:null;
+  const commandPreview=Array.isArray(preview.commandPreview)&&preview.commandPreview.length
+    ? '<div class="preview"><pre>'+esc(preview.commandPreview.join('\\n'))+'</pre></div>'
+    : '<div class="empty">No direct CLI preview is available yet for this discovery stub.</div>';
+  const scopeTokens=resolvedScope
+    ? '<div class="tokens">'+
+      (resolvedScope.sourceLibrary?'<div class="token">library: '+esc(String(resolvedScope.sourceLibrary))+'</div>':'')+
+      (resolvedScope.sourceFileCount!==undefined?'<div class="token">source files: '+esc(String(resolvedScope.sourceFileCount))+'</div>':'')+
+      (resolvedScope.memberFilterCount!==undefined?'<div class="token">members: '+esc(String(resolvedScope.memberFilterCount))+'</div>':'')+
+      (resolvedScope.outputRoot?'<div class="token">output: '+esc(String(resolvedScope.outputRoot))+'</div>':'')+
+    '</div>'
+    : '';
+  const candidatePanel=candidates.length
+    ? '<div class="field-list">'+candidates.map((entry)=>'<div class="field-item"><strong>'+esc(String(entry.value||''))+'</strong><p>'+esc(String(entry.rationale||'Resolved candidate.'))+'</p><div class="workflow-meta"><div class="token">kind: '+esc(String(entry.kind||'candidate'))+'</div><div class="token">confidence: '+esc(String(entry.confidence||'medium'))+'</div><div class="token">'+esc(String(entry.origin||'resolved preview'))+'</div></div></div>').join('')+'</div>'
+    : '<div class="empty">No scoped candidates available yet.</div>';
+  const warningPanel=warnings.length
+    ? '<div class="hint-list">'+warnings.map((warning)=>'<div class="hint-item"><strong>Preview warning</strong><p>'+esc(String(warning))+'</p></div>').join('')+'</div>'
+    : '';
+  const previewSummary=preview.summary?'<p>'+esc(String(preview.summary))+'</p>':'';
+  const previewMode=preview.previewKind==='config-derived-local-preview'
+    ? 'This preview is config-derived and local-only.'
+    : (preview.implemented===false?'This action is intentionally stubbed and does not execute discovery yet.':'');
+  return '<div class="hint-list"><div class="hint-item"><strong>'+esc(preview.title||'Discovery Preview')+'</strong><div class="tokens"><div class="token '+esc(statusToneClass(preview.status||'not-ready'))+'">'+esc(preview.status||'not-ready')+'</div><div class="token">Safety: '+esc(preview.safetyLevel||'S2')+'</div><div class="token">'+esc(preview.scope||'read-only')+'</div></div>'+previewSummary+'<p>'+esc(previewMode)+'</p>'+scopeTokens+'</div></div>'+candidatePanel+warningPanel+commandPreview+(Array.isArray(preview.notes)&&preview.notes.length?'<div class="hint-list">'+preview.notes.map((note)=>'<div class="hint-item"><p>'+esc(String(note))+'</p></div>').join('')+'</div>':'');
+}
+
+function renderGuidedStepDetails(step,intent){
+  const fields=step&&Array.isArray(step.fields)?step.fields:[];
+  const purposeLabels=guidedPurposeLabels();
+  const classifications=intent&&Array.isArray(intent.classifications)?intent.classifications:[];
+  const stepClassification=classifications.find((entry)=>entry.stepId===String(step&&step.id||''))||null;
+
+  return '<div class="stack">'+
+    '<div class="hint-list"><div class="hint-item"><strong>'+(step?esc(step.title):'Wizard Step')+'</strong><div class="tokens"><div class="token">Safety: '+esc(step&&step.safetyLevel||'S0')+'</div>'+(stepClassification?'<div class="token">'+esc(stepClassification.classification)+'</div>':'')+'<div class="token">'+esc(step&&step.status||'foundation-ready')+'</div></div><p>'+esc(step&&step.description||'')+'</p>'+(stepClassification&&stepClassification.rationale?'<p class="small">'+esc(stepClassification.rationale)+'</p>':'')+'</div></div>'+
+    '<h3>Field Guidance</h3>'+
+    (fields.length?'<div class="field-list">'+fields.map((field)=>'<div class="field-item"><strong>'+esc(field.label||field.key)+'</strong><p>'+esc(field.helpText||field.description||'')+'</p><div class="workflow-meta"><div class="token">type: '+esc(field.type||'string')+'</div><div class="token">safety: '+esc(field.safetyLevel||'S0')+'</div><div class="token">'+esc(field.secret?'secret-ref only':'display-safe')+'</div></div><div class="small">validation: '+esc(field.validationRule||'n/a')+'</div>'+(Array.isArray(field.examples)&&field.examples.length?'<div class="small">examples: '+esc(field.examples.join(' | '))+'</div>':'')+(field.discoveryActionId?'<div class="small">discovery action: '+esc(field.discoveryActionId)+'</div>':'')+'</div>').join('')+'</div>':'<div class="empty">No guided fields mapped to this step yet.</div>')+
+    '<h3>Purpose Labels</h3>'+
+    (purposeLabels.length?'<div class="chips">'+purposeLabels.map((entry)=>'<div class="token" title="'+escAttr(entry.description||'')+'">'+esc(entry.label)+'</div>').join('')+'</div>':'<div class="empty">No purpose labels available.</div>')+
+  '</div>';
 }
 
 function normalizeAnalyzeActionDiagnostics(result){
@@ -1129,9 +1272,12 @@ function renderConfigure(){
 
   const sections=metadataSections();
   const fields=metadataFields();
-  const selectedSection=s.uiMetadata.selectedConfigSection||defaultConfigSection();
-  const selectedFields=fields.filter((field)=>field.section===selectedSection);
-  const sectionMeta=sections.find((section)=>section.id===selectedSection)||{ label:selectedSection };
+  const guided=guidedConfiguration();
+  const steps=guidedConfigSteps();
+  const intents=guidedConfigIntents();
+  const discoveryActions=guidedDiscoveryActions();
+  const selectedStep=selectedGuidedStep();
+  const selectedIntent=selectedGuidedIntent();
 
   const statusLine=s.uiMetadata.loading
     ? 'Loading metadata...'
@@ -1160,30 +1306,82 @@ function renderConfigure(){
       .join('\\n')
     : '';
   const doctorDiagnosticsPanel=renderDoctorDiagnostics(doctorResult);
+  const discoveryState=s.uiActions.discovery||{};
+  const discoveryResult=discoveryState.result;
+  const selectedDiscoveryActionId=String(discoveryState.actionId||((discoveryActions[0]&&discoveryActions[0].id)||'discover-source-libraries'));
+  const profileForWizard=String(doctorState.profile||discoveryState.profile||'dev').trim()||'dev';
 
-  root.innerHTML='<div class="sub"><h2>Configure (Read-only)</h2><p>This view renders config metadata only. No resolved env/profile values are shown.</p><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Sections: '+esc(String(sections.length||0))+'</div><div class="token">Fields: '+esc(String(fields.length||0))+'</div></div><div class="hint-list"><div class="hint-item"><strong>Doctor action is allowlisted</strong><p>Only <code>doctor readiness</code> is supported from UI actions. Arbitrary command execution is intentionally blocked.</p></div><div class="hint-item"><strong>Safety</strong><p>Action payload is strictly validated server-side and responses are JSON-only.</p></div></div><h3>Readiness Check</h3><div class="field-grid"><label>Profile Name<input id="configDoctorProfile" value="'+escAttr(doctorState.profile||'dev')+'" placeholder="dev"></label></div><div class="actions"><button class="btn primary" data-config-doctor="1">'+esc(doctorState.running?'Checking...':'Check Readiness')+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div><div class="tokens"><div class="token '+esc(doctorTone)+'">Doctor: '+esc(doctorStatusLabel)+'</div><div class="token">profile: '+esc(doctorState.profile||'dev')+'</div>'+(doctorResult?'<div class="token">duration: '+esc(String(doctorResult.durationMs||0))+' ms</div>':'')+'</div>'+
+  root.innerHTML='<div class="sub"><h2>Guided Configuration Wizard</h2><p>Smallest useful next step: a safe-by-default wizard foundation over the existing CLI contracts, not a second configuration engine.</p><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Wizard steps: '+esc(String(steps.length||0))+'</div><div class="token">Intents: '+esc(String(intents.length||0))+'</div><div class="token">Purpose labels: '+esc(String(guided&&guided.purposeLabels&&guided.purposeLabels.length||0))+'</div></div><div class="hint-list"><div class="hint-item"><strong>Current limitation</strong><p>The previous Configure screen was mostly a metadata browser plus a doctor button. That was too flat for guided IBM i setup.</p></div><div class="hint-item"><strong>Safety boundary</strong><p>This wizard is intentionally limited to S0, S1, and S2. Source-scope discovery below now derives local previews from the selected profile; broader remote-read discovery remains explicit preview-first stub work.</p></div></div><h3>Readiness Check</h3><div class="field-grid"><label>Profile Name<input id="configDoctorProfile" value="'+escAttr(profileForWizard)+'" placeholder="dev"></label><label>Analysis Intent<select id="guidedIntentSelect">'+intents.map((intent)=>'<option value="'+escAttr(intent.id)+'"'+(selectedIntent&&intent.id===selectedIntent.id?' selected':'')+'>'+esc(intent.title)+'</option>').join('')+'</select></label></div><div class="actions"><button class="btn primary" data-config-doctor="1">'+esc(doctorState.running?'Checking...':'Check Readiness')+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button><button class="btn" data-guided-step-prev="1">Previous Step</button><button class="btn" data-guided-step-next="1">Next Step</button></div><div class="tokens"><div class="token '+esc(doctorTone)+'">Doctor: '+esc(doctorStatusLabel)+'</div><div class="token">profile: '+esc(profileForWizard)+'</div>'+(selectedIntent?'<div class="token">intent: '+esc(selectedIntent.title)+'</div>':'')+(selectedStep?'<div class="token">step: '+esc(selectedStep.shortTitle||selectedStep.title)+'</div>':'')+(doctorResult?'<div class="token">duration: '+esc(String(doctorResult.durationMs||0))+' ms</div>':'')+'</div>'+
     (doctorSummary?'<div class="hint-list"><div class="hint-item"><strong>Summary</strong><p>pass '+esc(String(doctorSummary.pass||0))+' • warn '+esc(String(doctorSummary.warn||0))+' • fail '+esc(String(doctorSummary.fail||0))+' • skip '+esc(String(doctorSummary.skip||0))+'</p><p class="small">'+esc(doctorHint)+'</p></div></div>':'<div class="hint-list"><div class="hint-item"><strong>Status</strong><p>'+esc(doctorHint)+'</p></div></div>')+
     doctorDiagnosticsPanel+
     (doctorDetails?'<details><summary>Show checks</summary><div class="preview"><pre>'+esc(doctorDetails)+'</pre></div></details>':'')+
+    '<h3>Wizard Steps</h3><div class="section-list">'+steps.map((step)=>'<button class="btn section-btn'+(selectedStep&&step.id===selectedStep.id?' active':'')+'" data-guided-step="'+esc(step.id)+'">'+esc(step.shortTitle||step.title)+'</button>').join('')+'</div>'+
+    '<h3>Read-only Discovery Actions</h3><div class="field-list">'+(discoveryActions.length?discoveryActions.map((action)=>'<div class="field-item"><strong>'+esc(action.title)+'</strong><p>'+esc(action.description||'')+'</p><div class="workflow-meta"><div class="token">safety: '+esc(action.safetyLevel||'S2')+'</div><div class="token">'+esc(action.status||'stubbed-preview-only')+'</div><div class="token">'+esc(action.expensive?'preview first':'read-only')+'</div></div><div class="actions"><button class="btn" data-discovery-preview="'+esc(action.id)+'">'+esc(String(action.status||'').indexOf('config-preview-ready')===0?'Preview':'Preview Stub')+'</button></div></div>').join(''):'<div class="empty">No discovery actions available.</div>')+'</div>'+
+    (discoveryState.error?'<div class="hint-list"><div class="hint-item"><strong>Discovery preview error</strong><p>'+esc(discoveryState.error)+'</p></div></div>':'')+
+    renderGuidedDiscoveryPreview(discoveryResult)+
+    '<h3>Safe CLI Preview</h3><p class="small">Generated from the selected intent. Secrets are never included.</p>'+
+    renderGuidedCliPreview(selectedIntent,profileForWizard)+
     '</div>'+
-    '<div class="sub"><h2>'+esc(sectionMeta.label||selectedSection)+'</h2><div class="configure-layout"><div class="section-list">'+
-      sections.map((section)=>'<button class="btn section-btn'+(section.id===selectedSection?' active':'')+'" data-config-section="'+esc(section.id)+'">'+esc(section.label||section.id)+'</button>').join('')+
+    '<div class="sub"><h2>'+(selectedStep?esc(selectedStep.title):'Guided Step Detail')+'</h2><div class="configure-layout"><div class="section-list">'+
+      sections.map((section)=>'<button class="btn section-btn'+(section.id===s.uiMetadata.selectedConfigSection?' active':'')+'" data-config-section="'+esc(section.id)+'">'+esc(section.label||section.id)+'</button>').join('')+
     '</div><div class="field-list">'+
-      (selectedFields.length>0
-        ? selectedFields.map((field)=>'<div class="field-item"><strong>'+esc(field.label||field.key)+'</strong><p>'+esc(field.description||'')+'</p><div class="workflow-meta"><div class="token">key: '+esc(field.key)+'</div><div class="token">type: '+esc(field.type||'string')+'</div><div class="token">'+esc(field.sensitive?'sensitive':'non-sensitive')+'</div></div><div class="small">placeholder: '+esc(field.placeholder||'(none)')+'</div><div class="small">example: '+esc(field.example||'(none)')+'</div><div class="small">env: '+esc(field.envVar||'(none)')+'</div><div class="small">profile path: '+esc(field.profilePath||'(none)')+'</div></div>').join('')
-        : '<div class="empty">No fields for this section.</div>')+
+      renderGuidedStepDetails(selectedStep,selectedIntent)+
+      '<details><summary>Raw metadata fallback</summary>'+(fields.length>0?'<div class="field-list">'+fields.filter((field)=>field.section===String(s.uiMetadata.selectedConfigSection||defaultConfigSection())).map((field)=>'<div class="field-item"><strong>'+esc(field.label||field.key)+'</strong><p>'+esc(field.description||'')+'</p><div class="workflow-meta"><div class="token">key: '+esc(field.key)+'</div><div class="token">type: '+esc(field.type||'string')+'</div><div class="token">'+esc(field.sensitive?'sensitive':'non-sensitive')+'</div></div><div class="small">placeholder: '+esc(field.placeholder||'(none)')+'</div><div class="small">example: '+esc(field.example||'(none)')+'</div><div class="small">env: '+esc(field.envVar||'(none)')+'</div><div class="small">profile path: '+esc(field.profilePath||'(none)')+'</div></div>').join('')+'</div>':'<div class="empty">No metadata fields available.</div>')+'</details>'+
     '</div></div></div>';
 
-  for(const button of root.querySelectorAll('[data-config-section]')){
+  for(const button of root.querySelectorAll('[data-guided-step]')){
     button.onclick=()=>{
-      s.uiMetadata.selectedConfigSection=button.dataset.configSection;
+      s.uiMetadata.selectedGuidedStep=button.dataset.guidedStep;
       renderConfigure();
     };
   }
   const profileInput=root.querySelector('#configDoctorProfile');
   if(profileInput){
     profileInput.oninput=(event)=>{
-      s.uiActions.doctor.profile=String(event.target.value||'').trim();
+      const nextValue=String(event.target.value||'').trim();
+      s.uiActions.doctor.profile=nextValue;
+      s.uiActions.discovery.profile=nextValue;
+    };
+  }
+  const intentSelect=root.querySelector('#guidedIntentSelect');
+  if(intentSelect){
+    intentSelect.onchange=(event)=>{
+      s.uiMetadata.selectedGuidedIntent=String(event.target.value||'').trim();
+      renderConfigure();
+    };
+  }
+  for(const button of root.querySelectorAll('[data-discovery-preview]')){
+    button.onclick=async ()=>{
+      const profileInput=q('configDoctorProfile');
+      if(profileInput){
+        const nextValue=String(profileInput.value||'').trim()||'dev';
+        s.uiActions.doctor.profile=nextValue;
+        s.uiActions.discovery.profile=nextValue;
+      }
+      s.uiActions.discovery.actionId=button.dataset.discoveryPreview||selectedDiscoveryActionId;
+      renderConfigure();
+      await runDiscoveryPreviewAction();
+      renderConfigure();
+    };
+  }
+  const previousStepButton=root.querySelector('[data-guided-step-prev]');
+  if(previousStepButton){
+    previousStepButton.onclick=()=>{
+      const steps=guidedConfigSteps();
+      const currentIndex=steps.findIndex((entry)=>entry.id===String(s.uiMetadata.selectedGuidedStep||''));
+      const nextIndex=currentIndex<=0?0:currentIndex-1;
+      s.uiMetadata.selectedGuidedStep=(steps[nextIndex]&&steps[nextIndex].id)||defaultGuidedStep();
+      renderConfigure();
+    };
+  }
+  const nextStepButton=root.querySelector('[data-guided-step-next]');
+  if(nextStepButton){
+    nextStepButton.onclick=()=>{
+      const steps=guidedConfigSteps();
+      const currentIndex=steps.findIndex((entry)=>entry.id===String(s.uiMetadata.selectedGuidedStep||''));
+      const nextIndex=currentIndex<0?0:Math.min(currentIndex+1,steps.length-1);
+      s.uiMetadata.selectedGuidedStep=(steps[nextIndex]&&steps[nextIndex].id)||defaultGuidedStep();
+      renderConfigure();
     };
   }
   const doctorButton=root.querySelector('[data-config-doctor]');
@@ -1191,7 +1389,9 @@ function renderConfigure(){
     doctorButton.onclick=async ()=>{
       const profileInput=q('configDoctorProfile');
       if(profileInput){
-        s.uiActions.doctor.profile=String(profileInput.value||'').trim()||'dev';
+        const nextValue=String(profileInput.value||'').trim()||'dev';
+        s.uiActions.doctor.profile=nextValue;
+        s.uiActions.discovery.profile=nextValue;
       }
       await runDoctorReadinessAction();
       renderConfigure();
@@ -1203,6 +1403,12 @@ function renderConfigure(){
       await loadUiMetadata();
       renderConfigure();
       if(s.tab==='home') renderHome();
+    };
+  }
+  for(const button of root.querySelectorAll('[data-config-section]')){
+    button.onclick=()=>{
+      s.uiMetadata.selectedConfigSection=button.dataset.configSection;
+      renderConfigure();
     };
   }
 }
