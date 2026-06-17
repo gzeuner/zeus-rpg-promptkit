@@ -193,6 +193,46 @@ function normalizeRequiredColumns(columns = []) {
   return Array.from(new Set((columns || []).map((column) => validateSqlIdentifier(column, '--require-column'))));
 }
 
+function buildResolveObjectDiagnostics({
+  catalogResult,
+  elapsedMs,
+  normalizedSchema,
+  objects,
+}) {
+  const schemas = Array.from(new Set(
+    (objects || [])
+      .map((entry) => String(entry && entry.schema ? entry.schema : '').trim().toUpperCase())
+      .filter(Boolean),
+  ));
+  const meta = catalogResult && catalogResult.meta ? catalogResult.meta : {};
+  const recommendations = [];
+
+  if (!normalizedSchema) {
+    recommendations.push('Schema-free resolution searches across visible schemas and can be slower on shared systems.');
+    if (schemas.length === 1) {
+      recommendations.push(`Use --schema ${schemas[0]} for faster follow-up checks.`);
+    } else {
+      recommendations.push('Use --schema <LIB> to reduce search scope when the target library is known.');
+    }
+  }
+
+  if (meta.usedVariant && meta.usedVariant !== 'primary') {
+    recommendations.push('A catalog fallback query variant was used because some QSYS2 columns were unavailable.');
+  }
+
+  return {
+    elapsedMs,
+    schemaProvided: Boolean(normalizedSchema),
+    schemaFilter: normalizedSchema,
+    searchMode: normalizedSchema ? 'schema-bound' : 'schema-discovery',
+    scope: normalizedSchema ? 'single-schema' : 'all-visible-schemas',
+    attemptCount: Number(meta.attemptCount || 1),
+    catalogVariant: meta.usedVariant || 'primary',
+    fallbackUsed: Boolean(meta.usedVariant && meta.usedVariant !== 'primary'),
+    recommendations,
+  };
+}
+
 function resolveObjectsByName(
   dbConfig,
   tableNameOrAlias,
@@ -203,6 +243,7 @@ function resolveObjectsByName(
     runtime = {},
   } = {},
 ) {
+  const startedAt = Date.now();
   const normalizedName = validateSqlIdentifier(tableNameOrAlias, '--table');
   const normalizedSchema = schema ? validateSqlIdentifier(schema, '--schema') : null;
   const requiredColumns = normalizeRequiredColumns(requireColumns);
@@ -271,6 +312,13 @@ function resolveObjectsByName(
     };
   });
 
+  const diagnostics = buildResolveObjectDiagnostics({
+    catalogResult: result,
+    elapsedMs: Date.now() - startedAt,
+    normalizedSchema,
+    objects,
+  });
+
   return {
     searched: {
       tableNameOrAlias: normalizedName,
@@ -281,10 +329,12 @@ function resolveObjectsByName(
     found: objects.length > 0,
     objects,
     count: objects.length,
+    diagnostics,
   };
 }
 
 module.exports = {
+  buildResolveObjectDiagnostics,
   listTablesInSchema,
   resolveObjectsByName,
   resolveColumnsWithName,
