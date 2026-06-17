@@ -8,6 +8,7 @@ Current status:
 - no extractor implementation
 - no catalog persistence
 - no MCP/API exposure
+- local profile-scoped known facts stay separate from this project-neutral pipeline
 
 Boundaries:
 
@@ -15,6 +16,7 @@ Boundaries:
 - `sanitized/` contains redacted/tokenized candidate contracts only
 - `final/` contains the final project-neutral catalog contract
 - `privacy/` contains a fail-closed privacy gate
+- `localKnownFactsStore.js` writes project-local annotations only to `config/local-only/known-facts/*.json`
 
 Safety rules:
 

@@ -244,6 +244,17 @@ function buildAnalyzeRunManifest({
               : '',
           }
           : null,
+        knownFacts: context.knownFacts && typeof context.knownFacts === 'object'
+          ? {
+            enabled: Boolean(context.knownFacts.enabled),
+            profile: typeof context.knownFacts.profile === 'string' && context.knownFacts.profile.trim()
+              ? context.knownFacts.profile
+              : null,
+            storePath: typeof context.knownFacts.storePath === 'string' && context.knownFacts.storePath.trim()
+              ? context.knownFacts.storePath
+              : null,
+          }
+          : null,
       },
       sourceSnapshot,
       importManifest: importManifestSummary,
