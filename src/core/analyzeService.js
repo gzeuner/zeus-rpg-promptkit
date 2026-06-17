@@ -125,6 +125,13 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
   const searchIgnorePatterns = parseCsv(args['search-ignore']);
   const diagnosticPacks = parseCsv(args['diagnostic-packs']);
   const diagnosticParameterString = typeof args['diagnostic-params'] === 'string' ? args['diagnostic-params'] : '';
+  const loadKnownFactsEnabled = Boolean(args['with-known-facts']);
+  const knownFactsProfile = typeof args['known-facts-profile'] === 'string'
+    ? String(args['known-facts-profile']).trim()
+    : '';
+  const knownFactsStorePath = typeof args['known-facts-path'] === 'string'
+    ? String(args['known-facts-path']).trim()
+    : '';
   const reproducibility = normalizeReproducibilitySettings(Boolean(args.reproducible));
 
   if (testDataLimit === null) {
@@ -138,6 +145,9 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
     const error = new Error(`Source directory not found: ${sourceRoot}. Provide a valid --source path.`);
     error.code = 'SOURCE_ROOT_MISSING';
     throw error;
+  }
+  if (loadKnownFactsEnabled && !knownFactsStorePath && !knownFactsProfile && !args.profile) {
+    throw new Error('Invalid option: --with-known-facts requires --known-facts-profile, --known-facts-path, or --profile');
   }
 
   const outputProgramDir = path.join(outputRoot, program);
@@ -168,6 +178,10 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
       searchMaxResults,
       diagnosticPacks,
       diagnosticParameterString,
+      profile: args.profile || '',
+      loadKnownFactsEnabled,
+      knownFactsProfile: knownFactsProfile || args.profile || '',
+      knownFactsStorePath,
       cwd,
       env: process.env,
       ibmiConfig: config.ibmi,
@@ -230,6 +244,11 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
           diagnosticPacks,
           diagnosticParameterString,
         },
+        knownFacts: {
+          enabled: loadKnownFactsEnabled,
+          profile: knownFactsProfile || args.profile || null,
+          storePath: knownFactsStorePath || null,
+        },
       },
       result,
       previousManifest,
@@ -257,6 +276,7 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
       emitDiagnostics,
       searchTerms,
       diagnosticPacks,
+      loadKnownFactsEnabled,
       reproducibility,
     };
   } catch (error) {
@@ -311,6 +331,11 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
           searchMaxResults,
           diagnosticPacks,
           diagnosticParameterString,
+        },
+        knownFacts: {
+          enabled: loadKnownFactsEnabled,
+          profile: knownFactsProfile || args.profile || null,
+          storePath: knownFactsStorePath || null,
         },
       },
       error,

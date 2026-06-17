@@ -60,6 +60,36 @@ function buildAnalysisDiagnostics(state) {
   };
 }
 
+function buildKnownFactsArtifact(context) {
+  const knownFacts = context && context.knownFacts && typeof context.knownFacts === 'object'
+    ? context.knownFacts
+    : {};
+  const versionMarker = knownFacts.versionMarker && typeof knownFacts.versionMarker === 'object'
+    ? knownFacts.versionMarker
+    : {};
+
+  return {
+    schemaVersion: 1,
+    kind: 'analysis-known-facts',
+    program: context && context.program ? context.program : null,
+    generatedAt: context && context.scannedAt ? context.scannedAt : null,
+    status: knownFacts.status || 'disabled',
+    enabled: Boolean(knownFacts.enabled),
+    mode: knownFacts.mode || 'local-only',
+    profile: knownFacts.profile || null,
+    storePath: knownFacts.storePath || null,
+    factCount: Number(knownFacts.factCount) || 0,
+    versionMarker: {
+      toolVersion: versionMarker.toolVersion || null,
+      updatedAt: versionMarker.updatedAt || null,
+      expiresAt: versionMarker.expiresAt || null,
+      ttlDays: versionMarker.ttlDays || null,
+    },
+    facts: Array.isArray(knownFacts.facts) ? knownFacts.facts : [],
+    notes: Array.isArray(knownFacts.notes) ? knownFacts.notes : [],
+  };
+}
+
 function writeAnalyzeArtifacts(state) {
   const {
     canonicalAnalysis,
@@ -122,11 +152,18 @@ function writeAnalyzeArtifacts(state) {
       'diagnostic-query-pack-manifest.json',
     );
   }
+  const knownFactsArtifactEnabled = Boolean(
+    context
+    && context.knownFacts
+    && context.knownFacts.status
+    && context.knownFacts.status !== 'disabled',
+  );
   const generatedFiles = [
     'canonical-analysis.json',
     'context.json',
     ...(optimizedContext ? ['optimized-context.json'] : []),
     'ai-knowledge.json',
+    ...(knownFactsArtifactEnabled ? ['known-facts.json'] : []),
     'analysis-index.json',
     'dependency-graph.json',
     'dependency-graph.mmd',
@@ -184,6 +221,12 @@ function writeAnalyzeArtifacts(state) {
     writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), writtenOptimizedContext);
   }
   writeJsonReport(path.join(outputProgramDir, 'ai-knowledge.json'), writtenAiKnowledge);
+  if (knownFactsArtifactEnabled) {
+    const knownFactsArtifact = reproducibilitySettings.enabled
+      ? replaceExactStringsDeep(buildKnownFactsArtifact(context), pathReplacements)
+      : buildKnownFactsArtifact(context);
+    writeJsonReport(path.join(outputProgramDir, 'known-facts.json'), knownFactsArtifact);
+  }
   if (ifsPathReport && ifsPathReport.enabled) {
     writeJsonReport(path.join(outputProgramDir, 'ifs-paths.json'), ifsPathReport);
     fs.writeFileSync(path.join(outputProgramDir, 'ifs-paths.md'), renderIfsPathMarkdown(ifsPathReport), 'utf8');

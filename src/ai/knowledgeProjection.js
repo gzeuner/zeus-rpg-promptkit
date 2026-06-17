@@ -144,6 +144,19 @@ function projectSqlStatements(canonicalAnalysis, evidenceIndex) {
       text: statement.text,
       tables: asArray(statement.tables),
       hostVariables: asArray(statement.hostVariables),
+      driverTable: statement.driverTable || null,
+      joins: asArray(statement.joins).map((join) => ({
+        table: join.table,
+        alias: join.alias || null,
+        joinType: join.joinType || 'INNER',
+        condition: join.condition || null,
+        hostVariables: asArray(join.hostVariables),
+      })),
+      filters: asArray(statement.filters).map((filter) => ({
+        text: filter.text,
+        hostVariables: asArray(filter.hostVariables),
+      })),
+      confidence: statement.confidence || null,
       dynamic: Boolean(statement.dynamic),
       unresolved: Boolean(statement.unresolved),
       uncertainty: asArray(statement.uncertainty),
@@ -314,6 +327,58 @@ function projectUiPatterns(context) {
       states: [],
       transitions: [],
     },
+  };
+}
+
+function projectKnownFacts(context) {
+  const knownFacts = context && context.knownFacts && typeof context.knownFacts === 'object'
+    ? context.knownFacts
+    : null;
+
+  if (!knownFacts || !knownFacts.enabled) {
+    return {
+      enabled: false,
+      status: knownFacts && knownFacts.status ? knownFacts.status : 'disabled',
+      mode: 'local-only',
+      profile: knownFacts && knownFacts.profile ? knownFacts.profile : null,
+      factCount: 0,
+      versionMarker: knownFacts && knownFacts.versionMarker ? knownFacts.versionMarker : {
+        toolVersion: null,
+        updatedAt: null,
+        expiresAt: null,
+        ttlDays: null,
+      },
+      facts: [],
+      notes: Array.isArray(knownFacts && knownFacts.notes) ? knownFacts.notes : [],
+    };
+  }
+
+  return {
+    enabled: true,
+    status: knownFacts.status || 'ready',
+    mode: knownFacts.mode || 'local-only',
+    profile: knownFacts.profile || null,
+    factCount: Number(knownFacts.factCount) || asArray(knownFacts.facts).length,
+    versionMarker: knownFacts.versionMarker || {
+      toolVersion: null,
+      updatedAt: null,
+      expiresAt: null,
+      ttlDays: null,
+    },
+    facts: asArray(knownFacts.facts).map((entry) => ({
+      id: entry.id || null,
+      subject: entry.subject || '',
+      attribute: entry.attribute || '',
+      value: entry.value || '',
+      confidence: entry.confidence || null,
+      uncertainty: asArray(entry.uncertainty),
+      source: entry.source || null,
+      observedAt: entry.observedAt || null,
+      expiresAt: entry.expiresAt || null,
+      tags: asArray(entry.tags),
+      notes: entry.notes || null,
+    })),
+    notes: asArray(knownFacts.notes),
   };
 }
 
@@ -728,6 +793,7 @@ function buildAiKnowledgeProjection({
       searchFindings: projectSearchFindings(context),
       diagnosticPacks: projectDiagnosticPacks(context),
       uiPatterns: projectUiPatterns(context),
+      knownFacts: projectKnownFacts(context),
       uiPatternKnowledge: projectUiPatternKnowledge({ cwd, env }),
       binding: projectBinding(context, canonicalAnalysis, evidenceIndex),
       modules: asArray(canonicalAnalysis.entities && canonicalAnalysis.entities.modules).map((entry) => ({

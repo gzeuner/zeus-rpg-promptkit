@@ -146,6 +146,24 @@ Wichtig:
 - Der frühere experimentelle DDDL-/Template-/Registry-Pfad wurde zurückgesetzt.
 - DDDL bleibt nur ein lokales Roh-Austauschformat für interne Tooling-Schritte, keine sichere wiederverwendbare Knowledgebase.
 
+### Lokale Known Facts (explizites Opt-in)
+
+Zusätzlich zur projektneutralen Knowledge-Pipeline kann Zeus profilbezogene, rein lokale Known Facts in eine Analyse einblenden.
+
+Wichtig:
+
+- Known Facts bleiben bewusst lokal unter `config/local-only/known-facts/<profile>.json`
+- sie werden nur mit explizitem Opt-in über `--with-known-facts` geladen
+- fehlende oder abgelaufene Stores werden sichtbar markiert statt still geraten
+- secret-artige Inhalte werden fail-closed abgewiesen
+- diese lokalen Fakten sind **nicht** Teil der projektneutralen Toolkit-Knowledge-Pipeline
+
+Beispiel:
+
+```powershell
+node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --profile default --out .\output --with-known-facts
+```
+
 ---
 
 ## Lokale MCP-Unterstützung (experimentelles MVP)
@@ -822,6 +840,24 @@ Important:
 - CLI/MCP/API exposure remains disabled until a final catalog passes privacy validation.
 - The former experimental DDDL/template/registry path has been reset.
 - DDDL remains a local raw interchange format for internal tooling only, not a safe reusable knowledgebase.
+
+### Local known facts (explicit opt-in)
+
+In addition to the project-neutral knowledge pipeline, Zeus can fold profile-scoped local known facts into an analysis run.
+
+Important:
+
+- known facts stay intentionally local at `config/local-only/known-facts/<profile>.json`
+- they are loaded only via explicit opt-in with `--with-known-facts`
+- missing or expired stores are surfaced explicitly instead of being guessed silently
+- secret-like content is rejected fail-closed
+- these local facts are **not** part of the project-neutral reusable toolkit knowledge pipeline
+
+Example:
+
+```bash
+node ./cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --profile default --out ./output --with-known-facts
+```
 
 ---
 
