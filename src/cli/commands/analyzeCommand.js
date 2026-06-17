@@ -79,6 +79,9 @@ function runAnalyze(args) {
     if (result.cacheStatus && result.cacheStatus.testData && result.cacheStatus.testData.status !== 'disabled') {
       console.log(`Test data cache: ${result.cacheStatus.testData.status}`);
     }
+    if (result.context && result.context.knownFacts && result.context.knownFacts.status !== 'disabled') {
+      console.log(`Known facts: ${result.context.knownFacts.status} (${result.context.knownFacts.factCount || 0} facts)`);
+    }
     if (result.optimizationReport.enabled) {
       console.log(`Context tokens: ${result.optimizationReport.contextTokens}`);
       console.log(`Optimized tokens: ${result.optimizationReport.optimizedTokens}`);

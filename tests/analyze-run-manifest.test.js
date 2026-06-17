@@ -98,6 +98,11 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
           diagnosticPacks: ['table-investigation'],
           diagnosticParameterString: 'table=ORDERS',
         },
+        knownFacts: {
+          enabled: true,
+          profile: 'dev',
+          storePath: 'config/local-only/known-facts/dev.json',
+        },
       },
       result: {
         sourceFiles: [sourceFile],
@@ -202,6 +207,9 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
     assert.equal(manifest.inputs.options.investigation.scanIfsPathsEnabled, true);
     assert.deepEqual(manifest.inputs.options.investigation.searchTerms, ['ORDERS']);
     assert.deepEqual(manifest.inputs.options.investigation.diagnosticPacks, ['table-investigation']);
+    assert.equal(manifest.inputs.options.knownFacts.enabled, true);
+    assert.equal(manifest.inputs.options.knownFacts.profile, 'dev');
+    assert.equal(manifest.inputs.options.knownFacts.storePath, 'config/local-only/known-facts/dev.json');
     assert.equal(manifest.artifacts.length, 2);
     assert.equal(manifest.artifacts[0].exists, true);
     assert.ok(typeof manifest.artifacts[0].sha256 === 'string' && manifest.artifacts[0].sha256.length > 0);
