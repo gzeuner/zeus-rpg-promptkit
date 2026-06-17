@@ -109,7 +109,8 @@ function executeWithAdaptiveRetry(queryExecutor, queryVariants, options = {}) {
         success: true,
         result,
         usedVariant: variant.name,
-        degradedMode: false
+        degradedMode: false,
+        attemptCount: index + 1,
       };
     } catch (error) {
       const sqlState = extractSqlState(error);

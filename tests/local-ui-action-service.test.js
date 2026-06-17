@@ -3,8 +3,10 @@ const assert = require('node:assert/strict');
 
 const {
   UiActionError,
+  buildDiscoveryConfigContext,
   createLocalUiActionService,
   normalizeAnalyzeExistingWorkspacePayload,
+  normalizeDiscoveryPreviewPayload,
   normalizeDoctorDiagnostics,
   normalizeDoctorPayload,
   validateProfileName,
@@ -63,6 +65,49 @@ test('unknown action is rejected', async () => {
   );
 });
 
+test('discovery-preview action derives source scope locally from resolved fetch config', async () => {
+  const service = createLocalUiActionService({
+    cwd: '/workspace/project',
+    fetchConfigResolver: () => ({
+      sourceLibrary: 'APPLIB',
+      files: ['qrpglesrc', 'qclsrc'],
+      members: ['orderpgm'],
+      out: '/workspace/project/rpg_sources',
+      sourceLibEnvOverride: null,
+    }),
+  });
+  const result = await service.executeAction('discovery-preview', {
+    profile: 'dev',
+    actionId: 'discover-source-libraries',
+  });
+
+  assert.equal(result.action, 'discovery-preview');
+  assert.equal(result.status, 'config-preview-ready');
+  assert.equal(result.input.profile, 'dev');
+  assert.equal(result.input.actionId, 'discover-source-libraries');
+  assert.equal(result.result.implemented, true);
+  assert.equal(result.result.readOnly, true);
+  assert.equal(result.result.previewKind, 'config-derived-local-preview');
+  assert.equal(result.result.candidates[0].value, 'APPLIB');
+  assert.equal(result.result.resolvedScope.outputRoot, './rpg_sources');
+  assert.ok(Array.isArray(result.result.notes));
+  assert.ok(result.notes.some((entry) => /resolved runtime configuration/i.test(entry)));
+});
+
+test('discovery-preview keeps DB2 discovery explicit stub metadata without pretending success', async () => {
+  const service = createLocalUiActionService({});
+  const result = await service.executeAction('discovery-preview', {
+    profile: 'dev',
+    actionId: 'discover-db2-tables',
+  });
+
+  assert.equal(result.action, 'discovery-preview');
+  assert.equal(result.status, 'not-ready');
+  assert.equal(result.result.implemented, false);
+  assert.equal(result.result.readOnly, true);
+  assert.ok(Array.isArray(result.result.notes));
+});
+
 test('unknown payload keys are rejected', () => {
   assert.throws(
     () => normalizeDoctorPayload({
@@ -90,6 +135,44 @@ test('unsafe profile names are rejected', () => {
       `expected profile "${candidate}" to be rejected`,
     );
   }
+});
+
+test('discovery preview payload rejects unknown keys and unknown actions', () => {
+  assert.throws(
+    () => normalizeDiscoveryPreviewPayload({
+      profile: 'dev',
+      actionId: 'discover-source-libraries',
+      command: 'scan everything',
+    }),
+    /unsupported key/i,
+  );
+
+  assert.throws(
+    () => normalizeDiscoveryPreviewPayload({
+      profile: 'dev',
+      actionId: 'discover-everything',
+    }),
+    /unknown discovery action/i,
+  );
+});
+
+test('buildDiscoveryConfigContext keeps only safe source-scope details', () => {
+  const context = buildDiscoveryConfigContext({
+    sourceLibrary: 'applib',
+    files: ['qrpglesrc', 'qclsrc'],
+    members: ['orderpgm'],
+    out: '/workspace/project/rpg_sources',
+    sourceLibEnvOverride: { envValue: 'ALT', profileValue: 'APP' },
+  }, '/workspace/project');
+
+  assert.deepEqual(context, {
+    sourceLibrary: 'APPLIB',
+    sourceFiles: ['QRPGLESRC', 'QCLSRC'],
+    members: ['ORDERPGM'],
+    outputRoot: './rpg_sources',
+    hasSourceLibOverride: true,
+    matchesDefaultSourceFiles: false,
+  });
 });
 
 test('showResolved=true is accepted without exposing resolved values', async () => {

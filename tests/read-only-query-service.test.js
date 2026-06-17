@@ -56,4 +56,9 @@ test('executeReadOnlyDb2QueryWithFallback retries with the handler-provided quer
 
   assert.deepEqual(calls, ['SELECT * FROM MISSING', 'SELECT * FROM MISSING_FALLBACK']);
   assert.equal(result.rowCount, 1);
+  assert.deepEqual(result.meta, {
+    degradedMode: false,
+    attemptCount: 2,
+    usedVariant: 'fallback-42704-1',
+  });
 });

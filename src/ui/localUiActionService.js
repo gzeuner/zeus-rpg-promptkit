@@ -14,15 +14,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const path = require('path');
 const { runDoctorChecks } = require('../cli/commands/doctorCommand');
 const { executeAnalyze } = require('../core/analyzeService');
-const { resolveAnalyzeConfig } = require('../config/runtimeConfig');
+const { resolveAnalyzeConfig, resolveFetchConfig } = require('../config/runtimeConfig');
 const { ANALYZE_RUN_MANIFEST_FILE } = require('../analyze/analyzeRunManifest');
+const { DEFAULT_SOURCE_FILES } = require('../fetch/fetchService');
 const {
   buildEnvProfileConflictMessage,
   summarizeTargetValue,
 } = require('../cli/helpers/runtimeConfigWarnings');
+const { buildDiscoveryActionPreview, getGuidedDiscoveryAction } = require('./guidedConfigWizardModel');
 
 const ALLOWED_DOCTOR_KEYS = new Set(['profile', 'showResolved']);
 const ALLOWED_ANALYZE_WORKSPACE_KEYS = new Set(['profile', 'program', 'member', 'safeSharing']);
+const ALLOWED_DISCOVERY_PREVIEW_KEYS = new Set(['profile', 'actionId']);
+const CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
+  'discover-source-libraries',
+  'discover-source-physical-files',
+  'discover-members',
+]);
 const PROFILE_NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 const OBJECT_NAME_PATTERN = /^[A-Za-z0-9_]{1,64}$/;
 const SECRET_LIKE_PATTERN = /(PASS|PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY|CREDENTIAL|PWD)/i;
@@ -109,6 +117,31 @@ function normalizeAnalyzeExistingWorkspacePayload(rawPayload) {
     program: program || null,
     member: member || null,
     safeSharing: rawPayload.safeSharing === undefined ? true : Boolean(rawPayload.safeSharing),
+  };
+}
+
+function normalizeDiscoveryPreviewPayload(rawPayload) {
+  if (!isPlainObject(rawPayload)) {
+    throw new UiActionError('Invalid payload: expected JSON object', 400);
+  }
+
+  const unknownKeys = Object.keys(rawPayload).filter((key) => !ALLOWED_DISCOVERY_PREVIEW_KEYS.has(key));
+  if (unknownKeys.length > 0) {
+    throw new UiActionError(`Invalid payload: unsupported key(s): ${unknownKeys.join(', ')}`, 400);
+  }
+
+  const profile = validateProfileName(rawPayload.profile);
+  const actionId = String(rawPayload.actionId || '').trim();
+  if (!actionId) {
+    throw new UiActionError('Invalid payload: actionId is required', 400);
+  }
+  if (!getGuidedDiscoveryAction(actionId)) {
+    throw new UiActionError(`Invalid payload: unknown discovery action "${actionId}"`, 400);
+  }
+
+  return {
+    profile,
+    actionId,
   };
 }
 
@@ -216,6 +249,10 @@ function defaultAnalyzeConfigResolver(args, runtime) {
   return resolveAnalyzeConfig(args, runtime);
 }
 
+function defaultFetchConfigResolver(args, runtime) {
+  return resolveFetchConfig(args, runtime);
+}
+
 function sanitizeWorkspacePathForUi(value, cwd) {
   const trimmed = String(value || '').trim();
   if (!trimmed) {
@@ -235,6 +272,39 @@ function sanitizeWorkspacePathForUi(value, cwd) {
   return normalized.startsWith('.') ? normalized : `./${normalized}`;
 }
 
+function normalizeUppercaseList(values) {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+  return Array.from(new Set(values
+    .map((entry) => String(entry || '').trim().toUpperCase())
+    .filter(Boolean)));
+}
+
+function matchesDefaultSourceFiles(sourceFiles) {
+  const normalizedFiles = normalizeUppercaseList(sourceFiles);
+  const normalizedDefaults = normalizeUppercaseList(DEFAULT_SOURCE_FILES);
+  if (normalizedFiles.length !== normalizedDefaults.length) {
+    return false;
+  }
+  return normalizedDefaults.every((entry, index) => entry === normalizedFiles[index]);
+}
+
+function buildDiscoveryConfigContext(fetchConfig, cwd) {
+  if (!fetchConfig || typeof fetchConfig !== 'object') {
+    return null;
+  }
+
+  return {
+    sourceLibrary: String(fetchConfig.sourceLibrary || fetchConfig.sourceLib || '').trim().toUpperCase(),
+    sourceFiles: normalizeUppercaseList(fetchConfig.files),
+    members: normalizeUppercaseList(fetchConfig.members),
+    outputRoot: sanitizeWorkspacePathForUi(fetchConfig.out, cwd),
+    hasSourceLibOverride: Boolean(fetchConfig.sourceLibEnvOverride),
+    matchesDefaultSourceFiles: matchesDefaultSourceFiles(fetchConfig.files),
+  };
+}
+
 function isExpectedAnalyzeFailure(error) {
   const code = String(error && error.code || '').trim().toUpperCase();
   if (KNOWN_ANALYZE_FAILURE_CODES.has(code)) {
@@ -243,6 +313,11 @@ function isExpectedAnalyzeFailure(error) {
 
   const message = String(error && error.message || '');
   return /failed to load profiles|profile ".*" not found|missing required option|source directory not found|member ".*" not found|ambiguous/i.test(message);
+}
+
+function isExpectedDiscoveryPreparationFailure(error) {
+  const message = String(error && error.message || '');
+  return /failed to load profiles|profile ".*" not found|invalid fetch config|source library|fetch/i.test(message);
 }
 
 function summarizeAnalyzeFailure(error) {
@@ -267,6 +342,17 @@ function summarizeAnalyzeFailure(error) {
     return message;
   }
   return 'Analyze Workspace failed for the selected input.';
+}
+
+function summarizeDiscoveryPreparationFailure(error) {
+  const message = String(error && error.message || '').trim();
+  if (/profile ".*" not found/i.test(message)) {
+    return 'The selected profile could not be resolved from local runtime configuration.';
+  }
+  if (/failed to load profiles/i.test(message)) {
+    return 'Local runtime profiles could not be loaded for discovery preview.';
+  }
+  return 'The selected profile does not resolve to a usable fetch configuration yet.';
 }
 
 function summarizeAnalyzeDiagnostics(manifest) {
@@ -326,6 +412,7 @@ function createLocalUiActionService({
   doctorExecutor = defaultDoctorExecutor,
   analyzeExecutor = defaultAnalyzeExecutor,
   analyzeConfigResolver = defaultAnalyzeConfigResolver,
+  fetchConfigResolver = defaultFetchConfigResolver,
 } = {}) {
   async function runDoctorAction(rawPayload) {
     const startedAt = new Date();
@@ -481,6 +568,52 @@ function createLocalUiActionService({
     }
   }
 
+  async function runDiscoveryPreviewAction(rawPayload) {
+    const payload = normalizeDiscoveryPreviewPayload(rawPayload);
+    const startedAt = new Date();
+    let configContext = null;
+
+    if (CONFIG_DERIVED_DISCOVERY_ACTIONS.has(payload.actionId)) {
+      try {
+        const fetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
+        configContext = buildDiscoveryConfigContext(fetchConfig, cwd);
+      } catch (error) {
+        if (!isExpectedDiscoveryPreparationFailure(error)) {
+          throw error;
+        }
+        configContext = {
+          error: summarizeDiscoveryPreparationFailure(error),
+        };
+      }
+    }
+
+    const preview = buildDiscoveryActionPreview({
+      actionId: payload.actionId,
+      profile: payload.profile,
+      configContext,
+    });
+    const finishedAt = new Date();
+
+    return {
+      action: 'discovery-preview',
+      status: preview.status,
+      startedAt: startedAt.toISOString(),
+      finishedAt: finishedAt.toISOString(),
+      durationMs: finishedAt.getTime() - startedAt.getTime(),
+      input: payload,
+      result: preview,
+      notes: preview.previewKind === 'config-derived-local-preview'
+        ? [
+          'This preview was derived locally from resolved runtime configuration only.',
+          'No remote discovery or DB2 access was executed for this UI response.',
+        ]
+        : [
+          'This preview is explicit about not executing remote discovery yet.',
+          'Use the CLI as the operational foundation until GUI-backed discovery is wired to read-only backend flows.',
+        ],
+    };
+  }
+
   async function executeAction(actionName, payload) {
     const normalizedAction = String(actionName || '').trim().toLowerCase();
     if (!normalizedAction) {
@@ -493,6 +626,9 @@ function createLocalUiActionService({
     if (normalizedAction === 'analyze-existing-workspace') {
       return runAnalyzeExistingWorkspaceAction(payload);
     }
+    if (normalizedAction === 'discovery-preview') {
+      return runDiscoveryPreviewAction(payload);
+    }
 
     throw new UiActionError(`Unknown action: ${normalizedAction}`, 404);
   }
@@ -500,7 +636,9 @@ function createLocalUiActionService({
   return {
     executeAction,
     normalizeAnalyzeExistingWorkspacePayload,
+    normalizeDiscoveryPreviewPayload,
     normalizeDoctorPayload,
+    buildDiscoveryConfigContext,
     validateProfileName,
     validateObjectName,
   };
@@ -509,7 +647,9 @@ function createLocalUiActionService({
 module.exports = {
   UiActionError,
   createLocalUiActionService,
+  buildDiscoveryConfigContext,
   normalizeAnalyzeExistingWorkspacePayload,
+  normalizeDiscoveryPreviewPayload,
   normalizeDoctorPayload,
   normalizeDoctorDiagnostics,
   validateProfileName,

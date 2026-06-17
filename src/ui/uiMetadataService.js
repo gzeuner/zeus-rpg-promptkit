@@ -21,6 +21,7 @@ const {
   COMMAND_CATEGORIES,
   listCommandUiMetadata,
 } = require('../cli/commandMetadata');
+const { buildGuidedConfigurationPayload } = require('./guidedConfigWizardModel');
 
 const UI_METADATA_SCHEMA_VERSION = 1;
 
@@ -105,6 +106,9 @@ function buildUiMetadataPayload() {
       sections: CONFIG_UI_SECTIONS,
       fields: listConfigUiFields({ includeSensitive: true }),
     },
+    guidedConfiguration: buildGuidedConfigurationPayload({
+      configFields: listConfigUiFields({ includeSensitive: true }),
+    }),
     commands: {
       categories: COMMAND_CATEGORIES,
       entries: commandEntries,
