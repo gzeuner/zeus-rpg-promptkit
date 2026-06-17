@@ -168,7 +168,7 @@ node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --profile d
 
 ## Lokale MCP-Unterstützung (experimentelles MVP)
 
-Dieser Branch enthält eine **lokale MCP-Server-Integration** für kontrollierten Tool-Zugriff über `stdio`.
+Dieses Repository enthält eine **lokale MCP-Server-Integration** für kontrollierten Tool-Zugriff über `stdio`.
 
 Ziel ist nicht „Agent darf alles“, sondern:
 
@@ -208,7 +208,7 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,
 
 ### Aktuelle MCP-Tool-Oberfläche
 
-Die MCP-Tool-Oberfläche ist experimentell und kann sich zwischen Branches/Versionen ändern.  
+Die MCP-Tool-Oberfläche ist experimentell und kann sich zwischen Releases/Versionen ändern.  
 Die verbindliche Referenz ist `docs/tool-catalog.md`.
 
 Hinweise:
@@ -248,7 +248,6 @@ Bridge-Funktionen bleiben im MCP-Kontext bewusst operator-gated. Plan-, Report- 
 ```bash
 git clone https://github.com/gzeuner/zeus-rpg-promptkit.git
 cd zeus-rpg-promptkit
-git checkout feature/local-mcp-next-iteration
 npm install
 ```
 
@@ -352,6 +351,46 @@ Empfohlene Profilnamen im Public-Contract: `dev`, `demo`, `sftp-fetch`, `readonl
 Für Mehrsystem-Setups können Profile benannte `systems` mit `displayName`, `systemName` und `aliases` definieren.
 Damit bleibt auch bei Host-Alias, DNS-CNAME oder abweichendem `CURRENT_SERVER` klar, welche Verbindung für Fetch, Metadaten und Testdaten gedacht ist.
 `doctor --profile <name> --probe --show-resolved` zeigt diese Zuordnung explizit an.
+
+---
+
+## GUI starten und Verbindungen prüfen
+
+Lokale UI starten:
+
+```bash
+node cli/zeus.js serve --source-output-root ./output
+# oder profilbasiert:
+node cli/zeus.js serve --profile dev
+```
+
+Danach im Browser öffnen:
+
+```text
+http://127.0.0.1:4782
+```
+
+Was bereits integriert ist:
+
+- Configure-Ansicht mit Guided Configuration Wizard, Profil-/Feld-Metadaten und sicheren CLI-Previews
+- `Check Readiness` in der GUI ruft den allowlisteten `doctor`-Check auf und zeigt Warnungen/Fehler strukturiert an
+- lokale Discovery-Previews für Source-Libraries, Source-Files und Members werden aus dem gewählten Profil abgeleitet
+
+Verbindungen lokal einrichten und prüfen:
+
+```bash
+cp config/profiles.example.json config/local-only/profiles.json
+node cli/zeus.js profiles --show-env
+source ./config/load-env.sh <environment>
+node cli/zeus.js doctor --profile dev --probe --show-resolved
+```
+
+Wichtig zur aktuellen Grenze:
+
+- Die Browser-UI führt nur allowlistete Aktionen aus, vor allem `doctor` und lokales `analyze-existing-workspace`.
+- Fetch-, DB2- und Objekt-Discovery im Configure-Flow ist derzeit bewusst preview-first.
+- Source-Library-/Source-File-/Member-Previews kontaktieren aktuell weder IBM i noch DB2; sie werden lokal aus Profil und Runtime-Konfiguration abgeleitet.
+- Echte Remote-Checks und produktive Connection-Verifikation laufen weiterhin über CLI-Kommandos wie `doctor`, `resolve-object`, `query-table` oder `fetch`.
 
 ---
 
@@ -589,7 +628,7 @@ Zentrale Bereiche:
 | `src/impact/` | Reverse-Impact-Analysen |
 | `src/analyze/` | Analysepipeline und Stage Registry |
 | `src/java/` | Java Runtime Bridge |
-| `src/mcp/` | lokale MCP-Server-/Policy-Integration, falls im Branch vorhanden |
+| `src/mcp/` | lokale MCP-Server-/Policy-Integration |
 
 ### Java-Helfer
 
@@ -863,7 +902,7 @@ node ./cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --profile d
 
 ## Local MCP support (experimental MVP)
 
-This branch includes a **local MCP server integration** for controlled tool access over `stdio`.
+This repository includes a **local MCP server integration** for controlled tool access over `stdio`.
 
 The goal is not “let the agent do everything”. The goal is:
 
@@ -903,7 +942,7 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,
 
 ### Current MCP tool surface
 
-The MCP tool surface is experimental and may change between branches/releases.  
+The MCP tool surface is experimental and may change between releases.  
 The authoritative reference is `docs/tool-catalog.md`.
 
 Notes:
@@ -943,7 +982,6 @@ Bridge capabilities remain deliberately operator-gated in MCP. Plan, report and 
 ```bash
 git clone https://github.com/gzeuner/zeus-rpg-promptkit.git
 cd zeus-rpg-promptkit
-git checkout feature/local-mcp-next-iteration
 npm install
 ```
 
@@ -1023,18 +1061,22 @@ cp config/profiles.example.json config/local-only/profiles.json
 # config/local-only/profiles.json
 
 # 3. Load environment variables
-source ./config/load-env.sh
+source ./config/load-env.sh project
 
 # Windows PowerShell:
-# . .\config\load-env.ps1
+# . .\config\load-env.ps1 -Environment project
 
 # 4. Validate setup
-node cli/zeus.js doctor --profile dev --show-resolved
+node cli/zeus.js profiles --show-env
+node cli/zeus.js doctor --profile dev --probe --show-resolved
 
-# 5. Fetch sources
+# 5. Resolve object names cleanly when needed
+node cli/zeus.js resolve-object --profile readonly-db2 --table APP_TABLE_00 --require-column CASE_ID
+
+# 6. Fetch sources
 node cli/zeus.js fetch --profile sftp-fetch
 
-# 6. Analyze sources
+# 7. Analyze sources
 node cli/zeus.js analyze --profile dev --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
 ```
 
@@ -1044,6 +1086,46 @@ Recommended public profile names: `dev`, `demo`, `sftp-fetch`, `readonly-db2`, `
 For multi-system setups, profiles can define named `systems` with `displayName`, `systemName`, and `aliases`.
 That keeps fetch, metadata, and test-data routing explicit even when host aliases or `CURRENT_SERVER` names differ.
 Run `doctor --profile <name> --probe --show-resolved` to inspect the resolved routing.
+
+---
+
+## Start the GUI and verify connections
+
+Start the local UI:
+
+```bash
+node cli/zeus.js serve --source-output-root ./output
+# or profile-based:
+node cli/zeus.js serve --profile dev
+```
+
+Then open:
+
+```text
+http://127.0.0.1:4782
+```
+
+What is already integrated:
+
+- a Configure view with Guided Configuration Wizard, profile/field metadata, and safe CLI previews
+- `Check Readiness` in the UI runs the allowlisted `doctor` readiness check and renders structured warnings/errors
+- local discovery previews for source libraries, source files, and members derived from the selected profile
+
+How to configure and verify connections locally:
+
+```bash
+cp config/profiles.example.json config/local-only/profiles.json
+node cli/zeus.js profiles --show-env
+source ./config/load-env.sh <environment>
+node cli/zeus.js doctor --profile dev --probe --show-resolved
+```
+
+Current boundary:
+
+- the browser UI only executes allowlisted actions, mainly `doctor` and local `analyze-existing-workspace`
+- fetch, DB2, and object discovery in the Configure flow are still intentionally preview-first
+- source-library, source-file, and member previews currently do not contact IBM i or DB2; they are derived locally from profile and runtime config
+- real remote checks and connection verification still happen through CLI commands such as `doctor`, `resolve-object`, `query-table`, or `fetch`
 
 ---
 
@@ -1277,7 +1359,7 @@ Key areas:
 | `src/impact/` | reverse-impact analysis |
 | `src/analyze/` | analysis pipeline and stage registry |
 | `src/java/` | Java runtime bridge |
-| `src/mcp/` | local MCP server/policy integration, where present in the branch |
+| `src/mcp/` | local MCP server/policy integration |
 
 ### Java helpers
 
