@@ -190,11 +190,23 @@ function executeReadOnlyDb2QueryWithFallback({
           rowCount: 0,
           degradedMode: true,
           recommendations: result.recommendations || [],
+          meta: {
+            degradedMode: true,
+            attemptCount: Number(result.attemptCount || 0),
+            usedVariant: result.usedVariant || '',
+          },
         };
       }
       throw (result && result.lastError) || new Error('Read-only DB2 query failed.');
     }
-    return result.result;
+    return {
+      ...result.result,
+      meta: {
+        degradedMode: false,
+        attemptCount: Number(result.attemptCount || 1),
+        usedVariant: result.usedVariant || 'primary',
+      },
+    };
   } catch (error) {
     if (normalizeSqlState(extractSqlState(error)) === '42501' && degradedMode !== 'throw') {
       return {
@@ -203,6 +215,11 @@ function executeReadOnlyDb2QueryWithFallback({
         rowCount: 0,
         degradedMode: true,
         recommendations: ['Metadata query skipped because the current user has no QSYS2 authority.'],
+        meta: {
+          degradedMode: true,
+          attemptCount: 1,
+          usedVariant: 'primary',
+        },
       };
     }
     throw error;

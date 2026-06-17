@@ -169,13 +169,32 @@ const COMMANDS_NEEDING_ENV = new Set([
   'resolve-object',
 ]);
 
-const DB_ENV_VARS = ['ZEUS_DB_USER', 'ZEUS_DB_PASSWORD', 'ZEUS_DB_HOST', 'ZEUS_DB_URL'];
 const FETCH_ENV_VARS = ['ZEUS_FETCH_USER', 'ZEUS_FETCH_PASSWORD', 'ZEUS_FETCH_HOST'];
+
+function hasNonEmptyEnvVar(name) {
+  return Boolean(String(process.env[name] || '').trim());
+}
+
+function collectMissingDbEnvVars() {
+  const missing = [];
+  if (!hasNonEmptyEnvVar('ZEUS_DB_USER')) {
+    missing.push('ZEUS_DB_USER');
+  }
+  if (!hasNonEmptyEnvVar('ZEUS_DB_PASSWORD')) {
+    missing.push('ZEUS_DB_PASSWORD');
+  }
+  if (!hasNonEmptyEnvVar('ZEUS_DB_HOST') && !hasNonEmptyEnvVar('ZEUS_DB_URL')) {
+    missing.push('ZEUS_DB_HOST|ZEUS_DB_URL');
+  }
+  return missing;
+}
 
 function checkEnvLoaded(command) {
   if (!COMMANDS_NEEDING_ENV.has(command)) return;
-  const missingDb = DB_ENV_VARS.filter(v => !process.env[v]);
-  const missingFetch = command.startsWith('fetch') ? FETCH_ENV_VARS.filter(v => !process.env[v]) : [];
+  const missingDb = collectMissingDbEnvVars();
+  const missingFetch = command.startsWith('fetch')
+    ? FETCH_ENV_VARS.filter((envVar) => !hasNonEmptyEnvVar(envVar))
+    : [];
   const missing = [...new Set([...missingDb, ...missingFetch])];
   if (missing.length > 0) {
     process.stderr.write(
@@ -390,3 +409,11 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+module.exports = {
+  checkEnvLoaded,
+  collectMissingDbEnvVars,
+  hasNonEmptyEnvVar,
+  parseArgs,
+  splitCommandArgs,
+};
