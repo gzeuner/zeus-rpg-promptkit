@@ -20,6 +20,7 @@ const {
   defaultDiagnosticPackReport,
   defaultGraphSummary,
   defaultIfsPathReport,
+  defaultKnownFacts,
   defaultNativeFileUsage,
   defaultPuiPatterns,
   defaultSearchResults,
@@ -153,6 +154,10 @@ function projectSql(canonicalAnalysis) {
       tables: statement.tables || [],
       hostVariables: statement.hostVariables || [],
       cursors: statement.cursors || [],
+      driverTable: statement.driverTable || null,
+      joins: statement.joins || [],
+      filters: statement.filters || [],
+      confidence: statement.confidence || null,
       readsData: Boolean(statement.readsData),
       writesData: Boolean(statement.writesData),
       dynamic: Boolean(statement.dynamic),
@@ -240,6 +245,9 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
     puiPatterns: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.puiPatterns
       ? canonicalAnalysis.enrichments.puiPatterns
       : defaultPuiPatterns(),
+    knownFacts: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.knownFacts
+      ? canonicalAnalysis.enrichments.knownFacts
+      : defaultKnownFacts(),
     analysisCache: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.analysisCache
       ? canonicalAnalysis.enrichments.analysisCache
       : defaultAnalysisCache(),

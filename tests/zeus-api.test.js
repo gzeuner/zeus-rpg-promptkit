@@ -8,13 +8,19 @@ const { analyze, listRuns, readKnowledge, runWorkflow } = require('../src/api/ze
 
 const fixtureRoot = path.join(__dirname, 'fixtures', 'v1-smoke', 'src');
 
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
 test('zeusApi exposes reusable analyze and workflow entry points', async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-api-'));
   const sourceRoot = path.join(tempRoot, 'src');
   const configRoot = path.join(tempRoot, 'config');
+  const localOnlyRoot = path.join(configRoot, 'local-only', 'known-facts');
 
   fs.cpSync(fixtureRoot, sourceRoot, { recursive: true });
   fs.mkdirSync(configRoot, { recursive: true });
+  fs.mkdirSync(localOnlyRoot, { recursive: true });
   fs.writeFileSync(path.join(configRoot, 'profiles.json'), `${JSON.stringify({
     local: {
       sourceRoot: './src',
@@ -33,11 +39,30 @@ test('zeusApi exposes reusable analyze and workflow entry points', async () => {
       },
     },
   }, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(path.join(localOnlyRoot, 'local.json'), `${JSON.stringify({
+    schemaVersion: 1,
+    kind: 'zeus-local-known-facts',
+    mode: 'local-only',
+    profile: 'local',
+    versionMarker: {
+      toolVersion: '0.1.0',
+      updatedAt: '2026-06-16T10:00:00.000Z',
+      expiresAt: '2026-07-16T10:00:00.000Z',
+      ttlDays: 30,
+    },
+    facts: [{
+      subject: 'ORDERS',
+      attribute: 'primaryKey',
+      value: 'ORDER_ID',
+      confidence: 'HIGH',
+    }],
+  }, null, 2)}\n`, 'utf8');
 
   try {
     const analyzeResult = analyze('local', {
       member: 'ORDERPGM',
       mode: 'documentation',
+      'with-known-facts': true,
       runtime: {
         cwd: tempRoot,
         env: {},
@@ -45,6 +70,18 @@ test('zeusApi exposes reusable analyze and workflow entry points', async () => {
     });
     assert.equal(analyzeResult.program, 'ORDERPGM');
     assert.equal(fs.existsSync(path.join(analyzeResult.outputProgramDir, 'context.json')), true);
+    assert.equal(fs.existsSync(path.join(analyzeResult.outputProgramDir, 'known-facts.json')), true);
+    assert.equal(analyzeResult.result.context.knownFacts.enabled, true);
+    assert.equal(analyzeResult.result.context.knownFacts.factCount, 1);
+    assert.equal(analyzeResult.result.context.knownFacts.facts[0].attribute, 'primaryKey');
+    const knownFactsArtifact = readJson(path.join(analyzeResult.outputProgramDir, 'known-facts.json'));
+    assert.equal(knownFactsArtifact.kind, 'analysis-known-facts');
+    assert.equal(knownFactsArtifact.factCount, 1);
+    const analyzeManifest = readJson(path.join(analyzeResult.outputProgramDir, 'analyze-run-manifest.json'));
+    assert.ok(analyzeManifest.artifacts.some((artifact) => artifact.path === 'known-facts.json'));
+    const report = fs.readFileSync(path.join(analyzeResult.outputProgramDir, 'report.md'), 'utf8');
+    assert.match(report, /## Known Facts/);
+    assert.match(report, /Artifact: known-facts\.json/);
 
     const workflowResult = await runWorkflow('local', 'legacy-rpg-analysis', {
       runtime: {

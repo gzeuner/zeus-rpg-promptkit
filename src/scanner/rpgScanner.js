@@ -36,6 +36,24 @@ const NATIVE_IO_OPCODES = new Set([
   'EXFMT',
 ]);
 const BINDER_SOURCE_EXTENSIONS = new Set(['.BND', '.BINDER', '.BNDSRC']);
+const SQL_ALIAS_STOP_WORDS = new Set([
+  'ON',
+  'WHERE',
+  'JOIN',
+  'INNER',
+  'LEFT',
+  'RIGHT',
+  'FULL',
+  'CROSS',
+  'GROUP',
+  'ORDER',
+  'HAVING',
+  'UNION',
+  'FETCH',
+  'FOR',
+  'OFFSET',
+  'LIMIT',
+]);
 
 function normalizeWhitespace(text) {
   return String(text || '').replace(/\s+/g, ' ').trim();
@@ -256,6 +274,152 @@ function determineSqlIntent(sqlType, sqlText) {
   return 'OTHER';
 }
 
+function normalizeSqlAlias(rawAlias) {
+  const alias = normalizeName(rawAlias);
+  if (!alias || SQL_ALIAS_STOP_WORDS.has(alias)) {
+    return '';
+  }
+  return alias;
+}
+
+function normalizeSqlJoinType(rawJoinType) {
+  const normalized = normalizeWhitespace(rawJoinType).toUpperCase();
+  if (!normalized) return 'INNER';
+  return normalized.replace(/\s+OUTER$/, '');
+}
+
+function extractStaticSqlQueryBody(sqlText, sqlType) {
+  const normalized = normalizeWhitespace(sqlText);
+  if (sqlType === 'SELECT') {
+    return normalized;
+  }
+  if (sqlType === 'DECLARE_CURSOR') {
+    const match = normalized.match(/\bCURSOR\s+FOR\s+(.+)$/i);
+    return match ? normalizeWhitespace(match[1]) : '';
+  }
+  return '';
+}
+
+function splitSqlWhereFilters(whereClause) {
+  const normalized = normalizeWhitespace(whereClause);
+  if (!normalized) {
+    return {
+      filters: [],
+      complex: false,
+    };
+  }
+
+  const complex = /\bOR\b|\bNOT\b|\bEXISTS\b|\bIN\s*\(|\bBETWEEN\b|\bLIKE\b|\(/i.test(normalized);
+  if (complex) {
+    return {
+      filters: [normalized],
+      complex: true,
+    };
+  }
+
+  return {
+    filters: normalized
+      .split(/\s+AND\s+/i)
+      .map((entry) => normalizeWhitespace(entry))
+      .filter(Boolean),
+    complex: false,
+  };
+}
+
+function extractSqlRelationSemantics(sqlText, sqlType, dynamic) {
+  const empty = {
+    driverTable: null,
+    joins: [],
+    filters: [],
+    confidence: null,
+    uncertainty: [],
+  };
+
+  if (dynamic || !['SELECT', 'DECLARE_CURSOR'].includes(sqlType)) {
+    return empty;
+  }
+
+  const queryBody = extractStaticSqlQueryBody(sqlText, sqlType);
+  if (!queryBody) {
+    return {
+      ...empty,
+      confidence: 'LOW',
+      uncertainty: ['RELATIONSHIP_PARSE_PARTIAL'],
+    };
+  }
+
+  const uncertainty = [];
+  if (/^\s*WITH\b/i.test(queryBody)) {
+    uncertainty.push('CTE_SQL');
+  }
+  if (/\bFROM\s+[^;]+,\s*("[^"]+"|[A-Z0-9_#$@./]+)/i.test(queryBody)) {
+    uncertainty.push('LEGACY_JOIN_SYNTAX');
+  }
+
+  const fromMatch = queryBody.match(/\bFROM\s+("[^"]+"|[A-Z0-9_#$@./]+)(?:\s+(?:AS\s+)?([A-Z][A-Z0-9_#$@]*))?/i);
+  const driverTable = fromMatch ? normalizeTableName(fromMatch[1]) : '';
+  if (!driverTable) {
+    uncertainty.push('RELATIONSHIP_PARSE_PARTIAL');
+  }
+
+  const joins = [];
+  const joinRegex = /\b(?:(INNER|LEFT(?:\s+OUTER)?|RIGHT(?:\s+OUTER)?|FULL(?:\s+OUTER)?|CROSS)\s+)?JOIN\s+("[^"]+"|[A-Z0-9_#$@./]+)(?:\s+(?:AS\s+)?([A-Z][A-Z0-9_#$@]*))?(?:\s+ON\s+(.+?))?(?=\s+(?:(?:INNER|LEFT(?:\s+OUTER)?|RIGHT(?:\s+OUTER)?|FULL(?:\s+OUTER)?|CROSS)\s+)?JOIN\b|\s+\b(?:WHERE|GROUP|ORDER|HAVING|UNION|FETCH|FOR|OFFSET|LIMIT)\b|$)/gi;
+  let joinMatch = joinRegex.exec(queryBody);
+  while (joinMatch) {
+    const joinType = normalizeSqlJoinType(joinMatch[1]);
+    const table = normalizeTableName(joinMatch[2]);
+    const alias = normalizeSqlAlias(joinMatch[3]);
+    const condition = normalizeWhitespace(joinMatch[4] || '');
+    if (!condition && joinType !== 'CROSS') {
+      uncertainty.push('JOIN_CONDITION_PARTIAL');
+    }
+    if (table) {
+      joins.push({
+        table,
+        alias: alias || null,
+        joinType,
+        condition: condition || null,
+        hostVariables: extractSqlHostVariables(condition),
+      });
+    }
+    joinMatch = joinRegex.exec(queryBody);
+  }
+
+  const whereMatch = queryBody.match(/\bWHERE\s+(.+?)(?=\s+\b(?:GROUP|ORDER|HAVING|UNION|FETCH|FOR|OFFSET|LIMIT)\b|$)/i);
+  const filters = [];
+  if (whereMatch) {
+    const split = splitSqlWhereFilters(whereMatch[1]);
+    if (split.complex) {
+      uncertainty.push('FILTER_COMPLEX_PREDICATE');
+    }
+    for (const entry of split.filters) {
+      filters.push({
+        text: entry,
+        hostVariables: extractSqlHostVariables(entry),
+      });
+    }
+  }
+
+  let confidence = null;
+  if (driverTable) {
+    confidence = uncertainty.some((marker) => ['RELATIONSHIP_PARSE_PARTIAL'].includes(marker))
+      ? 'LOW'
+      : uncertainty.some((marker) => ['CTE_SQL', 'LEGACY_JOIN_SYNTAX', 'JOIN_CONDITION_PARTIAL', 'FILTER_COMPLEX_PREDICATE'].includes(marker))
+        ? 'MEDIUM'
+        : 'HIGH';
+  } else if (joins.length > 0 || filters.length > 0) {
+    confidence = 'LOW';
+  }
+
+  return {
+    driverTable: driverTable || null,
+    joins,
+    filters,
+    confidence,
+    uncertainty: Array.from(new Set(uncertainty)).sort((a, b) => a.localeCompare(b)),
+  };
+}
+
 function buildSqlUncertainty({ sqlType, intent, tables, cursors, dynamic, unresolved, hasUnqualifiedTables }) {
   const markers = [];
   if (dynamic) {
@@ -292,15 +456,19 @@ function createSqlStatement({
   const readsData = intent === 'READ';
   const writesData = intent === 'WRITE';
   const unresolved = dynamic || ((readsData || writesData) && tables.length === 0 && cursors.length === 0);
-  const uncertainty = buildSqlUncertainty({
-    sqlType: type,
-    intent,
-    tables,
-    cursors,
-    dynamic,
-    unresolved,
-    hasUnqualifiedTables,
-  });
+  const relationSemantics = extractSqlRelationSemantics(normalizedText, type, dynamic);
+  const uncertainty = uniqueSortedStrings([
+    ...buildSqlUncertainty({
+      sqlType: type,
+      intent,
+      tables,
+      cursors,
+      dynamic,
+      unresolved,
+      hasUnqualifiedTables,
+    }),
+    ...(relationSemantics.uncertainty || []),
+  ]);
 
   return {
     type,
@@ -313,6 +481,10 @@ function createSqlStatement({
     writesData,
     dynamic,
     unresolved,
+    driverTable: relationSemantics.driverTable || null,
+    joins: relationSemantics.joins || [],
+    filters: relationSemantics.filters || [],
+    confidence: relationSemantics.confidence || null,
     uncertainty,
     evidence: [
       {
@@ -1775,6 +1947,10 @@ function mergeSqlStatements(scanResults) {
           writesData: Boolean(sql.writesData),
           dynamic: Boolean(sql.dynamic),
           unresolved: Boolean(sql.unresolved),
+          driverTable: sql.driverTable || null,
+          joins: Array.isArray(sql.joins) ? sql.joins.map((entry) => ({ ...entry })) : [],
+          filters: Array.isArray(sql.filters) ? sql.filters.map((entry) => ({ ...entry })) : [],
+          confidence: sql.confidence || null,
           uncertainty: Array.from(new Set(sql.uncertainty || [])).sort(),
           evidence: [],
         });
@@ -1787,6 +1963,27 @@ function mergeSqlStatements(scanResults) {
       item.writesData = item.writesData || Boolean(sql.writesData);
       item.dynamic = item.dynamic || Boolean(sql.dynamic);
       item.unresolved = item.unresolved || Boolean(sql.unresolved);
+      item.driverTable = item.driverTable || sql.driverTable || null;
+      const joinMap = new Map((item.joins || []).map((entry) => [JSON.stringify(entry), entry]));
+      for (const join of sql.joins || []) {
+        joinMap.set(JSON.stringify(join), { ...join });
+      }
+      item.joins = Array.from(joinMap.values());
+      const filterMap = new Map((item.filters || []).map((entry) => [JSON.stringify(entry), entry]));
+      for (const filter of sql.filters || []) {
+        filterMap.set(JSON.stringify(filter), { ...filter });
+      }
+      item.filters = Array.from(filterMap.values());
+      const confidenceRank = {
+        HIGH: 3,
+        MEDIUM: 2,
+        LOW: 1,
+      };
+      const currentConfidence = normalizeName(item.confidence);
+      const nextConfidence = normalizeName(sql.confidence);
+      if ((confidenceRank[nextConfidence] || 0) > (confidenceRank[currentConfidence] || 0)) {
+        item.confidence = sql.confidence || null;
+      }
       item.uncertainty = Array.from(new Set([...(item.uncertainty || []), ...(sql.uncertainty || [])])).sort();
       const cursorSet = new Set((item.cursors || []).map((entry) => `${entry.name}:${entry.action}`));
       for (const cursor of sql.cursors || []) {

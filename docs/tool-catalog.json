@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-22T11:24:29.888Z",
+  "generatedAt": "2026-06-17T05:15:53.537Z",
   "commandRows": [
     {
       "command": "doctor",
@@ -8,12 +8,32 @@
       "purpose": "Validate runtime, profiles, Java/runtime wiring, and env contracts.",
       "example": "node cli/zeus.js doctor --profile default --show-resolved",
       "usage": [
-        "[--config <path>] doctor --profile <name> [--show-resolved]"
+        "[--config <path>] doctor --profile <name> [--probe] [--show-resolved]"
       ],
       "options": [
         "--config",
         "--profile",
+        "--probe",
         "--show-resolved"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "profiles",
+      "safety": "S0",
+      "scope": "Local",
+      "purpose": "List profiles and show masked runtime defaults and resolved routing hints.",
+      "example": "node cli/zeus.js profiles --profile default --show-env",
+      "usage": [
+        "[--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query"
+      ],
+      "options": [
+        "--config",
+        "--profile",
+        "--show-env"
       ],
       "source": {
         "routeDetected": true,
@@ -27,7 +47,7 @@
       "purpose": "Fetch source members/IFS content into the local workspace.",
       "example": "node cli/zeus.js fetch --profile default-fetch",
       "usage": [
-        "[--config <path>] fetch --host <hostname> --port <n> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--profile <name>] [--verbose]"
+        "[--config <path>] fetch --host <hostname> --port <n> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--clean-remote] [--profile <name>] [--verbose]"
       ],
       "options": [
         "--config",
@@ -49,7 +69,31 @@
         "--prefer-transport",
         "--diagnose-transport",
         "--transport-timeout-ms",
+        "--clean-remote",
         "--profile",
+        "--verbose"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "fetch-member",
+      "safety": "S2",
+      "scope": "IBM i read",
+      "purpose": "Fetch one or more specific source members into a local output directory.",
+      "example": "node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM",
+      "usage": [
+        "[--config <path>] fetch-member --profile <name> --lib <library> --member <name>[,<name>,...] [--file <QRPGLESRC>] [--out <dir>] [--verbose]  # Einzel- oder Mehrfach-Member-Download"
+      ],
+      "options": [
+        "--config",
+        "--profile",
+        "--lib",
+        "--member",
+        "--file",
+        "--out",
         "--verbose"
       ],
       "source": {
@@ -64,7 +108,7 @@
       "purpose": "Analyze RPG/CL/DDS and generate evidence artifacts.",
       "example": "node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context",
       "usage": [
-        "[--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]"
+        "[--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]"
       ],
       "options": [
         "--config",
@@ -88,6 +132,9 @@
         "--user",
         "--password",
         "--safe-sharing",
+        "--with-known-facts",
+        "--known-facts-profile",
+        "--known-facts-path",
         "--emit-diagnostics",
         "--reproducible",
         "--test-data-limit",
@@ -279,14 +326,37 @@
       "purpose": "Query DB2 table metadata.",
       "example": "node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA",
       "usage": [
-        "[--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>]"
+        "[--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>] [--save <datei.csv|datei.json>]"
       ],
       "options": [
         "--config",
         "--profile",
         "--table",
         "--schema",
-        "--filter"
+        "--filter",
+        "--save"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "resolve-object",
+      "safety": "S2",
+      "scope": "DB2 read",
+      "purpose": "Resolve SQL/system object names and optionally verify required columns.",
+      "example": "node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS",
+      "usage": [
+        "[--config <path>] resolve-object --profile <name> --table <name> [--schema <name>] [--require-column <COLUMN>] [--include-row-count]"
+      ],
+      "options": [
+        "--config",
+        "--profile",
+        "--table",
+        "--schema",
+        "--require-column",
+        "--include-row-count"
       ],
       "source": {
         "routeDetected": true,
@@ -300,7 +370,7 @@
       "purpose": "Run read-only SQL statements (SELECT/WITH).",
       "example": "node cli/zeus.js query-sql --profile default --sql \"SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY\"",
       "usage": [
-        "[--config <path>] query-sql --profile <name> (--sql \"SELECT ...\" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv]"
+        "[--config <path>] query-sql --profile <name> (--sql \"SELECT ...\" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv|json] [--save <datei.csv|datei.json>] [--watch <sek>]"
       ],
       "options": [
         "--config",
@@ -310,7 +380,9 @@
         "--default-schema",
         "--liblist",
         "--max-rows",
-        "--output"
+        "--output",
+        "--save",
+        "--watch"
       ],
       "source": {
         "routeDetected": true,
@@ -513,23 +585,42 @@
       }
     },
     {
-      "command": "upsert",
+      "command": "write-sql",
       "safety": "S3",
       "scope": "DB2 write",
-      "purpose": "DML wrapper for INSERT/UPDATE/DELETE/MERGE with guardrails.",
-      "example": "node cli/zeus.js upsert --profile default --sql \"UPDATE APPDATA.APP_TABLE_00 SET STATUS='X' WHERE ID=1\"",
+      "purpose": "Execute guarded DML with confirmation, backup, and safety preflight options.",
+      "example": "node cli/zeus.js write-sql --profile default --sql \"DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'\" --confirm --backup",
       "usage": [
-        "[--config <path>] upsert --profile <name> (--sql \"INSERT/UPDATE/DELETE/MERGE ...\" | --file <path>)"
+        "[--config <path>] write-sql --profile <name> (--sql \"INSERT/UPDATE/DELETE/MERGE ...\" | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup] [--backup-schema <schema>]  # allgemeiner DML-Befehl"
       ],
       "options": [
         "--config",
         "--profile",
         "--sql",
-        "--file"
+        "--file",
+        "--confirm",
+        "--force",
+        "--dry-run",
+        "--backup",
+        "--require-backup",
+        "--backup-schema"
       ],
       "source": {
         "routeDetected": true,
         "usageDetected": true
+      }
+    },
+    {
+      "command": "upsert",
+      "safety": "S3",
+      "scope": "DB2 write",
+      "purpose": "DML wrapper for INSERT/UPDATE/DELETE/MERGE with guardrails.",
+      "example": "node cli/zeus.js upsert --profile default --sql \"UPDATE APPDATA.APP_TABLE_00 SET STATUS='X' WHERE ID=1\"",
+      "usage": [],
+      "options": [],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": false
       }
     },
     {
@@ -538,18 +629,11 @@
       "scope": "DB2 write",
       "purpose": "Backward-compatible alias for the upsert flow.",
       "example": "node cli/zeus.js upsert-sql --profile default --sql \"INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)\"",
-      "usage": [
-        "[--config <path>] upsert-sql --profile <name> (--sql \"INSERT/UPDATE/DELETE ...\" | --file <path>)"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--sql",
-        "--file"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -559,7 +643,7 @@
       "purpose": "Strict insert-only DML command.",
       "example": "node cli/zeus.js insert --profile default --sql \"INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)\"",
       "usage": [
-        "[--config <path>] insert --profile <name> (--sql \"INSERT ...\" | --file <path>)"
+        "[--config <path>] insert  --profile <name> (--sql \"INSERT ...\"              | --file <path>)"
       ],
       "options": [
         "--config",
@@ -579,13 +663,60 @@
       "purpose": "Strict update-only DML command.",
       "example": "node cli/zeus.js update --profile default --sql \"UPDATE APPDATA.APP_TABLE_00 SET STATUS='Y' WHERE ID=1\"",
       "usage": [
-        "[--config <path>] update --profile <name> (--sql \"UPDATE ...\" | --file <path>)"
+        "[--config <path>] update  --profile <name> (--sql \"UPDATE ...\"              | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup]"
       ],
       "options": [
         "--config",
         "--profile",
         "--sql",
-        "--file"
+        "--file",
+        "--confirm",
+        "--force",
+        "--dry-run",
+        "--backup",
+        "--require-backup"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "delete",
+      "safety": "S3",
+      "scope": "DB2 write",
+      "purpose": "Strict delete-only DML command with the shared write-safety guardrails.",
+      "example": "node cli/zeus.js delete --profile default --sql \"DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'\" --confirm --backup",
+      "usage": [
+        "[--config <path>] delete  --profile <name> (--sql \"DELETE ...\"              | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup]"
+      ],
+      "options": [
+        "--config",
+        "--profile",
+        "--sql",
+        "--file",
+        "--confirm",
+        "--force",
+        "--dry-run",
+        "--backup",
+        "--require-backup"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "analyses",
+      "safety": "S1",
+      "scope": "Local",
+      "purpose": "List, register, inspect, and open locally tracked analysis artifacts.",
+      "example": "node cli/zeus.js analyses list --profile default",
+      "usage": [
+        "[--config <path>] analyses <list|register|index|open|show|unregister> [options]"
+      ],
+      "options": [
+        "--config"
       ],
       "source": {
         "routeDetected": true,
@@ -617,12 +748,15 @@
       "purpose": "Apply structured UI edit operations to local display artifacts.",
       "example": "node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json",
       "usage": [
-        "pui-edit --file <path> --action <roundtrip-check|dump-json|plan|apply|grid-add-column> [--changes-file <path>] [--confirm] [--sfl-record <name>] [--sfl-field \"<DDS line>\"]"
+        "pui-edit --file <path> --action <roundtrip-check|dump-json|validate-json|export-json|import-json|plan|apply|grid-add-column> [--changes-file <path>] [--out <path>] [--in <path>] [--format pretty|compact|dddl] [--confirm] [--sfl-record <name>] [--sfl-field \"<DDS line>\"]"
       ],
       "options": [
         "--file",
         "--action",
         "--changes-file",
+        "--out",
+        "--in",
+        "--format",
         "--confirm",
         "--sfl-record",
         "--sfl-field"
@@ -666,23 +800,6 @@
         "--config",
         "--stdio",
         "--verbose"
-      ],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": true
-      }
-    },
-    {
-      "command": "analyses",
-      "safety": "S0",
-      "scope": "Local",
-      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
-      "example": "node cli/zeus.js analyses",
-      "usage": [
-        "[--config <path>] analyses <list|register|index|open|show|unregister> [options]"
-      ],
-      "options": [
-        "--config"
       ],
       "source": {
         "routeDetected": true,
