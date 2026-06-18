@@ -764,7 +764,7 @@ function runDefaultArtifact(){
 function renderRuns(){
   const root=q('runs');
   if(!s.runs.length){
-    root.innerHTML='<div class="empty">No runs.</div>';
+    root.innerHTML='<div class="empty">No analysis runs found yet. Finish Setup first, then generate output with the CLI and refresh this list.</div>';
     return;
   }
   root.innerHTML=s.runs.map((r)=>'<button class="run'+(r.program===s.program?' active':'')+'" data-run="'+esc(r.program)+'"><strong>'+esc(r.program)+'</strong><div>'+esc(r.workflowPreset||r.workflowMode||'standard')+'</div><div>'+esc(fmt(r.completedAt))+'</div></button>').join('');
@@ -3209,15 +3209,62 @@ function renderArtifacts(){
   root.classList.toggle('active',s.tab==='artifacts');
   if(s.tab!=='artifacts') return;
 
-  if(!s.detail||!s.detail.artifacts.length){
-    root.innerHTML='<div class="sub"><h2>Reports</h2><div class="empty">No report output is loaded yet. Finish Setup, run Check Readiness, then create analysis output with the CLI before returning here.</div><div class="actions"><button class="btn primary" data-reports-target="configure">Open Setup</button><button class="btn" data-reports-target="refresh">Refresh Runs</button><button class="btn" data-reports-target="home">Open Advanced / Tools</button></div></div>';
+  if(!s.runs.length){
+    root.innerHTML='<div class="sub"><h2>Reports</h2><p>Reports are read-only. They use existing local artifacts and do not fetch, query, or modify remote systems.</p><div class="empty">No analysis runs were found under the current output root yet. Finish Setup, run Check Readiness, then generate analysis output with the CLI before returning here.</div><div class="actions"><button class="btn primary" data-reports-target="configure">Open Setup</button><button class="btn" data-reports-target="refresh">Refresh Runs</button><button class="btn" data-reports-target="home">Open Advanced / Tools</button></div></div>';
     for(const button of root.querySelectorAll('[data-reports-target]')){
       button.onclick=()=>openHomeTarget(button.dataset.reportsTarget);
     }
     return;
   }
 
-  root.innerHTML='<div class="sub"><h2>Reports</h2><p>Read-only report and artifact review for the selected run. Use the explorer shortcuts when you want a focused graph, DB2/Test Data, or prompt comparison view.</p><div class="workflow-meta"><div class="token">program: '+esc(String(s.detail.summary&&s.detail.summary.program||s.program||''))+'</div><div class="token">artifacts: '+esc(String(s.detail.artifacts.length||0))+'</div><div class="token">safe local read</div></div><div class="actions"><button class="btn" data-reports-target="graph">Open Graph</button><button class="btn" data-reports-target="db2">Open DB2/Test Data</button><button class="btn" data-reports-target="prompts">Open Prompt Compare</button><button class="btn" data-reports-target="refresh">Refresh Runs</button></div><div class="item-list">'+s.detail.artifacts.map((a)=>'<button class="item'+(a.path===s.artifact?' active':'')+'" data-aid="'+esc(a.path)+'"><strong>'+esc(a.path)+'</strong><div>'+esc(a.kind)+' • '+esc(String(a.sizeBytes))+' bytes</div></button>').join('')+'</div></div><div class="sub"><div class="stack"><h2 id="aTitle">Artifact Preview</h2><p id="aSub">Choose an artifact.</p></div><a id="aRaw" class="btn" target="_blank" rel="noreferrer" hidden>Open Raw</a><div id="aPrev" class="preview"><div class="empty">No artifact selected.</div></div></div>';
+  if(!s.detail){
+    root.innerHTML='<div class="sub"><h2>Reports</h2><p>Reports are read-only. They use existing local artifacts and do not fetch, query, or modify remote systems.</p><div class="empty">Select a run from the left sidebar to open its report views.</div><div class="actions"><button class="btn" data-reports-target="refresh">Refresh Runs</button><button class="btn" data-reports-target="configure">Open Setup</button></div></div>';
+    for(const button of root.querySelectorAll('[data-reports-target]')){
+      button.onclick=()=>openHomeTarget(button.dataset.reportsTarget);
+    }
+    return;
+  }
+
+  const summary=s.detail.summary&&typeof s.detail.summary==='object'?s.detail.summary:{};
+  const views=s.detail.views&&typeof s.detail.views==='object'?s.detail.views:{};
+  const graphAvailable=Boolean(views.graph&&views.graph.available);
+  const db2Summary=views.db2&&views.db2.summary&&typeof views.db2.summary==='object'?views.db2.summary:{};
+  const db2Available=Boolean(views.db2&&(views.db2.metadataAvailable||views.db2.testDataAvailable||Number(db2Summary.tableCount||0)>0));
+  const promptArtifacts=views.prompts&&Array.isArray(views.prompts.artifacts)?views.prompts.artifacts:[];
+  const promptCompareAvailable=promptArtifacts.length>0;
+  const artifactCount=Array.isArray(s.detail.artifacts)?s.detail.artifacts.length:0;
+  const reportsCards=[
+    {
+      title:'Graph',
+      description:graphAvailable?'Follow related nodes, artifacts, and prompt links for this run.':'Graph data is not available for this run.',
+      target:'graph',
+      available:graphAvailable,
+      detail:graphAvailable?'nodes: '+String(views.summary&&views.summary.graphNodeCount||0):'read-only view unavailable',
+    },
+    {
+      title:'DB2/Test Data',
+      description:db2Available?'Inspect exported DB2 metadata and test-data evidence for this run.':'No DB2/Test Data report view is available for this run.',
+      target:'db2',
+      available:db2Available,
+      detail:db2Available?'tables: '+String(views.summary&&views.summary.db2TableCount||0):'read-only view unavailable',
+    },
+    {
+      title:'Prompt Compare',
+      description:promptCompareAvailable?'Compare prompt artifacts side by side.':'No prompt artifacts are available to compare for this run.',
+      target:'prompts',
+      available:promptCompareAvailable,
+      detail:promptCompareAvailable?'prompt packs: '+String(promptArtifacts.length):'read-only view unavailable',
+    },
+    {
+      title:'Artifacts',
+      description:artifactCount>0?'Browse the saved artifacts for this run and preview them safely.':'No artifacts are available to preview for this run.',
+      target:'artifacts',
+      available:artifactCount>0,
+      detail:'artifacts: '+String(artifactCount),
+    }
+  ];
+
+  root.innerHTML='<div class="sub"><h2>Reports</h2><p>Reports are read-only. They use existing local artifacts and do not fetch, query, or modify remote systems.</p><div class="workflow-meta"><div class="token">selected run: '+esc(String(summary.program||s.program||''))+'</div><div class="token">runs found: '+esc(String(s.runs.length||0))+'</div><div class="token">artifacts: '+esc(String(artifactCount))+'</div><div class="token">safe local read</div></div><div class="hint-list"><div class="hint-item"><strong>After Setup</strong><p>Use the left sidebar to switch runs, then open the report view that best matches what you want to inspect.</p></div><div class="hint-item"><strong>What is available here</strong><p>Graph, DB2/Test Data, Prompt Compare, and artifact previews are report views over existing output. They do not execute remote actions.</p></div></div><h3>Available Report Views</h3><div class="workflow-grid">'+reportsCards.map((card)=>'<div class="workflow-card'+(card.available?'':' disabled')+'"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description)+'</p><div class="workflow-meta"><div class="token">'+esc(card.available?'Available now':'Read-only unavailable')+'</div><div class="token">'+esc(card.detail)+'</div></div><div class="actions">'+(card.available&&card.target!=='artifacts'?'<button class="btn" data-reports-target="'+esc(card.target)+'">Open '+esc(card.title)+'</button>':'')+(card.target==='artifacts'?'<button class="btn'+(card.available?' primary':'')+'"'+(card.available?' data-reports-target="artifacts"':' disabled')+'>'+(card.available?'Browse Artifacts':'Artifacts unavailable')+'</button>':'')+(card.available?'<button class="btn" data-reports-target="refresh">Refresh Runs</button>':'')+'</div></div>').join('')+'</div><h3>Artifacts In This Run</h3>'+(artifactCount>0?'<div class="item-list">'+s.detail.artifacts.map((a)=>'<button class="item'+(a.path===s.artifact?' active':'')+'" data-aid="'+esc(a.path)+'"><strong>'+esc(a.path)+'</strong><div>'+esc(a.kind)+' • '+esc(String(a.sizeBytes))+' bytes</div></button>').join('')+'</div>':'<div class="empty">This run does not contain previewable artifacts yet.</div>')+'</div><div class="sub"><div class="stack"><h2 id="aTitle">Artifact Preview</h2><p id="aSub">Choose an artifact.</p></div><a id="aRaw" class="btn" target="_blank" rel="noreferrer" hidden>Open Raw</a><div id="aPrev" class="preview"><div class="empty">No artifact selected.</div></div></div>';
 
   for(const b of root.querySelectorAll('[data-aid]')){
     b.onclick=()=>{
@@ -3238,6 +3285,10 @@ async function renderArtifactPreview(){
   const title=q('aTitle');
   const sub=q('aSub');
   const raw=q('aRaw');
+
+  if(!root||!title||!sub||!raw){
+    return;
+  }
 
   if(!s.artifact){
     title.textContent='Artifact Preview';
@@ -3267,9 +3318,23 @@ async function renderArtifactPreview(){
   }
 
   root.innerHTML='<pre>Loading...</pre>';
-  const p=await getArtifact(art.path);
-  const c=art.kind==='json'?JSON.stringify(JSON.parse(p.content),null,2):p.content;
-  root.innerHTML='<pre>'+esc(c)+'</pre>';
+  try{
+    const p=await getArtifact(art.path);
+    let c=p.content;
+    if(art.kind==='json'){
+      try{
+        c=JSON.stringify(JSON.parse(p.content),null,2);
+      }catch(error){
+        title.textContent=art.path;
+        sub.textContent='json preview';
+        root.innerHTML='<div class="empty">This JSON artifact could not be formatted for preview. Use Open Raw to inspect the saved file directly.</div>';
+        return;
+      }
+    }
+    root.innerHTML='<pre>'+esc(c)+'</pre>';
+  }catch(error){
+    root.innerHTML='<div class="empty">Artifact preview is unavailable right now. Refresh Reports or use Open Raw if the file exists.</div>';
+  }
 }
 
 async function selectTab(tab){
