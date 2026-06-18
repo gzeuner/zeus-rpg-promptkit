@@ -78,6 +78,8 @@ test('workflow cards are derived from command metadata categories', () => {
   const advancedCard = cards.find((card) => card.id === 'analyze-workspace');
   assert.equal(advancedCard.availability, 'advanced');
   assert.equal(advancedCard.status, 'Advanced tool');
+  assert.equal(advancedCard.area, 'advanced');
+  assert.match(advancedCard.explanation, /local-only/i);
 });
 
 test('ui metadata includes sensitive field markers but no resolved values', () => {
