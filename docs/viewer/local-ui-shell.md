@@ -73,6 +73,10 @@ The browser shell consumes only those endpoints. It does not parse output direct
   - Prompt Compare
   - Artifacts
 - advanced and specialist tools are demoted into Advanced / Tools instead of appearing as primary workflow actions
+- Advanced / Tools is intentionally secondary and grouped into:
+  - Prompt Tools
+  - Local Analysis Tools
+  - Experimental / Coming Later
 - metadata-driven read-only Setup panel (section-grouped field contract preview)
 - list analysis runs under the configured output root
 - show manifest-derived run summary details
@@ -91,6 +95,7 @@ UI hardening behavior:
 - Doctor is the first real browser action
 - Prompt Workbench remains available, but no longer dominates the initial landing area
 - Reports is the next production-ready tab after Setup
+- Advanced / Tools is optional and should not be mistaken for onboarding
 
 Large-output behavior:
 
@@ -178,6 +183,37 @@ Reports group the existing read-only report views under a single parent area:
 - Artifacts stay available as a report view
 
 When no runs are present, Reports explains that output must be generated outside the browser flow before report views can be inspected.
+
+## Advanced / Tools
+
+Advanced / Tools is intentionally secondary:
+
+- start in Setup for onboarding, profile understanding, and readiness
+- continue to Reports for normal read-only output review
+- use Advanced / Tools only when you need a specialist local utility
+
+Current grouping:
+
+- Prompt Tools
+  - Prompt Workbench
+  - prompt templates
+  - prompt import from existing runs
+  - local prompt previews
+- Local Analysis Tools
+  - Analyze Workspace
+  - local-only shortcuts back into Reports
+- Experimental / Coming Later
+  - Fetch Sources
+  - Query DB2
+  - Generate AI Context
+
+Advanced / Tools still follows the same safety rules:
+
+- no arbitrary browser command execution
+- no remote fetch action
+- no browser-triggered DB2 query execution
+- no secret exposure
+- Analyze Workspace stays local-only
 
 ## Doctor readiness diagnostics
 

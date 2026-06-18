@@ -656,6 +656,14 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /This JSON artifact could not be formatted for preview\. Use Open Raw to inspect the saved file directly\./);
     assert.match(shellHtml, /Artifact preview is unavailable right now\. Refresh Reports or use Open Raw if the file exists\./);
     assert.match(shellHtml, /Analyze Workspace/);
+    assert.match(shellHtml, /Prompt Tools/);
+    assert.match(shellHtml, /Local Analysis Tools/);
+    assert.match(shellHtml, /Experimental \/ Coming Later/);
+    assert.match(shellHtml, /Advanced: optional/);
+    assert.match(shellHtml, /Everything here is optional and intended for experienced users/);
+    assert.match(shellHtml, /Open In Reports/);
+    assert.match(shellHtml, /local-only/);
+    assert.match(shellHtml, /Deferred remote workflows/);
     assert.match(shellHtml, /Open analysis report/);
     assert.match(shellHtml, /Show raw result/);
     assert.match(shellHtml, /\/api\/ui-actions\/analyze-existing-workspace/);

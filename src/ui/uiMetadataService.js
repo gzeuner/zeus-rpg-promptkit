@@ -60,7 +60,7 @@ const WORKFLOW_CARD_DEFINITIONS = Object.freeze([
     enabledInShell: true,
     uiTarget: 'analyze-workspace',
     area: 'advanced',
-    explanation: 'Available as an advanced local-only tool after Setup is ready.',
+    explanation: 'Available as an advanced local-only tool after Setup is ready. It is optional and does not fetch remote sources.',
   }),
   Object.freeze({
     id: 'query-db2',
