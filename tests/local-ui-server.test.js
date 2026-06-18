@@ -12,10 +12,34 @@ const cliPath = path.join(projectRoot, 'cli', 'zeus.js');
 
 function createUiFixture() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-local-ui-'));
+  const configDir = path.join(tempRoot, 'config');
   const outputRoot = path.join(tempRoot, 'output');
   const programDir = path.join(outputRoot, 'ORDERPGM');
   const safeDir = path.join(programDir, 'safe-sharing');
+  fs.mkdirSync(configDir, { recursive: true });
   fs.mkdirSync(safeDir, { recursive: true });
+  fs.writeFileSync(path.join(configDir, 'profiles.example.json'), `${JSON.stringify({
+    'default-shared': {
+      outputRoot: './workspace/output',
+    },
+    dev: {
+      extends: 'default-shared',
+      sourceRoot: './workspace/source',
+      outputRoot: './workspace/output',
+      db: {
+        system: 'dev',
+      },
+      systems: {
+        dev: {
+          displayName: 'Development IBM i',
+          host: 'internal-host.example',
+          user: '${env:ZEUS_DB_USER}',
+          password: '${env:ZEUS_DB_PASSWORD}',
+          defaultSchema: 'APPDEV',
+        },
+      },
+    },
+  }, null, 2)}\n`, 'utf8');
 
   fs.writeFileSync(path.join(programDir, 'report.md'), '# Report\n\nSummary.\n', 'utf8');
   fs.writeFileSync(path.join(programDir, 'context.json'), `${JSON.stringify({
@@ -166,6 +190,12 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
           out: './rpg_sources',
           sourceLibEnvOverride: null,
         }),
+        workflowConfigResolver: () => ({
+          members: ['CUSTSRV', 'ORDERPGM'],
+          tables: [
+            { schema: 'APP', table: 'ORDERS', filter: 'ORDER%' },
+          ],
+        }),
         analyzeExecutor: (args) => {
           if (args.profile === 'explode-analyze') {
             throw new Error('unexpected analyze failure');
@@ -191,6 +221,8 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
             },
           };
         },
+        cwd: tempRoot,
+        env: {},
       },
     });
 
@@ -205,14 +237,149 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.ok(Array.isArray(uiMetadata.commands.entries));
     assert.ok(Array.isArray(uiMetadata.workflowCards));
     assert.equal(uiMetadata.workflowCards.length, 6);
+    assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'configure').title, 'Setup');
+    assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'configure').availability, 'production-ready');
+    assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'configure').status, 'Available now');
+    assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'review-reports').enabledInShell, true);
+    assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'fetch-sources').enabledInShell, false);
+    assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'fetch-sources').status, 'Coming later');
     assert.equal(uiMetadata.guidedConfiguration.schemaVersion, 1);
     assert.ok(Array.isArray(uiMetadata.guidedConfiguration.steps));
     assert.ok(uiMetadata.guidedConfiguration.steps.length >= 7);
     assert.ok(Array.isArray(uiMetadata.guidedConfiguration.discoveryActions));
     assert.ok(uiMetadata.guidedConfiguration.discoveryActions.some((entry) => entry.id === 'discover-source-libraries'));
+    assert.equal(uiMetadata.profileWizard.mode, 'local-only-profile-wizard');
+    assert.ok(Array.isArray(uiMetadata.profileWizard.steps));
+    assert.ok(uiMetadata.profileWizard.steps.some((entry) => entry.id === 'managed-environments'));
     const sensitiveFields = uiMetadata.config.fields.filter((field) => field.sensitive === true);
     assert.ok(sensitiveFields.length >= 2);
     assert.equal(Object.prototype.hasOwnProperty.call(sensitiveFields[0], 'value'), false);
+
+    const profileWizardState = await fetch(`${started.url}/api/profile-wizard/state`).then((response) => response.json());
+    assert.equal(profileWizardState.schemaVersion, 1);
+    assert.equal(profileWizardState.mode, 'local-only-profile-wizard');
+    assert.ok(Array.isArray(profileWizardState.profiles));
+    assert.ok(profileWizardState.profiles.some((entry) => entry.name === 'dev'));
+    assert.equal(profileWizardState.profiles.find((entry) => entry.name === 'dev').sourceKind, 'shared');
+    assert.equal(JSON.stringify(profileWizardState).includes('internal-host.example'), false);
+
+    const profileWizardPreviewResponse = await fetch(`${started.url}/api/profile-wizard/preview`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profileName: 'gui-dev',
+        comment: 'GUI dev profile',
+        extends: ['default-shared', '_gui-environments'],
+        sourceRoot: './workspace/source',
+        outputRoot: './workspace/output',
+        environmentBindings: {
+          defaultDbSystem: 'devgui',
+          metadataSystem: 'devgui',
+          testDataSystem: 'devgui',
+          fetchSystem: 'devgui',
+        },
+        fetch: {
+          enabled: true,
+          sourceLibrary: 'APPLIB',
+          out: './rpg_sources',
+          files: ['QRPGLESRC'],
+          members: ['ORDERPGM'],
+          transport: 'auto',
+        },
+        managedEnvironments: [{
+          key: 'devgui',
+          displayName: 'GUI Dev',
+          systemName: 'SYSDEV',
+          aliases: 'DEVBOX',
+          hostEnvVar: 'ZEUS_DEV_HOST',
+          userEnvVar: 'ZEUS_DEV_USER',
+          passwordEnvVar: 'ZEUS_DEV_PASSWORD',
+          defaultLibrary: 'APPLIB',
+          defaultSchema: 'APPLIB',
+        }],
+      }),
+    });
+    assert.equal(profileWizardPreviewResponse.status, 200);
+    const profileWizardPreview = await profileWizardPreviewResponse.json();
+    assert.equal(profileWizardPreview.valid, true);
+    assert.equal(profileWizardPreview.profilePreview.fetch.system, 'devgui');
+    assert.ok(Array.isArray(profileWizardPreview.diagnostics));
+    assert.ok(Array.isArray(profileWizardPreview.stepValidation));
+
+    const profileWizardSaveResponse = await fetch(`${started.url}/api/profile-wizard/save`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profileName: 'gui-dev',
+        comment: 'GUI dev profile',
+        extends: ['default-shared', '_gui-environments'],
+        sourceRoot: './workspace/source',
+        outputRoot: './workspace/output',
+        analysesRegistryPath: './analysis/_registry.json',
+        environmentBindings: {
+          defaultDbSystem: 'devgui',
+          metadataSystem: 'devgui',
+          testDataSystem: 'devgui',
+          fetchSystem: 'devgui',
+        },
+        fetch: {
+          enabled: true,
+          sourceLibrary: 'APPLIB',
+          out: './rpg_sources',
+          files: ['QRPGLESRC'],
+          members: ['ORDERPGM'],
+          transport: 'auto',
+        },
+        managedEnvironments: [{
+          key: 'devgui',
+          displayName: 'GUI Dev',
+          systemName: 'SYSDEV',
+          aliases: 'DEVBOX',
+          hostEnvVar: 'ZEUS_DEV_HOST',
+          userEnvVar: 'ZEUS_DEV_USER',
+          passwordEnvVar: 'ZEUS_DEV_PASSWORD',
+          defaultLibrary: 'APPLIB',
+          defaultSchema: 'APPLIB',
+        }],
+      }),
+    });
+    assert.equal(profileWizardSaveResponse.status, 200);
+    const profileWizardSave = await profileWizardSaveResponse.json();
+    assert.equal(profileWizardSave.saved, true);
+    const savedProfiles = JSON.parse(fs.readFileSync(path.join(tempRoot, 'config', 'local-only', 'profiles.json'), 'utf8'));
+    assert.ok(savedProfiles['gui-dev']);
+    assert.ok(savedProfiles['_gui-environments']);
+
+    const profileWizardStateAfterSave = await fetch(`${started.url}/api/profile-wizard/state`).then((response) => response.json());
+    assert.equal(profileWizardStateAfterSave.profiles.find((entry) => entry.name === 'gui-dev').sourceKind, 'local-only');
+    assert.ok(profileWizardStateAfterSave.managedEnvironmentUsage.dependentProfiles.includes('gui-dev'));
+
+    const profileWizardDeleteResponse = await fetch(`${started.url}/api/profile-wizard/profiles/gui-dev`, {
+      method: 'DELETE',
+    });
+    assert.equal(profileWizardDeleteResponse.status, 200);
+    const profileWizardDelete = await profileWizardDeleteResponse.json();
+    assert.equal(profileWizardDelete.deleted, true);
+
+    const invalidPreviewResponse = await fetch(`${started.url}/api/profile-wizard/preview`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profileName: '',
+        managedEnvironments: [],
+      }),
+    });
+    assert.equal(invalidPreviewResponse.status, 400);
+    const invalidPreview = await invalidPreviewResponse.json();
+    assert.equal(invalidPreview.error, 'profileName is required');
+    assert.ok(Array.isArray(invalidPreview.diagnostics));
+    assert.equal(invalidPreview.diagnostics[0].fieldPath, 'profileName');
 
     const doctorResponse = await fetch(`${started.url}/api/ui-actions/doctor`, {
       method: 'POST',
@@ -264,10 +431,30 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.equal(discoveryResponse.status, 200);
     const discoveryPayload = await discoveryResponse.json();
     assert.equal(discoveryPayload.action, 'discovery-preview');
-    assert.equal(discoveryPayload.status, 'not-ready');
-    assert.equal(discoveryPayload.result.implemented, false);
+    assert.equal(discoveryPayload.status, 'config-preview-ready');
+    assert.equal(discoveryPayload.result.implemented, true);
     assert.equal(discoveryPayload.result.readOnly, true);
     assert.equal(Array.isArray(discoveryPayload.result.commandPreview), true);
+    assert.equal(discoveryPayload.result.previewKind, 'config-derived-local-preview');
+    assert.ok(discoveryPayload.result.candidates.some((entry) => entry.value === 'APP.ORDERS'));
+
+    const objectPreviewResponse = await fetch(`${started.url}/api/ui-actions/discovery-preview`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        actionId: 'discover-object-types',
+      }),
+    });
+    assert.equal(objectPreviewResponse.status, 200);
+    const objectPreviewPayload = await objectPreviewResponse.json();
+    assert.equal(objectPreviewPayload.action, 'discovery-preview');
+    assert.equal(objectPreviewPayload.status, 'config-preview-ready');
+    assert.equal(objectPreviewPayload.result.previewKind, 'config-derived-local-preview');
+    assert.ok(objectPreviewPayload.result.candidates.some((entry) => entry.value === 'APPLIB'));
+    assert.ok(objectPreviewPayload.result.candidates.some((entry) => entry.value === 'CUSTSRV'));
 
     const sourcePreviewResponse = await fetch(`${started.url}/api/ui-actions/discovery-preview`, {
       method: 'POST',
@@ -432,15 +619,27 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
 
     const shellHtml = await fetch(`${started.url}/`).then((response) => response.text());
     assert.match(shellHtml, /Zeus RPG PromptKit/);
-    assert.match(shellHtml, /Home/);
-    assert.match(shellHtml, /Configure/);
-    assert.match(shellHtml, /Workflow Shell/);
-    assert.match(shellHtml, /Workflow Cards/);
+    assert.match(shellHtml, /Setup/);
+    assert.match(shellHtml, /Reports/);
+    assert.match(shellHtml, /Advanced \/ Tools/);
+    assert.match(shellHtml, /Setup &amp; Readiness|Setup & Readiness/);
+    assert.match(shellHtml, /Use Setup as a simple 3-step path/);
+    assert.match(shellHtml, /Run Zeus Doctor/);
+    assert.match(shellHtml, /Resolution order/);
+    assert.match(shellHtml, /CLI overrides env\. Env overrides profile\. Profile overrides defaults\./);
+    assert.match(shellHtml, /Environment Override Explanation/);
+    assert.match(shellHtml, /Config Metadata Overview/);
+    assert.match(shellHtml, /Recommended Next Step/);
     assert.match(shellHtml, /Check Readiness/);
+    assert.match(shellHtml, /Doctor Readiness Check/);
+    assert.match(shellHtml, /Local-only Profile Wizard/);
+    assert.match(shellHtml, /Advanced Setup Details/);
     assert.match(shellHtml, /Analyze Workspace/);
     assert.match(shellHtml, /Open analysis report/);
     assert.match(shellHtml, /Show raw result/);
     assert.match(shellHtml, /\/api\/ui-actions\/analyze-existing-workspace/);
+    assert.match(shellHtml, /\/api\/profile-wizard\/state/);
+    assert.match(shellHtml, /Preview needs refresh|preview-stale/);
     assert.match(shellHtml, /Configuration warnings/);
     assert.match(shellHtml, /Selected profile and environment point to different DB targets/);
     assert.match(shellHtml, /Graph Explorer|Graph/);
@@ -449,7 +648,11 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /Prompt Workbench/);
     assert.match(shellHtml, /Prompt Canvas/);
     assert.match(shellHtml, /Output Context Source/);
-    assert.match(shellHtml, /Quick Actions|Open Prompt Workbench/);
+    assert.match(shellHtml, /Coming Later/);
+    assert.match(shellHtml, /Remote fetch is not a supported browser action in this iteration\./);
+    assert.match(shellHtml, /Quick Actions|Open Prompt Workbench|Open Prompt Workbench/);
+    assert.doesNotMatch(shellHtml, /Prepare Fetch Inputs/);
+    assert.doesNotMatch(shellHtml, /Review Query Commands/);
     const scriptMatch = shellHtml.match(/<script>([\s\S]*)<\/script>/);
     assert.ok(scriptMatch);
     assert.doesNotThrow(() => new Function(scriptMatch[1]));
