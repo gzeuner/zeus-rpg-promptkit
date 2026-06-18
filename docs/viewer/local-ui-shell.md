@@ -6,7 +6,7 @@ Last Updated: 2026-06-18
 
 # Local UI Shell
 
-The local UI is now hardened around a Setup-first browser flow. The first production-ready area is onboarding, configuration understanding, and readiness checking. Reports remain available as a read-only follow-up area, while Prompt Workbench and other specialist features are demoted into an Advanced / Tools area instead of competing with setup.
+The local UI is now hardened around a Setup-first browser flow. The first production-ready area is onboarding, configuration understanding, and readiness checking. Reports remain available as a read-only follow-up area, now with grouped report views, while Prompt Workbench and other specialist features are demoted into an Advanced / Tools area instead of competing with setup.
 
 ## Command
 
@@ -56,12 +56,22 @@ The browser shell consumes only those endpoints. It does not parse output direct
   - clear recommended next steps
 - the local-only profile wizard remains available inside Setup, but behind an expandable details area so onboarding does not start with a dense editing surface
 - Reports remains available as a read-only follow-up area for generated artifacts
-- Reports now acts as the read-only landing area for existing runs and report views
+- Reports now acts as the read-only landing area and parent navigation area for existing runs and report views
 - Reports explains:
   - whether any runs exist
   - which report views are available for the selected run
-  - that Graph, DB2/Test Data, Prompt Compare, and artifact preview are report views over existing local output
+  - that Overview, Graph, DB2/Test Data, Prompt Compare, and artifact preview are report views over existing local output
   - that all of those views stay read-only in this iteration
+- top-level navigation is intentionally reduced to:
+  - Setup
+  - Reports
+  - Advanced / Tools
+- report-view navigation is grouped under Reports:
+  - Overview
+  - Graph
+  - DB2/Test Data
+  - Prompt Compare
+  - Artifacts
 - advanced and specialist tools are demoted into Advanced / Tools instead of appearing as primary workflow actions
 - metadata-driven read-only Setup panel (section-grouped field contract preview)
 - list analysis runs under the configured output root
@@ -158,6 +168,14 @@ Reports help the user answer:
 - which run is selected?
 - which report views are available for that run?
 - where should they go next: Graph, DB2/Test Data, Prompt Compare, or artifact preview?
+
+Reports group the existing read-only report views under a single parent area:
+
+- Overview is the default Reports landing view
+- Graph stays available as a report view
+- DB2/Test Data stays available as a report view
+- Prompt Compare stays available as a report view
+- Artifacts stay available as a report view
 
 When no runs are present, Reports explains that output must be generated outside the browser flow before report views can be inspected.
 

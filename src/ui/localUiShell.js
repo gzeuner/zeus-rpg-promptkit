@@ -535,7 +535,7 @@ input[type="search"]{
     </div>
 
     <div id="metrics" class="metrics"><div class="panel metric"><div>Primary Tab</div><strong>Setup</strong></div><div class="panel metric"><div>First Action</div><strong>Check Readiness</strong></div><div class="panel metric"><div>Reports</div><strong>After Output</strong></div><div class="panel metric"><div>Secrets</div><strong>Hidden</strong></div></div>
-    <div id="tabs" class="panel tabs"><button class="tab active">Setup</button><button class="tab">Reports</button><button class="tab">Graph</button><button class="tab">DB2/Test Data</button><button class="tab">Prompt Compare</button><button class="tab">Advanced / Tools</button></div>
+    <div id="tabs" class="panel tabs"><button class="tab active">Setup</button><button class="tab">Reports</button><button class="tab">Advanced / Tools</button></div>
 
     <div id="home" class="panel view two"></div>
     <div id="configure" class="panel view two active"></div>
@@ -631,11 +631,15 @@ const s={
 
 const tabs=[
   ['configure','Setup'],
-  ['artifacts','Reports'],
-  ['graph','Graph'],
-  ['db2','DB2/Test Data'],
-  ['prompts','Prompt Compare'],
+  ['reports','Reports'],
   ['home','Advanced / Tools']
+];
+
+const reportViews=[
+  ['artifacts','Overview'],
+  ['graph','Graph'],
+  ['db2','DB2 / Test Data'],
+  ['prompts','Prompt Compare']
 ];
 
 const WB_PREVIEW_DEBOUNCE_MS=220;
@@ -785,8 +789,8 @@ function renderHero(){
   q('title').textContent=x.program;
   q('subtitle').textContent=s.tab==='configure'
     ? 'Review setup, profile readiness, and safe next steps.'
-    : (s.tab==='artifacts'
-      ? 'Read-only reports and artifact review for the selected run.'
+    : (isReportsTab(s.tab)
+      ? 'Read-only reports and report views for the selected run.'
       : (s.tab==='home'||s.tab==='workbench'
         ? 'Advanced and experimental tools live here after Setup is ready.'
         : 'Read-only explorer for generated analysis evidence.'));
@@ -818,10 +822,27 @@ function renderMetrics(){
 
 function renderTabs(){
   q('tabs').innerHTML=tabs.map(([id,label])=>{
-    const active=s.tab===id||(id==='home'&&s.tab==='workbench');
+    const active=(id==='reports'&&isReportsTab(s.tab))||(s.tab===id)||(id==='home'&&s.tab==='workbench');
     return '<button class="tab'+(active?' active':'')+'" data-tab="'+id+'">'+label+'</button>';
   }).join('');
   for(const b of q('tabs').querySelectorAll('[data-tab]')) b.onclick=()=>selectTab(b.dataset.tab);
+}
+
+function isReportsTab(tab){
+  return tab==='artifacts'||tab==='graph'||tab==='db2'||tab==='prompts';
+}
+
+function renderReportsSubnav(activeTab){
+  return '<div class="stack"><div><h2>Reports</h2><p>Reports are local and read-only. They inspect existing artifacts and never fetch, query, or modify remote systems.</p></div><div class="tabs">'+reportViews.map(([id,label])=>'<button class="tab'+(id===activeTab?' active':'')+'" data-report-view="'+esc(id)+'">'+esc(label)+'</button>').join('')+'</div><div class="small">Select a run in the left sidebar, then choose the report view you want to inspect.</div></div>';
+}
+
+function bindReportsSubnav(root){
+  for(const button of root.querySelectorAll('[data-report-view]')){
+    button.onclick=async ()=>{
+      s.tab=button.dataset.reportView||'artifacts';
+      await render();
+    };
+  }
 }
 
 function renderCommandBlock(lines){
@@ -848,7 +869,7 @@ function fallbackWorkflowCards(){
     { id:'fetch-sources', title:'Fetch Sources', description:'Prepare source evidence from IBM i.', badge:'fetch', status:'Coming later', primaryActionLabel:'Coming Later', recommendedNext:'copy-to-workspace', availability:'coming-later', enabledInShell:false, uiTarget:null, area:'advanced', explanation:'Remote fetch is not a supported browser action in this iteration.' },
     { id:'analyze-workspace', title:'Analyze Workspace', description:'Run the local-only analyze pipeline against an existing workspace source root.', badge:'analyze', status:'Advanced local-only', primaryActionLabel:'Analyze Workspace', recommendedNext:'serve', availability:'advanced', enabledInShell:true, uiTarget:'analyze-workspace', area:'advanced', explanation:'Use only after Setup is ready.' },
     { id:'query-db2', title:'Query DB2', description:'Run read-only DB2 query workflows.', badge:'query', status:'Coming later', primaryActionLabel:'Coming Later', recommendedNext:'query-table', availability:'coming-later', enabledInShell:false, uiTarget:null, area:'advanced', explanation:'DB2 query execution is not exposed as a browser action here.' },
-    { id:'review-reports', title:'Reports', description:'Inspect report and artifact output.', badge:'review', status:'Available now', primaryActionLabel:'Open Reports', recommendedNext:'bundle', availability:'production-ready', enabledInShell:true, uiTarget:'artifacts', area:'secondary', explanation:'Read-only report and artifact review is supported now.' },
+    { id:'review-reports', title:'Reports', description:'Inspect report and artifact output.', badge:'review', status:'Available now', primaryActionLabel:'Open Reports', recommendedNext:'bundle', availability:'production-ready', enabledInShell:true, uiTarget:'reports', area:'secondary', explanation:'Read-only report and artifact review is supported now.' },
     { id:'generate-ai-context', title:'Generate AI Context', description:'Bundle and refine AI context artifacts.', badge:'context', status:'Coming later', primaryActionLabel:'Coming Later', recommendedNext:'bundle', availability:'coming-later', enabledInShell:false, uiTarget:null, area:'advanced', explanation:'AI context generation is intentionally out of scope for this browser iteration.' }
   ];
 }
@@ -1910,6 +1931,12 @@ async function openHomeTarget(target,options){
     return;
   }
 
+  if(target==='reports'){
+    s.tab='artifacts';
+    await render();
+    return;
+  }
+
   if(target==='guide'){
     s.tab='home';
     s.homePanel='guide';
@@ -2416,7 +2443,8 @@ function renderGraph(){
   if(s.tab!=='graph') return;
 
   if(!s.detail||!s.detail.views.graph.available){
-    root.innerHTML='<div class="sub"><div class="empty">No graph available.</div></div>';
+    root.innerHTML='<div class="sub">'+renderReportsSubnav('graph')+'<div class="empty">No graph available for the selected run.</div></div>';
+    bindReportsSubnav(root);
     return;
   }
 
@@ -2425,11 +2453,12 @@ function renderGraph(){
   const nodes=g.nodes.filter((n)=>!f||n.id.toLowerCase().includes(f)||n.type.toLowerCase().includes(f));
   const sel=g.nodes.find((n)=>n.id===s.node)||nodes[0]||null;
 
-  root.innerHTML='<div class="sub"><h2>Graph Explorer</h2><p>Click nodes to follow related artifacts and prompts.</p><input id="graphFilter" placeholder="Filter nodes"><div class="item-list">'+nodes.map((n)=>'<button class="item'+(sel&&sel.id===n.id?' active':'')+'" data-nid="'+esc(n.id)+'"><strong>'+esc(n.id)+'</strong><div>'+esc(n.type)+' • in '+esc(String(n.incomingCount))+' • out '+esc(String(n.outgoingCount))+'</div></button>').join('')+'</div></div><div class="sub">'+(sel?'<h2>'+esc(sel.id)+'</h2><div class="tokens"><div class="token">'+esc(sel.type)+'</div><div class="token">Connected '+esc(String(sel.connectedNodeIds.length))+'</div></div><h3>Connected Nodes</h3>'+linkNodes(sel.connectedNodeIds)+'<h3>Related Artifacts</h3>'+linkArtifacts(sel.relatedArtifactPaths)+'<h3>Related Prompts</h3>'+linkPrompts(sel.relatedPromptPaths)+(g.viewerArtifact?'<a class="btn" target="_blank" rel="noreferrer" href="/runs/'+encodeURIComponent(s.program)+'/artifacts/raw?path='+encodeURIComponent(g.viewerArtifact)+'">Open Architecture Viewer</a>':''):'<div class="empty">No nodes matched.</div>')+'</div>';
+  root.innerHTML='<div class="sub">'+renderReportsSubnav('graph')+'<h3>Graph Explorer</h3><p>Click nodes to follow related artifacts and prompts.</p><input id="graphFilter" placeholder="Filter nodes"><div class="item-list">'+nodes.map((n)=>'<button class="item'+(sel&&sel.id===n.id?' active':'')+'" data-nid="'+esc(n.id)+'"><strong>'+esc(n.id)+'</strong><div>'+esc(n.type)+' • in '+esc(String(n.incomingCount))+' • out '+esc(String(n.outgoingCount))+'</div></button>').join('')+'</div></div><div class="sub">'+(sel?'<h2>'+esc(sel.id)+'</h2><div class="tokens"><div class="token">'+esc(sel.type)+'</div><div class="token">Connected '+esc(String(sel.connectedNodeIds.length))+'</div><div class="token">report view: Graph</div></div><h3>Connected Nodes</h3>'+linkNodes(sel.connectedNodeIds)+'<h3>Related Artifacts</h3>'+linkArtifacts(sel.relatedArtifactPaths)+'<h3>Related Prompts</h3>'+linkPrompts(sel.relatedPromptPaths)+(g.viewerArtifact?'<a class="btn" target="_blank" rel="noreferrer" href="/runs/'+encodeURIComponent(s.program)+'/artifacts/raw?path='+encodeURIComponent(g.viewerArtifact)+'">Open Architecture Viewer</a>':''):'<div class="empty">No nodes matched.</div>')+'</div>';
 
   q('graphFilter').value=f;
   q('graphFilter').oninput=()=>renderGraph();
   for(const b of root.querySelectorAll('[data-nid]')) b.onclick=()=>{s.node=b.dataset.nid;renderGraph();};
+  bindReportsSubnav(root);
   bindCross(root);
 }
 
@@ -2439,13 +2468,15 @@ function renderDb2(){
   if(s.tab!=='db2') return;
 
   if(!s.detail){
-    root.innerHTML='<div class="sub"><div class="empty">No run selected.</div></div>';
+    root.innerHTML='<div class="sub">'+renderReportsSubnav('db2')+'<div class="empty">No run selected.</div></div>';
+    bindReportsSubnav(root);
     return;
   }
 
   const d=s.detail.views.db2;
   if(!d.metadataAvailable&&!d.testDataAvailable){
-    root.innerHTML='<div class="sub"><div class="empty">No DB2 metadata or test data.</div></div>';
+    root.innerHTML='<div class="sub">'+renderReportsSubnav('db2')+'<div class="empty">No DB2 metadata or test data for the selected run.</div></div>';
+    bindReportsSubnav(root);
     return;
   }
 
@@ -2453,11 +2484,12 @@ function renderDb2(){
   const tables=d.tables.filter((t)=>!f||t.qualifiedName.toLowerCase().includes(f));
   const sel=d.tables.find((t)=>t.id===s.table)||tables[0]||null;
 
-  root.innerHTML='<div class="sub"><h2>DB2/Test Data</h2><div class="tokens"><div class="token">Metadata '+esc(String(d.metadataSummary&&d.metadataSummary.tableCount||0))+'</div><div class="token">Samples '+esc(String(d.testDataSummary&&d.testDataSummary.tableCount||0))+'</div><div class="token">Masked '+esc(String(d.testDataSummary&&d.testDataSummary.policySummary&&d.testDataSummary.policySummary.maskedTableCount||0))+'</div></div><input id="db2Filter" placeholder="Filter tables"><div class="item-list">'+tables.map((t)=>'<button class="item'+(sel&&sel.id===t.id?' active':'')+'" data-tid="'+esc(t.id)+'"><strong>'+esc(t.qualifiedName||t.table)+'</strong><div>rows '+esc(String(t.sampleRowCount||0))+' • masks '+esc(String(t.maskedColumnCount||0))+'</div></button>').join('')+'</div></div><div class="sub">'+(sel?'<h2>'+esc(sel.qualifiedName||sel.table)+'</h2><div class="tokens"><div class="token">match '+esc(sel.matchStatus||'unknown')+'</div><div class="token">policy '+esc(sel.policyEligibility||'not-exported')+'</div><div class="token">evidence '+esc(String(sel.sourceEvidenceCount||0))+'</div></div><h3>Artifacts</h3>'+linkArtifacts(sel.relatedArtifactPaths)+'<h3>Prompts</h3>'+linkPrompts(sel.relatedPromptPaths):'<div class="empty">No tables matched.</div>')+'</div>';
+  root.innerHTML='<div class="sub">'+renderReportsSubnav('db2')+'<h3>DB2/Test Data</h3><div class="tokens"><div class="token">Metadata '+esc(String(d.metadataSummary&&d.metadataSummary.tableCount||0))+'</div><div class="token">Samples '+esc(String(d.testDataSummary&&d.testDataSummary.tableCount||0))+'</div><div class="token">Masked '+esc(String(d.testDataSummary&&d.testDataSummary.policySummary&&d.testDataSummary.policySummary.maskedTableCount||0))+'</div></div><input id="db2Filter" placeholder="Filter tables"><div class="item-list">'+tables.map((t)=>'<button class="item'+(sel&&sel.id===t.id?' active':'')+'" data-tid="'+esc(t.id)+'"><strong>'+esc(t.qualifiedName||t.table)+'</strong><div>rows '+esc(String(t.sampleRowCount||0))+' • masks '+esc(String(t.maskedColumnCount||0))+'</div></button>').join('')+'</div></div><div class="sub">'+(sel?'<h2>'+esc(sel.qualifiedName||sel.table)+'</h2><div class="tokens"><div class="token">match '+esc(sel.matchStatus||'unknown')+'</div><div class="token">policy '+esc(sel.policyEligibility||'not-exported')+'</div><div class="token">evidence '+esc(String(sel.sourceEvidenceCount||0))+'</div><div class="token">report view: DB2 / Test Data</div></div><h3>Artifacts</h3>'+linkArtifacts(sel.relatedArtifactPaths)+'<h3>Prompts</h3>'+linkPrompts(sel.relatedPromptPaths):'<div class="empty">No tables matched.</div>')+'</div>';
 
   q('db2Filter').value=f;
   q('db2Filter').oninput=()=>renderDb2();
   for(const b of root.querySelectorAll('[data-tid]')) b.onclick=()=>{s.table=b.dataset.tid;renderDb2();};
+  bindReportsSubnav(root);
   bindCross(root);
 }
 
@@ -2478,7 +2510,8 @@ async function renderPrompts(){
   if(s.tab!=='prompts') return;
 
   if(!s.detail||!s.detail.views.prompts.artifacts.length){
-    root.innerHTML='<div class="sub"><div class="empty">No prompt artifacts.</div></div>';
+    root.innerHTML='<div class="sub">'+renderReportsSubnav('prompts')+'<div class="empty">No prompt artifacts for the selected run.</div></div>';
+    bindReportsSubnav(root);
     return;
   }
 
@@ -2486,11 +2519,12 @@ async function renderPrompts(){
   if(!s.left) s.left=ps[0].path;
   if(!s.right) s.right=(ps[1]&&ps[1].path)||ps[0].path;
 
-  root.innerHTML='<div class="sub"><h2>Prompt Compare</h2><p>Compare prompt packs side by side.</p><div class="item-list">'+ps.map((p)=>'<button class="item" data-pick="'+esc(p.path)+'"><strong>'+esc(p.title)+'</strong><div>'+esc(p.path)+'</div></button>').join('')+'</div></div><div class="sub"><h3>Left Prompt</h3><select id="leftSel">'+ps.map((p)=>'<option value="'+esc(p.path)+'"'+(p.path===s.left?' selected':'')+'>'+esc(p.title)+'</option>').join('')+'</select><div id="leftPrev" class="preview"></div></div><div class="sub"><h3>Right Prompt</h3><select id="rightSel">'+ps.map((p)=>'<option value="'+esc(p.path)+'"'+(p.path===s.right?' selected':'')+'>'+esc(p.title)+'</option>').join('')+'</select><div id="rightPrev" class="preview"></div></div>';
+  root.innerHTML='<div class="sub">'+renderReportsSubnav('prompts')+'<h3>Prompt Compare</h3><p>Compare prompt packs side by side.</p><div class="item-list">'+ps.map((p)=>'<button class="item" data-pick="'+esc(p.path)+'"><strong>'+esc(p.title)+'</strong><div>'+esc(p.path)+'</div></button>').join('')+'</div></div><div class="sub"><h3>Left Prompt</h3><select id="leftSel">'+ps.map((p)=>'<option value="'+esc(p.path)+'"'+(p.path===s.left?' selected':'')+'>'+esc(p.title)+'</option>').join('')+'</select><div id="leftPrev" class="preview"></div></div><div class="sub"><h3>Right Prompt</h3><select id="rightSel">'+ps.map((p)=>'<option value="'+esc(p.path)+'"'+(p.path===s.right?' selected':'')+'>'+esc(p.title)+'</option>').join('')+'</select><div id="rightPrev" class="preview"></div></div>';
 
   for(const b of root.querySelectorAll('[data-pick]')) b.onclick=()=>{s.left=b.dataset.pick;renderPrompts();};
   q('leftSel').onchange=(e)=>{s.left=e.target.value;renderPrompts();};
   q('rightSel').onchange=(e)=>{s.right=e.target.value;renderPrompts();};
+  bindReportsSubnav(root);
   await Promise.all([renderPromptPreview('leftPrev',s.left),renderPromptPreview('rightPrev',s.right)]);
 }
 
@@ -3210,7 +3244,8 @@ function renderArtifacts(){
   if(s.tab!=='artifacts') return;
 
   if(!s.runs.length){
-    root.innerHTML='<div class="sub"><h2>Reports</h2><p>Reports are read-only. They use existing local artifacts and do not fetch, query, or modify remote systems.</p><div class="empty">No analysis runs were found under the current output root yet. Finish Setup, run Check Readiness, then generate analysis output with the CLI before returning here.</div><div class="actions"><button class="btn primary" data-reports-target="configure">Open Setup</button><button class="btn" data-reports-target="refresh">Refresh Runs</button><button class="btn" data-reports-target="home">Open Advanced / Tools</button></div></div>';
+    root.innerHTML='<div class="sub">'+renderReportsSubnav('artifacts')+'<div class="empty">No analysis runs were found under the current output root yet. Finish Setup, run Check Readiness, then generate analysis output with the CLI before returning here.</div><div class="actions"><button class="btn primary" data-reports-target="configure">Open Setup</button><button class="btn" data-reports-target="refresh">Refresh Runs</button><button class="btn" data-reports-target="home">Open Advanced / Tools</button></div></div>';
+    bindReportsSubnav(root);
     for(const button of root.querySelectorAll('[data-reports-target]')){
       button.onclick=()=>openHomeTarget(button.dataset.reportsTarget);
     }
@@ -3218,7 +3253,8 @@ function renderArtifacts(){
   }
 
   if(!s.detail){
-    root.innerHTML='<div class="sub"><h2>Reports</h2><p>Reports are read-only. They use existing local artifacts and do not fetch, query, or modify remote systems.</p><div class="empty">Select a run from the left sidebar to open its report views.</div><div class="actions"><button class="btn" data-reports-target="refresh">Refresh Runs</button><button class="btn" data-reports-target="configure">Open Setup</button></div></div>';
+    root.innerHTML='<div class="sub">'+renderReportsSubnav('artifacts')+'<div class="empty">Select a run from the left sidebar to open its report views.</div><div class="actions"><button class="btn" data-reports-target="refresh">Refresh Runs</button><button class="btn" data-reports-target="configure">Open Setup</button></div></div>';
+    bindReportsSubnav(root);
     for(const button of root.querySelectorAll('[data-reports-target]')){
       button.onclick=()=>openHomeTarget(button.dataset.reportsTarget);
     }
@@ -3264,7 +3300,7 @@ function renderArtifacts(){
     }
   ];
 
-  root.innerHTML='<div class="sub"><h2>Reports</h2><p>Reports are read-only. They use existing local artifacts and do not fetch, query, or modify remote systems.</p><div class="workflow-meta"><div class="token">selected run: '+esc(String(summary.program||s.program||''))+'</div><div class="token">runs found: '+esc(String(s.runs.length||0))+'</div><div class="token">artifacts: '+esc(String(artifactCount))+'</div><div class="token">safe local read</div></div><div class="hint-list"><div class="hint-item"><strong>After Setup</strong><p>Use the left sidebar to switch runs, then open the report view that best matches what you want to inspect.</p></div><div class="hint-item"><strong>What is available here</strong><p>Graph, DB2/Test Data, Prompt Compare, and artifact previews are report views over existing output. They do not execute remote actions.</p></div></div><h3>Available Report Views</h3><div class="workflow-grid">'+reportsCards.map((card)=>'<div class="workflow-card'+(card.available?'':' disabled')+'"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description)+'</p><div class="workflow-meta"><div class="token">'+esc(card.available?'Available now':'Read-only unavailable')+'</div><div class="token">'+esc(card.detail)+'</div></div><div class="actions">'+(card.available&&card.target!=='artifacts'?'<button class="btn" data-reports-target="'+esc(card.target)+'">Open '+esc(card.title)+'</button>':'')+(card.target==='artifacts'?'<button class="btn'+(card.available?' primary':'')+'"'+(card.available?' data-reports-target="artifacts"':' disabled')+'>'+(card.available?'Browse Artifacts':'Artifacts unavailable')+'</button>':'')+(card.available?'<button class="btn" data-reports-target="refresh">Refresh Runs</button>':'')+'</div></div>').join('')+'</div><h3>Artifacts In This Run</h3>'+(artifactCount>0?'<div class="item-list">'+s.detail.artifacts.map((a)=>'<button class="item'+(a.path===s.artifact?' active':'')+'" data-aid="'+esc(a.path)+'"><strong>'+esc(a.path)+'</strong><div>'+esc(a.kind)+' • '+esc(String(a.sizeBytes))+' bytes</div></button>').join('')+'</div>':'<div class="empty">This run does not contain previewable artifacts yet.</div>')+'</div><div class="sub"><div class="stack"><h2 id="aTitle">Artifact Preview</h2><p id="aSub">Choose an artifact.</p></div><a id="aRaw" class="btn" target="_blank" rel="noreferrer" hidden>Open Raw</a><div id="aPrev" class="preview"><div class="empty">No artifact selected.</div></div></div>';
+  root.innerHTML='<div class="sub">'+renderReportsSubnav('artifacts')+'<div class="workflow-meta"><div class="token">selected run: '+esc(String(summary.program||s.program||''))+'</div><div class="token">runs found: '+esc(String(s.runs.length||0))+'</div><div class="token">artifacts: '+esc(String(artifactCount))+'</div><div class="token">safe local read</div></div><div class="hint-list"><div class="hint-item"><strong>After Setup</strong><p>Use the left sidebar to switch runs, then choose the report view that best matches what you want to inspect.</p></div><div class="hint-item"><strong>What is available here</strong><p>Overview, Graph, DB2/Test Data, Prompt Compare, and artifact previews are report views over existing output. They do not execute remote actions.</p></div></div><h3>Reports Overview</h3><div class="workflow-grid">'+reportsCards.map((card)=>'<div class="workflow-card'+(card.available?'':' disabled')+'"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description)+'</p><div class="workflow-meta"><div class="token">'+esc(card.available?'Available now':'Read-only unavailable')+'</div><div class="token">'+esc(card.detail)+'</div></div><div class="actions">'+(card.available&&card.target!=='artifacts'?'<button class="btn" data-reports-target="'+esc(card.target)+'">Open '+esc(card.title)+'</button>':'')+(card.target==='artifacts'?'<button class="btn'+(card.available?' primary':'')+'"'+(card.available?' data-reports-target="artifacts"':' disabled')+'>'+(card.available?'Browse Artifacts':'Artifacts unavailable')+'</button>':'')+(card.available?'<button class="btn" data-reports-target="refresh">Refresh Runs</button>':'')+'</div></div>').join('')+'</div><h3>Artifacts In This Run</h3>'+(artifactCount>0?'<div class="item-list">'+s.detail.artifacts.map((a)=>'<button class="item'+(a.path===s.artifact?' active':'')+'" data-aid="'+esc(a.path)+'"><strong>'+esc(a.path)+'</strong><div>'+esc(a.kind)+' • '+esc(String(a.sizeBytes))+' bytes</div></button>').join('')+'</div>':'<div class="empty">This run does not contain previewable artifacts yet.</div>')+'</div><div class="sub"><div class="stack"><h2 id="aTitle">Artifact Preview</h2><p id="aSub">Choose an artifact.</p></div><a id="aRaw" class="btn" target="_blank" rel="noreferrer" hidden>Open Raw</a><div id="aPrev" class="preview"><div class="empty">No artifact selected.</div></div></div>';
 
   for(const b of root.querySelectorAll('[data-aid]')){
     b.onclick=()=>{
@@ -3273,6 +3309,7 @@ function renderArtifacts(){
       renderArtifactPreview();
     };
   }
+  bindReportsSubnav(root);
   for(const button of root.querySelectorAll('[data-reports-target]')){
     button.onclick=()=>openHomeTarget(button.dataset.reportsTarget);
   }
@@ -3338,6 +3375,11 @@ async function renderArtifactPreview(){
 }
 
 async function selectTab(tab){
+  if(tab==='reports'){
+    s.tab='artifacts';
+    await render();
+    return;
+  }
   if(tab==='home'){
     s.homePanel='guide';
   }
