@@ -241,6 +241,7 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'configure').availability, 'production-ready');
     assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'configure').status, 'Available now');
     assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'review-reports').enabledInShell, true);
+    assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'review-reports').uiTarget, 'reports');
     assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'fetch-sources').enabledInShell, false);
     assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'fetch-sources').status, 'Coming later');
     assert.equal(uiMetadata.guidedConfiguration.schemaVersion, 1);
@@ -634,8 +635,14 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /Doctor Readiness Check/);
     assert.match(shellHtml, /Local-only Profile Wizard/);
     assert.match(shellHtml, /Advanced Setup Details/);
-    assert.match(shellHtml, /Reports are read-only/);
-    assert.match(shellHtml, /Available Report Views/);
+    assert.match(shellHtml, /Reports are local and read-only/);
+    assert.match(shellHtml, /Overview/);
+    assert.match(shellHtml, /\['artifacts','Overview'\]/);
+    assert.match(shellHtml, /\['graph','Graph'\]/);
+    assert.match(shellHtml, /\['db2','DB2 \/ Test Data'\]/);
+    assert.match(shellHtml, /\['prompts','Prompt Compare'\]/);
+    assert.match(shellHtml, /Reports Overview/);
+    assert.match(shellHtml, /Reports Overview/);
     assert.match(shellHtml, /After Setup/);
     assert.match(shellHtml, /What is available here/);
     assert.match(shellHtml, /selected run:/);
@@ -659,6 +666,7 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /Graph Explorer|Graph/);
     assert.match(shellHtml, /DB2\/Test Data/);
     assert.match(shellHtml, /Prompt Compare/);
+    assert.match(shellHtml, /Artifacts In This Run/);
     assert.match(shellHtml, /Prompt Workbench/);
     assert.match(shellHtml, /Prompt Canvas/);
     assert.match(shellHtml, /Output Context Source/);

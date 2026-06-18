@@ -67,6 +67,8 @@ test('workflow cards are derived from command metadata categories', () => {
   assert.equal(reportsCard.enabledInShell, true);
   assert.equal(reportsCard.status, 'Available now');
   assert.equal(reportsCard.area, 'secondary');
+  assert.equal(reportsCard.uiTarget, 'reports');
+  assert.match(reportsCard.explanation, /Graph/);
 
   const deferredCard = cards.find((card) => card.id === 'fetch-sources');
   assert.equal(deferredCard.availability, 'coming-later');
