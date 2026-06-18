@@ -215,6 +215,19 @@ Advanced / Tools still follows the same safety rules:
 - no secret exposure
 - Analyze Workspace stays local-only
 
+Prompt Workbench behavior:
+
+- Prompt Workbench lives under Advanced / Tools / Prompt Tools
+- it is optional and specialist-oriented, not part of the default onboarding path
+- Setup should be completed first so profile, env precedence, and readiness are already understood
+- Reports remains the normal place to inspect existing generated output
+- Preview Prompt is local and safe; it does not persist anything by itself
+- Save Local Template and Delete Local Template change only local prompt template data
+- Import From Report Artifact reads existing local `ai_prompt_*.md` artifacts as seeds for a new draft
+- Advanced Options expose lower-level canvas controls such as module order and additional requirements
+- the browser does not execute arbitrary commands and Prompt Workbench does not contact remote systems
+- Prompt Workbench responses stay escaped and do not expose secret values
+
 ## Doctor readiness diagnostics
 
 The Setup tab can surface safe runtime guardrail diagnostics after `Check Readiness`.
