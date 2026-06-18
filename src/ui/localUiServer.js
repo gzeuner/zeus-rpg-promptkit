@@ -24,6 +24,7 @@ const { listAnalysisRuns } = require('./localUiDataApi');
 const { renderLocalUiShell } = require('./localUiShell');
 const { buildUiMetadataPayload } = require('./uiMetadataService');
 const { UiActionError, createLocalUiActionService } = require('./localUiActionService');
+const { ProfileWizardError, createProfileWizardService } = require('./profileWizardService');
 const { createPromptWorkbenchService } = require('./promptWorkbenchService');
 const { collectSensitiveTermsFromEnv, maskSensitiveTermsInText, sanitizeValue } = require('../security/secretMasking');
 const { listWorkspaces, readWorkspaceById, touchWorkspace } = require('../workspace/analysisRegistryService');
@@ -171,6 +172,83 @@ async function handleUiActionRequest({
       error: statusCode === 500 ? 'Internal server error' : (error.message || 'Action failed'),
     }, { sensitiveTerms });
   }
+  return true;
+}
+
+async function handleProfileWizardRequest({
+  request,
+  response,
+  pathname,
+  segments,
+  profileWizardService,
+  sensitiveTerms = [],
+}) {
+  const send = (statusCode, payload) => sendJson(response, statusCode, payload, { sensitiveTerms });
+
+  if (!pathname.startsWith('/api/profile-wizard')) {
+    return false;
+  }
+
+  try {
+    if (pathname === '/api/profile-wizard/state') {
+      if (request.method !== 'GET') {
+        sendMethodNotAllowed(response, ['GET']);
+        return true;
+      }
+      send(200, profileWizardService.getState());
+      return true;
+    }
+
+    if (pathname === '/api/profile-wizard/preview') {
+      if (request.method !== 'POST') {
+        sendMethodNotAllowed(response, ['POST']);
+        return true;
+      }
+      requireJsonRequest(request);
+      const payload = await readJsonBody(request);
+      send(200, profileWizardService.previewDraft(payload));
+      return true;
+    }
+
+    if (pathname === '/api/profile-wizard/save') {
+      if (request.method !== 'POST') {
+        sendMethodNotAllowed(response, ['POST']);
+        return true;
+      }
+      requireJsonRequest(request);
+      const payload = await readJsonBody(request);
+      send(200, profileWizardService.saveDraft(payload));
+      return true;
+    }
+
+    if (segments[0] === 'api' && segments[1] === 'profile-wizard' && segments[2] === 'profiles' && segments.length === 4) {
+      if (request.method === 'GET') {
+        send(200, profileWizardService.readProfileDraft(segments[3]));
+        return true;
+      }
+      if (request.method === 'DELETE') {
+        send(200, profileWizardService.deleteProfile(segments[3]));
+        return true;
+      }
+      sendMethodNotAllowed(response, ['GET', 'DELETE']);
+      return true;
+    }
+  } catch (error) {
+    const statusCode = error instanceof ProfileWizardError
+      ? error.statusCode
+      : /^invalid json body:|^request body exceeds/i.test(String(error && error.message))
+        ? 400
+        : 500;
+    send(statusCode, {
+      error: statusCode === 500 ? 'Internal server error' : (error.message || 'Profile wizard request failed'),
+      ...(error instanceof ProfileWizardError && error.details && typeof error.details === 'object'
+        ? error.details
+        : {}),
+    });
+    return true;
+  }
+
+  send(404, { error: `Route not found: ${pathname}` });
   return true;
 }
 
@@ -414,12 +492,14 @@ function createLocalUiRequestHandler({
   outputRoot,
   promptWorkbenchService,
   actionService,
+  profileWizardService,
   registryPath = null,
   sensitiveTerms = [],
 }) {
   const resolvedOutputRoot = path.resolve(outputRoot);
   const service = promptWorkbenchService || createPromptWorkbenchService();
   const uiActionService = actionService || createLocalUiActionService();
+  const resolvedProfileWizardService = profileWizardService || createProfileWizardService();
 
   return async function handleRequest(request, response) {
     const url = new URL(request.url, 'http://127.0.0.1');
@@ -449,6 +529,18 @@ function createLocalUiRequestHandler({
         sensitiveTerms,
       });
       if (promptBuilderHandled) {
+        return;
+      }
+
+      const profileWizardHandled = await handleProfileWizardRequest({
+        request,
+        response,
+        pathname,
+        segments,
+        profileWizardService: resolvedProfileWizardService,
+        sensitiveTerms,
+      });
+      if (profileWizardHandled) {
         return;
       }
 
@@ -544,6 +636,7 @@ async function startLocalUiServer({
   port = DEFAULT_UI_PORT,
   templateStorePath,
   actionService,
+  profileWizardService,
   actionServiceOptions = {},
   registryPath = null,
   sensitiveTerms = [],
@@ -562,12 +655,18 @@ async function startLocalUiServer({
     analyzeExecutor: actionServiceOptions.analyzeExecutor,
     analyzeConfigResolver: actionServiceOptions.analyzeConfigResolver,
     fetchConfigResolver: actionServiceOptions.fetchConfigResolver,
+    workflowConfigResolver: actionServiceOptions.workflowConfigResolver,
+  });
+  const resolvedProfileWizardService = profileWizardService || createProfileWizardService({
+    cwd: actionServiceOptions.cwd || process.cwd(),
+    env: actionServiceOptions.env || process.env,
   });
   const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(process.env, sensitiveTerms);
   const server = http.createServer(createLocalUiRequestHandler({
     outputRoot: resolvedOutputRoot,
     promptWorkbenchService,
     actionService: uiActionService,
+    profileWizardService: resolvedProfileWizardService,
     registryPath: registryPath ? path.resolve(registryPath) : null,
     sensitiveTerms: resolvedSensitiveTerms,
   }));
