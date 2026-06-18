@@ -77,14 +77,14 @@ const WORKFLOW_CARD_DEFINITIONS = Object.freeze([
   Object.freeze({
     id: 'review-reports',
     title: 'Reports',
-    description: 'Inspect generated reports, artifacts, and run summaries after analysis output exists.',
+    description: 'Inspect generated reports, artifacts, and grouped read-only report views after analysis output exists.',
     category: 'review',
     primaryActionLabel: 'Open Reports',
     availability: 'production-ready',
     enabledInShell: true,
-    uiTarget: 'artifacts',
+    uiTarget: 'reports',
     area: 'secondary',
-    explanation: 'Read-only report and artifact review is supported now.',
+    explanation: 'Read-only report overview, Graph, DB2/Test Data, Prompt Compare, and artifact review are supported now.',
   }),
   Object.freeze({
     id: 'generate-ai-context',
