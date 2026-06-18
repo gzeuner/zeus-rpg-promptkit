@@ -3,7 +3,9 @@ const assert = require('node:assert/strict');
 
 const {
   UiActionError,
+  buildDb2DiscoveryConfigContext,
   buildDiscoveryConfigContext,
+  buildObjectDiscoveryConfigContext,
   createLocalUiActionService,
   normalizeAnalyzeExistingWorkspacePayload,
   normalizeDiscoveryPreviewPayload,
@@ -94,18 +96,86 @@ test('discovery-preview action derives source scope locally from resolved fetch 
   assert.ok(result.notes.some((entry) => /resolved runtime configuration/i.test(entry)));
 });
 
-test('discovery-preview keeps DB2 discovery explicit stub metadata without pretending success', async () => {
-  const service = createLocalUiActionService({});
+test('discovery-preview derives DB2 metadata scope locally from resolved analyze and workflow config', async () => {
+  const service = createLocalUiActionService({
+    analyzeConfigResolver: () => ({
+      db: {
+        defaultSchema: 'BASELIB',
+      },
+      dbRoles: {
+        metadata: {
+          defaultSchema: 'METALIB',
+        },
+        testData: {
+          defaultSchema: 'TESTLIB',
+        },
+      },
+      connections: {
+        metadata: {
+          profileKey: 'dbRoles.metadata',
+        },
+        testData: {
+          profileKey: 'dbRoles.testData',
+        },
+      },
+      testData: {
+        limit: 25,
+        allowTables: ['APP.CUSTOMERS'],
+        denyTables: ['APP.AUDITLOG'],
+        maskColumns: ['EMAIL'],
+        maskRules: [{ table: 'APP.CUSTOMERS', column: 'PHONE', value: 'MASKED' }],
+      },
+    }),
+    workflowConfigResolver: () => ({
+      tables: [
+        { schema: 'APP', table: 'ORDERS', filter: 'ORDER%' },
+      ],
+    }),
+  });
   const result = await service.executeAction('discovery-preview', {
     profile: 'dev',
     actionId: 'discover-db2-tables',
   });
 
   assert.equal(result.action, 'discovery-preview');
-  assert.equal(result.status, 'not-ready');
-  assert.equal(result.result.implemented, false);
+  assert.equal(result.status, 'config-preview-ready');
+  assert.equal(result.result.implemented, true);
   assert.equal(result.result.readOnly, true);
+  assert.equal(result.result.previewKind, 'config-derived-local-preview');
+  assert.ok(result.result.candidates.some((entry) => entry.value === 'METALIB' && entry.kind === 'metadata-schema'));
+  assert.ok(result.result.candidates.some((entry) => entry.value === 'TESTLIB' && entry.kind === 'test-data-schema'));
+  assert.ok(result.result.candidates.some((entry) => entry.value === 'APP.ORDERS' && entry.kind === 'workflow-table'));
+  assert.equal(result.result.resolvedScope.testDataRowLimit, 25);
   assert.ok(Array.isArray(result.result.notes));
+});
+
+test('discovery-preview derives object scope locally from resolved fetch and workflow config', async () => {
+  const service = createLocalUiActionService({
+    fetchConfigResolver: () => ({
+      sourceLibrary: 'APPLIB',
+      files: ['QRPGLESRC', 'QSRVSRC'],
+      members: ['ORDERPGM'],
+      out: './rpg_sources',
+      sourceLibEnvOverride: null,
+    }),
+    workflowConfigResolver: () => ({
+      members: ['CUSTSRV', 'ORDERPGM'],
+    }),
+  });
+  const result = await service.executeAction('discovery-preview', {
+    profile: 'dev',
+    actionId: 'discover-object-types',
+  });
+
+  assert.equal(result.action, 'discovery-preview');
+  assert.equal(result.status, 'config-preview-ready');
+  assert.equal(result.result.implemented, true);
+  assert.equal(result.result.readOnly, true);
+  assert.equal(result.result.previewKind, 'config-derived-local-preview');
+  assert.ok(result.result.candidates.some((entry) => entry.value === 'APPLIB' && entry.kind === 'object-library'));
+  assert.ok(result.result.candidates.some((entry) => entry.value === 'CUSTSRV' && entry.kind === 'workflow-member'));
+  assert.equal(result.result.resolvedScope.fetchMemberCount, 1);
+  assert.equal(result.result.resolvedScope.workflowMemberCount, 2);
 });
 
 test('unknown payload keys are rejected', () => {
@@ -172,6 +242,77 @@ test('buildDiscoveryConfigContext keeps only safe source-scope details', () => {
     outputRoot: './rpg_sources',
     hasSourceLibOverride: true,
     matchesDefaultSourceFiles: false,
+  });
+});
+
+test('buildDb2DiscoveryConfigContext keeps only safe DB2 scope hints', () => {
+  const context = buildDb2DiscoveryConfigContext({
+    db: {
+      defaultSchema: 'BASELIB',
+    },
+    dbRoles: {
+      metadata: {
+        defaultSchema: 'METALIB',
+      },
+      testData: {
+        defaultSchema: 'TESTLIB',
+      },
+    },
+    connections: {
+      metadata: {
+        profileKey: 'dbRoles.metadata',
+      },
+      testData: {
+        profileKey: 'dbRoles.testData',
+      },
+    },
+    testData: {
+      limit: 50,
+      allowTables: ['app.customers'],
+      denyTables: ['app.auditlog'],
+      maskColumns: ['email'],
+      maskRules: [{ table: 'APP.CUSTOMERS', column: 'PHONE', value: 'MASKED' }],
+    },
+  }, {
+    tables: [
+      { schema: 'app', table: 'orders', filter: 'order%' },
+    ],
+  });
+
+  assert.deepEqual(context, {
+    metadataSchema: 'METALIB',
+    testDataSchema: 'TESTLIB',
+    metadataRoleProfileKey: 'dbRoles.metadata',
+    testDataRoleProfileKey: 'dbRoles.testData',
+    workflowTables: [
+      { schema: 'APP', table: 'ORDERS', filter: 'ORDER%' },
+    ],
+    testDataLimit: 50,
+    allowTables: ['APP.CUSTOMERS'],
+    denyTables: ['APP.AUDITLOG'],
+    maskColumns: ['EMAIL'],
+    maskRuleCount: 1,
+  });
+});
+
+test('buildObjectDiscoveryConfigContext keeps only safe object-scope hints', () => {
+  const context = buildObjectDiscoveryConfigContext({
+    sourceLibrary: 'applib',
+    files: ['qrpglesrc', 'qsrvsrc'],
+    members: ['orderpgm'],
+  }, {
+    members: ['custsrv', ' orderpgm '],
+  }, ['fetch scope unresolved elsewhere']);
+
+  assert.deepEqual(context, {
+    objectLibrary: 'APPLIB',
+    sourceFiles: ['QRPGLESRC', 'QSRVSRC'],
+    fetchMembers: ['ORDERPGM'],
+    workflowMembers: ['CUSTSRV', 'ORDERPGM'],
+    hasSourceLibrary: true,
+    hasWorkflowMembers: true,
+    hasFetchMembers: true,
+    warnings: ['fetch scope unresolved elsewhere'],
   });
 });
 

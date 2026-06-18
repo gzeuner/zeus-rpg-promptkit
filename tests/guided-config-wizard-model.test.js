@@ -133,18 +133,60 @@ test('config-derived discovery preview stays local-only and honest about source 
   assert.ok(preview.notes.some((entry) => /does not contact IBM i/i.test(entry)));
 });
 
-test('discovery preview remains explicit stub instead of pretending discovery already works', () => {
+test('DB2 discovery preview can stay local-only while deriving honest metadata scope hints', () => {
   const preview = buildDiscoveryActionPreview({
     actionId: 'discover-db2-tables',
     profile: 'dev',
+    configContext: {
+      metadataSchema: 'METALIB',
+      testDataSchema: 'TESTLIB',
+      metadataRoleProfileKey: 'dbRoles.metadata',
+      testDataRoleProfileKey: 'dbRoles.testData',
+      workflowTables: [
+        { schema: 'APP', table: 'ORDERS', filter: 'ORDER%' },
+      ],
+      allowTables: ['APP.CUSTOMERS'],
+      denyTables: ['APP.AUDITLOG'],
+      testDataLimit: 25,
+      maskColumns: ['EMAIL'],
+      maskRuleCount: 1,
+    },
   });
 
-  assert.equal(preview.status, 'not-ready');
-  assert.equal(preview.implemented, false);
+  assert.equal(preview.status, 'config-preview-ready');
+  assert.equal(preview.implemented, true);
   assert.equal(preview.readOnly, true);
   assert.equal(preview.safetyLevel, 'S2');
+  assert.equal(preview.previewKind, 'config-derived-local-preview');
+  assert.ok(preview.candidates.some((entry) => entry.kind === 'metadata-schema' && entry.value === 'METALIB'));
+  assert.ok(preview.candidates.some((entry) => entry.kind === 'workflow-table' && entry.value === 'APP.ORDERS'));
+  assert.equal(preview.resolvedScope.testDataRowLimit, 25);
   assert.ok(Array.isArray(preview.notes));
-  assert.ok(preview.notes.some((entry) => /metadata-only/i.test(entry) || /stub/i.test(entry)));
+  assert.ok(preview.notes.some((entry) => /does not contact IBM i or DB2/i.test(entry)));
+});
+
+test('object discovery preview can stay local-only while deriving bounded library and member hints', () => {
+  const preview = buildDiscoveryActionPreview({
+    actionId: 'discover-object-types',
+    profile: 'dev',
+    configContext: {
+      objectLibrary: 'APPLIB',
+      sourceFiles: ['QRPGLESRC', 'QSRVSRC'],
+      fetchMembers: ['ORDERPGM'],
+      workflowMembers: ['CUSTSRV', 'ORDERPGM'],
+    },
+  });
+
+  assert.equal(preview.status, 'config-preview-ready');
+  assert.equal(preview.implemented, true);
+  assert.equal(preview.readOnly, true);
+  assert.equal(preview.safetyLevel, 'S2');
+  assert.equal(preview.previewKind, 'config-derived-local-preview');
+  assert.ok(preview.candidates.some((entry) => entry.kind === 'object-library' && entry.value === 'APPLIB'));
+  assert.ok(preview.candidates.some((entry) => entry.kind === 'workflow-member' && entry.value === 'CUSTSRV'));
+  assert.equal(preview.resolvedScope.workflowMemberCount, 2);
+  assert.ok(Array.isArray(preview.notes));
+  assert.ok(preview.notes.some((entry) => /does not contact IBM i or DB2/i.test(entry)));
 });
 
 test('wizard step navigation stays bounded at first and last steps', () => {

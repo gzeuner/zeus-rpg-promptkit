@@ -1,12 +1,12 @@
 ---
 Title: Local UI Shell
 Description: Dokumentation zur lokalen Viewer- und UI-Shell fuer erzeugte Analyseartefakte.
-Last Updated: 2026-06-02
+Last Updated: 2026-06-18
 ---
 
 # Local UI Shell
 
-The local UI keeps the run explorer mostly read-only while also exposing a small allowlisted local action surface: Doctor readiness checks, Analyze Workspace for existing local source trees, and Prompt Workbench actions such as preview generation, template persistence, and prompt-seed import. It still avoids introducing a separate parsing layer in the browser.
+The local UI is now hardened around a Setup-first browser flow. The first production-ready area is onboarding, configuration understanding, and readiness checking. Reports remain available as a read-only follow-up area, while Prompt Workbench and other specialist features are demoted into an Advanced / Tools area instead of competing with setup.
 
 ## Command
 
@@ -19,7 +19,7 @@ Behavior:
 - binds to loopback only (`127.0.0.1` by default)
 - serves a local HTML shell plus local-only JSON routes
 - reads existing analyze output directories
-- can trigger allowlisted local analysis for an already configured workspace source root
+- can trigger allowlisted local analysis for an already configured workspace source root as an advanced local-only tool
 - reuses the current manifest and artifact contracts instead of introducing a parallel storage model
 
 ## API endpoints
@@ -46,14 +46,18 @@ The browser shell consumes only those endpoints. It does not parse output direct
 
 ## Current shell scope
 
-- metadata-driven workflow shell landing with six workflow cards:
-  - Configure
-  - Fetch Sources
-  - Analyze Workspace
-  - Query DB2
-  - Review Reports
-  - Generate AI Context
-- metadata-driven read-only Configure panel (section-grouped field contract preview)
+- Setup is the default landing tab and the first production-ready browser flow
+- Setup focuses on:
+  - selected/default profile overview
+  - env/profile precedence explanation
+  - safe config metadata overview
+  - Doctor readiness checks
+  - runtime guardrail conflict warnings
+  - clear recommended next steps
+- the local-only profile wizard remains available inside Setup, but behind an expandable details area so onboarding does not start with a dense editing surface
+- Reports remains available as a read-only follow-up area for generated artifacts
+- advanced and specialist tools are demoted into Advanced / Tools instead of appearing as primary workflow actions
+- metadata-driven read-only Setup panel (section-grouped field contract preview)
 - list analysis runs under the configured output root
 - show manifest-derived run summary details
 - provide a graph explorer with node-level links to related artifacts and prompts
@@ -63,6 +67,13 @@ The browser shell consumes only those endpoints. It does not parse output direct
 - import existing `ai_prompt_*.md` artifacts as Prompt Canvas seeds
 - enumerate available artifacts, including `safe-sharing/` variants
 - preview JSON, Markdown, and HTML artifacts on demand
+
+UI hardening behavior:
+
+- a visible primary action must either work, be clearly disabled, or be moved out of the primary Setup flow
+- unfinished browser workflows such as remote fetch, DB2 query execution, and AI context generation are marked as deferred instead of being presented as normal live actions
+- Doctor is the first real browser action
+- Prompt Workbench remains available, but no longer dominates the initial landing area
 
 Large-output behavior:
 
@@ -97,6 +108,8 @@ Security behavior:
 - responses keep diagnostics structured and do not expose resolved secret values or raw env values
 - runtime guardrail conflicts between profile DB targets and env overrides are surfaced as warnings, not automatic aborts
 - conflict diagnostics remain allowlisted and redacted; the UI never exposes passwords or full credential-bearing JDBC URLs
+- no arbitrary browser command execution is supported
+- no plaintext secrets are persisted in browser storage
 
 Analyze Workspace behavior:
 
@@ -107,9 +120,25 @@ Analyze Workspace behavior:
 - can link back to the generated run summary and `report.md` when that artifact exists
 - keeps raw action details collapsed in the browser by default
 
+## Setup and precedence
+
+The Setup tab explains precedence in simple terms:
+
+- CLI overrides env
+- env overrides profile
+- profile overrides defaults
+- env vars are powerful and can change the effective target
+- Doctor checks the effective configuration after those rules are applied
+- secret values are never shown
+
+Env vars are shown as metadata only, for example:
+
+- `ZEUS_DB_HOST can override db.host`
+- `ZEUS_DB_PASSWORD` may exist, but its value is never rendered
+
 ## Doctor readiness diagnostics
 
-The Configure panel can surface safe runtime guardrail diagnostics after `Check Readiness`.
+The Setup tab can surface safe runtime guardrail diagnostics after `Check Readiness`.
 
 Behavior:
 
@@ -131,3 +160,12 @@ Example meaning:
 - effective target: `secondary-system`
 
 The Local UI still does not execute arbitrary browser commands. It only invokes the allowlisted `doctor` and `analyze-existing-workspace` actions and renders the resulting diagnostics as escaped text.
+
+## Hardening approach
+
+The Local UI is being hardened tab by tab instead of growing more actions all at once:
+
+- Setup is the first production-ready tab
+- Reports stays available when it is backed by real output
+- specialist features move under Advanced / Tools until they are ready to stand on their own
+- deferred workflows stay visible only as clearly non-production placeholders
