@@ -316,7 +316,7 @@ const GUIDED_DISCOVERY_ACTIONS = Object.freeze([
     title: 'Discover DB2 Tables / Views',
     description: 'Preview safe metadata-first discovery of DB2 tables and views.',
     safetyLevel: 'S2',
-    status: 'stubbed-preview-only',
+    status: 'config-preview-ready',
     scope: 'DB2 read-only',
     expensive: true,
     commandPreviewTemplates: Object.freeze([
@@ -326,6 +326,7 @@ const GUIDED_DISCOVERY_ACTIONS = Object.freeze([
     notes: Object.freeze([
       'Prefer metadata-only checks before reading any live sample data.',
       'Large libraries should be previewed and narrowed intentionally.',
+      'The browser preview only shows config-derived schemas, workflow tables, and bounded test-data hints.',
     ]),
   }),
   Object.freeze({
@@ -333,7 +334,7 @@ const GUIDED_DISCOVERY_ACTIONS = Object.freeze([
     title: 'Discover Object Types',
     description: 'Prepare a read-only object-library review for programs, service programs, modules, files, and commands.',
     safetyLevel: 'S2',
-    status: 'stubbed-preview-only',
+    status: 'config-preview-ready',
     scope: 'IBM i read-only',
     expensive: true,
     commandPreviewTemplates: Object.freeze([
@@ -342,6 +343,7 @@ const GUIDED_DISCOVERY_ACTIONS = Object.freeze([
     notes: Object.freeze([
       'Future GUI discovery should prefer preview or plan mode before full scans.',
       'Do not add a generic scan-everything action without preview and explicit confirmation.',
+      'The browser preview only shows config-derived object-library and bounded target hints, not live object inventory.',
     ]),
   }),
 ]);
@@ -827,6 +829,211 @@ function buildConfigDerivedDiscoveryPreview(definition, profile, configContext =
   };
 }
 
+function buildDb2ConfigDerivedDiscoveryPreview(definition, profile, configContext = {}) {
+  const metadataSchema = String(configContext.metadataSchema || '').trim().toUpperCase();
+  const testDataSchema = String(configContext.testDataSchema || '').trim().toUpperCase();
+  const workflowTables = Array.isArray(configContext.workflowTables) ? configContext.workflowTables : [];
+  const allowTables = toUppercaseList(configContext.allowTables || []);
+  const denyTables = toUppercaseList(configContext.denyTables || []);
+  const maskColumns = toUppercaseList(configContext.maskColumns || []);
+  const unavailableReason = String(configContext.error || '').trim();
+  const basePreview = {
+    actionId: definition.id,
+    title: definition.title,
+    implemented: true,
+    readOnly: true,
+    previewKind: 'config-derived-local-preview',
+    safetyLevel: definition.safetyLevel,
+    scope: definition.scope,
+    expensive: Boolean(definition.expensive),
+    commandPreview: renderCliPreviewTemplate(definition.commandPreviewTemplates, { profile }),
+    notes: [
+      'This preview is derived locally from resolved runtime and workflow configuration and does not contact IBM i or DB2.',
+      ...definition.notes,
+    ],
+  };
+
+  if (unavailableReason) {
+    return {
+      ...basePreview,
+      status: 'needs-profile-input',
+      summary: 'Profile-based metadata preview is unavailable until the selected analyze profile resolves cleanly.',
+      candidates: [],
+      warnings: [unavailableReason],
+    };
+  }
+
+  const candidates = [];
+  if (metadataSchema) {
+    candidates.push({
+      value: metadataSchema,
+      kind: 'metadata-schema',
+      confidence: 'high',
+      origin: String(configContext.metadataRoleProfileKey || 'db'),
+      rationale: 'Resolved metadata role already defines a default schema for read-only DB2 metadata work.',
+    });
+  }
+  if (testDataSchema) {
+    candidates.push({
+      value: testDataSchema,
+      kind: 'test-data-schema',
+      confidence: testDataSchema === metadataSchema ? 'medium' : 'high',
+      origin: String(configContext.testDataRoleProfileKey || configContext.metadataRoleProfileKey || 'db'),
+      rationale: testDataSchema === metadataSchema
+        ? 'Resolved test-data scope currently inherits the same default schema.'
+        : 'Resolved test-data role narrows reads to a distinct default schema.',
+    });
+  }
+  for (const table of workflowTables) {
+    const tableValue = table.schema ? `${table.schema}.${table.table}` : table.table;
+    candidates.push({
+      value: tableValue,
+      kind: 'workflow-table',
+      confidence: 'high',
+      origin: 'workflow.tables',
+      rationale: table.filter
+        ? `Workflow scope already names this table and an optional filter (${table.filter}).`
+        : 'Workflow scope already names this table for bounded metadata review.',
+    });
+  }
+  for (const value of allowTables) {
+    candidates.push({
+      value,
+      kind: 'test-data-allow-table',
+      confidence: 'high',
+      origin: 'testData.allowTables',
+      rationale: 'Test-data policy explicitly allowlists this table for future bounded reads.',
+    });
+  }
+
+  const warnings = [];
+  if (!metadataSchema) {
+    warnings.push('No metadata default schema resolves yet. Add profile.db.defaultSchema or dbRoles.metadata.defaultSchema for clearer DB2 preview scope.');
+  }
+  if (!workflowTables.length && !allowTables.length) {
+    warnings.push('No bounded workflow.tables or testData.allowTables are configured yet. Narrow future remote reads before execution.');
+  }
+  if (denyTables.length > 0) {
+    warnings.push(`Test-data policy already excludes ${denyTables.length} table${denyTables.length === 1 ? '' : 's'} from future bounded reads.`);
+  }
+  if (maskColumns.length > 0 || Number(configContext.maskRuleCount || 0) > 0) {
+    warnings.push('Test-data masking rules are configured and should remain part of any later read-only backend flow.');
+  }
+
+  return {
+    ...basePreview,
+    status: candidates.length > 0 ? 'config-preview-ready' : 'needs-scope',
+    summary: candidates.length > 0
+      ? `The selected profile resolves ${candidates.length} DB2 scope candidate${candidates.length === 1 ? '' : 's'} without contacting DB2.`
+      : 'No metadata schema or bounded DB2 scope resolves for the selected profile yet.',
+    candidates,
+    warnings,
+    resolvedScope: {
+      metadataSchema: metadataSchema || '(not configured)',
+      testDataSchema: testDataSchema || '(inherits or not configured)',
+      workflowTableCount: workflowTables.length,
+      testDataAllowCount: allowTables.length,
+      testDataRowLimit: Number(configContext.testDataLimit || 0) || 0,
+      testDataMaskColumnCount: maskColumns.length,
+      testDataMaskRuleCount: Number(configContext.maskRuleCount || 0) || 0,
+    },
+  };
+}
+
+function buildObjectConfigDerivedDiscoveryPreview(definition, profile, configContext = {}) {
+  const objectLibrary = String(configContext.objectLibrary || '').trim().toUpperCase();
+  const sourceFiles = toUppercaseList(configContext.sourceFiles || []);
+  const fetchMembers = toUppercaseList(configContext.fetchMembers || []);
+  const workflowMembers = toUppercaseList(configContext.workflowMembers || []);
+  const initialWarnings = Array.isArray(configContext.warnings)
+    ? configContext.warnings.map((entry) => String(entry || '').trim()).filter(Boolean)
+    : [];
+  const basePreview = {
+    actionId: definition.id,
+    title: definition.title,
+    implemented: true,
+    readOnly: true,
+    previewKind: 'config-derived-local-preview',
+    safetyLevel: definition.safetyLevel,
+    scope: definition.scope,
+    expensive: Boolean(definition.expensive),
+    commandPreview: renderCliPreviewTemplate(definition.commandPreviewTemplates, { profile }),
+    notes: [
+      'This preview is derived locally from resolved fetch and workflow configuration and does not contact IBM i or DB2.',
+      ...definition.notes,
+    ],
+  };
+
+  if (!objectLibrary && !workflowMembers.length && !fetchMembers.length && initialWarnings.length > 0) {
+    return {
+      ...basePreview,
+      status: 'needs-profile-input',
+      summary: 'Profile-based object preview is unavailable until the selected fetch/workflow scope resolves cleanly.',
+      candidates: [],
+      warnings: initialWarnings,
+    };
+  }
+
+  const candidates = [];
+  if (objectLibrary) {
+    candidates.push({
+      value: objectLibrary,
+      kind: 'object-library',
+      confidence: 'medium',
+      origin: 'resolved fetch config',
+      rationale: 'The current fetch library is the strongest local candidate for a bounded object review starting point.',
+    });
+  }
+  for (const value of workflowMembers) {
+    candidates.push({
+      value,
+      kind: 'workflow-member',
+      confidence: 'high',
+      origin: 'workflow.members',
+      rationale: 'Workflow scope already names this program/member as an intentional bounded analysis target.',
+    });
+  }
+  for (const value of fetchMembers) {
+    if (workflowMembers.includes(value)) {
+      continue;
+    }
+    candidates.push({
+      value,
+      kind: 'fetch-member',
+      confidence: 'high',
+      origin: 'resolved fetch config',
+      rationale: 'Fetch scope already includes this member, which keeps later object inspection bounded.',
+    });
+  }
+
+  const warnings = [...initialWarnings];
+  if (!objectLibrary) {
+    warnings.push('No object-library candidate resolves yet. Confirm the application/source library before any remote object inspection.');
+  }
+  if (!workflowMembers.length && !fetchMembers.length) {
+    warnings.push('No bounded workflow.members or fetch.members are configured yet. Add explicit program/member hints before broader object discovery.');
+  }
+  if (!sourceFiles.length) {
+    warnings.push('No source physical files resolve yet, so object review should stay especially narrow and intentional.');
+  }
+
+  return {
+    ...basePreview,
+    status: candidates.length > 0 ? 'config-preview-ready' : 'needs-scope',
+    summary: candidates.length > 0
+      ? `The selected profile resolves ${candidates.length} object-scope candidate${candidates.length === 1 ? '' : 's'} without contacting IBM i.`
+      : 'No bounded object-library or member hints resolve for the selected profile yet.',
+    candidates,
+    warnings,
+    resolvedScope: {
+      objectLibrary: objectLibrary || '(not configured)',
+      sourceFileCount: sourceFiles.length,
+      fetchMemberCount: fetchMembers.length,
+      workflowMemberCount: workflowMembers.length,
+    },
+  };
+}
+
 function buildDiscoveryActionPreview({ actionId, profile = 'dev', configContext = null } = {}) {
   const definition = getGuidedDiscoveryAction(actionId);
   if (!definition) {
@@ -842,6 +1049,14 @@ function buildDiscoveryActionPreview({ actionId, profile = 'dev', configContext 
     || definition.id === 'discover-members'
   )) {
     return buildConfigDerivedDiscoveryPreview(definition, profile, configContext);
+  }
+
+  if (configContext && definition.id === 'discover-db2-tables') {
+    return buildDb2ConfigDerivedDiscoveryPreview(definition, profile, configContext);
+  }
+
+  if (configContext && definition.id === 'discover-object-types') {
+    return buildObjectConfigDerivedDiscoveryPreview(definition, profile, configContext);
   }
 
   return {

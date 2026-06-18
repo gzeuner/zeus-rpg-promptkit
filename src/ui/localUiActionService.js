@@ -14,7 +14,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const path = require('path');
 const { runDoctorChecks } = require('../cli/commands/doctorCommand');
 const { executeAnalyze } = require('../core/analyzeService');
-const { resolveAnalyzeConfig, resolveFetchConfig } = require('../config/runtimeConfig');
+const {
+  loadProfiles,
+  readWorkflowConfig,
+  resolveAnalyzeConfig,
+  resolveFetchConfig,
+  resolveProfile,
+} = require('../config/runtimeConfig');
 const { ANALYZE_RUN_MANIFEST_FILE } = require('../analyze/analyzeRunManifest');
 const { DEFAULT_SOURCE_FILES } = require('../fetch/fetchService');
 const {
@@ -26,10 +32,16 @@ const { buildDiscoveryActionPreview, getGuidedDiscoveryAction } = require('./gui
 const ALLOWED_DOCTOR_KEYS = new Set(['profile', 'showResolved']);
 const ALLOWED_ANALYZE_WORKSPACE_KEYS = new Set(['profile', 'program', 'member', 'safeSharing']);
 const ALLOWED_DISCOVERY_PREVIEW_KEYS = new Set(['profile', 'actionId']);
-const CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
+const FETCH_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
   'discover-source-libraries',
   'discover-source-physical-files',
   'discover-members',
+]);
+const ANALYZE_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
+  'discover-db2-tables',
+]);
+const OBJECT_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
+  'discover-object-types',
 ]);
 const PROFILE_NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 const OBJECT_NAME_PATTERN = /^[A-Za-z0-9_]{1,64}$/;
@@ -253,6 +265,12 @@ function defaultFetchConfigResolver(args, runtime) {
   return resolveFetchConfig(args, runtime);
 }
 
+function defaultWorkflowConfigResolver(args, { cwd = process.cwd(), env = process.env } = {}) {
+  const profiles = loadProfiles({ cwd, env, args });
+  const profile = resolveProfile(profiles, args.profile, { env });
+  return readWorkflowConfig(profiles, profile, env);
+}
+
 function sanitizeWorkspacePathForUi(value, cwd) {
   const trimmed = String(value || '').trim();
   if (!trimmed) {
@@ -305,6 +323,70 @@ function buildDiscoveryConfigContext(fetchConfig, cwd) {
   };
 }
 
+function normalizeWorkflowTableList(values) {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+  return values
+    .map((entry) => ({
+      schema: String(entry && entry.schema || '').trim().toUpperCase(),
+      table: String(entry && entry.table || '').trim().toUpperCase(),
+      filter: String(entry && entry.filter || '').trim().toUpperCase(),
+    }))
+    .filter((entry) => entry.table);
+}
+
+function buildDb2DiscoveryConfigContext(analyzeConfig, workflowConfig) {
+  if (!analyzeConfig || typeof analyzeConfig !== 'object') {
+    return null;
+  }
+
+  const metadataDb = analyzeConfig.dbRoles && analyzeConfig.dbRoles.metadata
+    ? analyzeConfig.dbRoles.metadata
+    : analyzeConfig.db;
+  const testDataDb = analyzeConfig.dbRoles && analyzeConfig.dbRoles.testData
+    ? analyzeConfig.dbRoles.testData
+    : metadataDb;
+  const workflowTables = normalizeWorkflowTableList(workflowConfig && workflowConfig.tables);
+  const testData = analyzeConfig.testData && typeof analyzeConfig.testData === 'object'
+    ? analyzeConfig.testData
+    : {};
+
+  return {
+    metadataSchema: String(metadataDb && (metadataDb.defaultSchema || metadataDb.defaultLibrary) || '').trim().toUpperCase(),
+    testDataSchema: String(testDataDb && (testDataDb.defaultSchema || testDataDb.defaultLibrary) || '').trim().toUpperCase(),
+    metadataRoleProfileKey: String(analyzeConfig.connections && analyzeConfig.connections.metadata && analyzeConfig.connections.metadata.profileKey || 'db').trim(),
+    testDataRoleProfileKey: String(analyzeConfig.connections && analyzeConfig.connections.testData && analyzeConfig.connections.testData.profileKey || 'db').trim(),
+    workflowTables,
+    testDataLimit: Number(testData.limit) || null,
+    allowTables: normalizeUppercaseList(testData.allowTables),
+    denyTables: normalizeUppercaseList(testData.denyTables),
+    maskColumns: normalizeUppercaseList(testData.maskColumns),
+    maskRuleCount: Array.isArray(testData.maskRules) ? testData.maskRules.length : 0,
+  };
+}
+
+function buildObjectDiscoveryConfigContext(fetchConfig, workflowConfig, preparationWarnings = []) {
+  const workflowMembers = normalizeUppercaseList(workflowConfig && workflowConfig.members);
+  const sourceLibrary = String(fetchConfig && (fetchConfig.sourceLibrary || fetchConfig.sourceLib) || '').trim().toUpperCase();
+  const sourceFiles = normalizeUppercaseList(fetchConfig && fetchConfig.files);
+  const fetchMembers = normalizeUppercaseList(fetchConfig && fetchConfig.members);
+  const warnings = Array.isArray(preparationWarnings)
+    ? preparationWarnings.map((entry) => String(entry || '').trim()).filter(Boolean)
+    : [];
+
+  return {
+    objectLibrary: sourceLibrary,
+    sourceFiles,
+    fetchMembers,
+    workflowMembers,
+    hasSourceLibrary: Boolean(sourceLibrary),
+    hasWorkflowMembers: workflowMembers.length > 0,
+    hasFetchMembers: fetchMembers.length > 0,
+    warnings,
+  };
+}
+
 function isExpectedAnalyzeFailure(error) {
   const code = String(error && error.code || '').trim().toUpperCase();
   if (KNOWN_ANALYZE_FAILURE_CODES.has(code)) {
@@ -317,7 +399,7 @@ function isExpectedAnalyzeFailure(error) {
 
 function isExpectedDiscoveryPreparationFailure(error) {
   const message = String(error && error.message || '');
-  return /failed to load profiles|profile ".*" not found|invalid fetch config|source library|fetch/i.test(message);
+  return /failed to load profiles|profile ".*" not found|invalid fetch config|invalid analyze config|source library|fetch/i.test(message);
 }
 
 function summarizeAnalyzeFailure(error) {
@@ -352,7 +434,10 @@ function summarizeDiscoveryPreparationFailure(error) {
   if (/failed to load profiles/i.test(message)) {
     return 'Local runtime profiles could not be loaded for discovery preview.';
   }
-  return 'The selected profile does not resolve to a usable fetch configuration yet.';
+  if (/invalid analyze config/i.test(message)) {
+    return 'The selected profile does not resolve to a usable analyze configuration for metadata preview yet.';
+  }
+  return 'The selected profile does not resolve to a usable local discovery configuration yet.';
 }
 
 function summarizeAnalyzeDiagnostics(manifest) {
@@ -413,6 +498,7 @@ function createLocalUiActionService({
   analyzeExecutor = defaultAnalyzeExecutor,
   analyzeConfigResolver = defaultAnalyzeConfigResolver,
   fetchConfigResolver = defaultFetchConfigResolver,
+  workflowConfigResolver = defaultWorkflowConfigResolver,
 } = {}) {
   async function runDoctorAction(rawPayload) {
     const startedAt = new Date();
@@ -573,7 +659,7 @@ function createLocalUiActionService({
     const startedAt = new Date();
     let configContext = null;
 
-    if (CONFIG_DERIVED_DISCOVERY_ACTIONS.has(payload.actionId)) {
+    if (FETCH_CONFIG_DERIVED_DISCOVERY_ACTIONS.has(payload.actionId)) {
       try {
         const fetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
         configContext = buildDiscoveryConfigContext(fetchConfig, cwd);
@@ -585,6 +671,47 @@ function createLocalUiActionService({
           error: summarizeDiscoveryPreparationFailure(error),
         };
       }
+    }
+
+    if (ANALYZE_CONFIG_DERIVED_DISCOVERY_ACTIONS.has(payload.actionId)) {
+      try {
+        const analyzeConfig = analyzeConfigResolver({ profile: payload.profile }, { cwd, env });
+        const workflowConfig = workflowConfigResolver({ profile: payload.profile }, { cwd, env });
+        configContext = buildDb2DiscoveryConfigContext(analyzeConfig, workflowConfig);
+      } catch (error) {
+        if (!isExpectedDiscoveryPreparationFailure(error)) {
+          throw error;
+        }
+        configContext = {
+          error: summarizeDiscoveryPreparationFailure(error),
+        };
+      }
+    }
+
+    if (OBJECT_CONFIG_DERIVED_DISCOVERY_ACTIONS.has(payload.actionId)) {
+      let fetchConfig = null;
+      let workflowConfig = null;
+      const preparationWarnings = [];
+
+      try {
+        fetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
+      } catch (error) {
+        if (!isExpectedDiscoveryPreparationFailure(error)) {
+          throw error;
+        }
+        preparationWarnings.push(summarizeDiscoveryPreparationFailure(error));
+      }
+
+      try {
+        workflowConfig = workflowConfigResolver({ profile: payload.profile }, { cwd, env });
+      } catch (error) {
+        if (!isExpectedDiscoveryPreparationFailure(error)) {
+          throw error;
+        }
+        preparationWarnings.push(summarizeDiscoveryPreparationFailure(error));
+      }
+
+      configContext = buildObjectDiscoveryConfigContext(fetchConfig, workflowConfig, preparationWarnings);
     }
 
     const preview = buildDiscoveryActionPreview({
@@ -639,6 +766,8 @@ function createLocalUiActionService({
     normalizeDiscoveryPreviewPayload,
     normalizeDoctorPayload,
     buildDiscoveryConfigContext,
+    buildDb2DiscoveryConfigContext,
+    buildObjectDiscoveryConfigContext,
     validateProfileName,
     validateObjectName,
   };
@@ -648,6 +777,8 @@ module.exports = {
   UiActionError,
   createLocalUiActionService,
   buildDiscoveryConfigContext,
+  buildDb2DiscoveryConfigContext,
+  buildObjectDiscoveryConfigContext,
   normalizeAnalyzeExistingWorkspacePayload,
   normalizeDiscoveryPreviewPayload,
   normalizeDoctorPayload,
