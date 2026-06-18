@@ -56,6 +56,12 @@ The browser shell consumes only those endpoints. It does not parse output direct
   - clear recommended next steps
 - the local-only profile wizard remains available inside Setup, but behind an expandable details area so onboarding does not start with a dense editing surface
 - Reports remains available as a read-only follow-up area for generated artifacts
+- Reports now acts as the read-only landing area for existing runs and report views
+- Reports explains:
+  - whether any runs exist
+  - which report views are available for the selected run
+  - that Graph, DB2/Test Data, Prompt Compare, and artifact preview are report views over existing local output
+  - that all of those views stay read-only in this iteration
 - advanced and specialist tools are demoted into Advanced / Tools instead of appearing as primary workflow actions
 - metadata-driven read-only Setup panel (section-grouped field contract preview)
 - list analysis runs under the configured output root
@@ -74,6 +80,7 @@ UI hardening behavior:
 - unfinished browser workflows such as remote fetch, DB2 query execution, and AI context generation are marked as deferred instead of being presented as normal live actions
 - Doctor is the first real browser action
 - Prompt Workbench remains available, but no longer dominates the initial landing area
+- Reports is the next production-ready tab after Setup
 
 Large-output behavior:
 
@@ -136,6 +143,24 @@ Env vars are shown as metadata only, for example:
 - `ZEUS_DB_HOST can override db.host`
 - `ZEUS_DB_PASSWORD` may exist, but its value is never rendered
 
+## Reports
+
+The Reports tab is the next read-only step after Setup:
+
+- Reports use existing local artifacts only
+- Reports do not fetch remote sources
+- Reports do not execute DB2 browser queries
+- Reports do not modify remote or local runtime configuration
+
+Reports help the user answer:
+
+- are there any runs to inspect?
+- which run is selected?
+- which report views are available for that run?
+- where should they go next: Graph, DB2/Test Data, Prompt Compare, or artifact preview?
+
+When no runs are present, Reports explains that output must be generated outside the browser flow before report views can be inspected.
+
 ## Doctor readiness diagnostics
 
 The Setup tab can surface safe runtime guardrail diagnostics after `Check Readiness`.
@@ -166,6 +191,10 @@ The Local UI still does not execute arbitrary browser commands. It only invokes 
 The Local UI is being hardened tab by tab instead of growing more actions all at once:
 
 - Setup is the first production-ready tab
-- Reports stays available when it is backed by real output
+- Reports is the next production-ready read-only tab
 - specialist features move under Advanced / Tools until they are ready to stand on their own
 - deferred workflows stay visible only as clearly non-production placeholders
+
+## Local-only Notes
+
+Local planning, status, and handover notes belong under `.local/` and must remain untracked. They are not part of the public Local UI documentation surface.
