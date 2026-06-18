@@ -2692,12 +2692,13 @@ async function loadContextSourcePrompts(program,options){
   if(!normalized){
     s.promptBuilder.contextSourcePrompts=[];
     s.promptBuilder.contextSourcePromptPath='';
+    s.promptBuilder.contextSourceStatus='Select a report run first.';
     if(!opts.silent) renderWorkbench();
     return;
   }
   s.promptBuilder.contextSourceProgram=normalized;
   if(!opts.silent){
-    s.promptBuilder.contextSourceStatus='Loading context prompts...';
+    s.promptBuilder.contextSourceStatus='Loading report prompt artifacts...';
     renderWorkbench();
   }
   try {
@@ -2707,11 +2708,11 @@ async function loadContextSourcePrompts(program,options){
     if(!promptArtifacts.some((entry)=>entry.path===s.promptBuilder.contextSourcePromptPath)){
       s.promptBuilder.contextSourcePromptPath=promptArtifacts[0]?promptArtifacts[0].path:'';
     }
-    s.promptBuilder.contextSourceStatus=promptArtifacts.length>0?'Context prompts loaded.':'No ai_prompt artifacts for selected run.';
+    s.promptBuilder.contextSourceStatus=promptArtifacts.length>0?'Report prompt artifacts loaded.':'No importable prompt artifacts were found for that run.';
   } catch(error){
     s.promptBuilder.contextSourcePrompts=[];
     s.promptBuilder.contextSourcePromptPath='';
-    s.promptBuilder.contextSourceStatus='Context load failed: '+(error.message||String(error));
+    s.promptBuilder.contextSourceStatus=workbenchUserError('Could not load report prompt artifacts',error);
   }
   if(!opts.silent) renderWorkbench();
 }
@@ -2719,7 +2720,7 @@ async function loadContextSourcePrompts(program,options){
 function applyImportedContextSeed(seed){
   const content=String(seed&&seed.content||'');
   if(!content){
-    s.promptBuilder.contextSourceStatus='Imported prompt is empty.';
+    s.promptBuilder.contextSourceStatus='The selected report prompt is empty.';
     return;
   }
   s.promptBuilder.previewEditable=true;
@@ -2727,19 +2728,19 @@ function applyImportedContextSeed(seed){
   const marker='Imported context seed from '+String(seed.program||'')+'/'+String(seed.path||'');
   const currentReq=String(s.promptBuilder.additionalRequirements||'').trim();
   s.promptBuilder.additionalRequirements=currentReq?currentReq+'\\n'+marker:marker;
-  s.promptBuilder.contextSourceStatus='Imported '+String(seed.path||'')+' as preview seed.';
-  s.promptBuilder.saveStatus='Context seed applied.';
+  s.promptBuilder.contextSourceStatus='Imported '+String(seed.path||'')+' as a preview seed.';
+  s.promptBuilder.saveStatus='Report artifact seed applied to the preview draft.';
 }
 
 async function importContextSourcePrompt(){
   const program=String(s.promptBuilder.contextSourceProgram||'').trim();
   const promptPath=String(s.promptBuilder.contextSourcePromptPath||'').trim();
   if(!program||!promptPath){
-    s.promptBuilder.contextSourceStatus='Select a run and prompt artifact first.';
+    s.promptBuilder.contextSourceStatus='Select a report run and prompt artifact first.';
     renderWorkbench();
     return;
   }
-  s.promptBuilder.contextSourceStatus='Importing context prompt...';
+  s.promptBuilder.contextSourceStatus='Importing report prompt artifact...';
   renderWorkbench();
   try {
     const payload=await sendJson('POST','/api/prompt-builder/context-sources/import',{
@@ -2748,7 +2749,7 @@ async function importContextSourcePrompt(){
     });
     applyImportedContextSeed(payload.seed||{});
   } catch(error){
-    s.promptBuilder.contextSourceStatus='Import failed: '+(error.message||String(error));
+    s.promptBuilder.contextSourceStatus=workbenchUserError('Could not import the report prompt artifact',error);
   }
   renderWorkbench();
 }
@@ -2858,6 +2859,18 @@ function tagsListToText(values){
   return (Array.isArray(values)?values:[]).join(', ');
 }
 
+function workbenchUserError(prefix,error){
+  const base=String(prefix||'Action failed').trim()||'Action failed';
+  let message=String((error&&error.message)||error||'');
+  message=message.split('\\r').join(' ').split('\\n').join(' ').split('\\t').join(' ').trim();
+  while(message.includes('  ')) message=message.split('  ').join(' ');
+  if(!message) return base+'. Try again.';
+  if(message.toLowerCase().startsWith('request failed:')||message.length>180||(message.includes(' at ')&&message.includes('('))){
+    return base+'. Try again.';
+  }
+  return base+': '+message;
+}
+
 function templatePayloadFromCanvas(useCase){
   return {
     name:String(s.promptBuilder.templateName||'').trim(),
@@ -2875,7 +2888,7 @@ async function saveWorkbenchTemplate(){
   if(!useCase) return;
   const payload=templatePayloadFromCanvas(useCase);
   const templateId=s.promptBuilder.selectedTemplateId;
-  s.promptBuilder.saveStatus='Saving template...';
+  s.promptBuilder.saveStatus='Saving local template...';
   renderWorkbench();
   try {
     const result=templateId
@@ -2886,9 +2899,9 @@ async function saveWorkbenchTemplate(){
     s.promptBuilder.templateDescription=result.template.description||payload.description||'';
     s.promptBuilder.templateTags=tagsListToText(result.template.tags||payload.tags||[]);
     await refreshWorkbenchTemplates();
-    s.promptBuilder.saveStatus='Template saved.';
+    s.promptBuilder.saveStatus='Local template saved.';
   } catch(error){
-    s.promptBuilder.saveStatus='Save failed: '+(error.message||String(error));
+    s.promptBuilder.saveStatus=workbenchUserError('Could not save the local template',error);
   }
   renderWorkbench();
 }
@@ -2896,15 +2909,15 @@ async function saveWorkbenchTemplate(){
 async function deleteWorkbenchTemplate(){
   const templateId=s.promptBuilder.selectedTemplateId;
   if(!templateId) return;
-  s.promptBuilder.saveStatus='Deleting template...';
+  s.promptBuilder.saveStatus='Deleting local template...';
   renderWorkbench();
   try {
     await sendJson('DELETE','/api/prompt-builder/templates/'+encodeURIComponent(templateId));
     s.promptBuilder.selectedTemplateId=null;
-    s.promptBuilder.saveStatus='Template deleted.';
+    s.promptBuilder.saveStatus='Local template deleted.';
     await refreshWorkbenchTemplates();
   } catch(error){
-    s.promptBuilder.saveStatus='Delete failed: '+(error.message||String(error));
+    s.promptBuilder.saveStatus=workbenchUserError('Could not delete the local template',error);
   }
   renderWorkbench();
 }
@@ -2927,19 +2940,19 @@ function applyTemplateToCanvas(template){
   s.promptBuilder.previewEditable=false;
   s.promptBuilder.previewEditableContent='';
   s.promptBuilder.previewError=null;
-  s.promptBuilder.saveStatus='Template loaded.';
+  s.promptBuilder.saveStatus='Local template loaded.';
 }
 
 async function loadWorkbenchTemplate(templateId){
   if(!templateId) return;
-  s.promptBuilder.saveStatus='Loading template...';
+  s.promptBuilder.saveStatus='Loading local template...';
   renderWorkbench();
   try {
     const payload=await getJson('/api/prompt-builder/templates/'+encodeURIComponent(templateId));
     applyTemplateToCanvas(payload.template);
     scheduleWorkbenchPreview();
   } catch(error){
-    s.promptBuilder.saveStatus='Load failed: '+(error.message||String(error));
+    s.promptBuilder.saveStatus=workbenchUserError('Could not load the local template',error);
   }
   renderWorkbench();
 }
@@ -2966,7 +2979,7 @@ async function generateWorkbenchPreview(options){
       s.promptBuilder.previewEditableContent=(preview&&preview.preview&&preview.preview.content)||'';
     }
   } catch(error){
-    s.promptBuilder.previewError=error.message||String(error);
+    s.promptBuilder.previewError=workbenchUserError('Preview could not be generated',error);
   } finally {
     s.promptBuilder.previewLoading=false;
     renderWorkbench();
@@ -2985,7 +2998,7 @@ function setPreviewEditMode(editable){
 async function copyWorkbenchPreview(){
   const text=currentPreviewText();
   if(!text){
-    s.promptBuilder.saveStatus='Nothing to copy.';
+    s.promptBuilder.saveStatus='No preview content is available to copy yet.';
     renderWorkbench();
     return;
   }
@@ -3003,7 +3016,7 @@ async function copyWorkbenchPreview(){
     }
     s.promptBuilder.saveStatus='Preview copied.';
   } catch(error){
-    s.promptBuilder.saveStatus='Copy failed: '+(error.message||String(error));
+    s.promptBuilder.saveStatus=workbenchUserError('Could not copy the preview',error);
   }
   renderWorkbench();
 }
@@ -3011,7 +3024,7 @@ async function copyWorkbenchPreview(){
 function exportWorkbenchPreview(){
   const text=currentPreviewText();
   if(!text){
-    s.promptBuilder.saveStatus='Nothing to export.';
+    s.promptBuilder.saveStatus='No preview content is available to export yet.';
     renderWorkbench();
     return;
   }
@@ -3065,6 +3078,9 @@ function renderWorkbench(){
   const availableModules=(s.promptBuilder.modules||[]).filter((entry)=>!moduleOrder.includes(entry.id));
   const selectedModule=selectedCanvasModule();
   const fieldDefs=collectFieldDefinitions(selected,moduleOrder);
+  const templates=s.promptBuilder.templates||[];
+  const contextSources=s.promptBuilder.contextSources||[];
+  const contextPrompts=s.promptBuilder.contextSourcePrompts||[];
   const activeFieldDefs=selectedModule&&Array.isArray(selectedModule.configFields)&&selectedModule.configFields.length>0
     ? selectedModule.configFields.map((field)=>({
       name:String(field.name||'').trim(),
@@ -3074,9 +3090,9 @@ function renderWorkbench(){
     : fieldDefs;
   const previewText=currentPreviewText();
 
-  root.innerHTML='<div class="sub"><h2>Prompt Workbench</h2><p>Template-based flow: choose use case, fill only your goal, preview, then compare and export.</p><input id="wbFilter" type="search" placeholder="Filter use cases"><div class="card-grid">'+filtered.map((entry)=>'<div class="card'+(selected&&selected.id===entry.id?' active':'')+'"><h3>'+esc(entry.title)+'</h3><p>'+esc(entry.description||'')+'</p><div class="meta"><div class="token">Priority: '+esc(entry.priority||'n/a')+'</div><div class="token">Default Modules: '+esc(String((entry.defaultModuleIds||[]).length))+'</div></div><div class="actions"><button class="btn" data-wb-select="'+esc(entry.id)+'">Select</button></div></div>').join('')+'</div><h3>Template</h3><div class="field-grid"><label>Name<input id="wbTemplateName" value="'+escAttr(s.promptBuilder.templateName||'')+'" placeholder="Template name"></label><label>Description<textarea id="wbTemplateDescription" placeholder="Template description">'+esc(s.promptBuilder.templateDescription||'')+'</textarea></label><label>Tags (comma separated)<input id="wbTemplateTags" value="'+escAttr(s.promptBuilder.templateTags||'')+'" placeholder="mvp, api, ui"></label><label>Saved Templates<select id="wbTemplateSel"><option value="">'+esc('Select saved template')+'</option>'+((s.promptBuilder.templates||[]).map((template)=>'<option value="'+esc(template.id)+'"'+(template.id===s.promptBuilder.selectedTemplateId?' selected':'')+'>'+esc(template.name)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbLoadTemplate">Load</button><button class="btn primary" id="wbSaveTemplate">Save Template</button><button class="btn" id="wbDeleteTemplate">Delete</button></div><div class="small '+statusToneClass(s.promptBuilder.saveStatus)+'">'+esc(s.promptBuilder.saveStatus||'')+'</div><h3>Output Context Source (optional)</h3><div class="field-grid"><label>Analyze Run<select id="wbContextRunSel"><option value="">'+esc('Select output/<PROGRAM>')+'</option>'+((s.promptBuilder.contextSources||[]).map((entry)=>'<option value="'+esc(entry.program)+'"'+(entry.program===s.promptBuilder.contextSourceProgram?' selected':'')+'>'+esc(entry.program+' ('+(entry.promptArtifactCount||0)+' prompts)')+'</option>').join(''))+'</select></label><label>Prompt Artifact<select id="wbContextPromptSel"><option value="">'+esc('Select ai_prompt_*.md')+'</option>'+((s.promptBuilder.contextSourcePrompts||[]).map((entry)=>'<option value="'+esc(entry.path)+'"'+(entry.path===s.promptBuilder.contextSourcePromptPath?' selected':'')+'>'+esc(entry.path)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbContextRefresh">Refresh Runs</button><button class="btn" id="wbContextLoadPrompts">Load Prompts</button><button class="btn" id="wbContextImport">Import As Seed</button></div><div class="small '+statusToneClass(s.promptBuilder.contextSourceStatus)+'">'+esc(s.promptBuilder.contextSourceStatus||'')+'</div><h3>Prompt Canvas</h3><div class="item-list">'+moduleOrder.map((moduleId,index)=>'<div class="module-row'+(s.promptBuilder.selectedModuleId===moduleId?' active':'')+'"><h4>'+esc(moduleMap[moduleId]||moduleId)+'</h4><div class="small">'+esc(moduleId)+'</div><div class="actions"><button class="btn" data-wb-module-select="'+esc(moduleId)+'">Config</button><button class="btn" data-wb-module-up="'+esc(String(index))+'">Up</button><button class="btn" data-wb-module-down="'+esc(String(index))+'">Down</button><button class="btn" data-wb-module-remove="'+esc(String(index))+'">Remove</button></div></div>').join('')+'</div><h4>Add Module</h4><div class="chips">'+(availableModules.length?availableModules.map((module)=>'<button class="btn" data-wb-module-add="'+esc(module.id)+'">+ '+esc(module.title)+'</button>').join(''):'<div class="empty">All modules in canvas.</div>')+'</div><h4>Additional Requirements</h4><textarea id="wbAddReq" style="min-height:180px" placeholder="Additional requirements for this implementation prompt...">'+esc(s.promptBuilder.additionalRequirements||'')+'</textarea></div>'+
+  root.innerHTML='<div class="sub"><h2>Prompt Workbench</h2><p>Advanced prompt composition tool for local drafts, previews, and reusable templates.</p><div class="hint-list"><div class="hint-item"><strong>Start here</strong><p>Finish Setup first. Use Reports for normal output review, then return here when you want to compose or refine a prompt draft.</p></div><div class="hint-item"><strong>Safety boundary</strong><p>This tool previews local prompt content, saves local templates, and imports existing local report artifacts. It does not execute arbitrary commands or contact remote systems.</p></div></div><h3>Use Cases</h3><p class="small">Pick a starting pattern, then adjust only what your draft needs.</p><input id="wbFilter" type="search" placeholder="Filter use cases"><div class="card-grid">'+filtered.map((entry)=>'<div class="card'+(selected&&selected.id===entry.id?' active':'')+'"><h3>'+esc(entry.title)+'</h3><p>'+esc(entry.description||'')+'</p><div class="meta"><div class="token">Priority: '+esc(entry.priority||'n/a')+'</div><div class="token">Default Modules: '+esc(String((entry.defaultModuleIds||[]).length))+'</div></div><div class="actions"><button class="btn" data-wb-select="'+esc(entry.id)+'">Use This Pattern</button></div></div>').join('')+'</div><h3>Templates</h3><p class="small">Save or reload reusable local templates. These actions persist local prompt-builder drafts only.</p><div class="field-grid"><label>Name<input id="wbTemplateName" value="'+escAttr(s.promptBuilder.templateName||'')+'" placeholder="Template name"></label><label>Description<textarea id="wbTemplateDescription" placeholder="Template description">'+esc(s.promptBuilder.templateDescription||'')+'</textarea></label><label>Tags (comma separated)<input id="wbTemplateTags" value="'+escAttr(s.promptBuilder.templateTags||'')+'" placeholder="mvp, api, ui"></label><label>Saved Templates<select id="wbTemplateSel"><option value="">'+esc('Select saved template')+'</option>'+(templates.map((template)=>'<option value="'+esc(template.id)+'"'+(template.id===s.promptBuilder.selectedTemplateId?' selected':'')+'>'+esc(template.name)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbLoadTemplate">Load Template</button><button class="btn primary" id="wbSaveTemplate">Save Local Template</button><button class="btn" id="wbDeleteTemplate">Delete Local Template</button></div>'+(templates.length?'<div class="small">Saved local templates: '+esc(String(templates.length))+'. Loading a template replaces the current draft fields.</div>':'<div class="small">No saved local templates yet. Preview a useful draft, then save it here for reuse.</div>')+(s.promptBuilder.saveStatus?'<div class="small '+statusToneClass(s.promptBuilder.saveStatus)+'">'+esc(s.promptBuilder.saveStatus)+'</div>':'')+'<h3>Import From Reports</h3><p class="small">Use an existing local report prompt as a seed. Import reads saved <code>ai_prompt_*.md</code> artifacts only.</p><div class="field-grid"><label>Analyze Run<select id="wbContextRunSel"><option value="">'+esc('Select output/<PROGRAM>')+'</option>'+(contextSources.map((entry)=>'<option value="'+esc(entry.program)+'"'+(entry.program===s.promptBuilder.contextSourceProgram?' selected':'')+'>'+esc(entry.program+' ('+(entry.promptArtifactCount||0)+' prompts)')+'</option>').join(''))+'</select></label><label>Prompt Artifact<select id="wbContextPromptSel"><option value="">'+esc('Select ai_prompt_*.md')+'</option>'+(contextPrompts.map((entry)=>'<option value="'+esc(entry.path)+'"'+(entry.path===s.promptBuilder.contextSourcePromptPath?' selected':'')+'>'+esc(entry.path)+'</option>').join(''))+'</select></label></div><div class="actions"><button class="btn" id="wbContextRefresh">Refresh Runs</button><button class="btn" id="wbContextLoadPrompts">Load Report Prompts</button><button class="btn" id="wbContextImport">Import From Report Artifact</button></div>'+(!contextSources.length?'<div class="small">No report runs are available for import yet. Generate output outside the browser, inspect it in Reports, then come back here if you want a prompt seed.</div>':(!contextPrompts.length&&s.promptBuilder.contextSourceProgram?'<div class="small">No importable prompt artifacts were found for the selected run yet.</div>':''))+(s.promptBuilder.contextSourceStatus?'<div class="small '+statusToneClass(s.promptBuilder.contextSourceStatus)+'">'+esc(s.promptBuilder.contextSourceStatus)+'</div>':'')+'<details><summary>Advanced Options</summary><p class="small">Use the canvas when you need to change module order, add lower-level sections, or add extra requirements.</p><h3>Prompt Canvas</h3><div class="item-list">'+moduleOrder.map((moduleId,index)=>'<div class="module-row'+(s.promptBuilder.selectedModuleId===moduleId?' active':'')+'"><h4>'+esc(moduleMap[moduleId]||moduleId)+'</h4><div class="small">'+esc(moduleId)+'</div><div class="actions"><button class="btn" data-wb-module-select="'+esc(moduleId)+'">Configure</button><button class="btn" data-wb-module-up="'+esc(String(index))+'">Move Up</button><button class="btn" data-wb-module-down="'+esc(String(index))+'">Move Down</button><button class="btn" data-wb-module-remove="'+esc(String(index))+'">Remove</button></div></div>').join('')+'</div><h4>Add Module</h4><div class="chips">'+(availableModules.length?availableModules.map((module)=>'<button class="btn" data-wb-module-add="'+esc(module.id)+'">+ '+esc(module.title)+'</button>').join(''):'<div class="empty">All modules are already in the canvas.</div>')+'</div><h4>Additional Requirements</h4><textarea id="wbAddReq" style="min-height:180px" placeholder="Additional requirements for this implementation prompt...">'+esc(s.promptBuilder.additionalRequirements||'')+'</textarea></details></div>'+
     '<div class="sub">'+
-    (selected?'<h2>'+esc(selected.title)+'</h2><p>'+esc(selected.description||'')+'</p><div class="tokens"><div class="token">Modules in Canvas: '+esc(String(moduleOrder.length))+'</div><div class="token">Preview tokens: '+esc(String((preview&&preview.estimatedTokens)||0))+'</div><div class="token">Mode: '+esc(s.promptBuilder.previewEditable?'edit':'live')+'</div></div><h3>Module Configuration'+(selectedModule?': '+esc(selectedModule.title):'')+'</h3>'+(activeFieldDefs.length?'<div class="field-grid">'+activeFieldDefs.map((field)=>renderCanvasFieldInput(field,(s.promptBuilder.fields||{})[field.name])).join('')+'</div>':'<div class="empty">No configurable fields for selected modules.</div>')+'<div class="actions"><button class="btn" id="wbPreviewRefresh">Refresh Preview</button><button class="btn" id="wbEditToggle">'+esc(s.promptBuilder.previewEditable?'Lock Preview':'Edit Preview')+'</button><button class="btn" id="wbCopyPreview">Copy</button><button class="btn" id="wbExportPreview">Export</button><button class="btn" id="wbToCompare">Open Prompt Compare</button></div><h3>Live Preview</h3><div id="wbPreviewPane" class="preview">'+(s.promptBuilder.previewLoading?'<pre>Generating preview...</pre>':s.promptBuilder.previewError?'<div class="empty">'+esc(s.promptBuilder.previewError)+'</div>':s.promptBuilder.previewEditable?'<textarea id="wbPreviewEditor" style="min-height:360px">'+esc(previewText)+'</textarea>':previewText?'<pre>'+esc(previewText)+'</pre>':'<div class="empty">No preview yet. Configure canvas or click refresh.</div>')+'</div>'
+    (selected?'<h2>'+esc(selected.title)+'</h2><p>'+esc(selected.description||'')+'</p><div class="tokens"><div class="token">Modules in Canvas: '+esc(String(moduleOrder.length))+'</div><div class="token">Preview tokens: '+esc(String((preview&&preview.estimatedTokens)||0))+'</div><div class="token">Mode: '+esc(s.promptBuilder.previewEditable?'edit':'live')+'</div></div><div class="hint-list"><div class="hint-item"><strong>Preview</strong><p>Preview is safe and local. It does not persist anything unless you save a local template or export the preview.</p></div><div class="hint-item"><strong>Beginner path</strong><p>Use the default module set first. Open Advanced Options only when you need to reorder modules or add specialist sections.</p></div></div><h3>Draft Inputs'+(selectedModule?': '+esc(selectedModule.title):'')+'</h3>'+(activeFieldDefs.length?'<div class="field-grid">'+activeFieldDefs.map((field)=>renderCanvasFieldInput(field,(s.promptBuilder.fields||{})[field.name])).join('')+'</div>':'<div class="empty">No configurable fields are available for the current selection.</div>')+'<div class="actions"><button class="btn primary" id="wbPreviewRefresh">Preview Prompt</button><button class="btn" id="wbEditToggle">'+esc(s.promptBuilder.previewEditable?'Lock Preview Editing':'Edit Preview Draft')+'</button><button class="btn" id="wbCopyPreview">Copy Preview</button><button class="btn" id="wbExportPreview">Export Preview</button><button class="btn" id="wbToCompare">Open Prompt Compare</button></div><h3>Preview Prompt</h3><div id="wbPreviewPane" class="preview">'+(s.promptBuilder.previewLoading?'<pre>Generating preview...</pre>':s.promptBuilder.previewError?'<div class="empty">'+esc(s.promptBuilder.previewError)+'</div>':s.promptBuilder.previewEditable?'<textarea id="wbPreviewEditor" style="min-height:360px">'+esc(previewText)+'</textarea>':previewText?'<pre>'+esc(previewText)+'</pre>':'<div class="empty">No preview yet. Choose a use case, review the draft inputs, and click Preview Prompt.</div>')+'</div>'
     :'<div class="empty">Select a use case to start.</div>')+
     '</div>';
 
@@ -3151,9 +3167,9 @@ function renderWorkbench(){
       renderWorkbench();
       try {
         await refreshContextSources();
-        s.promptBuilder.contextSourceStatus='Context runs refreshed.';
+        s.promptBuilder.contextSourceStatus='Report runs refreshed.';
       } catch(error){
-        s.promptBuilder.contextSourceStatus='Context refresh failed: '+(error.message||String(error));
+        s.promptBuilder.contextSourceStatus=workbenchUserError('Could not refresh report runs',error);
       }
       renderWorkbench();
     };
