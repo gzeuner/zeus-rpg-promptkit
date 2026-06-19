@@ -15,7 +15,8 @@ const path = require('path');
 
 const { loadProfiles, resolveBundleConfig, resolveProfile } = require('../../config/runtimeConfig');
 const { resolveRegistryPath } = require('../../workspace/analysisRegistryService');
-const { startLocalUiServer, DEFAULT_UI_HOST, DEFAULT_UI_PORT } = require('../../ui/localUiServer');
+const { startLocalUiServer } = require('../../ui/localUiServer');
+const { DEFAULT_UI_HOST, DEFAULT_UI_PORT } = require('../../ui/localUiDefaults');
 
 function parsePort(value, fallback) {
   if (value === undefined || value === null || value === true) {

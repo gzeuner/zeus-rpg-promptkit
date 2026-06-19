@@ -72,7 +72,7 @@ const { assessCanonicalModel } = require('../impact/riskAssessmentAnalyzer');
 const { WORKFLOW_RUN_MANIFEST_FILE } = require('../workflow/workflowRunManifest');
 const { searchLocalSources } = require('../investigation/fieldXrefService');
 const { listAnalysisRuns } = require('../ui/localUiDataApi');
-const { DEFAULT_UI_HOST, DEFAULT_UI_PORT } = require('../ui/localUiServer');
+const { DEFAULT_UI_HOST, DEFAULT_UI_PORT } = require('../ui/localUiDefaults');
 const {
   buildWorkCopyTargetName,
   discoverFetchedSources,
