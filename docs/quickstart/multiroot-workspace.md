@@ -1,7 +1,7 @@
 ---
 Title: Quickstart: Multi-Root Workspace fuer Ticket-basierte Analyse
 Description: Schneller operativer Einstieg in typische Zeus-Workflows.
-Last Updated: 2026-05-20
+Last Updated: 2026-06-19
 ---
 
 # Quickstart: Multi-Root Workspace fuer Ticket-basierte Analyse
@@ -23,23 +23,16 @@ cd c:\Tickets\TICKET-12345
 
 Lege beide Ordner parallel bereit:
 - `c:\Tickets\TICKET-12345`
-- `c:\Users\Developer.User\Tools\zeus-rpg-promptkit`
+- `c:\Tools\zeus-rpg-promptkit`
 
 Nutze dein bevorzugtes Werkzeug, um zwischen beiden Verzeichnissen zu arbeiten.
 
 ## 3. Umgebungsvariablen laden
 
 ```powershell
-cd c:\Users\Developer.User\Tools\zeus-rpg-promptkit
+cd c:\Tools\zeus-rpg-promptkit
 
-if (-not (Test-Path config\.env.local)) {
-    copy config\.env.example config\.env.local
-    Write-Host "Created config/.env.local - please edit with your credentials"
-    notepad config\.env.local
-    exit
-}
-
-. .\config\load-env.ps1
+. .\config\load-env.ps1 -Environment <environment>
 ```
 
 ## 4. Konfiguration prüfen
@@ -63,7 +56,7 @@ node cli/zeus.js analyze --profile default
 ## 7. Artefakte auswerten
 
 - Prüfe `output/` und `analysis/`.
-- Starte optional den lokalen Viewer:
+- Starte optional den lokalen Viewer nur für bereits erzeugte Artefakte:
 
 ```powershell
 node cli/zeus.js serve --source-output-root ./output

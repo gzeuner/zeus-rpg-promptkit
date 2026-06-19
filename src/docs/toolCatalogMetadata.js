@@ -136,7 +136,7 @@ const COMMAND_METADATA = Object.freeze({
   serve: Object.freeze({
     safety: 'S0',
     scope: 'Local',
-    purpose: 'Start the local artifact viewer and API shell.',
+    purpose: 'Start the optional local artifact viewer and experimental UI shell.',
     example: 'node cli/zeus.js serve --source-output-root ./output --host 127.0.0.1 --port 4782',
   }),
   qa: Object.freeze({
@@ -285,7 +285,7 @@ const RECOMMENDED_AI_SEQUENCE = Object.freeze([
   '`analyze` or `workflow --preset ...`',
   '`query-table`/`query-sql`/`joblog`/`field-search`/`search-source`/`inspect-object` for evidence deepening',
   '`impact`/`assess-risk`/`generate-test`/`generate-checklist`/`qa` for planning and validation',
-  '`bundle`/`serve` for review and sharing',
+  'generated artifacts and `bundle` for review/sharing; optional `serve` for local viewing',
   '`upsert`/`upsert-sql`/`insert`/`update` only after explicit user approval',
   '`bridge` only in operator-gated, explicitly approved flows',
 ]);

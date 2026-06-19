@@ -687,6 +687,7 @@ Suggested commands:
 
 ```powershell
 node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context
+# optional local viewer:
 node .\cli\zeus.js serve --source-output-root .\output
 ```
 
@@ -1151,7 +1152,7 @@ Best for:
 - sharing with vendors or partners
 - internal review when raw identifiers or extracted values should not leave the core team
 
-### H4 Browser-first Local Review
+### H4 Optional Local Viewer Review
 
 Use:
 
@@ -1161,9 +1162,8 @@ node .\cli\zeus.js serve --source-output-root .\output
 
 Best for:
 
-- non-terminal users
 - walk-through sessions
-- browsing runs, views, and raw artifacts from a local web UI
+- browsing runs, views, and raw artifacts from a local web UI after CLI/MCP work already produced them
 
 ## 7. Best Practices
 
