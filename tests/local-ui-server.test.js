@@ -244,11 +244,20 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'review-reports').uiTarget, 'reports');
     assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'fetch-sources').enabledInShell, false);
     assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'fetch-sources').status, 'Coming later');
+    assert.equal(uiMetadata.setup.title, 'Setup');
+    assert.equal(uiMetadata.setup.primaryAction.label, 'Check Readiness');
+    assert.equal(uiMetadata.setup.primaryAction.actionPath, '/api/ui-actions/doctor');
+    assert.ok(Array.isArray(uiMetadata.setup.precedenceRules));
     assert.equal(uiMetadata.guidedConfiguration.schemaVersion, 1);
     assert.ok(Array.isArray(uiMetadata.guidedConfiguration.steps));
     assert.ok(uiMetadata.guidedConfiguration.steps.length >= 7);
     assert.ok(Array.isArray(uiMetadata.guidedConfiguration.discoveryActions));
     assert.ok(uiMetadata.guidedConfiguration.discoveryActions.some((entry) => entry.id === 'discover-source-libraries'));
+    assert.equal(uiMetadata.aiSessionStarter.templateSource, 'docs/ai/session-prompt.md');
+    assert.equal(uiMetadata.aiSessionStarter.actionPath, '/api/ui-actions/generate-ai-session-prompt');
+    assert.equal(uiMetadata.aiSessionStarter.goalMaxLength, 4000);
+    assert.equal(uiMetadata.aiSessionStarter.envLoading.powerShell.command.includes('load-env.ps1'), true);
+    assert.equal(uiMetadata.aiSessionStarter.envLoading.bash.command.includes('load-env.sh'), true);
     assert.equal(uiMetadata.profileWizard.mode, 'local-only-profile-wizard');
     assert.ok(Array.isArray(uiMetadata.profileWizard.steps));
     assert.ok(uiMetadata.profileWizard.steps.some((entry) => entry.id === 'managed-environments'));
@@ -418,6 +427,54 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
       }),
     });
     assert.equal(doctorUnknownKey.status, 400);
+
+    const aiSessionPromptResponse = await fetch(`${started.url}/api/ui-actions/generate-ai-session-prompt`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        environment: 'development',
+        goal: 'Analyze program ORDERPGM and summarize dependencies.',
+        includeDoctorSummary: true,
+        doctorSummary: {
+          status: 'warning',
+          summary: {
+            total: 2,
+            pass: 1,
+            warn: 1,
+            fail: 0,
+            info: 0,
+            skip: 0,
+          },
+          finishedAt: '2026-06-19T12:00:00.000Z',
+        },
+      }),
+    });
+    assert.equal(aiSessionPromptResponse.status, 200);
+    const aiSessionPromptPayload = await aiSessionPromptResponse.json();
+    assert.equal(aiSessionPromptPayload.action, 'generate-ai-session-prompt');
+    assert.equal(aiSessionPromptPayload.status, 'completed');
+    assert.match(aiSessionPromptPayload.prompt, /Analyze program ORDERPGM and summarize dependencies\./);
+    assert.match(aiSessionPromptPayload.prompt, /docs\/tool-catalog\.md/);
+    assert.equal(aiSessionPromptPayload.metadata.profile, 'dev');
+    assert.equal(aiSessionPromptPayload.metadata.environment, 'development');
+    assert.equal(aiSessionPromptPayload.metadata.includedDoctorSummary, true);
+    assert.equal(Array.isArray(aiSessionPromptPayload.warnings), true);
+    assert.equal(JSON.stringify(aiSessionPromptPayload).includes('password=super-secret'), false);
+
+    const invalidAiSessionPromptResponse = await fetch(`${started.url}/api/ui-actions/generate-ai-session-prompt`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        goal: 'jdbc:as400://user:secret@internal-host.example;password=secret',
+      }),
+    });
+    assert.equal(invalidAiSessionPromptResponse.status, 400);
 
     const discoveryResponse = await fetch(`${started.url}/api/ui-actions/discovery-preview`, {
       method: 'POST',
@@ -633,6 +690,14 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /Recommended Next Step/);
     assert.match(shellHtml, /Check Readiness/);
     assert.match(shellHtml, /Doctor Readiness Check/);
+    assert.match(shellHtml, /Start AI Session/);
+    assert.match(shellHtml, /Generate Session Prompt/);
+    assert.match(shellHtml, /Copy Prompt/);
+    assert.match(shellHtml, /Include compact Doctor summary/);
+    assert.match(shellHtml, /The Local UI cannot load env vars into your already-open terminal/);
+    assert.match(shellHtml, /load-env\.ps1/);
+    assert.match(shellHtml, /load-env\.sh/);
+    assert.match(shellHtml, /Do not paste credentials into the goal/);
     assert.match(shellHtml, /Local-only Profile Wizard/);
     assert.match(shellHtml, /Advanced Setup Details/);
     assert.match(shellHtml, /Reports are local and read-only/);

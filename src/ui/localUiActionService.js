@@ -27,11 +27,18 @@ const {
   buildEnvProfileConflictMessage,
   summarizeTargetValue,
 } = require('../cli/helpers/runtimeConfigWarnings');
+const { maskSecretsInText } = require('../security/secretMasking');
+const {
+  AI_SESSION_GOAL_MAX_LENGTH,
+  AiSessionPromptError,
+  createAiSessionPromptService,
+} = require('./aiSessionPromptService');
 const { buildDiscoveryActionPreview, getGuidedDiscoveryAction } = require('./guidedConfigWizardModel');
 
 const ALLOWED_DOCTOR_KEYS = new Set(['profile', 'showResolved']);
 const ALLOWED_ANALYZE_WORKSPACE_KEYS = new Set(['profile', 'program', 'member', 'safeSharing']);
 const ALLOWED_DISCOVERY_PREVIEW_KEYS = new Set(['profile', 'actionId']);
+const ALLOWED_AI_SESSION_PROMPT_KEYS = new Set(['profile', 'environment', 'goal', 'includeDoctorSummary', 'doctorSummary']);
 const FETCH_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
   'discover-source-libraries',
   'discover-source-physical-files',
@@ -45,12 +52,16 @@ const OBJECT_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
 ]);
 const PROFILE_NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 const OBJECT_NAME_PATTERN = /^[A-Za-z0-9_]{1,64}$/;
+const CONTROL_CHARACTER_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/u;
 const SECRET_LIKE_PATTERN = /(PASS|PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY|CREDENTIAL|PWD)/i;
+const JDBC_CREDENTIAL_PATTERN = /\bjdbc:[a-z0-9]+:\/\/[^:\s/;,@]+:[^@\s/;]+@/i;
 const KNOWN_ANALYZE_FAILURE_CODES = new Set([
   'PROGRAM_REQUIRED',
   'SOURCE_REQUIRED',
   'SOURCE_ROOT_MISSING',
 ]);
+const ALLOWED_DOCTOR_SUMMARY_KEYS = new Set(['status', 'summary', 'finishedAt']);
+const ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS = new Set(['total', 'pass', 'fail', 'warn', 'info', 'skip']);
 
 class UiActionError extends Error {
   constructor(message, statusCode = 400) {
@@ -87,6 +98,95 @@ function validateObjectName(value, fieldName) {
     throw new UiActionError(`Invalid payload: ${fieldName} contains unsupported characters`, 400);
   }
   return trimmed.toUpperCase();
+}
+
+function validateOptionalSimpleName(value, fieldName) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) {
+    return '';
+  }
+  if (trimmed.includes('..')) {
+    throw new UiActionError(`Invalid payload: ${fieldName} must not contain ".."`, 400);
+  }
+  if (!PROFILE_NAME_PATTERN.test(trimmed)) {
+    throw new UiActionError(`Invalid payload: ${fieldName} contains unsupported characters`, 400);
+  }
+  return trimmed;
+}
+
+function normalizeGoal(goal) {
+  const trimmed = String(goal || '').replace(/\r\n/g, '\n').trim();
+  if (!trimmed) {
+    throw new UiActionError('Invalid payload: goal is required', 400);
+  }
+  if (trimmed.length > AI_SESSION_GOAL_MAX_LENGTH) {
+    throw new UiActionError(`Invalid payload: goal exceeds ${AI_SESSION_GOAL_MAX_LENGTH} characters`, 400);
+  }
+  if (CONTROL_CHARACTER_PATTERN.test(trimmed)) {
+    throw new UiActionError('Invalid payload: goal contains unsupported control characters', 400);
+  }
+  if (JDBC_CREDENTIAL_PATTERN.test(trimmed) || maskSecretsInText(trimmed) !== trimmed) {
+    throw new UiActionError('Invalid payload: goal appears to contain secrets or credential-bearing connection text', 400);
+  }
+  return trimmed;
+}
+
+function normalizeDoctorSummary(rawDoctorSummary) {
+  if (rawDoctorSummary === undefined) {
+    return null;
+  }
+  if (!isPlainObject(rawDoctorSummary)) {
+    throw new UiActionError('Invalid payload: doctorSummary must be an object', 400);
+  }
+
+  const unknownKeys = Object.keys(rawDoctorSummary).filter((key) => !ALLOWED_DOCTOR_SUMMARY_KEYS.has(key));
+  if (unknownKeys.length > 0) {
+    throw new UiActionError(`Invalid payload: unsupported doctorSummary key(s): ${unknownKeys.join(', ')}`, 400);
+  }
+
+  const status = String(rawDoctorSummary.status || '').trim().toLowerCase();
+  if (!status) {
+    throw new UiActionError('Invalid payload: doctorSummary.status is required when doctorSummary is provided', 400);
+  }
+
+  let summary = null;
+  if (rawDoctorSummary.summary !== undefined) {
+    if (!isPlainObject(rawDoctorSummary.summary)) {
+      throw new UiActionError('Invalid payload: doctorSummary.summary must be an object', 400);
+    }
+    const unknownSummaryKeys = Object.keys(rawDoctorSummary.summary)
+      .filter((key) => !ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS.has(key));
+    if (unknownSummaryKeys.length > 0) {
+      throw new UiActionError(`Invalid payload: unsupported doctorSummary.summary key(s): ${unknownSummaryKeys.join(', ')}`, 400);
+    }
+    summary = {};
+    for (const key of ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS) {
+      if (rawDoctorSummary.summary[key] === undefined) {
+        continue;
+      }
+      const numericValue = Number(rawDoctorSummary.summary[key]);
+      if (!Number.isInteger(numericValue) || numericValue < 0) {
+        throw new UiActionError(`Invalid payload: doctorSummary.summary.${key} must be a non-negative integer`, 400);
+      }
+      summary[key] = numericValue;
+    }
+  }
+
+  const finishedAt = rawDoctorSummary.finishedAt === undefined
+    ? null
+    : String(rawDoctorSummary.finishedAt).trim();
+  if (finishedAt) {
+    const timestamp = new Date(finishedAt);
+    if (Number.isNaN(timestamp.getTime())) {
+      throw new UiActionError('Invalid payload: doctorSummary.finishedAt must be an ISO timestamp', 400);
+    }
+  }
+
+  return {
+    status,
+    summary,
+    finishedAt: finishedAt || null,
+  };
 }
 
 function normalizeDoctorPayload(rawPayload) {
@@ -154,6 +254,33 @@ function normalizeDiscoveryPreviewPayload(rawPayload) {
   return {
     profile,
     actionId,
+  };
+}
+
+function normalizeAiSessionPromptPayload(rawPayload) {
+  if (!isPlainObject(rawPayload)) {
+    throw new UiActionError('Invalid payload: expected JSON object', 400);
+  }
+
+  const unknownKeys = Object.keys(rawPayload).filter((key) => !ALLOWED_AI_SESSION_PROMPT_KEYS.has(key));
+  if (unknownKeys.length > 0) {
+    throw new UiActionError(`Invalid payload: unsupported key(s): ${unknownKeys.join(', ')}`, 400);
+  }
+
+  const profile = validateProfileName(rawPayload.profile);
+  const environment = validateOptionalSimpleName(rawPayload.environment, 'environment');
+  const goal = normalizeGoal(rawPayload.goal);
+  const doctorSummary = normalizeDoctorSummary(rawPayload.doctorSummary);
+  const includeDoctorSummary = rawPayload.includeDoctorSummary === undefined
+    ? Boolean(doctorSummary)
+    : Boolean(rawPayload.includeDoctorSummary);
+
+  return {
+    profile,
+    environment: environment || null,
+    goal,
+    includeDoctorSummary,
+    doctorSummary,
   };
 }
 
@@ -499,6 +626,7 @@ function createLocalUiActionService({
   analyzeConfigResolver = defaultAnalyzeConfigResolver,
   fetchConfigResolver = defaultFetchConfigResolver,
   workflowConfigResolver = defaultWorkflowConfigResolver,
+  aiSessionPromptService = createAiSessionPromptService(),
 } = {}) {
   async function runDoctorAction(rawPayload) {
     const startedAt = new Date();
@@ -741,6 +869,46 @@ function createLocalUiActionService({
     };
   }
 
+  async function runGenerateAiSessionPromptAction(rawPayload) {
+    const startedAt = new Date();
+    const payload = normalizeAiSessionPromptPayload(rawPayload || {});
+
+    try {
+      const promptResult = await Promise.resolve(aiSessionPromptService.generatePrompt(payload));
+      const finishedAt = new Date();
+
+      return {
+        action: 'generate-ai-session-prompt',
+        status: 'completed',
+        startedAt: startedAt.toISOString(),
+        finishedAt: finishedAt.toISOString(),
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        input: {
+          profile: payload.profile,
+          environment: payload.environment,
+          goal: payload.goal,
+          includeDoctorSummary: payload.includeDoctorSummary,
+          doctorSummary: payload.includeDoctorSummary ? payload.doctorSummary : null,
+        },
+        prompt: promptResult.prompt,
+        warnings: Array.isArray(promptResult.warnings) ? promptResult.warnings : [],
+        metadata: promptResult.metadata && typeof promptResult.metadata === 'object'
+          ? promptResult.metadata
+          : {
+            profile: payload.profile,
+            environment: payload.environment,
+            includedDoctorSummary: Boolean(payload.includeDoctorSummary && payload.doctorSummary),
+            templateSource: null,
+          },
+      };
+    } catch (error) {
+      if (!(error instanceof AiSessionPromptError)) {
+        throw error;
+      }
+      throw new UiActionError(error.message, error.statusCode);
+    }
+  }
+
   async function executeAction(actionName, payload) {
     const normalizedAction = String(actionName || '').trim().toLowerCase();
     if (!normalizedAction) {
@@ -756,6 +924,9 @@ function createLocalUiActionService({
     if (normalizedAction === 'discovery-preview') {
       return runDiscoveryPreviewAction(payload);
     }
+    if (normalizedAction === 'generate-ai-session-prompt') {
+      return runGenerateAiSessionPromptAction(payload);
+    }
 
     throw new UiActionError(`Unknown action: ${normalizedAction}`, 404);
   }
@@ -763,6 +934,7 @@ function createLocalUiActionService({
   return {
     executeAction,
     normalizeAnalyzeExistingWorkspacePayload,
+    normalizeAiSessionPromptPayload,
     normalizeDiscoveryPreviewPayload,
     normalizeDoctorPayload,
     buildDiscoveryConfigContext,
@@ -780,9 +952,11 @@ module.exports = {
   buildDb2DiscoveryConfigContext,
   buildObjectDiscoveryConfigContext,
   normalizeAnalyzeExistingWorkspacePayload,
+  normalizeAiSessionPromptPayload,
   normalizeDiscoveryPreviewPayload,
   normalizeDoctorPayload,
   normalizeDoctorDiagnostics,
   validateProfileName,
+  validateOptionalSimpleName,
   validateObjectName,
 };

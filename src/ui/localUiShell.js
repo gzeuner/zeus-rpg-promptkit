@@ -580,6 +580,17 @@ const s={
       running:false,
       error:null,
       result:null
+    },
+    aiSession:{
+      profile:'dev',
+      environment:'',
+      goal:'',
+      includeDoctorSummary:false,
+      running:false,
+      error:null,
+      result:null,
+      copyStatus:'',
+      expanded:false
     }
   },
   profileWizard:{
@@ -849,6 +860,38 @@ function renderCommandBlock(lines){
   return '<div class="command-block"><pre>'+esc((Array.isArray(lines)?lines:[String(lines||'')]).join('\\n'))+'</pre></div>';
 }
 
+function renderTokenRow(items,className){
+  const safeItems=Array.isArray(items)?items:[];
+  const tokens=safeItems.map((entry)=>{
+    if(entry===null||entry===undefined||entry===false) return '';
+    if(typeof entry==='object'){
+      const text=entry.text===undefined||entry.text===null?'':String(entry.text);
+      if(!text) return '';
+      const toneClass=entry.tone?statusToneClass(entry.tone):'';
+      return '<div class="token'+(toneClass?' '+escAttr(toneClass):'')+'">'+esc(text)+'</div>';
+    }
+    const text=String(entry);
+    return text?'<div class="token">'+esc(text)+'</div>':'';
+  }).filter(Boolean).join('');
+  if(!tokens) return '';
+  return '<div class="'+escAttr(className||'tokens')+'">'+tokens+'</div>';
+}
+
+function renderHintList(items){
+  const safeItems=Array.isArray(items)?items:[];
+  const content=safeItems.map((entry)=>{
+    if(!entry||typeof entry!=='object') return '';
+    const title=entry.title?'<strong>'+esc(String(entry.title))+'</strong>':'';
+    const tokens=renderTokenRow(entry.tokens,'tokens');
+    const body=entry.body?'<p>'+esc(String(entry.body))+'</p>':'';
+    const bodyHtml=entry.bodyHtml?'<p>'+String(entry.bodyHtml)+'</p>':'';
+    const small=entry.small?'<p class="small">'+esc(String(entry.small))+'</p>':'';
+    const smallHtml=entry.smallHtml?'<p class="small">'+String(entry.smallHtml)+'</p>':'';
+    return '<div class="hint-item">'+title+tokens+body+bodyHtml+small+smallHtml+'</div>';
+  }).filter(Boolean).join('');
+  return content?'<div class="hint-list">'+content+'</div>':'';
+}
+
 function promptWorkbenchHighlights(){
   const useCases=(s.promptBuilder.useCases||[]).slice(0,3);
   if(s.promptBuilder.loading){
@@ -892,6 +935,13 @@ function metadataFields(){
   return fields.length>0?fields:[];
 }
 
+function setupMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.setup&&typeof payload.setup==='object'
+    ? payload.setup
+    : null;
+}
+
 function guidedConfiguration(){
   const payload=s.uiMetadata&&s.uiMetadata.payload;
   return payload&&payload.guidedConfiguration&&typeof payload.guidedConfiguration==='object'
@@ -923,6 +973,13 @@ function profileWizardMetadata(){
   const payload=s.uiMetadata&&s.uiMetadata.payload;
   return payload&&payload.profileWizard&&typeof payload.profileWizard==='object'
     ? payload.profileWizard
+    : null;
+}
+
+function aiSessionStarterMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.aiSessionStarter&&typeof payload.aiSessionStarter==='object'
+    ? payload.aiSessionStarter
     : null;
 }
 
@@ -1510,6 +1567,7 @@ function preferredProfileWizardDoctorProfile(){
 
 function renderConfigureStartPanel(options){
   const safeOptions=options&&typeof options==='object'?options:{};
+  const setupMeta=setupMetadata()||{};
   const draft=safeOptions.draft&&typeof safeOptions.draft==='object'?safeOptions.draft:ensureProfileWizardDraft();
   const signals=safeOptions.signals&&typeof safeOptions.signals==='object'?safeOptions.signals:evaluateProfileWizardDraft();
   const previewFreshness=safeOptions.previewFreshness&&typeof safeOptions.previewFreshness==='object'
@@ -1564,30 +1622,138 @@ function renderConfigureStartPanel(options){
     : (draftSavedSummary
       ? 'This draft name matches an existing saved profile, but no profile is currently loaded for doctor yet.'
       : 'The browser edits local-only config only. It does not apply unsaved drafts to doctor.');
+  const precedenceRules=Array.isArray(setupMeta.precedenceRules)&&setupMeta.precedenceRules.length
+    ? setupMeta.precedenceRules
+    : ['CLI overrides env.','Env overrides profile.','Profile overrides defaults.'];
+  const precedenceSummary='CLI overrides env. Env overrides profile. Profile overrides defaults.';
+  const boundaryNotes=Array.isArray(setupMeta.boundaryNotes)&&setupMeta.boundaryNotes.length
+    ? setupMeta.boundaryNotes
+    : ['This screen only edits local-only config and placeholder-based environment routing.','It does not expose secrets and it does not connect to IBM i or DB2 here.'];
+  const recommendedNextTokens=Array.isArray(setupMeta.recommendedNextTokens)&&setupMeta.recommendedNextTokens.length
+    ? setupMeta.recommendedNextTokens
+    : ['setup focus','doctor uses effective config','warnings do not auto-abort'];
+  const doctorStatusGuidance=setupMeta.doctorStatusGuidance&&typeof setupMeta.doctorStatusGuidance==='object'
+    ? setupMeta.doctorStatusGuidance
+    : {};
+  const doctorActionLabel=setupMeta.primaryAction&&setupMeta.primaryAction.label
+    ? String(setupMeta.primaryAction.label)
+    : 'Check Readiness';
   let recommendedNext='Choose or load a profile and fill the required path fields first.';
   if(doctorState.running){
-    recommendedNext='Wait for Check Readiness to finish.';
+    recommendedNext=String(doctorStatusGuidance.running||'Wait for Check Readiness to finish.');
   }else if(doctorState.error){
-    recommendedNext='Review the readiness error, then try Check Readiness again.';
+    recommendedNext=String(doctorStatusGuidance.error||'Review the readiness error, then try Check Readiness again.');
   }else if(doctorResult&&doctorResult.status==='ready'){
-    recommendedNext='Setup looks ready. Continue to Reports when output exists, or use Advanced / Tools if you need local-only analysis or prompt work.';
+    recommendedNext=String(doctorStatusGuidance.ready||'Setup looks ready. Continue to Reports when output exists, or use Advanced / Tools if you need local-only analysis or prompt work.');
   }else if(doctorResult&&doctorResult.status==='warning'){
-    recommendedNext='Review the warning cards below. Env vars may be changing the effective target even when the saved profile looks correct.';
+    recommendedNext=String(doctorStatusGuidance.warning||'Review the warning cards below. Env vars may be changing the effective target even when the saved profile looks correct.');
   }else if(doctorResult&&doctorResult.status==='failed'){
-    recommendedNext='Resolve the failed doctor checks before moving on.';
+    recommendedNext=String(doctorStatusGuidance.failed||'Resolve the failed doctor checks before moving on.');
   }else if(signals.canSave){
     recommendedNext='Save the current draft if needed, then run Check Readiness.';
   }else if(signals.canPreview){
     recommendedNext='Run Preview Draft next, then save locally before Check Readiness.';
   }
-  return '<div class="sub"><h2>Setup</h2><p>Use Setup as a simple 3-step path: choose or create a profile, preview and save it locally, then run Zeus Doctor.</p><div class="hint-list"><div class="hint-item"><strong>Browser safety</strong><p>This screen only edits local-only config and placeholder-based environment routing. It does not expose secrets and it does not connect to IBM i or DB2 here.</p></div><div class="hint-item"><strong>Resolution order</strong><p>CLI overrides env. Env overrides profile. Profile overrides defaults. Doctor checks the effective configuration after those rules are applied.</p></div></div><div class="field-list">'+
-    '<div class="field-item"><strong>Recommended Next Step</strong><p>'+esc(recommendedNext)+'</p><div class="workflow-meta"><div class="token">setup focus</div><div class="token">doctor uses effective config</div><div class="token">warnings do not auto-abort</div></div></div>'+
-    '<div class="field-item"><strong>1. Choose Or Create A Profile</strong><p>'+esc(stepOneStatus)+'</p><div class="workflow-meta"><div class="token">known profiles: '+esc(String(profiles.length))+'</div><div class="token">local-only: '+esc(String(localOnlyProfiles.length))+'</div><div class="token">managed envs: '+esc(String(managedSystems.length))+'</div></div><p class="small">Selected profile source and local-only overlays are shown here, but secret values are never displayed.</p><div class="actions"><button class="btn" data-pw-refresh="1">Reload Wizard State</button><button class="btn primary" data-pw-new="1">New Local Draft</button><button class="btn" data-pw-load="1">Load Selected Profile</button></div></div>'+
-    '<div class="field-item"><strong>Environment Override Explanation</strong><p>Environment variables can change the effective target even when the saved profile looks correct.</p><div class="workflow-meta">'+routingTokens.map(([label,value])=>'<div class="token">'+esc(label+': '+value)+'</div>').join('')+'</div><p class="small">Examples: <code>ZEUS_DB_HOST</code> can override <code>db.host</code>. Secret env vars may exist, but their values are never shown here.</p></div>'+
-    '<div class="field-item"><strong>Config Metadata Overview</strong><p>'+esc(String(configSectionCount))+' setup sections and '+esc(String(configFields.length))+' documented fields are available in this UI payload.</p><div class="workflow-meta"><div class="token">sensitive fields: '+esc(String(configSensitiveCount))+'</div><div class="token">read-only metadata</div><div class="token">no resolved values</div></div><p class="small">Use the metadata section below to understand which fields can be set by profile or env without exposing runtime secrets.</p></div>'+
-    '<div class="field-item"><strong>2. Preview And Save Locally</strong><p>'+esc(stepTwoStatus)+'</p><div class="workflow-meta"><div class="token '+esc(statusToneClass(previewStatus))+'">'+esc(previewStatus)+'</div>'+(draftProfileName?'<div class="token">draft: '+esc(draftProfileName)+'</div>':'<div class="token">draft name missing</div>')+(selectedProfileSummary?'<div class="token">loaded source: '+esc(String(selectedProfileSummary.sourceKind||'shared'))+'</div>':'')+'</div><div class="actions"><button class="btn" data-pw-preview="1">Preview Draft</button><button class="btn primary" data-pw-save="1">Save Local-only</button></div></div>'+
-    '<div class="field-item"><strong>3. Run Zeus Doctor</strong><p>'+esc(doctorStatus)+'</p><div class="workflow-meta"><div class="token">doctor target: '+esc(doctorProfile)+'</div>'+(doctorProfileSummary?'<div class="token">source: '+esc(String(doctorProfileSummary.sourceKind||'shared'))+'</div>':'<div class="token">save required</div>')+(doctorState&&doctorState.result?'<div class="token">result available</div>':'')+'</div><p class="small">'+esc(doctorHint)+'</p><div class="actions"><button class="btn primary" data-config-doctor="1">Check Readiness</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div></div>'+
-  '</div></div>';
+  return '<div class="sub"><h2>'+esc(String(setupMeta.title||'Setup'))+'</h2><p>Use Setup as a simple 3-step path: choose or create a profile, preview and save it locally, then run Zeus Doctor.</p>'+
+    renderHintList([
+      { title:'Browser safety', body:boundaryNotes.join(' ') },
+      { title:'Resolution order', body:(precedenceRules.length?precedenceRules.join(' '):precedenceSummary)+' Doctor checks the effective configuration after those rules are applied.' }
+    ])+
+    '<div class="field-list">'+
+      '<div class="field-item"><strong>Recommended Next Step</strong><p>'+esc(recommendedNext)+'</p>'+renderTokenRow(recommendedNextTokens,'workflow-meta')+'</div>'+
+      '<div class="field-item"><strong>1. Choose Or Create A Profile</strong><p>'+esc(stepOneStatus)+'</p>'+renderTokenRow([
+        'known profiles: '+String(profiles.length),
+        'local-only: '+String(localOnlyProfiles.length),
+        'managed envs: '+String(managedSystems.length)
+      ],'workflow-meta')+'<p class="small">Selected profile source and local-only overlays are shown here, but secret values are never displayed.</p><div class="actions"><button class="btn" data-pw-refresh="1">Reload Wizard State</button><button class="btn primary" data-pw-new="1">New Local Draft</button><button class="btn" data-pw-load="1">Load Selected Profile</button></div></div>'+
+      '<div class="field-item"><strong>Environment Override Explanation</strong><p>Environment variables can change the effective target even when the saved profile looks correct.</p>'+renderTokenRow(routingTokens.map(([label,value])=>label+': '+value),'workflow-meta')+'<p class="small">Examples: <code>ZEUS_DB_HOST</code> can override <code>db.host</code>. Secret env vars may exist, but their values are never shown here.</p></div>'+
+      '<div class="field-item"><strong>Config Metadata Overview</strong><p>'+esc(String(configSectionCount))+' setup sections and '+esc(String(configFields.length))+' documented fields are available in this UI payload.</p>'+renderTokenRow([
+        'sensitive fields: '+String(configSensitiveCount),
+        'read-only metadata',
+        'no resolved values'
+      ],'workflow-meta')+'<p class="small">Use the metadata section below to understand which fields can be set by profile or env without exposing runtime secrets.</p></div>'+
+      '<div class="field-item"><strong>2. Preview And Save Locally</strong><p>'+esc(stepTwoStatus)+'</p>'+renderTokenRow([
+        { text:previewStatus, tone:previewStatus },
+        draftProfileName?'draft: '+draftProfileName:'draft name missing',
+        selectedProfileSummary?'loaded source: '+String(selectedProfileSummary.sourceKind||'shared'):null
+      ],'workflow-meta')+'<div class="actions"><button class="btn" data-pw-preview="1">Preview Draft</button><button class="btn primary" data-pw-save="1">Save Local-only</button></div></div>'+
+      '<div class="field-item"><strong>3. Run Zeus Doctor</strong><p>'+esc(doctorStatus)+'</p>'+renderTokenRow([
+        'doctor target: '+doctorProfile,
+        doctorProfileSummary?'source: '+String(doctorProfileSummary.sourceKind||'shared'):'save required',
+        doctorState&&doctorState.result?'result available':null
+      ],'workflow-meta')+'<p class="small">'+esc(doctorHint)+'</p><div class="actions"><button class="btn primary" data-config-doctor="1">'+esc(doctorActionLabel)+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div></div>'+
+    '</div></div>';
+}
+
+function buildAiSessionDoctorSummaryPayload(doctorResult){
+  if(!doctorResult||typeof doctorResult!=='object') return null;
+  const summary=doctorResult.result&&doctorResult.result.summary&&typeof doctorResult.result.summary==='object'
+    ? doctorResult.result.summary
+    : null;
+  return {
+    status:String(doctorResult.status||'').trim()||'unknown',
+    summary:summary?{
+      total:Number(summary.total||0),
+      pass:Number(summary.pass||0),
+      fail:Number(summary.fail||0),
+      warn:Number(summary.warn||0),
+      info:Number(summary.info||0),
+      skip:Number(summary.skip||0)
+    }:null,
+    finishedAt:doctorResult.finishedAt||null
+  };
+}
+
+function renderAiSessionStarterPanel(options){
+  const safeOptions=options&&typeof options==='object'?options:{};
+  const metadata=safeOptions.metadata&&typeof safeOptions.metadata==='object'
+    ? safeOptions.metadata
+    : (aiSessionStarterMetadata()||{});
+  const state=safeOptions.state&&typeof safeOptions.state==='object'?safeOptions.state:(s.uiActions.aiSession||{});
+  const doctorResult=safeOptions.doctorResult&&typeof safeOptions.doctorResult==='object'?safeOptions.doctorResult:null;
+  const doctorAvailable=Boolean(doctorResult);
+  const includeDoctorSummary=doctorAvailable
+    ? state.includeDoctorSummary!==false
+    : false;
+  const starterOpen=Boolean(state.expanded||state.running||state.error||(state.result&&state.result.prompt));
+  const goalMaxLength=Number(metadata.goalMaxLength||4000);
+  const promptText=state.result&&state.result.prompt?String(state.result.prompt):'';
+  const warnings=state.result&&Array.isArray(state.result.warnings)?state.result.warnings:[];
+  const envLoading=metadata.envLoading&&typeof metadata.envLoading==='object'?metadata.envLoading:{};
+  const powerShellCommand=envLoading.powerShell&&envLoading.powerShell.command
+    ? String(envLoading.powerShell.command)
+    : '. .\\config\\load-env.ps1 -Environment <environment>';
+  const bashCommand=envLoading.bash&&envLoading.bash.command
+    ? String(envLoading.bash.command)
+    : 'source ./config/load-env.sh <environment>';
+  const mcpSummary=metadata.capabilityGuidance&&metadata.capabilityGuidance.mcp&&typeof metadata.capabilityGuidance.mcp==='object'
+    ? metadata.capabilityGuidance.mcp
+    : null;
+  const starterCommands=metadata.capabilityGuidance&&Array.isArray(metadata.capabilityGuidance.starterCommands)
+    ? metadata.capabilityGuidance.starterCommands
+    : [];
+  const approvalRequiredCommands=metadata.capabilityGuidance&&Array.isArray(metadata.capabilityGuidance.approvalRequiredCommands)
+    ? metadata.capabilityGuidance.approvalRequiredCommands
+    : [];
+  const doctorStatusText=doctorAvailable
+    ? 'Doctor result available. The generated prompt can include a compact summary, but the assistant should still run doctor first.'
+    : 'No doctor result is available yet. Run Check Readiness first for a better session handoff.';
+  return '<div class="sub"><details'+(starterOpen?' open':'')+' id="aiSessionStarterDetails"><summary>Start AI Session</summary><p class="small">Use this after checking readiness. It creates a safe prompt for an AI assistant and stays local-only.</p>'+
+    renderHintList([
+      { title:'Boundary', body:'The Local UI cannot load env vars into your already-open terminal. Use the helper commands below, then validate with Doctor.' },
+      { title:'Safety', bodyHtml:'Do not paste credentials into the goal. The prompt reminds the assistant to run Doctor first and follow <code>'+esc(String(metadata.authoritativeCatalogPath||'docs/tool-catalog.md'))+'</code>.' }
+    ])+
+    '<div class="field-grid"><label>Profile Name<input id="aiSessionProfile" value="'+escAttr(String(state.profile||safeOptions.profile||'dev'))+'" placeholder="dev"></label><label>Environment Name (optional)<input id="aiSessionEnvironment" value="'+escAttr(String(state.environment||''))+'" placeholder="development"></label><label>Session Goal<textarea id="aiSessionGoal" placeholder="Analyze program ORDERPGM and summarize dependencies." maxlength="'+escAttr(String(goalMaxLength))+'">'+esc(String(state.goal||''))+'</textarea></label></div>'+
+    renderTokenRow([
+      'goal max: '+String(goalMaxLength),
+      'template: '+String(metadata.templateSource||'docs/ai/session-prompt.md'),
+      mcpSummary?'MCP tools: '+String(mcpSummary.toolCount||0):null
+    ],'tokens')+
+    '<div class="field-list"><div class="field-item"><strong>Env Loading Helper</strong><p>Choose the command for your shell. Loading env is process-scoped, so existing terminal sessions do not update automatically.</p><div class="preview"><pre>'+esc(powerShellCommand)+'\\n'+esc(bashCommand)+'</pre></div><p class="small">The Local UI server only sees env vars that were present when it started.</p></div><div class="field-item"><strong>Doctor Reminder</strong><p>'+esc(doctorStatusText)+'</p><div class="actions"><label><input id="aiSessionIncludeDoctorSummary" type="checkbox"'+(includeDoctorSummary?' checked':'')+(doctorAvailable?'':' disabled')+'> Include compact Doctor summary</label></div></div><div class="field-item"><strong>Capability Guidance</strong><p>Treat the tool catalog as authoritative and prefer evidence-first, read-only work before any higher-risk action.</p>'+renderTokenRow(starterCommands,'workflow-meta')+(approvalRequiredCommands.length?'<p class="small">Approval required before: '+esc(approvalRequiredCommands.join(', '))+'.</p>':'')+(mcpSummary&&Array.isArray(mcpSummary.starterTools)&&mcpSummary.starterTools.length?'<p class="small">If MCP is available in the AI client, allowlisted Zeus tools may include: '+esc(mcpSummary.starterTools.join(', '))+'.</p>':'')+'</div></div><div class="actions"><button class="btn primary" data-ai-session-generate="1">'+esc(state.running?'Generating...':'Generate Session Prompt')+'</button><button class="btn" data-ai-session-copy="1">Copy Prompt</button></div>'+
+    (state.error?renderHintList([{ title:'Prompt generation error', body:String(state.error) }]):'')+
+    (warnings.length?renderHintList(warnings.map((entry)=>({ body:String(entry) }))):'')+
+    (state.copyStatus?'<div class="small '+esc(statusToneClass(state.copyStatus))+'">'+esc(state.copyStatus)+'</div>':'')+
+    '<div class="preview">'+(promptText?'<textarea id="aiSessionPromptOutput" style="min-height:360px" readonly>'+esc(promptText)+'</textarea>':'<div class="empty">Generate a session prompt here after Setup and Doctor are ready.</div>')+'</div></details></div>';
 }
 
 function renderProfileWizardPanel(){
@@ -2139,10 +2305,19 @@ function renderConfigure(){
       .join('\\n')
     : '';
   const doctorDiagnosticsPanel=renderDoctorDiagnostics(doctorResult);
+  const aiSessionState=s.uiActions.aiSession||{};
   const discoveryState=s.uiActions.discovery||{};
   const discoveryResult=discoveryState.result;
   const selectedDiscoveryActionId=String(discoveryState.actionId||((discoveryActions[0]&&discoveryActions[0].id)||'discover-source-libraries'));
   const profileForWizard=String(doctorState.profile||discoveryState.profile||preferredProfileWizardDoctorProfile()).trim()||'dev';
+  if(!String(aiSessionState.profile||'').trim()){
+    aiSessionState.profile=profileForWizard;
+  }
+  if(!doctorResult){
+    aiSessionState.includeDoctorSummary=false;
+  }else if(aiSessionState.result===null&&aiSessionState.error===null&&String(aiSessionState.goal||'').trim()===''){
+    aiSessionState.includeDoctorSummary=true;
+  }
   const wizardDetailsOpen=Boolean(
     s.profileWizard.loading
     || s.profileWizard.previewing
@@ -2172,6 +2347,12 @@ function renderConfigure(){
     doctorDiagnosticsPanel+
     (doctorDetails?'<details><summary>Show checks</summary><div class="preview"><pre>'+esc(doctorDetails)+'</pre></div></details>':'')+
     '</div>'+
+    renderAiSessionStarterPanel({
+      metadata:aiSessionStarterMetadata(),
+      state:aiSessionState,
+      profile:profileForWizard,
+      doctorResult
+    })+
     '<div class="sub"><details'+(wizardDetailsOpen?' open':'')+'><summary>Local-only Profile Wizard</summary><p class="small">Use this only when you need to create or adjust the local-only profile overlay that Setup and Doctor rely on.</p>'+renderProfileWizardPanel()+'</details></div>'+
     '<div class="sub"><h2>Advanced Setup Details</h2><p class="small">These sections explain the metadata-driven wizard model and read-only preview stubs. They are optional once the main setup flow is clear.</p><details'+(discoveryResult||discoveryState.error?' open':'')+'><summary>Read-only Discovery Actions</summary><div class="stack"><div class="field-list">'+(discoveryActions.length?discoveryActions.map((action)=>'<div class="field-item"><strong>'+esc(action.title)+'</strong><p>'+esc(action.description||'')+'</p><div class="workflow-meta"><div class="token">safety: '+esc(action.safetyLevel||'S2')+'</div><div class="token">'+esc(action.status||'stubbed-preview-only')+'</div><div class="token">'+esc(action.expensive?'preview first':'read-only')+'</div></div><div class="actions"><button class="btn" data-discovery-preview="'+esc(action.id)+'">'+esc(String(action.status||'').indexOf('config-preview-ready')===0?'Preview':'Preview Stub')+'</button></div></div>').join(''):'<div class="empty">No discovery actions available.</div>')+'</div>'+(discoveryState.error?'<div class="hint-list"><div class="hint-item"><strong>Discovery preview error</strong><p>'+esc(discoveryState.error)+'</p></div></div>':'')+renderGuidedDiscoveryPreview(discoveryResult)+'</div></details><details><summary>Safe CLI Preview</summary><p class="small">Generated from the selected intent. Secrets are never included.</p><div class="field-grid"><label>Analysis Intent<select id="guidedIntentSelect">'+intents.map((intent)=>'<option value="'+escAttr(intent.id)+'"'+(selectedIntent&&intent.id===selectedIntent.id?' selected':'')+'>'+esc(intent.title)+'</option>').join('')+'</select></label></div>'+renderGuidedCliPreview(selectedIntent,profileForWizard)+'</details><details><summary>Guided Wizard Metadata</summary><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Wizard steps: '+esc(String(steps.length||0))+'</div><div class="token">Intents: '+esc(String(intents.length||0))+'</div><div class="token">Purpose labels: '+esc(String(guided&&guided.purposeLabels&&guided.purposeLabels.length||0))+'</div></div><div class="section-list">'+steps.map((step)=>'<button class="btn section-btn'+(selectedStep&&step.id===selectedStep.id?' active':'')+'" data-guided-step="'+esc(step.id)+'">'+esc(step.shortTitle||step.title)+'</button>').join('')+'</div><div class="configure-layout"><div class="section-list">'+
       sections.map((section)=>'<button class="btn section-btn'+(section.id===s.uiMetadata.selectedConfigSection?' active':'')+'" data-config-section="'+esc(section.id)+'">'+esc(section.label||section.id)+'</button>').join('')+
@@ -2344,6 +2525,25 @@ function renderConfigure(){
       const nextValue=String(event.target.value||'').trim();
       s.uiActions.doctor.profile=nextValue;
       s.uiActions.discovery.profile=nextValue;
+      s.uiActions.aiSession.profile=nextValue;
+    };
+  }
+  const aiSessionDetails=root.querySelector('#aiSessionStarterDetails');
+  if(aiSessionDetails){
+    aiSessionDetails.ontoggle=()=>{
+      s.uiActions.aiSession.expanded=aiSessionDetails.open;
+    };
+  }
+  bindInput('#aiSessionProfile',(value)=>{ s.uiActions.aiSession.profile=value.trim(); });
+  bindInput('#aiSessionEnvironment',(value)=>{ s.uiActions.aiSession.environment=value.trim(); });
+  bindInput('#aiSessionGoal',(value)=>{
+    s.uiActions.aiSession.goal=value;
+    s.uiActions.aiSession.copyStatus='';
+  });
+  const aiSessionDoctorSummary=root.querySelector('#aiSessionIncludeDoctorSummary');
+  if(aiSessionDoctorSummary){
+    aiSessionDoctorSummary.onchange=(event)=>{
+      s.uiActions.aiSession.includeDoctorSummary=Boolean(event.target.checked);
     };
   }
   const intentSelect=root.querySelector('#guidedIntentSelect');
@@ -2392,9 +2592,21 @@ function renderConfigure(){
         const nextValue=String(profileInput.value||'').trim()||'dev';
         s.uiActions.doctor.profile=nextValue;
         s.uiActions.discovery.profile=nextValue;
+        s.uiActions.aiSession.profile=nextValue;
       }
       await runDoctorReadinessAction();
       renderConfigure();
+    };
+  }
+  for(const generateButton of root.querySelectorAll('[data-ai-session-generate]')){
+    generateButton.onclick=async ()=>{
+      await runGenerateAiSessionPromptAction();
+      renderConfigure();
+    };
+  }
+  for(const copyButton of root.querySelectorAll('[data-ai-session-copy]')){
+    copyButton.onclick=async ()=>{
+      await copyAiSessionPrompt();
     };
   }
   for(const refreshButton of root.querySelectorAll('[data-config-refresh]')){
@@ -2995,6 +3207,20 @@ function setPreviewEditMode(editable){
   renderWorkbench();
 }
 
+async function copyTextToClipboard(text){
+  if(navigator&&navigator.clipboard&&navigator.clipboard.writeText){
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const area=document.createElement('textarea');
+  area.value=text;
+  document.body.appendChild(area);
+  area.focus();
+  area.select();
+  document.execCommand('copy');
+  document.body.removeChild(area);
+}
+
 async function copyWorkbenchPreview(){
   const text=currentPreviewText();
   if(!text){
@@ -3003,22 +3229,61 @@ async function copyWorkbenchPreview(){
     return;
   }
   try {
-    if(navigator&&navigator.clipboard&&navigator.clipboard.writeText){
-      await navigator.clipboard.writeText(text);
-    } else {
-      const area=document.createElement('textarea');
-      area.value=text;
-      document.body.appendChild(area);
-      area.focus();
-      area.select();
-      document.execCommand('copy');
-      document.body.removeChild(area);
-    }
+    await copyTextToClipboard(text);
     s.promptBuilder.saveStatus='Preview copied.';
   } catch(error){
     s.promptBuilder.saveStatus=workbenchUserError('Could not copy the preview',error);
   }
   renderWorkbench();
+}
+
+async function runGenerateAiSessionPromptAction(){
+  const profile=String(s.uiActions.aiSession.profile||s.uiActions.doctor.profile||'dev').trim()||'dev';
+  const environment=String(s.uiActions.aiSession.environment||'').trim();
+  const goal=String(s.uiActions.aiSession.goal||'').trim();
+  const doctorResult=s.uiActions.doctor&&s.uiActions.doctor.result&&typeof s.uiActions.doctor.result==='object'
+    ? s.uiActions.doctor.result
+    : null;
+  const includeDoctorSummary=Boolean(doctorResult&&s.uiActions.aiSession.includeDoctorSummary!==false);
+  const doctorSummary=includeDoctorSummary?buildAiSessionDoctorSummaryPayload(doctorResult):null;
+  s.uiActions.aiSession.running=true;
+  s.uiActions.aiSession.error=null;
+  s.uiActions.aiSession.copyStatus='';
+  s.uiActions.aiSession.expanded=true;
+  try{
+    const payload={
+      profile,
+      goal,
+      includeDoctorSummary
+    };
+    if(environment) payload.environment=environment;
+    if(doctorSummary) payload.doctorSummary=doctorSummary;
+    const result=await sendJson('POST','/api/ui-actions/generate-ai-session-prompt',payload);
+    s.uiActions.aiSession.result=result;
+  }catch(error){
+    s.uiActions.aiSession.error=error.message||String(error);
+    s.uiActions.aiSession.result=null;
+  }finally{
+    s.uiActions.aiSession.running=false;
+  }
+}
+
+async function copyAiSessionPrompt(){
+  const text=s.uiActions.aiSession&&s.uiActions.aiSession.result&&s.uiActions.aiSession.result.prompt
+    ? String(s.uiActions.aiSession.result.prompt)
+    : '';
+  if(!text){
+    s.uiActions.aiSession.copyStatus='No session prompt is available to copy yet.';
+    renderConfigure();
+    return;
+  }
+  try{
+    await copyTextToClipboard(text);
+    s.uiActions.aiSession.copyStatus='Session prompt copied.';
+  }catch(error){
+    s.uiActions.aiSession.copyStatus='Could not copy the session prompt.';
+  }
+  renderConfigure();
 }
 
 function exportWorkbenchPreview(){
