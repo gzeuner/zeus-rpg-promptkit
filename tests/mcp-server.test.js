@@ -317,7 +317,7 @@ test('mcp tools list defaults to the minimal safe surface and excludes risky too
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.bridge'), false);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-sql'), false);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-table'), false);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.search-source'), false);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.search-source'), true);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.knowledge'), false);
 
   const callResponse = await server.handleRequest({
@@ -597,7 +597,7 @@ test('mcp tools call rejects non-default tool when no explicit allowlist is prov
       id: 14,
       method: 'tools/call',
       params: {
-        name: 'zeus.search-source',
+        name: 'zeus.query-sql',
       },
     }),
     /not allowed/i,
@@ -674,8 +674,39 @@ test('mcp tools call doctor requires profile argument', async () => {
         arguments: {},
       },
     }),
-    /profile is required/i,
+    /"profile" is required/i,
   );
+});
+
+test('mcp tools call zeus.help returns structured overview and per-command info (S0)', async () => {
+  const server = createTestServer({ cwd: process.cwd() });
+
+  // Overview
+  const overview = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 50,
+    method: 'tools/call',
+    params: { name: 'zeus.help', arguments: {} },
+  });
+  assert.equal(overview.result.isError, false);
+  const o = overview.result.structuredContent;
+  assert.equal(o.action, 'zeus.help');
+  assert.ok(o.help && o.help.defaultTools && o.help.defaultTools.includes('zeus.doctor'));
+  assert.ok(Array.isArray(o.help.recommendedSequence));
+
+  // Specific command
+  const cmdHelp = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 51,
+    method: 'tools/call',
+    params: { name: 'zeus.help', arguments: { command: 'analyze' } },
+  });
+  assert.equal(cmdHelp.result.isError, false);
+  const c = cmdHelp.result.structuredContent;
+  assert.equal(c.action, 'zeus.help');
+  assert.equal(c.help.command, 'analyze');
+  assert.ok(c.help.purpose && c.help.purpose.length > 5);
+  assert.ok(c.help.safety);
 });
 
 test('mcp tools call profiles returns masked structured summaries', async () => {
@@ -1680,7 +1711,7 @@ test('mcp tools call generate-test maps invalid arguments to -32602', async () =
   const server = createTestServer({
     cwd: process.cwd(),
     generateTestRunner: () => {
-      throw new Error('Invalid arguments for zeus.generate-test: program is required.');
+      throw new Error('Invalid arguments for zeus.generate-test: "program" is required');
     },
   });
 
@@ -1698,7 +1729,7 @@ test('mcp tools call generate-test maps invalid arguments to -32602', async () =
     }),
     (error) => {
       assert.equal(error.code, -32602);
-      assert.match(error.message, /program is required/i);
+      assert.match(error.message, /"program" is required/i);
       return true;
     },
   );
@@ -4861,7 +4892,7 @@ test('mcp audit trail writes allowed and refused tools/call events', async () =>
     const server = createTestServer({
       cwd: tempRoot,
       auditPath,
-      allowlistedTools: ['zeus.health'],
+      allowlistedTools: ['zeus.health', 'zeus.doctor'],
     });
 
     await server.handleRequest({
@@ -4869,10 +4900,9 @@ test('mcp audit trail writes allowed and refused tools/call events', async () =>
       id: 21,
       method: 'tools/call',
       params: {
-        name: 'zeus.health',
+        name: 'zeus.doctor',
         arguments: {
           profile: 'default-shared',
-          dryRun: true,
         },
       },
     });
@@ -4901,9 +4931,9 @@ test('mcp audit trail writes allowed and refused tools/call events', async () =>
     assert.equal(entries.length, 2);
     assert.equal(entries[0].eventType, 'mcp.tools.call');
     assert.equal(entries[0].schemaVersion, MCP_AUDIT_SCHEMA_VERSION);
-    assert.equal(entries[0].toolName, 'zeus.health');
+    assert.equal(entries[0].toolName, 'zeus.doctor');
     assert.equal(entries[0].profile, 'default-shared');
-    assert.equal(entries[0].dryRun, true);
+    assert.equal(entries[0].dryRun, false);
     assert.equal(entries[0].policyDecision, 'allowed');
     assert.equal(entries[0].status, 'success');
     assert.equal(entries[0].resultCode, 0);
