@@ -56,37 +56,44 @@ Curated prompts expose the standard Zeus session bootstrap prompt plus prompt-te
 
 ## Supported MCP Tools (Current)
 
-Only the minimal safe default surface is exposed automatically. Everything else below requires explicit `--allow-tools`, including remote read-only DB2 / IBM i tools because read-only access can still expose sensitive data.
+The default safe surface (S0/S1 local evidence, config, searches, and bounded catalog regen) is exposed automatically for AI agents. Remote or higher-risk tools require explicit `--allow-tools`.
 
-- `zeus.health`
-- `zeus.version`
-- `zeus.doctor`
-- `zeus.profiles`
-- `zeus.workflow`
-- `zeus.bundle`
-- `zeus.analyze`
-- `zeus.impact`
-- `zeus.assess-risk`
-- `zeus.query-table`
-- `zeus.resolve-object`
-- `zeus.query-sql`
-- `zeus.write-sql`
-- `zeus.bridge`
-- `zeus.search-source`
-- `zeus.field-search`
-- `zeus.diff`
-- `zeus.generate-test`
-- `zeus.generate-checklist`
-- `zeus.qa`
-- `zeus.analyses`
-- `zeus.fetch`
-- `zeus.fetch-member`
+Default (no --allow-tools needed):
+- `zeus.health`, `zeus.version`, `zeus.doctor`, `zeus.profiles`
+- `zeus.search-source`, `zeus.field-search`
 - `zeus.docs-generate-catalog`
-- `zeus.test-run`
-- `zeus.copy-to-workspace`
-- `zeus.serve`
-- `zeus.joblog`
-- `zeus.inspect-object`
+- `zeus.analyze`, `zeus.impact`, `zeus.assess-risk`
+- `zeus.generate-test`, `zeus.generate-checklist`, `zeus.qa`
+- `zeus.workflow`, `zeus.bundle`
+
+Everything else (fetch*, query*, write*, bridge, joblog, inspect, etc.) requires explicit allowlist.
+
+Example with pub400 profile (recommended for real-target agent sessions):
+```bash
+source ./config/load-env.sh pub400
+node cli/zeus.js doctor --profile pub400-zeus
+# MCP server with safe local surface + some read
+./.local/mcp/start-zeus-mcp-pub400.sh
+# or
+node cli/zeus.js mcp serve --stdio true --allow-tools zeus.health,zeus.profiles,zeus.search-source,zeus.analyze,zeus.workflow,zeus.bundle,zeus.docs-generate-catalog,...
+```
+
+## Perfect AI Agent Interaction Pattern (Example)
+
+An AI can bootstrap and operate fully via MCP without prior hard-coded knowledge beyond the protocol:
+
+1. `initialize`
+2. `resources/list` then `resources/read` for `zeus://docs/ai/session-prompt.md`, `zeus://docs/tool-catalog.json`, `zeus://metadata/mcp-tools.json`, `zeus://metadata/workflow-presets.json`
+3. `prompts/get` `zeus.session.start` with goal describing the task (e.g. "Perform local analysis of the RPG sources in this workspace and prepare a modernization review bundle")
+4. `tools/call` `zeus.doctor` + `zeus.profiles`
+5. `tools/call` `zeus.help` (for self-service guidance) or `zeus.search-source`
+6. `tools/call` `zeus.analyze` with `source` pointing to local sources + `program`
+7. Use `resources/list` / `resources/read` `zeus://runs/PROGRAM/...` to fetch manifests, reports and generated `ai_prompt_*.md` files
+8. `tools/call` `zeus.bundle` or `zeus.impact` etc.
+9. `tools/call` `zeus.help` "bundle" for usage.
+
+All via stdio, all outputs structured + enveloped, all bounded to workspace, secrets redacted. Use the default allowlist for pure local evidence work.
+```
 
 Curated resources currently include:
 
