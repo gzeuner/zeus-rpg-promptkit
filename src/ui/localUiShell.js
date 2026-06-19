@@ -860,6 +860,38 @@ function renderCommandBlock(lines){
   return '<div class="command-block"><pre>'+esc((Array.isArray(lines)?lines:[String(lines||'')]).join('\\n'))+'</pre></div>';
 }
 
+function renderTokenRow(items,className){
+  const safeItems=Array.isArray(items)?items:[];
+  const tokens=safeItems.map((entry)=>{
+    if(entry===null||entry===undefined||entry===false) return '';
+    if(typeof entry==='object'){
+      const text=entry.text===undefined||entry.text===null?'':String(entry.text);
+      if(!text) return '';
+      const toneClass=entry.tone?statusToneClass(entry.tone):'';
+      return '<div class="token'+(toneClass?' '+escAttr(toneClass):'')+'">'+esc(text)+'</div>';
+    }
+    const text=String(entry);
+    return text?'<div class="token">'+esc(text)+'</div>':'';
+  }).filter(Boolean).join('');
+  if(!tokens) return '';
+  return '<div class="'+escAttr(className||'tokens')+'">'+tokens+'</div>';
+}
+
+function renderHintList(items){
+  const safeItems=Array.isArray(items)?items:[];
+  const content=safeItems.map((entry)=>{
+    if(!entry||typeof entry!=='object') return '';
+    const title=entry.title?'<strong>'+esc(String(entry.title))+'</strong>':'';
+    const tokens=renderTokenRow(entry.tokens,'tokens');
+    const body=entry.body?'<p>'+esc(String(entry.body))+'</p>':'';
+    const bodyHtml=entry.bodyHtml?'<p>'+String(entry.bodyHtml)+'</p>':'';
+    const small=entry.small?'<p class="small">'+esc(String(entry.small))+'</p>':'';
+    const smallHtml=entry.smallHtml?'<p class="small">'+String(entry.smallHtml)+'</p>':'';
+    return '<div class="hint-item">'+title+tokens+body+bodyHtml+small+smallHtml+'</div>';
+  }).filter(Boolean).join('');
+  return content?'<div class="hint-list">'+content+'</div>':'';
+}
+
 function promptWorkbenchHighlights(){
   const useCases=(s.promptBuilder.useCases||[]).slice(0,3);
   if(s.promptBuilder.loading){
@@ -1622,14 +1654,35 @@ function renderConfigureStartPanel(options){
   }else if(signals.canPreview){
     recommendedNext='Run Preview Draft next, then save locally before Check Readiness.';
   }
-  return '<div class="sub"><h2>'+esc(String(setupMeta.title||'Setup'))+'</h2><p>Use Setup as a simple 3-step path: choose or create a profile, preview and save it locally, then run Zeus Doctor.</p><div class="hint-list"><div class="hint-item"><strong>Browser safety</strong><p>'+esc(boundaryNotes.join(' '))+'</p></div><div class="hint-item"><strong>Resolution order</strong><p>'+esc(precedenceRules.length?precedenceRules.join(' '):precedenceSummary)+' Doctor checks the effective configuration after those rules are applied.</p></div></div><div class="field-list">'+
-    '<div class="field-item"><strong>Recommended Next Step</strong><p>'+esc(recommendedNext)+'</p><div class="workflow-meta">'+recommendedNextTokens.map((token)=>'<div class="token">'+esc(String(token))+'</div>').join('')+'</div></div>'+
-    '<div class="field-item"><strong>1. Choose Or Create A Profile</strong><p>'+esc(stepOneStatus)+'</p><div class="workflow-meta"><div class="token">known profiles: '+esc(String(profiles.length))+'</div><div class="token">local-only: '+esc(String(localOnlyProfiles.length))+'</div><div class="token">managed envs: '+esc(String(managedSystems.length))+'</div></div><p class="small">Selected profile source and local-only overlays are shown here, but secret values are never displayed.</p><div class="actions"><button class="btn" data-pw-refresh="1">Reload Wizard State</button><button class="btn primary" data-pw-new="1">New Local Draft</button><button class="btn" data-pw-load="1">Load Selected Profile</button></div></div>'+
-    '<div class="field-item"><strong>Environment Override Explanation</strong><p>Environment variables can change the effective target even when the saved profile looks correct.</p><div class="workflow-meta">'+routingTokens.map(([label,value])=>'<div class="token">'+esc(label+': '+value)+'</div>').join('')+'</div><p class="small">Examples: <code>ZEUS_DB_HOST</code> can override <code>db.host</code>. Secret env vars may exist, but their values are never shown here.</p></div>'+
-    '<div class="field-item"><strong>Config Metadata Overview</strong><p>'+esc(String(configSectionCount))+' setup sections and '+esc(String(configFields.length))+' documented fields are available in this UI payload.</p><div class="workflow-meta"><div class="token">sensitive fields: '+esc(String(configSensitiveCount))+'</div><div class="token">read-only metadata</div><div class="token">no resolved values</div></div><p class="small">Use the metadata section below to understand which fields can be set by profile or env without exposing runtime secrets.</p></div>'+
-    '<div class="field-item"><strong>2. Preview And Save Locally</strong><p>'+esc(stepTwoStatus)+'</p><div class="workflow-meta"><div class="token '+esc(statusToneClass(previewStatus))+'">'+esc(previewStatus)+'</div>'+(draftProfileName?'<div class="token">draft: '+esc(draftProfileName)+'</div>':'<div class="token">draft name missing</div>')+(selectedProfileSummary?'<div class="token">loaded source: '+esc(String(selectedProfileSummary.sourceKind||'shared'))+'</div>':'')+'</div><div class="actions"><button class="btn" data-pw-preview="1">Preview Draft</button><button class="btn primary" data-pw-save="1">Save Local-only</button></div></div>'+
-    '<div class="field-item"><strong>3. Run Zeus Doctor</strong><p>'+esc(doctorStatus)+'</p><div class="workflow-meta"><div class="token">doctor target: '+esc(doctorProfile)+'</div>'+(doctorProfileSummary?'<div class="token">source: '+esc(String(doctorProfileSummary.sourceKind||'shared'))+'</div>':'<div class="token">save required</div>')+(doctorState&&doctorState.result?'<div class="token">result available</div>':'')+'</div><p class="small">'+esc(doctorHint)+'</p><div class="actions"><button class="btn primary" data-config-doctor="1">'+esc(doctorActionLabel)+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div></div>'+
-  '</div></div>';
+  return '<div class="sub"><h2>'+esc(String(setupMeta.title||'Setup'))+'</h2><p>Use Setup as a simple 3-step path: choose or create a profile, preview and save it locally, then run Zeus Doctor.</p>'+
+    renderHintList([
+      { title:'Browser safety', body:boundaryNotes.join(' ') },
+      { title:'Resolution order', body:(precedenceRules.length?precedenceRules.join(' '):precedenceSummary)+' Doctor checks the effective configuration after those rules are applied.' }
+    ])+
+    '<div class="field-list">'+
+      '<div class="field-item"><strong>Recommended Next Step</strong><p>'+esc(recommendedNext)+'</p>'+renderTokenRow(recommendedNextTokens,'workflow-meta')+'</div>'+
+      '<div class="field-item"><strong>1. Choose Or Create A Profile</strong><p>'+esc(stepOneStatus)+'</p>'+renderTokenRow([
+        'known profiles: '+String(profiles.length),
+        'local-only: '+String(localOnlyProfiles.length),
+        'managed envs: '+String(managedSystems.length)
+      ],'workflow-meta')+'<p class="small">Selected profile source and local-only overlays are shown here, but secret values are never displayed.</p><div class="actions"><button class="btn" data-pw-refresh="1">Reload Wizard State</button><button class="btn primary" data-pw-new="1">New Local Draft</button><button class="btn" data-pw-load="1">Load Selected Profile</button></div></div>'+
+      '<div class="field-item"><strong>Environment Override Explanation</strong><p>Environment variables can change the effective target even when the saved profile looks correct.</p>'+renderTokenRow(routingTokens.map(([label,value])=>label+': '+value),'workflow-meta')+'<p class="small">Examples: <code>ZEUS_DB_HOST</code> can override <code>db.host</code>. Secret env vars may exist, but their values are never shown here.</p></div>'+
+      '<div class="field-item"><strong>Config Metadata Overview</strong><p>'+esc(String(configSectionCount))+' setup sections and '+esc(String(configFields.length))+' documented fields are available in this UI payload.</p>'+renderTokenRow([
+        'sensitive fields: '+String(configSensitiveCount),
+        'read-only metadata',
+        'no resolved values'
+      ],'workflow-meta')+'<p class="small">Use the metadata section below to understand which fields can be set by profile or env without exposing runtime secrets.</p></div>'+
+      '<div class="field-item"><strong>2. Preview And Save Locally</strong><p>'+esc(stepTwoStatus)+'</p>'+renderTokenRow([
+        { text:previewStatus, tone:previewStatus },
+        draftProfileName?'draft: '+draftProfileName:'draft name missing',
+        selectedProfileSummary?'loaded source: '+String(selectedProfileSummary.sourceKind||'shared'):null
+      ],'workflow-meta')+'<div class="actions"><button class="btn" data-pw-preview="1">Preview Draft</button><button class="btn primary" data-pw-save="1">Save Local-only</button></div></div>'+
+      '<div class="field-item"><strong>3. Run Zeus Doctor</strong><p>'+esc(doctorStatus)+'</p>'+renderTokenRow([
+        'doctor target: '+doctorProfile,
+        doctorProfileSummary?'source: '+String(doctorProfileSummary.sourceKind||'shared'):'save required',
+        doctorState&&doctorState.result?'result available':null
+      ],'workflow-meta')+'<p class="small">'+esc(doctorHint)+'</p><div class="actions"><button class="btn primary" data-config-doctor="1">'+esc(doctorActionLabel)+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div></div>'+
+    '</div></div>';
 }
 
 function buildAiSessionDoctorSummaryPayload(doctorResult){
@@ -1685,7 +1738,22 @@ function renderAiSessionStarterPanel(options){
   const doctorStatusText=doctorAvailable
     ? 'Doctor result available. The generated prompt can include a compact summary, but the assistant should still run doctor first.'
     : 'No doctor result is available yet. Run Check Readiness first for a better session handoff.';
-  return '<div class="sub"><details'+(starterOpen?' open':'')+' id="aiSessionStarterDetails"><summary>Start AI Session</summary><p class="small">Use this after checking readiness. It creates a safe prompt for an AI assistant and stays local-only.</p><div class="hint-list"><div class="hint-item"><strong>Boundary</strong><p>The Local UI cannot load env vars into your already-open terminal. Use the helper commands below, then validate with Doctor.</p></div><div class="hint-item"><strong>Safety</strong><p>Do not paste credentials into the goal. The prompt reminds the assistant to run Doctor first and follow <code>'+esc(String(metadata.authoritativeCatalogPath||'docs/tool-catalog.md'))+'</code>.</p></div></div><div class="field-grid"><label>Profile Name<input id="aiSessionProfile" value="'+escAttr(String(state.profile||safeOptions.profile||'dev'))+'" placeholder="dev"></label><label>Environment Name (optional)<input id="aiSessionEnvironment" value="'+escAttr(String(state.environment||''))+'" placeholder="development"></label><label>Session Goal<textarea id="aiSessionGoal" placeholder="Analyze program ORDERPGM and summarize dependencies." maxlength="'+escAttr(String(goalMaxLength))+'">'+esc(String(state.goal||''))+'</textarea></label></div><div class="tokens"><div class="token">goal max: '+esc(String(goalMaxLength))+'</div><div class="token">template: '+esc(String(metadata.templateSource||'docs/ai/session-prompt.md'))+'</div>'+(mcpSummary?'<div class="token">MCP tools: '+esc(String(mcpSummary.toolCount||0))+'</div>':'')+'</div><div class="field-list"><div class="field-item"><strong>Env Loading Helper</strong><p>Choose the command for your shell. Loading env is process-scoped, so existing terminal sessions do not update automatically.</p><div class="preview"><pre>'+esc(powerShellCommand)+'\\n'+esc(bashCommand)+'</pre></div><p class="small">The Local UI server only sees env vars that were present when it started.</p></div><div class="field-item"><strong>Doctor Reminder</strong><p>'+esc(doctorStatusText)+'</p><div class="actions"><label><input id="aiSessionIncludeDoctorSummary" type="checkbox"'+(includeDoctorSummary?' checked':'')+(doctorAvailable?'':' disabled')+'> Include compact Doctor summary</label></div></div><div class="field-item"><strong>Capability Guidance</strong><p>Treat the tool catalog as authoritative and prefer evidence-first, read-only work before any higher-risk action.</p><div class="workflow-meta">'+starterCommands.map((command)=>'<div class="token">'+esc(command)+'</div>').join('')+'</div>'+(approvalRequiredCommands.length?'<p class="small">Approval required before: '+esc(approvalRequiredCommands.join(', '))+'.</p>':'')+(mcpSummary&&Array.isArray(mcpSummary.starterTools)&&mcpSummary.starterTools.length?'<p class="small">If MCP is available in the AI client, allowlisted Zeus tools may include: '+esc(mcpSummary.starterTools.join(', '))+'.</p>':'')+'</div></div><div class="actions"><button class="btn primary" data-ai-session-generate="1">'+esc(state.running?'Generating...':'Generate Session Prompt')+'</button><button class="btn" data-ai-session-copy="1">Copy Prompt</button></div>'+(state.error?'<div class="hint-list"><div class="hint-item"><strong>Prompt generation error</strong><p>'+esc(state.error)+'</p></div></div>':'')+(warnings.length?'<div class="hint-list">'+warnings.map((entry)=>'<div class="hint-item"><p>'+esc(String(entry))+'</p></div>').join('')+'</div>':'')+(state.copyStatus?'<div class="small '+esc(statusToneClass(state.copyStatus))+'">'+esc(state.copyStatus)+'</div>':'')+'<div class="preview">'+(promptText?'<textarea id="aiSessionPromptOutput" style="min-height:360px" readonly>'+esc(promptText)+'</textarea>':'<div class="empty">Generate a session prompt here after Setup and Doctor are ready.</div>')+'</div></details></div>';
+  return '<div class="sub"><details'+(starterOpen?' open':'')+' id="aiSessionStarterDetails"><summary>Start AI Session</summary><p class="small">Use this after checking readiness. It creates a safe prompt for an AI assistant and stays local-only.</p>'+
+    renderHintList([
+      { title:'Boundary', body:'The Local UI cannot load env vars into your already-open terminal. Use the helper commands below, then validate with Doctor.' },
+      { title:'Safety', bodyHtml:'Do not paste credentials into the goal. The prompt reminds the assistant to run Doctor first and follow <code>'+esc(String(metadata.authoritativeCatalogPath||'docs/tool-catalog.md'))+'</code>.' }
+    ])+
+    '<div class="field-grid"><label>Profile Name<input id="aiSessionProfile" value="'+escAttr(String(state.profile||safeOptions.profile||'dev'))+'" placeholder="dev"></label><label>Environment Name (optional)<input id="aiSessionEnvironment" value="'+escAttr(String(state.environment||''))+'" placeholder="development"></label><label>Session Goal<textarea id="aiSessionGoal" placeholder="Analyze program ORDERPGM and summarize dependencies." maxlength="'+escAttr(String(goalMaxLength))+'">'+esc(String(state.goal||''))+'</textarea></label></div>'+
+    renderTokenRow([
+      'goal max: '+String(goalMaxLength),
+      'template: '+String(metadata.templateSource||'docs/ai/session-prompt.md'),
+      mcpSummary?'MCP tools: '+String(mcpSummary.toolCount||0):null
+    ],'tokens')+
+    '<div class="field-list"><div class="field-item"><strong>Env Loading Helper</strong><p>Choose the command for your shell. Loading env is process-scoped, so existing terminal sessions do not update automatically.</p><div class="preview"><pre>'+esc(powerShellCommand)+'\\n'+esc(bashCommand)+'</pre></div><p class="small">The Local UI server only sees env vars that were present when it started.</p></div><div class="field-item"><strong>Doctor Reminder</strong><p>'+esc(doctorStatusText)+'</p><div class="actions"><label><input id="aiSessionIncludeDoctorSummary" type="checkbox"'+(includeDoctorSummary?' checked':'')+(doctorAvailable?'':' disabled')+'> Include compact Doctor summary</label></div></div><div class="field-item"><strong>Capability Guidance</strong><p>Treat the tool catalog as authoritative and prefer evidence-first, read-only work before any higher-risk action.</p>'+renderTokenRow(starterCommands,'workflow-meta')+(approvalRequiredCommands.length?'<p class="small">Approval required before: '+esc(approvalRequiredCommands.join(', '))+'.</p>':'')+(mcpSummary&&Array.isArray(mcpSummary.starterTools)&&mcpSummary.starterTools.length?'<p class="small">If MCP is available in the AI client, allowlisted Zeus tools may include: '+esc(mcpSummary.starterTools.join(', '))+'.</p>':'')+'</div></div><div class="actions"><button class="btn primary" data-ai-session-generate="1">'+esc(state.running?'Generating...':'Generate Session Prompt')+'</button><button class="btn" data-ai-session-copy="1">Copy Prompt</button></div>'+
+    (state.error?renderHintList([{ title:'Prompt generation error', body:String(state.error) }]):'')+
+    (warnings.length?renderHintList(warnings.map((entry)=>({ body:String(entry) }))):'')+
+    (state.copyStatus?'<div class="small '+esc(statusToneClass(state.copyStatus))+'">'+esc(state.copyStatus)+'</div>':'')+
+    '<div class="preview">'+(promptText?'<textarea id="aiSessionPromptOutput" style="min-height:360px" readonly>'+esc(promptText)+'</textarea>':'<div class="empty">Generate a session prompt here after Setup and Doctor are ready.</div>')+'</div></details></div>';
 }
 
 function renderProfileWizardPanel(){
