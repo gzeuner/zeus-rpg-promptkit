@@ -31,6 +31,30 @@ test('extractSessionPromptTemplate reads the fenced text block', () => {
   assert.match(promptTemplate, /\[INSERT USER GOAL HERE\]/);
 });
 
+test('extractSessionPromptTemplate stops at the first closing fence inside the section', () => {
+  const promptTemplate = extractSessionPromptTemplate([
+    '# Title',
+    '',
+    '## Session Start Prompt (Copy/Paste)',
+    '',
+    '````text',
+    'Prompt body line 1',
+    '```bash',
+    'echo nested example',
+    '```',
+    AI_SESSION_PROMPT_PLACEHOLDER,
+    '````',
+    '',
+    'Additional notes in the same section should not be captured.',
+    '',
+    '## Notes',
+  ].join('\n'));
+
+  assert.match(promptTemplate, /Prompt body line 1/);
+  assert.match(promptTemplate, /echo nested example/);
+  assert.doesNotMatch(promptTemplate, /Additional notes in the same section/);
+});
+
 test('AI session prompt service replaces the goal placeholder and preserves safety guidance', () => {
   const service = createAiSessionPromptService({
     templateLoader: () => buildTemplate(),

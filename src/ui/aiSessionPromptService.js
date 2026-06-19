@@ -43,7 +43,7 @@ function extractSessionPromptTemplate(markdown) {
   }
 
   const sectionStart = sectionMatch.index;
-  const fenceMatch = /```text\r?\n/g;
+  const fenceMatch = /^(`{3,})text\r?\n/gm;
   fenceMatch.lastIndex = sectionStart;
   const openingFenceMatch = fenceMatch.exec(source);
   if (!openingFenceMatch) {
@@ -51,9 +51,7 @@ function extractSessionPromptTemplate(markdown) {
   }
 
   const promptStart = openingFenceMatch.index + openingFenceMatch[0].length;
-  const nextHeadingIndex = source.indexOf('\n## ', promptStart);
-  const sectionEnd = nextHeadingIndex >= 0 ? nextHeadingIndex : source.length;
-  const closingFenceIndex = source.lastIndexOf('\n```', sectionEnd);
+  const closingFenceIndex = source.indexOf(`\n${openingFenceMatch[1]}`, promptStart);
   if (closingFenceIndex < promptStart) {
     throw new AiSessionPromptError('AI session prompt template is missing the Session Start Prompt closing fence.', 500);
   }
