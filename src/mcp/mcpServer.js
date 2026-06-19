@@ -14,18 +14,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 'use strict';
 
 const { executeMcpToolCall, listMcpTools, readPackageVersion } = require('./mcpTools');
+const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
+const { getMcpPrompt, listMcpPrompts } = require('./mcpPrompts');
+const { listMcpResources, readMcpResource } = require('./mcpResources');
 const { createMcpAuditLogger } = require('./mcpAuditLog');
 const { createMcpRedactor } = require('./mcpRedaction');
 const { createStdioTransport } = require('./stdioTransport');
 
 const JSONRPC_VERSION = '2.0';
 const MCP_PROTOCOL_VERSION = '2024-11-05';
-const DEFAULT_MCP_SAFE_TOOL_NAMES = Object.freeze([
-  'zeus.health',
-  'zeus.version',
-  'zeus.doctor',
-]);
-
 class RpcError extends Error {
   constructor(code, message, data) {
     super(message);
@@ -171,13 +168,16 @@ function createMcpServer(runtime = {}) {
     diffRunner: typeof runtime.diffRunner === 'function' ? runtime.diffRunner : undefined,
     doctorRunner: typeof runtime.doctorRunner === 'function' ? runtime.doctorRunner : undefined,
     fetchRunner: typeof runtime.fetchRunner === 'function' ? runtime.fetchRunner : undefined,
+    fetchMemberRunner: typeof runtime.fetchMemberRunner === 'function' ? runtime.fetchMemberRunner : undefined,
     fieldSearchRunner: typeof runtime.fieldSearchRunner === 'function' ? runtime.fieldSearchRunner : undefined,
     generateChecklistRunner: typeof runtime.generateChecklistRunner === 'function' ? runtime.generateChecklistRunner : undefined,
     generateTestRunner: typeof runtime.generateTestRunner === 'function' ? runtime.generateTestRunner : undefined,
     impactRunner: typeof runtime.impactRunner === 'function' ? runtime.impactRunner : undefined,
     inspectObjectRunner: typeof runtime.inspectObjectRunner === 'function' ? runtime.inspectObjectRunner : undefined,
     joblogRunner: typeof runtime.joblogRunner === 'function' ? runtime.joblogRunner : undefined,
+    profilesRunner: typeof runtime.profilesRunner === 'function' ? runtime.profilesRunner : undefined,
     qaRunner: typeof runtime.qaRunner === 'function' ? runtime.qaRunner : undefined,
+    resolveObjectRunner: typeof runtime.resolveObjectRunner === 'function' ? runtime.resolveObjectRunner : undefined,
     queryTableRunner: typeof runtime.queryTableRunner === 'function' ? runtime.queryTableRunner : undefined,
     querySqlRunner: typeof runtime.querySqlRunner === 'function' ? runtime.querySqlRunner : undefined,
     searchSourceRunner: typeof runtime.searchSourceRunner === 'function' ? runtime.searchSourceRunner : undefined,
@@ -229,6 +229,13 @@ function createMcpServer(runtime = {}) {
       return respond({
         protocolVersion: MCP_PROTOCOL_VERSION,
         capabilities: {
+          prompts: {
+            listChanged: false,
+          },
+          resources: {
+            subscribe: false,
+            listChanged: false,
+          },
           tools: {
             listChanged: false,
           },
@@ -246,6 +253,54 @@ function createMcpServer(runtime = {}) {
 
     if (method === 'tools/list') {
       return respond({ tools: toolPolicy.listTools() });
+    }
+
+    if (method === 'resources/list') {
+      return respond({ resources: listMcpResources(context.cwd) });
+    }
+
+    if (method === 'resources/read') {
+      const uri = params && typeof params.uri === 'string'
+        ? params.uri.trim()
+        : '';
+      if (!uri) {
+        throw new RpcError(-32602, 'Invalid params: resources/read requires params.uri');
+      }
+      try {
+        return respond(readMcpResource(uri, { cwd: context.cwd }));
+      } catch (error) {
+        if (error && error.code === 'RESOURCE_INVALID_ARGUMENTS') {
+          throw new RpcError(-32602, error.message);
+        }
+        throw new RpcError(-32000, error.message || 'Resource read failed');
+      }
+    }
+
+    if (method === 'prompts/list') {
+      return respond({ prompts: listMcpPrompts() });
+    }
+
+    if (method === 'prompts/get') {
+      const name = params && typeof params.name === 'string'
+        ? params.name.trim()
+        : '';
+      const promptArgs = params && params.arguments && typeof params.arguments === 'object'
+        ? params.arguments
+        : {};
+      if (!name) {
+        throw new RpcError(-32602, 'Invalid params: prompts/get requires params.name');
+      }
+      try {
+        return respond(getMcpPrompt(name, promptArgs, { cwd: context.cwd }));
+      } catch (error) {
+        if (error && error.code === 'PROMPT_INVALID_ARGUMENTS') {
+          throw new RpcError(-32602, error.message);
+        }
+        if (error && error.code === 'PROMPT_NOT_FOUND') {
+          throw new RpcError(-32601, error.message);
+        }
+        throw new RpcError(-32000, error.message || 'Prompt generation failed');
+      }
     }
 
     if (method === 'tools/call') {

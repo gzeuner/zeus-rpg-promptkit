@@ -1,7 +1,7 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-06-19 13:52:26
+Last generated: 2026-06-19 15:24:13
 -->
 
 ---
@@ -76,7 +76,7 @@ Related:
 | `bridge` | `S4` | Operator-gated | Bridge planning/staging/apply/compile/report flow; never implicit. | `node cli/zeus.js bridge plan --profile default --help` |
 | `pui-edit` | `S1` | Local | Apply structured UI edit operations to local display artifacts. | `node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json` |
 | `docs:generate-catalog` | `S0` | Local read-only | Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`. | `node cli/zeus.js docs:generate-catalog` |
-| `mcp` | `S0` | Local read-mostly | Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools. | `node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.workflow,zeus.bundle,zeus.analyze,zeus.impact,zeus.assess-risk,zeus.query-table,zeus.query-sql,zeus.write-sql,zeus.bridge,zeus.search-source,zeus.field-search,zeus.diff,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.analyses,zeus.fetch,zeus.test-run,zeus.copy-to-workspace,zeus.serve,zeus.joblog,zeus.inspect-object` |
+| `mcp` | `S0` | Local read-mostly | Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools. | `node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.profiles,zeus.workflow,zeus.bundle,zeus.analyze,zeus.impact,zeus.assess-risk,zeus.query-table,zeus.resolve-object,zeus.query-sql,zeus.write-sql,zeus.bridge,zeus.search-source,zeus.field-search,zeus.diff,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.analyses,zeus.fetch,zeus.fetch-member,zeus.docs-generate-catalog,zeus.test-run,zeus.copy-to-workspace,zeus.serve,zeus.joblog,zeus.inspect-object` |
 
 ## Workflow Presets
 

@@ -32,7 +32,240 @@ test('mcp initialize returns protocol and capabilities', async () => {
   assert.equal(response.jsonrpc, '2.0');
   assert.equal(response.id, 1);
   assert.equal(response.result.protocolVersion, '2024-11-05');
+  assert.equal(response.result.capabilities.prompts.listChanged, false);
+  assert.equal(response.result.capabilities.resources.listChanged, false);
+  assert.equal(response.result.capabilities.resources.subscribe, false);
   assert.equal(response.result.capabilities.tools.listChanged, false);
+});
+
+test('mcp resources list returns curated docs and metadata resources', async () => {
+  const server = createTestServer({ cwd: process.cwd() });
+  const response = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 4,
+    method: 'resources/list',
+    params: {},
+  });
+
+  assert.equal(Array.isArray(response.result.resources), true);
+  const uris = response.result.resources.map((resource) => resource.uri);
+  assert.ok(uris.includes('zeus://docs/tool-catalog.md'));
+  assert.ok(uris.includes('zeus://docs/ai/session-prompt.md'));
+  assert.ok(uris.includes('zeus://metadata/command-catalog.json'));
+  assert.ok(uris.includes('zeus://metadata/mcp-tools.json'));
+  assert.ok(uris.includes('zeus://metadata/workflow-presets.json'));
+  assert.ok(uris.includes('zeus://metadata/prompt-contracts.json'));
+});
+
+test('mcp resources read returns file-backed and computed resource content', async () => {
+  const server = createTestServer({ cwd: process.cwd() });
+
+  const docsResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 5,
+    method: 'resources/read',
+    params: {
+      uri: 'zeus://docs/tool-catalog.md',
+    },
+  });
+  assert.equal(docsResponse.result.contents[0].mimeType, 'text/markdown');
+  assert.match(docsResponse.result.contents[0].text, /Zeus RPG PromptKit Tool Catalog/);
+
+  const metadataResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 6,
+    method: 'resources/read',
+    params: {
+      uri: 'zeus://metadata/mcp-tools.json',
+    },
+  });
+  assert.equal(metadataResponse.result.contents[0].mimeType, 'application/json');
+  assert.match(metadataResponse.result.contents[0].text, /"defaultAllowlist"/);
+  assert.match(metadataResponse.result.contents[0].text, /"zeus\.doctor"/);
+});
+
+test('mcp resources read maps missing or unknown uri to deterministic -32602 errors', async () => {
+  const server = createTestServer({ cwd: process.cwd() });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 7,
+      method: 'resources/read',
+      params: {},
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.equal(error.message, 'Invalid params: resources/read requires params.uri');
+      return true;
+    },
+  );
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 8,
+      method: 'resources/read',
+      params: {
+        uri: 'zeus://unknown/not-found.json',
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /unknown resource uri/i);
+      return true;
+    },
+  );
+});
+
+test('mcp resources list and read include curated run resources under output root', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-runs-'));
+  const outputRoot = path.join(tempRoot, 'output');
+  const programDir = path.join(outputRoot, 'ORDERPGM');
+
+  fs.mkdirSync(programDir, { recursive: true });
+  fs.writeFileSync(path.join(programDir, 'report.md'), '# Report\n', 'utf8');
+  fs.writeFileSync(path.join(programDir, 'analyze-run-manifest.json'), `${JSON.stringify({
+    schemaVersion: 1,
+    tool: { name: 'zeus-rpg-promptkit', command: 'analyze' },
+    run: {
+      status: 'succeeded',
+      completedAt: '2026-04-13T12:00:00.000Z',
+    },
+    inputs: {
+      sourceRoot: '/tmp/src',
+      options: {
+        guidedMode: { name: 'documentation' },
+        workflowPreset: { name: 'onboarding' },
+        reproducibleEnabled: false,
+      },
+    },
+  }, null, 2)}\n`, 'utf8');
+
+  try {
+    const server = createTestServer({ cwd: tempRoot });
+    const listResponse = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 9,
+      method: 'resources/list',
+      params: {},
+    });
+    const uris = listResponse.result.resources.map((resource) => resource.uri);
+    assert.ok(uris.includes('zeus://runs/ORDERPGM/summary.json'));
+    assert.ok(uris.includes('zeus://runs/ORDERPGM/views.json'));
+    assert.ok(uris.includes('zeus://runs/ORDERPGM/artifacts/report.md'));
+
+    const readSummary = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 10,
+      method: 'resources/read',
+      params: {
+        uri: 'zeus://runs/ORDERPGM/summary.json',
+      },
+    });
+    assert.match(readSummary.result.contents[0].text, /"program": "ORDERPGM"/);
+
+    const readArtifact = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 11,
+      method: 'resources/read',
+      params: {
+        uri: 'zeus://runs/ORDERPGM/artifacts/report.md',
+      },
+    });
+    assert.equal(readArtifact.result.contents[0].mimeType, 'text/plain');
+    assert.match(readArtifact.result.contents[0].text, /# Report/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp prompts list returns session bootstrap and curated template prompts', async () => {
+  const server = createTestServer({ cwd: process.cwd() });
+  const response = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 12,
+    method: 'prompts/list',
+    params: {},
+  });
+
+  assert.equal(Array.isArray(response.result.prompts), true);
+  const names = response.result.prompts.map((prompt) => prompt.name);
+  assert.ok(names.includes('zeus.session.start'));
+  assert.ok(names.includes('zeus.prompt.documentation'));
+  assert.ok(names.includes('zeus.prompt.modernization'));
+});
+
+test('mcp prompts get returns session bootstrap prompt and template prompt content', async () => {
+  const server = createTestServer({ cwd: process.cwd() });
+
+  const sessionResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 13,
+    method: 'prompts/get',
+    params: {
+      name: 'zeus.session.start',
+      arguments: {
+        profile: 'development',
+        environment: 'sandbox',
+        goal: 'Analyze program ORDERPGM and summarize dependencies.',
+      },
+    },
+  });
+  assert.equal(sessionResponse.result.messages[0].role, 'user');
+  assert.match(sessionResponse.result.messages[0].content.text, /Analyze program ORDERPGM and summarize dependencies\./);
+  assert.match(sessionResponse.result.messages[0].content.text, /docs\/tool-catalog\.md/);
+
+  const templateResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 14,
+    method: 'prompts/get',
+    params: {
+      name: 'zeus.prompt.documentation',
+      arguments: {},
+    },
+  });
+  assert.equal(templateResponse.result.messages[0].role, 'user');
+  assert.match(templateResponse.result.messages[0].content.text, /Template: documentation/);
+  assert.match(templateResponse.result.messages[0].content.text, /# Program Documentation/);
+});
+
+test('mcp prompts get maps missing args and unknown prompt names deterministically', async () => {
+  const server = createTestServer({ cwd: process.cwd() });
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 15,
+      method: 'prompts/get',
+      params: {
+        name: 'zeus.session.start',
+        arguments: {},
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32602);
+      assert.match(error.message, /requires arguments\.goal/i);
+      return true;
+    },
+  );
+
+  await assert.rejects(
+    () => server.handleRequest({
+      jsonrpc: '2.0',
+      id: 16,
+      method: 'prompts/get',
+      params: {
+        name: 'zeus.prompt.unknown',
+        arguments: {},
+      },
+    }),
+    (error) => {
+      assert.equal(error.code, -32601);
+      assert.match(error.message, /prompt not found/i);
+      return true;
+    },
+  );
 });
 
 test('mcp rejects invalid JSON-RPC version with deterministic -32600 error', async () => {
@@ -445,6 +678,167 @@ test('mcp tools call doctor requires profile argument', async () => {
   );
 });
 
+test('mcp tools call profiles returns masked structured summaries', async () => {
+  const server = createTestServer({
+    cwd: process.cwd(),
+    profilesRunner: () => ({
+      profileCount: 1,
+      selectedProfile: 'demo',
+      configSource: 'config/profiles.example.json',
+      profiles: [
+        {
+          name: 'demo',
+          extends: ['base'],
+          productionSystem: false,
+          metadataDb: {
+            target: 'demo-host',
+            user: 'DEMOUSR',
+            passwordSet: true,
+          },
+          testDataDb: null,
+          fetch: {
+            target: 'demo-fetch',
+            sourceLib: 'DEMO',
+            user: 'FETCHUSR',
+            passwordSet: true,
+          },
+        },
+      ],
+    }),
+  });
+
+  const response = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 171,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.profiles',
+      arguments: {},
+    },
+  });
+
+  assert.equal(response.result.structuredContent.profileCount, 1);
+  assert.equal(response.result.structuredContent.profiles[0].metadataDb.passwordSet, true);
+  assert.equal(response.result.structuredContent.profiles[0].metadataDb.user, 'DEMOUSR');
+});
+
+test('mcp tools call fetch-member returns deterministic structured payload', async () => {
+  const server = createTestServer({
+    cwd: process.cwd(),
+    fetchMemberRunner: () => ({
+      operation: 'run',
+      profile: 'default',
+      sourceLib: 'APPLIB',
+      sourceFile: 'QRPGLESRC',
+      outDir: '/workspace/output',
+      memberCount: 2,
+      fetched: [
+        {
+          member: 'ORDERPGM',
+          path: '/workspace/output/QRPGLESRC/ORDERPGM.rpgle',
+          linesWritten: 120,
+          usedFallback: false,
+        },
+      ],
+      failures: [
+        {
+          member: 'INVOICEPGM',
+          messages: ['not found'],
+          stderr: '',
+        },
+      ],
+    }),
+  });
+
+  const response = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 172,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.fetch-member',
+      arguments: {
+        profile: 'default',
+        member: 'ORDERPGM,INVOICEPGM',
+      },
+    },
+  });
+
+  assert.equal(response.result.structuredContent.ok, false);
+  assert.equal(response.result.structuredContent.fetchedCount, 1);
+  assert.equal(response.result.structuredContent.failureCount, 1);
+  assert.equal(response.result.structuredContent.fetched[0].member, 'ORDERPGM');
+  assert.equal(response.result.structuredContent.failures[0].member, 'INVOICEPGM');
+});
+
+test('mcp tools call docs-generate-catalog writes bounded outputs and returns deterministic metadata', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-docs-catalog-'));
+  fs.mkdirSync(path.join(tempRoot, 'cli', 'commands'), { recursive: true });
+  fs.mkdirSync(path.join(tempRoot, 'src', 'docs'), { recursive: true });
+  fs.mkdirSync(path.join(tempRoot, 'src', 'workflow'), { recursive: true });
+  fs.writeFileSync(path.join(tempRoot, 'cli', 'zeus.js'), `
+const command = process.argv[2];
+if (command === 'doctor') {}
+if (command === 'docs:generate-catalog') {}
+console.log('  zeus doctor --profile default');
+console.log('  zeus docs:generate-catalog');
+`, 'utf8');
+  fs.writeFileSync(path.join(tempRoot, 'package.json'), `${JSON.stringify({ version: '9.9.9-test' }, null, 2)}\n`, 'utf8');
+
+  try {
+    const server = createTestServer({ cwd: tempRoot });
+    const response = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 173,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.docs-generate-catalog',
+        arguments: {
+          output: 'docs/generated-tool-catalog.md',
+          jsonOutput: 'docs/generated-tool-catalog.json',
+        },
+      },
+    });
+
+    assert.equal(response.result.structuredContent.ok, true);
+    assert.equal(response.result.structuredContent.format, 'markdown');
+    assert.equal(response.result.structuredContent.repoRoot, tempRoot);
+    assert.match(response.result.structuredContent.markdownPath, /generated-tool-catalog\.md$/);
+    assert.match(response.result.structuredContent.jsonPath, /generated-tool-catalog\.json$/);
+    assert.match(fs.readFileSync(response.result.structuredContent.markdownPath, 'utf8'), /Zeus RPG PromptKit Tool Catalog/);
+    assert.match(fs.readFileSync(response.result.structuredContent.jsonPath, 'utf8'), /"command": "docs:generate-catalog"/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp tools call docs-generate-catalog rejects output paths outside workspace root', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-docs-catalog-'));
+
+  try {
+    const server = createTestServer({ cwd: tempRoot });
+    await assert.rejects(
+      () => server.handleRequest({
+        jsonrpc: '2.0',
+        id: 174,
+        method: 'tools/call',
+        params: {
+          name: 'zeus.docs-generate-catalog',
+          arguments: {
+            output: '../escape.md',
+          },
+        },
+      }),
+      (error) => {
+        assert.equal(error.code, -32602);
+        assert.match(error.message, /must resolve inside workspace root/i);
+        return true;
+      },
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test('mcp tools call query-sql returns deterministic structured rows', async () => {
   const server = createTestServer({
     cwd: process.cwd(),
@@ -622,6 +1016,55 @@ test('mcp tools call query-table maps invalid filter pattern to -32602', async (
       return true;
     },
   );
+});
+
+test('mcp tools call resolve-object returns deterministic structured payload', async () => {
+  const server = createTestServer({
+    cwd: process.cwd(),
+    resolveObjectRunner: () => ({
+      profile: 'default',
+      table: 'APP_TABLE_00',
+      schema: 'APPDATA',
+      requireColumns: ['STATUS'],
+      includeRowCount: true,
+      found: true,
+      diagnostics: {
+        searchMode: 'schema-bound',
+        attemptCount: 1,
+      },
+      objectCount: 1,
+      objects: [
+        {
+          schema: 'APPDATA',
+          sqlName: 'APP_TABLE_00',
+          systemName: 'APP0000',
+          type: 'T',
+          requiredColumns: ['STATUS'],
+          missingRequiredColumns: [],
+          allRequiredColumnsPresent: true,
+          rowCount: 42,
+          rowCountError: null,
+        },
+      ],
+    }),
+  });
+
+  const response = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 183,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.resolve-object',
+      arguments: {
+        profile: 'default',
+        table: 'APP_TABLE_00',
+      },
+    },
+  });
+
+  assert.equal(response.result.structuredContent.found, true);
+  assert.equal(response.result.structuredContent.objectCount, 1);
+  assert.equal(response.result.structuredContent.objects[0].rowCount, 42);
 });
 
 test('mcp tools call query-sql rejects non-read-only SQL', async () => {
