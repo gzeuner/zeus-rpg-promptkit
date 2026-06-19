@@ -1,19 +1,20 @@
 ---
 Title: Zeus RPG PromptKit Documentation Hub (v2.1)
 Description: Zentrale, KI-freundliche Navigation über alle Dokumentationsdomänen inklusive Safety-First-Einstieg und schnellen Referenzpfaden.
-Last Updated: 2026-05-17
+Last Updated: 2026-06-19
 ---
 
 # Zeus RPG PromptKit Documentation Hub (v2.1)
 
 Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 
-## Start Sequence (Safety-First)
+## Start Sequence (CLI/MCP-First)
 
-1. [`tool-catalog.md`](tool-catalog.md) - verbindliche Command-, Safety- und Scope-Referenz
-2. [`ai/session-prompt.md`](ai/session-prompt.md) - Session-Bootstrap für Evidence-First-KI-Workflows
-3. [`quickstart/5-minutes.md`](quickstart/5-minutes.md) - schnellster operativer Einstieg
-4. [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) - vertiefende Analysepfade
+1. Lade die Umgebung explizit in der Shell (`config/load-env.sh` oder `config/load-env.ps1`).
+2. Fuehre `doctor` aus, bevor du weitere Aktionen planst.
+3. Nutze [`tool-catalog.md`](tool-catalog.md) als verbindliche Command-, Safety- und Scope-Referenz.
+4. Starte AI-Sessions mit [`ai/session-prompt.md`](ai/session-prompt.md).
+5. Arbeite evidence-first ueber CLI oder MCP und nutze erzeugte Artefakte als Belege.
 
 ## Documentation Domains
 
@@ -22,12 +23,11 @@ Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 | `ai/` | KI-Verträge, Session-Patterns, Validierung | [`ai/session-prompt.md`](ai/session-prompt.md) | AI Agents, Prompt Engineers |
 | `cli/` | Referenz und praxisnahe Kommando-Beispiele | [`cli/reference.md`](cli/reference.md) | Entwickler:innen, Operatoren |
 | `quickstart/` | Schneller produktiver Einstieg | [`quickstart/5-minutes.md`](quickstart/5-minutes.md) | Neue Teammitglieder |
-| `architecture/` | Runtime-, Config- und Systemmodell-Reviews | [`architecture/runtime-config-model-review.md`](architecture/runtime-config-model-review.md) | Maintainer, GUI Engineers |
-| `gui/` | GUI-Fundament und Extensibility-Planung | [`gui/gui-extensibility-plan.md`](gui/gui-extensibility-plan.md) | UI Engineers, Product/UX |
+| `architecture/` | Runtime-, Config- und Systemmodell-Reviews | [`architecture/runtime-config-model-review.md`](architecture/runtime-config-model-review.md) | Maintainer, Tooling Engineers |
 | `mcp/` | Lokaler MCP-Betrieb, Policy-Grenzen und Troubleshooting | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Operatoren, AI-Integratoren |
 | `workflows/` | Geführte Analyse- und Agenten-Workflows | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Analysten, Architekten |
 | `safety/` | Safety-Guidance, Governance, Sharing | [`safety/best-practice-guide.md`](safety/best-practice-guide.md) | Reviewer, Security, Leads |
-| `viewer/` | Lokale UI-/Viewer-Architektur | [`viewer/local-ui-shell.md`](viewer/local-ui-shell.md) | Tooling Engineers |
+| `viewer/` | Optionaler lokaler Artefakt-Viewer und experimentelle UI-Shell | [`viewer/local-ui-shell.md`](viewer/local-ui-shell.md) | Tooling Engineers |
 | `sql/` | Reproduzierbare SQL-Discovery-Skripte fuer IBM i/DB2 | [`sql/index.md`](sql/index.md) | Analysts, DB2 Engineers |
 | `internal/` | Interne Verträge, Pipelines, technische Details | [`internal/canonical-analysis-model.md`](internal/canonical-analysis-model.md) | Maintainer, Contributors |
 
@@ -37,13 +37,12 @@ Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 |---|---|---|
 | Authoritative command behavior | [`tool-catalog.md`](tool-catalog.md) | Single source of truth für Commands, Safety und Beispiele |
 | Session bootstrap | [`ai/session-prompt.md`](ai/session-prompt.md) | Standardisierte Arbeitsweise mit Safety-Gates |
+| MCP operator setup | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Start-/Policy-/Audit-Referenz fuer lokalen MCP-Betrieb |
 | Prompt schema and constraints | [`ai/prompt-contracts.md`](ai/prompt-contracts.md) | Verhindert inkonsistente Prompt-Ausgaben |
 | Workflow options | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Zeigt Opt-in Vertiefungsfeatures |
-| Runtime config architecture | [`architecture/runtime-config-model-review.md`](architecture/runtime-config-model-review.md) | Erklaert Prioritaeten, Profilstruktur und GUI-relevante Konfiguration |
-| GUI extensibility direction | [`gui/gui-extensibility-plan.md`](gui/gui-extensibility-plan.md) | Praktischer Fahrplan fuer modulare, weniger ueberladene GUI-Flows |
+| Runtime config architecture | [`architecture/runtime-config-model-review.md`](architecture/runtime-config-model-review.md) | Erklaert Prioritaeten, Profilstruktur und lokale Tooling-Vertraege |
 | Safe sharing guidance | [`safety/safe-sharing.md`](safety/safe-sharing.md) | Reduktions-/Sanitization-Regeln für externe Nutzung |
 | CLI examples | [`cli/examples.md`](cli/examples.md) | Schnell nutzbare, reproduzierbare Befehlsmuster |
-| MCP operator setup | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Start-/Policy-/Audit-Referenz fuer lokalen MCP-Betrieb |
 | DB2 discovery SQL | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql) | Standardisierte Discovery-Queries fuer System- und Ticketkontext |
 
 ## Visual Map
@@ -58,7 +57,6 @@ flowchart TD
     A --> F[docs/cli]
     A --> G[docs/quickstart]
     A --> G2[docs/architecture]
-    A --> G3[docs/gui]
     A --> H[docs/mcp]
     A --> I[docs/workflows]
     A --> J[docs/safety]
@@ -75,6 +73,7 @@ flowchart TD
 ## Governance Notes
 
 - `docs/tool-catalog.md` bleibt die verbindliche Referenz für KI-Assistenten.
+- CLI und MCP bleiben der unterstützte Produktpfad; der lokale Viewer ist optional und experimentell.
 - Dokumentänderungen sollen Safety-Level und Scope-Terminologie konsistent halten (`S0` bis `S4`).
 - Regenerierung funktioniert direkt ueber `zeus docs:generate-catalog` oder `zeus docs generate-catalog` und haelt den Tool-Katalog aktuell.
 - Optional maschinenlesbar: `zeus docs:generate-catalog --json-output docs/tool-catalog.json`.

@@ -1,6 +1,6 @@
 # Runtime Config Model Review
 
-This note summarizes the current runtime/profile model and highlights what should stay stable versus what should evolve for a GUI-first experience.
+This note summarizes the current runtime/profile model and highlights what should stay stable versus what should evolve for CLI/MCP-first operation plus optional local viewer tooling.
 
 ## Scope Reviewed
 
@@ -80,7 +80,7 @@ The model already supports multi-system routing:
 - Inline overrides are allowed on top of referenced system definitions.
 - Resolution is deferred to top-level profile resolution so children can override parent references safely.
 
-This is a good foundation for GUI connection cards.
+This is a good foundation for optional local viewer metadata and other tooling surfaces.
 
 ## Option Ownership by Source Type
 
@@ -100,7 +100,7 @@ These should stay command-time inputs, not mandatory saved profile fields.
 - `ZEUS_OUTPUT_ROOT`, `ZEUS_SOURCE_ROOT`, `ZEUS_ANALYSES_REGISTRY`
 - `ZEUS_CONFIG_DIR`
 
-Passwords should remain env-first for GUI integration as well.
+Passwords should remain env-first for optional viewer/tooling integration as well.
 
 ### Profile-first options (reusable team defaults)
 
@@ -110,9 +110,9 @@ Passwords should remain env-first for GUI integration as well.
 - workflow presets and step defaults
 - analysis limits, token budgets, work-copy behavior
 
-## What GUI Needs That Is Not Explicit Yet
+## What Optional Local Tooling Needs That Is Not Explicit Yet
 
-The runtime model is robust, but GUI rendering currently needs implicit knowledge from multiple modules. A GUI needs an explicit metadata contract for:
+The runtime model is robust, but local UI rendering currently needs implicit knowledge from multiple modules. Optional local tooling needs an explicit metadata contract for:
 
 - field labels/help/sections
 - sensitivity and safe-display flags
@@ -128,7 +128,7 @@ This iteration adds that under `src/config/configUiMetadata.js`.
 - Profile naming was historically mixed (`default*`, `sample-*`, newer semantic names).
 - Some options appear in CLI, env, and profile simultaneously; this is powerful but hard to explain without a matrix.
 - `default` profile name is generic and less workflow-oriented than `dev` / `demo` / `readonly-db2`.
-- Command discoverability lives across help text, docs, and tool-catalog metadata rather than one GUI-focused command contract.
+- Command discoverability lives across help text, docs, and tool-catalog metadata rather than one viewer-focused command contract.
 
 ## What Is Already Good and Should Stay Stable
 
@@ -142,4 +142,4 @@ This iteration adds that under `src/config/configUiMetadata.js`.
 
 - Keep runtime behavior backward-compatible while evolving metadata.
 - Continue preserving alias profiles for compatibility (`sample-*`) while preferring clearer names in docs/help.
-- Add GUI against metadata contracts first; avoid duplicating runtime resolution logic in the UI.
+- Any local viewer/UI should reuse metadata contracts first; avoid duplicating runtime resolution logic in the UI.
