@@ -54,6 +54,7 @@ const {
 const { readWorkspaceIndex } = require('../workspace/workspaceIndexBuilder');
 const { findImpactGraph } = require('../cli/helpers/impactGraphResolver');
 const { readAnalyzeRunManifest } = require('../analyze/analyzeRunManifest');
+const { executeAnalyze } = require('../core/analyzeService');
 const {
   getProfilesMetadata,
   loadProfiles,
@@ -74,6 +75,7 @@ const { executeSearchSource, normalizeFilePattern } = require('../core/searchSou
 const { analyzeImpactFromGraph, normalizeId } = require('../impact/impactAnalyzer');
 const { assessCanonicalModel } = require('../impact/riskAssessmentAnalyzer');
 const { WORKFLOW_RUN_MANIFEST_FILE } = require('../workflow/workflowRunManifest');
+const { runWorkflowEngine } = require('../workflow/workflowRunner');
 const { searchLocalSources } = require('../investigation/fieldXrefService');
 const { listAnalysisRuns } = require('../ui/localUiDataApi');
 const { DEFAULT_UI_HOST, DEFAULT_UI_PORT } = require('../ui/localUiDefaults');
@@ -83,6 +85,9 @@ const {
   parseMembersCsv: parseWorkCopyMembersCsv,
 } = require('../workspace/workCopyService');
 const { generateToolCatalog } = require('../docs/toolCatalogGenerator');
+const { COMMAND_METADATA, COMMAND_ORDER } = require('../docs/toolCatalogMetadata');
+const { listCommandUiMetadata } = require('../cli/commandMetadata');
+const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
 
 const SUPPORTED_INSPECT_OBJECT_TYPES = ['*PGM', '*SRVPGM', '*MODULE', '*FILE', '*CMD', '*DTAARA', '*JOBQ', '*OUTQ'];
 const DEFAULT_MCP_PAYLOAD_ITEMS = 100;
@@ -135,6 +140,119 @@ function assertPathWithinCwd({
   );
   error.code = 'TOOL_INVALID_ARGUMENTS';
   throw error;
+}
+
+function validateMcpToolArgs(toolName, args = {}, schema = {}) {
+  if (!schema || schema.type !== 'object') {
+    return;
+  }
+  const properties = schema.properties || {};
+  const allowedKeys = new Set(Object.keys(properties));
+  const additionalAllowed = schema.additionalProperties !== false;
+  const required = Array.isArray(schema.required) ? schema.required : [];
+  const input = args && typeof args === 'object' ? args : {};
+
+  // Reject unknown keys when additionalProperties: false
+  for (const key of Object.keys(input)) {
+    if (!allowedKeys.has(key) && !additionalAllowed) {
+      const error = new Error(`Invalid arguments for ${toolName}: unknown property "${key}"`);
+      error.code = 'TOOL_INVALID_ARGUMENTS';
+      throw error;
+    }
+  }
+
+  // Required fields
+  for (const req of required) {
+    const val = input[req];
+    if (val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
+      const error = new Error(`Invalid arguments for ${toolName}: "${req}" is required`);
+      error.code = 'TOOL_INVALID_ARGUMENTS';
+      throw error;
+    }
+  }
+
+  // Basic type, length, control char, and profile name checks
+  for (const [key, rawVal] of Object.entries(input)) {
+    if (rawVal === undefined || rawVal === null) continue;
+    const prop = properties[key] || {};
+    const type = prop.type;
+
+    if (type === 'string' && typeof rawVal !== 'string') {
+      const error = new Error(`Invalid arguments for ${toolName}: "${key}" must be a string`);
+      error.code = 'TOOL_INVALID_ARGUMENTS';
+      throw error;
+    }
+    if ((type === 'integer' || type === 'number') && !Number.isFinite(Number(rawVal))) {
+      const error = new Error(`Invalid arguments for ${toolName}: "${key}" must be a number`);
+      error.code = 'TOOL_INVALID_ARGUMENTS';
+      throw error;
+    }
+
+    if (typeof rawVal === 'string') {
+      if (/[\x00-\x1F\x7F]/.test(rawVal)) {
+        const error = new Error(`Invalid arguments for ${toolName}: "${key}" contains control characters`);
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+        throw error;
+      }
+      const maxLen = typeof prop.maxLength === 'number' ? prop.maxLength : 4096;
+      if (rawVal.length > maxLen) {
+        const error = new Error(`Invalid arguments for ${toolName}: "${key}" exceeds maximum length`);
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+        throw error;
+      }
+      if ((key === 'profile' || /profile/i.test(key)) && rawVal.trim()) {
+        if (!/^[a-zA-Z0-9._-]+$/.test(rawVal.trim())) {
+          const error = new Error(`Invalid arguments for ${toolName}: "${key}" must be a simple identifier`);
+          error.code = 'TOOL_INVALID_ARGUMENTS';
+          throw error;
+        }
+      }
+    }
+
+    // numeric bounds if declared
+    if (typeof rawVal === 'number' || (typeof rawVal === 'string' && rawVal.trim() !== '')) {
+      const num = Number(rawVal);
+      if (Number.isFinite(num)) {
+        if (typeof prop.minimum === 'number' && num < prop.minimum) {
+          const error = new Error(`Invalid arguments for ${toolName}: "${key}" below minimum`);
+          error.code = 'TOOL_INVALID_ARGUMENTS';
+          throw error;
+        }
+        if (typeof prop.maximum === 'number' && num > prop.maximum) {
+          const error = new Error(`Invalid arguments for ${toolName}: "${key}" above maximum`);
+          error.code = 'TOOL_INVALID_ARGUMENTS';
+          throw error;
+        }
+      }
+    }
+  }
+}
+
+function normalizeMcpResult(toolName, data = {}, extra = {}) {
+  const base = {
+    action: toolName,
+    status: (data && data.status) || (data && data.ok === false ? 'error' : 'success'),
+    summary: (data && data.summary) || '',
+    warnings: Array.isArray(data && data.warnings) ? data.warnings : (Array.isArray(extra.warnings) ? extra.warnings : []),
+    timestamp: (data && data.timestamp) || new Date().toISOString(),
+  };
+  if (extra.cliEquivalent || (data && data.cliEquivalent)) {
+    base.cliEquivalent = extra.cliEquivalent || data.cliEquivalent;
+  }
+  const arts = Array.isArray(extra.artifacts) ? extra.artifacts : (data && data.artifacts !== undefined ? data.artifacts : (Array.isArray(data && data.artifacts) ? data.artifacts : null));
+  if (arts !== null && arts !== undefined) {
+    base.artifacts = arts;
+  }
+  // Preserve other data fields (ok, service, specific results) but prefer envelope
+  const rest = { ...(data || {}) };
+  delete rest.action;
+  delete rest.status;
+  delete rest.summary;
+  delete rest.warnings;
+  delete rest.cliEquivalent;
+  delete rest.artifacts;
+  delete rest.timestamp;
+  return { ...base, ...rest };
 }
 
 function readPackageVersion(cwd) {
@@ -371,6 +489,21 @@ function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Runtime profile name used for doctor checks.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.help',
+      description: 'Returns structured, agent-friendly help for a specific command or an overview of safe MCP capabilities, safety rules, and recommended AI sequences. S0 local introspection tool.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          command: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional command name (e.g. "analyze", "doctor", "workflow", "bundle"). Omit for overview + recommended next steps for agents.',
           },
         },
       },
@@ -968,7 +1101,7 @@ function listMcpTools() {
     },
     {
       name: 'zeus.workflow',
-      description: 'Reads existing workflow run manifest and returns deterministic workflow metadata (read-only).',
+      description: 'Reads existing workflow run manifest or runs full preset workflow (with source+program+preset) for S1 local evidence generation.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -977,23 +1110,34 @@ function listMcpTools() {
           program: {
             type: 'string',
             minLength: 1,
-            description: 'Analyzed program output directory name.',
+            description: 'Program name.',
           },
           profile: {
             type: 'string',
             minLength: 1,
-            description: 'Optional runtime profile used to resolve default output root.',
+            description: 'Optional profile.',
           },
           out: {
             type: 'string',
             minLength: 1,
-            description: 'Optional output root override containing workflow artifacts.',
+            description: 'Optional output root.',
           },
           output: {
             type: 'string',
             minLength: 1,
-            description: 'Optional alias for out.',
+            description: 'Alias for out.',
           },
+          preset: {
+            type: 'string',
+            minLength: 1,
+            description: 'Workflow preset name (e.g. architecture-review). When provided with source, runs full workflow.',
+          },
+          source: {
+            type: 'string',
+            minLength: 1,
+            description: 'Source root for full workflow run.',
+          },
+          'source-root': { type: 'string', minLength: 1 },
         },
       },
     },
@@ -1040,7 +1184,7 @@ function listMcpTools() {
     },
     {
       name: 'zeus.analyze',
-      description: 'Reads existing analyze artifacts and returns deterministic run summaries (read-only).',
+      description: 'Reads existing analyze artifacts (when only program given) or runs full local analysis when source is provided. Bounded S1 local evidence generation.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1049,22 +1193,47 @@ function listMcpTools() {
           program: {
             type: 'string',
             minLength: 1,
-            description: 'Analyzed program output directory name.',
+            description: 'Program/output directory name.',
           },
           profile: {
             type: 'string',
             minLength: 1,
-            description: 'Optional runtime profile used to resolve default output root.',
+            description: 'Optional runtime profile.',
           },
           out: {
             type: 'string',
             minLength: 1,
-            description: 'Optional output root override containing analyze artifacts.',
+            description: 'Optional output root.',
           },
           output: {
             type: 'string',
             minLength: 1,
-            description: 'Optional alias for out.',
+            description: 'Alias for out.',
+          },
+          source: {
+            type: 'string',
+            minLength: 1,
+            description: 'Source root path. When provided, triggers full analysis execution (S1 local).',
+          },
+          'source-root': {
+            type: 'string',
+            minLength: 1,
+            description: 'Alias for source.',
+          },
+          sourceRoot: {
+            type: 'string',
+            minLength: 1,
+            description: 'Alias for source.',
+          },
+          mode: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional analysis mode (e.g. architecture).',
+          },
+          extensions: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional comma-separated file extensions.',
           },
         },
       },
@@ -4795,13 +4964,19 @@ async function executeReadOnlyFieldSearch(args = {}, context = {}) {
 }
 
 async function executeMcpToolCall(name, args = {}, context = {}) {
+  // Strict input validation (unknown keys, required, types, lengths, control chars, profile names)
+  const toolDef = listMcpTools().find((t) => t.name === name);
+  if (toolDef && toolDef.inputSchema) {
+    validateMcpToolArgs(name, args, toolDef.inputSchema);
+  }
+
   if (name === 'zeus.health') {
-    return {
+    return normalizeMcpResult('zeus.health', {
       ok: true,
       service: 'zeus-rpg-promptkit',
       mode: 'local-only',
       timestamp: new Date().toISOString(),
-    };
+    });
   }
 
   if (name === 'zeus.version') {
@@ -4816,7 +4991,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     if (includeNode) {
       payload.node = process.version;
     }
-    return payload;
+    return normalizeMcpResult('zeus.version', payload);
   }
 
   if (name === 'zeus.profiles') {
@@ -4840,7 +5015,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       throw error;
     }
 
-    return {
+    return normalizeMcpResult('zeus.profiles', {
       ok: true,
       service: 'zeus-rpg-promptkit',
       profileCount: Number(execution && execution.profileCount ? execution.profileCount : 0),
@@ -4857,7 +5032,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         }))
         : [],
       timestamp: new Date().toISOString(),
-    };
+    });
   }
 
   if (name === 'zeus.fetch-member') {
@@ -4931,7 +5106,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       throw error;
     }
 
-    return {
+    return normalizeMcpResult('zeus.docs-generate-catalog', {
       ok: true,
       service: 'zeus-rpg-promptkit',
       format: execution && execution.format ? String(execution.format) : 'markdown',
@@ -4941,7 +5116,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       commandCount: Number(execution && execution.commandCount ? execution.commandCount : 0),
       presetCount: Number(execution && execution.presetCount ? execution.presetCount : 0),
       timestamp: new Date().toISOString(),
-    };
+    }, { cliEquivalent: 'node cli/zeus.js docs:generate-catalog' });
   }
 
   if (name === 'zeus.bridge') {
@@ -5029,25 +5204,50 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.workflow') {
-    const workflowRunner = typeof context.workflowRunner === 'function'
-      ? context.workflowRunner
-      : executeReadOnlyWorkflow;
+    const cwd = context.cwd || process.cwd();
+    const hasPreset = args && typeof args.preset === 'string' && args.preset.trim();
+    const source = args && (args.source || args['source-root']);
+    const hasSourceForRun = typeof source === 'string' && source.trim();
 
     let execution;
     try {
-      execution = workflowRunner(args, {
-        cwd: context.cwd || process.cwd(),
-      });
+      if (hasPreset && hasSourceForRun) {
+        // Full S1 workflow execution (bounded)
+        const resolvedSource = path.resolve(cwd, source);
+        assertPathWithinCwd({
+          toolName: 'zeus.workflow',
+          optionName: 'source',
+          rawValue: source,
+          resolvedPath: resolvedSource,
+          cwd,
+        });
+
+        const fullRunner = typeof context.workflowRunner === 'function'
+          ? context.workflowRunner
+          : runWorkflowEngine;
+
+        const runArgs = {
+          ...args,
+          source: resolvedSource,
+          'source-root': resolvedSource,
+          preset: args.preset,
+          program: args.program ? String(args.program).trim() : '',
+        };
+
+        execution = await fullRunner(runArgs, { cwd, env: context.env || process.env });
+      } else {
+        const workflowRunner = typeof context.workflowRunner === 'function'
+          ? context.workflowRunner
+          : executeReadOnlyWorkflow;
+        execution = workflowRunner(args, { cwd });
+      }
     } catch (error) {
-      const invalidArgCodes = new Set([
-        'PROGRAM_REQUIRED',
-      ]);
+      const invalidArgCodes = new Set(['PROGRAM_REQUIRED']);
       if (
         (error && error.code && invalidArgCodes.has(error.code))
         || /invalid arguments for zeus\.workflow/i.test(String(error && error.message ? error.message : ''))
         || /missing required option: --program/i.test(String(error && error.message ? error.message : ''))
         || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
-        || /analyze\.outputRoot must be a string/i.test(String(error && error.message ? error.message : ''))
         || /workflow source program output not found:/i.test(String(error && error.message ? error.message : ''))
         || /workflow run manifest not found:/i.test(String(error && error.message ? error.message : ''))
       ) {
@@ -5115,6 +5315,50 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       },
       timestamp: new Date().toISOString(),
     };
+    const workflowResult = {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      profile: execution && typeof execution.profile === 'string' ? execution.profile : null,
+      program: execution && execution.program ? String(execution.program) : '',
+      schemaVersion: Number(execution && execution.schemaVersion ? execution.schemaVersion : 0),
+      kind: execution && execution.kind ? String(execution.kind) : null,
+      generatedAt: execution && execution.generatedAt ? String(execution.generatedAt) : null,
+      preset: {
+        available: Boolean(preset.available),
+        name: preset.name ? String(preset.name) : null,
+        title: preset.title ? String(preset.title) : null,
+        analyzeMode: preset.analyzeMode ? String(preset.analyzeMode) : null,
+        promptTemplateCount: Number(preset.promptTemplateCount || 0),
+        workflowKeyCount: Number(preset.workflowKeyCount || 0),
+        bundleArtifactCount: Number(preset.bundleArtifactCount || 0),
+        reviewWorkflow: {
+          intendedAudienceCount: Number(reviewWorkflow.intendedAudienceCount || 0),
+          keyQuestionsAnsweredCount: Number(reviewWorkflow.keyQuestionsAnsweredCount || 0),
+          expectedDecisionsCount: Number(reviewWorkflow.expectedDecisionsCount || 0),
+        },
+      },
+      analyzeRun: {
+        available: Boolean(analyzeRun.available),
+        status: analyzeRun.status ? String(analyzeRun.status) : null,
+        completedAt: analyzeRun.completedAt ? String(analyzeRun.completedAt) : null,
+        generatedArtifactCount: Number(analyzeRun.generatedArtifactCount || 0),
+        safeSharingEnabled: Boolean(analyzeRun.safeSharingEnabled),
+        guidedModeName: analyzeRun.guidedModeName ? String(analyzeRun.guidedModeName) : null,
+      },
+      bundle: {
+        available: Boolean(bundle.available),
+        zipPath: bundle.zipPath ? String(bundle.zipPath) : null,
+        totalFiles: Number(bundle.totalFiles || 0),
+        totalSizeBytes: Number(bundle.totalSizeBytes || 0),
+      },
+      reproducibility: {
+        available: Boolean(reproducibility.available),
+        enabled: Boolean(reproducibility.enabled),
+        contentFingerprint: reproducibility.contentFingerprint ? String(reproducibility.contentFingerprint) : null,
+      },
+      timestamp: new Date().toISOString(),
+    };
+    return normalizeMcpResult('zeus.workflow', workflowResult);
   }
 
   if (name === 'zeus.bundle') {
@@ -5232,25 +5476,52 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.analyze') {
-    const analyzeRunner = typeof context.analyzeRunner === 'function'
-      ? context.analyzeRunner
-      : executeReadOnlyAnalyze;
+    const cwd = context.cwd || process.cwd();
+    const source = args && (args.source || args['source-root'] || args.sourceRoot);
+    const hasSource = typeof source === 'string' && source.trim().length > 0;
 
     let execution;
     try {
-      execution = analyzeRunner(args, {
-        cwd: context.cwd || process.cwd(),
-      });
+      if (hasSource) {
+        // Full S1 local execution path (bounded)
+        const resolvedSource = path.resolve(cwd, source);
+        assertPathWithinCwd({
+          toolName: 'zeus.analyze',
+          optionName: 'source',
+          rawValue: source,
+          resolvedPath: resolvedSource,
+          cwd,
+        });
+
+        const fullRunner = typeof context.analyzeRunner === 'function'
+          ? context.analyzeRunner
+          : executeAnalyze;
+
+        const runArgs = {
+          ...args,
+          source: resolvedSource,
+          'source-root': resolvedSource,
+          program: (args && args.program ? String(args.program).trim() : ''),
+        };
+
+        execution = fullRunner(runArgs, { cwd });
+        // After full run, the read shape is compatible; enrich a bit
+        if (execution && !execution.sourceRoot) {
+          execution.sourceRoot = resolvedSource;
+        }
+      } else {
+        const analyzeRunner = typeof context.analyzeRunner === 'function'
+          ? context.analyzeRunner
+          : executeReadOnlyAnalyze;
+        execution = analyzeRunner(args, { cwd });
+      }
     } catch (error) {
-      const invalidArgCodes = new Set([
-        'PROGRAM_REQUIRED',
-      ]);
+      const invalidArgCodes = new Set(['PROGRAM_REQUIRED', 'SOURCE_REQUIRED']);
       if (
         (error && error.code && invalidArgCodes.has(error.code))
         || /invalid arguments for zeus\.analyze/i.test(String(error && error.message ? error.message : ''))
-        || /missing required option: --program/i.test(String(error && error.message ? error.message : ''))
+        || /missing required option: --program|--source/i.test(String(error && error.message ? error.message : ''))
         || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
-        || /analyze\.outputRoot must be a string/i.test(String(error && error.message ? error.message : ''))
         || /analyze output not found:/i.test(String(error && error.message ? error.message : ''))
         || /analyze run manifest not found:/i.test(String(error && error.message ? error.message : ''))
       ) {
@@ -5259,24 +5530,16 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       throw error;
     }
 
-    const summary = execution && execution.summary && typeof execution.summary === 'object'
-      ? execution.summary
-      : {};
-    const artifacts = execution && execution.artifacts && typeof execution.artifacts === 'object'
-      ? execution.artifacts
-      : {};
-    const analysisIndex = execution && execution.analysisIndex && typeof execution.analysisIndex === 'object'
-      ? execution.analysisIndex
-      : {};
-    const graph = execution && execution.graph && typeof execution.graph === 'object'
-      ? execution.graph
-      : {};
+    const summary = execution && execution.summary && typeof execution.summary === 'object' ? execution.summary : {};
+    const artifacts = execution && execution.artifacts && typeof execution.artifacts === 'object' ? execution.artifacts : {};
+    const analysisIndex = execution && execution.analysisIndex && typeof execution.analysisIndex === 'object' ? execution.analysisIndex : {};
+    const graph = execution && execution.graph && typeof execution.graph === 'object' ? execution.graph : {};
 
-    return {
+    const result = {
       ok: true,
       service: 'zeus-rpg-promptkit',
-      profile: execution && typeof execution.profile === 'string' ? execution.profile : null,
-      program: execution && execution.program ? String(execution.program) : '',
+      profile: execution && typeof execution.profile === 'string' ? execution.profile : (args && args.profile ? String(args.profile) : null),
+      program: execution && execution.program ? String(execution.program) : (args && args.program ? String(args.program) : ''),
       status: execution && execution.status ? String(execution.status) : 'unknown',
       completedAt: execution && execution.completedAt ? String(execution.completedAt) : null,
       durationMs: Number(execution && execution.durationMs ? execution.durationMs : 0),
@@ -5292,8 +5555,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         sourceFileCount: Number(summary.sourceFileCount || 0),
       },
       artifacts: {
-        count: Number(artifacts.count || 0),
-        files: Array.isArray(artifacts.files) ? artifacts.files : [],
+        count: Number(artifacts.count || (Array.isArray(artifacts.files) ? artifacts.files.length : 0) || 0),
+        files: Array.isArray(artifacts.files) ? artifacts.files : (Array.isArray(execution && execution.artifacts) ? execution.artifacts : []),
       },
       analysisIndex: {
         available: Boolean(analysisIndex.available),
@@ -5311,6 +5574,14 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       },
       timestamp: new Date().toISOString(),
     };
+
+    // If full run happened, include source and cli hint
+    if (hasSource) {
+      result.sourceRoot = execution && execution.sourceRoot ? String(execution.sourceRoot) : source;
+    }
+    return normalizeMcpResult('zeus.analyze', result, {
+      cliEquivalent: `node cli/zeus.js analyze --source ${hasSource ? source : '<source>'} --program ${result.program} --out ./output`,
+    });
   }
 
   if (name === 'zeus.doctor') {
@@ -5345,7 +5616,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         .sort((left, right) => left.status.localeCompare(right.status)),
     };
 
-    return {
+    return normalizeMcpResult('zeus.doctor', {
       ok: !Boolean(result && result.hasCriticalFailure),
       service: 'zeus-rpg-promptkit',
       profile,
@@ -5355,7 +5626,59 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         status: check && check.status ? String(check.status).toUpperCase() : 'UNKNOWN',
       })),
       timestamp: new Date().toISOString(),
-    };
+    }, { cliEquivalent: `node cli/zeus.js doctor --profile ${profile}` });
+  }
+
+  if (name === 'zeus.help') {
+    const cmd = args && typeof args.command === 'string' ? args.command.trim().toLowerCase() : '';
+    let helpData;
+
+    if (!cmd) {
+      // Overview for AI agents
+      const safeDefaults = [...DEFAULT_MCP_SAFE_TOOL_NAMES];
+      helpData = {
+        overview: 'Zeus RPG PromptKit MCP default safe surface (S0/S1 local only). Use for evidence gathering and AI context preparation without remote access.',
+        defaultTools: safeDefaults,
+        safetyReminder: 'Always prefer S0. Use S1 only for local artifact generation inside workspace. Never S2+ without explicit operator allowlist and approval.',
+        recommendedSequence: [
+          'zeus.doctor (check readiness)',
+          'zeus.profiles (discover config)',
+          'zeus.search-source or zeus.field-search (local code exploration)',
+          'zeus.analyze (with source) or zeus.workflow --preset X (full local evidence)',
+          'zeus.impact / zeus.assess-risk / zeus.generate-test / zeus.generate-checklist / zeus.qa',
+          'zeus.bundle (package for review)',
+          'Read generated artifacts + AI prompts via zeus://runs/... resources'
+        ],
+        howToGetMore: 'Call zeus.help with a command name for details. Use resources like zeus://docs/tool-catalog.md and zeus://metadata/command-catalog.json for full catalog.',
+        aiTip: 'After analysis, use resources/read on run URIs or specific ai_prompt_*.md artifacts to load evidence into your context.'
+      };
+    } else {
+      const meta = COMMAND_METADATA[cmd] || COMMAND_METADATA[cmd.replace(':', '')] || null;
+      const uiMeta = listCommandUiMetadata().find((c) => c.name === cmd || c.name === cmd.replace(':', ' ')) || null;
+      if (!meta && !uiMeta) {
+        const error = new Error(`Invalid arguments for zeus.help: unknown command "${cmd}". Use without command for overview or valid name from tool catalog.`);
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+        throw error;
+      }
+      helpData = {
+        command: cmd,
+        safety: meta ? meta.safety : (uiMeta ? 'see catalog' : null),
+        scope: meta ? meta.scope : null,
+        purpose: meta ? meta.purpose : (uiMeta ? uiMeta.summary : null),
+        example: meta ? meta.example : null,
+        usage: uiMeta ? uiMeta.commonOptions : [],
+        aiGuidance: meta && meta.safety && (meta.safety.startsWith('S0') || meta.safety.startsWith('S1')) ? 'Safe for direct MCP use by agents when in default allowlist.' : 'Requires explicit --allow-tools and human review for risk.',
+        nextSteps: uiMeta && uiMeta.recommendedNextCommands ? uiMeta.recommendedNextCommands : []
+      };
+    }
+
+    return normalizeMcpResult('zeus.help', {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      command: cmd || null,
+      help: helpData,
+      timestamp: new Date().toISOString(),
+    });
   }
 
   if (name === 'zeus.query-sql') {
