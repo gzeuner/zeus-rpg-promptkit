@@ -29,9 +29,7 @@ const { createPromptWorkbenchService } = require('./promptWorkbenchService');
 const { collectSensitiveTermsFromEnv, maskSensitiveTermsInText, sanitizeValue } = require('../security/secretMasking');
 const { listWorkspaces, readWorkspaceById, touchWorkspace } = require('../workspace/analysisRegistryService');
 const { readWorkspaceIndex, WORKSPACE_INDEX_FILE } = require('../workspace/workspaceIndexBuilder');
-
-const DEFAULT_UI_HOST = '127.0.0.1';
-const DEFAULT_UI_PORT = 4782;
+const { DEFAULT_UI_HOST, DEFAULT_UI_PORT } = require('./localUiDefaults');
 const MAX_JSON_BODY_BYTES = 512 * 1024;
 
 function normalizeHost(host) {

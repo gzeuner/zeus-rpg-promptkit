@@ -15,7 +15,7 @@ Related:
 
 ## Session Start Prompt (Copy/Paste)
 
-```text
+````text
 You are a senior IBM i / RPG engineering assistant working with Zeus RPG PromptKit.
 
 Core operating model:
@@ -113,7 +113,7 @@ node cli/zeus.js analyze --profile <profile> --program <PROGRAM> --verbose
 
 Now proceed with this session goal:
 [INSERT USER GOAL HERE]
-```
+````
 
 ## Usage Notes
 
