@@ -1,12 +1,22 @@
 ---
 Title: Local UI Shell
-Description: Dokumentation zur lokalen Viewer- und UI-Shell fuer erzeugte Analyseartefakte.
+Description: Dokumentation zur optionalen lokalen Viewer- und experimentellen UI-Shell fuer erzeugte Analyseartefakte.
 Last Updated: 2026-06-19
 ---
 
 # Local UI Shell
 
-The local UI is now hardened around a Setup-first browser flow. The first production-ready area is onboarding, configuration understanding, and readiness checking. Reports remain available as a read-only follow-up area, now with grouped report views, while Prompt Workbench and other specialist features are demoted into an Advanced / Tools area instead of competing with setup.
+The Local UI is an optional, local-only, experimental viewer around existing Zeus artifacts and a small allowlisted helper surface.
+
+The supported product workflow remains:
+
+1. load env explicitly in the shell
+2. run `doctor`
+3. use CLI or MCP commands from `docs/tool-catalog.md`
+4. generate artifacts and reports
+5. optionally inspect those artifacts with `zeus serve`
+
+The Local UI is not the primary onboarding, configuration, fetch, query, or prompt-generation workflow. It is also not a general browser command executor.
 
 ## Command
 
@@ -19,7 +29,7 @@ Behavior:
 - binds to loopback only (`127.0.0.1` by default)
 - serves a local HTML shell plus local-only JSON routes
 - reads existing analyze output directories
-- can trigger allowlisted local analysis for an already configured workspace source root as an advanced local-only tool
+- can trigger a very small set of allowlisted helper actions for an already configured local workspace
 - reuses the current manifest and artifact contracts instead of introducing a parallel storage model
 
 ## API endpoints
@@ -47,56 +57,35 @@ The browser shell consumes only those endpoints. It does not parse output direct
 
 ## Current shell scope
 
-- Setup is the default landing tab and the first production-ready browser flow
-- Setup focuses on:
-  - selected/default profile overview
-  - env/profile precedence explanation
-  - safe config metadata overview
-  - Doctor readiness checks
-  - AI Session Starter prompt generation from `docs/ai/session-prompt.md`
-  - runtime guardrail conflict warnings
-  - clear recommended next steps
-- the local-only profile wizard remains available inside Setup, but behind an expandable details area so onboarding does not start with a dense editing surface
-- Reports remains available as a read-only follow-up area for generated artifacts
-- Reports now acts as the read-only landing area and parent navigation area for existing runs and report views
-- Reports explains:
-  - whether any runs exist
-  - which report views are available for the selected run
-  - that Overview, Graph, DB2/Test Data, Prompt Compare, and artifact preview are report views over existing local output
-  - that all of those views stay read-only in this iteration
-- top-level navigation is intentionally reduced to:
-  - Setup
-  - Reports
-  - Advanced / Tools
-- report-view navigation is grouped under Reports:
-  - Overview
-  - Graph
-  - DB2/Test Data
-  - Prompt Compare
-  - Artifacts
-- advanced and specialist tools are demoted into Advanced / Tools instead of appearing as primary workflow actions
-- Advanced / Tools is intentionally secondary and grouped into:
-  - Prompt Tools
-  - Local Analysis Tools
-  - Experimental / Coming Later
-- metadata-driven read-only Setup panel (section-grouped field contract preview)
-- list analysis runs under the configured output root
-- show manifest-derived run summary details
-- provide a graph explorer with node-level links to related artifacts and prompts
-- provide dedicated DB2 metadata and test-data table views
-- provide side-by-side prompt comparison for generated prompt packs
-- provide Prompt Workbench canvas, live preview, and local template CRUD
-- import existing `ai_prompt_*.md` artifacts as Prompt Canvas seeds
-- enumerate available artifacts, including `safe-sharing/` variants
-- preview JSON, Markdown, and HTML artifacts on demand
+- not required for CLI or MCP usage
+- not a replacement for shell env loading
+- not a replacement for `doctor`, `fetch`, `query-table`, `query-sql`, `resolve-object`, or other CLI/MCP commands
+- not a general browser command runner
+- most useful after artifacts already exist under the output root
+- able to list analysis runs, summarize manifests, and preview local artifacts on demand
+- able to show grouped read-only report views such as Overview, Graph, DB2/Test Data, Prompt Compare, and Artifacts
+- able to surface a small set of local helper views such as config metadata, `doctor` diagnostics, and AI Session Starter prompt generation
+- able to keep specialist tools such as Prompt Workbench under a clearly secondary Advanced / Tools area
+
+The current top-level navigation still contains:
+
+- Setup
+- Reports
+- Advanced / Tools
+
+Interpretation guidance:
+
+- treat Reports as the main viewer-oriented area
+- treat Setup as an optional helper view, not the supported onboarding path
+- treat Advanced / Tools as optional specialist utilities only
 
 UI hardening behavior:
 
-- a visible primary action must either work, be clearly disabled, or be moved out of the primary Setup flow
+- a visible primary action must either work, be clearly disabled, or be moved out of high-visibility areas
 - unfinished browser workflows such as remote fetch, DB2 query execution, and AI context generation are marked as deferred instead of being presented as normal live actions
 - Doctor is the first real browser action
-- Prompt Workbench remains available, but no longer dominates the initial landing area
-- Reports is the next production-ready tab after Setup
+- Prompt Workbench remains available, but is intentionally secondary
+- Reports is the main read-only viewing area once output exists
 - Advanced / Tools is optional and should not be mistaken for onboarding
 
 Large-output behavior:
@@ -105,7 +94,7 @@ Large-output behavior:
 - the browser fetches prompt and artifact content only on selection
 - the shell uses simple filtering instead of eager full-page rendering of every artifact body
 
-This is the API-and-shell foundation for future richer views. It is not yet the full interactive exploration layer described in the later UI issues.
+This remains an API-and-shell foundation for optional local viewing. It is not the primary Zeus product surface.
 
 ## Allowlisted UI actions
 
@@ -163,7 +152,7 @@ Setup now also includes `Start AI Session`:
 - it generates a guided assistant prompt from `docs/ai/session-prompt.md`
 - it keeps prompt generation server-side so the browser only submits validated JSON
 - it can include a compact Doctor summary, but it still instructs the assistant to run Doctor first
-- it reminds the user that env loading is shell/process scoped
+- it reminds the user that env loading is shell/process scoped and remains authoritative
 - it shows helper commands for `config/load-env.ps1` and `config/load-env.sh`
 - it does not inject env vars into the user's already-open terminal
 - it does not expose credentials, resolved env values, or full connection strings
@@ -171,7 +160,7 @@ Setup now also includes `Start AI Session`:
 
 AI Session Starter guidance:
 
-- use it after Setup understanding and preferably after `Check Readiness`
+- use it only as a helper after shell env loading and preferably after `Check Readiness`
 - keep credentials in env or other local-only mechanisms, not in the goal text
 - generated prompts can mention allowlisted Zeus MCP tools if available, but they must not invent unsupported MCP capabilities
 - risky CLI or MCP operations still require explicit approval according to the tool catalog safety levels
@@ -183,7 +172,7 @@ Env vars are shown as metadata only, for example:
 
 ## Reports
 
-The Reports tab is the next read-only step after Setup:
+The Reports tab is the main viewer-oriented area:
 
 - Reports use existing local artifacts only
 - Reports do not fetch remote sources
@@ -211,8 +200,8 @@ When no runs are present, Reports explains that output must be generated outside
 
 Advanced / Tools is intentionally secondary:
 
-- start in Setup for onboarding, profile understanding, and readiness
-- continue to Reports for normal read-only output review
+- start with CLI/MCP and generated artifacts outside the browser
+- use Reports for normal read-only output review
 - use Advanced / Tools only when you need a specialist local utility
 
 Current grouping:
@@ -241,8 +230,8 @@ Advanced / Tools still follows the same safety rules:
 Prompt Workbench behavior:
 
 - Prompt Workbench lives under Advanced / Tools / Prompt Tools
-- it is optional and specialist-oriented, not part of the default onboarding path
-- Setup should be completed first so profile, env precedence, and readiness are already understood
+- it is optional and specialist-oriented, not part of the supported primary workflow
+- shell env loading plus CLI/MCP artifact generation should already be understood before using it
 - Reports remains the normal place to inspect existing generated output
 - Preview Prompt is local and safe; it does not persist anything by itself
 - Save Local Template and Delete Local Template change only local prompt template data
@@ -280,8 +269,8 @@ The Local UI still does not execute arbitrary browser commands. It only invokes 
 
 The Local UI is being hardened tab by tab instead of growing more actions all at once:
 
-- Setup is the first production-ready tab
-- Reports is the next production-ready read-only tab
+- Reports is the main useful read-only area for existing output
+- Setup remains a helper area, not the supported primary onboarding path
 - specialist features move under Advanced / Tools until they are ready to stand on their own
 - deferred workflows stay visible only as clearly non-production placeholders
 

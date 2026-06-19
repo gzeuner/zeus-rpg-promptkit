@@ -1,10 +1,13 @@
 ---
 Title: Prompt Workbench Quality Gates
-Description: Testmatrix, Regression-Schutz und negative Validierungsfaelle fuer Prompt Workbench.
-Last Updated: 2026-05-17
+Description: Testmatrix, Regression-Schutz und negative Validierungsfaelle fuer die experimentelle lokale Prompt Workbench.
+Last Updated: 2026-06-19
 ---
 
 # Prompt Workbench Quality Gates
+
+These checks cover an experimental, local-only viewer feature.
+They do not change the supported CLI/MCP-first product path.
 
 ## Testmatrix
 
