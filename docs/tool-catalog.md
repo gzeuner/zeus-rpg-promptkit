@@ -1,13 +1,13 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-06-17 07:15:53
+Last generated: 2026-06-19 13:52:26
 -->
 
 ---
 Title: Zeus RPG PromptKit Tool Catalog
 Description: Verbindlicher, sicherheitsklassifizierter Katalog aller CLI-Befehle und Workflow-Presets fuer Menschen und KI-Assistenten.
-Last Updated: 2026-06-17
+Last Updated: 2026-06-19
 ---
 
 # Zeus RPG PromptKit Tool Catalog
@@ -62,7 +62,7 @@ Related:
 | `search-source` | `S0` | Local | Search the local source tree by term, member, or table. | `node cli/zeus.js search-source --source-root ./rpg_sources --search-term "CHAIN(" --max-results 50` |
 | `copy-to-workspace` | `S1` | Local | Copy fetched source members into the active workspace. | `node cli/zeus.js copy-to-workspace --profile default --members ORDERPGM,INVOICEPGM` |
 | `diff` | `S2` | IBM i read + local | Compare local source members with IBM i members. | `node cli/zeus.js diff --profile default --member ORDERPGM` |
-| `serve` | `S0` | Local | Start the local artifact viewer and API shell. | `node cli/zeus.js serve --source-output-root ./output --host 127.0.0.1 --port 4782` |
+| `serve` | `S0` | Local | Start the optional local artifact viewer and experimental UI shell. | `node cli/zeus.js serve --source-output-root ./output --host 127.0.0.1 --port 4782` |
 | `qa` | `S1` | Local | Render QA validations/checks to jira, markdown, or json. | `node cli/zeus.js qa --input ./output/ORDERPGM --format markdown --strict STRICT` |
 | `inspect-object` | `S2` | IBM i read | Read object metadata and journaling details. | `node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_00 --type *FILE --journal` |
 | `test-run` | `S2/S1` | DB2 read + local | Capture before and after test snapshots plus rollback SQL text. | `node cli/zeus.js test-run start --profile default --program ORDERPGM --table APPLIB.APP_TABLE_00 --key ID=1` |
@@ -97,7 +97,7 @@ Related:
 3. `analyze` or `workflow --preset ...`
 4. `query-table`/`query-sql`/`joblog`/`field-search`/`search-source`/`inspect-object` for evidence deepening
 5. `impact`/`assess-risk`/`generate-test`/`generate-checklist`/`qa` for planning and validation
-6. `bundle`/`serve` for review and sharing
+6. generated artifacts and `bundle` for review/sharing; optional `serve` for local viewing
 7. `upsert`/`upsert-sql`/`insert`/`update` only after explicit user approval
 8. `bridge` only in operator-gated, explicitly approved flows
 

@@ -11,7 +11,7 @@
 ![Zeus RPG PromptKit](./images/zeus-rpg-promptkit.png)
 
 > **Evidence-first context builder for IBM i RPG, CL and DDS.**  
-> Local analysis, reviewable artifacts, AI-ready context and experimental local-first MCP access for controlled agent workflows.
+> CLI/MCP-first analysis, reviewable artifacts, AI-ready context and experimental local-only viewer support for controlled agent workflows.
 
 **Tags:** `IBM i`, `AS/400`, `RPG`, `CL`, `DDS`, `DB2`, `Static Analysis`, `Impact Analysis`, `AI Context`, `Modernization`, `MCP`, `Agentic Coding`
 
@@ -48,6 +48,8 @@ Kurz gesagt:
 Zeus hängt an keinem bestimmten KI-Anbieter. Die erzeugten Artefakte können mit GitHub Copilot, ChatGPT, Claude, Grok, lokalen Modellen oder klassischen Reviews verwendet werden.
 
 > **Projektstatus:** aktive Entwicklung. Schnittstellen, Workflows und MCP-Funktionen können sich zwischen Releases ändern.
+>
+> **Unterstützter Produktpfad:** CLI/MCP-first. `zeus serve` bleibt ein optionaler, lokaler, experimenteller Viewer für bereits erzeugte Artefakte.
 
 ---
 
@@ -257,7 +259,18 @@ npm install
 npm run demo:run
 ```
 
-### 4. Lokale UI starten
+### 4. Artefakte prüfen
+
+Typische Demo-Artefakte:
+
+```text
+examples/demo-rpg-mini-system/output-baseline/report.md
+examples/demo-rpg-mini-system/output-baseline/architecture-report.md
+examples/demo-rpg-mini-system/output-baseline/ai-knowledge.json
+examples/demo-rpg-mini-system/output-baseline/dependency-graph.mmd
+```
+
+Optionaler lokaler Viewer:
 
 ```bash
 node cli/zeus.js serve --source-output-root ./examples/demo-rpg-mini-system/output-baseline
@@ -275,15 +288,6 @@ http://localhost:4782
 npm run demo:prompt
 ```
 
-Typische Artefakte:
-
-```text
-examples/demo-rpg-mini-system/output-baseline/report.md
-examples/demo-rpg-mini-system/output-baseline/architecture-report.md
-examples/demo-rpg-mini-system/output-baseline/ai-knowledge.json
-examples/demo-rpg-mini-system/output-baseline/dependency-graph.mmd
-```
-
 ---
 
 ## Quickstart: eigene lokale Quellen analysieren
@@ -298,9 +302,6 @@ node cli/zeus.js analyze \
   --program ORDERPGM \
   --out ./output \
   --optimize-context
-
-# 3. Ergebnisse lokal im Browser ansehen
-node cli/zeus.js serve --source-output-root ./output
 ```
 
 Wichtige Ergebnisdateien:
@@ -313,6 +314,12 @@ output/ORDERPGM/canonical-analysis.json
 output/ORDERPGM/ai-knowledge.json
 output/ORDERPGM/dependency-graph.mmd
 output/ORDERPGM/analyze-run-manifest.json
+```
+
+Optionaler lokaler Viewer für vorhandene Artefakte:
+
+```bash
+node cli/zeus.js serve --source-output-root ./output
 ```
 
 ---
@@ -354,14 +361,15 @@ Damit bleibt auch bei Host-Alias, DNS-CNAME oder abweichendem `CURRENT_SERVER` k
 
 ---
 
-## GUI starten und Verbindungen prüfen
+## Optionalen lokalen Viewer nutzen
 
-Lokale UI starten:
+Der unterstützte Ablauf bleibt Shell-Env laden -> `doctor` -> CLI/MCP-Kommandos -> Artefakte.  
+`zeus serve` ist nur ein optionaler, lokaler, experimenteller Viewer für bereits vorhandene Ausgaben.
+
+Lokalen Viewer starten:
 
 ```bash
 node cli/zeus.js serve --source-output-root ./output
-# oder profilbasiert:
-node cli/zeus.js serve --profile dev
 ```
 
 Danach im Browser öffnen:
@@ -370,27 +378,19 @@ Danach im Browser öffnen:
 http://127.0.0.1:4782
 ```
 
-Was bereits integriert ist:
+Wofür der Viewer nützlich ist:
 
-- Configure-Ansicht mit Guided Configuration Wizard, Profil-/Feld-Metadaten und sicheren CLI-Previews
-- `Check Readiness` in der GUI ruft den allowlisteten `doctor`-Check auf und zeigt Warnungen/Fehler strukturiert an
-- lokale Discovery-Previews für Source-Libraries, Source-Files und Members werden aus dem gewählten Profil abgeleitet
+- vorhandene Reports, Graphen, Prompt-Artefakte und andere lokale Outputs im Browser durchsehen
+- lokale Hilfsansichten für Profil-/Feld-Metadaten und `doctor`-Diagnostik nutzen
+- bei Bedarf den lokalen AI Session Starter als Hilfsansicht verwenden
 
-Verbindungen lokal einrichten und prüfen:
+Wichtig zur Grenze:
 
-```bash
-cp config/profiles.example.json config/local-only/profiles.json
-node cli/zeus.js profiles --show-env
-source ./config/load-env.sh <environment>
-node cli/zeus.js doctor --profile dev --probe --show-resolved
-```
-
-Wichtig zur aktuellen Grenze:
-
-- Die Browser-UI führt nur allowlistete Aktionen aus, vor allem `doctor` und lokales `analyze-existing-workspace`.
-- Fetch-, DB2- und Objekt-Discovery im Configure-Flow ist derzeit bewusst preview-first.
-- Source-Library-/Source-File-/Member-Previews kontaktieren aktuell weder IBM i noch DB2; sie werden lokal aus Profil und Runtime-Konfiguration abgeleitet.
-- Echte Remote-Checks und produktive Connection-Verifikation laufen weiterhin über CLI-Kommandos wie `doctor`, `resolve-object`, `query-table` oder `fetch`.
+- Die Browser-Oberfläche ist nicht der primäre Onboarding-, Konfigurations- oder Ausführungspfad.
+- Shell-Env-Loading bleibt verbindlich; der Viewer ersetzt `config/load-env.*` nicht.
+- Die Browser-UI führt nur allowlistete Aktionen aus und ist kein allgemeiner Command-Runner.
+- Echte Remote-Checks und Connection-Verifikation laufen weiterhin über CLI- oder MCP-Kommandos wie `doctor`, `resolve-object`, `query-table` oder `fetch`.
+- Fetch-, DB2- und Objekt-Discovery im Browser bleiben bewusst eingeschränkt oder preview-first.
 
 ---
 
@@ -417,7 +417,7 @@ Die verbindliche Referenz ist `docs/tool-catalog.md`.
 | `search-source` | `S0` | lokale Source-Suche durchführen |
 | `copy-to-workspace` | `S1` | gefetchte Quellen in den Workspace kopieren |
 | `diff` | `S2` | lokale Member mit IBM i-Version vergleichen |
-| `serve` | `S0` | lokale Browser-UI starten |
+| `serve` | `S0` | optionalen lokalen Artefakt-Viewer starten |
 | `qa` | `S1` | QA-Checks als Markdown, JSON oder Jira-Format rendern |
 | `inspect-object` | `S2` | IBM i-Objektmetadaten lesen |
 | `test-run` | `S2/S1` | Test-Snapshots und Rollback-Hinweise erzeugen |
@@ -434,6 +434,7 @@ node cli/zeus.js doctor --profile dev --probe --show-resolved
 node cli/zeus.js resolve-object --profile readonly-db2 --table APP_TABLE_00 --require-column CASE_ID --include-row-count
 node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output
 node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output
+# optionaler lokaler Viewer:
 node cli/zeus.js serve --source-output-root ./output
 node cli/zeus.js docs:generate-catalog
 ```
@@ -460,7 +461,7 @@ Empfohlene AI-Arbeitsfolge:
 4. `analyze` oder `workflow --preset ...` starten
 5. mit `query-table`, `query-sql`, `joblog`, `field-search`, `search-source` oder `inspect-object` Evidenz vertiefen
 6. mit `impact`, `assess-risk`, `generate-test`, `generate-checklist` oder `qa` planen und validieren
-7. mit `bundle` oder `serve` reviewfähige Ergebnisse erzeugen
+7. mit generierten Artefakten und `bundle` reviewfähige Ergebnisse erzeugen; `serve` nur optional für lokale Sichtung nutzen
 8. `upsert`, `insert`, `update` oder `bridge` nur nach expliziter menschlicher Freigabe verwenden
 
 ---
@@ -782,6 +783,8 @@ In short, Zeus helps you:
 Zeus is not tied to a specific AI provider. The generated artifacts can be used with GitHub Copilot, ChatGPT, Claude, Grok, local models or plain human reviews.
 
 > **Project status:** active development. Interfaces, workflows and MCP features may change between releases.
+>
+> **Supported product path:** CLI/MCP-first. `zeus serve` remains an optional, local-only, experimental viewer for already generated artifacts.
 
 ---
 
@@ -991,7 +994,18 @@ npm install
 npm run demo:run
 ```
 
-### 4. Start local viewer
+### 4. Review demo artifacts
+
+Typical demo artifacts:
+
+```text
+examples/demo-rpg-mini-system/output-baseline/report.md
+examples/demo-rpg-mini-system/output-baseline/architecture-report.md
+examples/demo-rpg-mini-system/output-baseline/ai-knowledge.json
+examples/demo-rpg-mini-system/output-baseline/dependency-graph.mmd
+```
+
+Optional local viewer:
 
 ```bash
 node cli/zeus.js serve --source-output-root ./examples/demo-rpg-mini-system/output-baseline
@@ -1009,15 +1023,6 @@ http://localhost:4782
 npm run demo:prompt
 ```
 
-Typical artifacts:
-
-```text
-examples/demo-rpg-mini-system/output-baseline/report.md
-examples/demo-rpg-mini-system/output-baseline/architecture-report.md
-examples/demo-rpg-mini-system/output-baseline/ai-knowledge.json
-examples/demo-rpg-mini-system/output-baseline/dependency-graph.mmd
-```
-
 ---
 
 ## Quickstart: analyze your own local sources
@@ -1032,9 +1037,6 @@ node cli/zeus.js analyze \
   --program ORDERPGM \
   --out ./output \
   --optimize-context
-
-# 3. Review results in the local browser UI
-node cli/zeus.js serve --source-output-root ./output
 ```
 
 Important output files:
@@ -1047,6 +1049,12 @@ output/ORDERPGM/canonical-analysis.json
 output/ORDERPGM/ai-knowledge.json
 output/ORDERPGM/dependency-graph.mmd
 output/ORDERPGM/analyze-run-manifest.json
+```
+
+Optional local viewer for existing artifacts:
+
+```bash
+node cli/zeus.js serve --source-output-root ./output
 ```
 
 ---
@@ -1089,14 +1097,15 @@ Run `doctor --profile <name> --probe --show-resolved` to inspect the resolved ro
 
 ---
 
-## Start the GUI and verify connections
+## Use the optional local viewer
 
-Start the local UI:
+The supported workflow remains shell env loading -> `doctor` -> CLI/MCP commands -> generated artifacts.  
+`zeus serve` is only an optional, local-only, experimental viewer for existing output.
+
+Start the local viewer:
 
 ```bash
 node cli/zeus.js serve --source-output-root ./output
-# or profile-based:
-node cli/zeus.js serve --profile dev
 ```
 
 Then open:
@@ -1105,27 +1114,19 @@ Then open:
 http://127.0.0.1:4782
 ```
 
-What is already integrated:
+What the viewer is useful for:
 
-- a Configure view with Guided Configuration Wizard, profile/field metadata, and safe CLI previews
-- `Check Readiness` in the UI runs the allowlisted `doctor` readiness check and renders structured warnings/errors
-- local discovery previews for source libraries, source files, and members derived from the selected profile
-
-How to configure and verify connections locally:
-
-```bash
-cp config/profiles.example.json config/local-only/profiles.json
-node cli/zeus.js profiles --show-env
-source ./config/load-env.sh <environment>
-node cli/zeus.js doctor --profile dev --probe --show-resolved
-```
+- reviewing existing reports, graphs, prompt artifacts, and other local output in the browser
+- using local helper views for profile/field metadata and `doctor` diagnostics
+- optionally using the local AI Session Starter helper
 
 Current boundary:
 
-- the browser UI only executes allowlisted actions, mainly `doctor` and local `analyze-existing-workspace`
-- fetch, DB2, and object discovery in the Configure flow are still intentionally preview-first
-- source-library, source-file, and member previews currently do not contact IBM i or DB2; they are derived locally from profile and runtime config
-- real remote checks and connection verification still happen through CLI commands such as `doctor`, `resolve-object`, `query-table`, or `fetch`
+- the browser UI is not the primary onboarding, configuration, or execution path
+- shell env loading remains authoritative; the viewer does not replace `config/load-env.*`
+- the browser UI only executes allowlisted actions and is not a general command runner
+- fetch, DB2, and object discovery in the browser remain intentionally constrained or preview-first
+- real remote checks and connection verification still happen through CLI or MCP commands such as `doctor`, `resolve-object`, `query-table`, or `fetch`
 
 ---
 
@@ -1151,7 +1152,7 @@ The authoritative reference is `docs/tool-catalog.md`.
 | `search-source` | `S0` | search the local source tree |
 | `copy-to-workspace` | `S1` | copy fetched source members into the workspace |
 | `diff` | `S2` | compare local members with IBM i versions |
-| `serve` | `S0` | start the local browser UI |
+| `serve` | `S0` | start the optional local artifact viewer |
 | `qa` | `S1` | render QA checks as Markdown, JSON or Jira-style output |
 | `inspect-object` | `S2` | read IBM i object metadata |
 | `test-run` | `S2/S1` | capture test snapshots and rollback guidance |
@@ -1166,6 +1167,7 @@ Examples:
 node cli/zeus.js doctor --profile dev --show-resolved
 node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output
 node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output
+# optional local viewer:
 node cli/zeus.js serve --source-output-root ./output
 node cli/zeus.js docs:generate-catalog
 ```
@@ -1191,7 +1193,7 @@ Recommended AI operating sequence:
 3. run `analyze` or `workflow --preset ...`
 4. deepen evidence with `query-table`, `query-sql`, `joblog`, `field-search`, `search-source` or `inspect-object`
 5. plan and validate with `impact`, `assess-risk`, `generate-test`, `generate-checklist` or `qa`
-6. produce reviewable results with `bundle` or `serve`
+6. produce reviewable results with generated artifacts and `bundle`; use `serve` only when a local viewer helps
 7. use `upsert`, `insert`, `update` or `bridge` only after explicit human approval
 
 ---
@@ -1293,7 +1295,7 @@ Important files:
 | `dependency-graph.mmd` | Mermaid dependency graph |
 | `analyze-run-manifest.json` | run manifest and artifact inventory |
 
-Start local UI:
+Optional local viewer:
 
 ```bash
 node cli/zeus.js serve --source-output-root ./output

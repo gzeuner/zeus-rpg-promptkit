@@ -1,14 +1,14 @@
 ---
 Title: Agent Integration
 Description: Workflow-orientierte Leitfaeden fuer Analyse-, Review- und Agentenablaeufe.
-Last Updated: 2026-05-20
+Last Updated: 2026-06-19
 ---
 
 # Agent Integration
 
 This document explains how to run Zeus in AI-assisted workflows without binding to a specific editor.
 
-For the recommended product shape and the fastest agentic-coding path, start with [`agentic-coding.md`](agentic-coding.md).
+For the recommended CLI/MCP-first product shape and the fastest agentic-coding path, start with [`agentic-coding.md`](agentic-coding.md).
 
 Use [`../quickstart/5-minutes.md`](../quickstart/5-minutes.md) for the shortest onboarding path.
 
@@ -16,9 +16,9 @@ Use [`../ai/agent-validation-checklist.md`](../ai/agent-validation-checklist.md)
 
 ## Recommended operating model
 
-The recommended setup is **tools first**:
+The recommended setup is **CLI/MCP-first**:
 
-- Zeus tools are the primary integration contract.
+- Zeus CLI commands and their MCP counterparts are the primary integration contract.
 - Normal chat mode plus Zeus tools is the default user path.
 - A runtime adapter is responsible for tool registration and execution.
 
@@ -28,11 +28,11 @@ The recommended setup is **tools first**:
 1.  git clone / download repo
 2.  npm install
 3.  cp config/profiles.example.json config/local-only/profiles.json
-4.  set env vars (ZEUS_FETCH_*, ZEUS_DB_*)
+4.  load env explicitly in the current shell
 5.  run doctor
 6.  run analyze/workflow
 7.  open AI chat client
-8.  request Zeus tool-driven analysis
+8.  start with docs/ai/session-prompt.md and request Zeus tool-driven analysis
 ```
 
 ## First-time setup
@@ -43,25 +43,16 @@ The recommended setup is **tools first**:
 cp config/profiles.example.json config/local-only/profiles.json
 ```
 
-### 2. Set environment variables
+### 2. Load environment explicitly in the shell
 
 ```bash
-export ZEUS_SOURCE_ROOT="/work/rpg_sources"
-export ZEUS_OUTPUT_ROOT="/work/analysis"
+source ./config/load-env.sh <environment>
+
+# PowerShell:
+# . .\config\load-env.ps1 -Environment <environment>
 ```
 
-Add remote values only when needed:
-
-```bash
-export ZEUS_FETCH_HOST="myibmi.example.com"
-export ZEUS_FETCH_USER="MYUSER"
-export ZEUS_FETCH_PASSWORD="my-secret"
-
-export ZEUS_DB_HOST="myibmi.example.com"
-export ZEUS_DB_USER="MYUSER"
-export ZEUS_DB_PASSWORD="my-secret"
-export ZEUS_DB_DEFAULT_SCHEMA="MYLIB"
-```
+If you set variables manually, do it only in the current shell session and never paste real credentials into prompts, logs, or artifacts.
 
 ### 3. Validate runtime
 
@@ -73,23 +64,25 @@ All checks should show `PASS`.
 
 ## Using Zeus tools in chat
 
+Use [`../ai/session-prompt.md`](../ai/session-prompt.md) as the standard session start prompt.
+
 A good default sequence:
 
-1. `zeus_doctor`
-2. `zeus_analyze_workspace`
-3. `zeus_get_latest_report`
-4. `zeus_generate_ai_context`
-5. `zeus_query_table` only when DB2 metadata is needed
-6. `zeus_fetch_sources` only with explicit user confirmation
+1. `zeus.doctor`
+2. `zeus.analyze` or `zeus.workflow`
+3. `zeus.query-table`, `zeus.query-sql`, `zeus.joblog`, or `zeus.inspect-object` only when more evidence is needed
+4. `zeus.bundle` for review/sharing preparation
+5. `zeus.serve` only when an optional local viewer helps
+6. `zeus.fetch` only with explicit user confirmation
 
 Example prompts:
 
 ```text
-Analyze ORDERPGM and summarize architecture risks.
+Run doctor first, then analyze ORDERPGM and summarize architecture risks from the generated artifacts.
 
 Find security issues in INVPGM and cite the generated artifacts.
 
-Fetch sources first, then run a modernization-focused workflow for ORDERPGM.
+After approval, fetch sources, run a modernization-focused workflow for ORDERPGM, and cite the bundle outputs.
 ```
 
 ## CLI fallback
@@ -100,6 +93,8 @@ If direct tool-calls are not available, run Zeus directly:
 node cli/zeus.js doctor --profile default --show-resolved
 node cli/zeus.js analyze --profile default
 node cli/zeus.js workflow --preset security-review --source ./rpg_sources --program ORDERPGM --out ./output
+node cli/zeus.js bundle --program ORDERPGM --source-output-root ./output --include-md --include-json
+# optional local viewer:
 node cli/zeus.js serve --source-output-root ./output --port 4782
 ```
 

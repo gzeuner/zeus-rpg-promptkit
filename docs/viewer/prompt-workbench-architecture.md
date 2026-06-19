@@ -1,10 +1,13 @@
 ---
 Title: Prompt Workbench Architecture
-Description: Zielarchitektur und Integrationspfad fuer die GUI Prompt Workbench im bestehenden Node.js-Toolset.
-Last Updated: 2026-05-17
+Description: Zielarchitektur und Integrationspfad fuer die experimentelle lokale Prompt Workbench im bestehenden Node.js-Toolset.
+Last Updated: 2026-06-19
 ---
 
 # Prompt Workbench Architecture
+
+This document describes an experimental, local-only Prompt Workbench inside `zeus serve`.
+It is not the supported primary workflow and does not replace CLI/MCP commands or shell env loading.
 
 ## Zielarchitektur
 Die Prompt Workbench wird als additive Erweiterung des bestehenden `zeus serve` Stacks umgesetzt.
