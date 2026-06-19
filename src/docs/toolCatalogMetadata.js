@@ -217,6 +217,12 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.',
     example: 'node cli/zeus.js docs:generate-catalog',
   }),
+  help: Object.freeze({
+    safety: 'S0',
+    scope: 'Local',
+    purpose: 'Structured help for any command or overview of MCP-safe capabilities for AI agents. Returns purpose, safety, examples and agent guidance.',
+    example: 'node cli/zeus.js help --command analyze  (or via MCP zeus.help)',
+  }),
   mcp: Object.freeze({
     safety: 'S0',
     scope: 'Local read-mostly',
@@ -228,6 +234,7 @@ const COMMAND_METADATA = Object.freeze({
 const COMMAND_ORDER = Object.freeze([
   'doctor',
   'profiles',
+  'help',
   'fetch',
   'fetch-member',
   'analyze',
