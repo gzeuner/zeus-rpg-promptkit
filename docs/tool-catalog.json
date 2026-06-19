@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-19T11:52:26.447Z",
+  "generatedAt": "2026-06-19T13:24:13.367Z",
   "commandRows": [
     {
       "command": "doctor",
@@ -792,7 +792,7 @@
       "safety": "S0",
       "scope": "Local read-mostly",
       "purpose": "Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.",
-      "example": "node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.workflow,zeus.bundle,zeus.analyze,zeus.impact,zeus.assess-risk,zeus.query-table,zeus.query-sql,zeus.write-sql,zeus.bridge,zeus.search-source,zeus.field-search,zeus.diff,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.analyses,zeus.fetch,zeus.test-run,zeus.copy-to-workspace,zeus.serve,zeus.joblog,zeus.inspect-object",
+      "example": "node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.profiles,zeus.workflow,zeus.bundle,zeus.analyze,zeus.impact,zeus.assess-risk,zeus.query-table,zeus.resolve-object,zeus.query-sql,zeus.write-sql,zeus.bridge,zeus.search-source,zeus.field-search,zeus.diff,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.analyses,zeus.fetch,zeus.fetch-member,zeus.docs-generate-catalog,zeus.test-run,zeus.copy-to-workspace,zeus.serve,zeus.joblog,zeus.inspect-object",
       "usage": [
         "[--config <path>] mcp <serve|help> [--stdio true|false] [--verbose]"
       ],

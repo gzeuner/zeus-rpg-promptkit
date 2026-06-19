@@ -15,6 +15,7 @@ Expose a safe, local-only subset of Zeus capabilities over MCP stdio for AI clie
 - Transport: stdio only (local process boundary)
 - Default behavior: minimal safe default surface (`zeus.health`, `zeus.version`, `zeus.doctor`)
 - Policy: explicit allowlist gate (`--allow-tools`) for any broader tool surface
+- Curated discovery surfaces: first-class MCP `resources/*` and `prompts/*` for safe docs/metadata/prompt access
 - Redaction: response/error masking for common secret patterns
 - Audit: append-only local JSONL audit trail for `tools/call`
 - Runtime guardrails: per-tool timeout and maximum response-size limits with deterministic `-32000` failures
@@ -36,8 +37,22 @@ Without `--allow-tools`, MCP exposes only `zeus.health`, `zeus.version`, and `ze
 Restrict exposed tools explicitly for real workflows (recommended):
 
 ```bash
-node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql,zeus.search-source
+node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.profiles,zeus.query-table,zeus.resolve-object,zeus.query-sql,zeus.search-source,zeus.fetch-member,zeus.docs-generate-catalog
 ```
+
+## Supported MCP Methods (Current)
+
+- `initialize`
+- `tools/list`
+- `tools/call`
+- `resources/list`
+- `resources/read`
+- `prompts/list`
+- `prompts/get`
+
+Curated resources expose authoritative docs and structured metadata only.
+
+Curated prompts expose the standard Zeus session bootstrap prompt plus prompt-template entries from the internal prompt registry.
 
 ## Supported MCP Tools (Current)
 
@@ -46,12 +61,14 @@ Only the minimal safe default surface is exposed automatically. Everything else 
 - `zeus.health`
 - `zeus.version`
 - `zeus.doctor`
+- `zeus.profiles`
 - `zeus.workflow`
 - `zeus.bundle`
 - `zeus.analyze`
 - `zeus.impact`
 - `zeus.assess-risk`
 - `zeus.query-table`
+- `zeus.resolve-object`
 - `zeus.query-sql`
 - `zeus.write-sql`
 - `zeus.bridge`
@@ -63,11 +80,30 @@ Only the minimal safe default surface is exposed automatically. Everything else 
 - `zeus.qa`
 - `zeus.analyses`
 - `zeus.fetch`
+- `zeus.fetch-member`
+- `zeus.docs-generate-catalog`
 - `zeus.test-run`
 - `zeus.copy-to-workspace`
 - `zeus.serve`
 - `zeus.joblog`
 - `zeus.inspect-object`
+
+Curated resources currently include:
+
+- authoritative docs such as `tool-catalog.md`, `tool-catalog.json`, `cli/reference.md`, `ai/session-prompt.md`, and this operator guide
+- structured metadata for command catalog, MCP tool inventory, workflow presets, and prompt contracts
+
+Curated prompts currently include:
+
+- `zeus.session.start`
+- `zeus.prompt.documentation`
+- `zeus.prompt.error-analysis`
+- `zeus.prompt.defect-analysis`
+- `zeus.prompt.modernization`
+- `zeus.prompt.architecture-review`
+- `zeus.prompt.refactoring-plan`
+- `zeus.prompt.test-generation`
+- `zeus.prompt.security-analysis`
 
 `zeus.joblog` note:
 

@@ -45,6 +45,7 @@ const {
   readImportManifest,
   summarizeImportManifest,
 } = require('../fetch/importManifest');
+const { exportSourceMemberViaJdbc } = require('../fetch/jt400CommandRunner');
 const {
   listWorkspaces,
   readWorkspaceById,
@@ -54,6 +55,7 @@ const { readWorkspaceIndex } = require('../workspace/workspaceIndexBuilder');
 const { findImpactGraph } = require('../cli/helpers/impactGraphResolver');
 const { readAnalyzeRunManifest } = require('../analyze/analyzeRunManifest');
 const {
+  getProfilesMetadata,
   loadProfiles,
   readWorkCopyConfig,
   resolveAnalyzeConfig,
@@ -62,8 +64,10 @@ const {
   resolveFetchConfig,
   resolveProfile,
 } = require('../config/runtimeConfig');
+const { describeConnectionTarget } = require('../config/connectionTargetMetadata');
 const { isDbConfigured } = require('../db2/db2Config');
 const { escapeSqlLiteral, runReadOnlyDb2Query, validateSqlIdentifier } = require('../db2/readOnlyQueryService');
+const { resolveObjectsByName } = require('../db2/tableNameResolutionService');
 const { runWriteDb2Query } = require('../db2/writeQueryService');
 const { executeQuerySql, executeQueryTable } = require('../core/queryService');
 const { executeSearchSource, normalizeFilePattern } = require('../core/searchSourceService');
@@ -78,11 +82,16 @@ const {
   discoverFetchedSources,
   parseMembersCsv: parseWorkCopyMembersCsv,
 } = require('../workspace/workCopyService');
+const { generateToolCatalog } = require('../docs/toolCatalogGenerator');
 
 const SUPPORTED_INSPECT_OBJECT_TYPES = ['*PGM', '*SRVPGM', '*MODULE', '*FILE', '*CMD', '*DTAARA', '*JOBQ', '*OUTQ'];
 const DEFAULT_MCP_PAYLOAD_ITEMS = 100;
 const MAX_MCP_PAYLOAD_ITEMS = 1000;
 const MCP_CURSOR_VERSION = 1;
+const DEFAULT_FETCH_MEMBER_SOURCE_FILE = 'QRPGLESRC';
+const DEFAULT_FETCH_MEMBER_STREAM_FILE_CCSID = 1208;
+const DEFAULT_TOOL_CATALOG_MARKDOWN_OUTPUT = 'docs/tool-catalog.md';
+const DEFAULT_TOOL_CATALOG_JSON_OUTPUT = 'docs/tool-catalog.json';
 
 function isPathWithinBase(targetPath, basePath) {
   const resolvedBase = resolvePathForBoundary(basePath);
@@ -282,6 +291,34 @@ function summarizeJoblogRows({ profile, jobName, severity, maxMessages, result, 
   };
 }
 
+function listCallableProfileNames(profiles) {
+  return Object.keys(profiles)
+    .filter((name) => !['contextOptimizer', 'testData', 'analysisLimits', 'presets'].includes(name))
+    .filter((name) => !String(name).startsWith('_'))
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function normalizeResolveObjectRequiredColumns(value) {
+  if (value === undefined || value === null || value === false) {
+    return [];
+  }
+  const values = Array.isArray(value) ? value : [value];
+  return values
+    .map((entry) => String(entry || '').trim())
+    .filter(Boolean);
+}
+
+function resolveFetchMemberExtension(sourceFile) {
+  const upper = String(sourceFile || '').trim().toUpperCase();
+  if (upper === 'QRPGLESRC') return '.rpgle';
+  if (upper === 'QCLLESRC' || upper === 'QCLSRC') return '.clle';
+  if (upper === 'QDDSSRC') return '.dds';
+  if (upper === 'QSQLSRC') return '.sql';
+  if (upper === 'QCPYSRC') return '.rpgleinc';
+  if (upper === 'QSRVSRC') return '.bnd';
+  return '.rpgle';
+}
+
 function listMcpTools() {
   return [
     {
@@ -303,6 +340,21 @@ function listMcpTools() {
           includeNode: {
             type: 'boolean',
             description: 'Include current Node.js runtime version when true.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.profiles',
+      description: 'Lists masked profile summaries and configuration source metadata (read-only).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional profile name filter.',
           },
         },
       },
@@ -720,6 +772,77 @@ function listMcpTools() {
       },
     },
     {
+      name: 'zeus.fetch-member',
+      description: 'Fetches one or more specific IBM i source members into a workspace-bounded local output directory.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['profile', 'member'],
+        properties: {
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Runtime profile used to resolve fetch credentials and defaults.',
+          },
+          member: {
+            type: 'string',
+            minLength: 1,
+            description: 'Member name or comma-separated member list.',
+          },
+          lib: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional source library override.',
+          },
+          sourceLib: {
+            type: 'string',
+            minLength: 1,
+            description: 'Alias for lib.',
+          },
+          file: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional source file override (defaults to QRPGLESRC).',
+          },
+          out: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional local output directory override; must resolve inside the workspace root.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.docs-generate-catalog',
+      description: 'Regenerates the local tool catalog markdown and JSON files inside the current workspace root.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          format: {
+            type: 'string',
+            enum: ['markdown', 'json'],
+            description: 'Optional primary output mode; markdown keeps output semantics aligned with the CLI default.',
+          },
+          output: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional primary output path; must resolve inside the workspace root.',
+          },
+          jsonOutput: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional JSON output path override; must resolve inside the workspace root.',
+          },
+          'json-output': {
+            type: 'string',
+            minLength: 1,
+            description: 'Alias for jsonOutput.',
+          },
+        },
+      },
+    },
+    {
       name: 'zeus.test-run',
       description: 'Reads existing test-run manifest metadata and rollback SQL previews (read-only).',
       inputSchema: {
@@ -989,6 +1112,52 @@ function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Optional pagination cursor returned by a previous zeus.impact call.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.resolve-object',
+      description: 'Resolves SQL/system object names across schemas and optionally validates required columns (read-only).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['profile', 'table'],
+        properties: {
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Runtime profile name with DB2 read access.',
+          },
+          table: {
+            type: 'string',
+            minLength: 1,
+            description: 'Table or system object name to resolve.',
+          },
+          schema: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional schema filter.',
+          },
+          requireColumn: {
+            oneOf: [
+              {
+                type: 'string',
+                minLength: 1,
+              },
+              {
+                type: 'array',
+                items: {
+                  type: 'string',
+                  minLength: 1,
+                },
+              },
+            ],
+            description: 'Optional required column or list of required columns.',
+          },
+          includeRowCount: {
+            type: 'boolean',
+            description: 'When true, include row count lookups in the resolution output.',
           },
         },
       },
@@ -1928,6 +2097,314 @@ async function executeReadOnlyAssessRisk(args = {}, context = {}) {
     criticalPathsTruncated: rawCriticalPaths.length > criticalLimit,
     maxAccessPoints: accessLimit,
     maxCriticalPaths: criticalLimit,
+  };
+}
+
+function executeReadOnlyProfiles(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const profiles = loadProfiles({ cwd, env, args });
+  const metadata = getProfilesMetadata(profiles);
+  const profileFilter = args && typeof args.profile === 'string'
+    ? args.profile.trim()
+    : '';
+  const selectedNames = profileFilter
+    ? [profileFilter]
+    : listCallableProfileNames(profiles);
+
+  const summaries = selectedNames.map((name) => {
+    const resolved = resolveProfile(profiles, name, { env });
+    const metadataDb = (resolved.dbRoles && resolved.dbRoles.metadata) || resolved.db || {};
+    const testDataDb = (resolved.dbRoles && resolved.dbRoles.testData) || null;
+    const fetch = resolved.fetch || null;
+    return {
+      name,
+      extends: Array.isArray(resolved.extends)
+        ? [...resolved.extends]
+        : (resolved.extends ? [String(resolved.extends)] : []),
+      productionSystem: Boolean(resolved.productionSystem),
+      metadataDb: {
+        target: describeConnectionTarget(metadataDb),
+        user: metadataDb.user ? String(metadataDb.user) : null,
+        passwordSet: Boolean(metadataDb.password),
+      },
+      testDataDb: testDataDb
+        ? {
+          target: describeConnectionTarget(testDataDb),
+          user: testDataDb.user ? String(testDataDb.user) : null,
+          passwordSet: Boolean(testDataDb.password),
+        }
+        : null,
+      fetch: fetch
+        ? {
+          target: describeConnectionTarget(fetch),
+          sourceLib: fetch.sourceLib || fetch.sourceLibrary || null,
+          user: fetch.user ? String(fetch.user) : null,
+          passwordSet: Boolean(fetch.password),
+        }
+        : null,
+    };
+  });
+
+  return {
+    profileCount: summaries.length,
+    selectedProfile: profileFilter || null,
+    configSource: metadata && metadata.sourceFileLabel ? String(metadata.sourceFileLabel) : null,
+    profiles: summaries,
+  };
+}
+
+function executeReadOnlyResolveObject(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const profileName = args && typeof args.profile === 'string'
+    ? args.profile.trim()
+    : '';
+  const rawName = args && typeof args.table === 'string'
+    ? args.table.trim()
+    : '';
+  if (!profileName) {
+    const error = new Error('Invalid arguments for zeus.resolve-object: profile is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (!rawName) {
+    const error = new Error('Invalid arguments for zeus.resolve-object: table is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const config = resolveAnalyzeConfig(args, { cwd, env });
+  const dbConfig = resolveAnalyzeDbConfig(config, 'metadata');
+  if (!isDbConfigured(dbConfig)) {
+    const error = new Error('DB2 connection configuration is incomplete for the selected profile.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const requireColumns = normalizeResolveObjectRequiredColumns(args.requireColumn || args['require-column']);
+  const includeRowCount = args && args.includeRowCount === true;
+  const result = resolveObjectsByName(dbConfig, rawName, {
+    schema: args && typeof args.schema === 'string' && args.schema.trim() ? args.schema.trim() : null,
+    requireColumns,
+    includeRowCount,
+    runtime: {
+      scopeLabel: 'DB2 resolve-object connection',
+    },
+  });
+
+  return {
+    profile: profileName,
+    table: rawName.toUpperCase(),
+    schema: args && typeof args.schema === 'string' && args.schema.trim() ? args.schema.trim().toUpperCase() : null,
+    requireColumns: requireColumns.map((entry) => entry.toUpperCase()),
+    includeRowCount,
+    found: Boolean(result.found),
+    diagnostics: result.diagnostics || null,
+    objectCount: Array.isArray(result.objects) ? result.objects.length : 0,
+    objects: Array.isArray(result.objects)
+      ? result.objects.map((entry) => ({
+        schema: entry.schema,
+        sqlName: entry.sqlName,
+        systemName: entry.systemName,
+        type: entry.type || null,
+        requiredColumns: Array.isArray(entry.requiredColumns) ? entry.requiredColumns : [],
+        missingRequiredColumns: Array.isArray(entry.missingRequiredColumns) ? entry.missingRequiredColumns : [],
+        allRequiredColumnsPresent: Boolean(entry.allRequiredColumnsPresent),
+        ...(includeRowCount
+          ? {
+            rowCount: entry.rowCount,
+            rowCountError: entry.rowCountError || null,
+          }
+          : {}),
+      }))
+      : [],
+  };
+}
+
+function executeFetchMember(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const profileName = args && typeof args.profile === 'string'
+    ? args.profile.trim()
+    : '';
+  const memberArg = args && typeof args.member === 'string'
+    ? args.member.trim()
+    : '';
+  if (!profileName) {
+    const error = new Error('Invalid arguments for zeus.fetch-member: profile is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  if (!memberArg) {
+    const error = new Error('Invalid arguments for zeus.fetch-member: member is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const members = memberArg
+    .split(',')
+    .map((entry) => validateSqlIdentifier(entry, '--member'))
+    .filter(Boolean);
+  const sourceFile = validateSqlIdentifier(
+    args && typeof args.file === 'string' && args.file.trim()
+      ? args.file.trim()
+      : DEFAULT_FETCH_MEMBER_SOURCE_FILE,
+    '--file',
+  );
+
+  const fetchConfig = resolveFetchConfig(args, { cwd, env });
+  const sourceLibCandidate = args && typeof args.lib === 'string' && args.lib.trim()
+    ? args.lib.trim()
+    : (
+      args && typeof args.sourceLib === 'string' && args.sourceLib.trim()
+        ? args.sourceLib.trim()
+        : (fetchConfig && (fetchConfig.sourceLib || fetchConfig.sourceLibrary))
+    );
+  if (!sourceLibCandidate) {
+    const error = new Error('Invalid arguments for zeus.fetch-member: lib is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+  const sourceLib = validateSqlIdentifier(sourceLibCandidate, '--lib');
+  const host = fetchConfig.host;
+  const user = fetchConfig.user;
+  const password = fetchConfig.password;
+  if (!host || !user || !password) {
+    const error = new Error('Fetch connection configuration is incomplete for the selected profile.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const outDirInput = String(args.out || fetchConfig.out || '.').trim();
+  const outDir = path.resolve(cwd, outDirInput);
+  assertPathWithinCwd({
+    toolName: 'zeus.fetch-member',
+    optionName: '--out',
+    rawValue: outDirInput,
+    resolvedPath: outDir,
+    cwd,
+  });
+
+  const localSubDir = path.resolve(outDir, sourceFile);
+  assertPathWithinCwd({
+    toolName: 'zeus.fetch-member',
+    optionName: '--out',
+    rawValue: path.join(outDirInput, sourceFile),
+    resolvedPath: localSubDir,
+    cwd,
+  });
+  fs.mkdirSync(localSubDir, { recursive: true });
+
+  const extension = resolveFetchMemberExtension(sourceFile);
+  const fetched = [];
+  const failures = [];
+
+  for (const member of members) {
+    const localFile = path.join(localSubDir, `${member}${extension}`);
+    const result = exportSourceMemberViaJdbc({
+      host,
+      user,
+      password,
+      sourceLib,
+      sourceFile,
+      member,
+      targetPath: localFile,
+      streamFileCcsid: DEFAULT_FETCH_MEMBER_STREAM_FILE_CCSID,
+      verbose: false,
+    });
+
+    if (!result.ok) {
+      failures.push({
+        member,
+        messages: Array.isArray(result.messages) ? result.messages.map((entry) => String(entry)) : [],
+        stderr: result.stderr ? String(result.stderr) : '',
+      });
+      continue;
+    }
+
+    fetched.push({
+      member,
+      path: localFile,
+      linesWritten: Number(result.linesWritten || 0),
+      usedFallback: Boolean(result.usedFallback),
+    });
+  }
+
+  return {
+    operation: 'run',
+    profile: profileName,
+    sourceLib,
+    sourceFile,
+    outDir,
+    memberCount: members.length,
+    fetched,
+    failures,
+  };
+}
+
+function executeDocsGenerateCatalog(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const format = args && typeof args.format === 'string'
+    ? args.format.trim().toLowerCase()
+    : 'markdown';
+  if (format !== 'markdown' && format !== 'json') {
+    const error = new Error('Invalid arguments for zeus.docs-generate-catalog: format must be markdown or json.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const outputArg = args && typeof args.output === 'string' && args.output.trim()
+    ? args.output.trim()
+    : '';
+  const jsonOutputArg = args && typeof args.jsonOutput === 'string' && args.jsonOutput.trim()
+    ? args.jsonOutput.trim()
+    : (args && typeof args['json-output'] === 'string' && args['json-output'].trim()
+      ? args['json-output'].trim()
+      : '');
+
+  const markdownOutputPath = format === 'markdown'
+    ? (outputArg || DEFAULT_TOOL_CATALOG_MARKDOWN_OUTPUT)
+    : DEFAULT_TOOL_CATALOG_MARKDOWN_OUTPUT;
+  const jsonOutputPath = format === 'json'
+    ? (outputArg || jsonOutputArg || DEFAULT_TOOL_CATALOG_JSON_OUTPUT)
+    : (jsonOutputArg || DEFAULT_TOOL_CATALOG_JSON_OUTPUT);
+
+  const resolvedMarkdownPath = path.resolve(cwd, markdownOutputPath);
+  const resolvedJsonPath = jsonOutputPath
+    ? path.resolve(cwd, jsonOutputPath)
+    : null;
+
+  assertPathWithinCwd({
+    toolName: 'zeus.docs-generate-catalog',
+    optionName: '--output',
+    rawValue: markdownOutputPath,
+    resolvedPath: resolvedMarkdownPath,
+    cwd,
+  });
+  if (resolvedJsonPath) {
+    assertPathWithinCwd({
+      toolName: 'zeus.docs-generate-catalog',
+      optionName: '--json-output',
+      rawValue: jsonOutputPath,
+      resolvedPath: resolvedJsonPath,
+      cwd,
+    });
+  }
+
+  const result = generateToolCatalog({
+    repoRoot: cwd,
+    markdownOutputPath,
+    jsonOutputPath,
+  });
+
+  return {
+    format,
+    repoRoot: cwd,
+    markdownPath: result.markdownPath,
+    jsonPath: result.jsonPath,
+    commandCount: Number(result.commandCount || 0),
+    presetCount: Number(result.presetCount || 0),
   };
 }
 
@@ -4342,6 +4819,131 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     return payload;
   }
 
+  if (name === 'zeus.profiles') {
+    const profilesRunner = typeof context.profilesRunner === 'function'
+      ? context.profilesRunner
+      : executeReadOnlyProfiles;
+
+    let execution;
+    try {
+      execution = profilesRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      profileCount: Number(execution && execution.profileCount ? execution.profileCount : 0),
+      selectedProfile: execution && execution.selectedProfile ? String(execution.selectedProfile) : null,
+      configSource: execution && execution.configSource ? String(execution.configSource) : null,
+      profiles: Array.isArray(execution && execution.profiles)
+        ? execution.profiles.map((profile) => ({
+          name: profile && profile.name ? String(profile.name) : '',
+          extends: Array.isArray(profile && profile.extends) ? profile.extends.map((entry) => String(entry)) : [],
+          productionSystem: Boolean(profile && profile.productionSystem),
+          metadataDb: profile && profile.metadataDb ? profile.metadataDb : null,
+          testDataDb: profile && profile.testDataDb ? profile.testDataDb : null,
+          fetch: profile && profile.fetch ? profile.fetch : null,
+        }))
+        : [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.fetch-member') {
+    const fetchMemberRunner = typeof context.fetchMemberRunner === 'function'
+      ? context.fetchMemberRunner
+      : executeFetchMember;
+
+    let execution;
+    try {
+      execution = fetchMemberRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.fetch-member/i.test(String(error && error.message ? error.message : ''))
+        || /fetch connection configuration is incomplete/i.test(String(error && error.message ? error.message : ''))
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      } else {
+        throw normalizeMcpRuntimeToolError('zeus.fetch-member', error);
+      }
+      throw error;
+    }
+
+    return {
+      ok: Array.isArray(execution && execution.failures) ? execution.failures.length === 0 : true,
+      service: 'zeus-rpg-promptkit',
+      operation: execution && execution.operation ? String(execution.operation) : 'run',
+      profile: execution && execution.profile ? String(execution.profile) : null,
+      sourceLib: execution && execution.sourceLib ? String(execution.sourceLib) : null,
+      sourceFile: execution && execution.sourceFile ? String(execution.sourceFile) : null,
+      outDir: execution && execution.outDir ? String(execution.outDir) : null,
+      memberCount: Number(execution && execution.memberCount ? execution.memberCount : 0),
+      fetchedCount: Array.isArray(execution && execution.fetched) ? execution.fetched.length : 0,
+      failureCount: Array.isArray(execution && execution.failures) ? execution.failures.length : 0,
+      fetched: Array.isArray(execution && execution.fetched)
+        ? execution.fetched.map((entry) => ({
+          member: entry && entry.member ? String(entry.member) : '',
+          path: entry && entry.path ? String(entry.path) : '',
+          linesWritten: Number(entry && entry.linesWritten ? entry.linesWritten : 0),
+          usedFallback: Boolean(entry && entry.usedFallback),
+        }))
+        : [],
+      failures: Array.isArray(execution && execution.failures)
+        ? execution.failures.map((entry) => ({
+          member: entry && entry.member ? String(entry.member) : '',
+          messages: Array.isArray(entry && entry.messages) ? entry.messages.map((message) => String(message)) : [],
+          stderr: entry && entry.stderr ? String(entry.stderr) : '',
+        }))
+        : [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.docs-generate-catalog') {
+    let execution;
+    try {
+      execution = executeDocsGenerateCatalog(args, {
+        cwd: context.cwd || process.cwd(),
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.docs-generate-catalog/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      format: execution && execution.format ? String(execution.format) : 'markdown',
+      repoRoot: execution && execution.repoRoot ? String(execution.repoRoot) : (context.cwd || process.cwd()),
+      markdownPath: execution && execution.markdownPath ? String(execution.markdownPath) : null,
+      jsonPath: execution && execution.jsonPath ? String(execution.jsonPath) : null,
+      commandCount: Number(execution && execution.commandCount ? execution.commandCount : 0),
+      presetCount: Number(execution && execution.presetCount ? execution.presetCount : 0),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   if (name === 'zeus.bridge') {
     const bridgeRunner = typeof context.bridgeRunner === 'function'
       ? context.bridgeRunner
@@ -4823,6 +5425,51 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       columns: Array.isArray(execution.columns) ? execution.columns : [],
       rows: Array.isArray(execution.rows) ? execution.rows : [],
       rowCount: Number(execution.rowCount || 0),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.resolve-object') {
+    const resolveObjectRunner = typeof context.resolveObjectRunner === 'function'
+      ? context.resolveObjectRunner
+      : executeReadOnlyResolveObject;
+
+    let execution;
+    try {
+      execution = resolveObjectRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.resolve-object/i.test(String(error && error.message ? error.message : ''))
+        || /db2 connection configuration is incomplete/i.test(String(error && error.message ? error.message : ''))
+        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      } else {
+        throw normalizeMcpRuntimeToolError('zeus.resolve-object', error);
+      }
+      throw error;
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      profile: execution && execution.profile ? String(execution.profile) : '',
+      table: execution && execution.table ? String(execution.table) : '',
+      schema: execution && execution.schema ? String(execution.schema) : null,
+      requireColumns: Array.isArray(execution && execution.requireColumns)
+        ? execution.requireColumns.map((entry) => String(entry))
+        : [],
+      includeRowCount: Boolean(execution && execution.includeRowCount),
+      found: Boolean(execution && execution.found),
+      diagnostics: execution && execution.diagnostics ? execution.diagnostics : null,
+      objectCount: Number(execution && execution.objectCount ? execution.objectCount : 0),
+      objects: Array.isArray(execution && execution.objects)
+        ? execution.objects.map((entry) => (entry && typeof entry === 'object' ? entry : {}))
+        : [],
       timestamp: new Date().toISOString(),
     };
   }
