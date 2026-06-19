@@ -8,6 +8,7 @@ const {
   buildObjectDiscoveryConfigContext,
   createLocalUiActionService,
   normalizeAnalyzeExistingWorkspacePayload,
+  normalizeAiSessionPromptPayload,
   normalizeDiscoveryPreviewPayload,
   normalizeDoctorDiagnostics,
   normalizeDoctorPayload,
@@ -65,6 +66,41 @@ test('unknown action is rejected', async () => {
     () => service.executeAction('fetch', { profile: 'dev' }),
     (error) => error instanceof UiActionError && error.statusCode === 404,
   );
+});
+
+test('generate-ai-session-prompt action accepts valid payload and returns prompt metadata', async () => {
+  const service = createLocalUiActionService();
+  const result = await service.executeAction('generate-ai-session-prompt', {
+    profile: 'dev',
+    environment: 'development',
+    goal: 'Analyze program ORDERPGM and summarize dependencies.',
+    includeDoctorSummary: true,
+    doctorSummary: {
+      status: 'warning',
+      summary: {
+        total: 2,
+        pass: 1,
+        warn: 1,
+        fail: 0,
+        info: 0,
+        skip: 0,
+      },
+      finishedAt: '2026-06-19T12:00:00.000Z',
+    },
+  });
+
+  assert.equal(result.action, 'generate-ai-session-prompt');
+  assert.equal(result.status, 'completed');
+  assert.equal(result.input.profile, 'dev');
+  assert.equal(result.input.environment, 'development');
+  assert.equal(result.input.includeDoctorSummary, true);
+  assert.match(result.prompt, /Analyze program ORDERPGM and summarize dependencies\./);
+  assert.match(result.prompt, /docs\/tool-catalog\.md/);
+  assert.ok(Array.isArray(result.warnings));
+  assert.equal(result.metadata.profile, 'dev');
+  assert.equal(result.metadata.environment, 'development');
+  assert.equal(result.metadata.includedDoctorSummary, true);
+  assert.equal(result.metadata.templateSource, 'docs/ai/session-prompt.md');
 });
 
 test('discovery-preview action derives source scope locally from resolved fetch config', async () => {
@@ -186,6 +222,88 @@ test('unknown payload keys are rejected', () => {
       cmd: 'rm -rf /',
     }),
     /unsupported key/i,
+  );
+});
+
+test('AI session prompt payload rejects unknown keys, unsafe goal text, and invalid doctor summary details', () => {
+  assert.throws(
+    () => normalizeAiSessionPromptPayload({
+      profile: 'dev',
+      goal: 'Review ORDERPGM.',
+      command: 'rm -rf /',
+    }),
+    /unsupported key/i,
+  );
+
+  assert.throws(
+    () => normalizeAiSessionPromptPayload({
+      profile: 'dev',
+      goal: 'jdbc:as400://user:secret@internal-host.example;password=secret',
+    }),
+    /contain secrets/i,
+  );
+
+  assert.throws(
+    () => normalizeAiSessionPromptPayload({
+      profile: 'dev',
+      goal: 'Review ORDERPGM.',
+      doctorSummary: {
+        status: 'ready',
+        checks: [{ name: 'Java' }],
+      },
+    }),
+    /unsupported doctorSummary key/i,
+  );
+});
+
+test('AI session prompt payload rejects empty, overly long, and control-character goals', () => {
+  assert.throws(
+    () => normalizeAiSessionPromptPayload({
+      profile: 'dev',
+      goal: '',
+    }),
+    /goal is required/i,
+  );
+
+  assert.throws(
+    () => normalizeAiSessionPromptPayload({
+      profile: 'dev',
+      goal: 'A'.repeat(4001),
+    }),
+    /goal exceeds 4000 characters/i,
+  );
+
+  assert.throws(
+    () => normalizeAiSessionPromptPayload({
+      profile: 'dev',
+      goal: 'Review ORDERPGM.\u0007',
+    }),
+    /unsupported control characters/i,
+  );
+});
+
+test('AI session prompt payload accepts multiline goals and optional environment names', () => {
+  const payload = normalizeAiSessionPromptPayload({
+    profile: 'dev',
+    environment: 'sandbox-1',
+    goal: 'Review ORDERPGM.\r\nSummarize evidence-first next steps.',
+    includeDoctorSummary: false,
+  });
+
+  assert.equal(payload.profile, 'dev');
+  assert.equal(payload.environment, 'sandbox-1');
+  assert.equal(payload.goal, 'Review ORDERPGM.\nSummarize evidence-first next steps.');
+  assert.equal(payload.includeDoctorSummary, false);
+});
+
+test('AI session prompt payload rejects unsafe environment names', () => {
+  assert.throws(
+    () => normalizeAiSessionPromptPayload({
+      profile: 'dev',
+      environment: '../private',
+      goal: 'Review ORDERPGM.',
+    }),
+    /environment/i,
   );
 });
 

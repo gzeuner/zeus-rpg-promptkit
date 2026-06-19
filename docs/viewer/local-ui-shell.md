@@ -1,7 +1,7 @@
 ---
 Title: Local UI Shell
 Description: Dokumentation zur lokalen Viewer- und UI-Shell fuer erzeugte Analyseartefakte.
-Last Updated: 2026-06-18
+Last Updated: 2026-06-19
 ---
 
 # Local UI Shell
@@ -27,6 +27,7 @@ Behavior:
 - `GET /api/health`
 - `GET /api/ui-metadata`
 - `POST /api/ui-actions/doctor`
+- `POST /api/ui-actions/generate-ai-session-prompt`
 - `POST /api/ui-actions/analyze-existing-workspace`
 - `GET /api/runs`
 - `GET /api/runs/:program`
@@ -52,6 +53,7 @@ The browser shell consumes only those endpoints. It does not parse output direct
   - env/profile precedence explanation
   - safe config metadata overview
   - Doctor readiness checks
+  - AI Session Starter prompt generation from `docs/ai/session-prompt.md`
   - runtime guardrail conflict warnings
   - clear recommended next steps
 - the local-only profile wizard remains available inside Setup, but behind an expandable details area so onboarding does not start with a dense editing surface
@@ -118,15 +120,18 @@ The local UI action surface is intentionally explicit and small:
 Current supported action:
 
 - `doctor` readiness check via `POST /api/ui-actions/doctor`
+- `generate-ai-session-prompt` via `POST /api/ui-actions/generate-ai-session-prompt`
 - `analyze-existing-workspace` via `POST /api/ui-actions/analyze-existing-workspace`
 
 Security behavior:
 
 - request and response format is JSON only
 - server-side validation blocks unsafe profile values
+- `generate-ai-session-prompt` accepts only `profile`, optional `environment`, `goal`, `includeDoctorSummary`, and optional compact `doctorSummary`
 - `analyze-existing-workspace` accepts only `profile`, `program`, `member`, and `safeSharing`
 - browser payloads do not provide `sourceRoot`; the action always uses the selected profile's configured local source root
 - browser payloads cannot provide arbitrary shell commands, absolute paths, or traversal-style filesystem input
+- browser payloads cannot provide env dumps, raw secrets, or credential-bearing JDBC text for AI session generation
 - responses keep diagnostics structured and do not expose resolved secret values or raw env values
 - runtime guardrail conflicts between profile DB targets and env overrides are surfaced as warnings, not automatic aborts
 - conflict diagnostics remain allowlisted and redacted; the UI never exposes passwords or full credential-bearing JDBC URLs
@@ -152,6 +157,24 @@ The Setup tab explains precedence in simple terms:
 - env vars are powerful and can change the effective target
 - Doctor checks the effective configuration after those rules are applied
 - secret values are never shown
+
+Setup now also includes `Start AI Session`:
+
+- it generates a guided assistant prompt from `docs/ai/session-prompt.md`
+- it keeps prompt generation server-side so the browser only submits validated JSON
+- it can include a compact Doctor summary, but it still instructs the assistant to run Doctor first
+- it reminds the user that env loading is shell/process scoped
+- it shows helper commands for `config/load-env.ps1` and `config/load-env.sh`
+- it does not inject env vars into the user's already-open terminal
+- it does not expose credentials, resolved env values, or full connection strings
+- it treats `docs/tool-catalog.md` as the authoritative CLI/MCP command reference
+
+AI Session Starter guidance:
+
+- use it after Setup understanding and preferably after `Check Readiness`
+- keep credentials in env or other local-only mechanisms, not in the goal text
+- generated prompts can mention allowlisted Zeus MCP tools if available, but they must not invent unsupported MCP capabilities
+- risky CLI or MCP operations still require explicit approval according to the tool catalog safety levels
 
 Env vars are shown as metadata only, for example:
 

@@ -21,6 +21,11 @@ const {
   COMMAND_CATEGORIES,
   listCommandUiMetadata,
 } = require('../cli/commandMetadata');
+const { listMcpTools } = require('../mcp/mcpTools');
+const {
+  AI_SESSION_GOAL_MAX_LENGTH,
+  AI_SESSION_PROMPT_TEMPLATE_PATH,
+} = require('./aiSessionPromptService');
 const { buildGuidedConfigurationPayload } = require('./guidedConfigWizardModel');
 
 const UI_METADATA_SCHEMA_VERSION = 1;
@@ -150,6 +155,72 @@ const PROFILE_WIZARD_METADATA = Object.freeze({
   ]),
 });
 
+function buildAiSessionStarterMetadata() {
+  const mcpTools = listMcpTools();
+  const starterToolNames = [
+    'zeus.doctor',
+    'zeus.search-source',
+    'zeus.analyze',
+    'zeus.workflow',
+    'zeus.query-table',
+    'zeus.query-sql',
+    'zeus.bundle',
+  ].filter((name) => mcpTools.some((tool) => tool && tool.name === name));
+
+  return {
+    schemaVersion: 1,
+    title: 'Start AI Session',
+    templateSource: AI_SESSION_PROMPT_TEMPLATE_PATH,
+    actionPath: '/api/ui-actions/generate-ai-session-prompt',
+    goalMaxLength: AI_SESSION_GOAL_MAX_LENGTH,
+    authoritativeCatalogPath: 'docs/tool-catalog.md',
+    envLoading: {
+      powerShell: {
+        label: 'Windows PowerShell',
+        command: '. .\\config\\load-env.ps1 -Environment <environment>',
+      },
+      bash: {
+        label: 'Bash',
+        command: 'source ./config/load-env.sh <environment>',
+      },
+    },
+    reminders: [
+      'Environment variables are shell-scoped. The Local UI cannot load env vars into an already-open terminal session.',
+      'The Local UI server only sees env vars that were present when it started.',
+      'Run Doctor first to validate the effective runtime config before asking an AI assistant to do deeper work.',
+      'Do not paste credentials, secret env values, or full credential-bearing JDBC URLs into the goal.',
+    ],
+    capabilityGuidance: {
+      starterCommands: [
+        'doctor',
+        'profiles',
+        'search-source',
+        'analyze',
+        'workflow run',
+        'query-table',
+        'query-sql',
+        'impact',
+        'bundle',
+      ],
+      approvalRequiredCommands: [
+        'write-sql',
+        'upsert',
+        'upsert-sql',
+        'insert',
+        'update',
+        'delete',
+        'bridge',
+      ],
+      mcp: {
+        available: mcpTools.length > 0,
+        toolCount: mcpTools.length,
+        starterTools: starterToolNames,
+        note: 'Use allowlisted Zeus MCP tools if the AI client exposes them. Do not invent Zeus MCP tool names or unsupported capabilities.',
+      },
+    },
+  };
+}
+
 function deriveWorkflowCards(commandEntries = listCommandUiMetadata()) {
   return WORKFLOW_CARD_DEFINITIONS.map((definition) => {
     const matchingCommands = commandEntries.filter((entry) => entry.category === definition.category);
@@ -198,6 +269,7 @@ function buildUiMetadataPayload() {
     guidedConfiguration: buildGuidedConfigurationPayload({
       configFields: listConfigUiFields({ includeSensitive: true }),
     }),
+    aiSessionStarter: buildAiSessionStarterMetadata(),
     profileWizard: PROFILE_WIZARD_METADATA,
     commands: {
       categories: COMMAND_CATEGORIES,

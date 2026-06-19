@@ -580,6 +580,17 @@ const s={
       running:false,
       error:null,
       result:null
+    },
+    aiSession:{
+      profile:'dev',
+      environment:'',
+      goal:'',
+      includeDoctorSummary:false,
+      running:false,
+      error:null,
+      result:null,
+      copyStatus:'',
+      expanded:false
     }
   },
   profileWizard:{
@@ -923,6 +934,13 @@ function profileWizardMetadata(){
   const payload=s.uiMetadata&&s.uiMetadata.payload;
   return payload&&payload.profileWizard&&typeof payload.profileWizard==='object'
     ? payload.profileWizard
+    : null;
+}
+
+function aiSessionStarterMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.aiSessionStarter&&typeof payload.aiSessionStarter==='object'
+    ? payload.aiSessionStarter
     : null;
 }
 
@@ -1590,6 +1608,62 @@ function renderConfigureStartPanel(options){
   '</div></div>';
 }
 
+function buildAiSessionDoctorSummaryPayload(doctorResult){
+  if(!doctorResult||typeof doctorResult!=='object') return null;
+  const summary=doctorResult.result&&doctorResult.result.summary&&typeof doctorResult.result.summary==='object'
+    ? doctorResult.result.summary
+    : null;
+  return {
+    status:String(doctorResult.status||'').trim()||'unknown',
+    summary:summary?{
+      total:Number(summary.total||0),
+      pass:Number(summary.pass||0),
+      fail:Number(summary.fail||0),
+      warn:Number(summary.warn||0),
+      info:Number(summary.info||0),
+      skip:Number(summary.skip||0)
+    }:null,
+    finishedAt:doctorResult.finishedAt||null
+  };
+}
+
+function renderAiSessionStarterPanel(options){
+  const safeOptions=options&&typeof options==='object'?options:{};
+  const metadata=safeOptions.metadata&&typeof safeOptions.metadata==='object'
+    ? safeOptions.metadata
+    : (aiSessionStarterMetadata()||{});
+  const state=safeOptions.state&&typeof safeOptions.state==='object'?safeOptions.state:(s.uiActions.aiSession||{});
+  const doctorResult=safeOptions.doctorResult&&typeof safeOptions.doctorResult==='object'?safeOptions.doctorResult:null;
+  const doctorAvailable=Boolean(doctorResult);
+  const includeDoctorSummary=doctorAvailable
+    ? state.includeDoctorSummary!==false
+    : false;
+  const starterOpen=Boolean(state.expanded||state.running||state.error||(state.result&&state.result.prompt));
+  const goalMaxLength=Number(metadata.goalMaxLength||4000);
+  const promptText=state.result&&state.result.prompt?String(state.result.prompt):'';
+  const warnings=state.result&&Array.isArray(state.result.warnings)?state.result.warnings:[];
+  const envLoading=metadata.envLoading&&typeof metadata.envLoading==='object'?metadata.envLoading:{};
+  const powerShellCommand=envLoading.powerShell&&envLoading.powerShell.command
+    ? String(envLoading.powerShell.command)
+    : '. .\\config\\load-env.ps1 -Environment <environment>';
+  const bashCommand=envLoading.bash&&envLoading.bash.command
+    ? String(envLoading.bash.command)
+    : 'source ./config/load-env.sh <environment>';
+  const mcpSummary=metadata.capabilityGuidance&&metadata.capabilityGuidance.mcp&&typeof metadata.capabilityGuidance.mcp==='object'
+    ? metadata.capabilityGuidance.mcp
+    : null;
+  const starterCommands=metadata.capabilityGuidance&&Array.isArray(metadata.capabilityGuidance.starterCommands)
+    ? metadata.capabilityGuidance.starterCommands
+    : [];
+  const approvalRequiredCommands=metadata.capabilityGuidance&&Array.isArray(metadata.capabilityGuidance.approvalRequiredCommands)
+    ? metadata.capabilityGuidance.approvalRequiredCommands
+    : [];
+  const doctorStatusText=doctorAvailable
+    ? 'Doctor result available. The generated prompt can include a compact summary, but the assistant should still run doctor first.'
+    : 'No doctor result is available yet. Run Check Readiness first for a better session handoff.';
+  return '<div class="sub"><details'+(starterOpen?' open':'')+' id="aiSessionStarterDetails"><summary>Start AI Session</summary><p class="small">Use this after checking readiness. It creates a safe prompt for an AI assistant and stays local-only.</p><div class="hint-list"><div class="hint-item"><strong>Boundary</strong><p>The Local UI cannot load env vars into your already-open terminal. Use the helper commands below, then validate with Doctor.</p></div><div class="hint-item"><strong>Safety</strong><p>Do not paste credentials into the goal. The prompt reminds the assistant to run Doctor first and follow <code>'+esc(String(metadata.authoritativeCatalogPath||'docs/tool-catalog.md'))+'</code>.</p></div></div><div class="field-grid"><label>Profile Name<input id="aiSessionProfile" value="'+escAttr(String(state.profile||safeOptions.profile||'dev'))+'" placeholder="dev"></label><label>Environment Name (optional)<input id="aiSessionEnvironment" value="'+escAttr(String(state.environment||''))+'" placeholder="development"></label><label>Session Goal<textarea id="aiSessionGoal" placeholder="Analyze program ORDERPGM and summarize dependencies." maxlength="'+escAttr(String(goalMaxLength))+'">'+esc(String(state.goal||''))+'</textarea></label></div><div class="tokens"><div class="token">goal max: '+esc(String(goalMaxLength))+'</div><div class="token">template: '+esc(String(metadata.templateSource||'docs/ai/session-prompt.md'))+'</div>'+(mcpSummary?'<div class="token">MCP tools: '+esc(String(mcpSummary.toolCount||0))+'</div>':'')+'</div><div class="field-list"><div class="field-item"><strong>Env Loading Helper</strong><p>Choose the command for your shell. Loading env is process-scoped, so existing terminal sessions do not update automatically.</p><div class="preview"><pre>'+esc(powerShellCommand)+'\\n'+esc(bashCommand)+'</pre></div><p class="small">The Local UI server only sees env vars that were present when it started.</p></div><div class="field-item"><strong>Doctor Reminder</strong><p>'+esc(doctorStatusText)+'</p><div class="actions"><label><input id="aiSessionIncludeDoctorSummary" type="checkbox"'+(includeDoctorSummary?' checked':'')+(doctorAvailable?'':' disabled')+'> Include compact Doctor summary</label></div></div><div class="field-item"><strong>Capability Guidance</strong><p>Treat the tool catalog as authoritative and prefer evidence-first, read-only work before any higher-risk action.</p><div class="workflow-meta">'+starterCommands.map((command)=>'<div class="token">'+esc(command)+'</div>').join('')+'</div>'+(approvalRequiredCommands.length?'<p class="small">Approval required before: '+esc(approvalRequiredCommands.join(', '))+'.</p>':'')+(mcpSummary&&Array.isArray(mcpSummary.starterTools)&&mcpSummary.starterTools.length?'<p class="small">If MCP is available in the AI client, allowlisted Zeus tools may include: '+esc(mcpSummary.starterTools.join(', '))+'.</p>':'')+'</div></div><div class="actions"><button class="btn primary" data-ai-session-generate="1">'+esc(state.running?'Generating...':'Generate Session Prompt')+'</button><button class="btn" data-ai-session-copy="1">Copy Prompt</button></div>'+(state.error?'<div class="hint-list"><div class="hint-item"><strong>Prompt generation error</strong><p>'+esc(state.error)+'</p></div></div>':'')+(warnings.length?'<div class="hint-list">'+warnings.map((entry)=>'<div class="hint-item"><p>'+esc(String(entry))+'</p></div>').join('')+'</div>':'')+(state.copyStatus?'<div class="small '+esc(statusToneClass(state.copyStatus))+'">'+esc(state.copyStatus)+'</div>':'')+'<div class="preview">'+(promptText?'<textarea id="aiSessionPromptOutput" style="min-height:360px" readonly>'+esc(promptText)+'</textarea>':'<div class="empty">Generate a session prompt here after Setup and Doctor are ready.</div>')+'</div></details></div>';
+}
+
 function renderProfileWizardPanel(){
   const state=profileWizardState();
   const draft=ensureProfileWizardDraft();
@@ -2139,10 +2213,19 @@ function renderConfigure(){
       .join('\\n')
     : '';
   const doctorDiagnosticsPanel=renderDoctorDiagnostics(doctorResult);
+  const aiSessionState=s.uiActions.aiSession||{};
   const discoveryState=s.uiActions.discovery||{};
   const discoveryResult=discoveryState.result;
   const selectedDiscoveryActionId=String(discoveryState.actionId||((discoveryActions[0]&&discoveryActions[0].id)||'discover-source-libraries'));
   const profileForWizard=String(doctorState.profile||discoveryState.profile||preferredProfileWizardDoctorProfile()).trim()||'dev';
+  if(!String(aiSessionState.profile||'').trim()){
+    aiSessionState.profile=profileForWizard;
+  }
+  if(!doctorResult){
+    aiSessionState.includeDoctorSummary=false;
+  }else if(aiSessionState.result===null&&aiSessionState.error===null&&String(aiSessionState.goal||'').trim()===''){
+    aiSessionState.includeDoctorSummary=true;
+  }
   const wizardDetailsOpen=Boolean(
     s.profileWizard.loading
     || s.profileWizard.previewing
@@ -2172,6 +2255,12 @@ function renderConfigure(){
     doctorDiagnosticsPanel+
     (doctorDetails?'<details><summary>Show checks</summary><div class="preview"><pre>'+esc(doctorDetails)+'</pre></div></details>':'')+
     '</div>'+
+    renderAiSessionStarterPanel({
+      metadata:aiSessionStarterMetadata(),
+      state:aiSessionState,
+      profile:profileForWizard,
+      doctorResult
+    })+
     '<div class="sub"><details'+(wizardDetailsOpen?' open':'')+'><summary>Local-only Profile Wizard</summary><p class="small">Use this only when you need to create or adjust the local-only profile overlay that Setup and Doctor rely on.</p>'+renderProfileWizardPanel()+'</details></div>'+
     '<div class="sub"><h2>Advanced Setup Details</h2><p class="small">These sections explain the metadata-driven wizard model and read-only preview stubs. They are optional once the main setup flow is clear.</p><details'+(discoveryResult||discoveryState.error?' open':'')+'><summary>Read-only Discovery Actions</summary><div class="stack"><div class="field-list">'+(discoveryActions.length?discoveryActions.map((action)=>'<div class="field-item"><strong>'+esc(action.title)+'</strong><p>'+esc(action.description||'')+'</p><div class="workflow-meta"><div class="token">safety: '+esc(action.safetyLevel||'S2')+'</div><div class="token">'+esc(action.status||'stubbed-preview-only')+'</div><div class="token">'+esc(action.expensive?'preview first':'read-only')+'</div></div><div class="actions"><button class="btn" data-discovery-preview="'+esc(action.id)+'">'+esc(String(action.status||'').indexOf('config-preview-ready')===0?'Preview':'Preview Stub')+'</button></div></div>').join(''):'<div class="empty">No discovery actions available.</div>')+'</div>'+(discoveryState.error?'<div class="hint-list"><div class="hint-item"><strong>Discovery preview error</strong><p>'+esc(discoveryState.error)+'</p></div></div>':'')+renderGuidedDiscoveryPreview(discoveryResult)+'</div></details><details><summary>Safe CLI Preview</summary><p class="small">Generated from the selected intent. Secrets are never included.</p><div class="field-grid"><label>Analysis Intent<select id="guidedIntentSelect">'+intents.map((intent)=>'<option value="'+escAttr(intent.id)+'"'+(selectedIntent&&intent.id===selectedIntent.id?' selected':'')+'>'+esc(intent.title)+'</option>').join('')+'</select></label></div>'+renderGuidedCliPreview(selectedIntent,profileForWizard)+'</details><details><summary>Guided Wizard Metadata</summary><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Wizard steps: '+esc(String(steps.length||0))+'</div><div class="token">Intents: '+esc(String(intents.length||0))+'</div><div class="token">Purpose labels: '+esc(String(guided&&guided.purposeLabels&&guided.purposeLabels.length||0))+'</div></div><div class="section-list">'+steps.map((step)=>'<button class="btn section-btn'+(selectedStep&&step.id===selectedStep.id?' active':'')+'" data-guided-step="'+esc(step.id)+'">'+esc(step.shortTitle||step.title)+'</button>').join('')+'</div><div class="configure-layout"><div class="section-list">'+
       sections.map((section)=>'<button class="btn section-btn'+(section.id===s.uiMetadata.selectedConfigSection?' active':'')+'" data-config-section="'+esc(section.id)+'">'+esc(section.label||section.id)+'</button>').join('')+
@@ -2344,6 +2433,25 @@ function renderConfigure(){
       const nextValue=String(event.target.value||'').trim();
       s.uiActions.doctor.profile=nextValue;
       s.uiActions.discovery.profile=nextValue;
+      s.uiActions.aiSession.profile=nextValue;
+    };
+  }
+  const aiSessionDetails=root.querySelector('#aiSessionStarterDetails');
+  if(aiSessionDetails){
+    aiSessionDetails.ontoggle=()=>{
+      s.uiActions.aiSession.expanded=aiSessionDetails.open;
+    };
+  }
+  bindInput('#aiSessionProfile',(value)=>{ s.uiActions.aiSession.profile=value.trim(); });
+  bindInput('#aiSessionEnvironment',(value)=>{ s.uiActions.aiSession.environment=value.trim(); });
+  bindInput('#aiSessionGoal',(value)=>{
+    s.uiActions.aiSession.goal=value;
+    s.uiActions.aiSession.copyStatus='';
+  });
+  const aiSessionDoctorSummary=root.querySelector('#aiSessionIncludeDoctorSummary');
+  if(aiSessionDoctorSummary){
+    aiSessionDoctorSummary.onchange=(event)=>{
+      s.uiActions.aiSession.includeDoctorSummary=Boolean(event.target.checked);
     };
   }
   const intentSelect=root.querySelector('#guidedIntentSelect');
@@ -2392,9 +2500,21 @@ function renderConfigure(){
         const nextValue=String(profileInput.value||'').trim()||'dev';
         s.uiActions.doctor.profile=nextValue;
         s.uiActions.discovery.profile=nextValue;
+        s.uiActions.aiSession.profile=nextValue;
       }
       await runDoctorReadinessAction();
       renderConfigure();
+    };
+  }
+  for(const generateButton of root.querySelectorAll('[data-ai-session-generate]')){
+    generateButton.onclick=async ()=>{
+      await runGenerateAiSessionPromptAction();
+      renderConfigure();
+    };
+  }
+  for(const copyButton of root.querySelectorAll('[data-ai-session-copy]')){
+    copyButton.onclick=async ()=>{
+      await copyAiSessionPrompt();
     };
   }
   for(const refreshButton of root.querySelectorAll('[data-config-refresh]')){
@@ -2995,6 +3115,20 @@ function setPreviewEditMode(editable){
   renderWorkbench();
 }
 
+async function copyTextToClipboard(text){
+  if(navigator&&navigator.clipboard&&navigator.clipboard.writeText){
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const area=document.createElement('textarea');
+  area.value=text;
+  document.body.appendChild(area);
+  area.focus();
+  area.select();
+  document.execCommand('copy');
+  document.body.removeChild(area);
+}
+
 async function copyWorkbenchPreview(){
   const text=currentPreviewText();
   if(!text){
@@ -3003,22 +3137,61 @@ async function copyWorkbenchPreview(){
     return;
   }
   try {
-    if(navigator&&navigator.clipboard&&navigator.clipboard.writeText){
-      await navigator.clipboard.writeText(text);
-    } else {
-      const area=document.createElement('textarea');
-      area.value=text;
-      document.body.appendChild(area);
-      area.focus();
-      area.select();
-      document.execCommand('copy');
-      document.body.removeChild(area);
-    }
+    await copyTextToClipboard(text);
     s.promptBuilder.saveStatus='Preview copied.';
   } catch(error){
     s.promptBuilder.saveStatus=workbenchUserError('Could not copy the preview',error);
   }
   renderWorkbench();
+}
+
+async function runGenerateAiSessionPromptAction(){
+  const profile=String(s.uiActions.aiSession.profile||s.uiActions.doctor.profile||'dev').trim()||'dev';
+  const environment=String(s.uiActions.aiSession.environment||'').trim();
+  const goal=String(s.uiActions.aiSession.goal||'').trim();
+  const doctorResult=s.uiActions.doctor&&s.uiActions.doctor.result&&typeof s.uiActions.doctor.result==='object'
+    ? s.uiActions.doctor.result
+    : null;
+  const includeDoctorSummary=Boolean(doctorResult&&s.uiActions.aiSession.includeDoctorSummary!==false);
+  const doctorSummary=includeDoctorSummary?buildAiSessionDoctorSummaryPayload(doctorResult):null;
+  s.uiActions.aiSession.running=true;
+  s.uiActions.aiSession.error=null;
+  s.uiActions.aiSession.copyStatus='';
+  s.uiActions.aiSession.expanded=true;
+  try{
+    const payload={
+      profile,
+      goal,
+      includeDoctorSummary
+    };
+    if(environment) payload.environment=environment;
+    if(doctorSummary) payload.doctorSummary=doctorSummary;
+    const result=await sendJson('POST','/api/ui-actions/generate-ai-session-prompt',payload);
+    s.uiActions.aiSession.result=result;
+  }catch(error){
+    s.uiActions.aiSession.error=error.message||String(error);
+    s.uiActions.aiSession.result=null;
+  }finally{
+    s.uiActions.aiSession.running=false;
+  }
+}
+
+async function copyAiSessionPrompt(){
+  const text=s.uiActions.aiSession&&s.uiActions.aiSession.result&&s.uiActions.aiSession.result.prompt
+    ? String(s.uiActions.aiSession.result.prompt)
+    : '';
+  if(!text){
+    s.uiActions.aiSession.copyStatus='No session prompt is available to copy yet.';
+    renderConfigure();
+    return;
+  }
+  try{
+    await copyTextToClipboard(text);
+    s.uiActions.aiSession.copyStatus='Session prompt copied.';
+  }catch(error){
+    s.uiActions.aiSession.copyStatus='Could not copy the session prompt.';
+  }
+  renderConfigure();
 }
 
 function exportWorkbenchPreview(){
