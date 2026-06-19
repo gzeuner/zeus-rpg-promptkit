@@ -22,6 +22,8 @@ test('ui metadata payload exposes config, command, and workflow card contracts',
   assert.ok(Array.isArray(payload.guidedConfiguration.steps));
   assert.ok(Array.isArray(payload.guidedConfiguration.intents));
   assert.ok(Array.isArray(payload.guidedConfiguration.discoveryActions));
+  assert.ok(payload.setup);
+  assert.equal(payload.setup.primaryAction.actionPath, '/api/ui-actions/doctor');
   assert.ok(payload.aiSessionStarter);
   assert.equal(payload.aiSessionStarter.actionPath, '/api/ui-actions/generate-ai-session-prompt');
   assert.ok(payload.profileWizard);
@@ -100,6 +102,11 @@ test('ui metadata includes sensitive field markers but no resolved values', () =
   assert.equal(payload.aiSessionStarter.goalMaxLength, 4000);
   assert.equal(payload.aiSessionStarter.templateSource, 'docs/ai/session-prompt.md');
   assert.equal(payload.aiSessionStarter.authoritativeCatalogPath, 'docs/tool-catalog.md');
+  assert.equal(payload.setup.title, 'Setup');
+  assert.ok(Array.isArray(payload.setup.precedenceRules));
+  assert.ok(Array.isArray(payload.setup.boundaryNotes));
+  assert.ok(Array.isArray(payload.setup.recommendedNextTokens));
+  assert.equal(payload.setup.primaryAction.label, 'Check Readiness');
   assert.equal(payload.aiSessionStarter.envLoading.powerShell.command.includes('load-env.ps1'), true);
   assert.equal(payload.aiSessionStarter.envLoading.bash.command.includes('load-env.sh'), true);
   assert.ok(Array.isArray(payload.aiSessionStarter.capabilityGuidance.starterCommands));

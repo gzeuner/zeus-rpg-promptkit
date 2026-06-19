@@ -155,6 +155,56 @@ const PROFILE_WIZARD_METADATA = Object.freeze({
   ]),
 });
 
+function buildSetupMetadata() {
+  return {
+    schemaVersion: 1,
+    title: 'Setup',
+    summary: 'Use Setup as the primary local onboarding path before Reports or Advanced / Tools.',
+    primaryAction: {
+      label: 'Check Readiness',
+      actionPath: '/api/ui-actions/doctor',
+    },
+    steps: [
+      {
+        id: 'choose-profile',
+        title: 'Choose Or Create A Profile',
+        description: 'Review shared profiles or prepare a local-only overlay before running Doctor.',
+      },
+      {
+        id: 'preview-save',
+        title: 'Preview And Save Locally',
+        description: 'Preview local-only changes and save them before relying on them in Doctor.',
+      },
+      {
+        id: 'doctor',
+        title: 'Run Zeus Doctor',
+        description: 'Validate the effective runtime config after CLI, env, and profile precedence are applied.',
+      },
+    ],
+    precedenceRules: [
+      'CLI overrides env.',
+      'Env overrides profile.',
+      'Profile overrides defaults.',
+    ],
+    boundaryNotes: [
+      'This screen only edits local-only config and placeholder-based environment routing.',
+      'It does not expose secrets and it does not connect to IBM i or DB2 here.',
+    ],
+    recommendedNextTokens: [
+      'setup focus',
+      'doctor uses effective config',
+      'warnings do not auto-abort',
+    ],
+    doctorStatusGuidance: {
+      ready: 'Setup looks ready. Continue to Reports when output exists, or use Advanced / Tools if you need local-only analysis or prompt work.',
+      warning: 'Review the warning cards below. Env vars may be changing the effective target even when the saved profile looks correct.',
+      failed: 'Resolve the failed doctor checks before moving on.',
+      error: 'Review the readiness error, then try Check Readiness again.',
+      running: 'Wait for Check Readiness to finish.',
+    },
+  };
+}
+
 function buildAiSessionStarterMetadata() {
   const mcpTools = listMcpTools();
   const starterToolNames = [
@@ -266,6 +316,7 @@ function buildUiMetadataPayload() {
       sections: CONFIG_UI_SECTIONS,
       fields: listConfigUiFields({ includeSensitive: true }),
     },
+    setup: buildSetupMetadata(),
     guidedConfiguration: buildGuidedConfigurationPayload({
       configFields: listConfigUiFields({ includeSensitive: true }),
     }),

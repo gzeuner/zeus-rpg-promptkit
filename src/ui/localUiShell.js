@@ -903,6 +903,13 @@ function metadataFields(){
   return fields.length>0?fields:[];
 }
 
+function setupMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.setup&&typeof payload.setup==='object'
+    ? payload.setup
+    : null;
+}
+
 function guidedConfiguration(){
   const payload=s.uiMetadata&&s.uiMetadata.payload;
   return payload&&payload.guidedConfiguration&&typeof payload.guidedConfiguration==='object'
@@ -1528,6 +1535,7 @@ function preferredProfileWizardDoctorProfile(){
 
 function renderConfigureStartPanel(options){
   const safeOptions=options&&typeof options==='object'?options:{};
+  const setupMeta=setupMetadata()||{};
   const draft=safeOptions.draft&&typeof safeOptions.draft==='object'?safeOptions.draft:ensureProfileWizardDraft();
   const signals=safeOptions.signals&&typeof safeOptions.signals==='object'?safeOptions.signals:evaluateProfileWizardDraft();
   const previewFreshness=safeOptions.previewFreshness&&typeof safeOptions.previewFreshness==='object'
@@ -1582,29 +1590,45 @@ function renderConfigureStartPanel(options){
     : (draftSavedSummary
       ? 'This draft name matches an existing saved profile, but no profile is currently loaded for doctor yet.'
       : 'The browser edits local-only config only. It does not apply unsaved drafts to doctor.');
+  const precedenceRules=Array.isArray(setupMeta.precedenceRules)&&setupMeta.precedenceRules.length
+    ? setupMeta.precedenceRules
+    : ['CLI overrides env.','Env overrides profile.','Profile overrides defaults.'];
+  const precedenceSummary='CLI overrides env. Env overrides profile. Profile overrides defaults.';
+  const boundaryNotes=Array.isArray(setupMeta.boundaryNotes)&&setupMeta.boundaryNotes.length
+    ? setupMeta.boundaryNotes
+    : ['This screen only edits local-only config and placeholder-based environment routing.','It does not expose secrets and it does not connect to IBM i or DB2 here.'];
+  const recommendedNextTokens=Array.isArray(setupMeta.recommendedNextTokens)&&setupMeta.recommendedNextTokens.length
+    ? setupMeta.recommendedNextTokens
+    : ['setup focus','doctor uses effective config','warnings do not auto-abort'];
+  const doctorStatusGuidance=setupMeta.doctorStatusGuidance&&typeof setupMeta.doctorStatusGuidance==='object'
+    ? setupMeta.doctorStatusGuidance
+    : {};
+  const doctorActionLabel=setupMeta.primaryAction&&setupMeta.primaryAction.label
+    ? String(setupMeta.primaryAction.label)
+    : 'Check Readiness';
   let recommendedNext='Choose or load a profile and fill the required path fields first.';
   if(doctorState.running){
-    recommendedNext='Wait for Check Readiness to finish.';
+    recommendedNext=String(doctorStatusGuidance.running||'Wait for Check Readiness to finish.');
   }else if(doctorState.error){
-    recommendedNext='Review the readiness error, then try Check Readiness again.';
+    recommendedNext=String(doctorStatusGuidance.error||'Review the readiness error, then try Check Readiness again.');
   }else if(doctorResult&&doctorResult.status==='ready'){
-    recommendedNext='Setup looks ready. Continue to Reports when output exists, or use Advanced / Tools if you need local-only analysis or prompt work.';
+    recommendedNext=String(doctorStatusGuidance.ready||'Setup looks ready. Continue to Reports when output exists, or use Advanced / Tools if you need local-only analysis or prompt work.');
   }else if(doctorResult&&doctorResult.status==='warning'){
-    recommendedNext='Review the warning cards below. Env vars may be changing the effective target even when the saved profile looks correct.';
+    recommendedNext=String(doctorStatusGuidance.warning||'Review the warning cards below. Env vars may be changing the effective target even when the saved profile looks correct.');
   }else if(doctorResult&&doctorResult.status==='failed'){
-    recommendedNext='Resolve the failed doctor checks before moving on.';
+    recommendedNext=String(doctorStatusGuidance.failed||'Resolve the failed doctor checks before moving on.');
   }else if(signals.canSave){
     recommendedNext='Save the current draft if needed, then run Check Readiness.';
   }else if(signals.canPreview){
     recommendedNext='Run Preview Draft next, then save locally before Check Readiness.';
   }
-  return '<div class="sub"><h2>Setup</h2><p>Use Setup as a simple 3-step path: choose or create a profile, preview and save it locally, then run Zeus Doctor.</p><div class="hint-list"><div class="hint-item"><strong>Browser safety</strong><p>This screen only edits local-only config and placeholder-based environment routing. It does not expose secrets and it does not connect to IBM i or DB2 here.</p></div><div class="hint-item"><strong>Resolution order</strong><p>CLI overrides env. Env overrides profile. Profile overrides defaults. Doctor checks the effective configuration after those rules are applied.</p></div></div><div class="field-list">'+
-    '<div class="field-item"><strong>Recommended Next Step</strong><p>'+esc(recommendedNext)+'</p><div class="workflow-meta"><div class="token">setup focus</div><div class="token">doctor uses effective config</div><div class="token">warnings do not auto-abort</div></div></div>'+
+  return '<div class="sub"><h2>'+esc(String(setupMeta.title||'Setup'))+'</h2><p>Use Setup as a simple 3-step path: choose or create a profile, preview and save it locally, then run Zeus Doctor.</p><div class="hint-list"><div class="hint-item"><strong>Browser safety</strong><p>'+esc(boundaryNotes.join(' '))+'</p></div><div class="hint-item"><strong>Resolution order</strong><p>'+esc(precedenceRules.length?precedenceRules.join(' '):precedenceSummary)+' Doctor checks the effective configuration after those rules are applied.</p></div></div><div class="field-list">'+
+    '<div class="field-item"><strong>Recommended Next Step</strong><p>'+esc(recommendedNext)+'</p><div class="workflow-meta">'+recommendedNextTokens.map((token)=>'<div class="token">'+esc(String(token))+'</div>').join('')+'</div></div>'+
     '<div class="field-item"><strong>1. Choose Or Create A Profile</strong><p>'+esc(stepOneStatus)+'</p><div class="workflow-meta"><div class="token">known profiles: '+esc(String(profiles.length))+'</div><div class="token">local-only: '+esc(String(localOnlyProfiles.length))+'</div><div class="token">managed envs: '+esc(String(managedSystems.length))+'</div></div><p class="small">Selected profile source and local-only overlays are shown here, but secret values are never displayed.</p><div class="actions"><button class="btn" data-pw-refresh="1">Reload Wizard State</button><button class="btn primary" data-pw-new="1">New Local Draft</button><button class="btn" data-pw-load="1">Load Selected Profile</button></div></div>'+
     '<div class="field-item"><strong>Environment Override Explanation</strong><p>Environment variables can change the effective target even when the saved profile looks correct.</p><div class="workflow-meta">'+routingTokens.map(([label,value])=>'<div class="token">'+esc(label+': '+value)+'</div>').join('')+'</div><p class="small">Examples: <code>ZEUS_DB_HOST</code> can override <code>db.host</code>. Secret env vars may exist, but their values are never shown here.</p></div>'+
     '<div class="field-item"><strong>Config Metadata Overview</strong><p>'+esc(String(configSectionCount))+' setup sections and '+esc(String(configFields.length))+' documented fields are available in this UI payload.</p><div class="workflow-meta"><div class="token">sensitive fields: '+esc(String(configSensitiveCount))+'</div><div class="token">read-only metadata</div><div class="token">no resolved values</div></div><p class="small">Use the metadata section below to understand which fields can be set by profile or env without exposing runtime secrets.</p></div>'+
     '<div class="field-item"><strong>2. Preview And Save Locally</strong><p>'+esc(stepTwoStatus)+'</p><div class="workflow-meta"><div class="token '+esc(statusToneClass(previewStatus))+'">'+esc(previewStatus)+'</div>'+(draftProfileName?'<div class="token">draft: '+esc(draftProfileName)+'</div>':'<div class="token">draft name missing</div>')+(selectedProfileSummary?'<div class="token">loaded source: '+esc(String(selectedProfileSummary.sourceKind||'shared'))+'</div>':'')+'</div><div class="actions"><button class="btn" data-pw-preview="1">Preview Draft</button><button class="btn primary" data-pw-save="1">Save Local-only</button></div></div>'+
-    '<div class="field-item"><strong>3. Run Zeus Doctor</strong><p>'+esc(doctorStatus)+'</p><div class="workflow-meta"><div class="token">doctor target: '+esc(doctorProfile)+'</div>'+(doctorProfileSummary?'<div class="token">source: '+esc(String(doctorProfileSummary.sourceKind||'shared'))+'</div>':'<div class="token">save required</div>')+(doctorState&&doctorState.result?'<div class="token">result available</div>':'')+'</div><p class="small">'+esc(doctorHint)+'</p><div class="actions"><button class="btn primary" data-config-doctor="1">Check Readiness</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div></div>'+
+    '<div class="field-item"><strong>3. Run Zeus Doctor</strong><p>'+esc(doctorStatus)+'</p><div class="workflow-meta"><div class="token">doctor target: '+esc(doctorProfile)+'</div>'+(doctorProfileSummary?'<div class="token">source: '+esc(String(doctorProfileSummary.sourceKind||'shared'))+'</div>':'<div class="token">save required</div>')+(doctorState&&doctorState.result?'<div class="token">result available</div>':'')+'</div><p class="small">'+esc(doctorHint)+'</p><div class="actions"><button class="btn primary" data-config-doctor="1">'+esc(doctorActionLabel)+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div></div>'+
   '</div></div>';
 }
 

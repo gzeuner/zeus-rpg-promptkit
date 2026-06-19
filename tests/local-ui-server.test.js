@@ -244,6 +244,10 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'review-reports').uiTarget, 'reports');
     assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'fetch-sources').enabledInShell, false);
     assert.equal(uiMetadata.workflowCards.find((entry) => entry.id === 'fetch-sources').status, 'Coming later');
+    assert.equal(uiMetadata.setup.title, 'Setup');
+    assert.equal(uiMetadata.setup.primaryAction.label, 'Check Readiness');
+    assert.equal(uiMetadata.setup.primaryAction.actionPath, '/api/ui-actions/doctor');
+    assert.ok(Array.isArray(uiMetadata.setup.precedenceRules));
     assert.equal(uiMetadata.guidedConfiguration.schemaVersion, 1);
     assert.ok(Array.isArray(uiMetadata.guidedConfiguration.steps));
     assert.ok(uiMetadata.guidedConfiguration.steps.length >= 7);
