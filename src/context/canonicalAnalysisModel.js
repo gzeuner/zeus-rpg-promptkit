@@ -1374,6 +1374,8 @@ function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, sql
     procedureCallCount: (procedureCalls || []).length,
     bifCount: (rpgLanguageFeatures && rpgLanguageFeatures.bifCount) || 0,
     indicatorCount: (rpgLanguageFeatures && rpgLanguageFeatures.indicatorCount) || 0,
+    dataStructureCount: (rpgLanguageFeatures && rpgLanguageFeatures.dataStructureCount) || 0,
+    standaloneFieldCount: (rpgLanguageFeatures && rpgLanguageFeatures.standaloneFieldCount) || 0,
     internalProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'INTERNAL').length,
     externalProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'EXTERNAL').length,
     dynamicProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'DYNAMIC').length,
@@ -1620,6 +1622,9 @@ function buildCanonicalAnalysisModel({
   const nativeFileAccesses = normalizeNativeFileAccesses(dependencies && dependencies.nativeFileAccesses, normalizedSourceRoot);
   const bifUsages = (dependencies && dependencies.bifUsages) || [];
   const indicatorUsages = (dependencies && dependencies.indicatorUsages) || [];
+  const dataStructures = (dependencies && dependencies.dataStructures) || [];
+  const standaloneFields = (dependencies && dependencies.standaloneFields) || [];
+  const constants = (dependencies && dependencies.constants) || [];
   const modules = normalizeModules(dependencies && dependencies.modules, normalizedSourceRoot);
   const bindingDirectories = normalizeBindingDirectories(dependencies && dependencies.bindingDirectories, normalizedSourceRoot);
   const servicePrograms = normalizeServicePrograms(dependencies && dependencies.servicePrograms, normalizedSourceRoot);
@@ -1629,6 +1634,9 @@ function buildCanonicalAnalysisModel({
   const rpgLanguageFeatures = {
     bifCount: (bifUsages || []).length,
     indicatorCount: (indicatorUsages || []).length,
+    dataStructureCount: (dataStructures || []).length,
+    standaloneFieldCount: (standaloneFields || []).length,
+    constantCount: (constants || []).length,
     uniqueBifs: uniqueSortedStrings((bifUsages || []).map((b) => b.name)),
     uniqueIndicators: uniqueSortedStrings((indicatorUsages || []).map((i) => i.name)),
   };
@@ -1696,6 +1704,9 @@ function buildCanonicalAnalysisModel({
     rpgConstructs: {
       bifs: bifUsages,
       indicators: indicatorUsages,
+      dataStructures,
+      standaloneFields,
+      constants,
       languageFeatures: rpgLanguageFeatures,
     },
     relations: buildRelations(
