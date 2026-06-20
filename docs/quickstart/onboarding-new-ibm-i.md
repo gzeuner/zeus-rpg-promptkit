@@ -252,7 +252,7 @@ Use the generated `ai_prompt_documentation.md` or `report.md` + `canonical-analy
 - Try the `onboarding` workflow preset.
 - Use MCP with a minimal allowlist for AI agents:
   ```bash
-  node cli/zeus.js mcp serve --verbose --allow-tools zeus.doctor,zeus.resolve-object,zeus.query-table,zeus.search-source,zeus.validate-rpg-sql
+  node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run
   ```
 
 For deeper dives see:

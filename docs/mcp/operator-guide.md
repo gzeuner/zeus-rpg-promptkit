@@ -13,7 +13,7 @@ Expose a safe, local-only subset of Zeus capabilities over MCP stdio for AI clie
 ## Security Posture
 
 - Transport: stdio only (local process boundary)
-- Default behavior: minimal safe default surface (`zeus.health`, `zeus.version`, `zeus.doctor`)
+- Default behavior: safe expanded default surface (health, doctor, profiles, help, onboarding, analyze, workflow, searches, queries, review/planning tools, etc. — see mcpPolicy.js)
 - Policy: explicit allowlist gate (`--allow-tools`) for any broader tool surface
 - Curated discovery surfaces: first-class MCP `resources/*` and `prompts/*` for safe docs/metadata/prompt access
 - Redaction: response/error masking for common secret patterns
@@ -32,20 +32,16 @@ Out of scope for MVP:
 node cli/zeus.js mcp serve --stdio true --verbose
 ```
 
-Without `--allow-tools`, MCP exposes only `zeus.health`, `zeus.version`, and `zeus.doctor`.
+Without `--allow-tools`, MCP exposes the safe default surface (see above). Use `--allow-tools` to provide a custom (usually smaller) list.
 
 Restrict exposed tools explicitly for real workflows (recommended):
 
 ```bash
-# Minimal safe set for onboarding + discovery
 node cli/zeus.js mcp serve --verbose \
-  --allow-tools zeus.health,zeus.version,zeus.doctor,zeus.profiles,zeus.resolve-object,zeus.query-table,zeus.query-sql,zeus.search-source,zeus.validate-rpg-sql,zeus.inspect-object,zeus.docs-generate-catalog
+  --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run
 ```
 
-For full agentic analysis add: `zeus.analyze,zeus.workflow,zeus.impact,zeus.assess-risk,zeus.bundle,zeus.generate-test,zeus.generate-checklist,zeus.validate-rpg-sql`
-
-**Recommended minimal allow-list for onboarding a new system (discovery + validation):**
-`zeus.health,zeus.doctor,zeus.profiles,zeus.onboarding,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.search-source,zeus.validate-rpg-sql,zeus.field-search,zeus.docs-generate-catalog`
+(This is the single recommended list for most agentic coding + legacy IBM i / RPG work. You can always use a smaller subset.)
 
 See also the new onboarding guide: `docs/quickstart/onboarding-new-ibm-i.md` (covers connection, source location, PGM/Table objects, metadata & data discovery).
 
@@ -65,17 +61,14 @@ Curated prompts expose the standard Zeus session bootstrap prompt plus prompt-te
 
 ## Supported MCP Tools (Current)
 
-The default safe surface (S0/S1 local evidence, config, searches, and bounded catalog regen) is exposed automatically for AI agents. Remote or higher-risk tools require explicit `--allow-tools`.
+The safe default surface (when running without `--allow-tools`) is defined in `src/mcp/mcpPolicy.js` (includes health, doctor, profiles, analyze, searches, queries, review tools, etc.).
 
-Default (no --allow-tools needed):
-- `zeus.health`, `zeus.version`, `zeus.doctor`, `zeus.profiles`
-- `zeus.search-source`, `zeus.field-search`
-- `zeus.docs-generate-catalog`
-- `zeus.analyze`, `zeus.impact`, `zeus.assess-risk`
-- `zeus.generate-test`, `zeus.generate-checklist`, `zeus.qa`
-- `zeus.workflow`, `zeus.bundle`
+For reproducibility and explicit control, we recommend always passing this single list:
+```bash
+node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run
+```
 
-Everything else (fetch*, query*, write*, bridge, joblog, inspect, etc.) requires explicit allowlist.
+Use a smaller subset via `--allow-tools` when you want to restrict the agent more tightly.
 
 Example with a profile (recommended for real-target agent sessions):
 ```bash
@@ -84,7 +77,7 @@ node cli/zeus.js doctor --profile my-profile
 # MCP server with safe local surface + some read
 ./.local/mcp/start-zeus-mcp-myenv.sh
 # or
-node cli/zeus.js mcp serve --stdio true --allow-tools zeus.health,zeus.profiles,zeus.search-source,zeus.analyze,zeus.workflow,zeus.bundle,zeus.docs-generate-catalog,...
+node cli/zeus.js mcp serve --stdio true --allow-tools [paste the recommended list above]
 ```
 
 ## Perfect AI Agent Interaction Pattern (Example)
