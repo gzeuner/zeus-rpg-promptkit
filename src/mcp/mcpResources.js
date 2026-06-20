@@ -46,6 +46,27 @@ const RESOURCE_DEFINITIONS = Object.freeze([
     filePath: 'docs/mcp/operator-guide.md',
   }),
   Object.freeze({
+    uri: 'zeus://docs/quickstart/onboarding-new-ibm-i.md',
+    name: 'Onboarding Guide for New IBM i Systems',
+    description: 'Step-by-step guide to connect to a fresh AS/400 / IBM i / Power system, discover sources, PGM/table objects, metadata, and data.',
+    mimeType: 'text/markdown',
+    filePath: 'docs/quickstart/onboarding-new-ibm-i.md',
+  }),
+  Object.freeze({
+    uri: 'zeus://docs/ai/rpg-agent-guidance.md',
+    name: 'RPG Agent Guidance',
+    description: 'Project-neutral RPG/ILE patterns, modernization notes, BIFs, indicators, and agent rules for safe code proposals.',
+    mimeType: 'text/markdown',
+    filePath: 'docs/ai/rpg-agent-guidance.md',
+  }),
+  Object.freeze({
+    uri: 'zeus://docs/sql/system-environment-discovery.sql',
+    name: 'IBM i Environment Discovery SQL',
+    description: 'Ready-to-use read-only queries for source libraries, tables, objects, columns, keys, and catalog exploration.',
+    mimeType: 'text/plain',
+    filePath: 'docs/sql/system-environment-discovery.sql',
+  }),
+  Object.freeze({
     uri: 'zeus://metadata/command-catalog.json',
     name: 'Command Catalog Metadata',
     description: 'Structured CLI command metadata with safety levels and examples.',
@@ -72,6 +93,13 @@ const RESOURCE_DEFINITIONS = Object.freeze([
     description: 'Structured prompt template contracts and budget metadata.',
     mimeType: 'application/json',
     generator: buildPromptContractsResource,
+  }),
+  Object.freeze({
+    uri: 'zeus://onboarding/checklist.json',
+    name: 'Onboarding Checklist',
+    description: 'Structured, agent-friendly checklist for first connection to a new IBM i system (sources, objects, metadata, data).',
+    mimeType: 'application/json',
+    generator: buildOnboardingChecklistResource,
   }),
 ]);
 
@@ -164,6 +192,76 @@ function buildPromptContractsResource() {
       preferredOutputShape: contract.preferredOutputShape,
       budget: contract.budget,
     })),
+  };
+}
+
+function buildOnboardingChecklistResource() {
+  return {
+    title: 'Zeus Onboarding Checklist for New IBM i System',
+    version: '2026-06-20',
+    steps: [
+      {
+        step: 1,
+        title: 'Environment & Profiles',
+        actions: [
+          'Copy config/profiles.example.json to config/local-only/profiles.json',
+          'Load env: source ./config/load-env.sh <env> (or PowerShell equivalent)',
+          'Set ZEUS_FETCH_* and ZEUS_DB_* (and ZEUS_METADATA_* / ZEUS_TESTDATA_* for separation)'
+        ]
+      },
+      {
+        step: 2,
+        title: 'Verify Connection',
+        actions: [
+          'node cli/zeus.js doctor --profile <name> --show-resolved',
+          'node cli/zeus.js doctor --profile <name> --probe --show-resolved (live read-only checks)'
+        ]
+      },
+      {
+        step: 3,
+        title: 'Discover Source Locations',
+        actions: [
+          'Common: QRPGLESRC, QCLSRC, QDDSSRC, QCPYSRC, QSQLSRC, QSRVSRC',
+          'Use zeus fetch --profile <name> or point --source to existing tree',
+          'zeus search-source and zeus field-search for exploration'
+        ]
+      },
+      {
+        step: 4,
+        title: 'Discover Objects (PGM, Tables, etc.)',
+        actions: [
+          'zeus resolve-object --profile <name> --table <name>',
+          'zeus inspect-object --profile <name> --lib <lib> --name <pgm> --type *PGM',
+          'zeus query-table and zeus query-sql against QSYS2.SYSTABLES / SYSCOLUMNS'
+        ]
+      },
+      {
+        step: 5,
+        title: 'Obtain Metadata & Data',
+        actions: [
+          'zeus query-sql with QSYS2 catalog queries (see zeus://docs/sql/system-environment-discovery.sql)',
+          'zeus analyze ... (enriches with DB metadata when configured)',
+          'Use --test-data-limit for samples; respect allow/deny + masking'
+        ]
+      },
+      {
+        step: 6,
+        title: 'First Analysis & Onboarding Packet',
+        actions: [
+          'node cli/zeus.js onboarding (interactive zeus-onboarding-wizard)',
+          'node cli/zeus.js workflow --preset onboarding --profile <name> --source <dir> --program <PGM>',
+          'Bundle artifacts + use ai_prompt_*.md with your agent'
+        ]
+      }
+    ],
+    recommendedMcpResources: [
+      'zeus://docs/quickstart/onboarding-new-ibm-i.md',
+      'zeus://docs/ai/rpg-agent-guidance.md',
+      'zeus://docs/sql/system-environment-discovery.sql',
+      'zeus://docs/ai/session-prompt.md',
+      'zeus://metadata/workflow-presets.json'
+    ],
+    notes: 'Always prefer read-only (S0/S2). Use zeus.doctor first. Human approval for any remote access.'
   };
 }
 

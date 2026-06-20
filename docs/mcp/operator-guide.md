@@ -106,8 +106,12 @@ All via stdio, all outputs structured + enveloped, all bounded to workspace, sec
 
 Curated resources currently include:
 
-- authoritative docs such as `tool-catalog.md`, `tool-catalog.json`, `cli/reference.md`, `ai/session-prompt.md`, and this operator guide
-- structured metadata for command catalog, MCP tool inventory, workflow presets, and prompt contracts
+- authoritative docs such as `tool-catalog.md`, `tool-catalog.json`, `cli/reference.md`, `ai/session-prompt.md`, `mcp/operator-guide.md`
+- `quickstart/onboarding-new-ibm-i.md` (step-by-step for new IBM i systems: connection, source search, PGM/table objects, metadata & data)
+- `ai/rpg-agent-guidance.md` (RPG/ILE patterns for agents)
+- `sql/system-environment-discovery.sql` (catalog queries)
+- structured metadata for command catalog, MCP tool inventory, workflow presets, prompt contracts, and `onboarding/checklist.json` (agent-friendly onboarding steps + recommended resources)
+- dynamic run artifacts under `zeus://runs/...` (summaries, views, reports, ai_prompt_*.md)
 
 Curated prompts currently include:
 
