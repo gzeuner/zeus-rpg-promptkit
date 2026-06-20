@@ -25,6 +25,10 @@ const {
   normalizeFormat: normalizeQaFormat,
   normalizeStrict: normalizeQaStrict,
 } = require('../cli/commands/qaCommand');
+const {
+  runValidateRpgSql,
+  normalizeFormat: normalizeValidateFormat,
+} = require('../cli/commands/validateRpgSqlCommand');
 const { runQAPipeline, generateQAReport } = require('../qa/qaIntegration');
 const {
   generateChangeTestScenario,
@@ -832,6 +836,36 @@ function listMcpTools() {
             type: 'string',
             enum: ['LENIENT', 'STRICT'],
             description: 'QA strictness mode.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.validate-rpg-sql',
+      description: 'Validate embedded SQL in RPG (cursor/fetch column mismatches, dynamic SQL, host variables). Supports prior analyze output or direct source scan (read-only).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          input: {
+            type: 'string',
+            minLength: 1,
+            description: 'Path to canonical-analysis.json / analyze output dir, or omit when using source.',
+          },
+          source: {
+            type: 'string',
+            minLength: 1,
+            description: 'Source root directory for direct scan (alternative to input).',
+          },
+          program: {
+            type: 'string',
+            minLength: 1,
+            description: 'Program name to focus validation (optional).',
+          },
+          format: {
+            type: 'string',
+            enum: ['markdown', 'json'],
+            description: 'Output format.',
           },
         },
       },
@@ -6164,6 +6198,41 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       stageCount: Number(execution && execution.stageCount ? execution.stageCount : 0),
       failureCount: Number(execution && execution.failureCount ? execution.failureCount : 0),
       report,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.validate-rpg-sql') {
+    const validateRunner = typeof context.validateRpgSqlRunner === 'function'
+      ? context.validateRpgSqlRunner
+      : runValidateRpgSql;
+
+    let execution;
+    try {
+      execution = await validateRunner(args, {
+        cwd: context.cwd || process.cwd(),
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.validate-rpg-sql/i.test(String(error && error.message ? error.message : ''))
+        || /Source root not found/i.test(String(error && error.message ? error.message : ''))
+        || /Analysis not found/i.test(String(error && error.message ? error.message : ''))
+        || /Missing required input/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      program: execution && execution.program ? String(execution.program) : '',
+      source: execution && execution.source ? String(execution.source) : '',
+      errorCount: Number(execution && execution.errorCount ? execution.errorCount : 0),
+      warningCount: Number(execution && execution.warningCount ? execution.warningCount : 0),
+      outputPath: execution && execution.outputPath ? String(execution.outputPath) : null,
       timestamp: new Date().toISOString(),
     };
   }
