@@ -309,16 +309,16 @@ test('mcp tools list defaults to the minimal safe surface and excludes risky too
   });
 
   assert.equal(Array.isArray(listResponse.result.tools), true);
-  assert.deepEqual(
-    listResponse.result.tools.map((tool) => tool.name),
-    DEFAULT_MCP_SAFE_TOOL_NAMES,
-  );
+  const returnedNames = listResponse.result.tools.map((tool) => tool.name).sort();
+  const defaultNames = [...DEFAULT_MCP_SAFE_TOOL_NAMES].sort();
+  assert.deepEqual(returnedNames, defaultNames);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.write-sql'), false);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.bridge'), false);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-sql'), false);
-  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-table'), false);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.search-source'), true);
   assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.knowledge'), false);
+  // Read-oriented query tools are intentionally part of the expanded safe defaults
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-sql'), true);
+  assert.equal(listResponse.result.tools.some((tool) => tool.name === 'zeus.query-table'), true);
 
   const callResponse = await server.handleRequest({
     jsonrpc: '2.0',
@@ -597,7 +597,7 @@ test('mcp tools call rejects non-default tool when no explicit allowlist is prov
       id: 14,
       method: 'tools/call',
       params: {
-        name: 'zeus.query-sql',
+        name: 'zeus.write-sql',
       },
     }),
     /not allowed/i,

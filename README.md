@@ -187,13 +187,13 @@ Ziel ist nicht „Agent darf alles“, sondern:
 node cli/zeus.js mcp serve --verbose
 ```
 
-Ohne `--allow-tools` exponiert MCP nur die minimale sichere Default-Oberfläche: `zeus.health`, `zeus.version`, `zeus.doctor`.
+Ohne `--allow-tools` exponiert MCP die sichere Default-Oberfläche (health, doctor, profiles, analyze, searches, queries etc. — siehe Policy).
 Auch read-only DB2/IBM-i-Tools bleiben explizites Opt-in, weil read-only trotzdem sensible Daten offenlegen kann.
 
 Empfohlen: Tool-Oberfläche für echte Workflows explizit begrenzen:
 
 ```bash
-node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql,zeus.search-source
+node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run
 ```
 
 ### MCP-Sicherheitsrahmen
@@ -933,13 +933,13 @@ The goal is not “let the agent do everything”. The goal is:
 node cli/zeus.js mcp serve --verbose
 ```
 
-Without `--allow-tools`, MCP exposes only the minimal safe default surface: `zeus.health`, `zeus.version`, and `zeus.doctor`.
+Without `--allow-tools`, MCP exposes the safe default surface (health, doctor, profiles, analyze, search, queries, review tools etc. — see mcpPolicy.js).
 Remote read-only DB2 / IBM i tools still require explicit opt-in because read-only access can still expose sensitive data.
 
 Recommended: restrict the exposed tool surface explicitly for real workflows:
 
 ```bash
-node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql,zeus.search-source
+node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run
 ```
 
 ### MCP security posture
@@ -947,7 +947,7 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,
 | Area | Behavior |
 |---|---|
 | Transport | local `stdio` |
-| Policy | minimal safe default surface plus explicit tool allowlist |
+| Policy | safe default surface (see mcpPolicy.js) plus explicit --allow-tools |
 | Allowlist | `--allow-tools` |
 | Redaction | response and error payload masking |
 | Audit | local append-only JSONL at `.local/mcp/audit/mcp-audit.jsonl` |
