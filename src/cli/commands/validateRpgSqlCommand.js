@@ -158,7 +158,24 @@ async function runValidateRpgSql(args = {}, config = {}) {
       process.exit(2);
     }
 
-    const scanSummary = scanSourceFiles(allFiles);
+    let filesToScan = allFiles;
+
+    // Dedicated --program filtering in scan mode
+    if (program) {
+      const progUpper = program.toUpperCase();
+      const matching = allFiles.filter((f) => {
+        const base = path.basename(f, path.extname(f)).toUpperCase();
+        return base === progUpper;
+      });
+      if (matching.length > 0) {
+        filesToScan = matching;
+        if (verbose) console.log(`[verbose] Program filter: found ${filesToScan.length} file(s) matching ${progUpper}`);
+      } else if (verbose) {
+        console.log(`[verbose] No exact file match for program ${progUpper} (basename), scanning all ${allFiles.length} files`);
+      }
+    }
+
+    const scanSummary = scanSourceFiles(filesToScan);
     const sqlStmts = scanSummary.sqlStatements || [];
 
     // Run validator
@@ -170,7 +187,6 @@ async function runValidateRpgSql(args = {}, config = {}) {
     };
     sourceInfo = sourceRoot;
 
-    // If program specified, we can still report all (or filter loosely)
     if (!program) program = 'SCAN';
   } else {
     console.error('Missing required input: provide --input <analyze-output> or --source <dir> [--program <name>]');
