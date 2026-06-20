@@ -282,14 +282,17 @@ function defaultSqlAnalysis() {
       cursorStatementCount: 0,
       hostVariableCount: 0,
       cursorCount: 0,
+      validationErrorCount: 0,
+      validationWarningCount: 0,
     },
     tableNames: [],
     hostVariables: [],
     cursors: [],
+    validation: { errors: [], warnings: [] },
   };
 }
 
-function summarizeSqlStatements(sqlStatements) {
+function summarizeSqlStatements(sqlStatements, sqlValidation = {}) {
   const statements = sqlStatements || [];
   const tableNames = uniqueSortedStrings(statements.flatMap((statement) => statement.tables || []).map((name) => normalizeName(name)));
   const hostVariables = uniqueSortedStrings(statements.flatMap((statement) => statement.hostVariables || []).map((name) => normalizeName(name)));
@@ -314,6 +317,9 @@ function summarizeSqlStatements(sqlStatements) {
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  const valErrors = (sqlValidation && sqlValidation.validationErrors) || [];
+  const valWarnings = (sqlValidation && sqlValidation.validationWarnings) || [];
+
   return {
     summary: {
       statementCount: statements.length,
@@ -324,10 +330,16 @@ function summarizeSqlStatements(sqlStatements) {
       cursorStatementCount: statements.filter((statement) => (statement.cursors || []).length > 0).length,
       hostVariableCount: hostVariables.length,
       cursorCount: cursors.length,
+      validationErrorCount: valErrors.length,
+      validationWarningCount: valWarnings.length,
     },
     tableNames,
     hostVariables,
     cursors,
+    validation: {
+      errors: valErrors,
+      warnings: valWarnings,
+    },
   };
 }
 
@@ -341,6 +353,9 @@ function buildRiskHints(dependencies, sql, procedureCalls, nativeFileUsage) {
   }
   if ((sql.statements || []).some((statement) => statement.unresolved)) {
     hints.push('Unresolved SQL dependencies detected');
+  }
+  if (sql.validation && Array.isArray(sql.validation.errors) && sql.validation.errors.length > 0) {
+    hints.push('SQL validation errors detected (e.g. cursor/fetch mismatch)');
   }
   if ((dependencies.programCalls || []).length > 0) {
     hints.push('External program calls detected');
@@ -1625,11 +1640,12 @@ function buildCanonicalAnalysisModel({
   const dataStructures = (dependencies && dependencies.dataStructures) || [];
   const standaloneFields = (dependencies && dependencies.standaloneFields) || [];
   const constants = (dependencies && dependencies.constants) || [];
+  const sqlValidation = (dependencies && dependencies.sqlValidation) || { validationErrors: [], validationWarnings: [] };
   const modules = normalizeModules(dependencies && dependencies.modules, normalizedSourceRoot);
   const bindingDirectories = normalizeBindingDirectories(dependencies && dependencies.bindingDirectories, normalizedSourceRoot);
   const servicePrograms = normalizeServicePrograms(dependencies && dependencies.servicePrograms, normalizedSourceRoot);
   const nativeFileUsage = summarizeNativeFileUsage(nativeFiles, nativeFileAccesses);
-  const sqlAnalysis = summarizeSqlStatements(sqlStatements);
+  const sqlAnalysis = summarizeSqlStatements(sqlStatements, sqlValidation);
   const bindingAnalysis = summarizeBindingAnalysis(modules, servicePrograms, bindingDirectories, procedures);
   const rpgLanguageFeatures = {
     bifCount: (bifUsages || []).length,
@@ -1660,6 +1676,7 @@ function buildCanonicalAnalysisModel({
     tableNames: sqlAnalysis.tableNames,
     hostVariables: sqlAnalysis.hostVariables,
     cursors: sqlAnalysis.cursors,
+    validation: sqlAnalysis.validation || { errors: [], warnings: [] },
   };
 
   const model = {
@@ -1730,6 +1747,7 @@ function buildCanonicalAnalysisModel({
     enrichments: {
       summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements, sqlAnalysis, procedures, prototypes, procedureCalls, nativeFileUsage, bindingAnalysis, rpgLanguageFeatures),
       rpgLanguageFeatures,
+      sql: sqlBlock,
       aiContext: {
         programPurposeHint: '',
         primaryTables: dependencyBlock.tables.slice(0, 10).map((entry) => entry.name),

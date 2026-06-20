@@ -26,6 +26,10 @@
     "procedureCount": 3,
     "prototypeCount": 0,
     "procedureCallCount": 0,
+    "bifCount": 0,
+    "indicatorCount": 1,
+    "dataStructureCount": 0,
+    "standaloneFieldCount": 1,
     "internalProcedureCallCount": 0,
     "externalProcedureCallCount": 0,
     "dynamicProcedureCallCount": 0,
@@ -301,6 +305,10 @@
         "hostVariables": [
           "ID_001"
         ],
+        "driverTable": "TABLE_100",
+        "joins": [],
+        "filters": [],
+        "confidence": "HIGH",
         "dynamic": false,
         "unresolved": false,
         "uncertainty": [
@@ -321,6 +329,10 @@
         "hostVariables": [
           "ID_001"
         ],
+        "driverTable": null,
+        "joins": [],
+        "filters": [],
+        "confidence": null,
         "dynamic": false,
         "unresolved": false,
         "uncertainty": [
@@ -372,6 +384,78 @@
     "ifsPaths": [],
     "searchFindings": [],
     "diagnosticPacks": [],
+    "uiPatterns": {
+      "enabled": false,
+      "summary": {},
+      "elements": {
+        "familiesTop": [],
+        "typesTop": [],
+        "usageMatrix": []
+      },
+      "interactionModel": {
+        "runtimePatterns": [],
+        "responseSignals": [],
+        "backendActions": [],
+        "flowPatterns": []
+      },
+      "subfileLifecycleModel": {
+        "phases": [],
+        "controls": [],
+        "gridCapabilities": []
+      },
+      "stateMachineModel": {
+        "states": [],
+        "transitions": []
+      }
+    },
+    "knownFacts": {
+      "enabled": false,
+      "status": "disabled",
+      "mode": "local-only",
+      "profile": null,
+      "factCount": 0,
+      "versionMarker": {
+        "toolVersion": null,
+        "updatedAt": null,
+        "expiresAt": null,
+        "ttlDays": null
+      },
+      "facts": [],
+      "notes": []
+    },
+    "uiPatternKnowledge": {
+      "enabled": false,
+      "status": "disabled",
+      "reason": "Project-neutral knowledge catalog is not implemented yet. Source-derived local knowledge paths were removed during the privacy reset.",
+      "libraryId": null,
+      "knowledgeBaseId": null,
+      "generatedAt": null,
+      "summary": {
+        "elementTypeCount": 0,
+        "elementFamilyCount": 0,
+        "runtimePatternCount": 0,
+        "transitionCount": 0,
+        "dddlTemplateCount": 0,
+        "dddlTemplateCardCount": 0
+      },
+      "domains": {
+        "familiesTop": [],
+        "runtimePatterns": [],
+        "responseSignals": [],
+        "backendActions": [],
+        "flowPatterns": [],
+        "subfileControls": [],
+        "gridCapabilities": [],
+        "stateTransitions": []
+      },
+      "retrieval": {
+        "strategy": "disabled",
+        "availableCardTypes": [],
+        "notes": [
+          "MCP/API knowledge surfaces remain disabled until a privacy-gated final catalog exists."
+        ]
+      }
+    },
     "binding": {
       "modules": [
         {
@@ -583,7 +667,7 @@
       "uncertaintyMarkers": [
         "UNRESOLVED_LIBRARY"
       ],
-      "tokenBudget": 6000,
+      "tokenBudget": 8000,
       "estimatedTokens": 1928,
       "evidencePacks": {
         "sql": [
@@ -913,18 +997,18 @@
         "policy": {
           "allowTables": [
             {
-              "schema": "MYLIB",
+              "schema": "DATA_EXAMPLE",
               "table": "CUSTOMERS"
             },
             {
-              "schema": "MYLIB",
+              "schema": "DATA_EXAMPLE",
               "table": "ORDERS"
             }
           ],
           "denyTables": [
             {
-              "schema": "MYLIB",
-              "table": "AUDITLOG"
+              "schema": "DATA_EXAMPLE",
+              "table": "AUDIT_LOG"
             }
           ],
           "maskColumns": [
@@ -934,7 +1018,7 @@
           ],
           "maskRules": [
             {
-              "schema": "",
+              "schema": "DATA_EXAMPLE",
               "table": "CUSTOMERS",
               "columns": [
                 "PHONE"
@@ -1437,18 +1521,18 @@
         "policy": {
           "allowTables": [
             {
-              "schema": "MYLIB",
+              "schema": "DATA_EXAMPLE",
               "table": "CUSTOMERS"
             },
             {
-              "schema": "MYLIB",
+              "schema": "DATA_EXAMPLE",
               "table": "ORDERS"
             }
           ],
           "denyTables": [
             {
-              "schema": "MYLIB",
-              "table": "AUDITLOG"
+              "schema": "DATA_EXAMPLE",
+              "table": "AUDIT_LOG"
             }
           ],
           "maskColumns": [
@@ -1458,7 +1542,7 @@
           ],
           "maskRules": [
             {
-              "schema": "",
+              "schema": "DATA_EXAMPLE",
               "table": "CUSTOMERS",
               "columns": [
                 "PHONE"
@@ -1961,18 +2045,18 @@
         "policy": {
           "allowTables": [
             {
-              "schema": "MYLIB",
+              "schema": "DATA_EXAMPLE",
               "table": "CUSTOMERS"
             },
             {
-              "schema": "MYLIB",
+              "schema": "DATA_EXAMPLE",
               "table": "ORDERS"
             }
           ],
           "denyTables": [
             {
-              "schema": "MYLIB",
-              "table": "AUDITLOG"
+              "schema": "DATA_EXAMPLE",
+              "table": "AUDIT_LOG"
             }
           ],
           "maskColumns": [
@@ -1982,7 +2066,7 @@
           ],
           "maskRules": [
             {
-              "schema": "",
+              "schema": "DATA_EXAMPLE",
               "table": "CUSTOMERS",
               "columns": [
                 "PHONE"
@@ -2485,18 +2569,18 @@
         "policy": {
           "allowTables": [
             {
-              "schema": "MYLIB",
+              "schema": "DATA_EXAMPLE",
               "table": "CUSTOMERS"
             },
             {
-              "schema": "MYLIB",
+              "schema": "DATA_EXAMPLE",
               "table": "ORDERS"
             }
           ],
           "denyTables": [
             {
-              "schema": "MYLIB",
-              "table": "AUDITLOG"
+              "schema": "DATA_EXAMPLE",
+              "table": "AUDIT_LOG"
             }
           ],
           "maskColumns": [
@@ -2506,7 +2590,7 @@
           ],
           "maskRules": [
             {
-              "schema": "",
+              "schema": "DATA_EXAMPLE",
               "table": "CUSTOMERS",
               "columns": [
                 "PHONE"

@@ -13,8 +13,8 @@
 
 ## AI Context Optimization
 - Enabled: true
-- Context Tokens: 2511
-- Optimized Tokens: 8687
+- Context Tokens: 3041
+- Optimized Tokens: 8693
 - Reduction: 0%
 - Soft Token Limit: 10000
 
@@ -61,6 +61,15 @@ No search terms were configured for this run.
 ## Diagnostic Query Packs
 No diagnostic packs were selected for this run.
 
+## Known Facts
+- Enabled: false
+- Status: disabled
+- Mode: local-only
+- Profile: n/a
+- Fact Count: 0
+- Updated At: n/a
+- Expires At: n/a
+
 ## Analysis Cache
 - Enabled: true
 - Source Scan Hits: 0
@@ -97,6 +106,13 @@ No diagnostic packs were selected for this run.
 - Dynamic Calls: 0
 - Unresolved Calls: 0
 - Catalog-Resolved Calls: 0
+
+## RPG Language Features
+- BIF usages: 0 (n/a)
+- Indicator usages: 1 (*INLR)
+- Data Structures: 0 (n/a)
+- Standalone fields (DCL-S): 1 (ID_001)
+- Note: Structures, fields, *INxx and %BIF are key evidence for safe RPG development and modernization.
 
 ## Binding Analysis
 - Modules: 3
@@ -207,5 +223,5 @@ in your browser to explore program dependencies visually.
 ## Next Steps
 - Validate detected dependencies with the application design and naming standards.
 - Use canonical-analysis.json as the semantic source and context.json or optimized-context.json as prompt-ready projections.
-- Enrich with DB metadata, search results, and sample test data when available to improve reasoning.
+- Enrich with DB metadata, search results, sample test data, and explicit local known facts when available to improve reasoning.
 - Create a portable bundle with `zeus bundle --program PROGRAM_100`.

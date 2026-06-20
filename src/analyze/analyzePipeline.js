@@ -261,6 +261,7 @@ function collectAndScanStage(state) {
       dataStructures: scanSummary.dataStructures || [],
       standaloneFields: scanSummary.standaloneFields || [],
       constants: scanSummary.constants || [],
+      sqlValidation: scanSummary.sqlValidation || { validationErrors: [], validationWarnings: [] },
       modules: scanSummary.modules,
       bindingDirectories: scanSummary.bindingDirectories,
       servicePrograms: scanSummary.servicePrograms,

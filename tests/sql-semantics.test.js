@@ -278,3 +278,26 @@ end-proc;
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
+
+test('sqlRpgValidator detects cursor/fetch column count mismatch', () => {
+  const { validateEmbeddedSql } = require('../src/validator/sqlRpgValidator');
+  const statements = [
+    {
+      type: 'DECLARE_CURSOR',
+      text: 'declare C1 cursor for select a, b, c from t',
+      cursors: [{ name: 'C1', action: 'DECLARE' }],
+      hostVariables: [],
+      selectColumnCount: 3,
+    },
+    {
+      type: 'FETCH',
+      text: 'fetch C1 into :x',
+      cursors: [{ name: 'C1', action: 'FETCH' }],
+      hostVariables: ['X'],
+    },
+  ];
+  const result = validateEmbeddedSql(statements);
+  assert.ok(result.validationErrors.length > 0);
+  assert.equal(result.validationErrors[0].code, 'CURSOR_FETCH_MISMATCH');
+  assert.match(result.validationErrors[0].message, /3 column.*1 INTO/);
+});
