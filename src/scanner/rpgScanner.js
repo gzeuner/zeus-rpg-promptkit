@@ -2317,6 +2317,7 @@ function mergeSqlStatements(scanResults) {
           filters: Array.isArray(sql.filters) ? sql.filters.map((entry) => ({ ...entry })) : [],
           confidence: sql.confidence || null,
           uncertainty: Array.from(new Set(sql.uncertainty || [])).sort(),
+          selectColumnCount: typeof sql.selectColumnCount === 'number' ? sql.selectColumnCount : null,
           evidence: [],
         });
       }
@@ -2329,6 +2330,9 @@ function mergeSqlStatements(scanResults) {
       item.dynamic = item.dynamic || Boolean(sql.dynamic);
       item.unresolved = item.unresolved || Boolean(sql.unresolved);
       item.driverTable = item.driverTable || sql.driverTable || null;
+      if (typeof item.selectColumnCount !== 'number' && typeof sql.selectColumnCount === 'number') {
+        item.selectColumnCount = sql.selectColumnCount;
+      }
       const joinMap = new Map((item.joins || []).map((entry) => [JSON.stringify(entry), entry]));
       for (const join of sql.joins || []) {
         joinMap.set(JSON.stringify(join), { ...join });

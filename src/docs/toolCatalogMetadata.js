@@ -145,6 +145,12 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Render QA validations/checks to jira, markdown, or json.',
     example: 'node cli/zeus.js qa --input ./output/ORDERPGM --format markdown --strict STRICT',
   }),
+  'validate-rpg-sql': Object.freeze({
+    safety: 'S1',
+    scope: 'Local',
+    purpose: 'Validate embedded SQL in RPG sources for cursor/fetch mismatches, dynamic SQL patterns and host variable issues. Uses scanner + sqlRpgValidator.',
+    example: 'node cli/zeus.js validate-rpg-sql --source ./rpg_sources --program ORDERPGM --format markdown --out ./output',
+  }),
   'inspect-object': Object.freeze({
     safety: 'S2',
     scope: 'IBM i read',
@@ -227,7 +233,7 @@ const COMMAND_METADATA = Object.freeze({
     safety: 'S0',
     scope: 'Local read-mostly',
     purpose: 'Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.',
-    example: 'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.profiles,zeus.workflow,zeus.bundle,zeus.analyze,zeus.impact,zeus.assess-risk,zeus.query-table,zeus.resolve-object,zeus.query-sql,zeus.write-sql,zeus.bridge,zeus.search-source,zeus.field-search,zeus.diff,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.analyses,zeus.fetch,zeus.fetch-member,zeus.docs-generate-catalog,zeus.test-run,zeus.copy-to-workspace,zeus.serve,zeus.joblog,zeus.inspect-object',
+    example: 'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.profiles,zeus.workflow,zeus.bundle,zeus.analyze,zeus.impact,zeus.assess-risk,zeus.query-table,zeus.resolve-object,zeus.query-sql,zeus.write-sql,zeus.bridge,zeus.search-source,zeus.field-search,zeus.diff,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch,zeus.fetch-member,zeus.docs-generate-catalog,zeus.test-run,zeus.copy-to-workspace,zeus.serve,zeus.joblog,zeus.inspect-object',
   }),
 });
 
