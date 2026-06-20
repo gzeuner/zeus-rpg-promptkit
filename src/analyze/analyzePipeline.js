@@ -256,6 +256,8 @@ function collectAndScanStage(state) {
       procedureCalls: scanSummary.procedureCalls,
       nativeFiles: scanSummary.nativeFiles,
       nativeFileAccesses: scanSummary.nativeFileAccesses,
+      bifUsages: scanSummary.bifUsages || [],
+      indicatorUsages: scanSummary.indicatorUsages || [],
       modules: scanSummary.modules,
       bindingDirectories: scanSummary.bindingDirectories,
       servicePrograms: scanSummary.servicePrograms,

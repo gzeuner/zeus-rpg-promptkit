@@ -93,7 +93,8 @@ When starting work, do this first:
    - `source ./config/load-env.sh <environment>`
    - PowerShell: `. .\config\load-env.ps1 -Environment <environment>`
 3) Run `node cli/zeus.js doctor --profile <profile> --show-resolved`.
-4) Propose an execution plan with risk labels and approval points.
+4) For RPG analysis or code work, also review `docs/ai/rpg-agent-guidance.md` together with generated `rpgConstructs` (BIFs, indicators, procedures).
+5) Propose an execution plan with risk labels and approval points.
 
 Standard fetch/analyze workflow:
 ```bash
