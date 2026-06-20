@@ -5718,8 +5718,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
           'zeus.bundle (package for review)',
           'Read generated artifacts + AI prompts via zeus://runs/... resources'
         ],
-        howToGetMore: 'Call zeus.help with a command name for details. Use resources like zeus://docs/tool-catalog.md and zeus://metadata/command-catalog.json for full catalog.',
-        aiTip: 'After analysis, use resources/read on run URIs or specific ai_prompt_*.md artifacts to load evidence into your context.'
+        howToGetMore: 'Call zeus.help with a command name for details. Use resources like zeus://docs/tool-catalog.md , zeus://docs/quickstart/onboarding-new-ibm-i.md , zeus://onboarding/checklist.json and zeus://metadata/* for full catalog + onboarding guidance.',
+        aiTip: 'Start new IBM i systems with zeus.onboarding or read zeus://docs/quickstart/onboarding-new-ibm-i.md + zeus://onboarding/checklist.json . After analysis, use resources/read on run URIs or specific ai_prompt_*.md artifacts to load evidence into your context.'
       };
     } else {
       const meta = COMMAND_METADATA[cmd] || COMMAND_METADATA[cmd.replace(':', '')] || null;
