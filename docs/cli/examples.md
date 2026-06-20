@@ -72,7 +72,7 @@ node .\cli\zeus.js serve --source-output-root .\output --host 127.0.0.1 --port 4
 
 ```powershell
 node .\cli\zeus.js mcp serve --verbose
-node .\cli\zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.query-table,zeus.query-sql
+node .\cli\zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run
 ```
 
 ## Controlled Write Commands (Explicit Approval Required)

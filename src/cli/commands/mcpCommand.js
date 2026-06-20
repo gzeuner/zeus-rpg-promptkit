@@ -69,8 +69,8 @@ function printMcpHelp() {
   console.log('  zeus mcp serve [--stdio true|false] [--allow-tools <name1,name2>] [--verbose]');
   console.log('');
   console.log('Notes:');
-  console.log('  - Without --allow-tools, MCP exposes only the minimal safe default surface: zeus.health, zeus.version, zeus.doctor.');
-  console.log('  - Use --allow-tools to opt into additional read tools or operator-gated tools. Dangerous and remote-read tools are never part of the default surface.');
+  console.log('  - Without --allow-tools, MCP exposes the safe default surface (see DEFAULT_MCP_SAFE_TOOL_NAMES in policy: health, doctor, profiles, analyze, search, queries, review tools, etc.).');
+  console.log('  - Use --allow-tools to further restrict or customize (e.g. for minimal agent exposure). Dangerous tools (write-sql, bridge) are never in defaults.');
   console.log('  - Runs local-only over stdio transport.');
   console.log('  - Local path inputs are workspace-bounded, including absolute paths.');
   console.log('  - Cursor-enabled tools return opaque versioned nextCursor tokens; legacy numeric cursor input is rejected and no longer supported.');
