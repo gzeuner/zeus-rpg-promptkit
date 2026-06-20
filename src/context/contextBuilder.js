@@ -208,6 +208,13 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
       ? canonicalAnalysis.enrichments.nativeFileUsage
       : defaultNativeFileUsage(),
     sql: projectSql(canonicalAnalysis) || defaultSqlAnalysis(),
+    rpgConstructs: {
+      languageFeatures: canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.languageFeatures
+        ? canonicalAnalysis.rpgConstructs.languageFeatures
+        : { bifCount: 0, indicatorCount: 0, uniqueBifs: [], uniqueIndicators: [] },
+      bifUsages: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.bifs) || [],
+      indicatorUsages: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.indicators) || [],
+    },
     graph: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.graph
       ? canonicalAnalysis.enrichments.graph
       : defaultGraphSummary(),

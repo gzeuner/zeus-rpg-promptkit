@@ -42,8 +42,9 @@ Cite evidence IDs (EVxxxx) and file/line references for every claim.
 
 ### 1. IBM i Specific Behaviors to Preserve
 - Native file I/O via RPG opcodes (CHAIN, SETLL, READ, WRITE, UPDATE, DELETE) — these are not equivalent to SQL and must be mapped explicitly
-- Indicator logic (*IN01–*IN99, *INLR, *INOF) used for program flow or output formatting
+- Indicator logic (*IN01–*IN99, *INLR, *INOF) used for program flow or output formatting. Prefer replacing with explicit boolean fields or qualified DS in modern ILE.
 - Fixed-format RPG column dependencies if present (form types H/F/D/I/C/O/P)
+- Use extracted BIF usages (%SUBST, %TRIM, %DATE, %SCAN etc.) and procedure signatures (paramCount, hasPi, returnType) to plan safe incremental refactors.
 - CL command calls that trigger IBM i-specific system actions (SBMJOB, CALL, OVRDLKW, etc.)
 - Physical and Logical File (PF/LF) access that implies implicit key ordering and record locking
 

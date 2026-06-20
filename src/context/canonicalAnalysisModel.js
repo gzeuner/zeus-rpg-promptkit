@@ -1358,7 +1358,7 @@ function buildRelations(
   return relations.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, sqlAnalysis, procedures, prototypes, procedureCalls, nativeFileUsage, bindingAnalysis) {
+function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, sqlAnalysis, procedures, prototypes, procedureCalls, nativeFileUsage, bindingAnalysis, rpgLanguageFeatures = {}) {
   const summary = {
     sourceFileCount: sourceFiles.length,
     tableCount: (dependencies.tables || []).length,
@@ -1372,6 +1372,8 @@ function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, sql
     procedureCount: (procedures || []).length,
     prototypeCount: (prototypes || []).length,
     procedureCallCount: (procedureCalls || []).length,
+    bifCount: (rpgLanguageFeatures && rpgLanguageFeatures.bifCount) || 0,
+    indicatorCount: (rpgLanguageFeatures && rpgLanguageFeatures.indicatorCount) || 0,
     internalProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'INTERNAL').length,
     externalProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'EXTERNAL').length,
     dynamicProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'DYNAMIC').length,
@@ -1616,12 +1618,20 @@ function buildCanonicalAnalysisModel({
   const procedureCalls = normalizeProcedureCalls(dependencies && dependencies.procedureCalls, normalizedSourceRoot);
   const nativeFiles = normalizeNativeFiles(dependencies && dependencies.nativeFiles, normalizedSourceRoot);
   const nativeFileAccesses = normalizeNativeFileAccesses(dependencies && dependencies.nativeFileAccesses, normalizedSourceRoot);
+  const bifUsages = (dependencies && dependencies.bifUsages) || [];
+  const indicatorUsages = (dependencies && dependencies.indicatorUsages) || [];
   const modules = normalizeModules(dependencies && dependencies.modules, normalizedSourceRoot);
   const bindingDirectories = normalizeBindingDirectories(dependencies && dependencies.bindingDirectories, normalizedSourceRoot);
   const servicePrograms = normalizeServicePrograms(dependencies && dependencies.servicePrograms, normalizedSourceRoot);
   const nativeFileUsage = summarizeNativeFileUsage(nativeFiles, nativeFileAccesses);
   const sqlAnalysis = summarizeSqlStatements(sqlStatements);
   const bindingAnalysis = summarizeBindingAnalysis(modules, servicePrograms, bindingDirectories, procedures);
+  const rpgLanguageFeatures = {
+    bifCount: (bifUsages || []).length,
+    indicatorCount: (indicatorUsages || []).length,
+    uniqueBifs: uniqueSortedStrings((bifUsages || []).map((b) => b.name)),
+    uniqueIndicators: uniqueSortedStrings((indicatorUsages || []).map((i) => i.name)),
+  };
   const mergedTables = mergeSqlTablesIntoDependencies(tables, sqlAnalysis.tableNames)
     .map((table) => ({
       ...table,
@@ -1683,6 +1693,11 @@ function buildCanonicalAnalysisModel({
       procedureReferences,
       externalObjects: [],
     },
+    rpgConstructs: {
+      bifs: bifUsages,
+      indicators: indicatorUsages,
+      languageFeatures: rpgLanguageFeatures,
+    },
     relations: buildRelations(
       normalizedProgram,
       normalizedSourceFiles,
@@ -1702,7 +1717,8 @@ function buildCanonicalAnalysisModel({
       bindingDirectories,
     ),
     enrichments: {
-      summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements, sqlAnalysis, procedures, prototypes, procedureCalls, nativeFileUsage, bindingAnalysis),
+      summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements, sqlAnalysis, procedures, prototypes, procedureCalls, nativeFileUsage, bindingAnalysis, rpgLanguageFeatures),
+      rpgLanguageFeatures,
       aiContext: {
         programPurposeHint: '',
         primaryTables: dependencyBlock.tables.slice(0, 10).map((entry) => entry.name),

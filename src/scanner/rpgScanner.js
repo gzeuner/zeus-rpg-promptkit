@@ -67,8 +67,17 @@ function isCommentLine(rawLine) {
 
   const trimmed = rawLine.trim();
   if (!trimmed) return false;
-  if (trimmed.startsWith('*')) return true;
   if (trimmed.startsWith('//')) return true;
+  if (trimmed.startsWith('/*')) return true;
+  // Free form *INxx indicators or *ON/*OFF are not comments. Only pure star comments.
+  if (trimmed.startsWith('*')) {
+    const upper = trimmed.toUpperCase();
+    if (/^\*IN(\d{1,2}|[A-Z]{1,3}|\s*\()/i.test(trimmed) || /^\*(ON|OFF)\b/i.test(upper)) {
+      return false;
+    }
+    // **FREE header and classic * comments
+    return true;
+  }
   return false;
 }
 
@@ -508,8 +517,11 @@ function createDefinition({
   imported = false,
   externalName = null,
   text = '',
+  paramCount = 0,
+  hasPi = false,
+  returnType = null,
 }) {
-  return {
+  const def = {
     name,
     kind,
     ownerProgram,
@@ -527,6 +539,12 @@ function createDefinition({
       text: normalizeWhitespace(text),
     }],
   };
+  if (kind === 'PROCEDURE') {
+    def.paramCount = Number(paramCount) || 0;
+    def.hasPi = Boolean(hasPi);
+    def.returnType = returnType ? normalizeName(returnType) : null;
+  }
+  return def;
 }
 
 function createProcedureCall({
@@ -1001,6 +1019,9 @@ function collectDefinitions(filePath, lines) {
       sourceForm: 'FREE_FORM',
       exported: currentProcedure.exported,
       text: currentProcedure.text,
+      paramCount: currentProcedure.paramCount || 0,
+      hasPi: !!currentProcedure.hasPi,
+      returnType: currentProcedure.returnType || null,
     });
     addStructuredItem(
       proceduresMap,
@@ -1072,6 +1093,30 @@ function collectDefinitions(filePath, lines) {
     if (currentProcedure) {
       if (/\bend-proc\b/i.test(trimmed)) {
         finalizeProcedure(lineNo);
+      } else if (!currentProcedure.hasPi && /^dcl-pi\b/i.test(trimmed)) {
+        currentProcedure.hasPi = true;
+        const piDetail = trimmed.replace(/^dcl-pi\s*/i, '').trim();
+        if (/\bend-pi\b/i.test(piDetail)) {
+          // single line pi
+          const retMatch = piDetail.match(/\b(end-pi|)\s*([A-Z][A-Z0-9_]*|\*)\s*$/i);
+          if (retMatch && retMatch[2] && retMatch[2] !== 'END-PI') currentProcedure.returnType = normalizeName(retMatch[2]);
+        }
+        // count simple parms on this line if any
+        const parmMatches = (trimmed.match(/\b[A-Z0-9_#$@]+\s+(like|char|zoned|packed|int|uns|date|time|timestamp|varchar|ind|pointer|object)\b/gi) || []).length;
+        if (parmMatches) currentProcedure.paramCount = parmMatches;
+      } else if (currentProcedure.hasPi) {
+        if (/\bend-pi\b/i.test(trimmed)) {
+          // end of pi, param count may have been set from dcl-parm but rough count ok
+        } else {
+          // rough param detection on dcl-parm or inline
+          if (/^\s*dcl-parm\s+/i.test(trimmed) || /^\s*[A-Z0-9_#$@]+\s+(like|char|zoned|packed|int|uns|date|time|varchar|ind)\b/i.test(trimmed)) {
+            currentProcedure.paramCount = (currentProcedure.paramCount || 0) + 1;
+          }
+          const retCandidate = trimmed.match(/^\s*([A-Z][A-Z0-9_]*|\*)\s*;\s*$/i);
+          if (retCandidate && !currentProcedure.returnType) {
+            currentProcedure.returnType = normalizeName(retCandidate[1]);
+          }
+        }
       }
       continue;
     }
@@ -1132,6 +1177,9 @@ function collectDefinitions(filePath, lines) {
         startLine: lineNo,
         exported: /\bexport\b/i.test(dclProcMatch[2] || ''),
         text: trimmed,
+        paramCount: 0,
+        hasPi: false,
+        returnType: null,
       };
       if (/\bend-proc\b/i.test(trimmed)) {
         finalizeProcedure(lineNo);
@@ -1191,6 +1239,87 @@ function collectDefinitions(filePath, lines) {
     procedures,
     prototypes,
   };
+}
+
+function collectBifUsages(filePath, lines) {
+  const ownerProgram = toRelativeProgramName(filePath);
+  const usages = [];
+  const seen = new Set();
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const rawLine = lines[i];
+    if (isCommentLine(rawLine)) continue;
+    let match;
+    const regex = /%([A-Z][A-Z0-9_]*)\s*\(/gi;
+    // eslint-disable-next-line no-cond-assign
+    while ((match = regex.exec(rawLine)) !== null) {
+      const bif = normalizeName(match[1]);
+      if (!bif) continue;
+      const key = `${ownerProgram}:${bif}:${i}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      usages.push({
+        name: bif,
+        ownerProgram,
+        evidence: [{ file: filePath, line: i + 1, text: rawLine.trim() }],
+      });
+    }
+  }
+
+  return usages.sort((a, b) => a.name.localeCompare(b.name) || a.evidence.line - b.evidence.line);
+}
+
+function normalizeIndicator(ind) {
+  if (!ind) return '*IN';
+  const raw = String(ind).toUpperCase().trim();
+  if (/^\d{1,2}$/.test(raw)) {
+    const num = raw.padStart(2, '0');
+    return '*IN' + num;
+  }
+  // Only accept well-known RPG indicator suffixes
+  const known = ['LR', 'RT', 'OF', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'U1', 'U2', 'U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9', 'KA', 'KB', 'KC', 'KD', 'KE', 'KF', 'KG', 'KH', 'KI', 'KJ', 'KK', 'KL', 'KM', 'KN', 'KO', 'KP', 'KQ', 'KR', 'KS', 'KT', 'KU', 'KV', 'KW', 'KX', 'KY', 'KZ'];
+  if (known.includes(raw)) {
+    return '*IN' + raw;
+  }
+  if (/^\d{1,2}$/.test(raw)) return '*IN' + raw.padStart(2, '0');
+  // numeric padded already handled
+  return null; // reject unknown like INPUT
+}
+
+function collectIndicatorUsages(filePath, lines) {
+  const ownerProgram = toRelativeProgramName(filePath);
+  const usages = [];
+  const seen = new Set();
+
+  const indicatorRegex = /\*IN((\d{1,2})|([A-Z]{2,3}))\b(?!\w)|\*IN\s*\(\s*(\d{1,2}|[A-Z]{2,3})\s*\)/gi;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const rawLine = lines[i];
+    if (isCommentLine(rawLine)) continue;
+    let match;
+    // eslint-disable-next-line no-cond-assign
+    while ((match = indicatorRegex.exec(rawLine)) !== null) {
+      let ind = match[1] || match[4] || match[2] || match[3];
+      const normalized = normalizeIndicator(ind);
+      if (!normalized) continue;
+      const key = `${ownerProgram}:${normalized}:${i}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      // Heuristic write detection: left side of = or SETON/SETOFF or MOVE *IN
+      const upper = rawLine.toUpperCase();
+      const isWrite = /(?:^|[^A-Z0-9_])\*IN(?:\d{2}|[A-Z]{1,3}|\s*\()\s*=/i.test(upper) ||
+                      /\bSETON\b|\bSETOFF\b/i.test(upper) ||
+                      /\bMOVE\b.*\*IN/i.test(upper);
+      usages.push({
+        name: normalized,
+        kind: isWrite ? 'WRITE' : 'READ',
+        ownerProgram,
+        evidence: [{ file: filePath, line: i + 1, text: rawLine.trim() }],
+      });
+    }
+  }
+
+  return usages.sort((a, b) => a.name.localeCompare(b.name) || a.evidence.line - b.evidence.line);
 }
 
 function collectNativeFileDeclarations(filePath, lines) {
@@ -1513,6 +1642,8 @@ function scanContent(filePath, content) {
       procedureCalls: [],
       nativeFiles: [],
       nativeFileAccesses: [],
+      bifUsages: [],
+      indicatorUsages: [],
       modules: binderSemantics.modules,
       bindingDirectories: binderSemantics.bindingDirectories,
       servicePrograms: binderSemantics.servicePrograms,
@@ -1531,6 +1662,8 @@ function scanContent(filePath, content) {
   const { ownerProgram, procedures, prototypes } = collectDefinitions(filePath, lines);
   const nativeFiles = collectNativeFileDeclarations(filePath, lines);
   const bindingSemantics = collectModuleBindingSemantics(filePath, lines, ownerProgram, prototypes);
+  const bifUsages = collectBifUsages(filePath, lines);
+  const indicatorUsages = collectIndicatorUsages(filePath, lines);
 
   let inExecSql = false;
   let execStartLine = 0;
@@ -1825,6 +1958,8 @@ function scanContent(filePath, content) {
       if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
       return ((a.evidence && a.evidence[0] && a.evidence[0].line) || 0) - ((b.evidence && b.evidence[0] && b.evidence[0].line) || 0);
     }),
+    bifUsages,
+    indicatorUsages,
     modules: bindingSemantics.modules,
     bindingDirectories: bindingSemantics.bindingDirectories,
     servicePrograms: bindingSemantics.servicePrograms,
@@ -2258,6 +2393,16 @@ function scanSourceFiles(filePaths, options = {}) {
       if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
       return ((a.evidence && a.evidence[0] && a.evidence[0].line) || 0) - ((b.evidence && b.evidence[0] && b.evidence[0].line) || 0);
     }),
+    bifUsages: mergeStructuredItems(
+      scanResults,
+      'bifUsages',
+      (item) => [item.ownerProgram, item.name, (item.evidence && item.evidence[0] && item.evidence[0].line) || 0].join('|'),
+    ).sort((a, b) => a.name.localeCompare(b.name) || a.ownerProgram.localeCompare(b.ownerProgram)),
+    indicatorUsages: mergeStructuredItems(
+      scanResults,
+      'indicatorUsages',
+      (item) => [item.ownerProgram, item.name, item.kind, (item.evidence && item.evidence[0] && item.evidence[0].line) || 0].join('|'),
+    ).sort((a, b) => a.name.localeCompare(b.name) || a.ownerProgram.localeCompare(b.ownerProgram)),
     modules,
     bindingDirectories,
     servicePrograms,
