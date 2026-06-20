@@ -101,6 +101,9 @@ Standard fetch/analyze workflow:
 # 1. Load env in the current shell
 source ./config/load-env.sh <environment>
 
+# For a completely new system, start with the interactive wizard:
+# node cli/zeus.js onboarding   (or wizard / onboard)
+
 # 2. Validate environment and routing
 node cli/zeus.js doctor --profile <profile> --probe --show-resolved
 
