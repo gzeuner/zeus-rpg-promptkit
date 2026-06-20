@@ -5712,9 +5712,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         recommendedSequence: [
           'zeus.doctor (check readiness)',
           'zeus.profiles (discover config)',
+          'zeus.onboarding (guided first-time IBM i setup)',
           'zeus.search-source or zeus.field-search (local code exploration)',
           'zeus.analyze (with source) or zeus.workflow --preset X (full local evidence)',
-          'zeus.impact / zeus.assess-risk / zeus.generate-test / zeus.generate-checklist / zeus.qa',
+          'zeus.impact / zeus.assess-risk / zeus.generate-test / zeus.generate-checklist / zeus.qa / zeus.validate-rpg-sql',
           'zeus.bundle (package for review)',
           'Read generated artifacts + AI prompts via zeus://runs/... resources'
         ],
