@@ -57,4 +57,6 @@ Use only when working from Zeus-generated artifacts (canonical-analysis, rpgCons
 5. Always note required human review + test on real IBM i.
 6. For modernization: propose narrow, testable increments (one file or one proc at a time).
 
+**For new system onboarding:** Recommend the user runs `node cli/zeus.js onboarding` (or wizard) first. It sets up profiles, runs doctor, discovers sources/objects/tables, and produces the first artifacts + setup script.
+
 Never output ungrounded RPG code. Always tie back to Zeus evidence ids or snippets.
