@@ -15,6 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const { scanClFile } = require('./clScanner');
 const { scanDdsFile } = require('./ddsScanner');
+const { validateEmbeddedSql } = require('../validator/sqlRpgValidator');
 const {
   classifySourceFile,
   normalizeSourceType,
@@ -250,6 +251,33 @@ function extractSqlCursorActions(sqlText) {
     });
 }
 
+function estimateSelectColumnCount(sqlText) {
+  // Heuristic: count top-level commas in the SELECT list before FROM
+  const normalized = normalizeWhitespace(sqlText);
+  const selectMatch = normalized.match(/\bselect\s+(.+?)\s+from\b/i);
+  if (!selectMatch) return 0;
+  let list = selectMatch[1];
+
+  // Remove common noise (but keep structure)
+  // Simple top level comma count, skipping balanced parens and strings
+  let count = 1;
+  let depth = 0;
+  let inString = false;
+  for (let i = 0; i < list.length; i++) {
+    const ch = list[i];
+    if (ch === "'" && (i === 0 || list[i-1] !== "'")) {
+      inString = !inString;
+    }
+    if (inString) continue;
+    if (ch === '(') depth++;
+    else if (ch === ')') depth = Math.max(0, depth - 1);
+    else if (ch === ',' && depth === 0) {
+      count++;
+    }
+  }
+  return count;
+}
+
 function hasDynamicSqlMarker(sqlText, sqlType) {
   const normalized = normalizeWhitespace(sqlText).toUpperCase();
   if (['PREPARE', 'EXECUTE', 'EXECUTE_IMMEDIATE'].includes(sqlType)) {
@@ -466,6 +494,9 @@ function createSqlStatement({
   const writesData = intent === 'WRITE';
   const unresolved = dynamic || ((readsData || writesData) && tables.length === 0 && cursors.length === 0);
   const relationSemantics = extractSqlRelationSemantics(normalizedText, type, dynamic);
+  const selectColumnCount = (['SELECT', 'DECLARE_CURSOR'].includes(type) && !dynamic)
+    ? estimateSelectColumnCount(normalizedText)
+    : null;
   const uncertainty = uniqueSortedStrings([
     ...buildSqlUncertainty({
       sqlType: type,
@@ -486,6 +517,7 @@ function createSqlStatement({
     tables,
     hostVariables,
     cursors,
+    selectColumnCount,
     readsData,
     writesData,
     dynamic,
@@ -2098,6 +2130,34 @@ function scanContent(filePath, content) {
     finalizeExecSql(lines.length);
   }
 
+  // Run embedded SQL validation (cursor/fetch mismatches, host var issues, dynamic markers)
+  let sqlValidation = { validationErrors: [], validationWarnings: [] };
+  try {
+    sqlValidation = validateEmbeddedSql(sqlStatements);
+  } catch (e) {
+    // Fail closed for validation - do not break scan
+  }
+
+  // Attach validation results to individual statements where possible
+  const errorMap = new Map();
+  for (const err of sqlValidation.validationErrors || []) {
+    const key = err.cursor || '';
+    if (!errorMap.has(key)) errorMap.set(key, []);
+    errorMap.get(key).push(err);
+  }
+
+  for (const stmt of sqlStatements) {
+    const cursors = (stmt.cursors || []).map(c => c.name);
+    const errs = [];
+    for (const name of cursors) {
+      if (errorMap.has(name)) errs.push(...errorMap.get(name));
+    }
+    if (errs.length) {
+      stmt.validationErrors = errs;
+    }
+    // Mark dynamic more explicitly if validator confirms
+  }
+
   return {
     sourceFile: {
       path: filePath,
@@ -2134,6 +2194,7 @@ function scanContent(filePath, content) {
     servicePrograms: bindingSemantics.servicePrograms,
     diagnostics: bindingSemantics.diagnostics,
     notes: [],
+    sqlValidation,
   };
 }
 
@@ -2602,6 +2663,21 @@ function scanSourceFiles(filePaths, options = {}) {
       objectUsages,
       ddsFiles,
     },
+    sqlValidation: mergeValidationResults(scanResults),
+  };
+}
+
+function mergeValidationResults(scanResults) {
+  const allErrors = [];
+  const allWarnings = [];
+  for (const result of scanResults || []) {
+    const v = result.sqlValidation || {};
+    if (Array.isArray(v.validationErrors)) allErrors.push(...v.validationErrors);
+    if (Array.isArray(v.validationWarnings)) allWarnings.push(...v.validationWarnings);
+  }
+  return {
+    validationErrors: allErrors,
+    validationWarnings: allWarnings,
   };
 }
 

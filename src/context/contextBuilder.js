@@ -144,7 +144,10 @@ function projectProcedureAnalysis(canonicalAnalysis) {
 
 function projectSql(canonicalAnalysis) {
   const sqlStatements = (canonicalAnalysis.entities && canonicalAnalysis.entities.sqlStatements) || [];
-  const sqlAnalysis = summarizeSqlStatements(sqlStatements);
+  const sqlVal = (canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.sql && canonicalAnalysis.enrichments.sql.validation) ||
+                 (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.sqlValidation) ||
+                 (canonicalAnalysis.sql && canonicalAnalysis.sql.validation) || {};
+  const sqlAnalysis = summarizeSqlStatements(sqlStatements, sqlVal);
   return {
     summary: sqlAnalysis.summary,
     statements: sqlStatements.map((statement) => ({
@@ -164,10 +167,12 @@ function projectSql(canonicalAnalysis) {
       unresolved: Boolean(statement.unresolved),
       uncertainty: statement.uncertainty || [],
       evidence: statement.evidence || [],
+      validationErrors: statement.validationErrors || [],
     })),
     tableNames: sqlAnalysis.tableNames,
     hostVariables: sqlAnalysis.hostVariables,
     cursors: sqlAnalysis.cursors,
+    validation: (canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.sql && canonicalAnalysis.enrichments.sql.validation) || sqlAnalysis.validation || { errors: [], warnings: [] },
   };
 }
 

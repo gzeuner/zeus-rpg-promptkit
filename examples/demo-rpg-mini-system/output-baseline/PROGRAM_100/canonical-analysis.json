@@ -320,6 +320,10 @@
             "action": "FETCH"
           }
         ],
+        "driverTable": "TABLE_100",
+        "joins": [],
+        "filters": [],
+        "confidence": "HIGH",
         "readsData": true,
         "writesData": false,
         "dynamic": false,
@@ -347,6 +351,10 @@
           "ID_001"
         ],
         "cursors": [],
+        "driverTable": null,
+        "joins": [],
+        "filters": [],
+        "confidence": null,
         "readsData": false,
         "writesData": true,
         "dynamic": false,
@@ -436,6 +444,52 @@
     "procedureReferences": [],
     "externalObjects": []
   },
+  "rpgConstructs": {
+    "bifs": [],
+    "indicators": [
+      {
+        "name": "*INLR",
+        "kind": "WRITE",
+        "ownerProgram": "PROGRAM_300",
+        "evidence": [
+          {
+            "file": "SOURCE_ROOT/QRPGLESRC/PROGRAM_300.rpgle",
+            "line": 8,
+            "text": "*inlr = *on;"
+          }
+        ]
+      }
+    ],
+    "dataStructures": [],
+    "standaloneFields": [
+      {
+        "name": "ID_001",
+        "ownerProgram": "PROGRAM_200",
+        "like": null,
+        "detail": "packed(7:0);",
+        "sourceForm": "FREE_FORM",
+        "evidence": [
+          {
+            "file": "SOURCE_ROOT/QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "line": 4,
+            "text": "dcl-s ID_001 packed(7:0);"
+          }
+        ]
+      }
+    ],
+    "constants": [],
+    "languageFeatures": {
+      "bifCount": 0,
+      "indicatorCount": 1,
+      "dataStructureCount": 0,
+      "standaloneFieldCount": 1,
+      "constantCount": 0,
+      "uniqueBifs": [],
+      "uniqueIndicators": [
+        "*INLR"
+      ]
+    }
+  },
   "relations": [
     {
       "id": "CALLS_PROGRAM:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100",
@@ -486,6 +540,25 @@
       }
     },
     {
+      "id": "DRIVES:SQL:0001->TABLE:TABLE_100",
+      "type": "DRIVES",
+      "from": "SQL:0001",
+      "to": "TABLE:TABLE_100",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 7,
+          "endLine": 11
+        }
+      ],
+      "attributes": {
+        "confidence": "HIGH",
+        "uncertainty": [
+          "UNRESOLVED_LIBRARY"
+        ]
+      }
+    },
+    {
       "id": "EXECUTES_SQL:PROGRAM:PROGRAM_100->SQL:0001",
       "type": "EXECUTES_SQL",
       "from": "PROGRAM:PROGRAM_100",
@@ -504,6 +577,10 @@
         "writesData": false,
         "dynamic": false,
         "unresolved": false,
+        "driverTable": "TABLE_100",
+        "joinCount": 0,
+        "filterCount": 0,
+        "confidence": "HIGH",
         "hostVariables": [
           "ID_001"
         ],
@@ -534,6 +611,10 @@
         "writesData": true,
         "dynamic": false,
         "unresolved": false,
+        "driverTable": null,
+        "joinCount": 0,
+        "filterCount": 0,
+        "confidence": null,
         "hostVariables": [
           "ID_001"
         ],
@@ -848,6 +929,10 @@
       "procedureCount": 3,
       "prototypeCount": 0,
       "procedureCallCount": 0,
+      "bifCount": 0,
+      "indicatorCount": 1,
+      "dataStructureCount": 0,
+      "standaloneFieldCount": 1,
       "internalProcedureCallCount": 0,
       "externalProcedureCallCount": 0,
       "dynamicProcedureCallCount": 0,
@@ -861,6 +946,118 @@
       "bindingDirectoryCount": 0,
       "unresolvedBindingCount": 0,
       "text": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings)."
+    },
+    "rpgLanguageFeatures": {
+      "bifCount": 0,
+      "indicatorCount": 1,
+      "dataStructureCount": 0,
+      "standaloneFieldCount": 1,
+      "constantCount": 0,
+      "uniqueBifs": [],
+      "uniqueIndicators": [
+        "*INLR"
+      ]
+    },
+    "sql": {
+      "summary": {
+        "statementCount": 2,
+        "readStatementCount": 1,
+        "writeStatementCount": 1,
+        "dynamicStatementCount": 0,
+        "unresolvedStatementCount": 0,
+        "cursorStatementCount": 1,
+        "hostVariableCount": 1,
+        "cursorCount": 1,
+        "validationErrorCount": 0,
+        "validationWarningCount": 0
+      },
+      "statements": [
+        {
+          "type": "SELECT",
+          "intent": "READ",
+          "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+          "tables": [
+            "TABLE_100"
+          ],
+          "hostVariables": [
+            "ID_001"
+          ],
+          "cursors": [
+            {
+              "name": "FIRST",
+              "action": "FETCH"
+            }
+          ],
+          "driverTable": "TABLE_100",
+          "joins": [],
+          "filters": [],
+          "confidence": "HIGH",
+          "readsData": true,
+          "writesData": false,
+          "dynamic": false,
+          "unresolved": false,
+          "uncertainty": [
+            "UNRESOLVED_LIBRARY"
+          ],
+          "evidence": [
+            {
+              "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+              "startLine": 7,
+              "endLine": 11
+            }
+          ],
+          "id": "SQL:0001"
+        },
+        {
+          "type": "UPDATE",
+          "intent": "WRITE",
+          "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+          "tables": [
+            "TABLE_100"
+          ],
+          "hostVariables": [
+            "ID_001"
+          ],
+          "cursors": [],
+          "driverTable": null,
+          "joins": [],
+          "filters": [],
+          "confidence": null,
+          "readsData": false,
+          "writesData": true,
+          "dynamic": false,
+          "unresolved": false,
+          "uncertainty": [
+            "UNRESOLVED_LIBRARY"
+          ],
+          "evidence": [
+            {
+              "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+              "startLine": 13,
+              "endLine": 16
+            }
+          ],
+          "id": "SQL:0002"
+        }
+      ],
+      "tableNames": [
+        "TABLE_100"
+      ],
+      "hostVariables": [
+        "ID_001"
+      ],
+      "cursors": [
+        {
+          "name": "FIRST",
+          "actions": [
+            "FETCH"
+          ]
+        }
+      ],
+      "validation": {
+        "errors": [],
+        "warnings": []
+      }
     },
     "aiContext": {
       "programPurposeHint": "",
@@ -1164,6 +1361,70 @@
       "schemaVersion": 1,
       "kind": "diagnostic-query-pack-report"
     },
+    "puiPatterns": {
+      "enabled": false,
+      "importedAt": null,
+      "sourceFile": null,
+      "sourceKind": null,
+      "sourceVersion": null,
+      "generatedAt": null,
+      "scope": {
+        "scannedFiles": 0,
+        "puiCandidateDdsFiles": 0,
+        "parsedPuiJsonFiles": 0,
+        "jsonParseErrors": 0
+      },
+      "summary": {
+        "totalItems": 0,
+        "elementTypeCount": 0,
+        "elementFamilyCount": 0,
+        "interactionPatternCount": 0,
+        "dialogPatternCount": 0,
+        "handlerBindings": 0,
+        "runtimeGateChecks": 0,
+        "profoundUiLibraryBindings": 0
+      },
+      "elements": {
+        "familiesTop": [],
+        "typesTop": [],
+        "usageMatrix": []
+      },
+      "interactionModel": {
+        "runtimePatterns": [],
+        "responseSignals": [],
+        "backendActions": [],
+        "flowPatterns": []
+      },
+      "subfileLifecycleModel": {
+        "phases": [],
+        "controls": [],
+        "gridCapabilities": []
+      },
+      "stateMachineModel": {
+        "states": [],
+        "transitions": []
+      },
+      "redactionPolicy": {
+        "classification": null,
+        "literalSignalsRedacted": 0
+      }
+    },
+    "knownFacts": {
+      "enabled": false,
+      "status": "disabled",
+      "mode": "local-only",
+      "profile": null,
+      "storePath": null,
+      "factCount": 0,
+      "versionMarker": {
+        "toolVersion": null,
+        "updatedAt": null,
+        "expiresAt": null,
+        "ttlDays": null
+      },
+      "facts": [],
+      "notes": []
+    },
     "analysisCache": {
       "enabled": true,
       "sourceScan": {
@@ -1229,18 +1490,18 @@
       "policy": {
         "allowTables": [
           {
-            "schema": "MYLIB",
+            "schema": "DATA_EXAMPLE",
             "table": "CUSTOMERS"
           },
           {
-            "schema": "MYLIB",
+            "schema": "DATA_EXAMPLE",
             "table": "ORDERS"
           }
         ],
         "denyTables": [
           {
-            "schema": "MYLIB",
-            "table": "AUDITLOG"
+            "schema": "DATA_EXAMPLE",
+            "table": "AUDIT_LOG"
           }
         ],
         "maskColumns": [
@@ -1250,7 +1511,7 @@
         ],
         "maskRules": [
           {
-            "schema": "",
+            "schema": "DATA_EXAMPLE",
             "table": "CUSTOMERS",
             "columns": [
               "PHONE"

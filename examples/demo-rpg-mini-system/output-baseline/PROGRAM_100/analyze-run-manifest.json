@@ -39,21 +39,31 @@
           "PHONE"
         ],
         "allowTables": [
-          "MYLIB.CUSTOMERS",
-          "MYLIB.ORDERS"
+          "DATA_EXAMPLE.CUSTOMERS",
+          "DATA_EXAMPLE.ORDERS"
         ],
         "denyTables": [
-          "MYLIB.AUDITLOG"
+          "DATA_EXAMPLE.AUDIT_LOG"
         ],
         "maskRules": [
           {
+            "schema": "DATA_EXAMPLE",
             "table": "CUSTOMERS",
             "columns": [
               "PHONE"
             ],
             "value": "MASKED_PHONE"
           }
-        ]
+        ],
+        "writeSafety": {
+          "enabled": true,
+          "maxRowsAffected": 100,
+          "maxRowsByStatement": {
+            "update": 100,
+            "delete": 50
+          },
+          "blockWhenCountUnavailable": true
+        }
       },
       "extensions": [
         ".rpg",
@@ -138,6 +148,11 @@
         "searchMaxResults": 200,
         "diagnosticPacks": [],
         "diagnosticParameterString": ""
+      },
+      "knownFacts": {
+        "enabled": false,
+        "profile": null,
+        "storePath": null
       }
     },
     "sourceSnapshot": {
@@ -187,8 +202,8 @@
     "importManifest": null
   },
   "summary": {
-    "stageCount": 8,
-    "completedStageCount": 8,
+    "stageCount": 9,
+    "completedStageCount": 9,
     "failedStageCount": 0,
     "diagnosticCount": 2,
     "errorCount": 0,
@@ -340,7 +355,7 @@
       "metadata": {
         "canonicalAnalysis": {
           "schemaVersion": 1,
-          "relationCount": 25,
+          "relationCount": 26,
           "sourceFileCount": 5
         },
         "dependencyGraph": {
@@ -409,6 +424,31 @@
       "diagnostics": []
     },
     {
+      "id": "load-known-facts",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Load local known facts",
+        "description": "Optionally reads profile-scoped local known facts and folds them into the local analysis context.",
+        "category": "analysis",
+        "registrationOrder": 2,
+        "before": [],
+        "after": [
+          "build-context"
+        ]
+      },
+      "metadata": {
+        "enabled": false,
+        "status": "disabled",
+        "profile": null,
+        "factCount": 0
+      },
+      "diagnostics": []
+    },
+    {
       "id": "investigate-sources",
       "status": "completed",
       "startedAt": "2000-01-01T00:00:00.000Z",
@@ -419,10 +459,10 @@
         "title": "Run source investigations",
         "description": "Applies optional IFS-path, full-text search, and similar source investigations.",
         "category": "investigation",
-        "registrationOrder": 2,
+        "registrationOrder": 3,
         "before": [],
         "after": [
-          "build-context"
+          "load-known-facts"
         ]
       },
       "metadata": {
@@ -446,7 +486,7 @@
         "title": "Optimize prompt context",
         "description": "Builds the salience-ranked optimized context projection when enabled.",
         "category": "optimization",
-        "registrationOrder": 3,
+        "registrationOrder": 4,
         "before": [],
         "after": [
           "investigate-sources"
@@ -454,8 +494,8 @@
       },
       "metadata": {
         "enabled": true,
-        "contextTokens": 2511,
-        "optimizedTokens": 8687,
+        "contextTokens": 3041,
+        "optimizedTokens": 8693,
         "reductionPercent": 0
       },
       "diagnostics": []
@@ -471,7 +511,7 @@
         "title": "Export DB2 metadata",
         "description": "Exports DB2 metadata and folds linked evidence back into semantic analysis.",
         "category": "db2",
-        "registrationOrder": 4,
+        "registrationOrder": 5,
         "before": [],
         "after": [
           "optimize-context"
@@ -525,7 +565,7 @@
         "title": "Export governed test data",
         "description": "Exports bounded DB2 sample rows with configured masking and governance policy.",
         "category": "db2",
-        "registrationOrder": 5,
+        "registrationOrder": 6,
         "before": [],
         "after": [
           "export-db2"
@@ -543,18 +583,18 @@
         "policy": {
           "allowTables": [
             {
-              "schema": "MYLIB",
+              "schema": "DATA_EXAMPLE",
               "table": "CUSTOMERS"
             },
             {
-              "schema": "MYLIB",
+              "schema": "DATA_EXAMPLE",
               "table": "ORDERS"
             }
           ],
           "denyTables": [
             {
-              "schema": "MYLIB",
-              "table": "AUDITLOG"
+              "schema": "DATA_EXAMPLE",
+              "table": "AUDIT_LOG"
             }
           ],
           "maskColumns": [
@@ -564,7 +604,7 @@
           ],
           "maskRules": [
             {
-              "schema": "",
+              "schema": "DATA_EXAMPLE",
               "table": "CUSTOMERS",
               "columns": [
                 "PHONE"
@@ -615,7 +655,7 @@
         "title": "Run diagnostic packs",
         "description": "Executes optional read-only investigation packs after the main semantic pipeline.",
         "category": "investigation",
-        "registrationOrder": 6,
+        "registrationOrder": 7,
         "before": [],
         "after": [
           "export-test-data"
@@ -683,8 +723,8 @@
       "path": "ai-knowledge.json",
       "kind": "json",
       "exists": true,
-      "sizeBytes": 69723,
-      "sha256": "7a43332ffcb9fd2e2b6a0cb6560e738e19cf109670d72f863d7030a108e1a889"
+      "sizeBytes": 72080,
+      "sha256": "5c0ade83e3233855bc9d622b028fa53570300117884a242e25af4729cd8fa78b"
     },
     {
       "path": "analysis-index.json",
@@ -711,15 +751,15 @@
       "path": "canonical-analysis.json",
       "kind": "json",
       "exists": true,
-      "sizeBytes": 33935,
-      "sha256": "7de9060d794800732d4f58129726dc645f8a968a2f45486d95d5f950c86c600b"
+      "sizeBytes": 40251,
+      "sha256": "c85094f30fff106f724cab8955d77b75dc037e3c81935615629e0ac4fb5a1f72"
     },
     {
       "path": "context.json",
       "kind": "json",
       "exists": true,
-      "sizeBytes": 16905,
-      "sha256": "0b63b5a1681e94c8f37b28630838c67db95f9d7fb840ab0345655fbd7d78b7c6"
+      "sizeBytes": 19928,
+      "sha256": "3af07d8f4ca8c1d2ba3ebef75ebb41e92b535d1ea9f447efe43a18321d8d1d33"
     },
     {
       "path": "dependency-graph.json",
@@ -746,8 +786,8 @@
       "path": "optimized-context.json",
       "kind": "json",
       "exists": true,
-      "sizeBytes": 61528,
-      "sha256": "6b7264bf5d759dd2541207e044def48aefd78a48f1a6a5d8a07d98bf011afe6c"
+      "sizeBytes": 63016,
+      "sha256": "420363f2dcc979d18734fbef8c4e3a9edf72bd0f4ee4efc37b67cd5eeb7ba4c3"
     },
     {
       "path": "program-call-tree.json",
@@ -774,14 +814,14 @@
       "path": "report.md",
       "kind": "markdown",
       "exists": true,
-      "sizeBytes": 5265,
-      "sha256": "1e0fad6a0e9a3b670807d1b20a22cac4dd2c6071c3dad4c32b0d5fbe1d17c470"
+      "sizeBytes": 5680,
+      "sha256": "ab75dcaa19114c539fd13f64c39af73f0f3f1c137470f8efe3c3fd9fc02cfcb0"
     }
   ],
   "reproducibility": {
     "enabled": true,
     "stableTimestamp": "2000-01-01T00:00:00.000Z",
-    "contentFingerprint": "09607d604e906597c032a159e0a6fe8907cff8c10cf267322162ca0fcfbe6ba0",
+    "contentFingerprint": "b5c1722509d69d5496c78a91660e2f3ff9359bc52bd815334c666595e493064e",
     "runtimeMetadataSuppressed": true,
     "comparisonSuppressed": true
   },

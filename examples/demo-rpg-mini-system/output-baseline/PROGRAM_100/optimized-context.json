@@ -210,7 +210,7 @@
   "workflows": {
     "documentation": {
       "name": "documentation",
-      "tokenBudget": 6000,
+      "tokenBudget": 8000,
       "estimatedTokens": 1928,
       "summary": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
       "tables": [
@@ -2090,14 +2090,15 @@
       "maxSnippetLines": 20,
       "softTokenLimit": 10000,
       "workflowTokenBudgets": {
-        "documentation": 6000,
+        "documentation": 8000,
         "errorAnalysis": 4000,
         "security": 4000,
-        "modernization": 6000
+        "modernization": 6000,
+        "defectAnalysis": 6000
       }
     }
   },
-  "estimatedTokens": 8681,
+  "estimatedTokens": 8687,
   "analysisCache": {
     "enabled": true,
     "sourceScan": {
@@ -2177,6 +2178,70 @@
     },
     "notes": []
   },
+  "puiPatterns": {
+    "enabled": false,
+    "importedAt": null,
+    "sourceFile": null,
+    "sourceKind": null,
+    "sourceVersion": null,
+    "generatedAt": null,
+    "scope": {
+      "scannedFiles": 0,
+      "puiCandidateDdsFiles": 0,
+      "parsedPuiJsonFiles": 0,
+      "jsonParseErrors": 0
+    },
+    "summary": {
+      "totalItems": 0,
+      "elementTypeCount": 0,
+      "elementFamilyCount": 0,
+      "interactionPatternCount": 0,
+      "dialogPatternCount": 0,
+      "handlerBindings": 0,
+      "runtimeGateChecks": 0,
+      "profoundUiLibraryBindings": 0
+    },
+    "elements": {
+      "familiesTop": [],
+      "typesTop": [],
+      "usageMatrix": []
+    },
+    "interactionModel": {
+      "runtimePatterns": [],
+      "responseSignals": [],
+      "backendActions": [],
+      "flowPatterns": []
+    },
+    "subfileLifecycleModel": {
+      "phases": [],
+      "controls": [],
+      "gridCapabilities": []
+    },
+    "stateMachineModel": {
+      "states": [],
+      "transitions": []
+    },
+    "redactionPolicy": {
+      "classification": null,
+      "literalSignalsRedacted": 0
+    }
+  },
+  "knownFacts": {
+    "enabled": false,
+    "status": "disabled",
+    "mode": "local-only",
+    "profile": null,
+    "storePath": null,
+    "factCount": 0,
+    "versionMarker": {
+      "toolVersion": null,
+      "updatedAt": null,
+      "expiresAt": null,
+      "ttlDays": null
+    },
+    "facts": [],
+    "notes": []
+  },
   "db2Metadata": {
     "status": "skipped",
     "file": "db2-metadata.json",
@@ -2207,18 +2272,18 @@
     "policy": {
       "allowTables": [
         {
-          "schema": "MYLIB",
+          "schema": "DATA_EXAMPLE",
           "table": "CUSTOMERS"
         },
         {
-          "schema": "MYLIB",
+          "schema": "DATA_EXAMPLE",
           "table": "ORDERS"
         }
       ],
       "denyTables": [
         {
-          "schema": "MYLIB",
-          "table": "AUDITLOG"
+          "schema": "DATA_EXAMPLE",
+          "table": "AUDIT_LOG"
         }
       ],
       "maskColumns": [
@@ -2228,7 +2293,7 @@
       ],
       "maskRules": [
         {
-          "schema": "",
+          "schema": "DATA_EXAMPLE",
           "table": "CUSTOMERS",
           "columns": [
             "PHONE"
