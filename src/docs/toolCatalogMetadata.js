@@ -151,6 +151,18 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Validate embedded SQL in RPG sources for cursor/fetch mismatches, dynamic SQL patterns and host variable issues. Uses scanner + sqlRpgValidator.',
     example: 'node cli/zeus.js validate-rpg-sql --source ./rpg_sources --program ORDERPGM --format markdown --out ./output',
   }),
+  onboarding: Object.freeze({
+    safety: 'S0',
+    scope: 'Local',
+    purpose: 'Interactive zeus-onboarding-wizard. Guides through profile setup, doctor checks, source/object discovery, first fetch and analyze for a new IBM i system.',
+    example: 'node cli/zeus.js onboarding',
+  }),
+  wizard: Object.freeze({
+    safety: 'S0',
+    scope: 'Local',
+    purpose: 'Alias for the zeus-onboarding-wizard.',
+    example: 'node cli/zeus.js wizard',
+  }),
   'inspect-object': Object.freeze({
     safety: 'S2',
     scope: 'IBM i read',

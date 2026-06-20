@@ -44,6 +44,7 @@ const { run: runAnalyses } = require('../src/cli/commands/analysesCommand');
 const { runMcp } = require('../src/cli/commands/mcpCommand');
 const { runProfiles } = require('../src/cli/commands/profilesCommand');
 const { runValidateRpgSql } = require('../src/cli/commands/validateRpgSqlCommand');
+const { runOnboarding } = require('../src/cli/commands/onboardingCommand');
 
 function printHelp() {
   console.log('Usage:');
@@ -80,6 +81,7 @@ function printHelp() {
   console.log('  zeus [--config <path>] field-search --profile <name> --field <name> [--table <name>] [--source <path>] [--source-lib <lib>] [--source-file <file>] [--mode local|remote|xref|all] [--max-results <n>] [--verbose]');
   console.log('  zeus [--config <path>] qa [--input <path>] [--format jira|markdown|json] [--strict LENIENT|STRICT] [--post-comment] [--jira-ticket <ticket>] [--verbose]');
   console.log('  zeus [--config <path>] validate-rpg-sql [--source <path>] [--program <name>] [--input <analyze-output>] [--format markdown|json] [--out <path>] [--verbose]');
+  console.log('  zeus [--config <path>] onboarding | wizard | onboard   # Interactive zeus-onboarding-wizard for new IBM i systems');
   console.log('  zeus [--config <path>] inspect-object --profile <name> --lib <lib> --name <name> [--type *PGM|*FILE|*SRVPGM|*MODULE] [--journal]');
   console.log('  zeus [--config <path>] test-run <start|capture|show|rollback> --profile <name> [options]');
   console.log('  zeus [--config <path>] bridge <plan|stage|apply|compile-plan|compile-run|report> --profile <name> [options]');
@@ -350,6 +352,11 @@ async function main() {
 
   if (command === 'validate-rpg-sql' || command === 'validate-rpgsql') {
     await runValidateRpgSql(args);
+    return;
+  }
+
+  if (command === 'onboarding' || command === 'wizard' || command === 'onboard' || command === 'zeus-onboarding-wizard') {
+    await runOnboarding(args);
     return;
   }
 
