@@ -236,7 +236,18 @@ Bridge-Funktionen bleiben im MCP-Kontext bewusst operator-gated. Plan-, Report- 
 
 ---
 
-## Quickstart: Demo in 5 Minuten
+## Onboarding zu einem neuen IBM i System
+
+Siehe die dedizierte Anleitung: [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)
+
+Sie behandelt:
+- Verbindungsaufbau (Profile + Umgebungsvariablen)
+- Suche nach Source-Code (QRPGLESRC, QCLSRC etc.)
+- PGM-Objekte, Table-Objekte, DDL
+- Beschaffung von Metadaten und Daten
+- Die ersten sicheren Kommandos (`doctor --probe`, `resolve-object`, `inspect-object`, `fetch`, `analyze`)
+
+## Quickstart: Demo in 5 Minuten (lokal)
 
 ### 1. Voraussetzungen
 
@@ -971,7 +982,18 @@ Bridge capabilities remain deliberately operator-gated in MCP. Plan, report and 
 
 ---
 
-## Quickstart: demo in 5 minutes
+## Onboarding to a New IBM i System
+
+See the dedicated guide: [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)
+
+It covers:
+- How to connect (profiles + environment variables)
+- Where to search for source code
+- PGM objects, Table objects, DDL
+- Obtaining metadata and data
+- First safe commands (`doctor --probe`, `resolve-object`, `inspect-object`, `fetch`, `analyze`)
+
+## Quickstart: demo in 5 minutes (local)
 
 ### 1. Requirements
 

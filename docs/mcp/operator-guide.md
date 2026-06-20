@@ -37,8 +37,17 @@ Without `--allow-tools`, MCP exposes only `zeus.health`, `zeus.version`, and `ze
 Restrict exposed tools explicitly for real workflows (recommended):
 
 ```bash
-node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.profiles,zeus.query-table,zeus.resolve-object,zeus.query-sql,zeus.search-source,zeus.fetch-member,zeus.docs-generate-catalog
+# Minimal safe set for onboarding + discovery
+node cli/zeus.js mcp serve --verbose \
+  --allow-tools zeus.health,zeus.version,zeus.doctor,zeus.profiles,zeus.resolve-object,zeus.query-table,zeus.query-sql,zeus.search-source,zeus.validate-rpg-sql,zeus.inspect-object,zeus.docs-generate-catalog
 ```
+
+For full agentic analysis add: `zeus.analyze,zeus.workflow,zeus.impact,zeus.assess-risk,zeus.bundle,zeus.generate-test,zeus.generate-checklist,zeus.validate-rpg-sql`
+
+**Recommended minimal allow-list for onboarding a new system (discovery + validation):**
+`zeus.health,zeus.doctor,zeus.profiles,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.search-source,zeus.validate-rpg-sql,zeus.field-search,zeus.docs-generate-catalog`
+
+See also the new onboarding guide: `docs/quickstart/onboarding-new-ibm-i.md` (covers connection, source location, PGM/Table objects, metadata & data discovery).
 
 ## Supported MCP Methods (Current)
 
