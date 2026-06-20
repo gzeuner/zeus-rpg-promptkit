@@ -16,4 +16,5 @@ Diese Sektion enthaelt kuratierte SQL-Skripte fuer System-, Schema- und Objekt-D
 
 - Queries sind als read-only Discovery konzipiert.
 - Placeholder-Werte vor Nutzung in produktionsnahen Umgebungen ersetzen.
-- Ergebnisse als Evidence fuer `query-table`, `query-sql`, `inspect-object` und Review-Workflows nutzen.
+- Ergebnisse als Evidence fuer `query-table`, `query-sql`, `inspect-object`, `resolve-object` und Review-Workflows nutzen.
+- Siehe auch: [`../quickstart/onboarding-new-ibm-i.md`](../quickstart/onboarding-new-ibm-i.md) für den vollständigen Onboarding-Prozess (Connect, Source-Suche, Objekte, Meta-Daten, Daten).

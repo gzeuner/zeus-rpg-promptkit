@@ -1,10 +1,20 @@
--- PROJECT environment discovery queries
+-- IBM i Environment Discovery Queries (general onboarding)
 -- Purpose:
---   1. Confirm source-file presence in BIB, APPLIB, LIBDEV
---   2. Inspect application files in APPDATA, APPLIB, LIBDEV
---   3. Discover schema, columns, and likely ticket-relevant fields
--- Usage:
---   Replace the placeholder literals before execution.
+--   1. Find source libraries (QRPGLESRC, QCLSRC, QDDSSRC etc.)
+--   2. Discover application tables / files
+--   3. Locate programs (*PGM) and objects
+--   4. Obtain column metadata, keys, and sample data safely
+--
+-- How to use:
+--   1. Load your environment (config/load-env.*)
+--   2. Replace library/schema placeholders (BIB, APPLIB, APPDATA, MYLIB...)
+--   3. Run with: zeus query-sql --profile YOURPROFILE --sql "..." --max-rows 100
+--   4. Use results to feed fetch --source-lib, resolve-object, query-table, inspect-object
+--
+-- Related: docs/quickstart/onboarding-new-ibm-i.md
+-- Common catalog views: QSYS2.SYSTABLES, SYSCOLUMNS, SYSKEYS, SYSCST, SYSTRIG
+
+-- 1) Source file inventory - where is the RPG/CL/DDS/SQL code?
 
 -- 1) Source file inventory across the known development libraries.
 SELECT TABLE_SCHEMA,

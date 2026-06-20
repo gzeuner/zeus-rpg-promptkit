@@ -6,8 +6,11 @@ Last Updated: 2026-05-20
 
 # Zeus in 5 Minutes
 
-This is the shortest path to get Zeus working for agentic coding.
+This is the shortest path to get Zeus working for agentic coding (demo/local).
 
+For a **real new IBM i system** see the dedicated guide: [`onboarding-new-ibm-i.md`](onboarding-new-ibm-i.md).
+
+Quick local/demo path:
 1. Run `npm install` in the repository root.
 2. Copy `config/profiles.example.json` to `config/local-only/profiles.json`.
 3. Set `ZEUS_SOURCE_ROOT` and `ZEUS_OUTPUT_ROOT` for local analysis, plus `ZEUS_FETCH_*` or `ZEUS_DB_*` only if you need them.
