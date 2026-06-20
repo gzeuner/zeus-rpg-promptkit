@@ -498,6 +498,21 @@ function listMcpTools() {
       },
     },
     {
+      name: 'zeus.onboarding',
+      description: 'Returns structured onboarding guidance, checklist, and starter commands for connecting to a new IBM i system (read-only).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional profile name for example commands.',
+          },
+        },
+      },
+    },
+    {
       name: 'zeus.help',
       description: 'Returns structured, agent-friendly help for a specific command or an overview of safe MCP capabilities, safety rules, and recommended AI sequences. S0 local introspection tool.',
       inputSchema: {
@@ -5661,6 +5676,26 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       })),
       timestamp: new Date().toISOString(),
     }, { cliEquivalent: `node cli/zeus.js doctor --profile ${profile}` });
+  }
+
+  if (name === 'zeus.onboarding') {
+    const profile = args && typeof args.profile === 'string' ? args.profile.trim() : 'default';
+    return normalizeMcpResult('zeus.onboarding', {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      profile,
+      guidance: 'Run the interactive wizard with: node cli/zeus.js onboarding (or wizard)',
+      nonInteractiveExample: `node cli/zeus.js onboarding --yes --profile ${profile} --source ./rpg_sources --program YOURPGM`,
+      checklist: [
+        'Load env with config/load-env.*',
+        'Create/edit config/local-only/profiles.json',
+        'node cli/zeus.js doctor --profile ' + profile + ' --probe --show-resolved',
+        'Discover with resolve-object / inspect-object / query-sql on QSYS2',
+        'Fetch sources and analyze with --preset onboarding',
+        'Use generated artifacts + ai prompts for AI',
+      ],
+      timestamp: new Date().toISOString(),
+    }, { cliEquivalent: `node cli/zeus.js onboarding --profile ${profile}` });
   }
 
   if (name === 'zeus.help') {
