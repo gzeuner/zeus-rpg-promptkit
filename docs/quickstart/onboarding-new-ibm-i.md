@@ -201,6 +201,16 @@ node cli/zeus.js query-sql --profile new-system \
 
 ## 8. Recommended First Workflow for a New System
 
+The easiest way is the built-in **zeus-onboarding-wizard**:
+
+```bash
+source ./config/load-env.sh project
+node cli/zeus.js onboarding
+# aliases: wizard | onboard | zeus-onboarding-wizard
+```
+
+Manual steps (if you prefer full control):
+
 ```bash
 # 1. Load env + verify
 source ./config/load-env.sh project

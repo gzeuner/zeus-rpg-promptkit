@@ -45,7 +45,7 @@ node cli/zeus.js mcp serve --verbose \
 For full agentic analysis add: `zeus.analyze,zeus.workflow,zeus.impact,zeus.assess-risk,zeus.bundle,zeus.generate-test,zeus.generate-checklist,zeus.validate-rpg-sql`
 
 **Recommended minimal allow-list for onboarding a new system (discovery + validation):**
-`zeus.health,zeus.doctor,zeus.profiles,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.search-source,zeus.validate-rpg-sql,zeus.field-search,zeus.docs-generate-catalog`
+`zeus.health,zeus.doctor,zeus.profiles,zeus.onboarding,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.search-source,zeus.validate-rpg-sql,zeus.field-search,zeus.docs-generate-catalog`
 
 See also the new onboarding guide: `docs/quickstart/onboarding-new-ibm-i.md` (covers connection, source location, PGM/Table objects, metadata & data discovery).
 
