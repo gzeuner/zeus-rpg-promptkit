@@ -211,9 +211,12 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
     rpgConstructs: {
       languageFeatures: canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.languageFeatures
         ? canonicalAnalysis.rpgConstructs.languageFeatures
-        : { bifCount: 0, indicatorCount: 0, uniqueBifs: [], uniqueIndicators: [] },
+        : { bifCount: 0, indicatorCount: 0, dataStructureCount: 0, standaloneFieldCount: 0, uniqueBifs: [], uniqueIndicators: [] },
       bifUsages: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.bifs) || [],
       indicatorUsages: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.indicators) || [],
+      dataStructures: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.dataStructures) || [],
+      standaloneFields: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.standaloneFields) || [],
+      constants: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.constants) || [],
     },
     graph: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.graph
       ? canonicalAnalysis.enrichments.graph

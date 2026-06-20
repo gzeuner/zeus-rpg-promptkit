@@ -1322,6 +1322,168 @@ function collectIndicatorUsages(filePath, lines) {
   return usages.sort((a, b) => a.name.localeCompare(b.name) || a.evidence.line - b.evidence.line);
 }
 
+function collectDataDeclarations(filePath, lines) {
+  const ownerProgram = toRelativeProgramName(filePath);
+  const dataStructures = [];
+  const standaloneFields = [];
+  const constants = [];
+
+  let currentDS = null;
+  let inDS = false;
+
+  function finalizeDS(endLine) {
+    if (!currentDS) return;
+    dataStructures.push({
+      name: currentDS.name,
+      ownerProgram,
+      qualified: currentDS.qualified,
+      like: currentDS.like || null,
+      dim: currentDS.dim || null,
+      external: currentDS.external || null,
+      subfieldCount: currentDS.subfields.length,
+      subfields: currentDS.subfields.slice(0, 12), // bounded for token efficiency
+      sourceForm: currentDS.sourceForm,
+      startLine: currentDS.startLine,
+      endLine,
+      evidence: [{ file: filePath, startLine: currentDS.startLine, endLine, text: currentDS.text }],
+    });
+    currentDS = null;
+    inDS = false;
+  }
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const rawLine = lines[i];
+    if (isCommentLine(rawLine)) continue;
+    const trimmed = rawLine.trim();
+
+    // Free form DCL-DS
+    const dclDsMatch = trimmed.match(/^dcl-ds\s+([A-Z0-9_#$@]+)\b(.*)$/i);
+    if (dclDsMatch) {
+      if (currentDS) finalizeDS(i);
+      const detail = (dclDsMatch[2] || '').toLowerCase();
+      const likeMatch = detail.match(/\blikeds\s*\(\s*([A-Z0-9_#$@.]+)\s*\)/i) ||
+                        detail.match(/\bliker ec\s*\(\s*([A-Z0-9_#$@.]+)\s*\)/i);
+      const qualified = /\bqualified\b/i.test(detail);
+      const dimMatch = detail.match(/\bdim\s*\(\s*(\d+)\s*\)/i);
+      const extMatch = detail.match(/\bext(name|fld)\s*\(\s*['"]?([^'")]+)['"]?\s*\)/i);
+      currentDS = {
+        name: normalizeName(dclDsMatch[1]),
+        startLine: i + 1,
+        qualified,
+        like: likeMatch ? normalizeName(likeMatch[1]) : null,
+        dim: dimMatch ? dimMatch[1] : null,
+        external: extMatch ? normalizeName(extMatch[2]) : null,
+        subfields: [],
+        sourceForm: 'FREE_FORM',
+        text: trimmed,
+      };
+      inDS = true;
+      if (/\bend-ds\b/i.test(trimmed)) {
+        finalizeDS(i + 1);
+      }
+      continue;
+    }
+
+    if (inDS && currentDS) {
+      if (/\bend-ds\b/i.test(trimmed)) {
+        finalizeDS(i + 1);
+        continue;
+      }
+      // Capture simple subfield names (dcl-subf or bare name + type-ish)
+      const subMatch = trimmed.match(/^(?:dcl-subf\s+)?([A-Z0-9_#$@]+)\b/i);
+      if (subMatch && !/^(dcl-ds|end-ds|dcl-proc|dcl-pi|dcl-pr|if|else|for|dcl-f)\b/i.test(subMatch[1])) {
+        const sfName = normalizeName(subMatch[1]);
+        if (sfName && !currentDS.subfields.includes(sfName)) {
+          currentDS.subfields.push(sfName);
+        }
+      }
+      continue;
+    }
+
+    // Free form DCL-S (standalone)
+    const dclSMatch = trimmed.match(/^dcl-s\s+([A-Z0-9_#$@]+)\b(.*)$/i);
+    if (dclSMatch) {
+      const name = normalizeName(dclSMatch[1]);
+      const detail = dclSMatch[2] || '';
+      const likeMatch = detail.match(/\blike\s*\(\s*([A-Z0-9_#$@.]+)\s*\)/i);
+      standaloneFields.push({
+        name,
+        ownerProgram,
+        like: likeMatch ? normalizeName(likeMatch[1]) : null,
+        detail: normalizeWhitespace(detail).slice(0, 80),
+        sourceForm: 'FREE_FORM',
+        evidence: [{ file: filePath, line: i + 1, text: trimmed }],
+      });
+      continue;
+    }
+
+    // Free form DCL-C constant
+    const dclCMatch = trimmed.match(/^dcl-c\s+([A-Z0-9_#$@]+)\b(.*)$/i);
+    if (dclCMatch) {
+      constants.push({
+        name: normalizeName(dclCMatch[1]),
+        ownerProgram,
+        value: normalizeWhitespace((dclCMatch[2] || '').slice(0, 60)),
+        sourceForm: 'FREE_FORM',
+        evidence: [{ file: filePath, line: i + 1, text: trimmed }],
+      });
+      continue;
+    }
+
+    // Fixed form D spec rough support (very common in legacy)
+    // D NAME     DS or D NAME            S or D NAME     C
+    const fixedD = rawLine.match(/^\s*D\s+([A-Z0-9_#$@]+)\s+([A-Z ]{2,})\s*(.*)$/i);
+    if (fixedD) {
+      const name = normalizeName(fixedD[1]);
+      const spec = (fixedD[2] || '').trim().toUpperCase();
+      const rest = fixedD[3] || '';
+      if (spec.includes('DS') || /DS\b/.test(spec)) {
+        const like = rest.match(/LIKEDS\s*\(\s*([A-Z0-9_.]+)\s*\)/i);
+        dataStructures.push({
+          name,
+          ownerProgram,
+          qualified: /QUALIFIED/i.test(rest),
+          like: like ? normalizeName(like[1]) : null,
+          dim: null,
+          external: null,
+          subfieldCount: 0,
+          subfields: [],
+          sourceForm: 'FIXED_FORM',
+          startLine: i + 1,
+          endLine: i + 1,
+          evidence: [{ file: filePath, line: i + 1, text: trimmed }],
+        });
+      } else if (spec.includes(' S') || spec === 'S' || /\bS\b/.test(spec)) {
+        const like = rest.match(/LIKE\s*\(\s*([A-Z0-9_.]+)\s*\)/i);
+        standaloneFields.push({
+          name,
+          ownerProgram,
+          like: like ? normalizeName(like[1]) : null,
+          detail: normalizeWhitespace(rest).slice(0, 60),
+          sourceForm: 'FIXED_FORM',
+          evidence: [{ file: filePath, line: i + 1, text: trimmed }],
+        });
+      } else if (spec.includes(' C') || spec === 'C') {
+        constants.push({
+          name,
+          ownerProgram,
+          value: normalizeWhitespace(rest).slice(0, 40),
+          sourceForm: 'FIXED_FORM',
+          evidence: [{ file: filePath, line: i + 1, text: trimmed }],
+        });
+      }
+    }
+  }
+
+  if (currentDS) finalizeDS(lines.length);
+
+  return {
+    dataStructures: dataStructures.sort((a, b) => a.name.localeCompare(b.name)),
+    standaloneFields: standaloneFields.sort((a, b) => a.name.localeCompare(b.name)),
+    constants: constants.sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
 function collectNativeFileDeclarations(filePath, lines) {
   const ownerProgram = toRelativeProgramName(filePath);
   const nativeFilesMap = new Map();
@@ -1644,6 +1806,9 @@ function scanContent(filePath, content) {
       nativeFileAccesses: [],
       bifUsages: [],
       indicatorUsages: [],
+      dataStructures: [],
+      standaloneFields: [],
+      constants: [],
       modules: binderSemantics.modules,
       bindingDirectories: binderSemantics.bindingDirectories,
       servicePrograms: binderSemantics.servicePrograms,
@@ -1664,6 +1829,7 @@ function scanContent(filePath, content) {
   const bindingSemantics = collectModuleBindingSemantics(filePath, lines, ownerProgram, prototypes);
   const bifUsages = collectBifUsages(filePath, lines);
   const indicatorUsages = collectIndicatorUsages(filePath, lines);
+  const dataDeclarations = collectDataDeclarations(filePath, lines);
 
   let inExecSql = false;
   let execStartLine = 0;
@@ -1960,6 +2126,9 @@ function scanContent(filePath, content) {
     }),
     bifUsages,
     indicatorUsages,
+    dataStructures: dataDeclarations.dataStructures,
+    standaloneFields: dataDeclarations.standaloneFields,
+    constants: dataDeclarations.constants,
     modules: bindingSemantics.modules,
     bindingDirectories: bindingSemantics.bindingDirectories,
     servicePrograms: bindingSemantics.servicePrograms,
@@ -2403,6 +2572,21 @@ function scanSourceFiles(filePaths, options = {}) {
       'indicatorUsages',
       (item) => [item.ownerProgram, item.name, item.kind, (item.evidence && item.evidence[0] && item.evidence[0].line) || 0].join('|'),
     ).sort((a, b) => a.name.localeCompare(b.name) || a.ownerProgram.localeCompare(b.ownerProgram)),
+    dataStructures: mergeStructuredItems(
+      scanResults,
+      'dataStructures',
+      (item) => [item.ownerProgram, item.name, item.startLine].join('|'),
+    ).sort((a, b) => a.name.localeCompare(b.name)),
+    standaloneFields: mergeStructuredItems(
+      scanResults,
+      'standaloneFields',
+      (item) => [item.ownerProgram, item.name, (item.evidence && item.evidence[0] && item.evidence[0].line) || 0].join('|'),
+    ).sort((a, b) => a.name.localeCompare(b.name)),
+    constants: mergeStructuredItems(
+      scanResults,
+      'constants',
+      (item) => [item.ownerProgram, item.name].join('|'),
+    ).sort((a, b) => a.name.localeCompare(b.name)),
     modules,
     bindingDirectories,
     servicePrograms,
