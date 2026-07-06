@@ -9,8 +9,8 @@
       "files": ["core-patterns/freeform-order.rpgle"],
       "expected": {
         "sourceTypes": ["RPGLE"],
-        "tables": ["ORDERS"],
-        "calls": ["INVPGM"],
+        "tables": ["WRKTBL"],
+        "calls": ["SUBPGM"],
         "copyMembers": ["QRPGLESRC,ORDCOPY"]
       }
     },
@@ -20,7 +20,7 @@
       "files": ["core-patterns/fixedform-order.rpg"],
       "expected": {
         "sourceTypes": ["RPG"],
-        "tables": ["ORDERS"]
+        "tables": ["WRKTBL"]
       }
     },
     {

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
-const { ensureJavaHelperCompiled, runJavaHelper } = require('../fetch/jt400CommandRunner');
+const { ensureJavaHelperCompiled, runJavaHelper, SECRET_ENV_SENTINEL } = require('../fetch/jt400CommandRunner');
 const {
   normalizeIdentifier,
   resolveDefaultSchema,
@@ -688,12 +688,12 @@ function exportTestData({
     const result = runJavaHelper('Db2TestDataExtractor', [
       jdbcUrl,
       String(dbConfig.user),
-      String(dbConfig.password),
+      SECRET_ENV_SENTINEL,
       entry.schema,
       entry.table,
       String(rowLimit),
       primaryKeyColumns.join(','),
-    ]);
+    ], { password: String(dbConfig.password) });
 
     if (result.status !== 0) {
       const errorText = (result.stderr || '').trim() || 'unknown DB2 test data error';

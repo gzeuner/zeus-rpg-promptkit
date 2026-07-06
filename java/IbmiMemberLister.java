@@ -1,3 +1,4 @@
+
 /*
 Copyright 2026 gzeuner - tiny-tool.de
 
@@ -21,7 +22,8 @@ import java.util.List;
 
 public class IbmiMemberLister {
     private static String escape(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return value
                 .replace("\\", "\\\\")
                 .replace("\"", "\\\"")
@@ -41,7 +43,7 @@ public class IbmiMemberLister {
 
         String host = args[0];
         String user = args[1];
-        String password = args[2];
+        String password = ZeusSecrets.resolve(args[2]);
         String sourceLib = args[3].toUpperCase();
         String sourceFile = args[4].toUpperCase();
 
@@ -55,7 +57,7 @@ public class IbmiMemberLister {
             String url = "jdbc:as400://" + host + ";naming=system;errors=full";
 
             try (Connection conn = DriverManager.getConnection(url, user, password);
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, sourceLib);
                 stmt.setString(2, sourceFile);
 
@@ -74,7 +76,8 @@ public class IbmiMemberLister {
             json.append("\"ok\":true,");
             json.append("\"members\":[");
             for (int i = 0; i < members.size(); i++) {
-                if (i > 0) json.append(",");
+                if (i > 0)
+                    json.append(",");
                 json.append("\"").append(escape(members.get(i))).append("\"");
             }
             json.append("],");
@@ -97,4 +100,3 @@ public class IbmiMemberLister {
         }
     }
 }
-

@@ -22,6 +22,7 @@ const {
   validateFilterPattern,
 } = require('../../core/queryService');
 const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 
 async function runQueryTable(args) {
   let execution;
@@ -75,6 +76,18 @@ async function runQueryTable(args) {
     row.IS_NULLABLE,
   ]);
 
+  const json = createJsonOutput(args);
+  if (json.isJsonMode) {
+    const jsonData = {
+      table,
+      schema: effectiveSchema,
+      tableInfo: tableInfo.rows || [],
+      columns: columns.rows || [],
+    };
+    json.print(jsonData);
+    return;
+  }
+
   // --save: Ergebnis in Datei schreiben (CSV oder JSON)
   if (args.save && String(args.save).trim()) {
     const savePath = path.resolve(process.cwd(), String(args.save).trim());
@@ -82,7 +95,8 @@ async function runQueryTable(args) {
     let content;
     if (ext === '.json') {
       const rows = columnRows.map((row) => Object.fromEntries(COLUMN_HEADERS.map((h, i) => [h, row[i]])));
-      content = JSON.stringify(rows, null, 2) + '\n';
+      const j = createJsonOutput({ output: 'json' });
+      content = j.stringify(rows) || JSON.stringify(rows, null, 2) + '\n';
     } else {
       content = renderCsv(COLUMN_HEADERS, columnRows);
     }

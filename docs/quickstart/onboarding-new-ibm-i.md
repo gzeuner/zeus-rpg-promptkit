@@ -37,6 +37,8 @@ cp config/profiles.example.json config/local-only/profiles.json
 
 ## 3. Environment Variables & Profiles (How to Connect)
 
+**Recommendation:** Use encrypted credentials with the Secret Vault (`zeus secret encrypt`) instead of plaintext. See [`secrets-and-overrides.md`](secrets-and-overrides.md).
+
 Load environment **explicitly** every time (shell session):
 
 ```bash

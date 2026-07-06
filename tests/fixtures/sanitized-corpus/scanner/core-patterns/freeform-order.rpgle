@@ -1,4 +1,4 @@
 **FREE
-dcl-f ORDERS disk;
+dcl-f WRKTBL disk;
 /COPY QRPGLESRC,ORDCOPY
-CALL 'INVPGM';
+CALL 'SUBPGM';

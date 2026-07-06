@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 'use strict';
 
 const { buildJdbcUrl, isDbConfigured, resolveDefaultSchema } = require('./db2Config');
-const { runJavaHelper } = require('../fetch/jt400CommandRunner');
+const { runJavaHelper, SECRET_ENV_SENTINEL } = require('../fetch/jt400CommandRunner');
 const { ensureDb2ConnectionGuard } = require('../security/connectionGuards');
 
 /**
@@ -30,9 +30,9 @@ function executeWriteDb2QueryRaw({ dbConfig, sql, runtime = {} }) {
   const result = runJavaHelperFn('Db2WriteQueryRunner', [
     jdbcUrl,
     String(dbConfig.user),
-    String(dbConfig.password),
+    SECRET_ENV_SENTINEL,
     sql,
-  ]);
+  ], { password: String(dbConfig.password) });
 
   if (result.status !== 0) {
     throw new Error((result.stderr || '').trim() || 'DB2 write query failed.');

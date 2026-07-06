@@ -65,6 +65,21 @@ async function runFetchMember(args) {
     process.exit(2);
   }
 
+  if (fetchConfig && fetchConfig.hostEnvOverride) {
+    console.warn(
+      `[WARN] ZEUS_FETCH_HOST="${fetchConfig.hostEnvOverride.envValue}" ueberschreibt`
+      + ` Profil-Wert "${fetchConfig.hostEnvOverride.profileValue}".`
+      + ' Benutze --host <HOST> zum expliziten Setzen.',
+    );
+  }
+  if (fetchConfig && fetchConfig.sourceLibEnvOverride) {
+    console.warn(
+      `[WARN] ZEUS_FETCH_SOURCE_LIB="${fetchConfig.sourceLibEnvOverride.envValue}" ueberschreibt`
+      + ` Profil-Wert "${fetchConfig.sourceLibEnvOverride.profileValue}".`
+      + ' Benutze --lib <LIB> zum expliziten Setzen.',
+    );
+  }
+
   const ext = resolveExtension(sourceFile);
   const localSubDir = path.resolve(process.cwd(), outDir, sourceFile);
   if (!fs.existsSync(localSubDir)) {
@@ -92,12 +107,27 @@ async function runFetchMember(args) {
       member,
       targetPath: localFile,
       streamFileCcsid: DEFAULT_STREAM_FILE_CCSID,
+      writeMode: 'local',
       verbose,
     });
 
     if (!result.ok) {
       const msgs = result.messages.join('; ') || result.stderr || 'Unbekannter Fehler';
       console.error('  FEHLER: ' + msgs);
+      errors++;
+      continue;
+    }
+
+    // Post-Fetch-Verifikation: sicherstellen, dass die Datei wirklich lokal
+    // gelandet ist. Ein OK-Status vom Exporter allein reicht nicht.
+    let localStat = null;
+    try {
+      localStat = fs.statSync(localFile);
+    } catch (_) {
+      localStat = null;
+    }
+    if (!localStat || !localStat.isFile() || localStat.size === 0) {
+      console.error('  FEHLER: Lokale Datei wurde nicht (oder leer) geschrieben: ' + localFile);
       errors++;
       continue;
     }

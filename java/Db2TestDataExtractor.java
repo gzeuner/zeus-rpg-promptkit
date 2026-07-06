@@ -134,7 +134,7 @@ public class Db2TestDataExtractor {
 
         String jdbcUrl = args[0];
         String user = args[1];
-        String password = args[2];
+        String password = ZeusSecrets.resolve(args[2]);
         String schema = normalizeIdentifier(args[3]);
         String table = normalizeIdentifier(args[4]);
         int limit = parseLimit(args[5]);

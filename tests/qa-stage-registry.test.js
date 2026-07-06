@@ -3,7 +3,8 @@
  */
 
 const assert = require('assert');
-const { QA_STAGE_REGISTRY, loadQAStages, getRegistryMetadata } = require('../../src/qa/qaStageRegistry');
+const { describe, it } = require('node:test');
+const { QA_STAGE_REGISTRY, loadQAStages, getRegistryMetadata } = require('../src/qa/qaStageRegistry');
 
 describe('QA Stage Registry', () => {
   it('should have all stages disabled by default', () => {

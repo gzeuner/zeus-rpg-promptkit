@@ -12,6 +12,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const { buildResolvedDbConfig } = require('./dbRuntimeConfigDiagnostics');
+const { resolveSecretValue } = require('../security/secretVault');
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -39,10 +40,13 @@ function parseCsv(value, fallback, transform = (item) => item) {
 
 function resolveEnvPlaceholdersDeep(value, env) {
   if (typeof value === 'string') {
-    return value.replace(/\$\{env:([A-Z0-9_]+)\}/gi, (_, key) => {
+    const substituted = value.replace(/\$\{env:([A-Z0-9_]+)\}/gi, (_, key) => {
       const envValue = env[key];
       return envValue === undefined || envValue === null ? '' : String(envValue);
     });
+    // Transparente Entschluesselung: Werte im Format `enc:v1:...` (direkt im Profil
+    // oder ueber eine Env-Variable eingesetzt) werden hier zu Klartext aufgeloest.
+    return resolveSecretValue(substituted, { env });
   }
   if (Array.isArray(value)) {
     return value.map((entry) => resolveEnvPlaceholdersDeep(entry, env));

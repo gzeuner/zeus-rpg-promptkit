@@ -29,6 +29,7 @@ const {
   parseMaxRows,
   toRowMatrix,
 } = require('../../core/queryService');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 
 async function runQuerySql(args) {
   const watchSec = args.watch ? parseInt(String(args.watch), 10) : 0;
@@ -94,7 +95,8 @@ async function runSingleQuery(args) {
         const rows = matrix.map((row) =>
           Object.fromEntries(columns.map((col, i) => [col, Array.isArray(row) ? row[i] : row[col]]))
         );
-        content = JSON.stringify(rows, null, 2) + '\n';
+        const json = createJsonOutput({ output: 'json' });
+        content = json.stringify(rows) || JSON.stringify(rows, null, 2) + '\n';
       } else {
         content = renderCsv(columns, matrix);
       }
@@ -113,7 +115,8 @@ async function runSingleQuery(args) {
       const rows = matrix.map((row) =>
         Object.fromEntries(columns.map((col, i) => [col, Array.isArray(row) ? row[i] : row[col]]))
       );
-      process.stdout.write(JSON.stringify(rows, null, 2) + '\n');
+      const json = createJsonOutput({ output: 'json' });
+      json.print(rows);
       return;
     }
 

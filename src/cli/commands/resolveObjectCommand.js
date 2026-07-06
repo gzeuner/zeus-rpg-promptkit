@@ -1,6 +1,7 @@
 'use strict';
 
 const { renderAsciiTable } = require('../helpers/asciiTable');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 const {
   resolveAnalyzeConfig,
   resolveAnalyzeDbConfig,
@@ -99,6 +100,12 @@ async function runResolveObject(args) {
 
   if (!result.found) {
     console.log('No matching objects found in QSYS2.SYSTABLES.');
+    return;
+  }
+
+  const json = createJsonOutput(args);
+  if (json.isJsonMode) {
+    json.print(result);
     return;
   }
 

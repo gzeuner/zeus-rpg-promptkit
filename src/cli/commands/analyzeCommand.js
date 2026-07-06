@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
 const { listWorkflowModes, resolveWorkflowModeSettings } = require('../../workflow/workflowModeRegistry');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 const { resolvePromptTemplates } = require('../../prompt/promptBuilder');
 const { listDiagnosticPacks } = require('../../investigation/diagnosticPackRegistry');
 const { executeAnalyze } = require('../../core/analyzeService');
@@ -96,6 +97,11 @@ function runAnalyze(args) {
       console.log(`Diagnostics written to: ${path.join(outputProgramDir, 'analysis-diagnostics.json')}`);
     }
     console.log(`Output written to: ${outputProgramDir}`);
+
+    const json = createJsonOutput(args);
+    if (json.isJsonMode) {
+      json.print(result);
+    }
   } catch (error) {
     const message = args.mode
       ? `${error.message}. Use --list-modes to inspect supported workflow modes.`

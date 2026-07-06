@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
 const { executeImpact } = require('../../core/impactService');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 
 function runImpact(args) {
   const verbose = Boolean(args.verbose);
@@ -30,6 +31,12 @@ function runImpact(args) {
     console.log(`[verbose] Target: ${target}`);
     console.log(`[verbose] Graph path: ${graphPath}`);
     console.log(`[verbose] Output program: ${program}`);
+  }
+
+  const json = createJsonOutput(args);
+  if (json.isJsonMode) {
+    json.print(result);
+    return;
   }
 
   console.log(`Impact analysis complete for target ${result.target}`);

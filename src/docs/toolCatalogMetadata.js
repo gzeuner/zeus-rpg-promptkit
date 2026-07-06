@@ -19,6 +19,12 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Validate runtime, profiles, Java/runtime wiring, and env contracts.',
     example: 'node cli/zeus.js doctor --profile default --show-resolved',
   }),
+  secret: Object.freeze({
+    safety: 'S0',
+    scope: 'Local',
+    purpose: 'Manage encrypted credentials (Secret Vault). Create key, encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords.',
+    example: 'node cli/zeus.js secret init-key && node cli/zeus.js secret encrypt --value "myDbPass"',
+  }),
   profiles: Object.freeze({
     safety: 'S0',
     scope: 'Local',
@@ -88,8 +94,8 @@ const COMMAND_METADATA = Object.freeze({
   'query-table': Object.freeze({
     safety: 'S2',
     scope: 'DB2 read',
-    purpose: 'Query DB2 table metadata.',
-    example: 'node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA',
+    purpose: 'Query DB2 table metadata. Supports --json for machine readable output.',
+    example: 'node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA --json',
   }),
   'resolve-object': Object.freeze({
     safety: 'S2',

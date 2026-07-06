@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 'use strict';
 
 const { renderAsciiTable } = require('../helpers/asciiTable');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 const { resolveAnalyzeConfig, resolveAnalyzeDbConfig, loadProfiles, resolveProfile } = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query, escapeSqlLiteral } = require('../../db2/readOnlyQueryService');
@@ -128,6 +129,12 @@ async function runJoblog(args) {
 
     const columns = result.columns || [];
     const rows = result.rows || [];
+
+    const json = createJsonOutput(args);
+    if (json.isJsonMode) {
+      json.print({ columns, rows, total: rows.length });
+      return;
+    }
 
     // Format output
     console.log(`Found ${rows.length} job log entries:`);

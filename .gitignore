@@ -71,6 +71,25 @@ config/private.*
 config/local-only/
 config/profiles.json
 
+# Additional credential and key files
+*.pem
+*.key
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+*.crt
+*.p12
+*.pfx
+**/*-private-key*
+**/*-key.pem
+**/*-cert.pem
+
+# Local scratch / temp credential stores
+**/*-creds*
+**/*-secrets*
+**/*-passwords*
+
 # -----------------------------
 # OS files
 # -----------------------------
@@ -89,6 +108,33 @@ bundles/
 *.zip
 *.7z
 
+# Common analysis artifact names produced by this toolkit (prevent leaking real analyses)
+**/*-analysis.json
+**/*-context.json
+**/*-optimized-context.json
+**/*-ai-knowledge.json
+**/*-analyze-run-manifest.json
+**/*-workflow-run-manifest.json
+**/*-risk-assessment.json
+**/*-impact-analysis.json
+**/*-bundle-manifest.json
+**/*-analysis-index.json
+**/*-program-call-tree.json
+**/ai-*.md
+**/architecture-report.md
+**/dependency-graph.*
+**/canonical-analysis.json
+
+# Additional local analysis / work directories
+**/*-work/
+**/*-scratch/
+**/*-tmp-analysis/
+**/*-output/
+
+# Note: Do NOT broadly ignore *-baseline/ because examples/demo-rpg-mini-system/output-baseline/
+# and some test fixtures intentionally contain baseline artifacts for reproducibility.
+# If you have personal analysis baselines, they should go under output/ or .local/ which are already ignored.
+
 # -----------------------------
 # Local external/reference material
 # -----------------------------
@@ -104,6 +150,9 @@ java/lib/
 local/
 .local/
 .local-roadmap/
+**/.local/
+**/.zeus/
+**/.analysis-cache/
 
 # -----------------------------
 # Local analyses registry/workspaces

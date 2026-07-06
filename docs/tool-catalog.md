@@ -1,13 +1,13 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-06-20 13:03:49
+Last generated: 2026-07-06 15:41:59
 -->
 
 ---
 Title: Zeus RPG PromptKit Tool Catalog
 Description: Verbindlicher, sicherheitsklassifizierter Katalog aller CLI-Befehle und Workflow-Presets fuer Menschen und KI-Assistenten.
-Last Updated: 2026-06-20
+Last Updated: 2026-07-06
 ---
 
 # Zeus RPG PromptKit Tool Catalog
@@ -54,7 +54,7 @@ Related:
 | `assess-risk` | `S1` | Local | Produce a risk-oriented summary for a program. | `node cli/zeus.js assess-risk --program ORDERPGM --out ./output` |
 | `generate-test` | `S1` | Local | Generate test plan or test template artifacts. | `node cli/zeus.js generate-test --program ORDERPGM --format markdown --out ./output` |
 | `generate-checklist` | `S1` | Local | Generate deployment and change checklist artifacts. | `node cli/zeus.js generate-checklist --program ORDERPGM --type BOTH --impact HIGH --out ./output` |
-| `query-table` | `S2` | DB2 read | Query DB2 table metadata. | `node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA` |
+| `query-table` | `S2` | DB2 read | Query DB2 table metadata. Supports --json for machine readable output. | `node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA --json` |
 | `resolve-object` | `S2` | DB2 read | Resolve SQL/system object names and optionally verify required columns. | `node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS` |
 | `query-sql` | `S2` | DB2 read | Run read-only SQL statements (SELECT/WITH). | `node cli/zeus.js query-sql --profile default --sql "SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY"` |
 | `joblog` | `S2` | IBM i read | Inspect IBM i joblog messages. | `node cli/zeus.js joblog --profile default --severity ERROR --max-messages 100` |
@@ -77,6 +77,10 @@ Related:
 | `pui-edit` | `S1` | Local | Apply structured UI edit operations to local display artifacts. | `node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json` |
 | `docs:generate-catalog` | `S0` | Local read-only | Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`. | `node cli/zeus.js docs:generate-catalog` |
 | `mcp` | `S0` | Local read-mostly | Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools. | `node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run` |
+| `discover-environment` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js discover-environment` |
+| `pui-inspect` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js pui-inspect` |
+| `resources` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js resources` |
+| `secret` | `S0` | Local | Manage encrypted credentials (Secret Vault). Create key, encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. | `node cli/zeus.js secret init-key && node cli/zeus.js secret encrypt --value "myDbPass"` |
 
 ## Workflow Presets
 
