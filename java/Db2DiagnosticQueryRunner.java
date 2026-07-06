@@ -87,7 +87,7 @@ public class Db2DiagnosticQueryRunner {
 
         String jdbcUrl = args[0];
         String user = args[1];
-        String password = args[2];
+        String password = ZeusSecrets.resolve(args[2]);
         String query = args[3];
         int maxRows = parseMaxRows(args.length >= 5 ? args[4] : "50");
 

@@ -42,7 +42,7 @@ public class Db2WriteQueryRunner {
 
         String jdbcUrl = args[0];
         String user = args[1];
-        String password = args[2];
+        String password = ZeusSecrets.resolve(args[2]);
         String sql = args[3];
 
         try {

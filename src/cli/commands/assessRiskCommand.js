@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
 const { assessCanonicalModel, formatAssessmentMarkdown } = require('../../impact/riskAssessmentAnalyzer');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 
 async function runAssessRisk(args) {
   const verbose = Boolean(args.verbose);
@@ -70,10 +71,11 @@ async function runAssessRisk(args) {
       });
     }
 
-    // Write JSON output
+    const json = createJsonOutput(args);
+
+    // Write JSON output (always, using helper for masking)
     const jsonPath = path.join(programDir, 'risk-assessment.json');
-    fs.mkdirSync(path.dirname(jsonPath), { recursive: true });
-    fs.writeFileSync(jsonPath, JSON.stringify(assessment, null, 2), 'utf8');
+    json.writeFile(jsonPath, assessment);
 
     // Write markdown output
     const mdPath = path.join(programDir, 'risk-assessment.md');
@@ -83,9 +85,11 @@ async function runAssessRisk(args) {
     console.log(`JSON output: ${jsonPath}`);
     console.log(`Markdown report: ${mdPath}`);
 
-    if (verbose) {
+    if (json.isJsonMode) {
+      json.print(assessment);
+    } else if (verbose) {
       console.log(`[verbose] Assessment details:`);
-      console.log(JSON.stringify(assessment, null, 2));
+      console.log(json.stringify(assessment));  // use helper even in verbose for consistency
     }
   } catch (error) {
     console.error(error.message);

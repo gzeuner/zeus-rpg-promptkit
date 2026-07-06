@@ -25,6 +25,7 @@ const { resolveWorkflowPresetSettings, listWorkflowPresets } = require('../../wo
 const { buildWorkflowRunManifest, writeWorkflowRunManifest } = require('../../workflow/workflowRunManifest');
 const { normalizeReproducibilitySettings } = require('../../reproducibility/reproducibility');
 const { runWorkflowEngine } = require('../../workflow/workflowRunner');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 
 function printWorkflowPresets() {
   console.log('Supported workflow presets:');
@@ -120,6 +121,11 @@ function runLegacyWorkflowPreset(args) {
   });
   writeWorkflowRunManifest(outputProgramDir, workflowManifest);
 
+  const json = createJsonOutput(args);
+  if (json.isJsonMode) {
+    json.print({ preset: preset.name, manifestPath: path.join(outputProgramDir, 'workflow-run-manifest.json') });
+    return;
+  }
   console.log(`Workflow preset complete: ${preset.name}`);
   console.log(`Workflow manifest written to: ${path.join(outputProgramDir, 'workflow-run-manifest.json')}`);
 }
@@ -138,6 +144,14 @@ async function runWorkflow(args) {
     }
     try {
       const state = await runWorkflowEngine(args);
+      const json = createJsonOutput(args);
+      if (json.isJsonMode) {
+        json.print(state);
+        if (state.status !== 'succeeded') {
+          process.exitCode = 1;
+        }
+        return;
+      }
       console.log(`Workflow run complete: ${state.status}`);
       console.log(`Run ID: ${state.runId}`);
       console.log(`Run root: ${state.paths.runRoot}`);

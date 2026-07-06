@@ -59,6 +59,8 @@ const { readWorkspaceIndex } = require('../workspace/workspaceIndexBuilder');
 const { findImpactGraph } = require('../cli/helpers/impactGraphResolver');
 const { readAnalyzeRunManifest } = require('../analyze/analyzeRunManifest');
 const { executeAnalyze } = require('../core/analyzeService');
+const { executePuiEdit: executePuiEditAction } = require('../pui/puiEditService');
+const { buildPuiProjection, traceFieldBinding } = require('../pui/puiProjection');
 const {
   getProfilesMetadata,
   loadProfiles,
@@ -68,8 +70,13 @@ const {
   resolveBundleConfig,
   resolveFetchConfig,
   resolveProfile,
+  resolveProfileResources,
 } = require('../config/runtimeConfig');
 const { describeConnectionTarget } = require('../config/connectionTargetMetadata');
+const {
+  discoverEnvironment,
+  suggestResourcesConfig,
+} = require('../config/environmentDiscoveryService');
 const { isDbConfigured } = require('../db2/db2Config');
 const { escapeSqlLiteral, runReadOnlyDb2Query, validateSqlIdentifier } = require('../db2/readOnlyQueryService');
 const { resolveObjectsByName } = require('../db2/tableNameResolutionService');
@@ -119,9 +126,26 @@ function resolvePathForBoundary(targetPath) {
   try {
     return fs.realpathSync.native(resolvedPath);
   } catch (_) {
-    // TODO: Non-existent targets still fall back to lexical containment.
-    // A follow-up hardening pass should resolve existing parent segments to close symlink escapes for not-yet-created paths.
-    return resolvedPath;
+    // Target does not exist yet (e.g. a not-yet-created --output file).
+    // Canonicalize the nearest EXISTING ancestor and re-append the remaining
+    // segments. This closes short-path (Windows 8.3) and symlink mismatches for
+    // new outputs, so containment checks compare like-for-like canonical paths.
+    let current = resolvedPath;
+    const tail = [];
+    for (;;) {
+      const parent = path.dirname(current);
+      if (parent === current) {
+        // Reached the filesystem root without an existing segment.
+        return resolvedPath;
+      }
+      try {
+        const realParent = fs.realpathSync.native(parent);
+        return path.join(realParent, path.basename(current), ...tail);
+      } catch (_e) {
+        tail.unshift(path.basename(current));
+        current = parent;
+      }
+    }
   }
 }
 
@@ -493,6 +517,62 @@ function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Runtime profile name used for doctor checks.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.resources',
+      description: 'Returns the resolved, sanitized resource model for a profile, distinguishing the locations of source code, objects, DB metadata and DB data per system (read-only, no secrets).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['profile'],
+        properties: {
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Runtime profile name whose resource model should be resolved.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.discover-environment',
+      description: 'Runs READ-ONLY IBM i catalog discovery for a profile (libraries, source files, members, tables) and returns a report plus a suggested "resources" skeleton to create/expand/refine the environment. Never mutates IBM i state.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['profile'],
+        properties: {
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Runtime profile name providing the read-only DB2 connection.',
+          },
+          libraries: {
+            type: 'array',
+            items: { type: 'string', minLength: 1 },
+            description: 'Optional list of libraries/schemas to scope discovery.',
+          },
+          schemas: {
+            type: 'array',
+            items: { type: 'string', minLength: 1 },
+            description: 'Optional list of schemas to scope discovery.',
+          },
+          includeMembers: {
+            type: 'boolean',
+            description: 'When true, also enumerates source members (bounded). Defaults to false.',
+          },
+          role: {
+            type: 'string',
+            enum: ['metadata', 'data'],
+            description: 'Which connection role to use for discovery. Defaults to metadata.',
+          },
+          system: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional system key used to annotate the suggested resources skeleton.',
           },
         },
       },
@@ -1020,6 +1100,128 @@ function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Alias for jsonOutput.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.pui-edit',
+      description: 'Edits ProfoundUI Display File (DDS) members inside the workspace: read actions (dump-json, validate-json, roundtrip-check, plan) and confirmed write actions (export-json, import-json, apply, grid-add-column). All file paths must resolve inside the workspace root; mutating actions require confirm=true.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['action'],
+        properties: {
+          action: {
+            type: 'string',
+            enum: ['roundtrip-check', 'dump-json', 'validate-json', 'plan', 'export-json', 'import-json', 'apply', 'grid-add-column'],
+            description: 'pui-edit action to run.',
+          },
+          file: {
+            type: 'string',
+            minLength: 1,
+            description: 'Path to the DDS display member (required for all actions except validate-json). Must resolve inside the workspace root.',
+          },
+          in: {
+            type: 'string',
+            minLength: 1,
+            description: 'Input JSON/DDDL path for validate-json and import-json. Must resolve inside the workspace root.',
+          },
+          out: {
+            type: 'string',
+            minLength: 1,
+            description: 'Output path for export-json. Must resolve inside the workspace root.',
+          },
+          format: {
+            type: 'string',
+            enum: ['pretty', 'compact', 'dddl'],
+            description: 'Output format for export-json (default pretty).',
+          },
+          'changes-file': {
+            type: 'string',
+            minLength: 1,
+            description: 'Declarative change-set path for plan and apply. Must resolve inside the workspace root.',
+          },
+          confirm: {
+            type: 'boolean',
+            description: 'Required (true) for mutating actions import-json, apply and grid-add-column.',
+          },
+          'grid-id': {
+            type: 'string',
+            minLength: 1,
+            description: 'grid-add-column: ID of the grid element.',
+          },
+          'col-position': {
+            type: ['integer', 'string'],
+            description: 'grid-add-column: 0-based column position.',
+          },
+          'col-heading': {
+            type: 'string',
+            minLength: 1,
+            description: 'grid-add-column: column heading.',
+          },
+          'col-width': {
+            type: ['integer', 'string'],
+            description: 'grid-add-column: column width in pixels.',
+          },
+          'field-id': {
+            type: 'string',
+            minLength: 1,
+            description: 'grid-add-column: ID of the new PUI field element.',
+          },
+          'field-name': {
+            type: 'string',
+            minLength: 1,
+            description: 'grid-add-column: DDS field name.',
+          },
+          'field-type': {
+            type: 'string',
+            description: 'grid-add-column: PUI field type (default "output field").',
+          },
+          'field-data-type': {
+            type: 'string',
+            description: 'grid-add-column: PUI data type (default "char").',
+          },
+          'field-length': {
+            type: ['integer', 'string'],
+            description: 'grid-add-column: data length (default 10).',
+          },
+          'field-width': {
+            type: 'string',
+            description: 'grid-add-column: display width in px (default "100px").',
+          },
+          'sfl-field': {
+            type: ['string', 'array'],
+            description: 'grid-add-column: DDS field line(s) to insert into an SFL record.',
+          },
+          'sfl-record': {
+            type: 'string',
+            description: 'grid-add-column: explicit SFL record name for --sfl-field.',
+          },
+          'no-auto-adjust': {
+            type: 'boolean',
+            description: 'grid-add-column: skip layout auto-adjustment.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.pui-inspect',
+      description: 'LOCAL read-only projection of a ProfoundUI Display File (DDS) member: reassembles column-72 continuation lines, decodes the per-record-format JSON and projects grids -> columns -> field bindings + tooltips, standalone bound widgets and consistency signals. Optionally traces where a DDS field is bound. Reads a local workspace file only; never connects to IBM i and never writes. Decoded PUI JSON is customer content, so this tool is opt-in (not part of the default MCP-safe surface).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['file'],
+        properties: {
+          file: {
+            type: 'string',
+            minLength: 1,
+            description: 'Path to the DDS/PUI display member. Must resolve inside the workspace root.',
+          },
+          trace: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional DDS field name; returns where the field is bound (grid column or widget).',
           },
         },
       },
@@ -2372,6 +2574,55 @@ function executeReadOnlyProfiles(args = {}, context = {}) {
   };
 }
 
+function normalizeStringList(value) {
+  if (value === undefined || value === null) return [];
+  const list = Array.isArray(value) ? value : [value];
+  return list
+    .flatMap((entry) => String(entry).split(','))
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+async function executeDiscoverEnvironment(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+  const env = context.env || process.env;
+  const profileName = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  if (!profileName) {
+    const error = new Error('Invalid arguments for zeus.discover-environment: profile is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const config = resolveAnalyzeConfig(args, { cwd, env });
+  const role = String(args.role || 'metadata').trim().toLowerCase() === 'data' ? 'testData' : 'metadata';
+  const dbConfig = resolveAnalyzeDbConfig(config, role);
+  if (!isDbConfigured(dbConfig)) {
+    const error = new Error('DB2 connection configuration is incomplete for the selected profile.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const scope = {
+    libraries: normalizeStringList(args.libraries),
+    schemas: normalizeStringList(args.schemas),
+    includeMembers: Boolean(args.includeMembers),
+  };
+  const options = {
+    includeMembers: Boolean(args.includeMembers),
+    includeTables: args.includeTables === undefined ? true : Boolean(args.includeTables),
+  };
+
+  const runQuery = typeof context.discoveryQueryRunner === 'function'
+    ? context.discoveryQueryRunner
+    : undefined;
+
+  const report = await discoverEnvironment({ dbConfig, scope, options, runQuery });
+  const system = args.system ? String(args.system).trim() : '';
+  const suggestedResources = suggestResourcesConfig(report, { system });
+
+  return { profile: profileName, report, suggestedResources };
+}
+
 function executeReadOnlyResolveObject(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
   const env = context.env || process.env;
@@ -2529,6 +2780,7 @@ function executeFetchMember(args = {}, context = {}) {
       member,
       targetPath: localFile,
       streamFileCcsid: DEFAULT_FETCH_MEMBER_STREAM_FILE_CCSID,
+      writeMode: 'local',
       verbose: false,
     });
 
@@ -2537,6 +2789,21 @@ function executeFetchMember(args = {}, context = {}) {
         member,
         messages: Array.isArray(result.messages) ? result.messages.map((entry) => String(entry)) : [],
         stderr: result.stderr ? String(result.stderr) : '',
+      });
+      continue;
+    }
+
+    let localStat = null;
+    try {
+      localStat = fs.statSync(localFile);
+    } catch (_) {
+      localStat = null;
+    }
+    if (!localStat || !localStat.isFile() || localStat.size === 0) {
+      failures.push({
+        member,
+        messages: [`Local file was not written or is empty: ${localFile}`],
+        stderr: '',
       });
       continue;
     }
@@ -2624,6 +2891,79 @@ function executeDocsGenerateCatalog(args = {}, context = {}) {
     commandCount: Number(result.commandCount || 0),
     presetCount: Number(result.presetCount || 0),
   };
+}
+
+function executePuiEditMcp(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+
+  const pathOptions = [
+    { key: 'file', optionName: '--file' },
+    { key: 'in', optionName: '--in' },
+    { key: 'out', optionName: '--out' },
+    { key: 'changes-file', optionName: '--changes-file' },
+  ];
+  for (const { key, optionName } of pathOptions) {
+    const rawValue = args && typeof args[key] === 'string' ? args[key] : '';
+    if (!rawValue.trim()) {
+      continue;
+    }
+    assertPathWithinCwd({
+      toolName: 'zeus.pui-edit',
+      optionName,
+      rawValue,
+      resolvedPath: path.resolve(cwd, rawValue.trim()),
+      cwd,
+    });
+  }
+
+  try {
+    return executePuiEditAction(args, { cwd, allowWrites: true });
+  } catch (error) {
+    if (error && (error.code === 'PUI_EDIT_INVALID' || error.code === 'PUI_EDIT_WRITE_BLOCKED')) {
+      const invalid = new Error(`Invalid arguments for zeus.pui-edit: ${error.message}`);
+      invalid.code = 'TOOL_INVALID_ARGUMENTS';
+      throw invalid;
+    }
+    throw error;
+  }
+}
+
+function executePuiInspectMcp(args = {}, context = {}) {
+  const cwd = context.cwd || process.cwd();
+
+  const rawFile = args && typeof args.file === 'string' ? args.file.trim() : '';
+  if (!rawFile) {
+    const error = new Error('Invalid arguments for zeus.pui-inspect: file is required.');
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const resolvedPath = path.resolve(cwd, rawFile);
+  assertPathWithinCwd({
+    toolName: 'zeus.pui-inspect',
+    optionName: '--file',
+    rawValue: rawFile,
+    resolvedPath,
+    cwd,
+  });
+
+  if (!fs.existsSync(resolvedPath) || !fs.statSync(resolvedPath).isFile()) {
+    const error = new Error(`Invalid arguments for zeus.pui-inspect: file not found: ${rawFile}`);
+    error.code = 'TOOL_INVALID_ARGUMENTS';
+    throw error;
+  }
+
+  const content = fs.readFileSync(resolvedPath, 'utf8');
+  const relFile = path.relative(cwd, resolvedPath) || rawFile;
+  const projection = buildPuiProjection(content, { file: relFile });
+
+  const traceValue = args && typeof args.trace === 'string' ? args.trace.trim() : '';
+  if (traceValue) {
+    const hits = traceFieldBinding(projection, traceValue);
+    return { mode: 'trace', field: traceValue.toUpperCase(), hits, projection };
+  }
+
+  return { mode: 'projection', projection };
 }
 
 function executeReadOnlyDiff(args = {}, context = {}) {
@@ -5081,6 +5421,162 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         }))
         : [],
       timestamp: new Date().toISOString(),
+    });
+  }
+
+  if (name === 'zeus.resources') {
+    const resourcesRunner = typeof context.resourcesRunner === 'function'
+      ? context.resourcesRunner
+      : resolveProfileResources;
+
+    let execution;
+    try {
+      execution = resourcesRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      const message = String(error && error.message ? error.message : '');
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /profile name is required/i.test(message)
+        || /profile ".+" not found/i.test(message)
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+
+    return normalizeMcpResult('zeus.resources', {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      profile: execution && execution.profile ? String(execution.profile) : null,
+      configSource: execution && execution.configSource ? String(execution.configSource) : null,
+      model: execution && execution.model ? execution.model : null,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  if (name === 'zeus.discover-environment') {
+    const discoverRunner = typeof context.discoverEnvironmentRunner === 'function'
+      ? context.discoverEnvironmentRunner
+      : executeDiscoverEnvironment;
+
+    let execution;
+    try {
+      execution = await discoverRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      const message = String(error && error.message ? error.message : '');
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /connection configuration is incomplete/i.test(message)
+        || /profile name is required/i.test(message)
+        || /profile ".+" not found/i.test(message)
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+        throw error;
+      }
+      throw normalizeMcpRuntimeToolError('zeus.discover-environment', error);
+    }
+
+    return normalizeMcpResult('zeus.discover-environment', {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      readOnly: true,
+      profile: execution && execution.profile ? String(execution.profile) : null,
+      report: execution && execution.report ? execution.report : null,
+      suggestedResources: execution && execution.suggestedResources ? execution.suggestedResources : null,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  if (name === 'zeus.pui-edit') {
+    const puiEditRunner = typeof context.puiEditRunner === 'function'
+      ? context.puiEditRunner
+      : executePuiEditMcp;
+
+    let execution;
+    try {
+      execution = puiEditRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.pui-edit/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+        throw error;
+      }
+      throw normalizeMcpRuntimeToolError('zeus.pui-edit', error);
+    }
+
+    return normalizeMcpResult('zeus.pui-edit', {
+      ok: execution && execution.ok !== false,
+      service: 'zeus-rpg-promptkit',
+      puiAction: execution && execution.action ? String(execution.action) : null,
+      file: execution && execution.file ? String(execution.file) : null,
+      messages: Array.isArray(execution && execution.messages)
+        ? execution.messages.map((message) => String(message))
+        : [],
+      warnings: Array.isArray(execution && execution.warnings)
+        ? execution.warnings.map((warning) => String(warning))
+        : [],
+      writes: Array.isArray(execution && execution.writes)
+        ? execution.writes.map((entry) => String(entry))
+        : [],
+      data: execution && execution.data ? execution.data : {},
+      timestamp: new Date().toISOString(),
+    }, {
+      cliEquivalent: 'node cli/zeus.js pui-edit',
+    });
+  }
+
+  if (name === 'zeus.pui-inspect') {
+    const puiInspectRunner = typeof context.puiInspectRunner === 'function'
+      ? context.puiInspectRunner
+      : executePuiInspectMcp;
+
+    let execution;
+    try {
+      execution = puiInspectRunner(args, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
+        || /invalid arguments for zeus\.pui-inspect/i.test(String(error && error.message ? error.message : ''))
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+        throw error;
+      }
+      throw normalizeMcpRuntimeToolError('zeus.pui-inspect', error);
+    }
+
+    const projection = execution && execution.projection ? execution.projection : {};
+    return normalizeMcpResult('zeus.pui-inspect', {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      readOnly: true,
+      mode: execution && execution.mode ? String(execution.mode) : 'projection',
+      file: projection.file ? String(projection.file) : null,
+      recordFormatCount: Number(projection.recordFormatCount || 0),
+      recordFormats: Array.isArray(projection.recordFormats) ? projection.recordFormats : [],
+      signals: Array.isArray(projection.signals) ? projection.signals : [],
+      trace: execution && execution.mode === 'trace'
+        ? {
+          field: execution.field ? String(execution.field) : null,
+          hits: Array.isArray(execution.hits) ? execution.hits : [],
+        }
+        : null,
+      timestamp: new Date().toISOString(),
+    }, {
+      cliEquivalent: 'node cli/zeus.js pui-inspect',
     });
   }
 

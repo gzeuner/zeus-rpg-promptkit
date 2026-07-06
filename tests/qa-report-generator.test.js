@@ -3,7 +3,8 @@
  */
 
 const assert = require('assert');
-const qaReportGenerator = require('../../src/report/qaReportGenerator');
+const { describe, it } = require('node:test');
+const qaReportGenerator = require('../src/report/qaReportGenerator');
 
 describe('QA Report Generator', () => {
   const mockResults = {

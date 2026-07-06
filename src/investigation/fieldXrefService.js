@@ -14,7 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 'use strict';
 
-const { ensureJavaSourcesCompiled, runJavaClass } = require('../java/javaRuntime');
+const { ensureJavaSourcesCompiled, runJavaClass, SECRET_ENV_SENTINEL } = require('../java/javaRuntime');
 
 /**
  * SQL context patterns for Stufe 1: detect field+table relationship in source lines.
@@ -160,10 +160,12 @@ function searchLocalSources(sourceTextByRelativePath, options = {}) {
  * @param {string} options.field      - field name to search
  * @param {string} [options.table]    - optional: filter by table context
  * @param {number} [options.maxResults]
+ * @param {string} [options.progressFile] - optional: file for incremental progress/hits
+ * @param {number} [options.threads]      - optional: parallel worker count (default 16)
  * @returns {Object} parsed result from IbmiSourceSearcher JSON output
  */
 function searchRemoteSources(options = {}) {
-  const { host, user, password, sourceLib, sourceFile, field, table, maxResults = 500 } = options;
+  const { host, user, password, sourceLib, sourceFile, field, table, maxResults = 500, progressFile, threads } = options;
 
   if (!host || !user || !password) {
     throw new Error('host, user, password are required for remote search');
@@ -180,9 +182,16 @@ function searchRemoteSources(options = {}) {
   // Build search term: if table given, search for both field and table as separate terms
   const searchTerm = table ? `${field}|${table}` : field;
 
-  const result = runJavaClass('IbmiSourceSearcher', [
-    host, user, password, sourceLib, sourceFile, searchTerm, String(maxResults),
-  ]);
+  const javaArgs = [
+    host, user, SECRET_ENV_SENTINEL, sourceLib, sourceFile, searchTerm, String(maxResults),
+  ];
+  // argv[7] = progressFile (optional), argv[8] = threads (optional)
+  javaArgs.push(progressFile ? String(progressFile) : '');
+  if (threads && Number(threads) > 0) {
+    javaArgs.push(String(Math.floor(Number(threads))));
+  }
+
+  const result = runJavaClass('IbmiSourceSearcher', javaArgs, { password });
 
   const stdout = (result.stdout || '').trim();
   if (!stdout) {

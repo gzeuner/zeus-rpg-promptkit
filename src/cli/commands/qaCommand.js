@@ -16,6 +16,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 const { runQAPipeline, generateQAReport } = require('../../qa/qaIntegration');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 
 function normalizeFormat(value) {
   const format = String(value || 'markdown').trim().toLowerCase();
@@ -74,7 +75,8 @@ function loadCanonicalAnalysis(inputPath) {
 
 function renderReport(report) {
   if (report && report.format === 'json') {
-    return `${JSON.stringify(report, null, 2)}\n`;
+    const json = createJsonOutput({ format: 'json' });
+    return json.stringify(report) || `${JSON.stringify(report, null, 2)}\n`;
   }
   return `${report && report.content ? report.content : ''}\n`;
 }

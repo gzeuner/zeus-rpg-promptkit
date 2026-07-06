@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../../../../Snippets/WER-1047-Review"
+		},
+		{
+			"path": "../.."
+		}
+	],
+	"settings": {
+		"powershell.cwd": "WER-1047-Review"
+	}
+}

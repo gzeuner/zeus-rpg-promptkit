@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const { buildOutputBundle } = require('../../bundle/outputBundleBuilder');
 const { resolveBundleConfig } = require('../../config/runtimeConfig');
 const { normalizeReproducibilitySettings } = require('../../reproducibility/reproducibility');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 
 function runBundle(args) {
   const verbose = Boolean(args.verbose);
@@ -42,6 +43,12 @@ function runBundle(args) {
     if (verbose) {
       console.log(`[verbose] Program output: ${result.programOutputDir}`);
       console.log(`[verbose] Bundle output: ${result.bundleOutputRoot}`);
+    }
+
+    const json = createJsonOutput(args);
+    if (json.isJsonMode) {
+      json.print(result);
+      return result;
     }
 
     console.log(`Bundle created for program ${result.program}`);

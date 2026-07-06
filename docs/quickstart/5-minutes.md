@@ -15,6 +15,7 @@ Quick local/demo path:
 2. Copy `config/profiles.example.json` to `config/local-only/profiles.json`.
 3. Set `ZEUS_SOURCE_ROOT` and `ZEUS_OUTPUT_ROOT` for local analysis, plus `ZEUS_FETCH_*` or `ZEUS_DB_*` only if you need them.
 4. Run `node cli/zeus.js doctor --profile default --show-resolved`.
+   (If using credentials, set them up first via `zeus secret` — see [`secrets-and-overrides.md`](secrets-and-overrides.md))
 5. Run `node cli/zeus.js analyze --profile default`.
 6. Run `node cli/zeus.js analyses list --profile default`.
 7. Open your preferred AI client and provide the generated prompt and context artifacts.

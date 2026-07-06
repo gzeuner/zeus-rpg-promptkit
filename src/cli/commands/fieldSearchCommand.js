@@ -24,6 +24,7 @@ const {
   resolveProfile,
 } = require('../../config/runtimeConfig');
 const { renderAsciiTable } = require('../helpers/asciiTable');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 const {
   searchLocalSources,
   searchRemoteSources,
@@ -137,7 +138,9 @@ function printRemoteMatches(result) {
     return;
   }
 
-  console.log(`  Durchsucht: ${result.memberCount} Member`);
+  const scanned = result.scannedCount !== undefined ? result.scannedCount : result.memberCount;
+  const elapsed = result.elapsedMs !== undefined ? ` in ${(result.elapsedMs / 1000).toFixed(1)}s` : '';
+  console.log(`  Durchsucht: ${scanned}/${result.memberCount} Member${elapsed}`);
   console.log(`  Treffer: ${result.matchCount}${result.truncated ? ' (truncated)' : ''}`);
 
   if (result.matchCount === 0) {
@@ -159,6 +162,12 @@ function printRemoteMatches(result) {
     for (const m of matches) {
       rows.push([member, String(m.line), m.text.trim().slice(0, 80)]);
     }
+  }
+
+  const json = createJsonOutput(args);
+  if (json.isJsonMode) {
+    json.print(result);
+    return;
   }
 
   console.log(renderAsciiTable(['Member', 'Zeile', 'Text'], rows, { maxCellWidth: 80 }));
@@ -200,6 +209,8 @@ function printXrefMatches(result) {
  *   --source-file <file>    IBM i source file (default: QRPGLESRC)
  *   --mode local|remote|xref|all   Which search modes to run (default: all)
  *   --max-results <n>       Max matches per mode (default: 300)
+ *   --progress-file <path>  Remote search: file for live progress/hits (default: output/field-search-progress.txt)
+ *   --threads <n>           Remote search: parallel worker count (default: 16)
  *   --verbose               Show context lines
  */
 async function runFieldSearch(args) {
@@ -280,10 +291,36 @@ async function runFieldSearch(args) {
       console.log('\n[Stufe 2] --source-lib fehlt — übersprungen.');
       console.log('  Hinweis: --source-lib <LIB> angeben oder fetch.sourceLib im Profil setzen.');
     } else {
+      // Live progress file so intermediate hits are visible while the
+      // (fully buffered) Java process is still running.
+      let progressFile = args['progress-file'] ? String(args['progress-file']).trim() : null;
+      if (!progressFile) {
+        const outputRoot = (analyzeConfig && analyzeConfig.outputRoot)
+          ? path.resolve(process.cwd(), analyzeConfig.outputRoot)
+          : process.cwd();
+        progressFile = path.join(outputRoot, 'field-search-progress.txt');
+      }
+      try {
+        fs.mkdirSync(path.dirname(progressFile), { recursive: true });
+      } catch (_) {
+        // best-effort; searcher tolerates an unwritable progress file
+      }
+
+      let threads = null;
+      if (args.threads !== undefined) {
+        const parsedThreads = Number.parseInt(String(args.threads).trim(), 10);
+        if (Number.isFinite(parsedThreads) && parsedThreads > 0) {
+          threads = parsedThreads;
+        }
+      }
+
       console.log(`\n[Stufe 2] Starte Remote-Suche auf ${host}: ${sourceLib}/${sourceFile}...`);
+      console.log(`  Live-Fortschritt: ${progressFile}`);
+      console.log(`  Tipp: in zweitem Terminal mitlesen mit  Get-Content -Wait '${progressFile}'`);
       try {
         const remoteResult = searchRemoteSources({
           host, user, password, sourceLib, sourceFile, field, table, maxResults,
+          progressFile, threads,
         });
         printRemoteMatches(remoteResult);
       } catch (err) {

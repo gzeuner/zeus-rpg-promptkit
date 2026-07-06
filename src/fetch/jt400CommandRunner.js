@@ -11,7 +11,7 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
-const { ensureJavaSourcesCompiled, runJavaClass } = require('../java/javaRuntime');
+const { ensureJavaSourcesCompiled, runJavaClass, SECRET_ENV_SENTINEL } = require('../java/javaRuntime');
 const { ensureFetchConnectionGuard } = require('../security/connectionGuards');
 
 function ensureJavaHelperCompiled() {
@@ -31,8 +31,8 @@ function parseJsonResult(stdout, fallback) {
   }
 }
 
-function runJavaHelper(className, args) {
-  return runJavaClass(className, args);
+function runJavaHelper(className, args, options) {
+  return runJavaClass(className, args, options);
 }
 
 function executeClCommandRaw({ host, user, password, command, verbose, runtime = {} }) {
@@ -42,7 +42,7 @@ function executeClCommandRaw({ host, user, password, command, verbose, runtime =
   }
 
   const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
-  const result = runJavaHelperFn('IbmiCommandRunner', [host, user, password, command]);
+  const result = runJavaHelperFn('IbmiCommandRunner', [host, user, SECRET_ENV_SENTINEL, command], { password });
   const parsed = parseJsonResult(result.stdout, {
     ok: result.status === 0,
     command,
@@ -88,7 +88,7 @@ function executeListMembersRaw({ host, user, password, sourceLib, sourceFile, ve
   }
 
   const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
-  const result = runJavaHelperFn('IbmiMemberLister', [host, user, password, sourceLib, sourceFile]);
+  const result = runJavaHelperFn('IbmiMemberLister', [host, user, SECRET_ENV_SENTINEL, sourceLib, sourceFile], { password });
   const parsed = parseJsonResult(result.stdout, {
     ok: false,
     members: [],
@@ -138,6 +138,7 @@ function executeExportSourceMemberViaJdbcRaw({
   member,
   targetPath,
   streamFileCcsid,
+  writeMode = 'ifs',
   verbose,
   runtime = {},
 }) {
@@ -150,13 +151,14 @@ function executeExportSourceMemberViaJdbcRaw({
   const result = runJavaHelperFn('IbmiSourceMemberExporter', [
     host,
     user,
-    password,
+    SECRET_ENV_SENTINEL,
     sourceLib,
     sourceFile,
     member,
     targetPath,
     String(streamFileCcsid),
-  ]);
+    String(writeMode || 'ifs'),
+  ], { password });
 
   const parsed = parseJsonResult(result.stdout, {
     ok: false,
@@ -183,6 +185,7 @@ function exportSourceMemberViaJdbc({
   member,
   targetPath,
   streamFileCcsid,
+  writeMode = 'ifs',
   verbose,
   runtime = {},
 }) {
@@ -215,12 +218,14 @@ function exportSourceMemberViaJdbc({
     member,
     targetPath,
     streamFileCcsid,
+    writeMode,
     verbose,
     runtime,
   });
 }
 
 module.exports = {
+  SECRET_ENV_SENTINEL,
   executeClCommandRaw,
   executeExportSourceMemberViaJdbcRaw,
   executeListMembersRaw,

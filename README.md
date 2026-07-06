@@ -130,6 +130,91 @@ Praktisch bedeutet das:
 
 ---
 
+## So gehst du mit Zeus RPG PromptKit um (Einstieg)
+
+1. **Umgebung immer explizit laden** vor jedem Kommando:
+   ```bash
+   source ./config/load-env.sh   # oder . .\config\load-env.ps1 unter Windows
+   ```
+
+2. **Zuerst `doctor` ausführen** — prüft Setup, Profile, Java und Secret Vault:
+   ```bash
+   node cli/zeus.js doctor --profile default --show-resolved
+   ```
+
+3. **Tool-Katalog** als verbindliche Referenz für Commands, Safety-Level und Beispiele nutzen:
+   ```bash
+   node cli/zeus.js docs:generate-catalog
+   ```
+
+4. **Schnellstart** siehe [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md) oder vollständiges Onboarding für neues System ([`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)).
+
+5. **Credentials sicher verwalten** (siehe How-To unten).
+
+---
+
+## How To: Credentials verschlüsseln / entschlüsseln (Secret Vault)
+
+**Niemals Klartext-Passwörter** in `.env` oder committeden Profilen speichern.
+
+Zeus bietet einen Secret Vault (AES-256-GCM) mit dem Format `enc:v1:...`. Werte werden **transparent** zur Laufzeit entschlüsselt.
+
+### Einmalige Einrichtung
+
+```bash
+# Schlüssel anlegen (in config/local-only/.zeus-key – gitignoriert)
+node cli/zeus.js secret init-key
+
+# Oder per Env (hat Vorrang):
+# export ZEUS_SECRET_KEY="dein-32-byte-geheimnis"
+```
+
+### Passwort verschlüsseln
+
+```bash
+node cli/zeus.js secret encrypt --value "MeinSuperGeheimesPasswort"
+# -> enc:v1:BASE64...
+
+# Oder per Pipe (vermeidet History):
+echo -n "MeinSuperGeheimesPasswort" | node cli/zeus.js secret encrypt
+```
+
+### Verschlüsselten Wert verwenden
+
+In `.env.local`:
+
+```dotenv
+ZEUS_DB_PASSWORD=enc:v1:BASE64...
+ZEUS_FETCH_PASSWORD=enc:v1:BASE64...
+```
+
+Profil kann unverändert bleiben:
+
+```json
+"db": { "password": "${env:ZEUS_DB_PASSWORD}" }
+```
+
+### Verwalten & Troubleshooting
+
+```bash
+node cli/zeus.js secret status                 # Schlüssel-Quelle prüfen
+node cli/zeus.js secret decrypt --value "enc:v1:..."  # Nur zum Testen
+node cli/zeus.js doctor --profile default      # Secret-Vault-Check
+```
+
+**Schlüssel-Quellen (Priorität):**
+1. Env-Variable `ZEUS_SECRET_KEY`
+2. Datei `config/local-only/.zeus-key`
+
+**Wichtige Regeln:**
+- Die Schlüsseldatei darf **nie** committed oder geteilt werden.
+- Bei Schlüssel-Wechsel alle Werte neu verschlüsseln.
+- Ohne passenden Schlüssel schlägt die Entschlüsselung **laut** fehl.
+
+Vollständige Details: [`docs/quickstart/secrets-and-overrides.md`](docs/quickstart/secrets-and-overrides.md)
+
+---
+
 ## Projektneutrale Knowledge-Pipeline
 
 Zeus bereitet eine sichere, projektneutrale Knowledge-Pipeline für zukünftige KI-gestützte Modernisierungs-Workflows vor.
@@ -873,6 +958,94 @@ In practice:
 - Risky actions must be shown, explained and explicitly approved.
 - Generated artifacts may contain sensitive business logic and should be shared deliberately.
 - Use `--safe-sharing` where appropriate for external review.
+
+---
+
+## How to Handle Zeus RPG PromptKit (Getting Started)
+
+1. **Always load environment explicitly** before any command:
+   ```bash
+   source ./config/load-env.sh   # or . .\config\load-env.ps1 on Windows
+   ```
+
+2. **Run `doctor` first** — it validates your setup, profiles, Java, and secret vault:
+   ```bash
+   node cli/zeus.js doctor --profile default --show-resolved
+   ```
+
+3. **Use the Tool Catalog** as the single source of truth for commands, safety levels and examples:
+   ```bash
+   # see docs/tool-catalog.md or
+   node cli/zeus.js docs:generate-catalog
+   ```
+
+4. **Start with a quick local run** (see [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)) or full onboarding for a new IBM i ([`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)).
+
+5. **Handle credentials securely** (see dedicated how-to below).
+
+---
+
+## How To: Encrypt / Decrypt Credentials (Secret Vault)
+
+**Never store plaintext passwords** in `.env` files or committed profiles.
+
+Zeus supports a built-in Secret Vault (AES-256-GCM) using the `enc:v1:...` format. Values are **transparently decrypted** at runtime when referenced via `${env:...}` or directly in profiles.
+
+### One-time setup
+
+```bash
+# Create a local key (stored in config/local-only/.zeus-key — gitignored)
+node cli/zeus.js secret init-key
+
+# Or provide via env (takes precedence):
+# export ZEUS_SECRET_KEY="your-32-byte-secret"
+```
+
+### Encrypt a credential
+
+```bash
+node cli/zeus.js secret encrypt --value "MySuperSecretDbPassword"
+# Output: enc:v1:BASE64_ENCODED...
+
+# Or pipe from stdin (avoids shell history):
+echo -n "MySuperSecretDbPassword" | node cli/zeus.js secret encrypt
+```
+
+### Use the encrypted value
+
+In your `.env.local` (or local-only profile):
+
+```dotenv
+ZEUS_DB_PASSWORD=enc:v1:BASE64_ENCODED...
+ZEUS_FETCH_PASSWORD=enc:v1:BASE64_ENCODED...
+```
+
+The profile can stay as:
+
+```json
+"db": { "password": "${env:ZEUS_DB_PASSWORD}" }
+```
+
+Decryption happens automatically during config resolution.
+
+### Manage & troubleshoot
+
+```bash
+node cli/zeus.js secret status                 # Check key source
+node cli/zeus.js secret decrypt --value "enc:v1:..."  # For testing only
+node cli/zeus.js doctor --profile default      # Secret Vault check appears here
+```
+
+**Key sources (priority order):**
+1. `ZEUS_SECRET_KEY` environment variable
+2. `config/local-only/.zeus-key` file
+
+**Important rules:**
+- The key file must **never** be committed or shared.
+- Changing the key requires re-encrypting all values.
+- Without a matching key, decryption **fails loudly** (no silent fallback).
+
+Full details and override patterns: [`docs/quickstart/secrets-and-overrides.md`](docs/quickstart/secrets-and-overrides.md)
 
 ---
 

@@ -6,8 +6,9 @@
 #
 # Loads environment variables from .env files into the current shell session.
 # Search order for files:
-#   1) config/
-#   2) project root (backward compatibility)
+#   1) config/local-only/   (preferred location for gitignored credentials)
+#   2) config/
+#   3) project root (backward compatibility)
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   echo "Please source this script so variables stay in your current shell:"
@@ -23,6 +24,10 @@ project_root="$(cd "${script_dir}/.." && pwd)"
 
 resolve_env_file() {
   local file_name="$1"
+  if [ -f "${script_dir}/local-only/${file_name}" ]; then
+    printf '%s\n' "${script_dir}/local-only/${file_name}"
+    return 0
+  fi
   if [ -f "${script_dir}/${file_name}" ]; then
     printf '%s\n' "${script_dir}/${file_name}"
     return 0

@@ -32,6 +32,7 @@ const { isDbConfigured } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
 const { validateSqlIdentifier, escapeSqlLiteral } = require('../../db2/readOnlyQueryService');
 const { renderAsciiTable } = require('../helpers/asciiTable');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
 
 const SUPPORTED_TYPES = ['*PGM', '*SRVPGM', '*MODULE', '*FILE', '*CMD', '*DTAARA', '*JOBQ', '*OUTQ'];
@@ -219,6 +220,12 @@ async function runInspectObject(args) {
   if (rendered) {
     console.log(`\nObjekt: ${lib}/${name} (${type})\n`);
     console.log(rendered);
+  }
+
+  const json = createJsonOutput(args);
+  if (json.isJsonMode) {
+    json.print(result);
+    return;
   }
 
   console.log(`\n${result.rows.length} Objekt(e) gefunden.`);

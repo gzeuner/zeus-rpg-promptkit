@@ -30,6 +30,7 @@ WHERE TABLE_SCHEMA IN ('BIB', 'APPLIB', 'LIBDEV')
     'QCLSRC',
     'QCLLESRC',
     'QSQLSRC',
+    'QTBLSRC',
     'QSRVSRC',
     'QDDSSRC'
   )
@@ -50,6 +51,7 @@ WHERE TABLE_SCHEMA IN ('APPDATA', 'APPLIB', 'LIBDEV')
     'QCLSRC',
     'QCLLESRC',
     'QSQLSRC',
+    'QTBLSRC',
     'QSRVSRC',
     'QDDSSRC'
   )

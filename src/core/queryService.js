@@ -140,7 +140,10 @@ function executeQueryTable(args, { cwd = process.cwd() } = {}) {
   const dbConfig = requireDbConfig(config);
 
   const table = validateSqlIdentifier(args.table, '--table');
-  const schema = args.schema ? validateSqlIdentifier(args.schema, '--schema') : null;
+  // On IBM i a library is the SQL schema; accept --library as an alias for --schema
+  // so the override vocabulary stays consistent with `fetch` and `analyze`.
+  const schemaArg = args.schema || args.library;
+  const schema = schemaArg ? validateSqlIdentifier(schemaArg, '--schema') : null;
   const filter = args.filter ? validateFilterPattern(args.filter) : '';
   const discovered = !schema ? discoverSchema(dbConfig, table) : null;
   const effectiveSchema = schema || (discovered && discovered.TABLE_SCHEMA ? String(discovered.TABLE_SCHEMA).trim().toUpperCase() : '');
