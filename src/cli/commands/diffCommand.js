@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const path = require('path');
 const { loadProfiles, readWorkCopyConfig, resolveAnalyzeConfig, resolveFetchConfig, resolveProfile } = require('../../config/runtimeConfig');
 const { renderAsciiTable } = require('../helpers/asciiTable');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 const { buildLineComparison, readLines, resolveDiffPaths } = require('../../diff/workspaceDiffService');
 
 async function runDiff(args) {
@@ -57,6 +58,11 @@ async function runDiff(args) {
       { maxCellWidth: 60 },
     ));
     console.log(`Changed lines: ${comparison.changedCount}`);
+
+    const json = createJsonOutput(args);
+    if (json.isJsonMode) {
+      json.print({ member: resolved.member, comparison });
+    }
   } catch (error) {
     console.error(error.message);
     process.exit(2);

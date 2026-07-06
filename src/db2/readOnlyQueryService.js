@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const { buildJdbcUrl, resolveDefaultSchema, isDbConfigured } = require('./db2Config');
 const { runJavaHelper } = require('../fetch/jt400CommandRunner');
+const { SECRET_ENV_SENTINEL } = require('../java/javaRuntime');
 const {
   executeWithAdaptiveRetry,
   normalizeSqlState,
@@ -85,13 +86,15 @@ function escapeSqlLiteral(value) {
 function executeReadOnlyDb2QueryRaw({ dbConfig, query, maxRows = 50, runtime = {} }) {
   const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
   const jdbcUrl = buildJdbcUrl(dbConfig, resolveDefaultSchema(dbConfig));
+  // Security: pass the password via the child-process environment (ZEUS_JV_PASSWORD),
+  // not as a CLI argument. The sentinel marks the position; Java resolves it back.
   const result = runJavaHelperFn('Db2DiagnosticQueryRunner', [
     jdbcUrl,
     String(dbConfig.user),
-    String(dbConfig.password),
+    SECRET_ENV_SENTINEL,
     query,
     String(maxRows),
-  ]);
+  ], { password: String(dbConfig.password) });
 
   if (result.status !== 0) {
     throw new Error((result.stderr || '').trim() || 'DB2 diagnostic query failed.');

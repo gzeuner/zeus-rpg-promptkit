@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 
 const { buildJdbcUrl, isDbConfigured, resolveDefaultSchema } = require('../db2/db2Config');
-const { runClCommand, runJavaHelper } = require('../fetch/jt400CommandRunner');
+const { runClCommand, runJavaHelper, SECRET_ENV_SENTINEL } = require('../fetch/jt400CommandRunner');
 const { getDiagnosticPack } = require('./diagnosticPackRegistry');
 const {
   buildReproducibilityMetadata,
@@ -131,10 +131,10 @@ function defaultExecutors() {
       const result = runJavaHelper('Db2DiagnosticQueryRunner', [
         jdbcUrl,
         String(dbConfig.user),
-        String(dbConfig.password),
+        SECRET_ENV_SENTINEL,
         query,
         String(maxRows || 50),
-      ]);
+      ], { password: String(dbConfig.password) });
       if (result.status !== 0) {
         throw new Error((result.stderr || '').trim() || 'Diagnostic SQL helper failed.');
       }

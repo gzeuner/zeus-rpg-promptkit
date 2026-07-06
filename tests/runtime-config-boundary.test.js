@@ -115,6 +115,7 @@ test('runtime-config facade exports remain stable', () => {
     'resolveBundleConfig',
     'resolveFetchConfig',
     'resolveProfile',
+    'resolveProfileResources',
     'resolveProfilesConfigPaths',
     'resolveWorkflowPresetConfig',
     'validateProfiles',

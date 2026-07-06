@@ -33,8 +33,9 @@ async function cleanRemoteIfsDir(args, verbose) {
     throw new Error('--clean-remote: ifsDir konnte nicht ermittelt werden (ZEUS_FETCH_IFS_DIR oder --ifs-dir setzen).');
   }
 
-  // CL-Befehl: Verzeichnis und Inhalt löschen, dann neu anlegen
-  const rmCmd = `RMV IFS OBJ('${ifsDir}/*') SUBTREE(*ALL)`;
+  // CL-Befehl: IFS-Arbeitsverzeichnis samt Inhalt entfernen.
+  // Das nachfolgende Fetch legt das Verzeichnis via ensureRemoteDirectory neu an.
+  const rmCmd = `RMVDIR DIR('${ifsDir}') SUBTREE(*ALL) RMVLNK(*YES)`;
   if (verbose) {
     console.log(`[verbose] --clean-remote: ${rmCmd}`);
   }
@@ -75,24 +76,27 @@ async function runFetch(args) {
   try {
     const { config, summary } = await executeFetch(args);
 
+    // Env-Overrides immer sichtbar machen (nicht nur im verbose-Modus),
+    // damit eine stille Übersteuerung von Profilwerten nicht überrascht.
+    if (config.hostEnvOverride) {
+      console.warn(
+        `[WARN] ZEUS_FETCH_HOST="${config.hostEnvOverride.envValue}" überschreibt`
+        + ` Profil-Wert "${config.hostEnvOverride.profileValue}".`
+        + ' Benutze --host <HOST> zum expliziten Setzen.',
+      );
+    }
+    if (config.sourceLibEnvOverride) {
+      console.warn(
+        `[WARN] ZEUS_FETCH_SOURCE_LIB="${config.sourceLibEnvOverride.envValue}" überschreibt`
+        + ` Profil-Wert "${config.sourceLibEnvOverride.profileValue}".`
+        + ' Benutze --source-lib <LIB> zum expliziten Setzen.',
+      );
+    }
+
     if (verbose) {
       console.log(`[verbose] Fetch host: ${config.host}`);
       console.log(`[verbose] Fetch port: ${config.port}`);
       console.log(`[verbose] Object library: ${config.sourceLib}`);
-      if (config.hostEnvOverride) {
-        console.warn(
-          `[WARN] ZEUS_FETCH_HOST="${config.hostEnvOverride.envValue}" überschreibt`
-          + ` Profil-Wert "${config.hostEnvOverride.profileValue}".`
-          + ' Benutze --host <HOST> zum expliziten Setzen.',
-        );
-      }
-      if (config.sourceLibEnvOverride) {
-        console.warn(
-          `[WARN] ZEUS_FETCH_SOURCE_LIB="${config.sourceLibEnvOverride.envValue}" überschreibt`
-          + ` Profil-Wert "${config.sourceLibEnvOverride.profileValue}".`
-          + ' Benutze --source-lib <LIB> zum expliziten Setzen.',
-        );
-      }
       console.log(`[verbose] Source files: ${config.files.join(', ')}`);
       console.log(`[verbose] IFS dir: ${config.ifsDir}`);
       console.log(`[verbose] Local out: ${path.resolve(process.cwd(), config.out)}`);
@@ -114,6 +118,11 @@ async function runFetch(args) {
     console.log(`Download transport used: ${summary.transportUsed}`);
     console.log(`Source encoding policy: ${summary.encodingPolicy}`);
     console.log(`Local destination: ${summary.localDestination}`);
+    // Ablage-Struktur explizit machen, damit klar ist, wo die Sourcen liegen und
+    // was anschliessend als --source / sourceRoot fuer `analyze` zu verwenden ist.
+    console.log('Ablage-Struktur: <Local destination>/<SOURCE-FILE>/<MEMBER>.<ext>');
+    console.log(`  Beispiel: ${summary.localDestination}/QRPGLESRC/MYPGM.rpgle`);
+    console.log(`  -> Fuer die Analyse:  zeus analyze --source ${summary.localDestination} --member <NAME>`);
     if (summary.importManifestPath) {
       console.log(`Import manifest: ${summary.importManifestPath}`);
     }

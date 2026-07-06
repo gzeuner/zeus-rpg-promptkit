@@ -22,7 +22,7 @@ Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 |---|---|---|---|
 | `ai/` | KI-Verträge, Session-Patterns, Validierung | [`ai/session-prompt.md`](ai/session-prompt.md) | AI Agents, Prompt Engineers |
 | `cli/` | Referenz und praxisnahe Kommando-Beispiele | [`cli/reference.md`](cli/reference.md) | Entwickler:innen, Operatoren |
-| `quickstart/` | Schneller produktiver Einstieg | [`quickstart/5-minutes.md`](quickstart/5-minutes.md), [`quickstart/onboarding-new-ibm-i.md`](quickstart/onboarding-new-ibm-i.md) | Neue Teammitglieder, System-Onboarding |
+| `quickstart/` | Schneller produktiver Einstieg inkl. **How-To: Credentials verschlüsseln/entschlüsseln** | [`quickstart/5-minutes.md`](quickstart/5-minutes.md), [`quickstart/secrets-and-overrides.md`](quickstart/secrets-and-overrides.md) (Secret Vault), [`quickstart/onboarding-new-ibm-i.md`](quickstart/onboarding-new-ibm-i.md) | Neue Teammitglieder, System-Onboarding |
 | `architecture/` | Runtime-, Config- und Systemmodell-Reviews | [`architecture/runtime-config-model-review.md`](architecture/runtime-config-model-review.md) | Maintainer, Tooling Engineers |
 | `mcp/` | Lokaler MCP-Betrieb, Policy-Grenzen und Troubleshooting | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Operatoren, AI-Integratoren |
 | `workflows/` | Geführte Analyse- und Agenten-Workflows | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Analysten, Architekten |
@@ -78,3 +78,4 @@ flowchart TD
 - Regenerierung funktioniert direkt ueber `zeus docs:generate-catalog` oder `zeus docs generate-catalog` und haelt den Tool-Katalog aktuell.
 - Optional maschinenlesbar: `zeus docs:generate-catalog --json-output docs/tool-catalog.json`.
 - Tool catalog generator (implemented): [`internal/generate-tool-catalog-proposal.md`](internal/generate-tool-catalog-proposal.md).
+- Toolkit-Verbesserungen & offene Punkte (Juli 2026): [`internal/toolkit-improvements-2026-07.md`](internal/toolkit-improvements-2026-07.md).

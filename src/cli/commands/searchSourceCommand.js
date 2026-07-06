@@ -17,6 +17,7 @@ const {
   executeSearchSource,
   groupResultsByFile,
 } = require('../../core/searchSourceService');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 
 async function runSearchSource(args) {
   let execution;
@@ -33,6 +34,12 @@ async function runSearchSource(args) {
 
   if (execution.noSourceFiles) {
     console.log(`No source files found matching pattern: ${execution.filePattern}`);
+    return;
+  }
+
+  const json = createJsonOutput(args);
+  if (json.isJsonMode) {
+    json.print(execution);
     return;
   }
 

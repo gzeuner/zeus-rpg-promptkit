@@ -1,3 +1,4 @@
+
 /*
 Copyright 2026 gzeuner - tiny-tool.de
 
@@ -24,7 +25,8 @@ public class IbmiIfsDownloader {
     private static int downloadedCount = 0;
 
     private static String escape(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return value
                 .replace("\\", "\\\\")
                 .replace("\"", "\\\"")
@@ -39,7 +41,7 @@ public class IbmiIfsDownloader {
         }
 
         try (InputStream in = new IFSFileInputStream(system, remotePath);
-             FileOutputStream out = new FileOutputStream(localFile)) {
+                FileOutputStream out = new FileOutputStream(localFile)) {
             byte[] buffer = new byte[8192];
             int read;
             while ((read = in.read(buffer)) >= 0) {
@@ -61,7 +63,8 @@ public class IbmiIfsDownloader {
             }
 
             IFSFile[] children = remote.listFiles();
-            if (children == null) return;
+            if (children == null)
+                return;
 
             for (IFSFile child : children) {
                 String childRemotePath = child.getPath();
@@ -81,7 +84,7 @@ public class IbmiIfsDownloader {
 
         String host = args[0];
         String user = args[1];
-        String password = args[2];
+        String password = ZeusSecrets.resolve(args[2]);
         String remoteDir = args[3];
         String localDir = args[4];
 
@@ -120,4 +123,3 @@ public class IbmiIfsDownloader {
         }
     }
 }
-

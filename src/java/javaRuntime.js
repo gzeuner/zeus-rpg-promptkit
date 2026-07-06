@@ -15,6 +15,13 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
+// Secure secret passing to the Java helpers. The password is provided to the JVM
+// via this environment variable; SECRET_ENV_SENTINEL is placed in the CLI argument
+// vector where the password would otherwise appear, so it never reaches the OS
+// process list. Kept in sync with java/ZeusSecrets.java.
+const SECRET_ENV_VAR = 'ZEUS_JV_PASSWORD';
+const SECRET_ENV_SENTINEL = '@ZEUS_SECRET_ENV@';
+
 function resolveJavaPaths({ cwd = process.cwd() } = {}) {
   const sourceDir = path.resolve(cwd, 'java');
   return {
@@ -82,10 +89,14 @@ function shouldCompileJavaSources({ sourceFiles, binDir }) {
   });
 }
 
-function runProcess(command, args, errorLabel) {
+function runProcess(command, args, errorLabel, env) {
   const result = spawnSync(command, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    // Java helpers (e.g. source-wide search) can emit large JSON payloads;
+    // the default 1 MB buffer overflows with ENOBUFS on big result sets.
+    maxBuffer: 256 * 1024 * 1024,
+    ...(env ? { env } : {}),
   });
 
   if (result.error) {
@@ -140,14 +151,27 @@ const HEARTBEAT_CLASSES = new Set([
   'Db2TestDataExtractor',
 ]);
 
-function runJavaClass(className, args, { cwd = process.cwd(), heartbeat = false } = {}) {
+function runJavaClass(className, args, { cwd = process.cwd(), heartbeat = false, password } = {}) {
   const classpath = resolveJavaClasspath({ cwd });
   const showHeartbeat = heartbeat || HEARTBEAT_CLASSES.has(className);
   if (showHeartbeat) {
     process.stderr.write(`[zeus] ${className}: Verbindung aufbauen...\n`);
   }
   const t0 = Date.now();
-  const result = runProcess('java', ['-cp', classpath, className, ...args], `Failed to run Java helper ${className}`);
+  // Security: when a password is supplied, it is passed to the Java child via the
+  // ZEUS_JV_PASSWORD environment variable (NOT as a CLI argument), so it never
+  // appears in the OS process list. The caller places SECRET_ENV_SENTINEL in the
+  // argument vector where the password would otherwise go; ZeusSecrets.resolve()
+  // swaps it back inside the JVM.
+  const childEnv = (password !== undefined && password !== null)
+    ? { ...process.env, [SECRET_ENV_VAR]: String(password) }
+    : undefined;
+  const result = runProcess(
+    'java',
+    ['-cp', classpath, className, ...args],
+    `Failed to run Java helper ${className}`,
+    childEnv,
+  );
   if (showHeartbeat) {
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
     process.stderr.write(`[zeus] ${className}: fertig (${elapsed}s)\n`);
@@ -156,6 +180,8 @@ function runJavaClass(className, args, { cwd = process.cwd(), heartbeat = false 
 }
 
 module.exports = {
+  SECRET_ENV_SENTINEL,
+  SECRET_ENV_VAR,
   resolveJavaPaths,
   resolveJavaClasspathEntries,
   resolveJavaClasspath,

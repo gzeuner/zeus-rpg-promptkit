@@ -35,8 +35,8 @@
 #   - Keine Ausgabe von Credential-Werten in der Konsole
 #
 # Ablage der .env-Dateien:
-#   Bevorzugter Speicherort ist config/ (neben diesem Skript).
-#   Fallback: Projekt-Root (rueckwaertskompatibel)
+#   Bevorzugter Speicherort ist config/local-only/ (gitignoriert, neben profiles.json).
+#   Fallback: config/ (neben diesem Skript) und Projekt-Root (rueckwaertskompatibel).
 
 param(
     [string]$Environment = "default"
@@ -77,8 +77,12 @@ if ($effectiveExecutionPolicy) {
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 $envFileName = if ($Environment -eq "default") { ".env.local" } else { ".env.$Environment.local" }
-# Suche zuerst im config/-Verzeichnis, dann im Projekt-Root
-$envFile = if (Test-Path (Join-Path $scriptDir $envFileName)) {
+# Suche zuerst im config/local-only/-Verzeichnis (bevorzugter Ort fuer gitignorierte
+# Credentials), dann im config/-Verzeichnis, dann im Projekt-Root.
+$localOnlyDir = Join-Path $scriptDir 'local-only'
+$envFile = if (Test-Path (Join-Path $localOnlyDir $envFileName)) {
+    Join-Path $localOnlyDir $envFileName
+} elseif (Test-Path (Join-Path $scriptDir $envFileName)) {
     Join-Path $scriptDir $envFileName
 } else {
     Join-Path $projectRoot $envFileName
@@ -87,7 +91,9 @@ $envFile = if (Test-Path (Join-Path $scriptDir $envFileName)) {
 # ── Bei benannten Environments zusaetzlich .env.local laden (Basis-Konfiguration)
 $baseEnvFile = $null
 if ($Environment -ne "default") {
-    $baseCandidate = if (Test-Path (Join-Path $scriptDir ".env.local")) {
+    $baseCandidate = if (Test-Path (Join-Path $localOnlyDir ".env.local")) {
+        Join-Path $localOnlyDir ".env.local"
+    } elseif (Test-Path (Join-Path $scriptDir ".env.local")) {
         Join-Path $scriptDir ".env.local"
     } elseif (Test-Path (Join-Path $projectRoot ".env.local")) {
         Join-Path $projectRoot ".env.local"
@@ -102,7 +108,7 @@ if (-not (Test-Path $envFile)) {
     $exampleInRoot   = Join-Path $projectRoot ($envFileName -replace '\.local$', '.example')
     $exampleHint = if (Test-Path $exampleInConfig) { $exampleInConfig } else { $exampleInRoot }
     Write-Host "Beispiel-Datei vorhanden: $exampleHint" -ForegroundColor Yellow
-    Write-Host "Bitte als '$envFileName' in config/ ablegen und Werte befuellen." -ForegroundColor Yellow
+    Write-Host "Bitte als '$envFileName' in config/local-only/ (bevorzugt) oder config/ ablegen und Werte befuellen." -ForegroundColor Yellow
     Stop-LoadEnv "Env-Datei fehlt: $envFileName" 2
 }
 

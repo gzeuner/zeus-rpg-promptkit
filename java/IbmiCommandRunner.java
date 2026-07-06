@@ -1,3 +1,4 @@
+
 /*
 Copyright 2026 gzeuner - tiny-tool.de
 
@@ -19,7 +20,8 @@ import java.time.Instant;
 
 public class IbmiCommandRunner {
     private static String escape(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return value
                 .replace("\\", "\\\\")
                 .replace("\"", "\\\"")
@@ -39,7 +41,7 @@ public class IbmiCommandRunner {
 
         String host = args[0];
         String user = args[1];
-        String password = args[2];
+        String password = ZeusSecrets.resolve(args[2]);
         String command = args[3];
 
         AS400 system = null;
@@ -56,7 +58,8 @@ public class IbmiCommandRunner {
 
             AS400Message[] messages = commandCall.getMessageList();
             for (int i = 0; i < messages.length; i++) {
-                if (i > 0) json.append(",");
+                if (i > 0)
+                    json.append(",");
                 String message = messages[i].getID() + " " + messages[i].getText();
                 json.append("\"").append(escape(message)).append("\"");
             }
@@ -93,4 +96,3 @@ public class IbmiCommandRunner {
         }
     }
 }
-

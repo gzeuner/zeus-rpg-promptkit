@@ -29,6 +29,8 @@ const {
   matchesConnectionTargetName,
 } = require('../../config/connectionTargetMetadata');
 const { getRuntimeConfigMetadata } = require('../../config/dbRuntimeConfigDiagnostics');
+const { discoverEnvFiles } = require('../../config/envFileLoader');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 const {
   ensureJavaSourcesCompiled,
   listJavaSourceFiles,
@@ -40,6 +42,7 @@ const { isDbConfigured, resolveDefaultSchema } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
 const { getIbmiOsVersion } = require('../../db2/ibmiPlatformInfo');
 const { renderAsciiTable } = require('../helpers/asciiTable');
+const { resolveKeyMaterial, KEY_ENV_VAR, KEY_FILE_RELATIVE } = require('../../security/secretVault');
 const {
   buildDbRuntimeConflictDiagnostics,
   getDbRuntimeConflictWarnings,
@@ -71,6 +74,42 @@ function isSet(value) {
 
 function buildSetHint(name, value) {
   return `set ${name}=${value}`;
+}
+
+// Prueft das Secret-Vault-Setup: ist ein Schluessel verfuegbar und werden ueberhaupt
+// verschluesselte Werte (enc:v1:...) verwendet? Meldet FAIL, wenn verschluesselte
+// Werte vorliegen, aber kein Schluessel gefunden wird.
+function appendSecretVaultChecks(checks, { env = process.env } = {}) {
+  const keyInfo = resolveKeyMaterial({ env });
+  const encryptedEnvVars = Object.keys(env || {})
+    .filter((name) => typeof env[name] === 'string' && env[name].startsWith('enc:v1:'));
+
+  if (encryptedEnvVars.length === 0) {
+    checks.push({
+      name: 'Secret Vault',
+      status: 'INFO',
+      details: keyInfo
+        ? `Schluessel verfuegbar (${keyInfo.source}); aktuell keine verschluesselten Env-Werte.`
+        : `Kein Schluessel gesetzt. Optional: Passwoerter mit "zeus secret encrypt" verschluesseln (${KEY_ENV_VAR} oder ${KEY_FILE_RELATIVE}).`,
+    });
+    return;
+  }
+
+  if (keyInfo) {
+    checks.push({
+      name: 'Secret Vault',
+      status: 'PASS',
+      details: `${encryptedEnvVars.length} verschluesselte(r) Env-Wert(e); Schluessel: ${keyInfo.source}.`,
+    });
+    return;
+  }
+
+  checks.push({
+    name: 'Secret Vault',
+    status: 'FAIL',
+    details: `${encryptedEnvVars.join(', ')} sind verschluesselt (enc:v1:), aber kein Schluessel gefunden. `
+      + `Setze ${KEY_ENV_VAR} oder lege ${KEY_FILE_RELATIVE} an (zeus secret init-key).`,
+  });
 }
 
 function addEnvCheck(checks, { name, expected = true, envValue, fallbackValue = '', required = true, hint }) {
@@ -453,6 +492,36 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
   }
 
   try {
+    const environment = (typeof args.env === 'string' && args.env.trim())
+      || (typeof args.environment === 'string' && args.environment.trim())
+      || (env.ZEUS_ENV && String(env.ZEUS_ENV).trim())
+      || 'default';
+    const configDir = (typeof args.config === 'string' && args.config.trim())
+      ? args.config.trim()
+      : undefined;
+    const discovery = discoverEnvFiles({ cwd, configDir, environment });
+    if (discovery.files.length > 0) {
+      const fileLabel = discovery.files
+        .map((file) => `${path.relative(cwd, file.path).replace(/\\/g, '/')} (${file.role})`)
+        .join(', ');
+      checks.push({
+        name: 'Env Auto-Discovery',
+        status: 'INFO',
+        details: `${discovery.files.length} .env-Datei(en) gefunden: ${fileLabel}. Werte werden automatisch geladen, ohne bereits gesetzte Variablen zu ueberschreiben.`,
+      });
+    } else {
+      const searchedDirs = discovery.searchDirs
+        .map((dir) => path.relative(cwd, dir).replace(/\\/g, '/') || '.')
+        .join(', ');
+      checks.push({
+        name: 'Env Auto-Discovery',
+        status: 'INFO',
+        details: `Keine .env-Datei automatisch gefunden (gesucht in: ${searchedDirs}). Profil-Platzhalter benoetigen ggf. manuelles Laden via load-env.ps1/.sh.`,
+      });
+    }
+  } catch { /* Env-Discovery ist optional — Fehler nicht kritisch */ }
+
+  try {
     const profiles = loadProfiles({ cwd, env, args });
     resolvedProfile = resolveProfile(profiles, args.profile, { env });
     resolvedAnalyzeConfig = resolveAnalyzeConfig(args, { cwd, env });
@@ -496,6 +565,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
   if (envChecks.some((entry) => entry.status === 'FAIL')) {
     hasCriticalFailure = true;
   }
+  appendSecretVaultChecks(checks, { env });
   if (resolvedAnalyzeConfig) {
     const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
     const testDataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'testData');
@@ -979,6 +1049,19 @@ async function runDoctor(args) {
       result.probeRows.map((row) => [row.system, row.profile, row.functionName, row.status, row.details]),
       { maxCellWidth: 50 },
     ));
+  }
+
+  const json = createJsonOutput(args);
+  if (json.isJsonMode) {
+    json.print({
+      checks: result.checks,
+      probeRows: result.probeRows || [],
+      hasCriticalFailure: result.hasCriticalFailure,
+    });
+    if (result.hasCriticalFailure) {
+      process.exit(1);
+    }
+    return;
   }
 
   if (result.hasCriticalFailure) {

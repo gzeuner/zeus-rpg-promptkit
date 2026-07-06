@@ -12,7 +12,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
-const { ensureJavaHelperCompiled, runJavaHelper } = require('./jt400CommandRunner');
+const { ensureJavaHelperCompiled, runJavaHelper, SECRET_ENV_SENTINEL } = require('./jt400CommandRunner');
 
 function parseJsonResult(stdout, fallback) {
   const text = (stdout || '').trim();
@@ -38,7 +38,7 @@ async function downloadDirectoryViaJt400({
     console.log(`[verbose] JT400 IFS download ${remoteDir} -> ${resolvedLocal}`);
   }
 
-  const result = runJavaHelper('IbmiIfsDownloader', [host, user, password, remoteDir, resolvedLocal]);
+  const result = runJavaHelper('IbmiIfsDownloader', [host, user, SECRET_ENV_SENTINEL, remoteDir, resolvedLocal], { password });
   const parsed = parseJsonResult(result.stdout, {
     ok: result.status === 0,
     downloadedCount: 0,

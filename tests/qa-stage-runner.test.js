@@ -3,7 +3,8 @@
  */
 
 const assert = require('assert');
-const QAStageRunner = require('../../src/qa/qaStageRunner');
+const { describe, it } = require('node:test');
+const QAStageRunner = require('../src/qa/qaStageRunner');
 
 describe('QA Stage Runner', () => {
   it('should create runner with correct config', () => {

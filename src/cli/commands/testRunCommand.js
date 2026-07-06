@@ -32,6 +32,7 @@ const path = require('path');
 const { resolveProfile, loadProfiles, resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
 const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 const {
   captureSnapshot,
   writeTestRunManifest,
@@ -107,7 +108,8 @@ async function run(args) {
       console.error(`Fehler beim Laden: ${err.message}`);
       process.exit(2);
     }
-    console.log(JSON.stringify(manifest, null, 2));
+    const json = createJsonOutput(args);
+    json.print(manifest);
     return;
   }
 

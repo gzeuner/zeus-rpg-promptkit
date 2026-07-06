@@ -11,6 +11,8 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
+const { resolveSecretValue } = require('../security/secretVault');
+
 const RUNTIME_CONFIG_METADATA_KEY = Symbol('zeus.runtimeConfigMetadata');
 
 const DB_FIELD_SPECS = Object.freeze([
@@ -136,12 +138,12 @@ function getEnvOverride(env, prefix, spec) {
     const envKey = `${prefix}_${suffix}`;
     if (suffix === 'PASSWORD') {
       if (Object.prototype.hasOwnProperty.call(env, envKey)) {
-        return { envKey, value: env[envKey] };
+        return { envKey, value: resolveSecretValue(env[envKey], { env }) };
       }
       continue;
     }
     if (env[envKey]) {
-      return { envKey, value: env[envKey] };
+      return { envKey, value: resolveSecretValue(env[envKey], { env }) };
     }
   }
   return null;

@@ -47,7 +47,7 @@ const {
   resolveWorkflowPresetConfig: resolveWorkflowPresetConfigModule,
 } = require('./runtimeConfigWorkflow');
 const { mergeConfigLayers, resolveSystemReferences } = require('./runtimeConfigCore');
-const {
+const { resolveResourceModel } = require('./resourceModel');const {
   applyDbEnvOverrides,
   parseBoolean,
   parseCsv,
@@ -301,6 +301,31 @@ function resolveBundleConfig(args, { cwd = process.cwd(), env = process.env } = 
   });
 }
 
+/**
+ * Resolves the normalized, sanitized resource model for a profile.
+ * Distinguishes the locations of source code, objects, DB metadata and DB data,
+ * with backward-compatible derivation from legacy fetch/db/dbRoles config.
+ *
+ * @returns {{ profile: string, configSource: string, model: object }}
+ */
+function resolveProfileResources(args = {}, { cwd = process.cwd(), env = process.env } = {}) {
+  const profileName = args && (args.profile || args.profileName);
+  if (!profileName || typeof profileName !== 'string' || !profileName.trim()) {
+    throw new Error('A profile name is required to resolve resources (use --profile <name>).');
+  }
+  const profiles = loadProfiles({ cwd, env, args });
+  const resolved = resolveProfile(profiles, profileName.trim(), { env });
+  if (!resolved) {
+    throw new Error(`Profile "${profileName}" not found in ${describeProfilesLocation(profiles)}`);
+  }
+  const model = resolveResourceModel(resolved, { env });
+  return {
+    profile: profileName.trim(),
+    configSource: describeProfilesLocation(profiles),
+    model,
+  };
+}
+
 module.exports = {
   DEFAULT_EXTENSIONS,
   ALLOWED_FETCH_TRANSPORTS,
@@ -322,6 +347,7 @@ module.exports = {
   resolveAnalyzeConfig,
   resolveBundleConfig,
   resolveFetchConfig,
+  resolveProfileResources,
   resolveWorkflowPresetConfig,
   resolveProfilesConfigPaths,
   resolveProfile,

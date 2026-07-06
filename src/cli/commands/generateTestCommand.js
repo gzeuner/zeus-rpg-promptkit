@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const fs = require('fs');
 const path = require('path');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
 const { generateJestTestTemplate, generateMarkdownTestPlan, generateChangeTestScenario } = require('../../investigation/testScenarioGenerator');
 
@@ -83,6 +84,11 @@ async function runGenerateTest(args) {
     const outputPath = path.join(programDir, `test-scenarios${extension}`);
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.writeFileSync(outputPath, output, 'utf8');
+
+    const json = createJsonOutput(args);
+    if (json.isJsonMode) {
+      json.print({ program, format, outputPath, content: output });
+    }
 
     console.log(`Test scenarios generated successfully`);
     console.log(`Program: ${program}`);

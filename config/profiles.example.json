@@ -63,7 +63,7 @@
     }
   },
   "default-shared": {
-    "_comment": "Shared public defaults. Copy this template into your private profile file and replace placeholder values there only.",
+    "_comment": "Shared public defaults. Copy this template into your private profile file and replace placeholder values there only. Passwords should NOT be stored in clear text: put an encrypted value (enc:v1:...) into your .env (e.g. ZEUS_DB_PASSWORD=enc:v1:...) or directly into a private profile; it is decrypted transparently at runtime. Create a key via 'zeus secret init-key' and encrypt with 'zeus secret encrypt'.",
     "outputRoot": "${env:ZEUS_OUTPUT_ROOT}",
     "analysesRegistryPath": "${env:ZEUS_ANALYSES_REGISTRY}",
     "defaultWorkspaceRoot": "${env:ZEUS_ANALYSES_ROOT}",
@@ -123,7 +123,7 @@
     }
   },
   "default-fetch": {
-    "_comment": "Fetch defaults wired through environment variables for teams that do not want credentials in profile files.",
+    "_comment": "Fetch defaults wired through environment variables for teams that do not want credentials in profile files. Passwords may be stored encrypted (ZEUS_FETCH_PASSWORD=enc:v1:...) and are decrypted transparently at runtime.",
     "extends": "default-shared",
     "fetch": {
       "host": "${env:ZEUS_FETCH_HOST}",
@@ -482,6 +482,29 @@
         "DATA_EXAMPLE.CUSTOMERS",
         "REPORTING_EXAMPLE.ORDERS"
       ]
+    },
+    "resources": {
+      "_comment": "Optional explicit resource model. Distinguishes the locations of source code, objects, DB metadata, and DB data per system. When omitted, the resource model is derived from fetch/db/dbRoles. Inspect with: node cli/zeus.js resources --profile combined-fetch-and-query. Auto-discover and refine with: node cli/zeus.js discover-environment --profile combined-fetch-and-query.",
+      "sourceCode": {
+        "system": "dev",
+        "libraries": ["SOURCE_EXAMPLE"],
+        "sourceFiles": ["QRPGLESRC", "QSQLSRC", "QDDSSRC"],
+        "members": ["ORDERPGM", "ORDERSQL"],
+        "ifsPaths": ["/ifs/source-export/combined"]
+      },
+      "objects": {
+        "system": "dev",
+        "libraries": ["DATA_EXAMPLE"],
+        "objectTypes": ["*PGM", "*SRVPGM", "*MODULE"]
+      },
+      "metadata": {
+        "system": "readonly",
+        "schemas": ["REPORTING_EXAMPLE"]
+      },
+      "data": {
+        "system": "dev",
+        "schemas": ["DATA_EXAMPLE"]
+      }
     }
   },
   "sample-db2": {

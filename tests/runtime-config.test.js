@@ -23,6 +23,7 @@ const {
   validateProfiles,
 } = require('../src/config/runtimeConfig');
 const { getRuntimeConfigMetadata } = require('../src/config/dbRuntimeConfigDiagnostics');
+const { encryptSecret } = require('../src/security/secretVault');
 
 function createTempProject(profiles) {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-runtime-config-'));
@@ -394,6 +395,89 @@ test('resolveAnalyzeConfig applies environment overrides for DB credentials', ()
     assert.equal(metadata.warnings[0].field, 'host');
     assert.equal(metadata.warnings[0].envKey, 'ZEUS_DB_HOST');
     assert.equal(metadata.warnings[0].profileValue, 'primary-system');
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveAnalyzeConfig decrypts an encrypted DB password provided via env override', () => {
+  const tempRoot = createTempProject({
+    sample: {
+      db: {
+        host: 'primary-system',
+        user: 'app-user',
+        password: '${env:ZEUS_DB_PASSWORD}',
+      },
+    },
+  });
+
+  const KEY = 'runtime-config-master-key';
+  const token = encryptSecret('plain-db-pass', { keyMaterial: KEY });
+
+  try {
+    const config = resolveAnalyzeConfig(
+      { profile: 'sample' },
+      {
+        cwd: tempRoot,
+        env: {
+          ZEUS_SECRET_KEY: KEY,
+          ZEUS_DB_PASSWORD: token,
+        },
+      },
+    );
+    // Der verschluesselte Env-Wert muss am Ende als Klartext ankommen.
+    assert.equal(config.db.password, 'plain-db-pass');
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveAnalyzeConfig CLI --schema/--library override profile and env schema', () => {
+  const tempRoot = createTempProject({
+    sample: {
+      db: {
+        host: 'primary-system',
+        user: 'profile-user',
+        password: 'profile-pass',
+        defaultSchema: 'profilelib',
+        defaultLibrary: 'PROFILELIB',
+      },
+    },
+  });
+
+  try {
+    const config = resolveAnalyzeConfig(
+      { profile: 'sample', schema: 'data_x', library: 'applib' },
+      {
+        cwd: tempRoot,
+        env: { ZEUS_DB_DEFAULT_SCHEMA: 'ENVLIB' },
+      },
+    );
+
+    // CLI-Werte haben Vorrang und werden normalisiert (UPPERCASE).
+    assert.equal(config.db.defaultSchema, 'DATA_X');
+    assert.equal(config.db.defaultLibrary, 'APPLIB');
+    // Auch die testData-Rolle uebernimmt den Override.
+    assert.equal(config.dbRoles.testData.defaultSchema, 'DATA_X');
+    assert.equal(config.dbRoles.testData.defaultLibrary, 'APPLIB');
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveAnalyzeConfig accepts --source-root as an alias for --source', () => {
+  const tempRoot = createTempProject({
+    sample: {
+      sourceRoot: './profile-src',
+    },
+  });
+
+  try {
+    const config = resolveAnalyzeConfig(
+      { profile: 'sample', 'source-root': './cli-src' },
+      { cwd: tempRoot, env: {} },
+    );
+    assert.equal(config.sourceRoot, './cli-src');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

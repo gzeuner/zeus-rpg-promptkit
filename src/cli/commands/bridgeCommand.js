@@ -28,6 +28,7 @@ const {
 } = require('../../bridge/bridgePlanModel');
 const { BridgeRefusalError, throwBridgeRefusal } = require('../../bridge/bridgeRefusal');
 const { validateBridgeTarget } = require('../../bridge/bridgeTargetValidator');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 
 function parseBoolean(value, fallback = false) {
   if (value === undefined || value === null) {
@@ -571,7 +572,7 @@ async function executeBridgeCommand(args, runtime = {}) {
 }
 
 async function runBridge(args) {
-  const asJson = parseBoolean(args.json, false);
+  const json = createJsonOutput(args);
 
   try {
     const result = await executeBridgeCommand(args, {
@@ -582,8 +583,8 @@ async function runBridge(args) {
       printBridgeHelp();
       return;
     }
-    if (asJson) {
-      console.log(JSON.stringify(result, null, 2));
+    if (json.isJsonMode) {
+      json.print(result);
       return;
     }
     for (const line of formatResultForConsole(result)) {
@@ -591,8 +592,9 @@ async function runBridge(args) {
     }
   } catch (error) {
     if (error instanceof BridgeRefusalError) {
-      if (asJson) {
-        console.error(JSON.stringify(error.toJSON(), null, 2));
+      if (json.isJsonMode) {
+        const errObj = typeof error.toJSON === 'function' ? error.toJSON() : error;
+        console.error(json.stringify(errObj));
       } else {
         console.error(error.message);
       }

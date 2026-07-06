@@ -15,6 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const { loadProfiles, getProfilesMetadata, resolveProfile } = require('../../config/runtimeConfig');
 const { describeConnectionTarget } = require('../../config/connectionTargetMetadata');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 
 const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits', 'presets']);
 const PREFERRED_PROFILE_ORDER = ['dev', 'demo', 'sftp-fetch', 'readonly-db2', 'combined-fetch-and-query'];
@@ -159,6 +160,15 @@ async function runProfiles(args) {
 
   if (!filterName) {
     console.log(`${toShow.length} Profil(e) gefunden.`);
+  }
+
+  const json = createJsonOutput(args);
+  if (json.isJsonMode) {
+    const jsonProfiles = {};
+    for (const name of toShow) {
+      jsonProfiles[name] = profiles[name];
+    }
+    json.print({ profiles: jsonProfiles, count: toShow.length });
   }
 }
 

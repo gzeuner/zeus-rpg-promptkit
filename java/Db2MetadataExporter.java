@@ -559,7 +559,7 @@ public class Db2MetadataExporter {
 
         String jdbcUrl = args[0];
         String user = args[1];
-        String password = args[2];
+        String password = ZeusSecrets.resolve(args[2]);
         String defaultSchema = normalizeSchemaArg(args.length >= 4 ? args[3] : null);
         List<String> requestedTables = parseTables(args.length >= 5 ? args[4] : "");
 

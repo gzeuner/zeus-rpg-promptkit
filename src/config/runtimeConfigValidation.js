@@ -159,6 +159,47 @@ function validateDbRoleConfig(value, label) {
   }
 }
 
+const RESOURCE_KIND_FIELD_RULES = Object.freeze({
+  sourceCode: Object.freeze(['libraries', 'sourceFiles', 'members', 'ifsPaths']),
+  objects: Object.freeze(['libraries', 'objectTypes']),
+  metadata: Object.freeze(['schemas']),
+  data: Object.freeze(['schemas']),
+});
+
+function validateResourceKind(kind, value, label) {
+  if (value === undefined || value === null) return;
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  assertOptionalString(value.system, `${label}.system`);
+  const allowedFields = new Set(['system', ...RESOURCE_KIND_FIELD_RULES[kind]]);
+  for (const [field, fieldValue] of Object.entries(value)) {
+    if (field === 'system') continue;
+    if (field.startsWith('_')) continue;
+    if (!allowedFields.has(field)) {
+      failValidation(`${label}.${field} is not supported for resource kind "${kind}"; valid fields are ${RESOURCE_KIND_FIELD_RULES[kind].join(', ')}`);
+    }
+    if (fieldValue === undefined || fieldValue === null) continue;
+    assertStringArray(fieldValue, `${label}.${field}`);
+  }
+}
+
+function validateResourcesConfig(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  assertOptionalString(value.system, `${label}.system`);
+  const validKinds = new Set(Object.keys(RESOURCE_KIND_FIELD_RULES));
+  for (const [key, kindValue] of Object.entries(value)) {
+    if (key === 'system') continue;
+    if (key.startsWith('_')) continue;
+    if (!validKinds.has(key)) {
+      failValidation(`${label}.${key} is not a supported resource kind; valid kinds are ${Object.keys(RESOURCE_KIND_FIELD_RULES).join(', ')}`);
+    }
+    validateResourceKind(key, kindValue, `${label}.${key}`);
+  }
+}
+
 function validateSystemDefinition(value, label) {
   if (!isPlainObject(value)) {
     failValidation(`${label} must be an object`);
@@ -168,6 +209,9 @@ function validateSystemDefinition(value, label) {
   assertOptionalString(value.systemName, `${label}.systemName`);
   if (value.aliases !== undefined) {
     assertStringArray(value.aliases, `${label}.aliases`);
+  }
+  if (value.resources !== undefined) {
+    validateResourcesConfig(value.resources, `${label}.resources`);
   }
 }
 
@@ -465,6 +509,9 @@ function validateNamedProfile(profile, label) {
   if (profile.systems !== undefined) {
     validateSystemsConfig(profile.systems, `${label}.systems`);
   }
+  if (profile.resources !== undefined) {
+    validateResourcesConfig(profile.resources, `${label}.resources`);
+  }
   if (profile.fetch !== undefined) {
     validateFetchProfile(profile.fetch, `${label}.fetch`);
   }
@@ -574,4 +621,5 @@ module.exports = {
   validateBundleConfig,
   validateFetchConfig,
   validateProfiles,
+  validateResourcesConfig,
 };

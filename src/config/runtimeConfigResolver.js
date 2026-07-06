@@ -18,6 +18,7 @@ const {
   getConnectionTargetMetadata,
   listConnectionTargetNames,
 } = require('./connectionTargetMetadata');
+const { resolveSecretValue } = require('../security/secretVault');
 
 function resolveAnalyzeDbRoleConfigs(
   profile,
@@ -125,6 +126,26 @@ function resolveAnalyzeDbConfig(config, role = 'metadata') {
   return config.db || null;
 }
 
+// Uebersteuert defaultSchema/defaultLibrary aller aufgeloesten DB-Rollen mit den
+// CLI-Werten (falls gesetzt). Mutiert die uebergebenen Rollen-Objekte in place.
+function applyAnalyzeResourceOverrides(analyzeDbRoles, { schema = null, library = null } = {}) {
+  if (!analyzeDbRoles || (!schema && !library)) {
+    return analyzeDbRoles;
+  }
+  for (const role of ['metadata', 'testData']) {
+    const dbConfig = analyzeDbRoles[role];
+    if (dbConfig && typeof dbConfig === 'object') {
+      if (schema) {
+        dbConfig.defaultSchema = schema;
+      }
+      if (library) {
+        dbConfig.defaultLibrary = library;
+      }
+    }
+  }
+  return analyzeDbRoles;
+}
+
 function resolveAnalyzeConfig(
   args,
   { cwd = process.cwd(), env = process.env } = {},
@@ -155,8 +176,19 @@ function resolveAnalyzeConfig(
     ? parseCsv(args.extensions, DEFAULT_EXTENSIONS)
     : ((profile && profile.extensions) || DEFAULT_EXTENSIONS);
 
+  // CLI-Overrides fuer Bibliothek/Schema: erlauben, den Profilwert jederzeit gezielt
+  // zu uebersteuern (z. B. `analyze --schema DATA_X --library APPLIB`), ohne das
+  // Profil zu aendern. args haben Vorrang vor Profil/Env-Werten der DB-Rollen.
+  const cliSchema = typeof args.schema === 'string' && args.schema.trim()
+    ? args.schema.trim().toUpperCase()
+    : null;
+  const cliLibrary = (typeof args.library === 'string' && args.library.trim())
+    ? args.library.trim().toUpperCase()
+    : ((typeof args.lib === 'string' && args.lib.trim()) ? args.lib.trim().toUpperCase() : null);
+  applyAnalyzeResourceOverrides(analyzeDbRoles, { schema: cliSchema, library: cliLibrary });
+
   const resolved = {
-    sourceRoot: args.source || (profile && profile.sourceRoot),
+    sourceRoot: args.source || args['source-root'] || (profile && profile.sourceRoot),
     outputRoot: args.out || args.output || (profile && profile.outputRoot) || 'output',
     extensions,
     db: analyzeDbRoles.metadata,
@@ -240,7 +272,10 @@ function resolveFetchConfig(
   const resolved = {
     host: args.host || env.ZEUS_FETCH_HOST || fetchProfile.host,
     user: args.user || env.ZEUS_FETCH_USER || fetchProfile.user,
-    password: args.password || env.ZEUS_FETCH_PASSWORD || fetchProfile.password,
+    password: resolveSecretValue(
+      args.password || env.ZEUS_FETCH_PASSWORD || fetchProfile.password,
+      { env },
+    ),
     sourceLib: String(sourceLibrary || '').toUpperCase(),
     sourceLibrary: String(sourceLibrary || '').toUpperCase(),
     hostEnvOverride,
@@ -252,7 +287,7 @@ function resolveFetchConfig(
       10,
     ),
     files: parseCsv(sourceFiles, [...DEFAULT_SOURCE_FILES], (item) => item.toUpperCase()),
-    members: parseCsv(args.members || env.ZEUS_FETCH_MEMBERS || fetchProfile.members, [], (item) => item.toUpperCase()),
+    members: parseCsv(args.members || args.member || env.ZEUS_FETCH_MEMBERS || fetchProfile.members, [], (item) => item.toUpperCase()),
     replace: parseBoolean(
       args.replace !== undefined ? args.replace : (env.ZEUS_FETCH_REPLACE !== undefined ? env.ZEUS_FETCH_REPLACE : fetchProfile.replace),
       true,

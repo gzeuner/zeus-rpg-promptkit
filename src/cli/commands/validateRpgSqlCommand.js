@@ -20,6 +20,7 @@ const { scanSourceFiles } = require('../../scanner/rpgScanner');
 const { validateEmbeddedSql } = require('../../validator/sqlRpgValidator');
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
 const { buildCanonicalAnalysisModel } = require('../../context/canonicalAnalysisModel');
+const { createJsonOutput } = require('../helpers/jsonOutput');
 
 function normalizeFormat(value) {
   const format = String(value || 'markdown').trim().toLowerCase();
@@ -207,9 +208,10 @@ async function runValidateRpgSql(args = {}, config = {}) {
   };
 
   // Render
+  const json = createJsonOutput({ format });
   let output;
   if (format === 'json') {
-    output = JSON.stringify(report, null, 2) + '\n';
+    output = json.stringify(report) || `${JSON.stringify(report, null, 2)}\n`;
   } else {
     output = renderMarkdownReport(program, validationData, sourceInfo);
   }
@@ -224,7 +226,7 @@ async function runValidateRpgSql(args = {}, config = {}) {
     fs.mkdirSync(targetDir, { recursive: true });
 
     const jsonPath = path.join(targetDir, `${base}.json`);
-    fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8');
+    json.writeFile(jsonPath, report);
 
     if (format !== 'json') {
       const mdPath = path.join(targetDir, `${base}.md`);

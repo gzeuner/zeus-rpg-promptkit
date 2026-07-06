@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-20T11:03:49.829Z",
+  "generatedAt": "2026-07-06T13:41:59.872Z",
   "commandRows": [
     {
       "command": "doctor",
@@ -108,7 +108,7 @@
       "purpose": "Analyze RPG/CL/DDS and generate evidence artifacts.",
       "example": "node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context",
       "usage": [
-        "[--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]"
+        "[--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--source-root <path>] [--schema <name>] [--library <name>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]"
       ],
       "options": [
         "--config",
@@ -117,6 +117,9 @@
         "--member",
         "--profile",
         "--out",
+        "--source-root",
+        "--schema",
+        "--library",
         "--extensions",
         "--mode",
         "--list-modes",
@@ -139,7 +142,8 @@
         "--reproducible",
         "--test-data-limit",
         "--skip-test-data",
-        "--verbose"
+        "--verbose",
+        "--json"
       ],
       "source": {
         "routeDetected": true,
@@ -153,7 +157,7 @@
       "purpose": "Run preset-guided analyze and bundle flow.",
       "example": "node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output",
       "usage": [
-        "[--config <path>] workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose]"
+        "[--config <path>] workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]"
       ],
       "options": [
         "--config",
@@ -169,7 +173,8 @@
         "--reproducible",
         "--test-data-limit",
         "--skip-test-data",
-        "--verbose"
+        "--verbose",
+        "--json"
       ],
       "source": {
         "routeDetected": true,
@@ -231,7 +236,7 @@
       "purpose": "Build reverse-impact analysis by target or field.",
       "example": "node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output",
       "usage": [
-        "[--config <path>] impact (--target <name> | --field <name>) [--program <name> | --member <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose]"
+        "[--config <path>] impact (--target <name> | --field <name>) [--program <name> | --member <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose] [--json]"
       ],
       "options": [
         "--config",
@@ -243,7 +248,8 @@
         "--profile",
         "--source",
         "--reproducible",
-        "--verbose"
+        "--verbose",
+        "--json"
       ],
       "source": {
         "routeDetected": true,
@@ -257,13 +263,14 @@
       "purpose": "Produce a risk-oriented summary for a program.",
       "example": "node cli/zeus.js assess-risk --program ORDERPGM --out ./output",
       "usage": [
-        "[--config <path>] assess-risk --program <name> [--out <path>] [--verbose]"
+        "[--config <path>] assess-risk --program <name> [--out <path>] [--verbose] [--json]"
       ],
       "options": [
         "--config",
         "--program",
         "--out",
-        "--verbose"
+        "--verbose",
+        "--json"
       ],
       "source": {
         "routeDetected": true,
@@ -323,18 +330,20 @@
       "command": "query-table",
       "safety": "S2",
       "scope": "DB2 read",
-      "purpose": "Query DB2 table metadata.",
-      "example": "node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA",
+      "purpose": "Query DB2 table metadata. Supports --json for machine readable output.",
+      "example": "node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA --json",
       "usage": [
-        "[--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--filter <pattern>] [--save <datei.csv|datei.json>]"
+        "[--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--library <name>] [--filter <pattern>] [--save <datei.csv|datei.json>] [--json]"
       ],
       "options": [
         "--config",
         "--profile",
         "--table",
         "--schema",
+        "--library",
         "--filter",
-        "--save"
+        "--save",
+        "--json"
       ],
       "source": {
         "routeDetected": true,
@@ -348,7 +357,7 @@
       "purpose": "Resolve SQL/system object names and optionally verify required columns.",
       "example": "node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS",
       "usage": [
-        "[--config <path>] resolve-object --profile <name> --table <name> [--schema <name>] [--require-column <COLUMN>] [--include-row-count]"
+        "[--config <path>] resolve-object --profile <name> --table <name> [--schema <name>] [--require-column <COLUMN>] [--include-row-count] [--json]"
       ],
       "options": [
         "--config",
@@ -356,7 +365,8 @@
         "--table",
         "--schema",
         "--require-column",
-        "--include-row-count"
+        "--include-row-count",
+        "--json"
       ],
       "source": {
         "routeDetected": true,
@@ -370,7 +380,7 @@
       "purpose": "Run read-only SQL statements (SELECT/WITH).",
       "example": "node cli/zeus.js query-sql --profile default --sql \"SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY\"",
       "usage": [
-        "[--config <path>] query-sql --profile <name> (--sql \"SELECT ...\" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv|json] [--save <datei.csv|datei.json>] [--watch <sek>]"
+        "[--config <path>] query-sql --profile <name> (--sql \"SELECT ...\" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--save <datei.csv|datei.json>] [--watch <sek>] [--json]"
       ],
       "options": [
         "--config",
@@ -382,7 +392,8 @@
         "--max-rows",
         "--output",
         "--save",
-        "--watch"
+        "--watch",
+        "--json"
       ],
       "source": {
         "routeDetected": true,
@@ -396,14 +407,15 @@
       "purpose": "Inspect IBM i joblog messages.",
       "example": "node cli/zeus.js joblog --profile default --severity ERROR --max-messages 100",
       "usage": [
-        "[--config <path>] joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>]"
+        "[--config <path>] joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>] [--json]"
       ],
       "options": [
         "--config",
         "--profile",
         "--job",
         "--severity",
-        "--max-messages"
+        "--max-messages",
+        "--json"
       ],
       "source": {
         "routeDetected": true,
@@ -528,7 +540,7 @@
       "purpose": "Render QA validations/checks to jira, markdown, or json.",
       "example": "node cli/zeus.js qa --input ./output/ORDERPGM --format markdown --strict STRICT",
       "usage": [
-        "[--config <path>] qa [--input <path>] [--format jira|markdown|json] [--strict LENIENT|STRICT] [--post-comment] [--jira-ticket <ticket>] [--verbose]"
+        "[--config <path>] qa [--input <path>] [--format jira|markdown|json] [--strict LENIENT|STRICT] [--post-comment] [--jira-ticket <ticket>] [--verbose] [--json]"
       ],
       "options": [
         "--config",
@@ -537,7 +549,8 @@
         "--strict",
         "--post-comment",
         "--jira-ticket",
-        "--verbose"
+        "--verbose",
+        "--json"
       ],
       "source": {
         "routeDetected": true,
@@ -773,14 +786,15 @@
       "purpose": "Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.",
       "example": "node cli/zeus.js docs:generate-catalog",
       "usage": [
-        "[--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>]",
-        "[--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>]"
+        "[--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]",
+        "[--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]"
       ],
       "options": [
         "--config",
         "--output",
         "--format",
-        "--json-output"
+        "--json-output",
+        "--json"
       ],
       "source": {
         "routeDetected": true,
@@ -800,6 +814,88 @@
         "--config",
         "--stdio",
         "--verbose"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "discover-environment",
+      "safety": "S0",
+      "scope": "Local",
+      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
+      "example": "node cli/zeus.js discover-environment",
+      "usage": [
+        "[--config <path>] discover-environment --profile <name> [--libraries L1,L2] [--schemas S1,S2] [--include-members] [--no-tables] [--role metadata|data] [--system <name>] [--json] [--out <path>]  # Read-only Auto-Discovery von Bibliotheken/Source-Files/Members/Tabellen + Resource-Vorschlag"
+      ],
+      "options": [
+        "--config",
+        "--profile",
+        "--libraries",
+        "--schemas",
+        "--include-members",
+        "--no-tables",
+        "--role",
+        "--system",
+        "--json",
+        "--out"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "pui-inspect",
+      "safety": "S0",
+      "scope": "Local",
+      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
+      "example": "node cli/zeus.js pui-inspect",
+      "usage": [
+        "pui-inspect --file <path> [--json] [--trace <fieldName>]  # LOKAL: Grid-Spalten -> Feldbindung -> Tooltip einer PUI-Display-Datei sichtbar machen"
+      ],
+      "options": [
+        "--file",
+        "--json",
+        "--trace"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "resources",
+      "safety": "S0",
+      "scope": "Local",
+      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
+      "example": "node cli/zeus.js resources",
+      "usage": [
+        "[--config <path>] resources --profile <name> [--json]  # Zeigt das aufgeloeste Resource-Modell (Source/Objects/Metadata/Data) pro System"
+      ],
+      "options": [
+        "--config",
+        "--profile",
+        "--json"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "secret",
+      "safety": "S0",
+      "scope": "Local",
+      "purpose": "Manage encrypted credentials (Secret Vault). Create key, encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords.",
+      "example": "node cli/zeus.js secret init-key && node cli/zeus.js secret encrypt --value \"myDbPass\"",
+      "usage": [
+        "secret <init-key|status|encrypt|decrypt> [--value <text>] [--force]  # Passwoerter verschluesselt ablegen (enc:v1:...), Klartext vermeiden"
+      ],
+      "options": [
+        "--value",
+        "--force"
       ],
       "source": {
         "routeDetected": true,

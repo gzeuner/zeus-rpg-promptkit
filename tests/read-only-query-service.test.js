@@ -5,11 +5,45 @@ const {
   executeReadOnlyDb2QueryWithFallback,
   extractSqlState,
 } = require('../src/db2/readOnlyQueryService');
+const { SECRET_ENV_SENTINEL } = require('../src/java/javaRuntime');
 
 test('extractSqlState recognizes IBM i SQL codes and SQLSTATE values', () => {
   assert.equal(extractSqlState(new Error('SQL0204 Tabelle nicht gefunden')), 'SQL0204');
   assert.equal(extractSqlState(new Error('Fehler SQLSTATE=55019 Commitment control')), '55019');
   assert.equal(extractSqlState(new Error('kein sql state hier')), '');
+});
+
+test('read-only query passes the password via options, not as a CLI argument', () => {
+  let capturedArgs = null;
+  let capturedOptions = null;
+  executeReadOnlyDb2QueryWithFallback({
+    dbConfig: {
+      host: 'ibmi.example.com',
+      user: 'ZEUS',
+      password: 'top-secret-pw',
+    },
+    query: 'SELECT 1 FROM SYSIBM.SYSDUMMY1',
+    maxRows: 10,
+    runtime: {
+      skipConnectionGuard: true,
+      runJavaHelper(_className, args, options) {
+        capturedArgs = args;
+        capturedOptions = options;
+        return {
+          status: 0,
+          stdout: JSON.stringify({ columns: ['C'], rows: [{ C: 1 }], rowCount: 1 }),
+          stderr: '',
+        };
+      },
+    },
+  });
+
+  // The password must NOT appear anywhere in the argument vector (which is visible
+  // in the OS process list); the sentinel takes its place.
+  assert.equal(capturedArgs[2], SECRET_ENV_SENTINEL);
+  assert.ok(!capturedArgs.includes('top-secret-pw'));
+  // The real password is handed over out-of-band via the options.
+  assert.equal(capturedOptions.password, 'top-secret-pw');
 });
 
 test('executeReadOnlyDb2QueryWithFallback retries with the handler-provided query', () => {
