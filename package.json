@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "description": "CLI tool to prepare structured AI analysis context for IBM i RPG programs",
   "main": "cli/zeus.js",
+  "exports": {
+    ".": "./cli/zeus.js",
+    "./api": "./src/api/zeusApi.js",
+    "./package.json": "./package.json"
+  },
   "bin": {
     "zeus": "./cli/zeus.js"
   },

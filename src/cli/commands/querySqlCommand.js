@@ -30,9 +30,72 @@ const {
   toRowMatrix,
 } = require('../../core/queryService');
 const { createJsonOutput } = require('../helpers/jsonOutput');
+const readline = require('readline');
+
+/**
+ * Basic SQL statement splitter for --file batch support.
+ * Splits on top-level semicolons. Strips simple comments first for robustness.
+ * Sufficient for diagnostic scripts.
+ */
+function splitSqlStatements(sqlText) {
+  if (!sqlText || typeof sqlText !== 'string') return [];
+  // First, strip comments (reuse logic similar to validator)
+  let noComments = sqlText
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--[^\r\n]*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const statements = [];
+  let current = '';
+  let inSingle = false;
+  let inDouble = false;
+
+  for (let i = 0; i < noComments.length; i++) {
+    const ch = noComments[i];
+    if (inSingle) {
+      current += ch;
+      if (ch === "'") inSingle = false;
+      continue;
+    }
+    if (inDouble) {
+      current += ch;
+      if (ch === '"') inDouble = false;
+      continue;
+    }
+    if (ch === "'") {
+      inSingle = true;
+      current += ch;
+      continue;
+    }
+    if (ch === '"') {
+      inDouble = true;
+      current += ch;
+      continue;
+    }
+    if (ch === ';') {
+      const t = current.trim();
+      if (t) statements.push(t);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  const last = current.trim();
+  if (last) statements.push(last);
+  return statements.filter(Boolean);
+}
 
 async function runQuerySql(args) {
   const watchSec = args.watch ? parseInt(String(args.watch), 10) : 0;
+
+  // REPL / interactive mode (new for Phase 2)
+  const isRepl = !args.sql && !args.file && (args.repl || args.interactive || args.i);
+  if (isRepl) {
+    await runInteractiveRepl(args);
+    return;
+  }
+
   if (watchSec > 0 && !isNaN(watchSec)) {
     // --watch: Query wiederholen bis Ctrl+C
     const watchArgs = { ...args, watch: undefined };
@@ -44,9 +107,50 @@ async function runQuerySql(args) {
       process.stdout.write(`\n[watch] ${new Date().toLocaleTimeString()} | naechste Aktualisierung in ${watchSec}s\n`);
       await new Promise((resolve) => setTimeout(resolve, watchSec * 1000));
     }
+  } else if (args.file && String(args.file).trim() && !args.sql) {
+    // Batch mode from --file (supports multiple statements separated by ;)
+    await runBatchFromFile(args);
   } else {
     await runSingleQuery(args);
   }
+}
+
+async function runBatchFromFile(args) {
+  const filePath = path.resolve(process.cwd(), String(args.file).trim());
+  let content;
+  try {
+    content = fs.readFileSync(filePath, 'utf8');
+  } catch (err) {
+    console.error(`Cannot read SQL file: ${filePath} — ${err.message}`);
+    process.exit(2);
+  }
+
+  const statements = splitSqlStatements(content);
+  if (statements.length === 0) {
+    console.error('No executable SQL statements found in file.');
+    process.exit(2);
+  }
+
+  console.log(`[batch] Executing ${statements.length} statement(s) from ${filePath}`);
+  console.log('Note: First statement may incur connection probe overhead; subsequent use cached guard within this process.');
+
+  for (let i = 0; i < statements.length; i++) {
+    const stmt = statements[i];
+    console.log(`\n-- [${i + 1}/${statements.length}]`);
+    console.log(`SQL: ${stmt.length > 80 ? stmt.substring(0, 77) + '...' : stmt}`);
+    const stmtArgs = { ...args, sql: stmt, file: undefined };
+    try {
+      await runSingleQuery(stmtArgs);
+    } catch (e) {
+      console.error(`Statement ${i + 1} failed: ${e.message}`);
+      if (i < statements.length - 1) {
+        console.log('Continuing with next statement...');
+      } else {
+        process.exit(2);
+      }
+    }
+  }
+  console.log(`\n[batch] Completed ${statements.length} statement(s).`);
 }
 
 async function runSingleQuery(args) {
@@ -147,10 +251,61 @@ async function runSingleQuery(args) {
   }
 }
 
+/**
+ * Simple interactive REPL for query-sql.
+ * Holds the node process (and thus guard cache) across queries, so after the first
+ * query only one JVM/connection per statement (no repeated probe).
+ */
+async function runInteractiveRepl(initialArgs) {
+  console.log('Entering query-sql REPL. Type SQL (or .exit / .help). Profile and other options from initial call are reused.');
+  console.log('First query will perform connection probe; subsequent queries within this session use cached guard.');
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: 'SQL> ',
+  });
+
+  rl.prompt();
+
+  rl.on('line', async (line) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      rl.prompt();
+      return;
+    }
+    if (['.exit', '.quit', 'exit', 'quit'].includes(trimmed.toLowerCase())) {
+      console.log('Exiting REPL.');
+      rl.close();
+      return;
+    }
+    if (['.help', 'help'].includes(trimmed.toLowerCase())) {
+      console.log('Enter a read-only SQL statement and press Enter. .exit to quit.');
+      rl.prompt();
+      return;
+    }
+
+    const replArgs = { ...initialArgs, sql: trimmed, file: undefined, watch: undefined };
+
+    try {
+      await runSingleQuery(replArgs);
+    } catch (err) {
+      console.error('Error:', err.message);
+    }
+    rl.prompt();
+  });
+
+  rl.on('close', () => {
+    console.log('REPL closed.');
+    process.exit(0);
+  });
+}
+
 module.exports = {
   DEFAULT_MAX_ROWS,
   normalizeOutput,
   parseMaxRows,
   runQuerySql,
+  splitSqlStatements,
   toRowMatrix,
 };

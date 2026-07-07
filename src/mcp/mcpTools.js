@@ -100,6 +100,19 @@ const { COMMAND_METADATA, COMMAND_ORDER } = require('../docs/toolCatalogMetadata
 const { listCommandUiMetadata } = require('../cli/commandMetadata');
 const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
 
+// Pluggable support: dynamic tool registry (for zeus API extensibility)
+const dynamicMcpTools = new Map();
+
+function registerMcpTool(name, toolDef) {
+  if (!name || typeof name !== 'string') throw new Error('name required');
+  if (!toolDef || !toolDef.description || !toolDef.inputSchema) throw new Error('invalid toolDef');
+  dynamicMcpTools.set(name, { name, ...toolDef });
+}
+
+function unregisterMcpTool(name) {
+  dynamicMcpTools.delete(name);
+}
+
 const SUPPORTED_INSPECT_OBJECT_TYPES = ['*PGM', '*SRVPGM', '*MODULE', '*FILE', '*CMD', '*DTAARA', '*JOBQ', '*OUTQ'];
 const DEFAULT_MCP_PAYLOAD_ITEMS = 100;
 const MAX_MCP_PAYLOAD_ITEMS = 1000;
@@ -5359,6 +5372,29 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     validateMcpToolArgs(name, args, toolDef.inputSchema);
   }
 
+  // Support dynamically registered tools (from zeus.mcpTools.registerTool)
+  const dynDef = dynamicMcpTools.get(name);
+  if (dynDef) {
+    if (typeof dynDef.execute === 'function') {
+      try {
+        const result = await dynDef.execute(args, context);
+        return normalizeMcpResult(name, result);
+      } catch (e) {
+        const err = new Error(`Dynamic tool ${name} failed: ${e.message}`);
+        err.code = 'TOOL_EXECUTION_ERROR';
+        throw err;
+      }
+    }
+    // Default for simple dynamic tools: return the definition + args as payload
+    return normalizeMcpResult(name, {
+      ok: true,
+      tool: name,
+      args: args || {},
+      description: dynDef.description,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   if (name === 'zeus.health') {
     return normalizeMcpResult('zeus.health', {
       ok: true,
@@ -7399,6 +7435,8 @@ module.exports = {
   executeMcpToolCall,
   listMcpTools,
   readPackageVersion,
+  registerMcpTool,
+  unregisterMcpTool,
   __private: {
     buildHistoryLogFallbackQuery,
     buildHistoryLogFallbackSeverityClause,
@@ -7413,3 +7451,17 @@ module.exports = {
     summarizeJoblogRows,
   },
 };
+
+// Support dynamic tools by wrapping listMcpTools
+const _origList = listMcpTools;
+listMcpTools = function() {
+  const base = _origList() || [];
+  const dyn = Array.from(dynamicMcpTools.values());
+  const map = new Map();
+  base.forEach(t => map.set(t.name, t));
+  dyn.forEach(t => map.set(t.name, t));
+  return Array.from(map.values());
+};
+
+// Ensure exported listMcpTools uses the wrapped version
+module.exports.listMcpTools = listMcpTools;

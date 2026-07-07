@@ -43,6 +43,7 @@ const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
 const { getIbmiOsVersion } = require('../../db2/ibmiPlatformInfo');
 const { renderAsciiTable } = require('../helpers/asciiTable');
 const { resolveKeyMaterial, KEY_ENV_VAR, KEY_FILE_RELATIVE } = require('../../security/secretVault');
+const { detectPlaintextSecrets } = require('../../security/plaintextSecretDetector');
 const {
   buildDbRuntimeConflictDiagnostics,
   getDbRuntimeConflictWarnings,
@@ -110,6 +111,31 @@ function appendSecretVaultChecks(checks, { env = process.env } = {}) {
     details: `${encryptedEnvVars.join(', ')} sind verschluesselt (enc:v1:), aber kein Schluessel gefunden. `
       + `Setze ${KEY_ENV_VAR} oder lege ${KEY_FILE_RELATIVE} an (zeus secret init-key).`,
   });
+}
+
+/**
+ * Scans discovered .env files for likely plaintext credentials.
+ * Warns users to migrate to Secret Vault (enc:v1:...).
+ */
+function appendPlaintextSecretWarnings(checks, { env = process.env, cwd = process.cwd(), configDir, discovery } = {}) {
+  try {
+    const envFiles = (discovery && Array.isArray(discovery.files) ? discovery.files.map(f => f.path) : []);
+    const findings = detectPlaintextSecrets({ cwd, configDir, envFiles, env, checkProfiles: true });
+
+    if (findings.length > 0) {
+      const examples = findings.slice(0, 2).map((s) => `${s.key} (${s.source})`).join(', ');
+      checks.push({
+        name: 'Secret Hygiene',
+        status: 'WARN',
+        details: `${findings.length} Klartext-Credential(s) gefunden (z. B. ${examples}). ` +
+          `Klartext-Passwörter sind unsicher. Bitte migriere mit "zeus secret encrypt --value \"...\"" und ` +
+          `verwende "ZEUS_..._PASSWORD=enc:v1:..." in .env oder Profil. ` +
+          `Siehe docs/quickstart/secrets-and-overrides.md`,
+      });
+    }
+  } catch (_) {
+    // non-fatal
+  }
 }
 
 function addEnvCheck(checks, { name, expected = true, envValue, fallbackValue = '', required = true, hint }) {
@@ -479,6 +505,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
   const diagnostics = [];
   const probeRows = [];
   let hasCriticalFailure = false;
+  const strict = args.strict === true || String(args.strict || '').toLowerCase() === 'true';
   let resolvedAnalyzeConfig = null;
   let resolvedFetchConfig = null;
   let resolvedProfile = null;
@@ -566,6 +593,14 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
     hasCriticalFailure = true;
   }
   appendSecretVaultChecks(checks, { env });
+  appendPlaintextSecretWarnings(checks, { env, cwd });
+
+  if (strict) {
+    const hygiene = checks.find(c => c.name === 'Secret Hygiene');
+    if (hygiene && hygiene.status === 'WARN') {
+      hasCriticalFailure = true;
+    }
+  }
   if (resolvedAnalyzeConfig) {
     const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
     const testDataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'testData');

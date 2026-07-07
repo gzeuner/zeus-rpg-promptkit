@@ -132,3 +132,30 @@ test('profile resolution throws a clear error when the key is missing for an enc
     /Schluesselmaterial|Entschluesselung/,
   );
 });
+
+const { detectPlaintextSecrets } = require('../src/security/plaintextSecretDetector');
+
+test('detectPlaintextSecrets finds plaintext in .env files', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
+  fs.writeFileSync(path.join(tempRoot, '.env.local'), 'ZEUS_DB_PASSWORD=supersecret123\nOTHER=foo\nZEUS_FETCH_PASSWORD=enc:v1:xxx');
+  const findings = detectPlaintextSecrets({ cwd: tempRoot, env: {}, checkProfiles: false });
+  assert.ok(findings.some(f => f.key === 'ZEUS_DB_PASSWORD' && f.source === 'file'));
+  assert.equal(findings.filter(f => f.source === 'file').length, 1);
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+});
+
+test('detectPlaintextSecrets detects in profiles.json', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
+  fs.mkdirSync(path.join(tempRoot, 'config'), { recursive: true });
+  fs.writeFileSync(path.join(tempRoot, 'config', 'profiles.json'), JSON.stringify({
+    default: { db: { password: 'plain-in-profile' } }
+  }));
+  const findings = detectPlaintextSecrets({ cwd: tempRoot, checkProfiles: true });
+  assert.ok(findings.some(f => f.source === 'profile'));
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+});
+
+test('detectPlaintextSecrets scans current env', () => {
+  const findings = detectPlaintextSecrets({ cwd: '/tmp', env: { ZEUS_DB_PASSWORD: 'from-env-plain' }, checkProfiles: false });
+  assert.ok(findings.some(f => f.key === 'ZEUS_DB_PASSWORD' && f.source === 'env'));
+});

@@ -28,6 +28,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const SECRET_PREFIX = 'enc:v1:';
 const KEY_ENV_VAR = 'ZEUS_SECRET_KEY';
@@ -60,6 +61,11 @@ function resolveKeyMaterial({ env = process.env, cwd = process.cwd() } = {}) {
   if (fromEnv && String(fromEnv).trim()) {
     return { material: String(fromEnv).trim(), source: `env:${KEY_ENV_VAR}` };
   }
+
+  // Try Windows secure storage (optional, DPAPI-backed via Credential-like XML)
+  const fromWin = resolveKeyFromWindowsSecureXml();
+  if (fromWin) return fromWin;
+
   for (const candidate of getKeyFileCandidates(cwd)) {
     try {
       if (fs.existsSync(candidate)) {
@@ -77,6 +83,50 @@ function resolveKeyMaterial({ env = process.env, cwd = process.cwd() } = {}) {
 
 function hasKeyMaterial(options = {}) {
   return Boolean(resolveKeyMaterial(options));
+}
+
+// --- Optional Windows Credential Manager / DPAPI-backed storage (via Export-Clixml) ---
+const WINDOWS_KEY_XML = '.zeus-secure-key.xml';
+
+function isWindows() {
+  return process.platform === 'win32';
+}
+
+function getWindowsKeyXmlPath() {
+  const home = process.env.USERPROFILE || process.env.HOME || '';
+  return path.join(home, WINDOWS_KEY_XML);
+}
+
+function resolveKeyFromWindowsSecureXml() {
+  if (!isWindows()) return null;
+  const xmlPath = getWindowsKeyXmlPath();
+  if (!fs.existsSync(xmlPath)) return null;
+  try {
+    const cmd = `powershell -NoProfile -Command "try { (Import-Clixml -Path '${xmlPath}').GetNetworkCredential().Password } catch { '' }"`;
+    const password = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    if (password) {
+      return { material: password, source: 'windows-secure-xml (DPAPI-protected)' };
+    }
+  } catch (_) {}
+  return null;
+}
+
+function storeKeyInWindowsSecureXml(keyString) {
+  if (!isWindows()) {
+    throw new Error('Windows secure storage only available on Windows');
+  }
+  const xmlPath = getWindowsKeyXmlPath();
+  const cmd = `powershell -NoProfile -Command "$secure = ConvertTo-SecureString '${keyString.replace(/'/g, "''")}' -AsPlainText -Force; $cred = New-Object System.Management.Automation.PSCredential('zeus', $secure); $cred | Export-Clixml -Path '${xmlPath}' "`;
+  execSync(cmd, { stdio: 'ignore' });
+  return xmlPath;
+}
+
+function removeWindowsSecureXml() {
+  if (!isWindows()) return;
+  const xmlPath = getWindowsKeyXmlPath();
+  if (fs.existsSync(xmlPath)) {
+    try { fs.unlinkSync(xmlPath); } catch (_) {}
+  }
 }
 
 function deriveKeyBuffer(material) {
@@ -181,4 +231,8 @@ module.exports = {
   getKeyFilePath,
   getKeyFileCandidates,
   writeKeyFile,
+  isWindows,
+  storeKeyInWindowsSecureXml,
+  removeWindowsSecureXml,
+  resolveKeyFromWindowsSecureXml,
 };

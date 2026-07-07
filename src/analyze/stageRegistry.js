@@ -43,6 +43,15 @@ function normalizeStageDefinition(definition, options = {}) {
     throw new Error(`Invalid analyze stage definition for ${id}: missing run function`);
   }
 
+  // Support component-style identification for pluggability (name, version, signature)
+  const identification = definition.identification || {};
+  const componentId = {
+    name: normalizeOptionalString(identification.name || id),
+    version: identification.version || '1.0.0',
+    signature: normalizeOptionalString(identification.signature) || null,
+    userManaged: !!identification.userManaged,
+  };
+
   return {
     id,
     title: normalizeOptionalString(definition.title),
@@ -56,6 +65,7 @@ function normalizeStageDefinition(definition, options = {}) {
     afterRun: typeof definition.afterRun === 'function' ? definition.afterRun : null,
     onError: typeof definition.onError === 'function' ? definition.onError : null,
     registrationOrder: Number(options.registrationOrder),
+    identification: componentId,  // for pluggable component style
   };
 }
 
@@ -210,6 +220,7 @@ function createAnalyzeStageRegistry() {
         before: [...stage.before],
         after: [...stage.after],
         registrationOrder: stage.registrationOrder,
+        identification: stage.identification || null,
       }));
     },
 
