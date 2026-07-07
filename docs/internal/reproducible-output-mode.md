@@ -38,7 +38,7 @@ It stabilizes runtime metadata and bundle packaging behavior, but it does not cl
 Analyze and bundle reproducibly:
 
 ```bash
-zeus analyze --source ./rpg_sources --program ORDERPGM --optimize-context --reproducible
+zeus analyze --source ./rpg_sources --program ORDERPGM --optimize-context --dense full --reproducible
 zeus bundle --program ORDERPGM --source-output-root ./output --reproducible
 ```
 

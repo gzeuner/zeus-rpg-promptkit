@@ -686,7 +686,7 @@ Recommended approach:
 Suggested commands:
 
 ```powershell
-node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context
+node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context --dense full
 # optional local viewer:
 node .\cli\zeus.js serve --source-output-root .\output
 ```
@@ -764,14 +764,14 @@ Understand what a program does, which files and programs it depends on, and wher
 ### Exact Tool Usage
 
 ```powershell
-node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context
+node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context --dense full
 ```
 
 If source is still on IBM i:
 
 ```powershell
 node .\cli\zeus.js fetch --host myibmi --user MYUSER --password MYPASS --source-lib MYLIB --ifs-dir /home/zeus/export --out .\rpg_sources --transport auto
-node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context
+node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context --dense full
 ```
 
 ### Artifacts to Use

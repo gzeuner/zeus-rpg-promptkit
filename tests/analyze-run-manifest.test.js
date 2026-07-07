@@ -43,6 +43,7 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
         completedAt: '2026-03-16T10:00:02.000Z',
         durationMs: 2000,
         optimizeContextEnabled: true,
+        denseLevel: 'full',
         emitDiagnosticsEnabled: true,
         skipTestData: false,
         testDataLimit: 25,
@@ -192,6 +193,7 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
     assert.equal(manifest.run.durationMs, 2000);
     assert.equal(manifest.inputs.sourceSnapshot.fileCount, 1);
     assert.equal(manifest.inputs.options.emitDiagnosticsEnabled, true);
+    assert.equal(manifest.inputs.options.denseLevel, 'full');
     assert.equal(manifest.inputs.options.analysisLimits.maxProgramDepth, 12);
     assert.deepEqual(manifest.inputs.options.testDataPolicy.allowTables, ['APP.CUSTOMERS']);
     assert.equal(manifest.summary.generatedArtifactCount, 2);
@@ -241,6 +243,7 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
         completedAt: '2026-03-16T10:00:01.000Z',
         durationMs: 1000,
         optimizeContextEnabled: false,
+        denseLevel: 'lite',
         emitDiagnosticsEnabled: false,
         skipTestData: true,
         testDataLimit: 10,
@@ -299,6 +302,7 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
     assert.equal(manifest.diagnostics.length, 1);
     assert.equal(manifest.reproducibility.enabled, false);
     assert.equal(manifest.inputs.options.emitDiagnosticsEnabled, false);
+    assert.equal(manifest.inputs.options.denseLevel, 'lite');
     assert.equal(manifest.inputs.options.guidedMode.name, 'impact');
     assert.match(manifest.inputs.options.guidedMode.reviewWorkflow.expectedDecisions.join('\n'), /impact target/i);
   } finally {

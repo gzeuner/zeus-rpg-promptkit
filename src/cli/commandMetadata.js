@@ -102,7 +102,7 @@ const COMMAND_UI_METADATA = Object.freeze([
     primaryUseCase: 'Generate architecture/dependency findings and prompts.',
     requiredCapabilities: Object.freeze(['workspace']),
     commonOptions: Object.freeze(['--profile', '--source', '--program', '--out']),
-    advancedOptions: Object.freeze(['--mode', '--extensions', '--optimize-context', '--test-data-limit', '--safe-sharing', '--with-known-facts', '--known-facts-profile', '--known-facts-path', '--config']),
+    advancedOptions: Object.freeze(['--mode', '--extensions', '--optimize-context', '--dense [lite|full|ultra]', '--test-data-limit', '--safe-sharing', '--with-known-facts', '--known-facts-profile', '--known-facts-path', '--config']),
     outputArtifacts: Object.freeze([
       'report.md',
       'architecture-report.md',

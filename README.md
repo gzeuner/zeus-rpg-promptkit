@@ -397,7 +397,8 @@ node cli/zeus.js analyze \
   --source ./rpg_sources \
   --program ORDERPGM \
   --out ./output \
-  --optimize-context
+  --optimize-context \
+  --dense full   # optional: compact/dense reports + prompts. Levels: lite | full | ultra (graduated terseness, same evidence)
 ```
 
 Wichtige Ergebnisdateien:
@@ -445,7 +446,7 @@ node .\cli\zeus.js resolve-object --profile readonly-db2 --table APP_TABLE_00 --
 node .\cli\zeus.js fetch --profile sftp-fetch
 
 # 7. Quellen analysieren
-node .\cli\zeus.js analyze --profile dev --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context
+node .\cli\zeus.js analyze --profile dev --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context --dense full   # optional: lite | full | ultra
 ```
 
 Ohne IBM i-Anbindung können RPG-, CL- und DDS-Dateien einfach in `rpg_sources/` abgelegt und direkt mit `analyze` verarbeitet werden.
@@ -1231,7 +1232,8 @@ node cli/zeus.js analyze \
   --source ./rpg_sources \
   --program ORDERPGM \
   --out ./output \
-  --optimize-context
+  --optimize-context \
+  --dense full   # optional: lite | full | ultra (compact output style)
 ```
 
 Important output files:
@@ -1280,7 +1282,7 @@ node cli/zeus.js resolve-object --profile readonly-db2 --table APP_TABLE_00 --re
 node cli/zeus.js fetch --profile sftp-fetch
 
 # 7. Analyze sources
-node cli/zeus.js analyze --profile dev --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
+node cli/zeus.js analyze --profile dev --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense full   # optional: lite | full | ultra
 ```
 
 Without IBM i access, place RPG, CL and DDS files in `rpg_sources/` and run `analyze` directly.

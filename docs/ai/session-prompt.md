@@ -114,7 +114,7 @@ node cli/zeus.js fetch --profile <profile>
 node cli/zeus.js copy-to-workspace --profile <profile>
 
 # 5. Analyze locally and generate artifacts
-node cli/zeus.js analyze --profile <profile> --program <PROGRAM> --out ./output --optimize-context
+node cli/zeus.js analyze --profile <profile> --program <PROGRAM> --out ./output --optimize-context --dense full   # use --dense lite|full|ultra as needed
 
 # 6. Optional: package or locally review the artifacts
 node cli/zeus.js bundle --program <PROGRAM> --source-output-root ./output --include-md --include-json

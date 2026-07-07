@@ -540,7 +540,7 @@ function investigateSourcesStage(state) {
 }
 
 function optimizeContextStage(state) {
-  const { canonicalAnalysis, context, config, optimizeContextEnabled } = state;
+  const { canonicalAnalysis, context, config, optimizeContextEnabled, denseLevel } = state;
   const contextTokens = estimateTokensFromObject(context);
 
   if (!optimizeContextEnabled) {

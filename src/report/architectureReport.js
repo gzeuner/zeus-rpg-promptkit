@@ -131,11 +131,24 @@ function sqlSection(stats, sqlSummary, optimizedContext) {
   return lines.join('\n');
 }
 
-function buildOverview(program, tables, calls, copies, sqlSummary, nativeFileUsage, bindingAnalysis) {
+function buildOverview(program, tables, calls, copies, sqlSummary, nativeFileUsage, bindingAnalysis, denseLevel = null) {
   const sqlCount = Number(sqlSummary && sqlSummary.statementCount) || 0;
   const hasSql = sqlCount > 0;
   const nativeSummary = (nativeFileUsage && nativeFileUsage.summary) || {};
   const bindingSummary = (bindingAnalysis && bindingAnalysis.summary) || {};
+  const useDense = Boolean(denseLevel);
+  if (useDense) {
+    const base = [
+      `${program}: t=${tables.length} c=${calls.length} cp=${copies.length}`,
+      hasSql ? `sql r=${sqlSummary.readStatementCount || 0} w=${sqlSummary.writeStatementCount || 0} d=${sqlSummary.dynamicStatementCount || 0}` : 'no-sql',
+      `nat f=${nativeSummary.fileCount || 0} m=${nativeSummary.mutatingFileCount || 0} i=${nativeSummary.interactiveFileCount || 0}`,
+      `bind m=${bindingSummary.moduleCount || 0} s=${bindingSummary.serviceProgramCount || 0}`,
+    ].join(' ');
+    if (denseLevel === 'ultra') {
+      return base.replace(/ /g, '');
+    }
+    return base;
+  }
   return [
     `Program ${program} interacts with ${tables.length} database table${tables.length === 1 ? '' : 's'} and calls ${calls.length} external program${calls.length === 1 ? '' : 's'}.`,
     `The program ${hasSql ? `contains embedded SQL statements (${sqlSummary.readStatementCount || 0} read, ${sqlSummary.writeStatementCount || 0} write, ${sqlSummary.dynamicStatementCount || 0} dynamic)` : 'does not contain embedded SQL statements'} and includes ${copies.length} copy member${copies.length === 1 ? '' : 's'}.`,
@@ -258,7 +271,7 @@ function renderMermaidBlock(graph, fallbackText) {
   return lines.join('\n');
 }
 
-function renderArchitectureReport({ context, graph, optimizedContext, mermaidText }) {
+function renderArchitectureReport({ context, graph, optimizedContext, mermaidText, denseLevel = null }) {
   const program = String((context && context.program) || 'UNKNOWN');
   const generatedAt = (context && context.scannedAt) || new Date().toISOString();
   const tables = collectTables(context);
@@ -269,11 +282,24 @@ function renderArchitectureReport({ context, graph, optimizedContext, mermaidTex
   const nativeFileUsage = collectNativeFileUsage(context);
   const bindingAnalysis = collectBindingAnalysis(context);
   const sqlCount = sqlStats.reduce((sum, entry) => sum + entry.count, 0);
-  const overview = buildOverview(program, tables, calls, copyMembers, sqlSummary, nativeFileUsage, bindingAnalysis);
+  const overview = buildOverview(program, tables, calls, copyMembers, sqlSummary, nativeFileUsage, bindingAnalysis, denseLevel);
   const dataFlow = buildDataFlow(program, tables, calls, sqlSummary, nativeFileUsage, bindingAnalysis);
   const mermaid = renderMermaidBlock(graph, mermaidText);
 
-  return `# Architecture Report
+  const isDense = Boolean(denseLevel);
+  const overviewBlock = isDense
+    ? `## Overview\n- ${overview.replace(/\. /g, '.\n- ').replace(/\.$/, '')}`
+    : `## Overview\n\n${overview}`;
+
+  const dataFlowBlock = isDense
+    ? `## Data Flow\n${dataFlow}`
+    : `## Data Flow Overview\n\n${dataFlow}`;
+
+  const archTitle = denseLevel
+    ? `# Architecture Report (dense:${denseLevel})`
+    : '# Architecture Report';
+
+  return `${archTitle}
 
 Program: ${program}
 
@@ -289,9 +315,7 @@ Generated: ${generatedAt}
 - Service Programs: ${(bindingAnalysis.summary && bindingAnalysis.summary.serviceProgramCount) || 0}
 - Binding Directories: ${(bindingAnalysis.summary && bindingAnalysis.summary.bindingDirectoryCount) || 0}
 
-## Overview
-
-${overview}
+${overviewBlock}
 
 ## Program Dependencies
 
@@ -329,9 +353,7 @@ ${sqlSection(sqlStats, sqlSummary, optimizedContext)}
 ${mermaid}
 \`\`\`
 
-## Data Flow Overview
-
-${dataFlow}
+${dataFlowBlock}
 `;
 }
 
@@ -341,6 +363,7 @@ function generateArchitectureReport({
   outputPath,
   optimizedContextPath,
   mermaidPath,
+  denseLevel = null,
 }) {
   const context = readJsonFile(contextPath);
   const graph = readJsonFile(graphPath);
@@ -359,6 +382,7 @@ function generateArchitectureReport({
     graph,
     optimizedContext,
     mermaidText,
+    denseLevel,
   });
 
   fs.writeFileSync(outputPath, markdown, 'utf8');

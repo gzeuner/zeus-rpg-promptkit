@@ -1,13 +1,13 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-07-06 15:41:59
+Last generated: 2026-07-07 07:05:26
 -->
 
 ---
 Title: Zeus RPG PromptKit Tool Catalog
 Description: Verbindlicher, sicherheitsklassifizierter Katalog aller CLI-Befehle und Workflow-Presets fuer Menschen und KI-Assistenten.
-Last Updated: 2026-07-06
+Last Updated: 2026-07-07
 ---
 
 # Zeus RPG PromptKit Tool Catalog
@@ -46,7 +46,7 @@ Related:
 | `profiles` | `S0` | Local | List profiles and show masked runtime defaults and resolved routing hints. | `node cli/zeus.js profiles --profile default --show-env` |
 | `fetch` | `S2` | IBM i read | Fetch source members/IFS content into the local workspace. | `node cli/zeus.js fetch --profile default-fetch` |
 | `fetch-member` | `S2` | IBM i read | Fetch one or more specific source members into a local output directory. | `node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM` |
-| `analyze` | `S1` | Local | Analyze RPG/CL/DDS and generate evidence artifacts. | `node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context` |
+| `analyze` | `S1` | Local | Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context and --dense [lite\|full\|ultra] for compact reports and prompts. | `node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense full` |
 | `workflow` | `S1` | Local | Run preset-guided analyze and bundle flow. | `node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output` |
 | `workflow run` | `S1` | Local | Run workflow definitions from profile/runtime configuration. | `node cli/zeus.js workflow run --profile default --preset onboarding --out ./output` |
 | `bundle` | `S1` | Local | Package analysis artifacts for sharing and review. | `node cli/zeus.js bundle --program ORDERPGM --source-output-root ./output --include-md --include-json` |

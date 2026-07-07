@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-06T13:41:59.872Z",
+  "generatedAt": "2026-07-07T05:05:26.023Z",
   "commandRows": [
     {
       "command": "doctor",
@@ -105,10 +105,10 @@
       "command": "analyze",
       "safety": "S1",
       "scope": "Local",
-      "purpose": "Analyze RPG/CL/DDS and generate evidence artifacts.",
-      "example": "node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context",
+      "purpose": "Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context and --dense [lite|full|ultra] for compact reports and prompts.",
+      "example": "node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense full",
       "usage": [
-        "[--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--source-root <path>] [--schema <name>] [--library <name>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]"
+        "[--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--source-root <path>] [--schema <name>] [--library <name>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--dense [lite|full|ultra]] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]"
       ],
       "options": [
         "--config",
@@ -125,6 +125,7 @@
         "--list-modes",
         "--list-diagnostic-packs",
         "--optimize-context",
+        "--dense",
         "--scan-ifs-paths",
         "--search-terms",
         "--search-ignore",
