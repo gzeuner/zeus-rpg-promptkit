@@ -218,6 +218,7 @@ function buildAnalyzeRunManifest({
       outputRoot: context.outputRoot,
       options: {
         optimizeContextEnabled: Boolean(context.optimizeContextEnabled),
+        denseLevel: context.denseLevel || null,
         safeSharingEnabled: Boolean(context.safeSharingEnabled),
         emitDiagnosticsEnabled: Boolean(context.emitDiagnosticsEnabled),
         skipTestData: Boolean(context.skipTestData),

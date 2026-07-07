@@ -112,6 +112,7 @@ function writeAnalyzeArtifacts(state) {
     diagnosticPackManifest,
     emitDiagnostics,
     config,
+    denseLevel,
   } = state;
   const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
   const selectedPromptTemplates = resolvePromptTemplates(promptTemplates);
@@ -257,13 +258,14 @@ function writeAnalyzeArtifacts(state) {
     outputPath: path.join(outputProgramDir, 'architecture.html'),
   });
 
-  const reportMarkdown = generateMarkdownReport(writtenContext, optimizationReport);
+  const reportMarkdown = generateMarkdownReport(writtenContext, optimizationReport, { denseLevel });
   generateArchitectureReport({
     contextPath: path.join(outputProgramDir, 'context.json'),
     graphPath: path.join(outputProgramDir, 'dependency-graph.json'),
     outputPath: path.join(outputProgramDir, 'architecture-report.md'),
     optimizedContextPath: writtenOptimizedContext ? path.join(outputProgramDir, 'optimized-context.json') : null,
     mermaidPath: path.join(outputProgramDir, 'dependency-graph.mmd'),
+    denseLevel,
   });
   buildPrompts({
     aiProjection: writtenAiKnowledge,
@@ -271,6 +273,7 @@ function writeAnalyzeArtifacts(state) {
     sourceSnippet,
     templates: selectedPromptTemplates,
     tokenBudgets: config && config.tokenBudget ? config.tokenBudget : null,
+    denseLevel,
   });
   fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');
   writeJsonReport(path.join(outputProgramDir, 'analysis-index.json'), writtenAnalysisIndex);

@@ -633,7 +633,7 @@ function buildGeneratedArtifactSet(context) {
     );
   }
   if (redactedContext) {
-    const reportMarkdown = generateMarkdownReport(redactedContext, extractOptimizationReport(context.analyzeManifest));
+    const reportMarkdown = generateMarkdownReport(redactedContext, extractOptimizationReport(context.analyzeManifest), { denseLevel: context && context.denseLevel || null });
     writeText(path.join(safeDir, 'report.md'), reportMarkdown);
     generated.push(buildSafeArtifactPath('report.md'));
   }
@@ -642,6 +642,7 @@ function buildGeneratedArtifactSet(context) {
       context: redactedContext,
       graph: redactedDependencyGraph,
       optimizedContext: redactedOptimizedContext,
+      denseLevel: context && context.denseLevel || null,
       mermaidText: '',
     });
     writeText(path.join(safeDir, 'architecture-report.md'), architectureReport);

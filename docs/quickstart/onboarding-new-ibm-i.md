@@ -227,7 +227,7 @@ node cli/zeus.js fetch --profile new-system
 # or use existing local tree
 
 # 4. Analyze a key program
-node cli/zeus.js analyze --profile new-system --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context
+node cli/zeus.js analyze --profile new-system --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense full   # optional: lite | full | ultra for compact output
 
 # 5. Onboarding-focused analysis
 node cli/zeus.js workflow --preset onboarding --profile new-system --source ./rpg_sources --program ORDERPGM --out ./output

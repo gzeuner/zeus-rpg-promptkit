@@ -290,8 +290,8 @@ Für einen Change wie CHANGE-1234 (DDL + RPG anpassen) ist die empfohlene Workfl
 
 ```bash
 # 1a. Analyze the programs
-node cli/zeus.js analyze --program APPPGM --optimize-context
-node cli/zeus.js analyze --program APPHELP --optimize-context
+node cli/zeus.js analyze --program APPPGM --optimize-context --dense full
+node cli/zeus.js analyze --program APPHELP --optimize-context --dense full
 
 # 1b. Assess risks
 node cli/zeus.js assess-risk --program APPPGM

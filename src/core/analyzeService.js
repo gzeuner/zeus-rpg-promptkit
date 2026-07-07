@@ -52,6 +52,17 @@ function parseCsv(value) {
     .sort((a, b) => a.localeCompare(b));
 }
 
+function normalizeDenseLevel(value) {
+  if (!value) return null;
+  const raw = String(value).trim().toLowerCase();
+  if (raw === 'true' || raw === '') return 'full';
+  if (['lite', 'light', 'l'].includes(raw)) return 'lite';
+  if (['full', 'f', 'normal'].includes(raw)) return 'full';
+  if (['ultra', 'u', 'max', 'extreme'].includes(raw)) return 'ultra';
+  // Unknown value -> treat as full for simplicity
+  return 'full';
+}
+
 function executeAnalyze(args, { cwd = process.cwd() } = {}) {
   const verbose = Boolean(args.verbose);
   const logVerbose = (message) => {
@@ -106,6 +117,7 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
   }
   const optimizeContextEnabled = Boolean(args['optimize-context'])
     || Boolean(workflowModeSettings && workflowModeSettings.autoOptimizeContext);
+  const denseLevel = normalizeDenseLevel(args.dense);
   const guidedMode = workflowModeSettings
     ? {
       ...workflowModeSettings,
@@ -168,6 +180,7 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
       skipTestData,
       verbose,
       optimizeContextEnabled,
+      denseLevel,
       workflowMode: guidedMode ? guidedMode.name : null,
       workflowModeSettings: guidedMode,
       promptTemplates,
@@ -205,6 +218,7 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
         completedAt: resolveTimestamp(reproducibility),
         durationMs,
         optimizeContextEnabled,
+        denseLevel,
         safeSharingEnabled,
         emitDiagnosticsEnabled: emitDiagnostics,
         skipTestData,
@@ -273,6 +287,7 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
       guidedMode,
       workflowPreset,
       safeSharingEnabled,
+      denseLevel,
       emitDiagnostics,
       searchTerms,
       diagnosticPacks,
@@ -293,6 +308,7 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
         completedAt: resolveTimestamp(reproducibility),
         durationMs,
         optimizeContextEnabled,
+        denseLevel,
         safeSharingEnabled,
         emitDiagnosticsEnabled: emitDiagnostics,
         skipTestData,

@@ -76,3 +76,20 @@ test('fixture-driven prompt evaluation preserves completeness, evidence, and siz
     assert.ok(result.estimatedTokens > 0);
   }
 });
+
+test('renderPrompt includes dense style note when denseLevel is provided', () => {
+  const fixture = loadPromptEvaluationFixture(fixturePath);
+  const input = fixture.input;
+
+  const normal = renderPrompt('documentation', input);
+  assert.ok(!normal.content.includes('Style: Use dense'));
+
+  const fullDense = renderPrompt('documentation', input, { denseLevel: 'full' });
+  assert.ok(fullDense.content.includes('Style: Use dense technical form'));
+
+  const liteDense = renderPrompt('documentation', input, { denseLevel: 'lite' });
+  assert.ok(liteDense.content.includes('Style: Prefer concise sentences'));
+
+  const ultraDense = renderPrompt('documentation', input, { denseLevel: 'ultra' });
+  assert.ok(ultraDense.content.includes('Style: Ultra-dense technical'));
+});

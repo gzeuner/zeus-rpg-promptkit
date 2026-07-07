@@ -46,8 +46,8 @@ const COMMAND_METADATA = Object.freeze({
   analyze: Object.freeze({
     safety: 'S1',
     scope: 'Local',
-    purpose: 'Analyze RPG/CL/DDS and generate evidence artifacts.',
-    example: 'node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context',
+    purpose: 'Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context and --dense [lite|full|ultra] for compact reports and prompts.',
+    example: 'node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense full',
   }),
   workflow: Object.freeze({
     safety: 'S1',

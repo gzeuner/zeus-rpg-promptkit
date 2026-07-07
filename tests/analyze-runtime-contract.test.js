@@ -39,6 +39,7 @@ test('analyze core can run without artifact writes and the writer adapter can be
       skipTestData: true,
       verbose: false,
       optimizeContextEnabled: false,
+      denseLevel: 'ultra',
       logVerbose() {},
     });
 
@@ -61,6 +62,49 @@ test('analyze core can run without artifact writes and the writer adapter can be
     assert.equal(writtenResult.stageReports.some((stage) => stage.id === 'write-artifacts'), true);
     assert.equal(fs.existsSync(path.join(outputProgramDir, 'report.md')), true);
     assert.equal(fs.existsSync(path.join(outputProgramDir, 'analysis-diagnostics.json')), true);
+
+    // Verify denseLevel propagates to generated artifacts
+    const reportContent = fs.readFileSync(path.join(outputProgramDir, 'report.md'), 'utf8');
+    assert.ok(reportContent.includes('# Analysis Report (dense:ultra)'), 'report.md should reflect dense:ultra title');
+
+    const promptFiles = writtenResult.generatedFiles.filter(f => f.startsWith('ai_prompt_'));
+    if (promptFiles.length > 0) {
+      const promptContent = fs.readFileSync(path.join(outputProgramDir, promptFiles[0]), 'utf8');
+      assert.ok(promptContent.includes('Style: Ultra-dense technical'), 'prompt should include ultra dense style directive');
+    }
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('analyze without denseLevel produces normal (non-dense) report output', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-analyze-no-dense-'));
+  const sourceRoot = path.join(tempRoot, 'src');
+  const outputRoot = path.join(tempRoot, 'output');
+  const outputProgramDir = path.join(outputRoot, 'ORDERPGM');
+
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  fs.mkdirSync(outputProgramDir, { recursive: true });
+  fs.writeFileSync(path.join(sourceRoot, 'ORDERPGM.rpgle'), '**FREE\nDCL-F ORDERS;\n', 'utf8');
+
+  try {
+    const coreResult = runAnalyzeCore({
+      program: 'ORDERPGM',
+      sourceRoot,
+      outputRoot,
+      config: { extensions: ['.rpgle'], contextOptimizer: {}, testData: { limit: 10, maskColumns: [] }, db: null },
+      testDataLimit: 10,
+      skipTestData: true,
+      verbose: false,
+      optimizeContextEnabled: false,
+      // no denseLevel passed
+      logVerbose() {},
+    });
+
+    const written = runAnalyzeArtifactAdapter({ ...coreResult, outputRoot, outputProgramDir });
+    const report = fs.readFileSync(path.join(outputProgramDir, 'report.md'), 'utf8');
+    assert.ok(report.startsWith('# Zeus RPG Analysis Report'), 'default should use normal report title, not dense');
+    assert.ok(!report.includes('(dense'), 'no dense marker when denseLevel omitted');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

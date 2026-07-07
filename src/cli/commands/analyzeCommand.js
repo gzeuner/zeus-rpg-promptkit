@@ -52,7 +52,7 @@ function runAnalyze(args) {
   }
   try {
     const execution = executeAnalyze(args);
-    const { result, program, outputProgramDir, guidedMode, workflowPreset, safeSharingEnabled, searchTerms, diagnosticPacks, emitDiagnostics } = execution;
+    const { result, program, outputProgramDir, guidedMode, workflowPreset, safeSharingEnabled, denseLevel, searchTerms, diagnosticPacks, emitDiagnostics } = execution;
 
     console.log(`Analysis complete for program ${program}`);
     if (guidedMode) {
@@ -63,6 +63,9 @@ function runAnalyze(args) {
     }
     if (safeSharingEnabled) {
       console.log(`Safe-sharing artifacts: ${path.join(outputProgramDir, 'safe-sharing')}`);
+    }
+    if (denseLevel) {
+      console.log(`Dense output: ${denseLevel}`);
     }
     if (searchTerms.length > 0) {
       console.log(`Search terms: ${searchTerms.join(', ')}`);
