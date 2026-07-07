@@ -60,6 +60,15 @@ async function runFetchMember(args) {
     process.exit(2);
   }
 
+  // Helpful validation: catch common mix-up of --lib (Library) vs Source File (e.g. QRPGLESRC)
+  if (/^Q[A-Z0-9]*SRC$/i.test(sourceLib) || /SRC$/i.test(sourceLib)) {
+    console.warn(
+      `[WARN] --lib / sourceLib="${sourceLib}" sieht aus wie ein Source-File-Name (z. B. QRPGLESRC). ` +
+      'Falls gemeint war der Source File, nutze --file. ' +
+      'Falls eine Library gemeint ist, ignoriere diese Warnung.'
+    );
+  }
+
   if (!host || !user || !password) {
     console.error('Fehlende Verbindungskonfiguration (host/user/password). --profile oder Env-Variablen setzen.');
     process.exit(2);
@@ -147,12 +156,20 @@ async function runFetchMember(args) {
 
 function resolveExtension(sourceFile) {
   const upper = sourceFile.toUpperCase();
-  if (upper === 'QRPGLESRC') return '.rpgle';
+  // Exact matches for standard IBM i source files
+  if (upper === 'QRPGLESRC' || upper === 'QRPGFREE') return '.rpgle';
   if (upper === 'QCLLESRC' || upper === 'QCLSRC') return '.clle';
   if (upper === 'QDDSSRC') return '.dds';
-  if (upper === 'QSQLSRC') return '.sql';
+  if (upper === 'QSQLSRC' || upper === 'SQLSRC') return '.sql';
   if (upper === 'QCPYSRC') return '.rpgleinc';
   if (upper === 'QSRVSRC') return '.bnd';
+  // Heuristics for custom / non-standard source files (e.g. SQLTBLSRC, DDL sources)
+  if (upper.includes('SQL') || upper.includes('TBL') || upper.includes('TABLE') || upper.includes('DDL')) {
+    return '.sql';
+  }
+  if (upper.includes('DDS')) return '.dds';
+  if (upper.includes('CL')) return '.clle';
+  if (upper.includes('RPG')) return '.rpgle';
   return '.rpgle';
 }
 

@@ -14,6 +14,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 const { PROFILES_METADATA_KEY } = require('./runtimeConfigDefaults');
+const { detectPlaintextSecrets } = require('../security/plaintextSecretDetector');
+
+let warnedPlaintextProfiles = false;
+
+/**
+ * Walk upwards from startDir looking for a config directory that contains
+ * profile definitions. This makes profile and env discovery robust when
+ * the user runs the CLI from a subdirectory or a different terminal CWD
+ * in multi-root workspaces.
+ */
+function findNearestConfigDir(startDir) {
+  let current = path.resolve(startDir || process.cwd());
+  const maxDepth = 12;
+  for (let i = 0; i < maxDepth; i += 1) {
+    const configDir = path.join(current, 'config');
+    const hasProfiles = fs.existsSync(path.join(configDir, 'profiles.json'))
+      || fs.existsSync(path.join(configDir, 'local-only', 'profiles.json'))
+      || fs.existsSync(path.join(configDir, 'profiles.example.json'));
+    if (hasProfiles) {
+      return configDir;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return null;
+}
 
 function attachProfilesMetadata(profiles, metadata) {
   Object.defineProperty(profiles, PROFILES_METADATA_KEY, {
@@ -42,9 +69,14 @@ function resolveProfilesConfigPaths({ args = {}, cwd = process.cwd(), env = proc
     ? 'cli'
     : (envConfig ? 'env' : 'default');
   const explicitLocation = source !== 'default';
-  const resolvedLocation = rawLocation
-    ? path.resolve(cwd, rawLocation)
-    : path.resolve(cwd, 'config');
+
+  let resolvedLocation;
+  if (rawLocation) {
+    resolvedLocation = path.resolve(cwd, rawLocation);
+  } else {
+    const nearest = findNearestConfigDir(cwd);
+    resolvedLocation = nearest || path.resolve(cwd, 'config');
+  }
   const looksLikeJsonFile = resolvedLocation.toLowerCase().endsWith('.json');
 
   if (looksLikeJsonFile) {
@@ -119,6 +151,19 @@ function loadProfiles({
     }
 
     validateProfiles(profiles);
+
+    // Secrets-Hygiene: warn on profile load if plaintext credentials still present (once per process)
+    if (!warnedPlaintextProfiles) {
+      try {
+        const hygiene = detectPlaintextSecrets({ cwd, checkProfiles: true, env: process.env });
+        if (hygiene.length > 0) {
+          console.warn(`[WARN] Secrets-Hygiene: ${hygiene.length} Klartext-Credential(s) in .env oder Profilen erkannt beim Laden von Profilen.`);
+          console.warn('  Migriere mit "zeus secret encrypt". Details im "zeus doctor" oder "zeus secret status".');
+          warnedPlaintextProfiles = true;
+        }
+      } catch (_) {}
+    }
+
     return attachProfilesMetadata(profiles, {
       ...configPaths,
       profilePath,
@@ -143,6 +188,7 @@ function describeProfilesLocation(profiles) {
 
 module.exports = {
   describeProfilesLocation,
+  findNearestConfigDir,
   getProfilesMetadata,
   loadProfiles,
   resolveProfilesConfigPaths,

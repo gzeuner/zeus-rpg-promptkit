@@ -34,6 +34,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 
+const { findNearestConfigDir } = require('./runtimeConfigProfiles');
+
 const ENV_VAR_LINE = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/;
 const SECRET_NAME_PATTERN = /PASSWORD|SECRET|TOKEN|CREDENTIAL|PWD/i;
 
@@ -72,9 +74,13 @@ function isSecretName(name) {
  * Earlier directories win when the same file name exists in several places.
  */
 function resolveEnvSearchDirs({ cwd = process.cwd(), configDir } = {}) {
-  const baseConfigDir = configDir
-    ? path.resolve(cwd, configDir)
-    : path.resolve(cwd, 'config');
+  let baseConfigDir;
+  if (configDir) {
+    baseConfigDir = path.resolve(cwd, configDir);
+  } else {
+    const nearest = findNearestConfigDir(cwd);
+    baseConfigDir = nearest || path.resolve(cwd, 'config');
+  }
   const dirs = [
     path.join(baseConfigDir, 'local-only'),
     baseConfigDir,

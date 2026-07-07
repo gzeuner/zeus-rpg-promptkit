@@ -253,6 +253,31 @@ node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --profile d
 
 ---
 
+## Programmatic & Extensible API (pluggable components)
+
+Zeus exposes a rich API object for extensibility (inspired by platform patterns in the ecosystem):
+
+```js
+const { zeus } = require('./src/api/zeusApi');  // or via package exports "./api"
+
+// Register custom analyzer (enriches canonical analysis)
+zeus.analyzers.registerAnalyzer('my-analyzer', {
+  run(context) { return { myField: 'value' }; }
+});
+
+// Register dynamic MCP tool
+zeus.mcpTools.registerTool('my.tool', {
+  description: 'My custom tool',
+  inputSchema: { type: 'object' },
+  execute: async (args) => ({ ok: true, args })
+});
+
+zeus.registerPlugin(myPlugin);  // function or object form
+```
+
+See `src/api/zeusApi.js` for ComponentRegistry, AnalyzerRegistry, etc.
+Core stages and tools are pre-registered on `zeus.analyzeStages`, `zeus.mcpTools`.
+
 ## Lokale MCP-Unterstützung (experimentelles MVP)
 
 Dieses Repository enthält eine **lokale MCP-Server-Integration** für kontrollierten Tool-Zugriff über `stdio`.
@@ -457,6 +482,25 @@ Damit bleibt auch bei Host-Alias, DNS-CNAME oder abweichendem `CURRENT_SERVER` k
 `doctor --profile <name> --probe --show-resolved` zeigt diese Zuordnung explizit an.
 
 ---
+
+## VS Code Integration (in development)
+
+We are starting the "VS Code Foundation" phase of the roadmap:
+
+- A minimal extension lives in `vscode-extension/`
+- It detects **Code for IBM i** (when present) and can reuse its connection/profile
+- Smart **local fallback**: fully functional standalone when Code4i is not connected or not installed (status bar shows `Zeus (local)`)
+- Uses the rich pluggable `zeus` API (custom analyzers, dense levels, MCP tools, ...)
+- Commands: "Zeus: Analyze Current Program/Member", tree view of analyses, webview reports, chat participant
+
+To try during development:
+1. Open the `vscode-extension` folder (or repo root) in VS Code and press F5 (Extension Development Host).
+2. Open a local `.rpgle` (e.g. from `rpg_sources/` or `examples/demo-rpg-mini-system/rpg_sources`).
+3. Run Zeus commands. Works with or without Code for IBM i.
+
+The extension loads the core from `../../src/api/zeusApi`. Local analysis uses the same pipeline as the CLI.
+
+This is the beginning of deep integration so Zeus becomes the analysis/context brain *inside* the dominant IBM i VS Code experience (and usable purely locally too).
 
 ## Optionalen lokalen Viewer nutzen
 
@@ -1088,6 +1132,21 @@ node ./cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --profile d
 
 ---
 
+## Programmatic & Extensible API (pluggable components)
+
+Zeus exposes a rich API object for extensibility:
+
+```js
+const { zeus } = require('./src/api/zeusApi');
+// or const { zeus } = require('zeus-rpg-promptkit/api');
+
+zeus.analyzers.registerAnalyzer('my-analyzer', { run(ctx) { return { extra: true }; } });
+zeus.mcpTools.registerTool('my.tool', { description: '...', inputSchema: {}, execute: async (a) => ({}) });
+zeus.registerPlugin(plugin);
+```
+
+See src/api/zeusApi.js (registries for analyzers, tools, stages, components).
+
 ## Local MCP support (experimental MVP)
 
 This repository includes a **local MCP server integration** for controlled tool access over `stdio`.
@@ -1293,6 +1352,13 @@ That keeps fetch, metadata, and test-data routing explicit even when host aliase
 Run `doctor --profile <name> --probe --show-resolved` to inspect the resolved routing.
 
 ---
+
+## VS Code Integration (in development)
+
+A starter VS Code extension is in `vscode-extension/`. 
+It is designed to work *with* Code for IBM i (the leading IBM i VS Code platform) and uses the new extensible `zeus` API we built.
+
+This begins the VS Code phase of the roadmap: Zeus as the analysis & context engine inside the editor.
 
 ## Use the optional local viewer
 

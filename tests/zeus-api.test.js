@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { analyze, listRuns, readKnowledge, runWorkflow } = require('../src/api/zeusApi');
+const { analyze, listRuns, readKnowledge, runWorkflow, zeus } = require('../src/api/zeusApi');
 
 const fixtureRoot = path.join(__dirname, 'fixtures', 'v1-smoke', 'src');
 
@@ -141,4 +141,16 @@ test('zeusApi knowledge access is disabled until a privacy-gated catalog exists'
   assert.equal(knowledge.available, false);
   assert.equal(knowledge.status, 'disabled');
   assert.match(knowledge.reason, /privacy-gated project-neutral catalog/i);
+});
+
+test('zeus rich API supports pluggable registries (analyzers, mcpTools, stages, components)', () => {
+  assert.ok(zeus && typeof zeus === 'object');
+  assert.ok(zeus.analyzers && typeof zeus.analyzers.registerAnalyzer === 'function');
+  assert.ok(zeus.mcpTools && typeof zeus.mcpTools.registerTool === 'function');
+  assert.ok(zeus.analyzeStages && typeof zeus.analyzeStages.registerStage === 'function');
+  assert.ok(zeus.components && typeof zeus.components.register === 'function');
+
+  zeus.analyzers.registerAnalyzer('test-plug', { run: () => ({plugged: true}) });
+  assert.ok(zeus.analyzers.list().some(a => a.id === 'test-plug'));
+  assert.ok(zeus.analyzeStages.listStages().length > 0, 'core stages should be populated');
 });

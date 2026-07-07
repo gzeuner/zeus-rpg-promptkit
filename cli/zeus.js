@@ -27,6 +27,8 @@ const { runQuerySql } = require('../src/cli/commands/querySqlCommand');
 const { runCopyToWorkspace } = require('../src/cli/commands/copyToWorkspaceCommand');
 const { runDiff } = require('../src/cli/commands/diffCommand');
 const { runFieldSearch } = require('../src/cli/commands/fieldSearchCommand');
+const { runTrace } = require('../src/cli/commands/traceCommand');
+const { runXref } = require('../src/cli/commands/xrefCommand');
 const { run: runQA } = require('../src/cli/commands/qaCommand');
 const { runAssessRisk } = require('../src/cli/commands/assessRiskCommand');
 const { runGenerateTest } = require('../src/cli/commands/generateTestCommand');
@@ -51,6 +53,12 @@ const { runOnboarding } = require('../src/cli/commands/onboardingCommand');
 const { runSecret } = require('../src/cli/commands/secretCommand');
 const path = require('path');
 const { autoLoadEnvFiles } = require('../src/config/envFileLoader');
+const { detectPlaintextSecrets } = require('../src/security/plaintextSecretDetector');
+
+// Compute the installation root of the zeus package.
+// Useful for global `zeus` (via bin) so that config/env discovery has a stable
+// fallback even when process.cwd() is unrelated to the project.
+const zeusPackageRoot = path.resolve(__dirname, '..');
 
 function printHelp() {
   console.log('Usage:');
@@ -66,13 +74,17 @@ function printHelp() {
   console.log('  zeus [--config <path>] fetch-member --profile <name> --lib <library> --member <name>[,<name>,...] [--file <QRPGLESRC>] [--out <dir>] [--verbose]  # Einzel- oder Mehrfach-Member-Download');
   console.log('  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
   console.log('  zeus [--config <path>] analyses <list|register|index|open|show|unregister> [options]');
-  console.log('  zeus [--config <path>] doctor --profile <name> [--probe] [--show-resolved]');
-  console.log('  zeus secret <init-key|status|encrypt|decrypt> [--value <text>] [--force]  # Passwoerter verschluesselt ablegen (enc:v1:...), Klartext vermeiden');
+  console.log('  zeus [--config <path>] doctor --profile <name> [--probe] [--show-resolved] [--strict]');
+  console.log('    --strict: Hygiene-Probleme (Klartext-Secrets) als kritischer Fehler behandeln');
+  console.log('  zeus secret <init-key|status|encrypt|decrypt|check> [--value <text>] [--force] [--windows]');
+  console.log('    # Passwörter verschlüsselt ablegen (enc:v1:...). "check" prüft Hygiene. --windows für DPAPI auf Windows.');
   console.log('  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query');
   console.log('  zeus [--config <path>] resources --profile <name> [--json]  # Zeigt das aufgeloeste Resource-Modell (Source/Objects/Metadata/Data) pro System');
   console.log('  zeus [--config <path>] discover-environment --profile <name> [--libraries L1,L2] [--schemas S1,S2] [--include-members] [--no-tables] [--role metadata|data] [--system <name>] [--json] [--out <path>]  # Read-only Auto-Discovery von Bibliotheken/Source-Files/Members/Tabellen + Resource-Vorschlag');
   console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--library <name>] [--filter <pattern>] [--save <datei.csv|datei.json>] [--json]');
-  console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ..." | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--save <datei.csv|datei.json>] [--watch <sek>] [--json]');
+  console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ..." | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--save <datei.csv|datei.json>] [--watch <sek>] [--repl] [--json]');
+  console.log('  zeus sql (alias for query-sql, implies --repl if no --sql/--file)');
+  console.log('    --file supports multiple ;-separated statements (batch mode). --repl or no query for interactive REPL (reuses process/guard cache, avoids repeated probes).');
   console.log('  zeus [--config <path>] resolve-object --profile <name> --table <name> [--schema <name>] [--require-column <COLUMN>] [--include-row-count] [--json]');
   console.log('  zeus [--config <path>] joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>] [--json]');
   console.log('  zeus [--config <path>] write-sql --profile <name> (--sql "INSERT/UPDATE/DELETE/MERGE ..." | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup] [--backup-schema <schema>]  # allgemeiner DML-Befehl');
@@ -88,6 +100,8 @@ function printHelp() {
   console.log('  zeus [--config <path>] copy-to-workspace --profile <name> [--members <M1,M2,...>] [--force]');
   console.log('  zeus [--config <path>] diff --profile <name> --member <name>');
   console.log('  zeus [--config <path>] field-search --profile <name> --field <name> [--table <name>] [--source <path>] [--source-lib <lib>] [--source-file <file>] [--mode local|remote|xref|all] [--max-results <n>] [--verbose]');
+  console.log('  zeus trace --value <VAL> [--start-table <T>] [--start-program <P>] [--profile <name>] [--source <dir>] [--json]   # Value / data lineage');
+  console.log('  zeus xref (--program <NAME> | --table <NAME>) [--profile <name>] [--json]   # Who-calls / who-uses (catalog + graph)');
   console.log('  zeus [--config <path>] qa [--input <path>] [--format jira|markdown|json] [--strict LENIENT|STRICT] [--post-comment] [--jira-ticket <ticket>] [--verbose] [--json]');
   console.log('  zeus [--config <path>] validate-rpg-sql [--source <path>] [--program <name>] [--input <analyze-output>] [--format markdown|json] [--out <path>] [--verbose] [--json]');
   console.log('  zeus [--config <path>] onboarding | wizard | onboard   # Interactive zeus-onboarding-wizard for new IBM i systems');
@@ -187,7 +201,7 @@ const COMMANDS_NEEDING_ENV = new Set([
   'query-sql', 'query-table', 'fetch', 'fetch-member', 'analyze', 'workflow',
   'upsert', 'upsert-sql', 'write-sql', 'insert', 'update', 'delete',
   'joblog', 'inspect-object', 'diff', 'field-search', 'bridge', 'test-run',
-  'resolve-object',
+  'resolve-object', 'trace', 'xref',
 ]);
 
 const FETCH_ENV_VARS = ['ZEUS_FETCH_USER', 'ZEUS_FETCH_PASSWORD', 'ZEUS_FETCH_HOST'];
@@ -203,6 +217,7 @@ const COMMANDS_AUTO_ENV = new Set([
   'inspect-object', 'diff', 'field-search', 'bridge', 'test-run',
   'discover-environment', 'resources',
   'upsert', 'upsert-sql', 'write-sql', 'insert', 'update', 'delete',
+  'trace', 'xref',
 ]);
 
 function hasNonEmptyEnvVar(name) {
@@ -252,28 +267,67 @@ function autoLoadEnvironment(command, args) {
     ? args.config.trim()
     : undefined;
 
-  let summary;
-  try {
-    summary = autoLoadEnvFiles({
-      cwd: process.cwd(),
-      env: process.env,
-      configDir,
-      environment,
-    });
-  } catch (error) {
-    process.stderr.write(`[WARN] Env-Auto-Discovery fehlgeschlagen: ${error.message}\n`);
-    return;
+  const primaryCwd = process.cwd();
+  // Include the zeus package root as additional search location (lowest priority).
+  // This helps when the CLI is invoked globally (npm link / bin) from an unrelated CWD.
+  const searchRoots = [primaryCwd, zeusPackageRoot];
+
+  let summary = null;
+  let usedRoot = primaryCwd;
+  for (const root of searchRoots) {
+    try {
+      const candidate = autoLoadEnvFiles({
+        cwd: root,
+        env: process.env,
+        configDir: configDir && root === primaryCwd ? configDir : undefined,
+        environment,
+      });
+      if (candidate && Array.isArray(candidate.files) && candidate.files.length > 0) {
+        summary = candidate;
+        usedRoot = root;
+        break;
+      }
+      if (!summary) summary = candidate;
+    } catch (error) {
+      // continue searching other roots
+    }
+  }
+
+  if (!summary) {
+    try {
+      summary = autoLoadEnvFiles({
+        cwd: primaryCwd,
+        env: process.env,
+        configDir,
+        environment,
+      });
+    } catch (error) {
+      process.stderr.write(`[WARN] Env-Auto-Discovery fehlgeschlagen: ${error.message}\n`);
+      return;
+    }
   }
 
   if (summary && summary.loaded) {
-    const loadedFiles = summary.files
+    const loadedFiles = (summary.files || [])
       .filter((file) => Array.isArray(file.variables) && file.variables.length > 0)
-      .map((file) => path.relative(process.cwd(), file.path).replace(/\\/g, '/') || file.path);
+      .map((file) => path.relative(usedRoot, file.path).replace(/\\/g, '/') || file.path);
     const fileLabel = loadedFiles.length > 0 ? loadedFiles.join(' + ') : '(none)';
     process.stderr.write(
       `[INFO] Env auto-discovery: ${summary.applied.length} Variable(n) aus ${fileLabel} geladen `
       + `(bereits gesetzte Werte bleiben unveraendert; Secrets werden nicht ausgegeben).\n`,
     );
+
+    // Secrets-Hygiene early warning during auto-discovery
+    try {
+      const hygieneFiles = (summary.files || []).map(f => f.path);
+      const findings = detectPlaintextSecrets({ cwd: usedRoot, envFiles: hygieneFiles, env: process.env, checkProfiles: true });
+      if (findings.length > 0) {
+        process.stderr.write(
+          `[WARN] Secrets-Hygiene: ${findings.length} Klartext-Credential(s) in .env-Datei(en) erkannt (z. B. ${findings[0].key}). ` +
+          `Bitte mit "zeus secret encrypt" migrieren!\n`
+        );
+      }
+    } catch (_) {}
   }
 }
 
@@ -302,10 +356,18 @@ async function main() {
     process.exit(1);
   }
 
-  const { command, args } = splitCommandArgs(argv);
+  let { command, args } = splitCommandArgs(argv);
   if (!command) {
     printHelp();
     process.exit(1);
+  }
+
+  // Normalize 'sql' alias early so env auto-load / checks apply correctly
+  if (command === 'sql') {
+    command = 'query-sql';
+    if (!args.sql && !args.file) {
+      args.repl = true;
+    }
   }
 
   normalizeJsonArgs(args);
@@ -378,7 +440,11 @@ async function main() {
     return;
   }
 
-  if (command === 'query-sql') {
+  if (command === 'query-sql' || command === 'sql') {
+    // 'sql' is a convenient alias that implies interactive REPL unless --sql/--file given
+    if (command === 'sql' && !args.sql && !args.file) {
+      args.repl = true;
+    }
     await runQuerySql(args);
     return;
   }
@@ -440,6 +506,16 @@ async function main() {
 
   if (command === 'field-search') {
     await runFieldSearch(args);
+    return;
+  }
+
+  if (command === 'trace') {
+    await runTrace(args);
+    return;
+  }
+
+  if (command === 'xref') {
+    await runXref(args);
     return;
   }
 
@@ -537,6 +613,9 @@ module.exports = {
   collectMissingDbEnvVars,
   hasNonEmptyEnvVar,
   normalizeJsonArgs,
+  // Rich pluggable API
+  zeus: require('../src/api/zeusApi').zeus,
+  zeusApi: require('../src/api/zeusApi'),
   parseArgs,
   splitCommandArgs,
 };

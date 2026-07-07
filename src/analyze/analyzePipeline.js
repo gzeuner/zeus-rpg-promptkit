@@ -515,9 +515,31 @@ function investigateSourcesStage(state) {
     searchResults,
   });
 
+  // Run pluggable analyzers from zeus API if registered (for extensibility)
+  let enrichedAnalysis = nextCanonicalAnalysis;
+  try {
+    const { zeus } = require('../api/zeusApi');
+    if (zeus && zeus.analyzers) {
+      const registered = zeus.analyzers.list();
+      for (const reg of registered) {
+        if (reg.type === 'analyzer' && typeof reg.run === 'function') {
+          try {
+            const result = reg.run({ canonicalAnalysis: enrichedAnalysis, context: nextContext });
+            if (result && typeof result === 'object') {
+              // simple merge for enrichment
+              enrichedAnalysis = { ...enrichedAnalysis, ...result };
+            }
+          } catch (e) {
+            // ignore analyzer errors for robustness
+          }
+        }
+      }
+    }
+  } catch (_) {}
+
   return {
     ...state,
-    canonicalAnalysis: nextCanonicalAnalysis,
+    canonicalAnalysis: enrichedAnalysis,
     context: nextContext,
     optimizedContext: nextOptimizedContext,
     promptContext: resolvePromptContext(nextContext, nextOptimizedContext),
@@ -1015,6 +1037,18 @@ function buildAnalyzeStageRegistry(options = {}) {
     registry.use(plugin);
   }
 
+  // Also populate the global zeus analyzeStages for pluggable API consumers
+  try {
+    const { zeus } = require('../api/zeusApi');
+    if (zeus && zeus.analyzeStages) {
+      // register core if not already (simple check)
+      const existing = zeus.analyzeStages.listStages ? zeus.analyzeStages.listStages().map(s => s.id) : [];
+      if (existing.length === 0) {
+        registerCoreAnalyzeStages(zeus.analyzeStages);
+      }
+    }
+  } catch (_) {}
+
   return registry;
 }
 
@@ -1052,4 +1086,6 @@ module.exports = {
   runAnalyzeArtifactAdapter,
   runAnalyzeCore,
   runAnalyzePipeline,
+  // Expose for pluggable use via zeus API
+  createAnalyzeStageRegistry,
 };
