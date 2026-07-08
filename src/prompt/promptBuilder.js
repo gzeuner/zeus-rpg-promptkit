@@ -49,6 +49,100 @@ function asBulletList(values, transform) {
   }).join('\n');
 }
 
+function truncateForDense(items, denseLevel, label = 'items') {
+  if (!Array.isArray(items) || !denseLevel) return items;
+
+  const limits = { lite: 80, full: 50, ultra: 25 };
+  const limit = limits[denseLevel] || 50;
+  if (items.length <= limit) return items;
+
+  // Rank-aware: prefer existing score/rank fields (higher = more important)
+  const scored = items.map((item, idx) => {
+    const score = Number(item.workflowScore || item.score || item._score || item.rank || 0);
+    // Lower numeric rank number is better (1 is top)
+    const rank = Number(item.rank || item._rank || 999999);
+    return { item, score, rank, idx };
+  });
+
+  const hasScores = scored.some(s => s.score > 0);
+  const hasRanks = scored.some(s => s.rank < 999999);
+
+  let sorted;
+  if (hasRanks) {
+    sorted = scored.sort((a, b) => a.rank - b.rank);
+  } else if (hasScores) {
+    sorted = scored.sort((a, b) => b.score - a.score);
+  } else {
+    sorted = scored; // preserve original order
+  }
+
+  const selected = sorted.slice(0, limit).map(s => s.item);
+
+  // Attach metadata for downstream note injection (non-enumerable to avoid breaking JSON etc.)
+  Object.defineProperty(selected, '_truncated', {
+    value: { of: items.length, label, level: denseLevel },
+    enumerable: false,
+    writable: true,
+    configurable: true,
+  });
+
+  return selected;
+}
+
+function formatItemForDense(item, denseLevel, type = 'generic') {
+  if (!item || !denseLevel) {
+    // preserve legacy formatting exactly when not dense
+    if (typeof item === 'string') return item;
+    if (item && item.name) {
+      const flags = [];
+      if (item.mutating || (item.access && item.access.mutating)) flags.push('MUTATING');
+      if (item.interactive || (item.access && item.access.interactive)) flags.push('INTERACTIVE');
+      if (item.keyed) flags.push('KEYED');
+      if (flags.length || type === 'native') {
+        return `${item.name || item}${flags.length ? ` (${flags.join(', ')})` : ''}`;
+      }
+      const k = item.kind ? ` (${item.kind})` : '';
+      return `${item.name}${k}`;
+    }
+    return String(item || '');
+  }
+
+  const lvl = denseLevel;
+  const isUltra = lvl === 'ultra';
+
+  if (type === 'sql' && item.text) {
+    const flags = [];
+    if (item.intent && item.intent !== 'OTHER') flags.push(item.intent);
+    if (item.dynamic) flags.push('DYNAMIC');
+    if (item.unresolved) flags.push('UNRESOLVED');
+    const tables = Array.isArray(item.tables) && item.tables.length ? item.tables.join(',') : '';
+    const loc = item.file ? ` @${item.file}:${item.startLine || ''}` : '';
+    const base = `[${item.type || 'SQL'}${flags.length ? '/' + flags.join('/') : ''}]`;
+    if (isUltra) {
+      return `${base} ${tables}${loc}`.trim();
+    }
+    // full still shows abbreviated text
+    const shortText = String(item.text || '').replace(/\s+/g, ' ').slice(0, 80);
+    return `${base} ${shortText}${tables ? ' [' + tables + ']' : ''}${loc}`;
+  }
+
+  if (type === 'call' || type === 'programCall') {
+    const name = item.name || item;
+    const kind = item.kind ? `(${item.kind})` : '';
+    const res = item.resolutionSource && item.resolutionSource !== 'SOURCE' ? ` ${item.resolutionSource}` : '';
+    return `${name}${kind}${res}`;
+  }
+
+  if (type === 'table' || type === 'native') {
+    const name = item.name || item;
+    const kind = item.kind ? `(${item.kind})` : '';
+    return `${name}${kind}`;
+  }
+
+  if (item.name) return `${item.name}${item.kind ? `(${item.kind})` : ''}`;
+  return String(item);
+}
+
 function renderTemplate(template, data) {
   let rendered = template;
   for (const [key, value] of Object.entries(data)) {
@@ -62,7 +156,7 @@ function extractSections(context) {
   const tables = sortByName((context.dependencies && context.dependencies.tables) || context.tables || []);
   const programCalls = sortByName((context.dependencies && context.dependencies.programCalls) || context.calls || []);
   const copyMembers = sortByName((context.dependencies && context.dependencies.copyMembers) || context.copyMembers || []);
-  const nativeFiles = sortByName((context.nativeFileUsage && context.nativeFileUsage.files) || context.nativeFiles || []);
+  const nativeFiles = truncateForDense(sortByName((context.nativeFileUsage && context.nativeFileUsage.files) || context.nativeFiles || []), denseLevel, 'native');
   const sqlStatements = [...(((context.sql && context.sql.statements) || context.sqlStatements || []) || [])]
     .sort((a, b) => {
       const at = String((a && a.type) || '').toUpperCase();
@@ -83,6 +177,7 @@ function extractSections(context) {
 }
 
 function formatSqlStatements(sqlStatements) {
+  const isDense = !!(sqlStatements && sqlStatements._truncated);
   return asBulletList(sqlStatements, (item) => {
     const text = (item && (item.text || item.snippet)) || '';
     if (item && item.type && text) {
@@ -91,9 +186,16 @@ function formatSqlStatements(sqlStatements) {
       if (item.dynamic) flags.push('DYNAMIC');
       if (item.unresolved) flags.push('UNRESOLVED');
       const tables = Array.isArray(item.tables) && item.tables.length > 0
-        ? ` tables: ${item.tables.join(', ')}`
+        ? ` ${item.tables.join(',')}`
         : '';
-      return `[${item.type}${flags.length ? `/${flags.join('/')}` : ''}] ${text}${tables}`;
+      const loc = (item.file || item.startLine) ? ` @${item.file || ''}:${item.startLine || ''}` : '';
+
+      let displayText = text;
+      if (isDense) {
+        displayText = String(text).replace(/\s+/g, ' ').slice(0, 60);
+      }
+      const prefix = `[${item.type}${flags.length ? `/${flags.join('/')}` : ''}]`;
+      return `${prefix} ${displayText}${tables}${loc}`;
     }
     return item;
   });
@@ -270,8 +372,13 @@ function validatePromptApplicability(templateName, input) {
   };
 }
 
-function buildTemplateData(context, sourceSnippet, contract) {
-  const { tables, programCalls, copyMembers, nativeFiles, sqlStatements } = extractSections(context);
+function buildTemplateData(context, sourceSnippet, contract, denseLevel = null) {
+  const sections = extractSections(context);
+  const tables = truncateForDense(sections.tables, denseLevel, 'tables');
+  const programCalls = truncateForDense(sections.programCalls, denseLevel, 'calls');
+  const copyMembers = truncateForDense(sections.copyMembers, denseLevel, 'copymembers');
+  const sqlStatements = truncateForDense(sections.sqlStatements, denseLevel, 'sql');
+  const nativeFiles = truncateForDense(sections.nativeFiles || [], denseLevel, 'native');
   const summary = context.summary && context.summary.text
     ? context.summary.text
     : `Program ${context.program || ''} has ${tables.length} tables, ${programCalls.length} program calls, ${copyMembers.length} copy members, and ${sqlStatements.length} SQL statements.`;
@@ -287,16 +394,10 @@ function buildTemplateData(context, sourceSnippet, contract) {
   return {
     program: context.program || '',
     summary: [summary, db2Hint].filter(Boolean).join(' '),
-    tables: asBulletList(tables, (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
+    tables: asBulletList(tables, (item) => formatItemForDense(item, denseLevel, 'table')),
     programCalls: formatProgramCalls(programCalls),
-    copyMembers: asBulletList(copyMembers, (item) => item.name || item),
-    nativeFiles: asBulletList(nativeFiles, (item) => {
-      const flags = [];
-      if (item.mutating || (item.access && item.access.mutating)) flags.push('MUTATING');
-      if (item.interactive || (item.access && item.access.interactive)) flags.push('INTERACTIVE');
-      if (item.keyed) flags.push('KEYED');
-      return `${item.name || item}${flags.length ? ` (${flags.join(', ')})` : ''}`;
-    }),
+    copyMembers: asBulletList(copyMembers, (item) => formatItemForDense(item, denseLevel, 'generic')),
+    nativeFiles: asBulletList(nativeFiles, (item) => formatItemForDense(item, denseLevel, 'native')),
     sqlStatements: formatSqlStatements(sqlStatements),
     dependencyGraphSummary,
     testDataHint,
@@ -316,7 +417,7 @@ function resolveWorkflow(aiProjection, contract) {
   return aiProjection && aiProjection.workflows ? aiProjection.workflows[workflowName] : null;
 }
 
-function buildTemplateDataFromProjection(aiProjection, contract) {
+function buildTemplateDataFromProjection(aiProjection, contract, denseLevel = null) {
   const workflow = resolveWorkflow(aiProjection, contract);
   const graph = workflow && workflow.dependencyGraphSummary ? workflow.dependencyGraphSummary : {};
   const testData = workflow && workflow.testData ? workflow.testData : {};
@@ -342,20 +443,40 @@ function buildTemplateDataFromProjection(aiProjection, contract) {
       : '',
   ].filter(Boolean);
 
+  const rawTables = (workflow && workflow.tables) || [];
+  const rawSql = (workflow && workflow.sqlStatements) || [];
+  const rawCalls = (workflow && workflow.programCalls) || [];
+  const tablesForDense = truncateForDense(rawTables, denseLevel, 'tables');
+  const sqlForDense = truncateForDense(rawSql, denseLevel, 'sql');
+  const callsForDense = truncateForDense(rawCalls, denseLevel, 'calls');
+
+  const tableFormatter = (item) => formatItemForDense(item, denseLevel, 'table');
+  const callFormatter = (item) => formatItemForDense(item, denseLevel, 'call');
+  const nativeFormatter = (item) => {
+    const flags = [];
+    if (item.mutating) flags.push('MUTATING');
+    if (item.interactive) flags.push('INTERACTIVE');
+    if (item.keyed) flags.push('KEYED');
+    return formatItemForDense({ name: item.name || item, kind: flags.length ? flags.join(',') : null }, denseLevel, 'native');
+  };
+
   return {
     program: aiProjection.program || '',
     summary: summaryParts.join(' '),
-    tables: asBulletList((workflow && workflow.tables) || [], (item) => (item.kind ? `${item.name} (${item.kind})` : item.name || item)),
-    programCalls: formatProgramCalls((workflow && workflow.programCalls) || []),
-    copyMembers: asBulletList((workflow && workflow.copyMembers) || [], (item) => item.name || item),
+    tables: asBulletList(tablesForDense, tableFormatter),
+    programCalls: formatProgramCalls(callsForDense),
+    copyMembers: asBulletList((workflow && workflow.copyMembers) || [], (item) => formatItemForDense(item, denseLevel, 'generic')),
     nativeFiles: asBulletList((workflow && workflow.nativeFiles) || [], (item) => {
-      const flags = [];
-      if (item.mutating) flags.push('MUTATING');
-      if (item.interactive) flags.push('INTERACTIVE');
-      if (item.keyed) flags.push('KEYED');
-      return `${item.name || item}${flags.length ? ` (${flags.join(', ')})` : ''}`;
+      if (!denseLevel) {
+        const flags = [];
+        if (item.mutating) flags.push('MUTATING');
+        if (item.interactive) flags.push('INTERACTIVE');
+        if (item.keyed) flags.push('KEYED');
+        return `${item.name || item}${flags.length ? ` (${flags.join(', ')})` : ''}`;
+      }
+      return formatItemForDense(item, denseLevel, 'native');
     }),
-    sqlStatements: formatSqlStatements((workflow && workflow.sqlStatements) || []),
+    sqlStatements: formatSqlStatements(sqlForDense),
     dependencyGraphSummary,
     testDataHint,
     sourceSnippet: evidenceHighlights,
@@ -378,8 +499,8 @@ function renderPrompt(templateName, contextOrProjection, options = {}) {
 
   const template = loadTemplate(contract.templateFile || templateName);
   const data = isAiProjection(contextOrProjection)
-    ? buildTemplateDataFromProjection(contextOrProjection, contract)
-    : buildTemplateData(contextOrProjection, options.sourceSnippet, contract);
+    ? buildTemplateDataFromProjection(contextOrProjection, contract, options.denseLevel)
+    : buildTemplateData(contextOrProjection, options.sourceSnippet, contract, options.denseLevel);
   const resolved = renderTemplate(template, data);
   const generatedAt = contextOrProjection.generatedAt || contextOrProjection.scannedAt || new Date().toISOString();
   let denseNote = '';
@@ -404,9 +525,20 @@ function renderPrompt(templateName, contextOrProjection, options = {}) {
 }
 
 function buildPrompt(templateName, contextOrProjection, outputPath, options = {}) {
-  const rendered = renderPrompt(templateName, contextOrProjection, options);
-  fs.writeFileSync(outputPath, rendered.content, 'utf8');
-  return rendered.content;
+  try {
+    const rendered = renderPrompt(templateName, contextOrProjection, options);
+    fs.writeFileSync(outputPath, rendered.content, 'utf8');
+    return rendered.content;
+  } catch (err) {
+    // Budget or other prompt render issues are non-fatal for core analyze (see #6/#8)
+    const msg = `Prompt generation for ${templateName} skipped: ${err.message}`;
+    console.warn(`[WARN] ${msg}`);
+    const note = `Generated by: zeus-rpg-promptkit\nProgram: ${contextOrProjection && contextOrProjection.program || ''}\n\n[PROMPT RENDER SKIPPED]\n${msg}\n\nCore analysis artifacts (canonical-analysis.json, context.json, reports, graphs) were produced successfully.\nSee analysis-diagnostics.json or re-run with adjusted --token-budget / --dense / --optimize-context.`;
+    try {
+      fs.writeFileSync(outputPath, note, 'utf8');
+    } catch (_) {}
+    return note;
+  }
 }
 
 function buildPrompts({
@@ -451,4 +583,6 @@ module.exports = {
   resolveTokenBudgetKey,
   resolvePromptTemplates,
   validatePromptApplicability,
+  truncateForDense,
+  formatItemForDense,
 };

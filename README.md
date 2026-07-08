@@ -153,7 +153,12 @@ Praktisch bedeutet das:
 
 ---
 
-## How To: Credentials verschlüsseln / entschlüsseln (Secret Vault)
+## Deutsch: How To – Credentials verschlüsseln / entschlüsseln (Secret Vault)
+
+**Wichtige Capabilities** (auch im englischen Teil unten):
+- `--dense [lite|full|ultra]`: rangbasierte Token-Reduktion + Kompaktierung für Reports/Prompts (kombiniert mit --optimize-context). Verfügbar in `analyze` und weitergegeben an `workflow --preset` / `workflow run`.
+- `--prompt-max-tokens`, `--skip-db2-metadata`, `--reproducible` u.v.m. für große Programme und CI.
+- Siehe auch `docs/tool-catalog.md` und Quickstarts.
 
 **Niemals Klartext-Passwörter** in `.env` oder committeden Profilen speichern.
 
@@ -164,6 +169,7 @@ Zeus bietet einen Secret Vault (AES-256-GCM) mit dem Format `enc:v1:...`. Werte 
 ```bash
 # Schlüssel anlegen (in config/local-only/.zeus-key – gitignoriert)
 node cli/zeus.js secret init-key
+# Windows: node cli/zeus.js secret init-key --windows   # DPAPI-geschützt (sicherer)
 
 # Oder per Env (hat Vorrang):
 # export ZEUS_SECRET_KEY="dein-32-byte-geheimnis"
@@ -204,7 +210,8 @@ node cli/zeus.js doctor --profile default      # Secret-Vault-Check
 
 **Schlüssel-Quellen (Priorität):**
 1. Env-Variable `ZEUS_SECRET_KEY`
-2. Datei `config/local-only/.zeus-key`
+2. Windows DPAPI (`secret init-key --windows`, `%USERPROFILE%\.zeus-secure-key.xml`)
+3. Datei `config/local-only/.zeus-key`
 
 **Wichtige Regeln:**
 - Die Schlüsseldatei darf **nie** committed oder geteilt werden.
@@ -411,7 +418,7 @@ npm run demo:prompt
 
 ---
 
-## Quickstart: eigene lokale Quellen analysieren
+## Deutsch: Quickstart – eigene lokale Quellen analysieren
 
 ```bash
 # 1. Dependencies installieren
@@ -423,7 +430,7 @@ node cli/zeus.js analyze \
   --program ORDERPGM \
   --out ./output \
   --optimize-context \
-  --dense full   # optional: compact/dense reports + prompts. Levels: lite | full | ultra (graduated terseness, same evidence)
+  --dense full   # optional: lite | full | ultra – rank-aware token reduction & compaction (reports + prompts + optimizer). Auch bei `workflow --preset` und `workflow run --dense ...` verfügbar (wird an analyze weitergegeben). Weitere Flags: --prompt-max-tokens, --skip-db2-metadata, --reproducible usw.
 ```
 
 Wichtige Ergebnisdateien:
@@ -446,7 +453,7 @@ node cli/zeus.js serve --source-output-root ./output
 
 ---
 
-## Quickstart: IBM i-Fetch mit Profilen
+## Deutsch: Quickstart – IBM i-Fetch mit Profilen
 
 ```powershell
 # 1. Lokales Profil anlegen
@@ -471,7 +478,7 @@ node .\cli\zeus.js resolve-object --profile readonly-db2 --table APP_TABLE_00 --
 node .\cli\zeus.js fetch --profile sftp-fetch
 
 # 7. Quellen analysieren
-node .\cli\zeus.js analyze --profile dev --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context --dense full   # optional: lite | full | ultra
+node .\cli\zeus.js analyze --profile dev --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context --dense full   # optional: lite | full | ultra (auch bei workflow --preset / workflow run nutzbar)
 ```
 
 Ohne IBM i-Anbindung können RPG-, CL- und DDS-Dateien einfach in `rpg_sources/` abgelegt und direkt mit `analyze` verarbeitet werden.
@@ -1030,7 +1037,14 @@ In practice:
 
 ---
 
-## How To: Encrypt / Decrypt Credentials (Secret Vault)
+---
+
+## English: How To – Encrypt / Decrypt Credentials (Secret Vault)
+
+**All major capabilities** (also available in German section above):
+- `--dense [lite|full|ultra]`: rank-aware token reduction + compaction for reports/prompts (integrates with --optimize-context). Supported directly in `analyze` and forwarded in `workflow --preset` / `workflow run`.
+- `--prompt-max-tokens <n>`, `--skip-db2-metadata`, `--reproducible`, `--optimize-context` etc. for large programs and CI.
+- Full details in `docs/quickstart/...` and `docs/tool-catalog.md`.
 
 **Never store plaintext passwords** in `.env` files or committed profiles.
 
@@ -1041,6 +1055,7 @@ Zeus supports a built-in Secret Vault (AES-256-GCM) using the `enc:v1:...` forma
 ```bash
 # Create a local key (stored in config/local-only/.zeus-key — gitignored)
 node cli/zeus.js secret init-key
+# Windows: node cli/zeus.js secret init-key --windows   # DPAPI protected (recommended)
 
 # Or provide via env (takes precedence):
 # export ZEUS_SECRET_KEY="your-32-byte-secret"
@@ -1083,7 +1098,8 @@ node cli/zeus.js doctor --profile default      # Secret Vault check appears here
 
 **Key sources (priority order):**
 1. `ZEUS_SECRET_KEY` environment variable
-2. `config/local-only/.zeus-key` file
+2. Windows DPAPI (`secret init-key --windows`, `%USERPROFILE%\.zeus-secure-key.xml`)
+3. `config/local-only/.zeus-key` file
 
 **Important rules:**
 - The key file must **never** be committed or shared.
@@ -1280,7 +1296,7 @@ npm run demo:prompt
 
 ---
 
-## Quickstart: analyze your own local sources
+## English: Quickstart – analyze your own local sources
 
 ```bash
 # 1. Install dependencies
@@ -1292,7 +1308,7 @@ node cli/zeus.js analyze \
   --program ORDERPGM \
   --out ./output \
   --optimize-context \
-  --dense full   # optional: lite | full | ultra (compact output style)
+  --dense full   # optional: lite | full | ultra – rank-aware token reduction & compaction (reports, prompts, optimizer). Also available for `workflow --preset` and `workflow run --dense ...` (forwards to inner analyze steps). Other capabilities: --prompt-max-tokens <n>, --skip-db2-metadata, --reproducible etc.
 ```
 
 Important output files:
@@ -1315,7 +1331,7 @@ node cli/zeus.js serve --source-output-root ./output
 
 ---
 
-## Quickstart: IBM i fetch with profiles
+## English: Quickstart – IBM i fetch with profiles
 
 ```bash
 # 1. Create a local profile
@@ -1341,7 +1357,7 @@ node cli/zeus.js resolve-object --profile readonly-db2 --table APP_TABLE_00 --re
 node cli/zeus.js fetch --profile sftp-fetch
 
 # 7. Analyze sources
-node cli/zeus.js analyze --profile dev --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense full   # optional: lite | full | ultra
+node cli/zeus.js analyze --profile dev --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense full   # optional: lite | full | ultra (also via workflow run --dense)
 ```
 
 Without IBM i access, place RPG, CL and DDS files in `rpg_sources/` and run `analyze` directly.

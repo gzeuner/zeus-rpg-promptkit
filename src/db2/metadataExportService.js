@@ -377,7 +377,13 @@ function runTableMetadataExport({ jdbcUrl, dbConfig, defaultSchema, requestedTab
     SECRET_ENV_SENTINEL,
     defaultSchema,
     requestedTables.join(','),
-  ], { password: String(dbConfig.password) });
+  ], { password: String(dbConfig.password), timeout: 180000 }); // 3min hard timeout for large table sets (#7)
+
+  // Surface recent progress markers from Java stderr so hangs are observable
+  const prog = (result.stderr || '').split(/\r?\n/).filter((l) => /\[progress\].*metadata/.test(l)).slice(-5);
+  if (prog.length && (verbose || requestedTables.length > 30)) {
+    prog.forEach((p) => console.log(p));
+  }
 
   if (result.status !== 0) {
     const errorText = (result.stderr || '').trim() || 'unknown DB2 metadata error';
@@ -402,7 +408,7 @@ function runExternalObjectExport({ jdbcUrl, dbConfig, requestedNames, verbose })
     String(dbConfig.user),
     SECRET_ENV_SENTINEL,
     requestedNames.join(','),
-  ], { password: String(dbConfig.password) });
+  ], { password: String(dbConfig.password), timeout: 120000 });
 
   if (result.status !== 0) {
     const errorText = (result.stderr || '').trim() || 'unknown DB2 external object error';
@@ -412,7 +418,14 @@ function runExternalObjectExport({ jdbcUrl, dbConfig, requestedNames, verbose })
   return parseJavaJson(result.stdout);
 }
 
-function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose, canonicalAnalysis, context }) {
+function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose, canonicalAnalysis, context, skip, reproducible } = {}) {
+  if (skip || reproducible) {
+    return {
+      summary: createSkippedSummary('skipped via --skip-db2-metadata or --reproducible'),
+      notes: ['DB2 metadata export skipped (flag or reproducibility).'],
+      canonicalUpdates: { entities: {}, relations: [] },
+    };
+  }
   const requestedTables = buildRequestedTableNames(dependencies);
   const requestedExternalObjects = buildRequestedExternalObjectNames(canonicalAnalysis);
   const defaultSchema = resolveDefaultSchema(dbConfig);
@@ -435,6 +448,9 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
     };
   }
 
+  if (verbose) {
+    console.log(`[verbose] Starting DB2 metadata export for ${requestedTables.length} tables + ${requestedExternalObjects.length} externals (timeouts + progress; --skip-db2-metadata to bypass).`);
+  }
   if (requestedTables.length === 0 && requestedExternalObjects.length === 0) {
     const payload = {
       program: normalizeIdentifier(program),

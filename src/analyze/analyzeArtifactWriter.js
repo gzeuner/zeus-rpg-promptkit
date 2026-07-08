@@ -267,12 +267,13 @@ function writeAnalyzeArtifacts(state) {
     mermaidPath: path.join(outputProgramDir, 'dependency-graph.mmd'),
     denseLevel,
   });
+  const passedBudgets = state && state.tokenBudgets ? state.tokenBudgets : null;
   buildPrompts({
     aiProjection: writtenAiKnowledge,
     outputDir: outputProgramDir,
     sourceSnippet,
     templates: selectedPromptTemplates,
-    tokenBudgets: config && config.tokenBudget ? config.tokenBudget : null,
+    tokenBudgets: passedBudgets || (config && config.tokenBudget ? config.tokenBudget : null),
     denseLevel,
   });
   fs.writeFileSync(path.join(outputProgramDir, 'report.md'), reportMarkdown, 'utf8');

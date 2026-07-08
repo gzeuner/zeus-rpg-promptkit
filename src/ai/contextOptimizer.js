@@ -33,6 +33,14 @@ const DEFAULT_OPTIONS = {
   workflowTokenBudgets: DEFAULT_WORKFLOW_TOKEN_BUDGETS,
 };
 
+function getDenseMultipliers(denseLevel) {
+  if (!denseLevel) return { max: 1, snippet: 1, budget: 1 };
+  if (denseLevel === 'lite') return { max: 0.85, snippet: 0.9, budget: 0.9 };
+  if (denseLevel === 'full') return { max: 0.55, snippet: 0.6, budget: 0.6 };
+  if (denseLevel === 'ultra') return { max: 0.40, snippet: 0.45, budget: 0.45 }; // tuned: still aggressive but keeps some items on large programs
+  return { max: 0.55, snippet: 0.6, budget: 0.6 };
+}
+
 const WORKFLOW_KEYS = ['documentation', 'errorAnalysis', 'security', 'modernization'];
 
 function normalizeName(value) {
@@ -86,9 +94,11 @@ function normalizeWorkflowBudgets(value) {
   return resolved;
 }
 
-function normalizeOptions(config) {
+function normalizeOptions(config, denseLevel = null) {
   const input = config && typeof config === 'object' ? config : {};
-  return {
+  const m = getDenseMultipliers(denseLevel);
+
+  const base = {
     maxTables: Number.isFinite(Number(input.maxTables)) ? Math.max(0, Number(input.maxTables)) : DEFAULT_OPTIONS.maxTables,
     maxProgramCalls: Number.isFinite(Number(input.maxProgramCalls)) ? Math.max(0, Number(input.maxProgramCalls)) : DEFAULT_OPTIONS.maxProgramCalls,
     maxCopyMembers: Number.isFinite(Number(input.maxCopyMembers)) ? Math.max(0, Number(input.maxCopyMembers)) : DEFAULT_OPTIONS.maxCopyMembers,
@@ -97,6 +107,21 @@ function normalizeOptions(config) {
     maxSnippetLines: Number.isFinite(Number(input.maxSnippetLines)) ? Math.max(1, Number(input.maxSnippetLines)) : DEFAULT_OPTIONS.maxSnippetLines,
     softTokenLimit: Number.isFinite(Number(input.softTokenLimit)) ? Math.max(1, Number(input.softTokenLimit)) : DEFAULT_OPTIONS.softTokenLimit,
     workflowTokenBudgets: normalizeWorkflowBudgets(input.workflowTokenBudgets),
+  };
+
+  // Apply dense multipliers (only reduce, never increase)
+  return {
+    ...base,
+    maxTables: Math.max(1, Math.floor(base.maxTables * m.max)),
+    maxProgramCalls: Math.max(1, Math.floor(base.maxProgramCalls * m.max)),
+    maxCopyMembers: Math.max(1, Math.floor(base.maxCopyMembers * m.max)),
+    maxSQLStatements: Math.max(1, Math.floor(base.maxSQLStatements * m.max)),
+    maxSourceSnippets: Math.max(1, Math.floor(base.maxSourceSnippets * m.max)),
+    maxSnippetLines: Math.max(1, Math.floor(base.maxSnippetLines * m.snippet)),
+    softTokenLimit: base.softTokenLimit,
+    workflowTokenBudgets: Object.fromEntries(
+      Object.entries(base.workflowTokenBudgets).map(([k, v]) => [k, Math.max(100, Math.floor(v * m.budget))])
+    ),
   };
 }
 
@@ -966,8 +991,8 @@ function summarize(optimized) {
   };
 }
 
-function optimizeContext(context, config = {}, aiProjectionInput = null) {
-  const options = normalizeOptions(config);
+function optimizeContext(context, config = {}, aiProjectionInput = null, denseLevel = null) {
+  const options = normalizeOptions(config, denseLevel);
   const projection = aiProjectionInput && typeof aiProjectionInput === 'object'
     ? aiProjectionInput
     : buildFallbackProjection(context);

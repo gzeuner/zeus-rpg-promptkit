@@ -27,7 +27,7 @@ const {
   storeKeyInWindowsSecureXml,
   resolveKeyFromWindowsSecureXml,
 } = require('../../security/secretVault');
-const { detectPlaintextSecrets, SECRET_KEYS } = require('../../security/plaintextSecretDetector');
+const { detectPlaintextSecrets, SECRET_KEYS, isPlaceholder } = require('../../security/plaintextSecretDetector');
 
 // Liest den gesamten stdin-Inhalt (fuer Passwort-Eingabe ohne Shell-History).
 function readStdinSync() {
@@ -102,10 +102,10 @@ async function runSecret(args) {
     console.log('  zeus secret status                          # Zeigt, ob/woher Schluesselmaterial geladen wird + Hygiene-Check');
     console.log('  zeus secret encrypt [--value <text>]        # Verschluesselt einen Wert -> enc:v1:...  (ohne --value: stdin) + Hygiene-Warnung');
     console.log('  zeus secret decrypt --value <enc:v1:..>     # Entschluesselt einen Wert (nur zum Pruefen)');
-    console.log('  zeus secret check                            # Prüft auf Klartext-Credentials (exit 1 bei Problemen)');
-    console.log('  zeus secret migrate [--dry-run]              # Migriert gefundene Klartext-Secrets zu enc:v1:... (für .env Dateien)');
+    console.log('  zeus secret check [--warn-only]              # Prüft auf Klartext-Credentials (exit 1 bei Problemen; --warn-only => exit 0, für CI warn-only)');
+    console.log('  zeus secret migrate [--dry-run] [--no-backup]  # Migriert gefundene Klartext-Secrets zu enc:v1:... (für .env Dateien); --no-backup unterdrückt Klartext-Backup');
     console.log('');
-    console.log(`Schluessel-Quelle: Umgebungsvariable ${KEY_ENV_VAR} (Vorrang) oder Datei ${KEY_FILE_RELATIVE}.`);
+    console.log(`Schluessel-Quelle: ${KEY_ENV_VAR} (Vorrang) | Windows DPAPI (--windows) | Datei ${KEY_FILE_RELATIVE}.`);
     console.log('Ablage in Profil/.env:  ZEUS_DB_PASSWORD=enc:v1:...   (wird zur Laufzeit transparent entschluesselt)');
     return;
   }
@@ -196,7 +196,11 @@ async function runSecret(args) {
     if (hygiene.length > 0) {
       console.log('[FAIL] Secrets-Hygiene: Klartext-Credentials gefunden!');
       hygiene.forEach((f) => console.log(`  - ${f.key} in ${f.file} (source: ${f.source})`));
-      process.exit(1);
+      const warnOnly = args['warn-only'] || args.warnonly === true;
+      if (!warnOnly) {
+        process.exit(1);
+      }
+      console.log('  (Exit 0 wegen --warn-only)');
     } else {
       console.log('[PASS] Secrets-Hygiene: Keine Klartext-Credentials gefunden.');
     }
@@ -205,6 +209,7 @@ async function runSecret(args) {
 
   if (sub === 'migrate') {
     const dryRun = args['dry-run'] || args.dry === true;
+    const noBackup = args['no-backup'] || args.nobackup === true || args.backup === false;
     const hygiene = detectPlaintextSecrets({ cwd: process.cwd(), checkProfiles: true, env: process.env });
     if (hygiene.length === 0) {
       console.log('Keine Klartext-Credentials gefunden. Nichts zu migrieren.');
@@ -227,7 +232,7 @@ async function runSecret(args) {
 
     if (dryRun) {
       console.log('\nDry-run: Keine Änderungen vorgenommen.');
-      console.log('Führe ohne --dry-run aus, um zu migrieren (Backups werden erstellt).');
+      console.log('Führe ohne --dry-run aus, um zu migrieren (Backups werden mit --no-backup unterdrückt).');
       return;
     }
 
@@ -242,9 +247,13 @@ async function runSecret(args) {
       if (!fs.existsSync(fullPath)) continue;
 
       try {
-        // Backup
-        const backup = fullPath + '.bak.' + Date.now();
-        fs.copyFileSync(fullPath, backup);
+        // Backup (plaintext!) unless --no-backup
+        let backup = null;
+        if (!noBackup) {
+          backup = fullPath + '.bak.' + Date.now();
+          fs.copyFileSync(fullPath, backup);
+          try { fs.chmodSync(backup, 0o600); } catch (_) {}
+        }
 
         let content = fs.readFileSync(fullPath, 'utf8');
         const lines = content.split(/\r?\n/);
@@ -258,7 +267,7 @@ async function runSecret(args) {
           if (match) {
             const key = match[1];
             let value = match[2].trim().replace(/\s+#.*$/, '').trim();
-            if (SECRET_KEYS.test(key) && value && !value.startsWith('enc:v1:')) {
+            if (SECRET_KEYS.test(key) && value && !value.startsWith('enc:v1:') && !isPlaceholder(value)) {
               const encrypted = encryptSecret(value);
               // Preserve original indentation and comment if any
               const prefix = line.match(/^(\s*)/)[1];
@@ -272,7 +281,14 @@ async function runSecret(args) {
 
         if (changed) {
           fs.writeFileSync(fullPath, lines.join('\n'), 'utf8');
-          console.log(`  Migriert: ${fullPath} (Backup: ${backup})`);
+          if (backup) {
+            console.log(`  Migriert: ${fullPath}`);
+            console.log(`    Backup: ${backup}`);
+            console.log('    >>> ACHTUNG: Backup enthält KLARTEXT-Passwörter! Nach Verifikation löschen:');
+            console.log(`        rm "${backup}"   (oder del auf Windows)`);
+          } else {
+            console.log(`  Migriert: ${fullPath} (ohne Backup)`);
+          }
         }
       } catch (e) {
         console.error(`  Fehler bei ${fullPath}: ${e.message}`);
@@ -281,7 +297,8 @@ async function runSecret(args) {
 
     if (migratedFiles.size > 0) {
       console.log(`\nFertig. ${migratedFiles.size} Datei(en) migriert.`);
-      console.log('Bitte überprüfen und .bak Dateien bei Bedarf löschen.');
+      console.log('>>> WICHTIG: Prüfen und .bak-Dateien mit Klartext SOFORT löschen (nicht committen).');
+      console.log('    Verwendung von --no-backup bei zukünftigen Migrationen vermeidet Backups.');
     } else {
       console.log('Keine automatische Migration durchgeführt (manuelle Überprüfung empfohlen).');
     }

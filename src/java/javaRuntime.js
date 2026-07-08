@@ -89,17 +89,24 @@ function shouldCompileJavaSources({ sourceFiles, binDir }) {
   });
 }
 
-function runProcess(command, args, errorLabel, env) {
-  const result = spawnSync(command, args, {
+function runProcess(command, args, errorLabel, env, timeoutMs) {
+  const spawnOpts = {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     // Java helpers (e.g. source-wide search) can emit large JSON payloads;
     // the default 1 MB buffer overflows with ENOBUFS on big result sets.
     maxBuffer: 256 * 1024 * 1024,
     ...(env ? { env } : {}),
-  });
+  };
+  if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
+    spawnOpts.timeout = timeoutMs;
+  }
+  const result = spawnSync(command, args, spawnOpts);
 
   if (result.error) {
+    if (result.error.code === 'ETIMEDOUT' || (result.signal && String(result.signal).toUpperCase().includes('SIG'))) {
+      throw new Error(`${errorLabel}: timed out after ${timeoutMs}ms`);
+    }
     throw new Error(`${errorLabel}: ${result.error.message}`);
   }
 
@@ -151,7 +158,7 @@ const HEARTBEAT_CLASSES = new Set([
   'Db2TestDataExtractor',
 ]);
 
-function runJavaClass(className, args, { cwd = process.cwd(), heartbeat = false, password } = {}) {
+function runJavaClass(className, args, { cwd = process.cwd(), heartbeat = false, password, timeout } = {}) {
   const classpath = resolveJavaClasspath({ cwd });
   const showHeartbeat = heartbeat || HEARTBEAT_CLASSES.has(className);
   if (showHeartbeat) {
@@ -171,6 +178,7 @@ function runJavaClass(className, args, { cwd = process.cwd(), heartbeat = false,
     ['-cp', classpath, className, ...args],
     `Failed to run Java helper ${className}`,
     childEnv,
+    timeout,
   );
   if (showHeartbeat) {
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);

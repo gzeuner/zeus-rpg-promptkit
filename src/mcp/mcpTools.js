@@ -1804,6 +1804,63 @@ function listMcpTools() {
       },
     },
     {
+      name: 'zeus.investigation.start',
+      description: 'Start or resume a focused investigation session on top of existing analyze artifacts (S0).',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['program'],
+        properties: {
+          program: { type: 'string', minLength: 1 },
+          profile: { type: 'string' },
+          goal: { type: 'string' },
+          session: { type: 'string' },
+        },
+      },
+    },
+    {
+      name: 'zeus.investigation.focus',
+      description: 'Update focus in investigation session.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['program'],
+        properties: {
+          program: { type: 'string', minLength: 1 },
+          focus: { type: 'object' },
+          session: { type: 'string' },
+        },
+      },
+    },
+    {
+      name: 'zeus.investigation.search',
+      description: 'Scoped search in investigation session.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['program'],
+        properties: {
+          program: { type: 'string', minLength: 1 },
+          terms: { type: 'array', items: { type: 'string' } },
+          session: { type: 'string' },
+        },
+      },
+    },
+    {
+      name: 'zeus.investigation.generate-prompt',
+      description: 'Generate focused prompt from investigation session.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['program'],
+        properties: {
+          program: { type: 'string', minLength: 1 },
+          session: { type: 'string' },
+          goal: { type: 'string' },
+        },
+      },
+    },
+    {
       name: 'zeus.search-source',
       description: 'Searches local source files for term/member/table matches (read-only).',
       inputSchema: {
@@ -7182,6 +7239,36 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         lineNumber: Number(entry && entry.lineNumber ? entry.lineNumber : 0),
         line: entry && entry.line ? String(entry.line) : '',
       })),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // Prio 1: Investigation session tools
+  if (name.startsWith('zeus.investigation.')) {
+    const { focus: doFocus, search: doSearch, generateFocusedPrompt } = require('../investigation/investigationActions');
+    const program = args && args.program;
+    if (!program) {
+      const err = new Error('program is required for investigation tools');
+      err.code = 'TOOL_INVALID_ARGUMENTS';
+      throw err;
+    }
+    const cwd = context.cwd || process.cwd();
+    // Use similar resolution as analyze command for output dir
+    const config = require('../config/runtimeConfig').resolveAnalyzeConfig({ program }, { cwd });
+    const outputRoot = path.resolve(cwd, config.outputRoot || 'output');
+    const analysisDir = path.join(outputRoot, program);
+    let result;
+    if (name === 'zeus.investigation.start' || name === 'zeus.investigation.focus') {
+      result = doFocus({ analysisDir, sessionId: args.session, goal: args.goal, focus: args.focus || {} });
+    } else if (name === 'zeus.investigation.search') {
+      result = doSearch({ analysisDir, sessionId: args.session, terms: args.terms || [], goal: args.goal });
+    } else if (name === 'zeus.investigation.generate-prompt') {
+      result = generateFocusedPrompt({ analysisDir, sessionId: args.session, goal: args.goal });
+    }
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      ...result,
       timestamp: new Date().toISOString(),
     };
   }

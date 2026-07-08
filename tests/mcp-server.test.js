@@ -5057,3 +5057,107 @@ test('mcp audit trail supports explicit schema version override', async () => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
+
+// --- Investigation session MCP tools (Prio 1) ---
+test('mcp tools list includes zeus.investigation.* when explicitly allowlisted', async () => {
+  const server = createTestServer({
+    allowlistedTools: ['zeus.health', 'zeus.investigation.start', 'zeus.investigation.focus', 'zeus.investigation.search', 'zeus.investigation.generate-prompt'],
+  });
+
+  const listResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 300,
+    method: 'tools/list',
+  });
+
+  const names = listResponse.result.tools.map((t) => t.name);
+  assert.ok(names.includes('zeus.investigation.start'));
+  assert.ok(names.includes('zeus.investigation.focus'));
+  assert.ok(names.includes('zeus.investigation.search'));
+  assert.ok(names.includes('zeus.investigation.generate-prompt'));
+});
+
+test('mcp tools call zeus.investigation.start returns structured session payload (requires program dir)', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-inv-'));
+  const programDir = path.join(tempRoot, 'output', 'TESTPGM');
+  fs.mkdirSync(programDir, { recursive: true });
+  fs.writeFileSync(path.join(programDir, 'context.json'), JSON.stringify({ summary: { text: 'test' } }), 'utf8');
+
+  try {
+    const server = createTestServer({
+      cwd: tempRoot,
+      allowlistedTools: ['zeus.investigation.start'],
+    });
+
+    const response = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 301,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.investigation.start',
+        arguments: {
+          program: 'TESTPGM',
+          goal: 'MCP test focus',
+        },
+      },
+    });
+
+    assert.equal(response.result.isError, false);
+    const content = response.result.structuredContent;
+    assert.equal(content.ok, true);
+    assert.ok(content.session);
+    assert.ok(content.session.id);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('mcp tools call zeus.investigation.focus and generate-prompt work with session', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-inv2-'));
+  const programDir = path.join(tempRoot, 'output', 'TESTPGM');
+  fs.mkdirSync(programDir, { recursive: true });
+  fs.writeFileSync(path.join(programDir, 'context.json'), JSON.stringify({ summary: { text: 'test' } }), 'utf8');
+
+  try {
+    const server = createTestServer({
+      cwd: tempRoot,
+      allowlistedTools: ['zeus.investigation.start', 'zeus.investigation.focus', 'zeus.investigation.generate-prompt'],
+    });
+
+    // Start
+    await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 302,
+      method: 'tools/call',
+      params: { name: 'zeus.investigation.start', arguments: { program: 'TESTPGM' } },
+    });
+
+    // Focus
+    const focusResp = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 303,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.investigation.focus',
+        arguments: { program: 'TESTPGM', focus: { searchScopes: ['error paths'] } },
+      },
+    });
+    assert.equal(focusResp.result.isError, false);
+
+    // Generate prompt
+    const promptResp = await server.handleRequest({
+      jsonrpc: '2.0',
+      id: 304,
+      method: 'tools/call',
+      params: {
+        name: 'zeus.investigation.generate-prompt',
+        arguments: { program: 'TESTPGM', goal: 'test goal' },
+      },
+    });
+    assert.equal(promptResp.result.isError, false);
+    assert.ok(promptResp.result.structuredContent.prompt);
+    assert.match(promptResp.result.structuredContent.prompt, /Investigation Goal:/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});

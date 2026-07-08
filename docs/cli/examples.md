@@ -17,7 +17,7 @@ node .\cli\zeus.js doctor --profile default --probe --show-resolved
 
 ```powershell
 node .\cli\zeus.js fetch --profile default-fetch
-node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context --dense full   # optional: lite | full | ultra for terser reports/prompts
+node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context --dense full   # optional: lite | full | ultra (rank-aware). Auch via workflow-Befehle.
 ```
 
 Optional local known facts can be folded into the analyze context only via explicit opt-in:

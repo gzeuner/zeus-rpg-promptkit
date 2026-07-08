@@ -275,8 +275,21 @@ function generateMarkdownReport(context, tokenReport, options = {}) {
   const denseLevel = (options && options.denseLevel) || null;
   const isDense = Boolean(denseLevel);
   const summary = context.summary || {};
-  const dependencies = context.dependencies || {};
+  let dependencies = context.dependencies || {};
   const sql = context.sql || {};
+
+  // Dense: truncate large lists using rank-aware helper when available
+  if (isDense && dependencies) {
+    try {
+      const { truncateForDense } = require('../prompt/promptBuilder');
+      dependencies = {
+        ...dependencies,
+        tables: truncateForDense(dependencies.tables || [], denseLevel, 'tables'),
+        programCalls: truncateForDense(dependencies.programCalls || [], denseLevel, 'calls'),
+        copyMembers: truncateForDense(dependencies.copyMembers || [], denseLevel, 'copymembers'),
+      };
+    } catch (_) { /* fallback to full if helper not loadable */ }
+  }
   const graph = context.graph || {};
   const crossProgramGraph = context.crossProgramGraph || {};
   const procedureAnalysis = context.procedureAnalysis || {};

@@ -594,7 +594,7 @@ function optimizeContextStage(state) {
     cwd: state.cwd,
     env: state.env,
   });
-  const optimizedContext = optimizeContext(context, config.contextOptimizer, baseAiProjection);
+  const optimizedContext = optimizeContext(context, config.contextOptimizer, baseAiProjection, denseLevel);
   const optimizedTokens = estimateTokensFromObject(optimizedContext);
 
   return {
@@ -660,7 +660,15 @@ function exportDb2Stage(state) {
   let db2Export;
   let db2CacheMetadata;
 
-  if (cachedArtifact) {
+  const skipRequested = Boolean(state.skipDb2Metadata || (state.reproducibility && state.reproducibility.enabled));
+  if (skipRequested) {
+    db2Export = {
+      summary: { status: 'skipped', reason: 'skipped by --reproducible or --skip-db2-metadata' },
+      notes: ['DB2 metadata export skipped (reproducible mode or --skip-db2-metadata).'],
+      canonicalUpdates: { entities: {}, relations: [] },
+    };
+    db2CacheMetadata = { status: 'skipped', reason: 'flag' };
+  } else if (cachedArtifact) {
     db2Export = {
       payload: cachedArtifact.payload,
       summary: {
@@ -684,7 +692,7 @@ function exportDb2Stage(state) {
       markdownFile: cachedArtifact.markdownFile,
       manifestFile: ANALYSIS_ARTIFACT_CACHE_FILE,
     };
-  } else {
+  } else if (!skipRequested) {
     db2Export = exportDb2Metadata({
       program,
       dependencies: context.dependencies,
@@ -723,6 +731,9 @@ function exportDb2Stage(state) {
       ...(db2Export.summary || {}),
       cacheStatus: db2CacheMetadata.status,
     };
+  } else if (!db2Export) {
+    // skip already handled above
+    db2CacheMetadata = db2CacheMetadata || { status: 'skipped' };
   }
 
   const nextCacheStatus = mergeAnalysisCache(currentCacheStatus, {

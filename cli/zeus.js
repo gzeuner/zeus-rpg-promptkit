@@ -51,6 +51,7 @@ const { runDiscoverEnvironment } = require('../src/cli/commands/discoverEnvironm
 const { runValidateRpgSql } = require('../src/cli/commands/validateRpgSqlCommand');
 const { runOnboarding } = require('../src/cli/commands/onboardingCommand');
 const { runSecret } = require('../src/cli/commands/secretCommand');
+const { runInvestigate } = require('../src/cli/commands/investigateCommand');
 const path = require('path');
 const { autoLoadEnvFiles } = require('../src/config/envFileLoader');
 const { detectPlaintextSecrets } = require('../src/security/plaintextSecretDetector');
@@ -62,9 +63,12 @@ const zeusPackageRoot = path.resolve(__dirname, '..');
 
 function printHelp() {
   console.log('Usage:');
-  console.log('  zeus [--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--source-root <path>] [--schema <name>] [--library <name>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--dense [lite|full|ultra]] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]');
-  console.log('  zeus [--config <path>] workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]');
-  console.log('  zeus [--config <path>] workflow run --profile <name> [--preset <name>] [--out <path>] [--continue-on-error]');
+  console.log('  zeus [--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--source-root <path>] [--schema <name>] [--library <name>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--dense [lite|full|ultra]] [--prompt-max-tokens <n>] [--skip-db2-metadata] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]');
+  console.log('  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list] [--focus "<scope>"] [--search "<term>"] [--generate-prompt]  # Investigation session (focus, search, prompt gen)');
+  // Note: --dense now performs rank-aware selection + compaction (see Phase 1-3 impl)
+  console.log('  zeus [--config <path>] workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--dense [lite|full|ultra]] [--verbose] [--json]');
+  console.log('  zeus [--config <path>] workflow run --profile <name> [--preset <name>] [--out <path>] [--continue-on-error] [--dense [lite|full|ultra]]');
+  console.log('  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list]');
   console.log('  zeus [--config <path>] bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible] [--profile <name>] [--verbose]');
   console.log('  zeus [--config <path>] impact (--target <name> | --field <name>) [--program <name> | --member <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose] [--json]');
   console.log('  zeus [--config <path>] assess-risk --program <name> [--out <path>] [--verbose] [--json]');
@@ -75,9 +79,9 @@ function printHelp() {
   console.log('  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
   console.log('  zeus [--config <path>] analyses <list|register|index|open|show|unregister> [options]');
   console.log('  zeus [--config <path>] doctor --profile <name> [--probe] [--show-resolved] [--strict]');
-  console.log('    --strict: Hygiene-Probleme (Klartext-Secrets) als kritischer Fehler behandeln');
-  console.log('  zeus secret <init-key|status|encrypt|decrypt|check> [--value <text>] [--force] [--windows]');
-  console.log('    # Passwörter verschlüsselt ablegen (enc:v1:...). "check" prüft Hygiene. --windows für DPAPI auf Windows.');
+  console.log('    --strict: Hygiene-Probleme (Klartext-Secrets) als kritischer Fehler behandeln (spiegelt "secret check" Exit-Verhalten)');
+  console.log('  zeus secret <init-key|status|encrypt|decrypt|check|migrate> [--value <text>] [--force] [--windows] [--dry-run] [--no-backup]');
+  console.log('    # Passwörter verschlüsselt ablegen (enc:v1:...). "check" prüft Hygiene (Exit 1). --windows für DPAPI. migrate: --no-backup verhindert Klartext-Backup.');
   console.log('  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query');
   console.log('  zeus [--config <path>] resources --profile <name> [--json]  # Zeigt das aufgeloeste Resource-Modell (Source/Objects/Metadata/Data) pro System');
   console.log('  zeus [--config <path>] discover-environment --profile <name> [--libraries L1,L2] [--schemas S1,S2] [--include-members] [--no-tables] [--role metadata|data] [--system <name>] [--json] [--out <path>]  # Read-only Auto-Discovery von Bibliotheken/Source-Files/Members/Tabellen + Resource-Vorschlag');
@@ -594,6 +598,11 @@ async function main() {
 
   if (command === 'secret') {
     await runSecret(args);
+    return;
+  }
+
+  if (command === 'investigate' || command === 'investigation') {
+    runInvestigate(args);
     return;
   }
 

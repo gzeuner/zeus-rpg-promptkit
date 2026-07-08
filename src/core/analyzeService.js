@@ -146,6 +146,17 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
     : '';
   const reproducibility = normalizeReproducibilitySettings(Boolean(args.reproducible));
 
+  // CLI override for prompt budgets (addresses #6: configurable instead of only registry/profile)
+  const promptMaxTokens = parsePositiveInteger(args['prompt-max-tokens'] || args['promptMaxTokens']);
+  const cliTokenBudgets = {};
+  if (promptMaxTokens) {
+    // Apply as global max for common prompt keys (profile tokenBudget still takes precedence if set per-key)
+    const keys = ['documentation', 'errorAnalysis', 'defectAnalysis', 'architectureReview', 'refactoringPlan', 'testGeneration', 'securityAnalysis', 'modernization'];
+    for (const k of keys) cliTokenBudgets[k] = promptMaxTokens;
+  }
+
+  const skipDb2Metadata = Boolean(args['skip-db2-metadata'] || args['skipDb2Metadata'] || args['skip-db2']);
+
   if (testDataLimit === null) {
     throw new Error('Invalid option: --test-data-limit must be a positive integer');
   }
@@ -200,10 +211,17 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
       ibmiConfig: config.ibmi,
       reproducibility,
       logVerbose,
+      cliTokenBudgets,  // for prompt max override
+      skipDb2Metadata,
     });
+    const effectiveTokenBudgets = {
+      ...(config && config.tokenBudget ? config.tokenBudget : {}),
+      ...(cliTokenBudgets || {}),
+    };
     const result = runAnalyzeArtifactAdapter({
       ...coreResult,
       emitDiagnostics,
+      tokenBudgets: effectiveTokenBudgets,
     });
     const durationMs = resolveDurationMs(reproducibility, Number((process.hrtime.bigint() - startedNs) / 1000000n));
     const manifest = buildAnalyzeRunManifest({

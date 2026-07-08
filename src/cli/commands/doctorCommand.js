@@ -128,9 +128,9 @@ function appendPlaintextSecretWarnings(checks, { env = process.env, cwd = proces
         name: 'Secret Hygiene',
         status: 'WARN',
         details: `${findings.length} Klartext-Credential(s) gefunden (z. B. ${examples}). ` +
-          `Klartext-Passwörter sind unsicher. Bitte migriere mit "zeus secret encrypt --value \"...\"" und ` +
-          `verwende "ZEUS_..._PASSWORD=enc:v1:..." in .env oder Profil. ` +
-          `Siehe docs/quickstart/secrets-and-overrides.md`,
+          `Klartext-Passwörter sind unsicher. Mit --strict als Fehler behandeln (Exit 1). ` +
+          `Migriere mit "zeus secret encrypt" oder "zeus secret migrate". ` +
+          `Siehe docs/quickstart/secrets-and-overrides.md (auch "secret check --warn-only").`,
       });
     }
   } catch (_) {

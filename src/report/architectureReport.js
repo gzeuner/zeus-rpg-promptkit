@@ -274,9 +274,18 @@ function renderMermaidBlock(graph, fallbackText) {
 function renderArchitectureReport({ context, graph, optimizedContext, mermaidText, denseLevel = null }) {
   const program = String((context && context.program) || 'UNKNOWN');
   const generatedAt = (context && context.scannedAt) || new Date().toISOString();
-  const tables = collectTables(context);
-  const calls = collectProgramCalls(context);
-  const copyMembers = collectCopyMembers(context);
+  let tables = collectTables(context);
+  let calls = collectProgramCalls(context);
+  let copyMembers = collectCopyMembers(context);
+
+  if (denseLevel) {
+    try {
+      const { truncateForDense } = require('../prompt/promptBuilder');
+      tables = truncateForDense(tables, denseLevel, 'tables');
+      calls = truncateForDense(calls, denseLevel, 'calls');
+      copyMembers = truncateForDense(copyMembers, denseLevel, 'copymembers');
+    } catch (_) {}
+  }
   const sqlStats = collectSqlStats(context);
   const sqlSummary = collectSqlSummary(context);
   const nativeFileUsage = collectNativeFileUsage(context);

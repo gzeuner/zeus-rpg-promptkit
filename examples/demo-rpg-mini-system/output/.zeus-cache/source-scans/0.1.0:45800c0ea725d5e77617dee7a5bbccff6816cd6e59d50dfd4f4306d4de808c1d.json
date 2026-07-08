@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "kind": "zeus-source-scan-cache-entry",
+  "fingerprint": "0.1.0:45800c0ea725d5e77617dee7a5bbccff6816cd6e59d50dfd4f4306d4de808c1d",
+  "filePath": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources/QRPGLESRC/PROGRAM_100.rpgle",
+  "storedAt": "2026-07-07T07:54:17.555Z",
+  "metadata": {
+    "sizeBytes": 140,
+    "mtimeMs": 1778930229643,
+    "contentHash": "45800c0ea725d5e77617dee7a5bbccff6816cd6e59d50dfd4f4306d4de808c1d",
+    "toolVersion": "0.1.0"
+  },
+  "result": {
+    "sourceFile": {
+      "path": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources/QRPGLESRC/PROGRAM_100.rpgle",
+      "sizeBytes": 140,
+      "lines": 11,
+      "sourceType": "RPGLE"
+    },
+    "tables": [
+      {
+        "kind": "DISK",
+        "evidence": [
+          {
+            "file": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources/QRPGLESRC/PROGRAM_100.rpgle",
+            "line": 4,
+            "text": "dcl-f FILE_100 disk keyed usage(*input);"
+          }
+        ],
+        "name": "FILE_100"
+      }
+    ],
+    "calls": [
+      {
+        "kind": "PROGRAM",
+        "evidence": [
+          {
+            "file": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources/QRPGLESRC/PROGRAM_100.rpgle",
+            "line": 7,
+            "text": "call PROGRAM_200;"
+          }
+        ],
+        "name": "PROGRAM_200"
+      },
+      {
+        "kind": "PROGRAM",
+        "evidence": [
+          {
+            "file": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources/QRPGLESRC/PROGRAM_100.rpgle",
+            "line": 8,
+            "text": "call PROGRAM_300;"
+          }
+        ],
+        "name": "PROGRAM_300"
+      }
+    ],
+    "copyMembers": [],
+    "sqlStatements": [],
+    "procedures": [
+      {
+        "name": "MAIN",
+        "kind": "PROCEDURE",
+        "ownerProgram": "PROGRAM_100",
+        "sourceFile": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources/QRPGLESRC/PROGRAM_100.rpgle",
+        "startLine": 6,
+        "endLine": 9,
+        "sourceForm": "FREE_FORM",
+        "exported": false,
+        "imported": false,
+        "externalName": null,
+        "evidence": [
+          {
+            "file": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources/QRPGLESRC/PROGRAM_100.rpgle",
+            "startLine": 6,
+            "endLine": 9,
+            "text": "dcl-proc MAIN;"
+          }
+        ],
+        "paramCount": 0,
+        "hasPi": false,
+        "returnType": null
+      }
+    ],
+    "prototypes": [],
+    "procedureCalls": [],
+    "nativeFiles": [
+      {
+        "name": "FILE_100",
+        "ownerProgram": "PROGRAM_100",
+        "sourceFile": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources/QRPGLESRC/PROGRAM_100.rpgle",
+        "kind": "DISK",
+        "declaredAccess": [
+          "READ"
+        ],
+        "keyed": true,
+        "evidence": [
+          {
+            "file": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources/QRPGLESRC/PROGRAM_100.rpgle",
+            "line": 4,
+            "text": "dcl-f FILE_100 disk keyed usage(*input);"
+          }
+        ]
+      }
+    ],
+    "nativeFileAccesses": [],
+    "bifUsages": [],
+    "indicatorUsages": [],
+    "dataStructures": [],
+    "standaloneFields": [],
+    "constants": [],
+    "modules": [
+      {
+        "name": "PROGRAM_100",
+        "ownerProgram": "PROGRAM_100",
+        "sourceFile": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources/QRPGLESRC/PROGRAM_100.rpgle",
+        "kind": "PROGRAM_MODULE",
+        "bindingDirectories": [],
+        "servicePrograms": [],
+        "importedProcedures": [],
+        "evidence": [
+          {
+            "file": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources/QRPGLESRC/PROGRAM_100.rpgle",
+            "line": 2,
+            "text": "ctl-opt dftactgrp(*no);"
+          }
+        ]
+      }
+    ],
+    "bindingDirectories": [],
+    "servicePrograms": [],
+    "diagnostics": [],
+    "notes": [],
+    "sqlValidation": {
+      "validationErrors": [],
+      "validationWarnings": []
+    }
+  }
+}
