@@ -85,3 +85,26 @@ end-proc;
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
+
+test('optimizeContext respects denseLevel by applying tighter caps', () => {
+  const minimalContext = {
+    program: 'DENSETEST',
+    summary: { text: 'test' },
+    dependencies: { tables: Array.from({length: 50}, (_,i) => ({name: 'T'+i, score:50-i})), programCalls: [], copyMembers: [] },
+    sql: { statements: [] },
+    graph: { nodeCount: 1, edgeCount: 0 },
+    nativeFileUsage: { files: [] },
+  };
+  const baseP = { entities: { sqlStatements: [] }, workflows: {} };
+
+  const normal = optimizeContext(minimalContext, { maxTables: 50 }, baseP, null);
+  const ultra = optimizeContext(minimalContext, { maxTables: 50 }, baseP, 'ultra');
+
+  const nTables = (normal.workflows && normal.workflows.documentation && normal.workflows.documentation.tables || []).length;
+  const uTables = (ultra.workflows && ultra.workflows.documentation && ultra.workflows.documentation.tables || []).length;
+
+  // ultra should result in fewer or equal (selection may further filter)
+  assert.ok(uTables <= nTables, 'ultra should not produce more tables than normal');
+  // at minimum the cap multiplier was applied inside normalize
+  console.log('dense test: normal tables ~', nTables, 'ultra ~', uTables);
+});

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-07T05:05:26.023Z",
+  "generatedAt": "2026-07-08T06:50:35.342Z",
   "commandRows": [
     {
       "command": "doctor",
@@ -8,13 +8,14 @@
       "purpose": "Validate runtime, profiles, Java/runtime wiring, and env contracts.",
       "example": "node cli/zeus.js doctor --profile default --show-resolved",
       "usage": [
-        "[--config <path>] doctor --profile <name> [--probe] [--show-resolved]"
+        "[--config <path>] doctor --profile <name> [--probe] [--show-resolved] [--strict]"
       ],
       "options": [
         "--config",
         "--profile",
         "--probe",
-        "--show-resolved"
+        "--show-resolved",
+        "--strict"
       ],
       "source": {
         "routeDetected": true,
@@ -105,10 +106,10 @@
       "command": "analyze",
       "safety": "S1",
       "scope": "Local",
-      "purpose": "Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context and --dense [lite|full|ultra] for compact reports and prompts.",
-      "example": "node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense full",
+      "purpose": "Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context, --dense [lite|full|ultra] (rank-aware token reduction + compaction), --prompt-max-tokens, --skip-db2-metadata, --reproducible for large programs and CI stability.",
+      "example": "node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000",
       "usage": [
-        "[--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--source-root <path>] [--schema <name>] [--library <name>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--dense [lite|full|ultra]] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]"
+        "[--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--source-root <path>] [--schema <name>] [--library <name>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--dense [lite|full|ultra]] [--prompt-max-tokens <n>] [--skip-db2-metadata] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]"
       ],
       "options": [
         "--config",
@@ -126,6 +127,8 @@
         "--list-diagnostic-packs",
         "--optimize-context",
         "--dense",
+        "--prompt-max-tokens",
+        "--skip-db2-metadata",
         "--scan-ifs-paths",
         "--search-terms",
         "--search-ignore",
@@ -152,13 +155,39 @@
       }
     },
     {
+      "command": "investigate",
+      "safety": "S0",
+      "scope": "Local",
+      "purpose": "Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state. Designed for interactive use and MCP agents.",
+      "example": "node cli/zeus.js investigate --program ORDERPGM --profile dev --goal \"Focus on error paths\" --focus \"error paths\" --search \"dynamic sql\" --generate-prompt",
+      "usage": [
+        "[--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal \"<text>\"] [--list] [--focus \"<scope>\"] [--search \"<term>\"] [--generate-prompt]  # Investigation session (focus, search, prompt gen)",
+        "[--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal \"<text>\"] [--list]"
+      ],
+      "options": [
+        "--config",
+        "--program",
+        "--profile",
+        "--out",
+        "--goal",
+        "--list",
+        "--focus",
+        "--search",
+        "--generate-prompt"
+      ],
+      "source": {
+        "routeDetected": false,
+        "usageDetected": true
+      }
+    },
+    {
       "command": "workflow",
       "safety": "S1",
       "scope": "Local",
-      "purpose": "Run preset-guided analyze and bundle flow.",
-      "example": "node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output",
+      "purpose": "Run preset-guided analyze and bundle flow. Supports --dense (forwarded to analyze steps).",
+      "example": "node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output --dense ultra",
       "usage": [
-        "[--config <path>] workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]"
+        "[--config <path>] workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--dense [lite|full|ultra]] [--verbose] [--json]"
       ],
       "options": [
         "--config",
@@ -174,6 +203,7 @@
         "--reproducible",
         "--test-data-limit",
         "--skip-test-data",
+        "--dense",
         "--verbose",
         "--json"
       ],
@@ -186,17 +216,18 @@
       "command": "workflow run",
       "safety": "S1",
       "scope": "Local",
-      "purpose": "Run workflow definitions from profile/runtime configuration.",
-      "example": "node cli/zeus.js workflow run --profile default --preset onboarding --out ./output",
+      "purpose": "Run workflow definitions from profile/runtime configuration. --dense [lite|full|ultra] is supported and forwarded to inner analyze steps (rank-aware token reduction & compaction).",
+      "example": "node cli/zeus.js workflow run --profile default --preset onboarding --out ./output --dense full",
       "usage": [
-        "[--config <path>] workflow run --profile <name> [--preset <name>] [--out <path>] [--continue-on-error]"
+        "[--config <path>] workflow run --profile <name> [--preset <name>] [--out <path>] [--continue-on-error] [--dense [lite|full|ultra]]"
       ],
       "options": [
         "--config",
         "--profile",
         "--preset",
         "--out",
-        "--continue-on-error"
+        "--continue-on-error",
+        "--dense"
       ],
       "source": {
         "routeDetected": false,
@@ -381,7 +412,7 @@
       "purpose": "Run read-only SQL statements (SELECT/WITH).",
       "example": "node cli/zeus.js query-sql --profile default --sql \"SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY\"",
       "usage": [
-        "[--config <path>] query-sql --profile <name> (--sql \"SELECT ...\" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--save <datei.csv|datei.json>] [--watch <sek>] [--json]"
+        "[--config <path>] query-sql --profile <name> (--sql \"SELECT ...\" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--save <datei.csv|datei.json>] [--watch <sek>] [--repl] [--json]"
       ],
       "options": [
         "--config",
@@ -394,10 +425,11 @@
         "--output",
         "--save",
         "--watch",
+        "--repl",
         "--json"
       ],
       "source": {
-        "routeDetected": true,
+        "routeDetected": false,
         "usageDetected": true
       }
     },
@@ -889,14 +921,78 @@
       "command": "secret",
       "safety": "S0",
       "scope": "Local",
-      "purpose": "Manage encrypted credentials (Secret Vault). Create key, encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords.",
-      "example": "node cli/zeus.js secret init-key && node cli/zeus.js secret encrypt --value \"myDbPass\"",
+      "purpose": "Manage encrypted credentials (Secret Vault). Create key (init-key [--windows] for DPAPI on Windows), encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. Supports migrate, check (with --warn-only), status.",
+      "example": "node cli/zeus.js secret init-key --windows && node cli/zeus.js secret encrypt --value \"myDbPass\"",
       "usage": [
-        "secret <init-key|status|encrypt|decrypt> [--value <text>] [--force]  # Passwoerter verschluesselt ablegen (enc:v1:...), Klartext vermeiden"
+        "secret <init-key|status|encrypt|decrypt|check|migrate> [--value <text>] [--force] [--windows] [--dry-run] [--no-backup]"
       ],
       "options": [
         "--value",
-        "--force"
+        "--force",
+        "--windows",
+        "--dry-run",
+        "--no-backup"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "sql",
+      "safety": "S0",
+      "scope": "Local",
+      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
+      "example": "node cli/zeus.js sql",
+      "usage": [
+        "sql (alias for query-sql, implies --repl if no --sql/--file)"
+      ],
+      "options": [
+        "--repl",
+        "--sql",
+        "--file"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "trace",
+      "safety": "S0",
+      "scope": "Local",
+      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
+      "example": "node cli/zeus.js trace",
+      "usage": [
+        "trace --value <VAL> [--start-table <T>] [--start-program <P>] [--profile <name>] [--source <dir>] [--json]   # Value / data lineage"
+      ],
+      "options": [
+        "--value",
+        "--start-table",
+        "--start-program",
+        "--profile",
+        "--source",
+        "--json"
+      ],
+      "source": {
+        "routeDetected": true,
+        "usageDetected": true
+      }
+    },
+    {
+      "command": "xref",
+      "safety": "S0",
+      "scope": "Local",
+      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
+      "example": "node cli/zeus.js xref",
+      "usage": [
+        "xref (--program <NAME> | --table <NAME>) [--profile <name>] [--json]   # Who-calls / who-uses (catalog + graph)"
+      ],
+      "options": [
+        "--program",
+        "--table",
+        "--profile",
+        "--json"
       ],
       "source": {
         "routeDetected": true,

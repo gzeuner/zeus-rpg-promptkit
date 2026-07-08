@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const { runWorkflowEngine } = require('../workflow/workflowRunner');
 const { executeFetch } = require('../core/fetchService');
 const { executeAnalyze } = require('../core/analyzeService');
+const investigationSession = require('../investigation/investigationSession');
 const { executeQueryTable } = require('../core/queryService');
 const {
   executeListRuns,
@@ -208,6 +209,14 @@ const zeus = {
   components: new ComponentRegistry(),
   analyzeStages: analyzeStageRegistry,
 
+  // Investigation Sessions (Prio 1)
+  investigations: {
+    createOrLoad: investigationSession.createOrLoadSession,
+    list: investigationSession.listSessions,
+    recordEvent: investigationSession.recordInvestigationEvent,
+    updateFocus: investigationSession.updateFocus,
+  },
+
   // Convenience for plugins (inspired by platform extensibility)
   registerPlugin(plugin) {
     if (typeof plugin === 'function') {
@@ -230,6 +239,7 @@ const zeus = {
 zeus.ComponentRegistry = ComponentRegistry;
 zeus.AnalyzerRegistry = AnalyzerRegistry;
 zeus.McpToolRegistry = McpToolRegistry;
+zeus.InvestigationSession = investigationSession; // for advanced use
 
 module.exports = {
   analyze,

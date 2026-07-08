@@ -34,8 +34,8 @@ const PROMPT_REGISTRY = Object.freeze({
       'Evidence-backed references',
     ]),
     budget: Object.freeze({
-      targetTokens: 1400,
-      maxTokens: 2200,
+      targetTokens: 2400,
+      maxTokens: 4000,
     }),
   }),
   'error-analysis': Object.freeze({
@@ -60,8 +60,8 @@ const PROMPT_REGISTRY = Object.freeze({
       'Evidence-backed findings',
     ]),
     budget: Object.freeze({
-      targetTokens: 1400,
-      maxTokens: 2200,
+      targetTokens: 2400,
+      maxTokens: 4000,
     }),
   }),
   'defect-analysis': Object.freeze({
@@ -86,8 +86,8 @@ const PROMPT_REGISTRY = Object.freeze({
       'Evidence-backed references',
     ]),
     budget: Object.freeze({
-      targetTokens: 1500,
-      maxTokens: 2300,
+      targetTokens: 2500,
+      maxTokens: 4000,
     }),
   }),
   modernization: Object.freeze({
@@ -137,8 +137,8 @@ const PROMPT_REGISTRY = Object.freeze({
       'Recommended follow-up investigation',
     ]),
     budget: Object.freeze({
-      targetTokens: 1500,
-      maxTokens: 2300,
+      targetTokens: 2500,
+      maxTokens: 4000,
     }),
   }),
   'refactoring-plan': Object.freeze({
@@ -162,8 +162,8 @@ const PROMPT_REGISTRY = Object.freeze({
       'Concrete next change step',
     ]),
     budget: Object.freeze({
-      targetTokens: 1500,
-      maxTokens: 2400,
+      targetTokens: 2500,
+      maxTokens: 4000,
     }),
   }),
   'test-generation': Object.freeze({
@@ -187,8 +187,8 @@ const PROMPT_REGISTRY = Object.freeze({
       'Suggested assertions and fixtures',
     ]),
     budget: Object.freeze({
-      targetTokens: 1500,
-      maxTokens: 2400,
+      targetTokens: 2500,
+      maxTokens: 4000,
     }),
   }),
   'security-analysis': Object.freeze({

@@ -1,0 +1,1552 @@
+{
+  "schemaVersion": 1,
+  "kind": "ai-knowledge-projection",
+  "generatedAt": "2026-07-07T07:54:20.647Z",
+  "program": "PROGRAM_100",
+  "sourceRoot": "/home/zeus/dev/zeus-rpg-promptkit/examples/demo-rpg-mini-system/rpg_sources",
+  "provenance": {
+    "canonicalSchemaVersion": 1,
+    "canonicalKind": "canonical-analysis",
+    "sourceArtifacts": [
+      "canonical-analysis.json",
+      "context.json"
+    ]
+  },
+  "summary": {
+    "sourceFileCount": 5,
+    "tableCount": 4,
+    "programCallCount": 3,
+    "copyMemberCount": 0,
+    "sqlStatementCount": 2,
+    "readSqlStatementCount": 1,
+    "writeSqlStatementCount": 1,
+    "dynamicSqlStatementCount": 0,
+    "unresolvedSqlStatementCount": 0,
+    "procedureCount": 3,
+    "prototypeCount": 0,
+    "procedureCallCount": 0,
+    "bifCount": 0,
+    "indicatorCount": 1,
+    "dataStructureCount": 0,
+    "standaloneFieldCount": 1,
+    "internalProcedureCallCount": 0,
+    "externalProcedureCallCount": 0,
+    "dynamicProcedureCallCount": 0,
+    "unresolvedProcedureCallCount": 0,
+    "nativeFileCount": 3,
+    "mutatingNativeFileCount": 1,
+    "interactiveNativeFileCount": 0,
+    "recordFormatCount": 0,
+    "moduleCount": 3,
+    "serviceProgramCount": 0,
+    "bindingDirectoryCount": 0,
+    "unresolvedBindingCount": 0,
+    "text": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings)."
+  },
+  "riskMarkers": [
+    "Embedded SQL detected",
+    "External program calls detected",
+    "Mutating native file I/O detected"
+  ],
+  "uncertaintyMarkers": [
+    "UNRESOLVED_LIBRARY"
+  ],
+  "evidenceIndex": [
+    {
+      "id": "EV0001",
+      "category": "TABLE",
+      "label": "ETCH",
+      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "startLine": 11,
+      "endLine": 11,
+      "rawText": "fetch first 1 row only;",
+      "snippet": "fetch first 1 row only;"
+    },
+    {
+      "id": "EV0002",
+      "category": "TABLE",
+      "label": "FILE_100",
+      "file": "QRPGLESRC/PROGRAM_100.rpgle",
+      "startLine": 4,
+      "endLine": 4,
+      "rawText": "dcl-f FILE_100 disk keyed usage(*input);",
+      "snippet": "dcl-f FILE_100 disk keyed usage(*input);"
+    },
+    {
+      "id": "EV0003",
+      "category": "TABLE",
+      "label": "FILE_200",
+      "file": "QRPGLESRC/PROGRAM_300.rpgle",
+      "startLine": 4,
+      "endLine": 4,
+      "rawText": "dcl-f FILE_200 disk usage(*update);",
+      "snippet": "dcl-f FILE_200 disk usage(*update);"
+    },
+    {
+      "id": "EV0004",
+      "category": "TABLE",
+      "label": "TABLE_100",
+      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "startLine": 7,
+      "endLine": 7,
+      "rawText": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+      "snippet": "exec sql"
+    },
+    {
+      "id": "EV0005",
+      "category": "TABLE",
+      "label": "TABLE_100",
+      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "startLine": 13,
+      "endLine": 13,
+      "rawText": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+      "snippet": "exec sql"
+    },
+    {
+      "id": "EV0006",
+      "category": "SQL",
+      "label": "SELECT",
+      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "startLine": 7,
+      "endLine": 11,
+      "rawText": "",
+      "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;"
+    },
+    {
+      "id": "EV0007",
+      "category": "SQL",
+      "label": "UPDATE",
+      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "startLine": 13,
+      "endLine": 16,
+      "rawText": "",
+      "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;"
+    },
+    {
+      "id": "EV0008",
+      "category": "NATIVE_FILE",
+      "label": "FILE_100",
+      "file": "QDDSSRC/FILE_100.pf",
+      "startLine": 1,
+      "endLine": 1,
+      "rawText": "FILE_100 DISK",
+      "snippet": "A          R REC100"
+    },
+    {
+      "id": "EV0009",
+      "category": "MODULE",
+      "label": "PROGRAM_100",
+      "file": "QRPGLESRC/PROGRAM_100.rpgle",
+      "startLine": 2,
+      "endLine": 2,
+      "rawText": "ctl-opt dftactgrp(*no);",
+      "snippet": "ctl-opt dftactgrp(*no);"
+    },
+    {
+      "id": "EV0010",
+      "category": "MODULE",
+      "label": "PROGRAM_200",
+      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "startLine": 2,
+      "endLine": 2,
+      "rawText": "ctl-opt dftactgrp(*no);",
+      "snippet": "ctl-opt dftactgrp(*no);"
+    },
+    {
+      "id": "EV0011",
+      "category": "MODULE",
+      "label": "PROGRAM_300",
+      "file": "QRPGLESRC/PROGRAM_300.rpgle",
+      "startLine": 2,
+      "endLine": 2,
+      "rawText": "ctl-opt dftactgrp(*no);",
+      "snippet": "ctl-opt dftactgrp(*no);"
+    },
+    {
+      "id": "EV0012",
+      "category": "CALLS_PROGRAM",
+      "label": "CALLS_PROGRAM",
+      "file": "QCLLESRC/DRIVER_100.clle",
+      "startLine": 2,
+      "endLine": 2,
+      "rawText": "CALL PGM(PROGRAM_100)",
+      "snippet": "CALL PGM(PROGRAM_100)"
+    },
+    {
+      "id": "EV0013",
+      "category": "CALLS_PROGRAM",
+      "label": "CALLS_PROGRAM",
+      "file": "QRPGLESRC/PROGRAM_100.rpgle",
+      "startLine": 7,
+      "endLine": 7,
+      "rawText": "call PROGRAM_200;",
+      "snippet": "call PROGRAM_200;"
+    },
+    {
+      "id": "EV0014",
+      "category": "CALLS_PROGRAM",
+      "label": "CALLS_PROGRAM",
+      "file": "QRPGLESRC/PROGRAM_100.rpgle",
+      "startLine": 8,
+      "endLine": 8,
+      "rawText": "call PROGRAM_300;",
+      "snippet": "call PROGRAM_300;"
+    },
+    {
+      "id": "EV0015",
+      "category": "OWNS_PROCEDURE",
+      "label": "OWNS_PROCEDURE",
+      "file": "QRPGLESRC/PROGRAM_100.rpgle",
+      "startLine": 6,
+      "endLine": 9,
+      "rawText": "dcl-proc MAIN;",
+      "snippet": "dcl-proc MAIN;\n  call PROGRAM_200;\n  call PROGRAM_300;\nend-proc;"
+    },
+    {
+      "id": "EV0016",
+      "category": "OWNS_PROCEDURE",
+      "label": "OWNS_PROCEDURE",
+      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "startLine": 6,
+      "endLine": 17,
+      "rawText": "dcl-proc MAIN;",
+      "snippet": "dcl-proc MAIN;\n  exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;"
+    },
+    {
+      "id": "EV0017",
+      "category": "OWNS_PROCEDURE",
+      "label": "OWNS_PROCEDURE",
+      "file": "QRPGLESRC/PROGRAM_300.rpgle",
+      "startLine": 6,
+      "endLine": 9,
+      "rawText": "dcl-proc MAIN;",
+      "snippet": "dcl-proc MAIN;\n  // Synthetic placeholder operation.\n  *inlr = *on;\nend-proc;"
+    }
+  ],
+  "entities": {
+    "tables": [
+      {
+        "name": "ETCH",
+        "kind": "FILE",
+        "evidenceRefs": [
+          "EV0001"
+        ]
+      },
+      {
+        "name": "FILE_100",
+        "kind": "DISK",
+        "evidenceRefs": [
+          "EV0002"
+        ]
+      },
+      {
+        "name": "FILE_200",
+        "kind": "DISK",
+        "evidenceRefs": [
+          "EV0003"
+        ]
+      },
+      {
+        "name": "TABLE_100",
+        "kind": "SQL",
+        "evidenceRefs": [
+          "EV0004",
+          "EV0005"
+        ]
+      }
+    ],
+    "programCalls": [
+      {
+        "name": "PROGRAM_100",
+        "kind": "PROGRAM",
+        "resolutionSource": "SOURCE",
+        "catalogObjectType": null,
+        "catalogLibrary": null,
+        "catalogSchema": null,
+        "evidenceRefs": [
+          "EV0012"
+        ]
+      },
+      {
+        "name": "PROGRAM_200",
+        "kind": "PROGRAM",
+        "resolutionSource": "SOURCE",
+        "catalogObjectType": null,
+        "catalogLibrary": null,
+        "catalogSchema": null,
+        "evidenceRefs": [
+          "EV0013"
+        ]
+      },
+      {
+        "name": "PROGRAM_300",
+        "kind": "PROGRAM",
+        "resolutionSource": "SOURCE",
+        "catalogObjectType": null,
+        "catalogLibrary": null,
+        "catalogSchema": null,
+        "evidenceRefs": [
+          "EV0014"
+        ]
+      }
+    ],
+    "procedureCalls": [],
+    "copyMembers": [],
+    "sqlStatements": [
+      {
+        "id": "SQL:0001",
+        "type": "SELECT",
+        "intent": "READ",
+        "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+        "tables": [
+          "TABLE_100"
+        ],
+        "hostVariables": [
+          "ID_001"
+        ],
+        "driverTable": "TABLE_100",
+        "joins": [],
+        "filters": [],
+        "confidence": "HIGH",
+        "dynamic": false,
+        "unresolved": false,
+        "uncertainty": [
+          "UNRESOLVED_LIBRARY"
+        ],
+        "evidenceRefs": [
+          "EV0006"
+        ]
+      },
+      {
+        "id": "SQL:0002",
+        "type": "UPDATE",
+        "intent": "WRITE",
+        "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+        "tables": [
+          "TABLE_100"
+        ],
+        "hostVariables": [
+          "ID_001"
+        ],
+        "driverTable": null,
+        "joins": [],
+        "filters": [],
+        "confidence": null,
+        "dynamic": false,
+        "unresolved": false,
+        "uncertainty": [
+          "UNRESOLVED_LIBRARY"
+        ],
+        "evidenceRefs": [
+          "EV0007"
+        ]
+      }
+    ],
+    "nativeFiles": [
+      {
+        "name": "ETCH",
+        "kind": "FILE",
+        "keyed": false,
+        "mutating": false,
+        "interactive": false,
+        "recordFormats": [],
+        "evidenceRefs": [
+          "EV0001"
+        ]
+      },
+      {
+        "name": "FILE_100",
+        "kind": "DISK",
+        "keyed": true,
+        "mutating": false,
+        "interactive": false,
+        "recordFormats": [],
+        "evidenceRefs": [
+          "EV0002",
+          "EV0008"
+        ]
+      },
+      {
+        "name": "FILE_200",
+        "kind": "DISK",
+        "keyed": false,
+        "mutating": true,
+        "interactive": false,
+        "recordFormats": [],
+        "evidenceRefs": [
+          "EV0003"
+        ]
+      }
+    ],
+    "db2Tables": [],
+    "externalObjects": [],
+    "ifsPaths": [],
+    "searchFindings": [],
+    "diagnosticPacks": [],
+    "uiPatterns": {
+      "enabled": false,
+      "summary": {},
+      "elements": {
+        "familiesTop": [],
+        "typesTop": [],
+        "usageMatrix": []
+      },
+      "interactionModel": {
+        "runtimePatterns": [],
+        "responseSignals": [],
+        "backendActions": [],
+        "flowPatterns": []
+      },
+      "subfileLifecycleModel": {
+        "phases": [],
+        "controls": [],
+        "gridCapabilities": []
+      },
+      "stateMachineModel": {
+        "states": [],
+        "transitions": []
+      }
+    },
+    "knownFacts": {
+      "enabled": false,
+      "status": "disabled",
+      "mode": "local-only",
+      "profile": null,
+      "factCount": 0,
+      "versionMarker": {
+        "toolVersion": null,
+        "updatedAt": null,
+        "expiresAt": null,
+        "ttlDays": null
+      },
+      "facts": [],
+      "notes": []
+    },
+    "uiPatternKnowledge": {
+      "enabled": false,
+      "status": "disabled",
+      "reason": "Project-neutral knowledge catalog is not implemented yet. Source-derived local knowledge paths were removed during the privacy reset.",
+      "libraryId": null,
+      "knowledgeBaseId": null,
+      "generatedAt": null,
+      "summary": {
+        "elementTypeCount": 0,
+        "elementFamilyCount": 0,
+        "runtimePatternCount": 0,
+        "transitionCount": 0,
+        "dddlTemplateCount": 0,
+        "dddlTemplateCardCount": 0
+      },
+      "domains": {
+        "familiesTop": [],
+        "runtimePatterns": [],
+        "responseSignals": [],
+        "backendActions": [],
+        "flowPatterns": [],
+        "subfileControls": [],
+        "gridCapabilities": [],
+        "stateTransitions": []
+      },
+      "retrieval": {
+        "strategy": "disabled",
+        "availableCardTypes": [],
+        "notes": [
+          "MCP/API knowledge surfaces remain disabled until a privacy-gated final catalog exists."
+        ]
+      }
+    },
+    "binding": {
+      "modules": [
+        {
+          "name": "PROGRAM_100",
+          "kind": "PROGRAM_MODULE",
+          "bindingDirectories": [],
+          "servicePrograms": [],
+          "importedProcedures": [],
+          "unresolvedBindings": false,
+          "evidenceRefs": [
+            "EV0009"
+          ]
+        },
+        {
+          "name": "PROGRAM_200",
+          "kind": "PROGRAM_MODULE",
+          "bindingDirectories": [],
+          "servicePrograms": [],
+          "importedProcedures": [],
+          "unresolvedBindings": false,
+          "evidenceRefs": [
+            "EV0010"
+          ]
+        },
+        {
+          "name": "PROGRAM_300",
+          "kind": "PROGRAM_MODULE",
+          "bindingDirectories": [],
+          "servicePrograms": [],
+          "importedProcedures": [],
+          "unresolvedBindings": false,
+          "evidenceRefs": [
+            "EV0011"
+          ]
+        }
+      ],
+      "servicePrograms": [],
+      "bindingDirectories": []
+    },
+    "modules": [
+      {
+        "name": "PROGRAM_100",
+        "evidenceRefs": [
+          "EV0009"
+        ]
+      },
+      {
+        "name": "PROGRAM_200",
+        "evidenceRefs": [
+          "EV0010"
+        ]
+      },
+      {
+        "name": "PROGRAM_300",
+        "evidenceRefs": [
+          "EV0011"
+        ]
+      }
+    ]
+  },
+  "workflows": {
+    "documentation": {
+      "name": "documentation",
+      "summary": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
+      "tables": [
+        {
+          "name": "ETCH",
+          "kind": "FILE",
+          "evidenceRefs": [
+            "EV0001"
+          ]
+        },
+        {
+          "name": "FILE_100",
+          "kind": "DISK",
+          "evidenceRefs": [
+            "EV0002"
+          ]
+        },
+        {
+          "name": "FILE_200",
+          "kind": "DISK",
+          "evidenceRefs": [
+            "EV0003"
+          ]
+        },
+        {
+          "name": "TABLE_100",
+          "kind": "SQL",
+          "evidenceRefs": [
+            "EV0004",
+            "EV0005"
+          ]
+        }
+      ],
+      "programCalls": [
+        {
+          "name": "PROGRAM_100",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0012"
+          ]
+        },
+        {
+          "name": "PROGRAM_200",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0013"
+          ]
+        },
+        {
+          "name": "PROGRAM_300",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0014"
+          ]
+        }
+      ],
+      "procedureCalls": [],
+      "copyMembers": [],
+      "sqlStatements": [
+        {
+          "type": "SELECT",
+          "intent": "READ",
+          "tables": [
+            "TABLE_100"
+          ],
+          "dynamic": false,
+          "unresolved": false,
+          "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+          "evidenceRefs": [
+            "EV0006"
+          ],
+          "hostVariables": [
+            "ID_001"
+          ],
+          "uncertainty": [
+            "UNRESOLVED_LIBRARY"
+          ]
+        },
+        {
+          "type": "UPDATE",
+          "intent": "WRITE",
+          "tables": [
+            "TABLE_100"
+          ],
+          "dynamic": false,
+          "unresolved": false,
+          "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+          "evidenceRefs": [
+            "EV0007"
+          ],
+          "hostVariables": [
+            "ID_001"
+          ],
+          "uncertainty": [
+            "UNRESOLVED_LIBRARY"
+          ]
+        }
+      ],
+      "nativeFiles": [
+        {
+          "name": "ETCH",
+          "kind": "FILE",
+          "keyed": false,
+          "mutating": false,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0001"
+          ]
+        },
+        {
+          "name": "FILE_100",
+          "kind": "DISK",
+          "keyed": true,
+          "mutating": false,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0002",
+            "EV0008"
+          ]
+        },
+        {
+          "name": "FILE_200",
+          "kind": "DISK",
+          "keyed": false,
+          "mutating": true,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0003"
+          ]
+        }
+      ],
+      "db2Tables": [],
+      "externalObjects": [],
+      "ifsPaths": [],
+      "searchFindings": [],
+      "diagnosticPacks": [],
+      "riskMarkers": [
+        "Embedded SQL detected",
+        "External program calls detected",
+        "Mutating native file I/O detected"
+      ],
+      "uncertaintyMarkers": [
+        "UNRESOLVED_LIBRARY"
+      ],
+      "tokenBudget": null,
+      "estimatedTokens": null,
+      "evidencePacks": {
+        "sql": [],
+        "calls": [],
+        "fileUsage": [
+          {
+            "ref": "EV0003",
+            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "startLine": 4,
+            "endLine": 4,
+            "snippet": "dcl-f FILE_200 disk usage(*update);",
+            "label": "FILE_200"
+          }
+        ],
+        "conditionals": [],
+        "errorPaths": []
+      },
+      "evidenceHighlights": [
+        {
+          "ref": "EV0003",
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4,
+          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "label": "FILE_200"
+        }
+      ],
+      "rankedEvidence": [
+        {
+          "ref": "EV0003",
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4,
+          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "label": "FILE_200"
+        }
+      ],
+      "dependencyGraphSummary": {
+        "nodeCount": 10,
+        "edgeCount": 10
+      },
+      "testData": {
+        "status": "skipped",
+        "file": "test-data.json",
+        "markdownFile": "test-data.md",
+        "tableCount": 0,
+        "requestedTableCount": 4,
+        "skippedTableCount": 4,
+        "rowLimit": 50,
+        "reason": "no DB2 connection configuration was available",
+        "policy": {
+          "allowTables": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "CUSTOMERS"
+            },
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "ORDERS"
+            }
+          ],
+          "denyTables": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "AUDIT_LOG"
+            }
+          ],
+          "maskColumns": [
+            "EMAIL",
+            "NAME",
+            "PHONE"
+          ],
+          "maskRules": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "CUSTOMERS",
+              "columns": [
+                "PHONE"
+              ],
+              "value": "MASKED_PHONE"
+            }
+          ]
+        },
+        "policySummary": {
+          "allowlistCount": 2,
+          "denylistCount": 1,
+          "maskRuleCount": 1,
+          "globalMaskColumnCount": 3,
+          "deniedTableCount": 0,
+          "notAllowlistedTableCount": 0,
+          "maskedTableCount": 0,
+          "maskedColumnCount": 0
+        },
+        "cacheStatus": "disabled",
+        "tables": []
+      }
+    },
+    "errorAnalysis": {
+      "name": "error-analysis",
+      "summary": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
+      "tables": [
+        {
+          "name": "ETCH",
+          "kind": "FILE",
+          "evidenceRefs": [
+            "EV0001"
+          ]
+        },
+        {
+          "name": "FILE_100",
+          "kind": "DISK",
+          "evidenceRefs": [
+            "EV0002"
+          ]
+        },
+        {
+          "name": "FILE_200",
+          "kind": "DISK",
+          "evidenceRefs": [
+            "EV0003"
+          ]
+        },
+        {
+          "name": "TABLE_100",
+          "kind": "SQL",
+          "evidenceRefs": [
+            "EV0004",
+            "EV0005"
+          ]
+        }
+      ],
+      "programCalls": [
+        {
+          "name": "PROGRAM_100",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0012"
+          ]
+        },
+        {
+          "name": "PROGRAM_200",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0013"
+          ]
+        },
+        {
+          "name": "PROGRAM_300",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0014"
+          ]
+        }
+      ],
+      "procedureCalls": [],
+      "copyMembers": [],
+      "sqlStatements": [
+        {
+          "type": "SELECT",
+          "intent": "READ",
+          "tables": [
+            "TABLE_100"
+          ],
+          "dynamic": false,
+          "unresolved": false,
+          "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+          "evidenceRefs": [
+            "EV0006"
+          ],
+          "hostVariables": [
+            "ID_001"
+          ],
+          "uncertainty": [
+            "UNRESOLVED_LIBRARY"
+          ]
+        },
+        {
+          "type": "UPDATE",
+          "intent": "WRITE",
+          "tables": [
+            "TABLE_100"
+          ],
+          "dynamic": false,
+          "unresolved": false,
+          "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+          "evidenceRefs": [
+            "EV0007"
+          ],
+          "hostVariables": [
+            "ID_001"
+          ],
+          "uncertainty": [
+            "UNRESOLVED_LIBRARY"
+          ]
+        }
+      ],
+      "nativeFiles": [
+        {
+          "name": "ETCH",
+          "kind": "FILE",
+          "keyed": false,
+          "mutating": false,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0001"
+          ]
+        },
+        {
+          "name": "FILE_100",
+          "kind": "DISK",
+          "keyed": true,
+          "mutating": false,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0002",
+            "EV0008"
+          ]
+        },
+        {
+          "name": "FILE_200",
+          "kind": "DISK",
+          "keyed": false,
+          "mutating": true,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0003"
+          ]
+        }
+      ],
+      "db2Tables": [],
+      "externalObjects": [],
+      "ifsPaths": [],
+      "searchFindings": [],
+      "diagnosticPacks": [],
+      "riskMarkers": [
+        "Embedded SQL detected",
+        "External program calls detected",
+        "Mutating native file I/O detected"
+      ],
+      "uncertaintyMarkers": [
+        "UNRESOLVED_LIBRARY"
+      ],
+      "tokenBudget": null,
+      "estimatedTokens": null,
+      "evidencePacks": {
+        "sql": [],
+        "calls": [],
+        "fileUsage": [
+          {
+            "ref": "EV0003",
+            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "startLine": 4,
+            "endLine": 4,
+            "snippet": "dcl-f FILE_200 disk usage(*update);",
+            "label": "FILE_200"
+          }
+        ],
+        "conditionals": [],
+        "errorPaths": []
+      },
+      "evidenceHighlights": [
+        {
+          "ref": "EV0003",
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4,
+          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "label": "FILE_200"
+        }
+      ],
+      "rankedEvidence": [
+        {
+          "ref": "EV0003",
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4,
+          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "label": "FILE_200"
+        }
+      ],
+      "dependencyGraphSummary": {
+        "nodeCount": 10,
+        "edgeCount": 10
+      },
+      "testData": {
+        "status": "skipped",
+        "file": "test-data.json",
+        "markdownFile": "test-data.md",
+        "tableCount": 0,
+        "requestedTableCount": 4,
+        "skippedTableCount": 4,
+        "rowLimit": 50,
+        "reason": "no DB2 connection configuration was available",
+        "policy": {
+          "allowTables": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "CUSTOMERS"
+            },
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "ORDERS"
+            }
+          ],
+          "denyTables": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "AUDIT_LOG"
+            }
+          ],
+          "maskColumns": [
+            "EMAIL",
+            "NAME",
+            "PHONE"
+          ],
+          "maskRules": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "CUSTOMERS",
+              "columns": [
+                "PHONE"
+              ],
+              "value": "MASKED_PHONE"
+            }
+          ]
+        },
+        "policySummary": {
+          "allowlistCount": 2,
+          "denylistCount": 1,
+          "maskRuleCount": 1,
+          "globalMaskColumnCount": 3,
+          "deniedTableCount": 0,
+          "notAllowlistedTableCount": 0,
+          "maskedTableCount": 0,
+          "maskedColumnCount": 0
+        },
+        "cacheStatus": "disabled",
+        "tables": []
+      }
+    },
+    "security": {
+      "name": "security",
+      "summary": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
+      "tables": [
+        {
+          "name": "ETCH",
+          "kind": "FILE",
+          "evidenceRefs": [
+            "EV0001"
+          ]
+        },
+        {
+          "name": "FILE_100",
+          "kind": "DISK",
+          "evidenceRefs": [
+            "EV0002"
+          ]
+        },
+        {
+          "name": "FILE_200",
+          "kind": "DISK",
+          "evidenceRefs": [
+            "EV0003"
+          ]
+        },
+        {
+          "name": "TABLE_100",
+          "kind": "SQL",
+          "evidenceRefs": [
+            "EV0004",
+            "EV0005"
+          ]
+        }
+      ],
+      "programCalls": [
+        {
+          "name": "PROGRAM_100",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0012"
+          ]
+        },
+        {
+          "name": "PROGRAM_200",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0013"
+          ]
+        },
+        {
+          "name": "PROGRAM_300",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0014"
+          ]
+        }
+      ],
+      "procedureCalls": [],
+      "copyMembers": [],
+      "sqlStatements": [
+        {
+          "type": "SELECT",
+          "intent": "READ",
+          "tables": [
+            "TABLE_100"
+          ],
+          "dynamic": false,
+          "unresolved": false,
+          "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+          "evidenceRefs": [
+            "EV0006"
+          ],
+          "hostVariables": [
+            "ID_001"
+          ],
+          "uncertainty": [
+            "UNRESOLVED_LIBRARY"
+          ]
+        },
+        {
+          "type": "UPDATE",
+          "intent": "WRITE",
+          "tables": [
+            "TABLE_100"
+          ],
+          "dynamic": false,
+          "unresolved": false,
+          "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+          "evidenceRefs": [
+            "EV0007"
+          ],
+          "hostVariables": [
+            "ID_001"
+          ],
+          "uncertainty": [
+            "UNRESOLVED_LIBRARY"
+          ]
+        }
+      ],
+      "nativeFiles": [
+        {
+          "name": "ETCH",
+          "kind": "FILE",
+          "keyed": false,
+          "mutating": false,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0001"
+          ]
+        },
+        {
+          "name": "FILE_100",
+          "kind": "DISK",
+          "keyed": true,
+          "mutating": false,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0002",
+            "EV0008"
+          ]
+        },
+        {
+          "name": "FILE_200",
+          "kind": "DISK",
+          "keyed": false,
+          "mutating": true,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0003"
+          ]
+        }
+      ],
+      "db2Tables": [],
+      "externalObjects": [],
+      "ifsPaths": [],
+      "searchFindings": [],
+      "diagnosticPacks": [],
+      "riskMarkers": [
+        "Embedded SQL detected",
+        "External program calls detected",
+        "Mutating native file I/O detected"
+      ],
+      "uncertaintyMarkers": [
+        "UNRESOLVED_LIBRARY"
+      ],
+      "tokenBudget": null,
+      "estimatedTokens": null,
+      "evidencePacks": {
+        "sql": [],
+        "calls": [],
+        "fileUsage": [
+          {
+            "ref": "EV0003",
+            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "startLine": 4,
+            "endLine": 4,
+            "snippet": "dcl-f FILE_200 disk usage(*update);",
+            "label": "FILE_200"
+          }
+        ],
+        "conditionals": [],
+        "errorPaths": []
+      },
+      "evidenceHighlights": [
+        {
+          "ref": "EV0003",
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4,
+          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "label": "FILE_200"
+        }
+      ],
+      "rankedEvidence": [
+        {
+          "ref": "EV0003",
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4,
+          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "label": "FILE_200"
+        }
+      ],
+      "dependencyGraphSummary": {
+        "nodeCount": 10,
+        "edgeCount": 10
+      },
+      "testData": {
+        "status": "skipped",
+        "file": "test-data.json",
+        "markdownFile": "test-data.md",
+        "tableCount": 0,
+        "requestedTableCount": 4,
+        "skippedTableCount": 4,
+        "rowLimit": 50,
+        "reason": "no DB2 connection configuration was available",
+        "policy": {
+          "allowTables": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "CUSTOMERS"
+            },
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "ORDERS"
+            }
+          ],
+          "denyTables": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "AUDIT_LOG"
+            }
+          ],
+          "maskColumns": [
+            "EMAIL",
+            "NAME",
+            "PHONE"
+          ],
+          "maskRules": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "CUSTOMERS",
+              "columns": [
+                "PHONE"
+              ],
+              "value": "MASKED_PHONE"
+            }
+          ]
+        },
+        "policySummary": {
+          "allowlistCount": 2,
+          "denylistCount": 1,
+          "maskRuleCount": 1,
+          "globalMaskColumnCount": 3,
+          "deniedTableCount": 0,
+          "notAllowlistedTableCount": 0,
+          "maskedTableCount": 0,
+          "maskedColumnCount": 0
+        },
+        "cacheStatus": "disabled",
+        "tables": []
+      }
+    },
+    "modernization": {
+      "name": "modernization",
+      "summary": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
+      "tables": [
+        {
+          "name": "ETCH",
+          "kind": "FILE",
+          "evidenceRefs": [
+            "EV0001"
+          ]
+        },
+        {
+          "name": "FILE_100",
+          "kind": "DISK",
+          "evidenceRefs": [
+            "EV0002"
+          ]
+        },
+        {
+          "name": "FILE_200",
+          "kind": "DISK",
+          "evidenceRefs": [
+            "EV0003"
+          ]
+        },
+        {
+          "name": "TABLE_100",
+          "kind": "SQL",
+          "evidenceRefs": [
+            "EV0004",
+            "EV0005"
+          ]
+        }
+      ],
+      "programCalls": [
+        {
+          "name": "PROGRAM_100",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0012"
+          ]
+        },
+        {
+          "name": "PROGRAM_200",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0013"
+          ]
+        },
+        {
+          "name": "PROGRAM_300",
+          "kind": "PROGRAM",
+          "resolutionSource": "SOURCE",
+          "catalogObjectType": null,
+          "catalogLibrary": null,
+          "catalogSchema": null,
+          "evidenceRefs": [
+            "EV0014"
+          ]
+        }
+      ],
+      "procedureCalls": [],
+      "copyMembers": [],
+      "sqlStatements": [
+        {
+          "type": "SELECT",
+          "intent": "READ",
+          "tables": [
+            "TABLE_100"
+          ],
+          "dynamic": false,
+          "unresolved": false,
+          "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+          "evidenceRefs": [
+            "EV0006"
+          ],
+          "hostVariables": [
+            "ID_001"
+          ],
+          "uncertainty": [
+            "UNRESOLVED_LIBRARY"
+          ]
+        },
+        {
+          "type": "UPDATE",
+          "intent": "WRITE",
+          "tables": [
+            "TABLE_100"
+          ],
+          "dynamic": false,
+          "unresolved": false,
+          "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+          "evidenceRefs": [
+            "EV0007"
+          ],
+          "hostVariables": [
+            "ID_001"
+          ],
+          "uncertainty": [
+            "UNRESOLVED_LIBRARY"
+          ]
+        }
+      ],
+      "nativeFiles": [
+        {
+          "name": "ETCH",
+          "kind": "FILE",
+          "keyed": false,
+          "mutating": false,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0001"
+          ]
+        },
+        {
+          "name": "FILE_100",
+          "kind": "DISK",
+          "keyed": true,
+          "mutating": false,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0002",
+            "EV0008"
+          ]
+        },
+        {
+          "name": "FILE_200",
+          "kind": "DISK",
+          "keyed": false,
+          "mutating": true,
+          "interactive": false,
+          "recordFormats": [],
+          "evidenceRefs": [
+            "EV0003"
+          ]
+        }
+      ],
+      "db2Tables": [],
+      "externalObjects": [],
+      "ifsPaths": [],
+      "searchFindings": [],
+      "diagnosticPacks": [],
+      "riskMarkers": [
+        "Embedded SQL detected",
+        "External program calls detected",
+        "Mutating native file I/O detected"
+      ],
+      "uncertaintyMarkers": [
+        "UNRESOLVED_LIBRARY"
+      ],
+      "tokenBudget": null,
+      "estimatedTokens": null,
+      "evidencePacks": {
+        "sql": [],
+        "calls": [],
+        "fileUsage": [
+          {
+            "ref": "EV0003",
+            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "startLine": 4,
+            "endLine": 4,
+            "snippet": "dcl-f FILE_200 disk usage(*update);",
+            "label": "FILE_200"
+          }
+        ],
+        "conditionals": [],
+        "errorPaths": []
+      },
+      "evidenceHighlights": [
+        {
+          "ref": "EV0003",
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4,
+          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "label": "FILE_200"
+        }
+      ],
+      "rankedEvidence": [
+        {
+          "ref": "EV0003",
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4,
+          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "label": "FILE_200"
+        }
+      ],
+      "dependencyGraphSummary": {
+        "nodeCount": 10,
+        "edgeCount": 10
+      },
+      "testData": {
+        "status": "skipped",
+        "file": "test-data.json",
+        "markdownFile": "test-data.md",
+        "tableCount": 0,
+        "requestedTableCount": 4,
+        "skippedTableCount": 4,
+        "rowLimit": 50,
+        "reason": "no DB2 connection configuration was available",
+        "policy": {
+          "allowTables": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "CUSTOMERS"
+            },
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "ORDERS"
+            }
+          ],
+          "denyTables": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "AUDIT_LOG"
+            }
+          ],
+          "maskColumns": [
+            "EMAIL",
+            "NAME",
+            "PHONE"
+          ],
+          "maskRules": [
+            {
+              "schema": "DATA_EXAMPLE",
+              "table": "CUSTOMERS",
+              "columns": [
+                "PHONE"
+              ],
+              "value": "MASKED_PHONE"
+            }
+          ]
+        },
+        "policySummary": {
+          "allowlistCount": 2,
+          "denylistCount": 1,
+          "maskRuleCount": 1,
+          "globalMaskColumnCount": 3,
+          "deniedTableCount": 0,
+          "notAllowlistedTableCount": 0,
+          "maskedTableCount": 0,
+          "maskedColumnCount": 0
+        },
+        "cacheStatus": "disabled",
+        "tables": []
+      }
+    }
+  }
+}

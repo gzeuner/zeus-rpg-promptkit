@@ -19,8 +19,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // transparent entschluesselt (AES-256-GCM).
 //
 // Der Master-Schluessel wird bereitgestellt entweder ueber
-//   1. die Umgebungsvariable ZEUS_SECRET_KEY (hat Vorrang), oder
-//   2. die Schluesseldatei config/local-only/.zeus-key (gitignoriert).
+//   1. die Umgebungsvariable ZEUS_SECRET_KEY (hat Vorrang),
+//   2. Windows DPAPI Secure Storage (init-key --windows, nur Windows) -> %USERPROFILE%\.zeus-secure-key.xml,
+//   3. die Schluesseldatei config/local-only/.zeus-key (gitignoriert).
 //
 // Das Schluesselmaterial ist eine beliebige Passphrase / ein Base64-Key; daraus
 // wird deterministisch ein 32-Byte-Schluessel via SHA-256 abgeleitet.

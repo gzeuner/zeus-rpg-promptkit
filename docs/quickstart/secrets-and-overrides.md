@@ -25,6 +25,9 @@ Format `enc:v1:...` werden zur Laufzeit **transparent** entschlüsselt (AES-256-
 # 1. Schlüssel erzeugen (liegt gitignoriert unter config/local-only/.zeus-key)
 node cli/zeus.js secret init-key
 
+# Auf Windows (empfohlen): DPAPI-geschützt (kein Klartext im FS):
+#   node cli/zeus.js secret init-key --windows
+
 # Alternativ: Schlüssel über Umgebungsvariable bereitstellen (hat Vorrang)
 #   $env:ZEUS_SECRET_KEY = "<geheime-passphrase>"
 ```
@@ -58,12 +61,29 @@ node cli/zeus.js doctor --profile <name>    # Check "Secret Vault" in der Diagno
 **Schlüssel-Quellen (Priorität):**
 
 1. Umgebungsvariable `ZEUS_SECRET_KEY`
-2. Datei `config/local-only/.zeus-key` (gitignoriert)
+2. Windows Secure Storage (DPAPI): `zeus secret init-key --windows` (nur Windows, siehe unten)
+3. Datei `config/local-only/.zeus-key` (gitignoriert)
 
 > ⚠️ Ohne passenden Schlüssel schlägt die Auflösung eines `enc:v1:`-Werts bewusst **laut**
 > fehl (keine stillen Leer-/Falschwerte). Der Schlüssel ist geheim und darf nicht geteilt
 > oder eingecheckt werden. Wird der Schlüssel getauscht, müssen alle Werte neu verschlüsselt
 > werden.
+
+### Windows: DPAPI-geschützter Schlüssel (sicherste Variante auf Windows)
+
+Statt einer Klartext-Datei `.zeus-key` kann der Schlüssel DPAPI-geschützt (pro Windows-Benutzerkonto) gespeichert werden:
+
+```powershell
+node cli/zeus.js secret init-key --windows
+```
+
+- Speicherort: `%USERPROFILE%\.zeus-secure-key.xml` (via `Export-Clixml` + DPAPI).
+- Wird in `zeus secret status` als `windows-secure-xml (DPAPI-protected)` angezeigt.
+- Bindung: Nur der anlegende Windows-User kann den Schlüssel wieder auslesen.
+- Entfernen: `Remove-Item "$env:USERPROFILE\.zeus-secure-key.xml"`
+- Wichtig: Wird die XML-Datei gelöscht oder der Befehl unter einem anderen User/auf einer anderen Maschine ausgeführt, sind bestehende `enc:v1:`-Tokens unlesbar und müssen neu verschlüsselt werden (neuer Schlüssel erforderlich).
+
+Empfehlung: Auf Windows-Entwicklungsrechnern `--windows` nutzen, um Klartext-Schlüssel im Dateisystem zu vermeiden.
 
 ---
 

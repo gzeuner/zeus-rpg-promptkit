@@ -1,13 +1,13 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-07-07 07:05:26
+Last generated: 2026-07-08 08:50:35
 -->
 
 ---
 Title: Zeus RPG PromptKit Tool Catalog
 Description: Verbindlicher, sicherheitsklassifizierter Katalog aller CLI-Befehle und Workflow-Presets fuer Menschen und KI-Assistenten.
-Last Updated: 2026-07-07
+Last Updated: 2026-07-08
 ---
 
 # Zeus RPG PromptKit Tool Catalog
@@ -46,9 +46,10 @@ Related:
 | `profiles` | `S0` | Local | List profiles and show masked runtime defaults and resolved routing hints. | `node cli/zeus.js profiles --profile default --show-env` |
 | `fetch` | `S2` | IBM i read | Fetch source members/IFS content into the local workspace. | `node cli/zeus.js fetch --profile default-fetch` |
 | `fetch-member` | `S2` | IBM i read | Fetch one or more specific source members into a local output directory. | `node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM` |
-| `analyze` | `S1` | Local | Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context and --dense [lite\|full\|ultra] for compact reports and prompts. | `node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense full` |
-| `workflow` | `S1` | Local | Run preset-guided analyze and bundle flow. | `node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output` |
-| `workflow run` | `S1` | Local | Run workflow definitions from profile/runtime configuration. | `node cli/zeus.js workflow run --profile default --preset onboarding --out ./output` |
+| `analyze` | `S1` | Local | Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context, --dense [lite\|full\|ultra] (rank-aware token reduction + compaction), --prompt-max-tokens, --skip-db2-metadata, --reproducible for large programs and CI stability. | `node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000` |
+| `investigate` | `S0` | Local | Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state. Designed for interactive use and MCP agents. | `node cli/zeus.js investigate --program ORDERPGM --profile dev --goal "Focus on error paths" --focus "error paths" --search "dynamic sql" --generate-prompt` |
+| `workflow` | `S1` | Local | Run preset-guided analyze and bundle flow. Supports --dense (forwarded to analyze steps). | `node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output --dense ultra` |
+| `workflow run` | `S1` | Local | Run workflow definitions from profile/runtime configuration. --dense [lite\|full\|ultra] is supported and forwarded to inner analyze steps (rank-aware token reduction & compaction). | `node cli/zeus.js workflow run --profile default --preset onboarding --out ./output --dense full` |
 | `bundle` | `S1` | Local | Package analysis artifacts for sharing and review. | `node cli/zeus.js bundle --program ORDERPGM --source-output-root ./output --include-md --include-json` |
 | `impact` | `S1` | Local | Build reverse-impact analysis by target or field. | `node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output` |
 | `assess-risk` | `S1` | Local | Produce a risk-oriented summary for a program. | `node cli/zeus.js assess-risk --program ORDERPGM --out ./output` |
@@ -80,7 +81,10 @@ Related:
 | `discover-environment` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js discover-environment` |
 | `pui-inspect` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js pui-inspect` |
 | `resources` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js resources` |
-| `secret` | `S0` | Local | Manage encrypted credentials (Secret Vault). Create key, encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. | `node cli/zeus.js secret init-key && node cli/zeus.js secret encrypt --value "myDbPass"` |
+| `secret` | `S0` | Local | Manage encrypted credentials (Secret Vault). Create key (init-key [--windows] for DPAPI on Windows), encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. Supports migrate, check (with --warn-only), status. | `node cli/zeus.js secret init-key --windows && node cli/zeus.js secret encrypt --value "myDbPass"` |
+| `sql` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js sql` |
+| `trace` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js trace` |
+| `xref` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js xref` |
 
 ## Workflow Presets
 

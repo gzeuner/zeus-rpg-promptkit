@@ -22,8 +22,8 @@ const COMMAND_METADATA = Object.freeze({
   secret: Object.freeze({
     safety: 'S0',
     scope: 'Local',
-    purpose: 'Manage encrypted credentials (Secret Vault). Create key, encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords.',
-    example: 'node cli/zeus.js secret init-key && node cli/zeus.js secret encrypt --value "myDbPass"',
+    purpose: 'Manage encrypted credentials (Secret Vault). Create key (init-key [--windows] for DPAPI on Windows), encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. Supports migrate, check (with --warn-only), status.',
+    example: 'node cli/zeus.js secret init-key --windows && node cli/zeus.js secret encrypt --value "myDbPass"',
   }),
   profiles: Object.freeze({
     safety: 'S0',
@@ -46,20 +46,26 @@ const COMMAND_METADATA = Object.freeze({
   analyze: Object.freeze({
     safety: 'S1',
     scope: 'Local',
-    purpose: 'Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context and --dense [lite|full|ultra] for compact reports and prompts.',
-    example: 'node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense full',
+    purpose: 'Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context, --dense [lite|full|ultra] (rank-aware token reduction + compaction), --prompt-max-tokens, --skip-db2-metadata, --reproducible for large programs and CI stability.',
+    example: 'node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000',
   }),
   workflow: Object.freeze({
     safety: 'S1',
     scope: 'Local',
-    purpose: 'Run preset-guided analyze and bundle flow.',
-    example: 'node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output',
+    purpose: 'Run preset-guided analyze and bundle flow. Supports --dense (forwarded to analyze steps).',
+    example: 'node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output --dense ultra',
   }),
   'workflow run': Object.freeze({
     safety: 'S1',
     scope: 'Local',
-    purpose: 'Run workflow definitions from profile/runtime configuration.',
-    example: 'node cli/zeus.js workflow run --profile default --preset onboarding --out ./output',
+    purpose: 'Run workflow definitions from profile/runtime configuration. --dense [lite|full|ultra] is supported and forwarded to inner analyze steps (rank-aware token reduction & compaction).',
+    example: 'node cli/zeus.js workflow run --profile default --preset onboarding --out ./output --dense full',
+  }),
+  investigate: Object.freeze({
+    safety: 'S0',
+    scope: 'Local',
+    purpose: 'Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state. Designed for interactive use and MCP agents.',
+    example: 'node cli/zeus.js investigate --program ORDERPGM --profile dev --goal "Focus on error paths" --focus "error paths" --search "dynamic sql" --generate-prompt',
   }),
   bundle: Object.freeze({
     safety: 'S1',
@@ -262,6 +268,7 @@ const COMMAND_ORDER = Object.freeze([
   'fetch',
   'fetch-member',
   'analyze',
+  'investigate',
   'workflow',
   'workflow run',
   'bundle',

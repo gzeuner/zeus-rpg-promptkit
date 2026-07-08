@@ -154,3 +154,25 @@ test('zeus rich API supports pluggable registries (analyzers, mcpTools, stages, 
   assert.ok(zeus.analyzers.list().some(a => a.id === 'test-plug'));
   assert.ok(zeus.analyzeStages.listStages().length > 0, 'core stages should be populated');
 });
+
+test('zeus rich API exposes investigation sessions (Prio 1)', () => {
+  assert.ok(zeus && typeof zeus === 'object');
+  assert.ok(zeus.investigations && typeof zeus.investigations.createOrLoad === 'function');
+  assert.ok(zeus.investigations && typeof zeus.investigations.list === 'function');
+  assert.ok(zeus.investigations && typeof zeus.investigations.updateFocus === 'function');
+
+  // Basic smoke: create a temp session context (requires a dir with artifacts)
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-zeusapi-inv-'));
+  const analysisDir = path.join(tempRoot, 'output', 'TESTPGM');
+  fs.mkdirSync(analysisDir, { recursive: true });
+  fs.writeFileSync(path.join(analysisDir, 'context.json'), JSON.stringify({ summary: { text: 'test' } }), 'utf8');
+
+  try {
+    const ctx = zeus.investigations.createOrLoad({ outputProgramDir: analysisDir, goal: 'api test' });
+    assert.ok(ctx.session);
+    assert.ok(ctx.session.id);
+    assert.equal(ctx.session.goal, 'api test');
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});

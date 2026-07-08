@@ -1,0 +1,110 @@
+{
+  "rootProgram": "PROGRAM_100",
+  "nodes": [
+    {
+      "id": "ETCH",
+      "type": "TABLE",
+      "label": "ETCH"
+    },
+    {
+      "id": "FILE_100",
+      "type": "TABLE",
+      "label": "FILE_100"
+    },
+    {
+      "id": "FILE_200",
+      "type": "TABLE",
+      "label": "FILE_200"
+    },
+    {
+      "id": "PROGRAM_100",
+      "type": "PROGRAM",
+      "label": "PROGRAM_100"
+    },
+    {
+      "id": "PROGRAM_200",
+      "type": "PROGRAM",
+      "label": "PROGRAM_200"
+    },
+    {
+      "id": "PROGRAM_300",
+      "type": "PROGRAM",
+      "label": "PROGRAM_300"
+    },
+    {
+      "id": "TABLE_100",
+      "type": "TABLE",
+      "label": "TABLE_100"
+    }
+  ],
+  "edges": [
+    {
+      "from": "PROGRAM_100",
+      "to": "FILE_100",
+      "type": "USES_TABLE"
+    },
+    {
+      "from": "PROGRAM_100",
+      "to": "PROGRAM_200",
+      "type": "CALLS_PROGRAM"
+    },
+    {
+      "from": "PROGRAM_100",
+      "to": "PROGRAM_300",
+      "type": "CALLS_PROGRAM"
+    },
+    {
+      "from": "PROGRAM_200",
+      "to": "ETCH",
+      "type": "USES_TABLE"
+    },
+    {
+      "from": "PROGRAM_200",
+      "to": "TABLE_100",
+      "type": "USES_TABLE"
+    },
+    {
+      "from": "PROGRAM_300",
+      "to": "FILE_200",
+      "type": "USES_TABLE"
+    }
+  ],
+  "summary": {
+    "programCount": 3,
+    "tableCount": 4,
+    "copyMemberCount": 0,
+    "scannedFileCount": 3,
+    "edgeCount": 6,
+    "ambiguousPrograms": [],
+    "unresolvedPrograms": [],
+    "truncated": false,
+    "limitDiagnosticsCount": 0,
+    "limitsConfigured": {
+      "maxProgramDepth": 25,
+      "maxPrograms": 500,
+      "maxNodes": 5000,
+      "maxEdges": 4000,
+      "maxScannedFiles": 500,
+      "maxProgramCallsPerProgram": 200
+    },
+    "limitsReached": {
+      "maxProgramDepth": false,
+      "maxPrograms": false,
+      "maxNodes": false,
+      "maxEdges": false,
+      "maxScannedFiles": false,
+      "maxProgramCallsPerProgram": false
+    }
+  },
+  "sourceCatalog": {
+    "fileCount": 6,
+    "distinctMemberCount": 6,
+    "manifestBackedCount": 0,
+    "ambiguousMemberCount": 0,
+    "ambiguousMembers": []
+  },
+  "ambiguousPrograms": [],
+  "unresolvedPrograms": [],
+  "diagnostics": [],
+  "notes": []
+}

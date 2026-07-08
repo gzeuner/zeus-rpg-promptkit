@@ -272,6 +272,7 @@ public class Db2MetadataExporter {
     private static Long loadEstimatedRowCount(Connection connection, TableInfo tableInfo) {
         String sql = "SELECT SUM(NUMBER_ROWS) AS ESTIMATED_ROW_COUNT FROM QSYS2.SYSPARTITIONSTAT WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setQueryTimeout(15);
             statement.setString(1, tableInfo.schema);
             statement.setString(2, tableInfo.table);
             try (ResultSet rs = statement.executeQuery()) {
@@ -293,6 +294,7 @@ public class Db2MetadataExporter {
                 + "WHERE EVENT_OBJECT_SCHEMA = ? AND EVENT_OBJECT_TABLE = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setQueryTimeout(15);
             statement.setString(1, tableInfo.schema);
             statement.setString(2, tableInfo.table);
             try (ResultSet rs = statement.executeQuery()) {
@@ -375,6 +377,7 @@ public class Db2MetadataExporter {
 
         for (String schemaCandidate : schemaCandidates) {
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setQueryTimeout(25);
                 statement.setString(1, schemaCandidate);
                 statement.setString(2, requestedTable);
                 statement.setString(3, normalizedRequested);
@@ -580,7 +583,10 @@ public class Db2MetadataExporter {
                     tableInfos.add(enrichTableInfo(connection, metaData, seed));
                 }
             } else {
-                for (String requestedTable : requestedTables) {
+                int total = requestedTables.size();
+                for (int idx = 0; idx < total; idx++) {
+                    String requestedTable = requestedTables.get(idx);
+                    System.err.println("[progress] metadata " + (idx + 1) + "/" + total + " " + requestedTable);
                     List<TableInfo> seeds = findTablesViaCatalog(connection, requestedTable, defaultSchema);
                     if (seeds.isEmpty()) {
                         seeds = findTablesViaJdbc(metaData, requestedTable, defaultSchema);

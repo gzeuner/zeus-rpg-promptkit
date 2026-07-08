@@ -1,0 +1,117 @@
+{
+  "name": "zeus-rpg-promptkit",
+  "displayName": "Zeus RPG PromptKit",
+  "description": "Evidence-first analysis and AI context for IBM i RPG/CL/DDS. Works alongside Code for IBM i.",
+  "version": "0.1.0",
+  "publisher": "gzeuner",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:zeus.analyzeCurrent",
+    "onCommand:zeus.showReport",
+    "onCommand:zeus.registerDemoAnalyzer",
+    "onView:zeus.analyses"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "zeus.analyzeCurrent",
+        "title": "Zeus: Analyze Current Program/Member"
+      },
+      {
+        "command": "zeus.showReport",
+        "title": "Zeus: Show Latest Analysis Report"
+      },
+      {
+        "command": "zeus.registerDemoAnalyzer",
+        "title": "Zeus: Register Demo Custom Analyzer (from extension)"
+      },
+      {
+        "command": "zeus.openWebviewReport",
+        "title": "Zeus: Open Report in Webview"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "zeus.analyzeCurrent",
+          "group": "zeus"
+        },
+        {
+          "command": "zeus.registerDemoAnalyzer",
+          "group": "zeus"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "zeus.analyzeCurrent",
+          "when": "view == zeus.analyses"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "zeus.analyses",
+          "name": "Zeus Analyses",
+          "when": "zeus:enabled"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "zeus.analyses",
+        "contents": "Run Zeus analysis on members to see results here.\n[Analyze Current](command:zeus.analyzeCurrent)"
+      }
+    ],
+    "configuration": {
+      "title": "Zeus RPG PromptKit",
+      "properties": {
+        "zeus.defaultProfile": {
+          "type": "string",
+          "default": "default",
+          "description": "Default Zeus profile to use for analysis."
+        },
+        "zeus.defaultDenseLevel": {
+          "type": "string",
+          "enum": ["lite", "full", "ultra"],
+          "default": "full",
+          "description": "Default dense output level for editor context (cleaner for AI)."
+        },
+        "zeus.autoRegisterDemoAnalyzer": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically register the demo analyzer on activation."
+        }
+      }
+    },
+    "chatParticipants": [
+      {
+        "id": "zeus",
+        "fullName": "Zeus RPG PromptKit",
+        "name": "zeus",
+        "description": "Provides IBM i RPG analysis context and evidence using Zeus."
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npm run compile && vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.0.0"
+  },
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gzeuner/zeus-rpg-promptkit"
+  }
+}

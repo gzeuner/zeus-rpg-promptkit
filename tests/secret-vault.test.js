@@ -159,3 +159,41 @@ test('detectPlaintextSecrets scans current env', () => {
   const findings = detectPlaintextSecrets({ cwd: '/tmp', env: { ZEUS_DB_PASSWORD: 'from-env-plain' }, checkProfiles: false });
   assert.ok(findings.some(f => f.key === 'ZEUS_DB_PASSWORD' && f.source === 'env'));
 });
+
+test('detectPlaintextSecrets ignores ${env:...} placeholders in profiles (no false-positive)', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
+  fs.mkdirSync(path.join(tempRoot, 'config', 'local-only'), { recursive: true });
+  fs.writeFileSync(path.join(tempRoot, 'config', 'local-only', 'profiles.json'), JSON.stringify({
+    default: { db: { password: '${env:ZEUS_DB_PASSWORD}' } }
+  }));
+  const findings = detectPlaintextSecrets({ cwd: tempRoot, checkProfiles: true });
+  const profileFindings = findings.filter(f => f.source === 'profile');
+  assert.equal(profileFindings.length, 0, 'env placeholder must not be reported as plaintext');
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+});
+
+test('detectPlaintextSecrets ignores general ${...} placeholders and only flags real plaintext', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
+  fs.mkdirSync(path.join(tempRoot, 'config'), { recursive: true });
+  fs.writeFileSync(path.join(tempRoot, 'config', 'profiles.json'), JSON.stringify({
+    p1: { db: { password: '${env:FOO}', user: 'realuser' } },
+    p2: { secret: 'THIS_IS_PLAINTEXT_SECRET' }
+  }));
+  const findings = detectPlaintextSecrets({ cwd: tempRoot, checkProfiles: true });
+  // Should only report the real plaintext one (under secret key)
+  assert.ok(findings.some(f => f.source === 'profile' && f.key.includes('secret')));
+  assert.ok(!findings.some(f => String(f.key).includes('password')), 'password placeholder must be ignored');
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+});
+
+test('detectPlaintextSecrets discovers .env.*.local files (not just .env.local)', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
+  fs.mkdirSync(path.join(tempRoot, 'config', 'local-only'), { recursive: true });
+  fs.writeFileSync(path.join(tempRoot, 'config', 'local-only', '.env.ders.local'), 'ZEUS_DB_PASSWORD=dersplain\n');
+  fs.writeFileSync(path.join(tempRoot, 'config', 'local-only', '.env.local'), 'ZEUS_FETCH_PASSWORD=baseplain\n');
+  const findings = detectPlaintextSecrets({ cwd: tempRoot, checkProfiles: false });
+  const keys = findings.filter(f => f.source === 'file').map(f => f.key);
+  assert.ok(keys.includes('ZEUS_DB_PASSWORD'), 'should discover .env.ders.local');
+  assert.ok(keys.includes('ZEUS_FETCH_PASSWORD'), 'should discover .env.local');
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+});

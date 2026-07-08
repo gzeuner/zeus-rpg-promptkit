@@ -22,13 +22,22 @@ const path = require('path');
 
 const SECRET_KEYS = /PASSWORD|SECRET|TOKEN|PWD|KEY/i;
 
+// Treat ${env:FOO} and general ${...} placeholders (used in profiles.json) as non-plaintext.
+const PLACEHOLDER_RE = /^\$\{[^}]+\}$/;
+
+function isPlaceholder(value) {
+  const s = String(value || '').trim();
+  return PLACEHOLDER_RE.test(s);
+}
+
 function findPlaintextInObject(obj, path = '') {
   const results = [];
   if (typeof obj !== 'object' || obj === null) return results;
 
   for (const [key, value] of Object.entries(obj)) {
     const currentPath = path ? `${path}.${key}` : key;
-    if (typeof value === 'string' && SECRET_KEYS.test(key) && value.trim() && !value.startsWith('enc:v1:')) {
+    if (typeof value === 'string' && SECRET_KEYS.test(key) && value.trim()
+        && !value.startsWith('enc:v1:') && !isPlaceholder(value)) {
       results.push(currentPath);
     } else if (typeof value === 'object') {
       results.push(...findPlaintextInObject(value, currentPath));
@@ -56,16 +65,31 @@ function detectPlaintextSecrets({
 
   if (filesToScan.length === 0) {
     const base = configDir ? path.resolve(cwd, configDir) : path.join(cwd, 'config');
-    const candidates = [
-      path.join(base, 'local-only', '.env.local'),
-      path.join(base, '.env.local'),
-      path.join(cwd, '.env.local'),
-      path.join(base, 'local-only', '.env'),
-      path.join(base, '.env'),
-      path.join(cwd, '.env'),
+    const searchDirs = [
+      path.join(base, 'local-only'),
+      base,
+      cwd,
     ];
-    for (const f of candidates) {
-      if (fs.existsSync(f)) filesToScan.push(f);
+    const seen = new Set();
+    for (const dir of searchDirs) {
+      if (!fs.existsSync(dir)) continue;
+      let entries = [];
+      try {
+        entries = fs.readdirSync(dir);
+      } catch (_) {
+        continue;
+      }
+      for (const entry of entries) {
+        // Match .env, .env.local, .env.<name>.local, .env.ders.local etc.
+        if (entry === '.env' || (entry.startsWith('.env') && entry.endsWith('.local'))) {
+          const full = path.join(dir, entry);
+          const norm = path.resolve(full);
+          if (!seen.has(norm) && fs.existsSync(full)) {
+            seen.add(norm);
+            filesToScan.push(full);
+          }
+        }
+      }
     }
   }
 
@@ -81,7 +105,7 @@ function detectPlaintextSecrets({
         if (!match) continue;
         const key = match[1];
         let value = match[2].trim().replace(/\s+#.*$/, '').trim();
-        if (SECRET_KEYS.test(key) && value && !value.startsWith('enc:v1:')) {
+        if (SECRET_KEYS.test(key) && value && !value.startsWith('enc:v1:') && !isPlaceholder(value)) {
           if (!seenKeys.has(key)) {
             seenKeys.add(key);
             findings.push({
@@ -99,7 +123,7 @@ function detectPlaintextSecrets({
   // Scan currently loaded env for plaintext (e.g. already exported in shell or auto-loaded)
   if (env && typeof env === 'object') {
     for (const [key, val] of Object.entries(env)) {
-      if (SECRET_KEYS.test(key) && val && typeof val === 'string' && val.trim() && !val.startsWith('enc:v1:')) {
+      if (SECRET_KEYS.test(key) && val && typeof val === 'string' && val.trim() && !val.startsWith('enc:v1:') && !isPlaceholder(val)) {
         if (!seenKeys.has(key)) {
           seenKeys.add(key);
           findings.push({
@@ -133,8 +157,8 @@ function detectPlaintextSecrets({
             source: 'profile',
             hasValue: true,
           });
-        } else if (SECRET_KEYS.test(content) && !/enc:v1:/.test(content)) {
-          // Fallback rough check
+        } else if (SECRET_KEYS.test(content) && !/enc:v1:/.test(content) && !/\$\{/.test(content)) {
+          // Fallback rough check (avoid flagging profiles that only use placeholders)
           findings.push({
             key: 'possible-plaintext-secret',
             file: path.relative(cwd, p).replace(/\\/g, '/') || p,
@@ -152,4 +176,6 @@ function detectPlaintextSecrets({
 module.exports = {
   detectPlaintextSecrets,
   SECRET_KEYS,
+  isPlaceholder,
+  PLACEHOLDER_RE,
 };

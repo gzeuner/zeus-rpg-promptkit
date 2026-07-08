@@ -34,7 +34,7 @@ const DEFAULT_WORK_COPY = Object.freeze({
   root: 'source/',
   extension: 'txt',
 });
-const DEFAULT_TOKEN_BUDGET = 2200;
+const DEFAULT_TOKEN_BUDGET = 4000;
 const DEFAULT_WORKFLOW_STEPS = Object.freeze(['fetch', 'copy', 'analyze', 'report']);
 const DEFAULT_WORKFLOW_ANALYZE_MODES = Object.freeze(['documentation', 'defect-analysis']);
 const TOKEN_BUDGET_KEY_ALIASES = Object.freeze({
