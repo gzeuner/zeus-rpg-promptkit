@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
 
 const {
   buildResolveObjectDiagnostics,
@@ -8,12 +9,30 @@ const {
   resolveColumnsWithName,
   resolveTableNameBothDirections,
 } = require('../src/db2/tableNameResolutionService');
+const { SQL_STATEMENT_DELIMITER } = require('../src/db2/sqlBatch');
 const { resetConnectionGuardState } = require('../src/security/connectionGuards');
+
+function getExecutedQuery(args) {
+  if (!args || args.length < 4) {
+    return '';
+  }
+  if (args[3] === '--statements-file') {
+    const filePath = args[4];
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const parts = content.split(SQL_STATEMENT_DELIMITER);
+      return (parts[0] || '').trim();
+    } catch (err) {
+      return '';
+    }
+  }
+  return args[3] || '';
+}
 
 function createRuntimeWithRows(rows, queryChecks = []) {
   return {
     runJavaHelper(_className, args) {
-      const query = args[3];
+      const query = getExecutedQuery(args);
       if (/SYSIBM\.SYSDUMMY1/.test(query)) {
         return {
           status: 0,
@@ -45,7 +64,7 @@ function createRuntimeWithFallbackSequence(sequence) {
   let index = 0;
   return {
     runJavaHelper(_className, args) {
-      const query = args[3];
+      const query = getExecutedQuery(args);
       if (/SYSIBM\.SYSDUMMY1/.test(query)) {
         return {
           status: 0,
@@ -248,7 +267,7 @@ test('resolveObjectsByName matches SQL and system names across schemas and valid
   const queries = [];
   const runtime = {
     runJavaHelper(_className, args) {
-      const query = args[3];
+      const query = getExecutedQuery(args);
       queries.push(query);
       if (/FROM QSYS2\.SYSTABLES/.test(query)) {
         return {
