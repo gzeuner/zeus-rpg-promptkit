@@ -82,5 +82,4 @@ Was nie committed werden darf:
 
 Fragen? Siehe auch:
 - [`../safety/best-practice-guide.md`](../safety/best-practice-guide.md)
-- [`../internal/secure-env-setup.md`](../internal/secure-env-setup.md)
 - [`../workflows/investigation-workflows.md`](../workflows/investigation-workflows.md)

@@ -10,7 +10,6 @@ const ALLOWLISTED_DOCS = new Set([
   normalizePath('docs/knowledgebase/project-neutral-knowledgebase-architecture.md'),
   normalizePath('docs/knowledgebase/README.md'),
   normalizePath('docs/safety/local-workspace-policy.md'),
-  normalizePath('docs/internal/knowledge-lab.md'),
 ]);
 
 const DOC_BLOCKED_TERMS = [
@@ -41,8 +40,6 @@ const RUNTIME_BLOCKED_TERMS = [
   'promoteKnowledge',
   'trainFromSources',
   'rawEvidenceExport',
-  'knowledge-lab',
-  'internal-knowledge-lab',
   'local-ai-classifier',
   'train-from-projects',
   'train from sources',

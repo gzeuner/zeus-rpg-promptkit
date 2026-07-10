@@ -29,7 +29,6 @@ Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 | `safety/` | Safety-Guidance, Governance, Sharing | [`safety/best-practice-guide.md`](safety/best-practice-guide.md) | Reviewer, Security, Leads |
 | `viewer/` | Optionaler lokaler Artefakt-Viewer und experimentelle UI-Shell | [`viewer/local-ui-shell.md`](viewer/local-ui-shell.md) | Tooling Engineers |
 | `sql/` | Reproduzierbare SQL-Discovery-Skripte fuer IBM i/DB2 | [`sql/index.md`](sql/index.md) | Analysts, DB2 Engineers |
-| `internal/` | Interne Verträge, Pipelines, technische Details | [`internal/canonical-analysis-model.md`](internal/canonical-analysis-model.md) | Maintainer, Contributors |
 
 ## Quick Links For AI Assistants
 
@@ -78,4 +77,3 @@ flowchart TD
 - Regenerierung funktioniert direkt ueber `zeus docs:generate-catalog` oder `zeus docs generate-catalog` und haelt den Tool-Katalog aktuell.
 - Optional maschinenlesbar: `zeus docs:generate-catalog --json-output docs/tool-catalog.json`.
 - Tool catalog is auto-generated from code (see `zeus docs:generate-catalog`).
-- Toolkit-Verbesserungen & offene Punkte (Juli 2026): [`internal/toolkit-improvements-2026-07.md`](internal/toolkit-improvements-2026-07.md).

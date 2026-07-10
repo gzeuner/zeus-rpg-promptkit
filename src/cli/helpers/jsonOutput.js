@@ -24,7 +24,6 @@ const {
  * createJsonOutput(args, opts)
  *
  * Centralized helper for consistent machine-readable JSON output across CLI commands.
- * Addresses O-1 in toolkit-improvements-2026-07.md:
  * - Supports common flags: --json, --format json, --output json
  * - Applies secret masking by default (using existing sanitizeValue)
  * - Produces deterministic pretty (2 spaces) or compact output
