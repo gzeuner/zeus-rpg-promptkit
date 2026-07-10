@@ -310,7 +310,7 @@ function renderMarkdown(model, now = new Date()) {
   lines.push('');
   lines.push('- Regenerate with `zeus docs:generate-catalog` after CLI command-surface changes.');
   lines.push('- Command metadata lives in `src/docs/toolCatalogMetadata.js`.');
-  lines.push('- Proposal and background: [`internal/generate-tool-catalog-proposal.md`](internal/generate-tool-catalog-proposal.md).');
+  lines.push('- Historical proposal is no longer needed; generation logic lives in `cli/commands/generate-tool-catalog.js`.');
   lines.push('');
 
   return `${lines.join('\n')}`;
@@ -339,7 +339,9 @@ function generateToolCatalog({
     jsonTarget = path.isAbsolute(jsonOutputPath)
       ? jsonOutputPath
       : path.resolve(repoRoot, jsonOutputPath);
-    writeFileEnsuringDir(jsonTarget, `${JSON.stringify(model, null, 2)}\n`);
+    // Sanitize absolute repoRoot for committed/public catalog output
+    const jsonModel = { ...model, repoRoot: model.repoRoot ? path.basename(model.repoRoot) : null };
+    writeFileEnsuringDir(jsonTarget, `${JSON.stringify(jsonModel, null, 2)}\n`);
   }
 
   return {

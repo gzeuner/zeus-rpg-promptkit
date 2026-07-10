@@ -19,6 +19,7 @@ const { resolveAnalyzeConfig, resolveAnalyzeDbConfig, loadProfiles, resolveProfi
 const { isDbConfigured } = require('../../db2/db2Config');
 const { runWriteDb2Query } = require('../../db2/writeQueryService');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
+const { normalizeSqlStatements } = require('../../db2/sqlBatch');
 
 const PREFLIGHT_OPERATIONS = /^\s*(DELETE|UPDATE)\s+/i;
 const BACKUP_PREFIX = 'BAK';
@@ -90,6 +91,10 @@ function resolveSqlText(args, { cwd = process.cwd() } = {}) {
   const error = new Error('Missing required option: --sql "<DML ...>" or --file <path>');
   error.code = 'SQL_REQUIRED';
   throw error;
+}
+
+function resolveSqlStatements(args, options = {}) {
+  return normalizeSqlStatements({ sql: resolveSqlText(args, options) });
 }
 
 function extractTargetTable(sql) {
@@ -232,16 +237,20 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
     }
   }
 
-  let sql;
+  let statements;
   try {
-    sql = resolveSqlText(args, { cwd: process.cwd() });
+    statements = resolveSqlStatements(args, { cwd: process.cwd() });
   } catch (err) {
     console.error(err.message);
     process.exit(2);
   }
+  if (statements.length === 0) {
+    console.error('No executable SQL statements found.');
+    process.exit(2);
+  }
 
   try {
-    validateWriteSql(sql, { mode });
+    statements.forEach((statement) => validateWriteSql(statement, { mode }));
   } catch (err) {
     console.error(err.message);
     process.exit(2);
@@ -254,56 +263,73 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
     process.exit(2);
   }
 
-  console.log(`SQL: ${sql}`);
+  if (statements.length === 1) {
+    console.log(`SQL: ${statements[0]}`);
+  } else {
+    console.log(`[batch] ${statements.length} SQL statement(s)`);
+    statements.forEach((statement, index) => {
+      console.log(`SQL [${index + 1}/${statements.length}]: ${statement}`);
+    });
+  }
   console.log('');
 
   // Pre-flight: Row-Count für DELETE/UPDATE anzeigen und ggf. auf --confirm warten
-  if (PREFLIGHT_OPERATIONS.test(sql)) {
-    const countSql = buildPreflightCountSql(sql);
-    if (countSql) {
-      let rowCount = '?';
-      try {
-        const countResult = runReadOnlyDb2Query({
-          dbConfig,
-          query: countSql,
-          maxRows: 1,
-          runtime: {
-            scopeLabel: 'DB2 preflight read-only connection',
-          },
-        });
-        const row = (countResult.rows || [])[0];
-        rowCount = row ? (row.ANZAHL || row.anzahl || Object.values(row)[0] || '?') : '?';
-      } catch (_) {
-        // Count-Fehler ist nicht kritisch — weiter ohne Zahl
-      }
-      console.log(`[preflight] Betroffene Zeilen: ${rowCount}`);
-      if (args['dry-run']) {
-        console.log('');
-        console.log('[dry-run] Kein SQL ausgef\u00fchrt. Beende mit --confirm oder --force um tats\u00e4chlich auszuf\u00fchren.');
-        process.exit(0);
-      }
-      if (!args.confirm && !args.force) {
-        console.error('');
-        console.error('[preflight] Abbruch \u2014 bitte --confirm zum Ausf\u00fchren oder --force zum \u00dcberspringen der Pr\u00fcfung angeben.');
-        process.exit(4);
-      }
-      console.log('');
+  const preflightStatements = statements.filter((statement) => PREFLIGHT_OPERATIONS.test(statement));
+  for (let i = 0; i < preflightStatements.length; i += 1) {
+    const statement = preflightStatements[i];
+    const countSql = buildPreflightCountSql(statement);
+    if (!countSql) {
+      continue;
     }
+    let rowCount = '?';
+    try {
+      const countResult = runReadOnlyDb2Query({
+        dbConfig,
+        query: countSql,
+        maxRows: 1,
+        runtime: {
+          scopeLabel: 'DB2 preflight read-only connection',
+        },
+      });
+      const row = (countResult.rows || [])[0];
+      rowCount = row ? (row.ANZAHL || row.anzahl || Object.values(row)[0] || '?') : '?';
+    } catch (_) {
+      // Count-Fehler ist nicht kritisch — weiter ohne Zahl
+    }
+    console.log(`[preflight] Statement ${i + 1}/${preflightStatements.length}: Betroffene Zeilen: ${rowCount}`);
+    if (args['dry-run']) {
+      continue;
+    }
+    if (!args.confirm && !args.force) {
+      console.error('');
+      console.error('[preflight] Abbruch \u2014 bitte --confirm zum Ausf\u00fchren oder --force zum \u00dcberspringen der Pr\u00fcfung angeben.');
+      process.exit(4);
+    }
+  }
+  if (args['dry-run']) {
+    console.log('');
+    console.log('[dry-run] Kein SQL ausgef\u00fchrt. Beende mit --confirm oder --force um tats\u00e4chlich auszuf\u00fchren.');
+    process.exit(0);
+  }
+  if (preflightStatements.length > 0) {
+    console.log('');
   }
 
   // Backup: vor DELETE/UPDATE eine Sicherungskopie der Zieltabelle anlegen
   if (args.backup || args['require-backup']) {
-    try {
-      ensureBackupCreated({
-        args,
-        config,
-        dbConfig,
-        sql,
-      });
-    } catch (err) {
-      console.error(`[backup] FEHLER beim Anlegen der Backup-Tabelle: ${err.message}`);
-      console.error('[backup] Abbruch — SQL wurde NICHT ausgeführt.');
-      process.exit(1);
+    for (const statement of statements) {
+      try {
+        ensureBackupCreated({
+          args,
+          config,
+          dbConfig,
+          sql: statement,
+        });
+      } catch (err) {
+        console.error(`[backup] FEHLER beim Anlegen der Backup-Tabelle: ${err.message}`);
+        console.error('[backup] Abbruch — SQL wurde NICHT ausgeführt.');
+        process.exit(1);
+      }
     }
     console.log('');
   }
@@ -312,7 +338,7 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
   try {
     result = runWriteDb2Query({
       dbConfig,
-      sql,
+      sql: statements,
       runtime: {
         scopeLabel: 'DB2 write connection',
       },
@@ -322,6 +348,11 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
     process.exit(1);
   }
 
+  if (result.statementCount > 1) {
+    for (let i = 0; i < result.results.length; i += 1) {
+      console.log(`[${i + 1}/${result.results.length}] ${result.results[i].rowsAffected} row(s) affected`);
+    }
+  }
   console.log(`${result.rowsAffected} row(s) affected`);
 }
 
@@ -348,6 +379,7 @@ module.exports = {
   extractTargetTable,
   formatBackupTimestamp,
   resolveSqlText,
+  resolveSqlStatements,
   resolveWriteMode,
   runDeleteSql,
   runInsertSql,

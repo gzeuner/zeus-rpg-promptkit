@@ -11,8 +11,14 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const crypto = require('crypto');
 const { ensureJavaSourcesCompiled, runJavaClass, SECRET_ENV_SENTINEL } = require('../java/javaRuntime');
 const { ensureFetchConnectionGuard } = require('../security/connectionGuards');
+
+const COMMAND_FILE_THRESHOLD = 1800;
 
 function ensureJavaHelperCompiled() {
   return ensureJavaSourcesCompiled();
@@ -35,29 +41,170 @@ function runJavaHelper(className, args, options) {
   return runJavaClass(className, args, options);
 }
 
-function executeClCommandRaw({ host, user, password, command, verbose, runtime = {} }) {
+function normalizeCommandList({ command, commands }) {
+  if (Array.isArray(commands)) {
+    return commands.map((entry) => String(entry || '').trim()).filter(Boolean);
+  }
+  if (Array.isArray(command)) {
+    return command.map((entry) => String(entry || '').trim()).filter(Boolean);
+  }
+  const single = String(command || '').trim();
+  return single ? [single] : [];
+}
+
+function writeCommandFile(commands) {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-ibmi-commands-'));
+  const filePath = path.join(tempDir, 'commands.txt');
+  fs.writeFileSync(filePath, `${commands.join('\n')}\n`, 'utf8');
+  return {
+    tempDir,
+    filePath,
+  };
+}
+
+function shouldUseCommandFile(commands, runtime = {}) {
+  if (runtime.forceCommandFile) {
+    return true;
+  }
+  return commands.length !== 1 || commands.some((entry) => entry.length > COMMAND_FILE_THRESHOLD);
+}
+
+function buildCommandRunnerArgs({
+  host,
+  user,
+  commands,
+  outputFile,
+  outputCcsid,
+  deleteOutputFile,
+  runtime = {},
+}) {
+  const args = [host, user, SECRET_ENV_SENTINEL];
+  let commandFile = null;
+
+  if (shouldUseCommandFile(commands, runtime)) {
+    commandFile = writeCommandFile(commands);
+    args.push('--commands-file', commandFile.filePath);
+  } else {
+    args.push(commands[0]);
+  }
+
+  if (outputFile) {
+    args.push('--output-file', outputFile);
+    args.push('--output-ccsid', outputCcsid || 'Cp037');
+    args.push('--delete-output-file', deleteOutputFile ? 'true' : 'false');
+  }
+
+  return {
+    args,
+    commandFile,
+  };
+}
+
+function removeCommandFile(commandFile) {
+  if (!commandFile || !commandFile.tempDir) {
+    return;
+  }
+  fs.rmSync(commandFile.tempDir, { recursive: true, force: true });
+}
+
+function quoteClString(value) {
+  return `'${String(value || '').replace(/'/g, "''")}'`;
+}
+
+function buildRemoteOutputPath(prefix = 'zeus-qsh-output') {
+  const suffix = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  return `/tmp/${prefix}-${suffix}.out`;
+}
+
+function buildQshCaptureCommand(script, outputFile) {
+  const remoteOutput = String(outputFile || buildRemoteOutputPath()).trim();
+  const qshScript = `{ ${String(script || ':').trim()} ; } > ${remoteOutput} 2>&1`;
+  return {
+    command: `QSH CMD(${quoteClString(qshScript)})`,
+    outputFile: remoteOutput,
+  };
+}
+
+function executeClCommandRaw({
+  host,
+  user,
+  password,
+  command,
+  commands,
+  outputFile,
+  outputCcsid,
+  deleteOutputFile,
+  verbose,
+  runtime = {},
+}) {
   ensureJavaHelperCompiled();
+  const commandList = normalizeCommandList({ command, commands });
+  if (commandList.length === 0) {
+    throw new Error('IBM i command runner requires at least one command.');
+  }
   if (verbose) {
-    console.log(`[verbose] CL command: ${command}`);
+    if (commandList.length === 1) {
+      console.log(`[verbose] CL command: ${commandList[0]}`);
+    } else {
+      console.log(`[verbose] CL command batch: ${commandList.length} commands`);
+      commandList.forEach((entry, index) => console.log(`[verbose]   [${index + 1}] ${entry}`));
+    }
+    if (outputFile) {
+      console.log(`[verbose] CL output capture: ${outputFile} (${outputCcsid || 'Cp037'})`);
+    }
   }
 
   const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
-  const result = runJavaHelperFn('IbmiCommandRunner', [host, user, SECRET_ENV_SENTINEL, command], { password });
+  const { args, commandFile } = buildCommandRunnerArgs({
+    host,
+    user,
+    commands: commandList,
+    outputFile,
+    outputCcsid,
+    deleteOutputFile,
+    runtime,
+  });
+
+  let result;
+  try {
+    result = runJavaHelperFn('IbmiCommandRunner', args, { password, timeout: runtime.timeoutMs });
+  } finally {
+    removeCommandFile(commandFile);
+  }
+
   const parsed = parseJsonResult(result.stdout, {
     ok: result.status === 0,
-    command,
+    command: commandList.length === 1 ? commandList[0] : undefined,
+    commands: commandList,
+    results: [],
     messages: [(result.stderr || '').trim()].filter(Boolean),
     timestamp: new Date().toISOString(),
   });
 
   return {
     ...parsed,
+    commands: Array.isArray(parsed.commands) ? parsed.commands : commandList,
+    command: parsed.command || (commandList.length === 1 ? commandList[0] : undefined),
+    results: Array.isArray(parsed.results) ? parsed.results : [],
+    outputText: parsed.outputText || parsed.stdout || '',
+    stdout: parsed.stdout || parsed.outputText || '',
     exitCode: result.status,
     stderr: (result.stderr || '').trim(),
   };
 }
 
-function runClCommand({ host, user, password, command, verbose, runtime = {} }) {
+function runClCommand({
+  host,
+  user,
+  password,
+  command,
+  commands,
+  outputFile,
+  outputCcsid,
+  deleteOutputFile,
+  verbose,
+  runtime = {},
+}) {
   if (!runtime.skipConnectionGuard) {
     ensureFetchConnectionGuard({
       fetchConfig: { host, user, password },
@@ -78,7 +225,67 @@ function runClCommand({ host, user, password, command, verbose, runtime = {} }) 
     });
   }
 
-  return executeClCommandRaw({ host, user, password, command, verbose, runtime });
+  return executeClCommandRaw({
+    host,
+    user,
+    password,
+    command,
+    commands,
+    outputFile,
+    outputCcsid,
+    deleteOutputFile,
+    verbose,
+    runtime,
+  });
+}
+
+function runClCommands({ host, user, password, commands, verbose, runtime = {} }) {
+  if (!Array.isArray(commands) || commands.length === 0) {
+    throw new Error('runClCommands requires a non-empty commands array.');
+  }
+  return runClCommand({
+    host,
+    user,
+    password,
+    commands,
+    verbose,
+    runtime,
+  });
+}
+
+function runQshCommand({
+  host,
+  user,
+  password,
+  script,
+  outputFile,
+  outputCcsid = 'Cp037',
+  deleteOutputFile,
+  verbose,
+  runtime = {},
+}) {
+  const capture = buildQshCaptureCommand(script, outputFile);
+  const shouldDeleteOutputFile = deleteOutputFile !== undefined
+    ? Boolean(deleteOutputFile)
+    : !outputFile;
+  const result = runClCommand({
+    host,
+    user,
+    password,
+    command: capture.command,
+    outputFile: capture.outputFile,
+    outputCcsid,
+    deleteOutputFile: shouldDeleteOutputFile,
+    verbose,
+    runtime,
+  });
+  return {
+    ...result,
+    qshScript: script,
+    outputFile: capture.outputFile,
+    outputText: result.outputText || result.stdout || '',
+    stdout: result.stdout || result.outputText || '',
+  };
 }
 
 function executeListMembersRaw({ host, user, password, sourceLib, sourceFile, verbose, runtime = {} }) {
@@ -226,12 +433,16 @@ function exportSourceMemberViaJdbc({
 
 module.exports = {
   SECRET_ENV_SENTINEL,
+  buildQshCaptureCommand,
   executeClCommandRaw,
   executeExportSourceMemberViaJdbcRaw,
   executeListMembersRaw,
   ensureJavaHelperCompiled,
+  quoteClString,
   runJavaHelper,
+  runClCommands,
   runClCommand,
+  runQshCommand,
   listMembers,
   exportSourceMemberViaJdbc,
 };

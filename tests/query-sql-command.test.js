@@ -5,6 +5,7 @@ const {
   DEFAULT_MAX_ROWS,
   normalizeOutput,
   parseMaxRows,
+  splitSqlStatements,
   toRowMatrix,
 } = require('../src/cli/commands/querySqlCommand');
 
@@ -33,4 +34,14 @@ test('toRowMatrix preserves column order for object rows', () => {
     [1, 'Alpha'],
     [2, 'Beta'],
   ]);
+});
+
+test('splitSqlStatements supports quoted semicolons and multiple statements', () => {
+  assert.deepEqual(
+    splitSqlStatements("SELECT 'A;B' AS X FROM SYSIBM.SYSDUMMY1; SELECT 2 AS Y FROM SYSIBM.SYSDUMMY1;"),
+    [
+      "SELECT 'A;B' AS X FROM SYSIBM.SYSDUMMY1",
+      'SELECT 2 AS Y FROM SYSIBM.SYSDUMMY1',
+    ],
+  );
 });

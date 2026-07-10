@@ -1,7 +1,7 @@
 ---
 Title: MCP Operator Guide
 Description: Local-first MCP startup, policy boundaries, and troubleshooting for Zeus RPG PromptKit.
-Last Updated: 2026-05-25
+Last Updated: 2026-07-09
 ---
 
 # MCP Operator Guide
@@ -130,6 +130,7 @@ Curated prompts currently include:
 - `operation=plan` is non-mutating (validation + readiness preview)
 - `operation=apply` is blocked unless `ZEUS_MCP_ENABLE_WRITES=true`
 - `operation=apply` requires `ZEUS_MCP_WRITE_CONFIRM_TOKEN` and matching `confirmToken` input
+- semicolon-separated DML batches are accepted, with validation, target checks, preflight, backup handling, and row-safety limits applied per statement
 - production profiles (`productionSystem=true`) remain hard-blocked for apply
 - if `testData.allowTables` is configured for the profile/global config, `operation=apply` is allowed only when SQL targets an allowlisted table
 - `operation=apply` rejects `UPDATE`/`DELETE` without a top-level `WHERE` clause

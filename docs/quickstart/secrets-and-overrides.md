@@ -102,10 +102,16 @@ Profilwerte lassen sich **jederzeit** durch CLI-Argumente übersteuern, ohne das
 | Zielverzeichnis | `--out <pfad>` |
 | IFS-Arbeitsverzeichnis | `--ifs-dir <pfad>` |
 | Host/User/Passwort | `--host` / `--user` / `--password` |
+| Benanntes System | `--system <name>` |
 
 ```powershell
 node cli/zeus.js fetch --profile dev --source-lib APPLIB --source-files QRPGLESRC,QCPYSRC --members ORDERPGM,CUSTSRV
+node cli/zeus.js fetch --profile combined-fetch-and-query --system dev --members ORDERPGM
 ```
+
+`--system <name>` ist für Mehrsystem-Profile gedacht. Der Name kann der `systems`-Key,
+`systemName` oder ein Alias sein. Explizite CLI-Werte wie `--host` oder `--user` haben
+weiterhin Vorrang, danach kommt der gewählte Systemblock, danach Env/Profile-Fallbacks.
 
 ### analyze
 
@@ -127,6 +133,29 @@ node cli/zeus.js analyze --profile dev --source ./rpg_sources --member ORDERPGM 
 | Schema (query-table) | `--schema <NAME>` |
 | Bibliotheksliste (query-sql) | `--liblist LIB1 LIB2 ...` |
 | Default-Schema (query-sql) | `--default-schema <NAME>` |
+
+`query-sql` kann mehrere read-only Statements (`SELECT` / `WITH`) in einem Lauf ausführen:
+
+```powershell
+node cli/zeus.js query-sql --profile dev --sql "SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1; SELECT CURRENT_SERVER FROM SYSIBM.SYSDUMMY1" --output json
+node cli/zeus.js query-sql --profile dev --file ./diagnostics/read-only-checks.sql --output table
+```
+
+Semikola in einfachen oder doppelten SQL-Strings werden beim Splitten berücksichtigt. Die
+Statements werden nach dem normalen Guard-Probe über einen gemeinsamen DB2-Runner-Aufruf
+ausgeführt. JSON-Ausgabe enthält pro Statement ein eigenes Ergebnisobjekt.
+
+### write-sql / insert / update / delete
+
+Guarded DML-Befehle akzeptieren ebenfalls mehrere Statements:
+
+```powershell
+node cli/zeus.js write-sql --profile dev --sql "INSERT INTO APP.T (ID) VALUES (1); UPDATE APP.T SET STATUS='Y' WHERE ID=1" --confirm
+```
+
+Jedes Statement wird gegen den Modus geprüft (`insert` nur `INSERT`, `update` nur `UPDATE`,
+`write-sql`/`upsert` `INSERT|UPDATE|DELETE|MERGE`). Preflight-Row-Counts und Backups laufen
+pro Statement. Produktionsprofile bleiben blockiert.
 
 ---
 

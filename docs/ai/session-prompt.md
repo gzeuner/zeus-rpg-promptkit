@@ -1,7 +1,7 @@
 ---
 Title: AI Session Prompt
 Description: Standardisierter Session-Startprompt fuer CLI/MCP-first, evidence-first und safety-first Arbeit mit Zeus.
-Last Updated: 2026-06-19
+Last Updated: 2026-07-09
 ---
 
 # Zeus RPG PromptKit - AI Session Prompt (v2.2)
@@ -51,7 +51,7 @@ Tooling quick reference:
 | Command | Safety | Purpose |
 |---|---|---|
 | doctor | S0 | Validate runtime, profile, and env wiring |
-| fetch | S2 | Read sources from IBM i into workspace |
+| fetch | S2 | Read sources from IBM i into workspace; use `--system <name>` for named profile systems |
 | analyze | S1 | Generate core analysis artifacts |
 | workflow | S1 | Run preset analysis flows |
 | bundle | S1 | Package artifacts for sharing |
@@ -60,7 +60,7 @@ Tooling quick reference:
 | generate-test | S1 | Test planning output |
 | generate-checklist | S1 | Deployment/change checklist |
 | query-table | S2 | DB2 metadata read |
-| query-sql | S2 | Read-only SQL |
+| query-sql | S2 | One or more read-only SQL statements |
 | joblog | S2 | IBM i joblog read |
 | field-search | S0/S2 | Cross-reference field/table usage |
 | search-source | S0 | Local source search |
@@ -109,6 +109,8 @@ node cli/zeus.js doctor --profile <profile> --probe --show-resolved
 
 # 3. Fetch only when needed and approved
 node cli/zeus.js fetch --profile <profile>
+# For multi-system profiles, select a named target without editing the profile:
+# node cli/zeus.js fetch --profile <profile> --system <system-name>
 
 # 4. Copy fetched members into the local workspace if required
 node cli/zeus.js copy-to-workspace --profile <profile>
@@ -124,6 +126,8 @@ node cli/zeus.js serve --source-output-root ./output
 Important notes:
 - Treat the local UI as optional and local-only; it is not required for CLI or MCP workflows.
 - The local UI does not replace shell env loading, `doctor`, or remote-read CLI/MCP commands.
+- `fetch --system <name>` can switch between named profile systems by key, `systemName`, or alias when an operator requests source from another target.
+- `query-sql` accepts semicolon-separated read-only batches; guarded DML commands accept semicolon-separated DML batches with validation and safety checks per statement.
 - Use generated artifacts such as `report.md`, `architecture-report.md`, `canonical-analysis.json`, and bundle output as evidence.
 - If MCP is available, use the corresponding `zeus.*` tools that map to the same guarded command surface.
 

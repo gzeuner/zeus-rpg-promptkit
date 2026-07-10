@@ -476,6 +476,7 @@ node .\cli\zeus.js resolve-object --profile readonly-db2 --table APP_TABLE_00 --
 
 # 6. Quellen holen
 node .\cli\zeus.js fetch --profile sftp-fetch
+node .\cli\zeus.js fetch --profile combined-fetch-and-query --system dev --members ORDERPGM
 
 # 7. Quellen analysieren
 node .\cli\zeus.js analyze --profile dev --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context --dense full   # optional: lite | full | ultra (auch bei workflow --preset / workflow run nutzbar)
@@ -487,6 +488,15 @@ Empfohlene Profilnamen im Public-Contract: `dev`, `demo`, `sftp-fetch`, `readonl
 Für Mehrsystem-Setups können Profile benannte `systems` mit `displayName`, `systemName` und `aliases` definieren.
 Damit bleibt auch bei Host-Alias, DNS-CNAME oder abweichendem `CURRENT_SERVER` klar, welche Verbindung für Fetch, Metadaten und Testdaten gedacht ist.
 `doctor --profile <name> --probe --show-resolved` zeigt diese Zuordnung explizit an.
+`fetch --system <name>` kann ein solches System zur Laufzeit per Key, `systemName` oder Alias auswählen, ohne das Profil zu ändern.
+
+`query-sql` unterstützt mehrere read-only Statements in einem Lauf:
+
+```bash
+node cli/zeus.js query-sql --profile dev --sql "SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1; SELECT CURRENT_SERVER FROM SYSIBM.SYSDUMMY1" --output json
+```
+
+Guarded DML-Kommandos (`write-sql`, `upsert`, `insert`, `update`, `delete`) akzeptieren ebenfalls Semikolon-Batches. Validierung, Preflight und Backup laufen pro Statement.
 
 ---
 
@@ -549,7 +559,7 @@ Die verbindliche Referenz ist `docs/tool-catalog.md`.
 | Befehl | Safety | Zweck |
 |---|---:|---|
 | `doctor` | `S0` | Umgebung, Profile, Java und Env-Verträge prüfen |
-| `fetch` | `S2` | IBM i-Quellen per SFTP, JT400 oder FTP holen |
+| `fetch` | `S2` | IBM i-Quellen per SFTP, JT400 oder FTP holen; `--system` kann ein benanntes Profil-System auswählen |
 | `analyze` | `S1` | RPG/CL/DDS scannen und Analyseartefakte erzeugen |
 | `workflow` | `S1` | vordefinierte Analyse- und Bundle-Presets ausführen |
 | `bundle` | `S1` | Analyseartefakte für Review oder Sharing paketieren |
@@ -558,7 +568,7 @@ Die verbindliche Referenz ist `docs/tool-catalog.md`.
 | `generate-test` | `S1` | Testpläne oder Test-Templates erzeugen |
 | `generate-checklist` | `S1` | Deployment- und Change-Checklisten erzeugen |
 | `query-table` | `S2` | DB2-Tabellenmetadaten lesen |
-| `query-sql` | `S2` | read-only SQL ausführen (`SELECT` / `WITH`) |
+| `query-sql` | `S2` | ein oder mehrere read-only SQL-Statements ausführen (`SELECT` / `WITH`) |
 | `resolve-object` | `S2` | SQL-Langname, Systemname und Schema read-only auflösen |
 | `joblog` | `S2` | IBM i-Joblog-Informationen lesen |
 | `field-search` | `S0/S2` | Feld- und Tabellenverwendung lokal oder remote suchen |
@@ -569,7 +579,7 @@ Die verbindliche Referenz ist `docs/tool-catalog.md`.
 | `qa` | `S1` | QA-Checks als Markdown, JSON oder Jira-Format rendern |
 | `inspect-object` | `S2` | IBM i-Objektmetadaten lesen |
 | `test-run` | `S2/S1` | Test-Snapshots und Rollback-Hinweise erzeugen |
-| `upsert` / `insert` / `update` | `S3` | DML mit Guardrails, nur nach expliziter Freigabe |
+| `upsert` / `insert` / `update` | `S3` | ein oder mehrere DML-Statements mit Guardrails, nur nach expliziter Freigabe |
 | `bridge` | `S4` | operator-gated Bridge-Planung, experimentell |
 | `mcp` | `S0` | lokalen MCP-Server starten |
 | `docs:generate-catalog` | `S0` | Tool-Katalog aus CLI-Metadaten regenerieren |
@@ -663,7 +673,7 @@ $env:ZEUS_FETCH_HOST = "myibmi.example.com"
 $env:ZEUS_FETCH_USER = "MYUSER"
 $env:ZEUS_FETCH_PASSWORD = "secret"
 $env:ZEUS_FETCH_SOURCE_LIB = "SOURCEN"
-$env:ZEUS_FETCH_IFS_DIR = "/home/zeus/rpg"
+$env:ZEUS_FETCH_IFS_DIR = "/home/YOURUSER/rpg"
 $env:ZEUS_FETCH_OUT = "./rpg_sources"
 ```
 
@@ -1355,6 +1365,7 @@ node cli/zeus.js resolve-object --profile readonly-db2 --table APP_TABLE_00 --re
 
 # 6. Fetch sources
 node cli/zeus.js fetch --profile sftp-fetch
+node cli/zeus.js fetch --profile combined-fetch-and-query --system dev --members ORDERPGM
 
 # 7. Analyze sources
 node cli/zeus.js analyze --profile dev --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense full   # optional: lite | full | ultra (also via workflow run --dense)
@@ -1366,6 +1377,15 @@ Recommended public profile names: `dev`, `demo`, `sftp-fetch`, `readonly-db2`, `
 For multi-system setups, profiles can define named `systems` with `displayName`, `systemName`, and `aliases`.
 That keeps fetch, metadata, and test-data routing explicit even when host aliases or `CURRENT_SERVER` names differ.
 Run `doctor --profile <name> --probe --show-resolved` to inspect the resolved routing.
+Use `fetch --system <name>` to select such a system at runtime by key, `systemName`, or alias without editing the profile.
+
+`query-sql` supports multiple read-only statements in one run:
+
+```bash
+node cli/zeus.js query-sql --profile dev --sql "SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1; SELECT CURRENT_SERVER FROM SYSIBM.SYSDUMMY1" --output json
+```
+
+Guarded DML commands (`write-sql`, `upsert`, `insert`, `update`, `delete`) also accept semicolon-separated batches. Validation, preflight, and backup handling run per statement.
 
 ---
 
@@ -1416,7 +1436,7 @@ The authoritative reference is `docs/tool-catalog.md`.
 | Command | Safety | Purpose |
 |---|---:|---|
 | `doctor` | `S0` | validate runtime, profiles, Java and env contracts |
-| `fetch` | `S2` | fetch IBM i sources via SFTP, JT400 or FTP |
+| `fetch` | `S2` | fetch IBM i sources via SFTP, JT400 or FTP; `--system` selects a named profile system |
 | `analyze` | `S1` | scan RPG/CL/DDS and generate analysis artifacts |
 | `workflow` | `S1` | run predefined analysis and bundle presets |
 | `bundle` | `S1` | package analysis artifacts for review or sharing |
@@ -1425,7 +1445,7 @@ The authoritative reference is `docs/tool-catalog.md`.
 | `generate-test` | `S1` | generate test plans or test templates |
 | `generate-checklist` | `S1` | generate deployment and change checklists |
 | `query-table` | `S2` | read DB2 table metadata |
-| `query-sql` | `S2` | execute read-only SQL (`SELECT` / `WITH`) |
+| `query-sql` | `S2` | execute one or more read-only SQL statements (`SELECT` / `WITH`) |
 | `joblog` | `S2` | read IBM i joblog information |
 | `field-search` | `S0/S2` | find field and table usage locally or remotely |
 | `search-source` | `S0` | search the local source tree |
@@ -1435,7 +1455,7 @@ The authoritative reference is `docs/tool-catalog.md`.
 | `qa` | `S1` | render QA checks as Markdown, JSON or Jira-style output |
 | `inspect-object` | `S2` | read IBM i object metadata |
 | `test-run` | `S2/S1` | capture test snapshots and rollback guidance |
-| `upsert` / `insert` / `update` | `S3` | DML with guardrails, only after explicit approval |
+| `upsert` / `insert` / `update` | `S3` | one or more DML statements with guardrails, only after explicit approval |
 | `bridge` | `S4` | operator-gated bridge planning, experimental |
 | `mcp` | `S0` | start the local MCP server |
 | `docs:generate-catalog` | `S0` | regenerate tool catalog from CLI metadata |
@@ -1526,7 +1546,7 @@ $env:ZEUS_FETCH_HOST = "myibmi.example.com"
 $env:ZEUS_FETCH_USER = "MYUSER"
 $env:ZEUS_FETCH_PASSWORD = "secret"
 $env:ZEUS_FETCH_SOURCE_LIB = "SOURCEN"
-$env:ZEUS_FETCH_IFS_DIR = "/home/zeus/rpg"
+$env:ZEUS_FETCH_IFS_DIR = "/home/YOURUSER/rpg"
 $env:ZEUS_FETCH_OUT = "./rpg_sources"
 ```
 

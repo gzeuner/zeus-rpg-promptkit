@@ -47,14 +47,15 @@ This is not a code generator and not an AI provider integration. It is a context
 
 ### 2.1 Node.js CLI
 
-The CLI entrypoint is `cli/zeus.js`. It exposes six commands:
+The CLI entrypoint is `cli/zeus.js`. The authoritative command list is generated in
+[`docs/tool-catalog.md`](../tool-catalog.md). Common execution groups are:
 
-- `zeus fetch`
-- `zeus analyze`
-- `zeus workflow`
-- `zeus bundle`
-- `zeus impact`
-- `zeus serve`
+- source ingest: `zeus fetch`, `zeus fetch-member`
+- analysis: `zeus analyze`, `zeus workflow`, `zeus bundle`, `zeus impact`
+- read-only evidence: `zeus query-table`, `zeus query-sql`, `zeus resolve-object`,
+  `zeus inspect-object`, `zeus joblog`
+- guarded mutation: `zeus write-sql`, `zeus insert`, `zeus update`, `zeus delete`
+- local presentation/integration: `zeus serve`, `zeus mcp`
 
 The runtime requires Node.js 20 or later.
 
@@ -74,6 +75,11 @@ The repository compiles and runs Java helpers from `java/` on demand through `sr
 Operational consequence:
 
 - `javac` and `java` must be available when using IBM i fetch, DB2 metadata export, test-data export, or JT400-based transfers.
+- `IbmiCommandRunner` supports command batches in one connection and can capture QSH output
+  by reading a temporary IFS output file. Generated QSH capture files are deleted by default.
+- `Db2DiagnosticQueryRunner` and `Db2WriteQueryRunner` support statement files for
+  multi-statement read and guarded DML batches. Single-statement JSON output stays
+  backward-compatible.
 
 ### 2.3 Data Acquisition
 
@@ -770,9 +776,14 @@ node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\out
 If source is still on IBM i:
 
 ```powershell
-node .\cli\zeus.js fetch --host myibmi --user MYUSER --password MYPASS --source-lib MYLIB --ifs-dir /home/zeus/export --out .\rpg_sources --transport auto
+node .\cli\zeus.js fetch --host myibmi --user MYUSER --password MYPASS --source-lib MYLIB --ifs-dir /home/YOURUSER/export --out .\rpg_sources --transport auto
+node .\cli\zeus.js fetch --profile combined-fetch-and-query --system dev --members ORDERPGM
 node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --out .\output --optimize-context --dense full
 ```
+
+For multi-system profiles, prefer `--system <key|systemName|alias>` over editing profile
+files for one-off operator-directed source retrievals. Explicit CLI connection flags still
+win over the selected system block.
 
 ### Artifacts to Use
 

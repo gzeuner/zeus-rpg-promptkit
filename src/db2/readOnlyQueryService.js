@@ -15,6 +15,12 @@ const { buildJdbcUrl, resolveDefaultSchema, isDbConfigured } = require('./db2Con
 const { runJavaHelper } = require('../fetch/jt400CommandRunner');
 const { SECRET_ENV_SENTINEL } = require('../java/javaRuntime');
 const {
+  buildSqlRunnerArgs,
+  normalizeSqlStatements,
+  removeSqlStatementsFile,
+  stripSqlComments,
+} = require('./sqlBatch');
+const {
   executeWithAdaptiveRetry,
   normalizeSqlState,
 } = require('./adaptiveQueryService');
@@ -22,14 +28,6 @@ const { ensureDb2ConnectionGuard } = require('../security/connectionGuards');
 
 const SQL_IDENTIFIER_PATTERN = /^[A-Z][A-Z0-9_#$@]*$/;
 const FORBIDDEN_SQL_PATTERN = /\b(INSERT|UPDATE|DELETE|MERGE|ALTER|DROP|CREATE|TRUNCATE|CALL|GRANT|REVOKE)\b/i;
-
-function stripSqlComments(sql) {
-  // Entfernt einzeilige Kommentare (-- ...) und mehrzeilige (/* ... */)
-  return sql
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/--[^\r\n]*/g, '')
-    .trim();
-}
 
 function validateReadOnlySql(query) {
   const normalized = stripSqlComments(String(query || '').trim());
@@ -54,6 +52,29 @@ function parseReadOnlyQueryResult(stdout) {
     };
   }
   return JSON.parse(content);
+}
+
+function normalizeReadOnlyBatchResult(result, statements) {
+  if (Array.isArray(result.statements)) {
+    return {
+      statementCount: Number(result.statementCount || result.statements.length),
+      statements: result.statements.map((entry, index) => ({
+        sql: entry.sql || statements[index] || '',
+        columns: Array.isArray(entry.columns) ? entry.columns : [],
+        rows: Array.isArray(entry.rows) ? entry.rows : [],
+        rowCount: Number(entry.rowCount || (entry.rows || []).length || 0),
+      })),
+    };
+  }
+  return {
+    statementCount: 1,
+    statements: [{
+      sql: result.sql || statements[0] || '',
+      columns: Array.isArray(result.columns) ? result.columns : [],
+      rows: Array.isArray(result.rows) ? result.rows : [],
+      rowCount: Number(result.rowCount || (result.rows || []).length || 0),
+    }],
+  };
 }
 
 function extractSqlState(error) {
@@ -84,31 +105,66 @@ function escapeSqlLiteral(value) {
 }
 
 function executeReadOnlyDb2QueryRaw({ dbConfig, query, maxRows = 50, runtime = {} }) {
+  const batch = executeReadOnlyDb2QueriesRaw({
+    dbConfig,
+    queries: normalizeSqlStatements({ sql: query }),
+    maxRows,
+    runtime,
+  });
+  return batch.statements[0] || { columns: [], rows: [], rowCount: 0 };
+}
+
+function executeReadOnlyDb2QueriesRaw({ dbConfig, queries, maxRows = 50, runtime = {} }) {
+  const statements = normalizeSqlStatements({ statements: queries });
+  if (statements.length === 0) {
+    throw new Error('Read-only SQL query is empty.');
+  }
   const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
   const jdbcUrl = buildJdbcUrl(dbConfig, resolveDefaultSchema(dbConfig));
+  const { args, statementFile } = buildSqlRunnerArgs({
+    jdbcUrl,
+    user: String(dbConfig.user),
+    passwordSentinel: SECRET_ENV_SENTINEL,
+    statements,
+    trailingArgs: [String(maxRows)],
+    runtime,
+  });
   // Security: pass the password via the child-process environment (ZEUS_JV_PASSWORD),
   // not as a CLI argument. The sentinel marks the position; Java resolves it back.
-  const result = runJavaHelperFn('Db2DiagnosticQueryRunner', [
-    jdbcUrl,
-    String(dbConfig.user),
-    SECRET_ENV_SENTINEL,
-    query,
-    String(maxRows),
-  ], { password: String(dbConfig.password) });
+  let result;
+  try {
+    result = runJavaHelperFn('Db2DiagnosticQueryRunner', args, { password: String(dbConfig.password) });
+  } finally {
+    removeSqlStatementsFile(statementFile);
+  }
 
   if (result.status !== 0) {
     throw new Error((result.stderr || '').trim() || 'DB2 diagnostic query failed.');
   }
 
-  return parseReadOnlyQueryResult(result.stdout);
+  return normalizeReadOnlyBatchResult(parseReadOnlyQueryResult(result.stdout), statements);
 }
 
 function runReadOnlyDb2Query({ dbConfig, query, maxRows = 50, runtime = {} }) {
+  const batch = runReadOnlyDb2Queries({
+    dbConfig,
+    queries: normalizeSqlStatements({ sql: query }),
+    maxRows,
+    runtime,
+  });
+  return batch.statements[0] || { columns: [], rows: [], rowCount: 0 };
+}
+
+function runReadOnlyDb2Queries({ dbConfig, queries, maxRows = 50, runtime = {} }) {
   if (!isDbConfigured(dbConfig)) {
     throw new Error('DB2 connection configuration is incomplete.');
   }
 
-  validateReadOnlySql(query);
+  const statements = normalizeSqlStatements({ statements: queries });
+  if (statements.length === 0) {
+    throw new Error('Read-only SQL query is empty.');
+  }
+  statements.forEach(validateReadOnlySql);
 
   if (!runtime.skipConnectionGuard) {
     ensureDb2ConnectionGuard({
@@ -126,7 +182,7 @@ function runReadOnlyDb2Query({ dbConfig, query, maxRows = 50, runtime = {} }) {
     });
   }
 
-  return executeReadOnlyDb2QueryRaw({ dbConfig, query, maxRows, runtime });
+  return executeReadOnlyDb2QueriesRaw({ dbConfig, queries: statements, maxRows, runtime });
 }
 
 function executeReadOnlyDb2QueryWithFallback({
@@ -235,7 +291,9 @@ module.exports = {
   extractSqlState,
   parseReadOnlyQueryResult,
   runReadOnlyDb2Query,
+  runReadOnlyDb2Queries,
   executeReadOnlyDb2QueryRaw,
+  executeReadOnlyDb2QueriesRaw,
   SQL_IDENTIFIER_PATTERN,
   validateReadOnlySql,
   validateSqlIdentifier,

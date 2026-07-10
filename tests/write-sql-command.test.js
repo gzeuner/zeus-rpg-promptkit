@@ -4,8 +4,12 @@ const assert = require('node:assert/strict');
 const {
   buildBackupObjectName,
   ensureBackupCreated,
+  resolveSqlStatements,
   validateWriteSql,
 } = require('../src/cli/commands/writeSqlCommand');
+const {
+  executeWriteDb2QueriesRaw,
+} = require('../src/db2/writeQueryService');
 
 test('validateWriteSql accepts INSERT/UPDATE/DELETE/MERGE in upsert mode', () => {
   assert.doesNotThrow(() => validateWriteSql('INSERT INTO T (ID) VALUES (1)', { mode: 'upsert-sql' }));
@@ -82,4 +86,56 @@ test('ensureBackupCreated executes backup creation before writes', () => {
   assert.equal(statements.length, 1);
   assert.match(statements[0], /^CREATE TABLE ARCHIVE\.BAK[A-Z0-9_]+ AS \(SELECT \* FROM APP\.ORDERS\) WITH DATA$/);
   assert.equal(created.targetTable, 'APP.ORDERS');
+});
+
+test('resolveSqlStatements splits multiple DML statements', () => {
+  assert.deepEqual(
+    resolveSqlStatements({
+      sql: "INSERT INTO T (NAME) VALUES ('A;B'); UPDATE T SET STATUS = 'Y' WHERE ID = 1;",
+    }),
+    [
+      "INSERT INTO T (NAME) VALUES ('A;B')",
+      "UPDATE T SET STATUS = 'Y' WHERE ID = 1",
+    ],
+  );
+});
+
+test('executeWriteDb2QueriesRaw uses one Java call with a statements file', () => {
+  let capturedArgs = null;
+  const result = executeWriteDb2QueriesRaw({
+    dbConfig: {
+      host: 'ibmi.example.com',
+      user: 'ZEUS',
+      password: 'secret',
+    },
+    statements: [
+      'INSERT INTO T (ID) VALUES (1)',
+      'UPDATE T SET STATUS = 1 WHERE ID = 1',
+    ],
+    runtime: {
+      skipConnectionGuard: true,
+      runJavaHelper(className, args) {
+        capturedArgs = args;
+        assert.equal(className, 'Db2WriteQueryRunner');
+        assert.ok(args.includes('--statements-file'));
+        return {
+          status: 0,
+          stdout: JSON.stringify({
+            statementCount: 2,
+            results: [
+              { sql: 'INSERT INTO T (ID) VALUES (1)', rowsAffected: 1 },
+              { sql: 'UPDATE T SET STATUS = 1 WHERE ID = 1', rowsAffected: 1 },
+            ],
+            rowsAffected: 2,
+          }),
+          stderr: '',
+        };
+      },
+    },
+  });
+
+  assert.equal(capturedArgs[2], '@ZEUS_SECRET_ENV@');
+  assert.equal(result.rowsAffected, 2);
+  assert.equal(result.statementCount, 2);
+  assert.deepEqual(result.results.map((entry) => entry.rowsAffected), [1, 1]);
 });

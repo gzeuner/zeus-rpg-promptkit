@@ -13,6 +13,9 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -24,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Db2DiagnosticQueryRunner {
+    private static final String STATEMENT_DELIMITER = "--ZEUS-SQL-STATEMENT--";
+
     private static String escape(String value) {
         if (value == null)
             return "";
@@ -79,17 +84,95 @@ public class Db2DiagnosticQueryRunner {
         }
     }
 
+    private static List<String> readStatementsFile(String filePath) throws Exception {
+        String content = new String(Files.readAllBytes(Paths.get(filePath)), Charset.forName("UTF-8"));
+        String[] parts = content.split("(?m)^" + java.util.regex.Pattern.quote(STATEMENT_DELIMITER) + "\\s*$");
+        List<String> statements = new ArrayList<>();
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                statements.add(trimmed);
+            }
+        }
+        return statements;
+    }
+
+    private static String runQueryJson(Statement statement, String query, int maxRows) throws SQLException {
+        statement.setMaxRows(maxRows);
+        try (ResultSet rs = statement.executeQuery(query)) {
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+            List<String> columns = new ArrayList<>();
+
+            for (int i = 1; i <= columnCount; i += 1) {
+                columns.add(metaData.getColumnLabel(i));
+            }
+
+            StringBuilder json = new StringBuilder();
+            json.append("{\"sql\":\"").append(escape(query)).append("\",\"columns\":[");
+            for (int i = 0; i < columns.size(); i += 1) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                json.append("\"").append(escape(columns.get(i))).append("\"");
+            }
+
+            json.append("],\"rows\":[");
+            int rowCount = 0;
+            while (rs.next()) {
+                if (rowCount > 0) {
+                    json.append(",");
+                }
+                json.append("{");
+                for (int i = 1; i <= columnCount; i += 1) {
+                    if (i > 1) {
+                        json.append(",");
+                    }
+                    Object value = readValue(rs, i, metaData.getColumnType(i));
+                    json.append("\"").append(escape(columns.get(i - 1))).append("\":")
+                            .append(encodeValue(value));
+                }
+                json.append("}");
+                rowCount += 1;
+            }
+            json.append("],\"rowCount\":").append(rowCount).append("}");
+            return json.toString();
+        }
+    }
+
     public static void main(String[] args) {
         if (args.length < 4) {
-            System.err.println("Usage: java Db2DiagnosticQueryRunner <jdbcUrl> <user> <password> <query> [maxRows]");
+            System.err.println("Usage: java Db2DiagnosticQueryRunner <jdbcUrl> <user> <password> <query>|--statements-file <path> [maxRows]");
             System.exit(1);
         }
 
         String jdbcUrl = args[0];
         String user = args[1];
         String password = ZeusSecrets.resolve(args[2]);
-        String query = args[3];
-        int maxRows = parseMaxRows(args.length >= 5 ? args[4] : "50");
+        List<String> queries = new ArrayList<>();
+        int argIndex = 3;
+        if ("--statements-file".equals(args[argIndex])) {
+            if (args.length <= argIndex + 1) {
+                System.err.println("DB2 diagnostic query failed: --statements-file requires a path.");
+                System.exit(1);
+            }
+            try {
+                queries.addAll(readStatementsFile(args[argIndex + 1]));
+            } catch (Exception e) {
+                System.err.println("DB2 diagnostic query failed: cannot read statements file: " + e.getMessage());
+                System.exit(1);
+            }
+            argIndex += 2;
+        } else {
+            queries.add(args[argIndex]);
+            argIndex += 1;
+        }
+        int maxRows = parseMaxRows(args.length > argIndex ? args[argIndex] : "50");
+
+        if (queries.isEmpty()) {
+            System.err.println("DB2 diagnostic query failed: no SQL statements supplied.");
+            System.exit(1);
+        }
 
         try {
             Class.forName("com.ibm.as400.access.AS400JDBCDriver");
@@ -102,44 +185,18 @@ public class Db2DiagnosticQueryRunner {
             connection.setReadOnly(true);
 
             try (Statement statement = connection.createStatement()) {
-                statement.setMaxRows(maxRows);
-                try (ResultSet rs = statement.executeQuery(query)) {
-                    ResultSetMetaData metaData = rs.getMetaData();
-                    int columnCount = metaData.getColumnCount();
-                    List<String> columns = new ArrayList<>();
-
-                    for (int i = 1; i <= columnCount; i += 1) {
-                        columns.add(metaData.getColumnLabel(i));
-                    }
-
+                if (queries.size() == 1) {
+                    System.out.println(runQueryJson(statement, queries.get(0), maxRows));
+                } else {
                     StringBuilder json = new StringBuilder();
-                    json.append("{\"columns\":[");
-                    for (int i = 0; i < columns.size(); i += 1) {
+                    json.append("{\"statementCount\":").append(queries.size()).append(",\"statements\":[");
+                    for (int i = 0; i < queries.size(); i += 1) {
                         if (i > 0) {
                             json.append(",");
                         }
-                        json.append("\"").append(escape(columns.get(i))).append("\"");
+                        json.append(runQueryJson(statement, queries.get(i), maxRows));
                     }
-
-                    json.append("],\"rows\":[");
-                    int rowCount = 0;
-                    while (rs.next()) {
-                        if (rowCount > 0) {
-                            json.append(",");
-                        }
-                        json.append("{");
-                        for (int i = 1; i <= columnCount; i += 1) {
-                            if (i > 1) {
-                                json.append(",");
-                            }
-                            Object value = readValue(rs, i, metaData.getColumnType(i));
-                            json.append("\"").append(escape(columns.get(i - 1))).append("\":")
-                                    .append(encodeValue(value));
-                        }
-                        json.append("}");
-                        rowCount += 1;
-                    }
-                    json.append("],\"rowCount\":").append(rowCount).append("}");
+                    json.append("]}");
                     System.out.println(json.toString());
                 }
             }
