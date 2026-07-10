@@ -65,8 +65,6 @@ src/report/
 src/cli/commands/
 └── qaCommand.js                  # CLI entry point
 
-docs/
-└── qa-validation-layer.md        # Full documentation
 ```
 
 ## Important Design Properties
@@ -144,7 +142,7 @@ npm test -- tests/qa-stage-registry.test.js
 
 ## Next Steps
 
-1. **Review documentation:** Read [`../internal/qa-validation-layer.md`](../internal/qa-validation-layer.md)
+1. **Review documentation:** See `src/qa/IMPLEMENTATION_GUIDE.md` and tests for details.
 2. **Try it out:** Run QA on an existing analysis
 3. **Enable validators gradually:** Start with one, add more as needed
 4. **Integrate with CI/CD:** Use `--strict STRICT` in pipelines
@@ -168,9 +166,9 @@ npm test -- tests/qa-stage-registry.test.js
 - `tests/qa-stage-runner.test.js`
 - `tests/qa-report-generator.test.js`
 
-**Documentation (2 files):**
-- `docs/internal/qa-validation-layer.md`
+**Documentation:**
 - `docs/quickstart/qa-quickstart.md` (this file)
+- `src/qa/IMPLEMENTATION_GUIDE.md` (implementation details)
 
 **Modified (2 files):**
 - `cli/zeus.js` - Added QA command routing
@@ -187,9 +185,9 @@ npm test -- tests/qa-stage-registry.test.js
 ## Support
 
 For issues or questions, refer to:
-- Full documentation: [`../internal/qa-validation-layer.md`](../internal/qa-validation-layer.md)
 - Test examples: `tests/qa-*.test.js`
 - CLI usage: `node cli/zeus.js qa --help`
+- Implementation: `src/qa/IMPLEMENTATION_GUIDE.md`
 
 ---
 

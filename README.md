@@ -744,7 +744,6 @@ Die Dokumentation ist Safety-first und KI-ready aufgebaut.
 | `docs/cli/` | CLI-Referenz und Beispiele |
 | `docs/workflows/` | geführte Analyse- und Agenten-Workflows |
 | `docs/sql/` | reproduzierbare SQL-Discovery-Skripte |
-| `docs/internal/` | interne Verträge, Modelle und technische Details |
 
 Tool-Katalog nach CLI-Änderungen aktualisieren:
 
@@ -1617,7 +1616,6 @@ The documentation is safety-first and AI-ready.
 | `docs/cli/` | CLI reference and examples |
 | `docs/workflows/` | guided analysis and agent workflows |
 | `docs/sql/` | reproducible SQL discovery scripts |
-| `docs/internal/` | internal contracts, models and technical details |
 
 Regenerate the tool catalog after CLI changes:
 

@@ -38,4 +38,3 @@ Internal knowledge-lab note:
 - raw/intermediate lab outputs are sensitive and disposable
 - lab outputs must not be treated as final project-neutral knowledge
 - only privacy-passed final catalog objects may cross into runtime surfaces
-- policy reference: `docs/internal/knowledge-lab.md`
