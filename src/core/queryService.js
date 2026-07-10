@@ -19,9 +19,11 @@ const {
   escapeSqlLiteral,
   executeReadOnlyDb2QueryWithFallback,
   runReadOnlyDb2Query,
+  runReadOnlyDb2Queries,
   validateReadOnlySql,
   validateSqlIdentifier,
 } = require('../db2/readOnlyQueryService');
+const { normalizeSqlStatements } = require('../db2/sqlBatch');
 const { discoverSchema } = require('../db2/schemaDiscovery');
 
 const DEFAULT_MAX_ROWS = 200;
@@ -237,32 +239,38 @@ function executeQuerySql(args, { cwd = process.cwd() } = {}) {
     throw error;
   }
 
-  let sql = resolveQuerySqlText(args, { cwd });
+  const sqlText = resolveQuerySqlText(args, { cwd });
   const maxRows = parseMaxRows(args['max-rows']);
   const output = normalizeOutput(args.output);
   const defaultSchema = validateDefaultSchema(args['default-schema']);
   const libraryList = normalizeLibraryList(args.liblist);
   const config = resolveAnalyzeConfig(args, { cwd });
   const dbConfig = requireDbConfig(config);
-  const effectiveDbConfig = libraryList.length > 0
-    ? { ...dbConfig, libraryList: libraryList.join(',') }
-    : dbConfig;
-
-  if (defaultSchema) {
-    sql = prependSchemaDirective(sql, defaultSchema);
+  const effectiveDbConfig = {
+    ...dbConfig,
+    ...(defaultSchema ? { defaultSchema } : {}),
+    ...(libraryList.length > 0 ? { libraryList: libraryList.join(',') } : {}),
+  };
+  const statements = normalizeSqlStatements({ sql: sqlText });
+  if (statements.length === 0) {
+    throw new Error('Read-only SQL query is empty.');
   }
+  statements.forEach(validateReadOnlySql);
 
-  validateReadOnlySql(sql);
-  const result = runReadOnlyDb2Query({
+  const batchResult = runReadOnlyDb2Queries({
     dbConfig: effectiveDbConfig,
-    query: sql,
+    queries: statements,
     maxRows,
   });
+  const result = batchResult.statements[0] || { columns: [], rows: [], rowCount: 0 };
   const columns = Array.isArray(result.columns) ? result.columns : [];
 
   return {
     config,
-    sql,
+    sql: statements[0],
+    statements: batchResult.statements,
+    statementCount: Number(batchResult.statementCount || batchResult.statements.length || statements.length),
+    batch: statements.length > 1,
     defaultSchema,
     libraryList,
     maxRows,

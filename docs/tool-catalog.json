@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-08T06:50:35.342Z",
+  "generatedAt": "2026-07-10T18:41:40.207Z",
   "commandRows": [
     {
       "command": "doctor",
@@ -45,10 +45,10 @@
       "command": "fetch",
       "safety": "S2",
       "scope": "IBM i read",
-      "purpose": "Fetch source members/IFS content into the local workspace.",
-      "example": "node cli/zeus.js fetch --profile default-fetch",
+      "purpose": "Fetch source members/IFS content into the local workspace. Supports --system <name> to select a named profile system at operator request without changing the loaded profile.",
+      "example": "node cli/zeus.js fetch --profile combined-fetch-and-query --system dev",
       "usage": [
-        "[--config <path>] fetch --host <hostname> --port <n> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--clean-remote] [--profile <name>] [--verbose]"
+        "[--config <path>] fetch --host <hostname> --port <n> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--clean-remote] [--profile <name>] [--system <name>] [--verbose]"
       ],
       "options": [
         "--config",
@@ -72,6 +72,7 @@
         "--transport-timeout-ms",
         "--clean-remote",
         "--profile",
+        "--system",
         "--verbose"
       ],
       "source": {
@@ -409,10 +410,10 @@
       "command": "query-sql",
       "safety": "S2",
       "scope": "DB2 read",
-      "purpose": "Run read-only SQL statements (SELECT/WITH).",
-      "example": "node cli/zeus.js query-sql --profile default --sql \"SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY\"",
+      "purpose": "Run one or more read-only SQL statements (SELECT/WITH). Semicolon-separated --sql and --file batches execute through one DB2 runner call.",
+      "example": "node cli/zeus.js query-sql --profile default --sql \"SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY; SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1\"",
       "usage": [
-        "[--config <path>] query-sql --profile <name> (--sql \"SELECT ...\" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--save <datei.csv|datei.json>] [--watch <sek>] [--repl] [--json]"
+        "[--config <path>] query-sql --profile <name> (--sql \"SELECT ...[; SELECT ...]\" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--save <datei.csv|datei.json>] [--watch <sek>] [--repl] [--json]"
       ],
       "options": [
         "--config",
@@ -634,10 +635,10 @@
       "command": "write-sql",
       "safety": "S3",
       "scope": "DB2 write",
-      "purpose": "Execute guarded DML with confirmation, backup, and safety preflight options.",
+      "purpose": "Execute one or more guarded DML statements with confirmation, backup, and safety preflight options.",
       "example": "node cli/zeus.js write-sql --profile default --sql \"DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'\" --confirm --backup",
       "usage": [
-        "[--config <path>] write-sql --profile <name> (--sql \"INSERT/UPDATE/DELETE/MERGE ...\" | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup] [--backup-schema <schema>]  # allgemeiner DML-Befehl"
+        "[--config <path>] write-sql --profile <name> (--sql \"INSERT/UPDATE/DELETE/MERGE ...[; ...]\" | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup] [--backup-schema <schema>]  # allgemeiner DML-Befehl"
       ],
       "options": [
         "--config",
@@ -1081,6 +1082,6 @@
     "`upsert`/`upsert-sql`/`insert`/`update` only after explicit user approval",
     "`bridge` only in operator-gated, explicitly approved flows"
   ],
-  "repoRoot": "/home/zeus/dev/zeus-rpg-promptkit",
+  "repoRoot": "zeus-rpg-promptkit",
   "cliFile": "cli/zeus.js"
 }

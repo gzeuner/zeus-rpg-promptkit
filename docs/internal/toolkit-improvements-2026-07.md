@@ -1,7 +1,7 @@
 # Toolkit-Verbesserungen — Juli 2026
 
 Diese Datei dokumentiert die im Juli 2026 umgesetzten Verbesserungen am Zeus RPG PromptKit
-sowie die bewusst noch **offenen Punkte**. Stand: **2026-07-03**.
+sowie die bewusst noch **offenen Punkte**. Stand: **2026-07-09**.
 
 Teststand nach Abschluss: **`npm test` grün — 562 Tests** (contract 13, smoke 4, corpus 1,
 unit 544 / 102 Dateien).
@@ -96,6 +96,49 @@ Diese Tests waren in keinem npm-Skript verdrahtet und schlugen fehl:
   ([`src/mcp/mcpTools.js`](../../src/mcp/mcpTools.js)) kanonisiert jetzt den nächsten
   existierenden Elternpfad, sodass die Workspace-Root-Prüfung für noch nicht angelegte
   Ausgabepfade korrekt greift.
+
+## 6. Runner- und Batch-Verbesserungen
+
+### 6.1 Fetch-Zielsysteme zur Laufzeit wechseln
+
+- `zeus fetch` unterstützt jetzt `--system <name>` zusätzlich zu Profil, Env und CLI-Overrides.
+- `<name>` kann der `systems`-Key, `systemName` oder ein Alias sein.
+- Vorrang: explizite CLI-Verbindungswerte (`--host`, `--user`, `--password`) vor
+  `--system`, danach Env/Profile-Fallbacks.
+- Zweck: Operator oder KI-Agent kann auf Anfrage gezielt ein anderes Quellsystem wählen,
+  ohne das geladene Profil zu ändern.
+
+### 6.2 IBM i Command Runner: Batch, lange Kommandos, QSH-Output
+
+- `IbmiCommandRunner` akzeptiert jetzt lokale Command-Dateien (`--commands-file`) und führt
+  mehrere CL/QSH-Kommandos über eine AS400-Verbindung aus.
+- Node-Wrapper [`src/fetch/jt400CommandRunner.js`](../../src/fetch/jt400CommandRunner.js):
+  - `runClCommand(...)` bleibt rückwärtskompatibel.
+  - `runClCommands({ commands: [...] })` führt Batches aus.
+  - `runQshCommand({ script })` schreibt QSH stdout/stderr in eine temporäre IFS-Datei,
+    liest sie mit korrekter CCSID (`Cp037` default) zurück und gibt `stdout`/`outputText`
+    direkt an Node zurück.
+  - Temporäre QSH-Capture-Dateien werden standardmäßig remote gelöscht.
+
+### 6.3 SQL Runner: Multi-Statement Read und DML-Batches
+
+- Neuer gemeinsamer SQL-Batch-Helper [`src/db2/sqlBatch.js`](../../src/db2/sqlBatch.js):
+  semikolonbewusstes Statement-Splitting, Quote-Behandlung und temporäre Statement-Dateien
+  für lange oder mehrere SQL-Statements.
+- `Db2DiagnosticQueryRunner`:
+  - akzeptiert `--statements-file`
+  - führt mehrere read-only `SELECT`/`WITH` Statements in einer JDBC-Verbindung aus
+  - gibt pro Statement Spalten, Zeilen und `rowCount` zurück
+  - Single-Statement-Ausgabe bleibt kompatibel
+- `Db2WriteQueryRunner`:
+  - akzeptiert `--statements-file`
+  - führt mehrere DML-Statements aus
+  - gibt pro Statement und insgesamt `rowsAffected` zurück
+- CLI:
+  - `query-sql --sql "SELECT ...; SELECT ..."` und `query-sql --file checks.sql`
+    senden die Batch über einen DB2-Runner-Aufruf.
+  - `write-sql`/`upsert`/`insert`/`update`/`delete` akzeptieren DML-Batches; Validierung,
+    Preflight und Backup laufen pro Statement.
 
 ---
 

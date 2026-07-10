@@ -178,7 +178,7 @@ ZEUS_METADATA_DB_USER=IBMI_USER
 ZEUS_METADATA_DB_PASSWORD=***
 ```
 
-Detaillierte System-Konfiguration: [system-environment-setup.md](system-environment-setup.md)
+Detaillierte System-Konfiguration: siehe interne Notes (nicht mehr im Repo enthalten).
 
 ---
 

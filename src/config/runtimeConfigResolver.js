@@ -13,12 +13,73 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const {
   attachConnectionTargetMetadata,
+  buildConnectionTargetMetadata,
   cloneConnectionTargetMetadata,
   describeConnectionTarget,
   getConnectionTargetMetadata,
   listConnectionTargetNames,
 } = require('./connectionTargetMetadata');
 const { resolveSecretValue } = require('../security/secretVault');
+
+function selectFetchSystemOverride(profile, rawProfile, systemName) {
+  const selectedSystem = String(systemName || '').trim();
+  if (!selectedSystem) {
+    return {
+      config: null,
+      rawConfig: null,
+      metadata: null,
+    };
+  }
+
+  const systems = profile && profile.systems && typeof profile.systems === 'object'
+    ? profile.systems
+    : {};
+  const rawSystems = rawProfile && rawProfile.systems && typeof rawProfile.systems === 'object'
+    ? rawProfile.systems
+    : {};
+  const normalizeSystemName = (value) => String(value || '').trim().toUpperCase();
+  const requestedName = normalizeSystemName(selectedSystem);
+  const selectedSystemKey = Object.keys(systems).find((key) => {
+    const candidate = systems[key];
+    if (!candidate || typeof candidate !== 'object') {
+      return false;
+    }
+    const acceptedNames = [
+      key,
+      candidate.systemName,
+      ...(Array.isArray(candidate.aliases) ? candidate.aliases : []),
+    ].map(normalizeSystemName).filter(Boolean);
+    return acceptedNames.includes(requestedName);
+  });
+
+  const systemConfig = selectedSystemKey ? systems[selectedSystemKey] : null;
+  if (!systemConfig || typeof systemConfig !== 'object') {
+    throw new Error(
+      `Fetch system "${selectedSystem}" not found in profile systems. `
+      + `Available systems: ${Object.keys(systems).join(', ') || '(none)'}`,
+    );
+  }
+
+  const rawSystemConfig = rawSystems[selectedSystemKey] || systemConfig;
+  const {
+    displayName: _displayName,
+    systemName: _systemName,
+    aliases: _aliases,
+    resources: _resources,
+    ...connectionFields
+  } = systemConfig;
+
+  return {
+    config: connectionFields,
+    rawConfig: rawSystemConfig,
+    metadata: buildConnectionTargetMetadata({
+      systemKey: selectedSystemKey,
+      systemDefinition: systemConfig,
+      resolvedConfig: connectionFields,
+      source: 'cli-system-override',
+    }),
+  };
+}
 
 function resolveAnalyzeDbRoleConfigs(
   profile,
@@ -231,10 +292,11 @@ function resolveFetchConfig(
   });
   const fetchProfile = profile ? resolveEnvPlaceholdersDeep(profile.fetch || profile, env) : {};
   const rawFetchProfile = rawProfile ? (rawProfile.fetch || rawProfile) : {};
-  const rawFetchTargetMetadata = getConnectionTargetMetadata(rawFetchProfile);
+  const fetchSystemOverride = selectFetchSystemOverride(profile, rawProfile, args.system);
+  const rawFetchTargetMetadata = fetchSystemOverride.metadata || getConnectionTargetMetadata(rawFetchProfile);
   const cliHost = args.host;
   const envHost = env.ZEUS_FETCH_HOST;
-  const profileHost = fetchProfile.host;
+  const profileHost = (fetchSystemOverride.config && fetchSystemOverride.config.host) || fetchProfile.host;
 
   // Auflösungsreihenfolge für sourceLib verfolgen, damit beim Überschreiben durch
   // eine ENV-Variable eine Warnung ausgegeben werden kann.
@@ -255,6 +317,7 @@ function resolveFetchConfig(
     : null;
   const hostEnvOverride = (
     !cliHost
+    && !fetchSystemOverride.config
     && envHost
     && profileHost
     && String(envHost).trim().toUpperCase() !== String(profileHost).trim().toUpperCase()
@@ -270,10 +333,13 @@ function resolveFetchConfig(
     || fetchProfile.files;
 
   const resolved = {
-    host: args.host || env.ZEUS_FETCH_HOST || fetchProfile.host,
-    user: args.user || env.ZEUS_FETCH_USER || fetchProfile.user,
+    host: args.host || (fetchSystemOverride.config && fetchSystemOverride.config.host) || env.ZEUS_FETCH_HOST || fetchProfile.host,
+    user: args.user || (fetchSystemOverride.config && fetchSystemOverride.config.user) || env.ZEUS_FETCH_USER || fetchProfile.user,
     password: resolveSecretValue(
-      args.password || env.ZEUS_FETCH_PASSWORD || fetchProfile.password,
+      args.password
+        || (fetchSystemOverride.config && fetchSystemOverride.config.password)
+        || env.ZEUS_FETCH_PASSWORD
+        || fetchProfile.password,
       { env },
     ),
     sourceLib: String(sourceLibrary || '').toUpperCase(),

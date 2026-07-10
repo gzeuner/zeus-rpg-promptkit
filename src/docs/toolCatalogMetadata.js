@@ -34,8 +34,8 @@ const COMMAND_METADATA = Object.freeze({
   fetch: Object.freeze({
     safety: 'S2',
     scope: 'IBM i read',
-    purpose: 'Fetch source members/IFS content into the local workspace.',
-    example: 'node cli/zeus.js fetch --profile default-fetch',
+    purpose: 'Fetch source members/IFS content into the local workspace. Supports --system <name> to select a named profile system at operator request without changing the loaded profile.',
+    example: 'node cli/zeus.js fetch --profile combined-fetch-and-query --system dev',
   }),
   'fetch-member': Object.freeze({
     safety: 'S2',
@@ -112,8 +112,8 @@ const COMMAND_METADATA = Object.freeze({
   'query-sql': Object.freeze({
     safety: 'S2',
     scope: 'DB2 read',
-    purpose: 'Run read-only SQL statements (SELECT/WITH).',
-    example: 'node cli/zeus.js query-sql --profile default --sql "SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY"',
+    purpose: 'Run one or more read-only SQL statements (SELECT/WITH). Semicolon-separated --sql and --file batches execute through one DB2 runner call.',
+    example: 'node cli/zeus.js query-sql --profile default --sql "SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY; SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1"',
   }),
   joblog: Object.freeze({
     safety: 'S2',
@@ -190,7 +190,7 @@ const COMMAND_METADATA = Object.freeze({
   'write-sql': Object.freeze({
     safety: 'S3',
     scope: 'DB2 write',
-    purpose: 'Execute guarded DML with confirmation, backup, and safety preflight options.',
+    purpose: 'Execute one or more guarded DML statements with confirmation, backup, and safety preflight options.',
     example: 'node cli/zeus.js write-sql --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS=\'X\'" --confirm --backup',
   }),
   upsert: Object.freeze({

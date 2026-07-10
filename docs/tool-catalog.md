@@ -1,13 +1,13 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-07-08 08:50:35
+Last generated: 2026-07-10 20:41:40
 -->
 
 ---
 Title: Zeus RPG PromptKit Tool Catalog
 Description: Verbindlicher, sicherheitsklassifizierter Katalog aller CLI-Befehle und Workflow-Presets fuer Menschen und KI-Assistenten.
-Last Updated: 2026-07-08
+Last Updated: 2026-07-10
 ---
 
 # Zeus RPG PromptKit Tool Catalog
@@ -44,7 +44,7 @@ Related:
 |---|---|---|---|---|
 | `doctor` | `S0` | Local | Validate runtime, profiles, Java/runtime wiring, and env contracts. | `node cli/zeus.js doctor --profile default --show-resolved` |
 | `profiles` | `S0` | Local | List profiles and show masked runtime defaults and resolved routing hints. | `node cli/zeus.js profiles --profile default --show-env` |
-| `fetch` | `S2` | IBM i read | Fetch source members/IFS content into the local workspace. | `node cli/zeus.js fetch --profile default-fetch` |
+| `fetch` | `S2` | IBM i read | Fetch source members/IFS content into the local workspace. Supports --system <name> to select a named profile system at operator request without changing the loaded profile. | `node cli/zeus.js fetch --profile combined-fetch-and-query --system dev` |
 | `fetch-member` | `S2` | IBM i read | Fetch one or more specific source members into a local output directory. | `node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM` |
 | `analyze` | `S1` | Local | Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context, --dense [lite\|full\|ultra] (rank-aware token reduction + compaction), --prompt-max-tokens, --skip-db2-metadata, --reproducible for large programs and CI stability. | `node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000` |
 | `investigate` | `S0` | Local | Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state. Designed for interactive use and MCP agents. | `node cli/zeus.js investigate --program ORDERPGM --profile dev --goal "Focus on error paths" --focus "error paths" --search "dynamic sql" --generate-prompt` |
@@ -57,7 +57,7 @@ Related:
 | `generate-checklist` | `S1` | Local | Generate deployment and change checklist artifacts. | `node cli/zeus.js generate-checklist --program ORDERPGM --type BOTH --impact HIGH --out ./output` |
 | `query-table` | `S2` | DB2 read | Query DB2 table metadata. Supports --json for machine readable output. | `node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA --json` |
 | `resolve-object` | `S2` | DB2 read | Resolve SQL/system object names and optionally verify required columns. | `node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS` |
-| `query-sql` | `S2` | DB2 read | Run read-only SQL statements (SELECT/WITH). | `node cli/zeus.js query-sql --profile default --sql "SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY"` |
+| `query-sql` | `S2` | DB2 read | Run one or more read-only SQL statements (SELECT/WITH). Semicolon-separated --sql and --file batches execute through one DB2 runner call. | `node cli/zeus.js query-sql --profile default --sql "SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY; SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1"` |
 | `joblog` | `S2` | IBM i read | Inspect IBM i joblog messages. | `node cli/zeus.js joblog --profile default --severity ERROR --max-messages 100` |
 | `field-search` | `S0/S2` | Local + IBM i read | Find field/table usage in local sources and or remote members. | `node cli/zeus.js field-search --profile default --field FIELD_ALPHA --table APP_TABLE --source ./rpg_sources --mode all` |
 | `search-source` | `S0` | Local | Search the local source tree by term, member, or table. | `node cli/zeus.js search-source --source-root ./rpg_sources --search-term "CHAIN(" --max-results 50` |
@@ -67,7 +67,7 @@ Related:
 | `qa` | `S1` | Local | Render QA validations/checks to jira, markdown, or json. | `node cli/zeus.js qa --input ./output/ORDERPGM --format markdown --strict STRICT` |
 | `inspect-object` | `S2` | IBM i read | Read object metadata and journaling details. | `node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_00 --type *FILE --journal` |
 | `test-run` | `S2/S1` | DB2 read + local | Capture before and after test snapshots plus rollback SQL text. | `node cli/zeus.js test-run start --profile default --program ORDERPGM --table APPLIB.APP_TABLE_00 --key ID=1` |
-| `write-sql` | `S3` | DB2 write | Execute guarded DML with confirmation, backup, and safety preflight options. | `node cli/zeus.js write-sql --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'" --confirm --backup` |
+| `write-sql` | `S3` | DB2 write | Execute one or more guarded DML statements with confirmation, backup, and safety preflight options. | `node cli/zeus.js write-sql --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'" --confirm --backup` |
 | `upsert` | `S3` | DB2 write | DML wrapper for INSERT/UPDATE/DELETE/MERGE with guardrails. | `node cli/zeus.js upsert --profile default --sql "UPDATE APPDATA.APP_TABLE_00 SET STATUS='X' WHERE ID=1"` |
 | `upsert-sql` | `S3` | DB2 write | Backward-compatible alias for the upsert flow. | `node cli/zeus.js upsert-sql --profile default --sql "INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)"` |
 | `insert` | `S3` | DB2 write | Strict insert-only DML command. | `node cli/zeus.js insert --profile default --sql "INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)"` |
@@ -113,4 +113,4 @@ Related:
 
 - Regenerate with `zeus docs:generate-catalog` after CLI command-surface changes.
 - Command metadata lives in `src/docs/toolCatalogMetadata.js`.
-- Proposal and background: [`internal/generate-tool-catalog-proposal.md`](internal/generate-tool-catalog-proposal.md).
+- Historical proposal is no longer needed; generation logic lives in `cli/commands/generate-tool-catalog.js`.

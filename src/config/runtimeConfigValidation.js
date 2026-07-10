@@ -232,6 +232,7 @@ function validateFetchProfile(value, label) {
   assertOptionalString(value.host, `${label}.host`);
   assertOptionalString(value.user, `${label}.user`);
   assertOptionalString(value.password, `${label}.password`);
+  assertOptionalString(value.system, `${label}.system`);
   assertOptionalString(value.sourceLib, `${label}.sourceLib`);
   assertOptionalString(value.sourceLibrary, `${label}.sourceLibrary`);
   assertOptionalString(value.ifsDir, `${label}.ifsDir`);

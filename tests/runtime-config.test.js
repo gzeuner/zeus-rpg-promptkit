@@ -23,6 +23,7 @@ const {
   validateProfiles,
 } = require('../src/config/runtimeConfig');
 const { getRuntimeConfigMetadata } = require('../src/config/dbRuntimeConfigDiagnostics');
+const { listConnectionTargetNames } = require('../src/config/connectionTargetMetadata');
 const { encryptSecret } = require('../src/security/secretVault');
 
 function createTempProject(profiles) {
@@ -669,6 +670,87 @@ test('resolveFetchConfig resolves fetch port from profile and environment overri
       },
     );
     assert.equal(configFromArgs.port, 2022);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveFetchConfig allows fetch to switch to another named system via CLI', () => {
+  const tempRoot = createTempProject({
+    multi: {
+      systems: {
+        dev: {
+          displayName: 'Development IBM i',
+          systemName: 'SYSDEV',
+          aliases: ['DEVBOX'],
+          host: 'dev-host',
+          user: 'dev-user',
+          password: 'dev-pass',
+        },
+        prodro: {
+          displayName: 'Read-only IBM i',
+          systemName: 'SYSPROD',
+          aliases: ['PRODRO'],
+          host: 'prod-host',
+          user: 'prod-user',
+          password: 'prod-pass',
+        },
+      },
+      fetch: {
+        system: 'dev',
+        sourceLib: 'SOURCEDEV',
+        ifsDir: '/home/dev',
+        out: './download',
+      },
+    },
+  });
+
+  try {
+    const config = resolveFetchConfig(
+      { profile: 'multi', system: 'SYSPROD' },
+      {
+        cwd: tempRoot,
+        env: {
+          ZEUS_FETCH_HOST: 'stale-env-host',
+          ZEUS_FETCH_USER: 'stale-env-user',
+          ZEUS_FETCH_PASSWORD: 'stale-env-pass',
+        },
+      },
+    );
+
+    assert.equal(config.host, 'prod-host');
+    assert.equal(config.user, 'prod-user');
+    assert.equal(config.password, 'prod-pass');
+    assert.equal(config.sourceLib, 'SOURCEDEV');
+    assert.equal(config.hostEnvOverride, null);
+    assert.deepEqual(listConnectionTargetNames(config), ['PRODRO', 'SYSPROD', 'PROD-HOST']);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveFetchConfig reports unknown fetch system overrides clearly', () => {
+  const tempRoot = createTempProject({
+    multi: {
+      systems: {
+        dev: {
+          host: 'dev-host',
+        },
+      },
+      fetch: {
+        system: 'dev',
+        sourceLib: 'SOURCEDEV',
+        ifsDir: '/home/dev',
+        out: './download',
+      },
+    },
+  });
+
+  try {
+    assert.throws(
+      () => resolveFetchConfig({ profile: 'multi', system: 'missing' }, { cwd: tempRoot, env: {} }),
+      /Fetch system "missing" not found in profile systems. Available systems: dev/,
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

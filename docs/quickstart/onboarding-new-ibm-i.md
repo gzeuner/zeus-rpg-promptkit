@@ -1,7 +1,7 @@
 ---
 Title: Onboarding to a New IBM i / AS400 System
 Description: Step-by-step guide to connect Zeus to a fresh IBM i system, discover sources, objects, metadata and data.
-Last Updated: 2026-06-20
+Last Updated: 2026-07-09
 ---
 
 # Onboarding to a New IBM i System with Zeus RPG PromptKit
@@ -149,6 +149,12 @@ node cli/zeus.js field-search --profile new-system --field CUSTOMER_ID --mode al
 ```
 
 Use `zeus fetch` with `--source-lib` or profile `fetch.sourceLib` to pull members.
+For profiles with several named systems, add `--system <name>` to select the target by
+`systems` key, `systemName`, or alias at runtime:
+
+```bash
+node cli/zeus.js fetch --profile new-system --system dev --members ORDERPGM
+```
 
 After fetch: sources land in `./rpg_sources` (or your `ZEUS_FETCH_OUT`).
 
@@ -200,6 +206,21 @@ node cli/zeus.js query-sql --profile new-system \
   --sql "SELECT * FROM APPDATA.CUSTOMERS FETCH FIRST 5 ROWS ONLY" \
   --max-rows 5
 ```
+
+`query-sql` can also run read-only batches from `--sql` or `--file` when statements are
+separated by semicolons. This is useful for discovery passes where one connection should
+return several catalog snapshots:
+
+```bash
+node cli/zeus.js query-sql --profile new-system \
+  --sql "SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1; SELECT CURRENT_SERVER FROM SYSIBM.SYSDUMMY1" \
+  --output json
+```
+
+Guarded DML commands (`write-sql`, `insert`, `update`, `delete`) also accept
+semicolon-separated batches. They still require the normal approval path and run
+validation, preflight, backup, production-profile blocks, and row-safety checks per
+statement.
 
 ## 8. Recommended First Workflow for a New System
 

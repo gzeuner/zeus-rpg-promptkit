@@ -77,5 +77,5 @@ flowchart TD
 - Dokumentänderungen sollen Safety-Level und Scope-Terminologie konsistent halten (`S0` bis `S4`).
 - Regenerierung funktioniert direkt ueber `zeus docs:generate-catalog` oder `zeus docs generate-catalog` und haelt den Tool-Katalog aktuell.
 - Optional maschinenlesbar: `zeus docs:generate-catalog --json-output docs/tool-catalog.json`.
-- Tool catalog generator (implemented): [`internal/generate-tool-catalog-proposal.md`](internal/generate-tool-catalog-proposal.md).
+- Tool catalog is auto-generated from code (see `zeus docs:generate-catalog`).
 - Toolkit-Verbesserungen & offene Punkte (Juli 2026): [`internal/toolkit-improvements-2026-07.md`](internal/toolkit-improvements-2026-07.md).
