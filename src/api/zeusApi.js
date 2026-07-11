@@ -111,6 +111,16 @@ try {
   // Graceful: callers can always create their own isolated registries.
 }
 
+const { createCapabilityRegistry, TINY_VERSION_CAPABILITY } = require('../core/capabilityRegistry');
+const capabilityRegistry = createCapabilityRegistry();
+
+try {
+  capabilityRegistry.register(TINY_VERSION_CAPABILITY);
+  // Foundation only: seal can be called by bootstrap in future packages
+} catch (e) {
+  // ignore in early load
+}
+
 // Core functions
 async function runWorkflow(profile, preset, options = {}) {
   const { runtime = {}, ...args } = options;
@@ -222,6 +232,10 @@ const zeus = {
   components: new ComponentRegistry(),
   analyzeStages: analyzeStageRegistry,
 
+  // Package 05: unified capability registry foundation (additive)
+  capabilities: capabilityRegistry,
+  createCapabilityRegistry,
+
   // Package 02: versioned domain schema registry (additive)
   contracts: {
     schemaRegistry,
@@ -274,6 +288,10 @@ module.exports = {
   // Schema / contract foundation (package 02)
   createSchemaRegistry,
   contracts: zeus.contracts,
+
+  // Capability registry foundation (package 05)
+  createCapabilityRegistry,
+  capabilities: zeus.capabilities,
 
   zeus,
   createZeus: () => ({ ...zeus }),
