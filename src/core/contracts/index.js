@@ -14,9 +14,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const { createSchemaRegistry } = require('./schemaRegistry');
 const { SchemaValidationError, normalizeValidationErrors } = require('./errors');
+const artifactReference = require('./artifactReference');
+const runManifest = require('./runManifest');
 
 module.exports = {
   createSchemaRegistry,
   SchemaValidationError,
   normalizeValidationErrors,
+  artifactReference,
+  runManifest,
 };

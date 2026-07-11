@@ -55,11 +55,29 @@ const runManifestSchema = (value) => {
     if (typeof value.run !== 'object' || value.run === null) {
       errors.push({ path: '/run', message: 'run object is required' });
     }
+    if (Array.isArray(value.artifacts)) {
+      value.artifacts.forEach((a, i) => {
+        if (a && typeof a.path === 'string' && (a.path.startsWith('/') || a.path.includes('..'))) {
+          errors.push({ path: `/artifacts/${i}/path`, message: 'artifact path must be relative and safe' });
+        }
+      });
+    }
   }
   return errors;
 };
 
-const artifactReferenceSchema = basicHeaderValidator(1);
+const artifactReferenceSchema = (value) => {
+  const errors = basicHeaderValidator(1)(value);
+  if (value && typeof value === 'object') {
+    if (typeof value.path !== 'string' || !value.path) {
+      errors.push({ path: '/path', message: 'path is required and must be a string' });
+    }
+    if (value.path && (value.path.startsWith('/') || value.path.includes('..'))) {
+      errors.push({ path: '/path', message: 'path must be relative and safe (no absolute or traversal)' });
+    }
+  }
+  return errors;
+};
 
 const investigationSessionSchema = basicHeaderValidator(1);
 
