@@ -1,7 +1,7 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-07-11 11:52:32
+Last generated: 2026-07-11 14:14:41
 -->
 
 ---
@@ -78,9 +78,9 @@ Related:
 | `pui-edit` | `S1` | Local | Apply structured UI edit operations to local display artifacts. | `node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json` |
 | `docs:generate-catalog` | `S0` | Local read-only | Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`. | `node cli/zeus.js docs:generate-catalog` |
 | `mcp` | `S0` | Local read-mostly | Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools. | `node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run` |
-| `discover-environment` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js discover-environment` |
+| `discover-environment` | `S0` | Local | Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion. | `node cli/zeus.js discover-environment --profile dev --json` |
 | `pui-inspect` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js pui-inspect` |
-| `resources` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js resources` |
+| `resources` | `S0` | Local | Show resolved resource model (Source/Objects/Metadata/Data) per system. | `node cli/zeus.js resources --profile dev --json` |
 | `secret` | `S0` | Local | Manage encrypted credentials (Secret Vault). Create key (init-key [--windows] for DPAPI on Windows), encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. Supports migrate, check (with --warn-only), status. | `node cli/zeus.js secret init-key --windows && node cli/zeus.js secret encrypt --value "myDbPass"` |
 | `sql` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js sql` |
 | `trace` | `S0` | Local | Command metadata missing; update src/docs/toolCatalogMetadata.js. | `node cli/zeus.js trace` |
