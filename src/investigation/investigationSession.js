@@ -15,8 +15,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 
+const { createSchemaRegistry } = require('../core/contracts');
+const { INITIAL_SCHEMAS, CONTRACT_IDS } = require('../core/contracts/schemas');
+
 const SESSION_DIR = '.investigations';
 const SESSION_FILE = 'session.json';
+const INVESTIGATION_SESSION_CONTRACT = `${CONTRACT_IDS.INVESTIGATION_SESSION}@1`;
+const INVESTIGATION_SESSION_VERSION = 1;
+
+const schemaRegistry = createSchemaRegistry();
+try {
+  Object.entries(INITIAL_SCHEMAS).forEach(([id, def]) => {
+    schemaRegistry.register({ id, version: def.version, schema: def.schema });
+  });
+} catch (e) {
+  // ignore duplicate registration
+}
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -29,6 +43,80 @@ function getSessionRoot(outputProgramDir) {
 function buildSessionId() {
   const now = new Date();
   return `inv-${now.toISOString().replace(/[:.]/g, '').slice(0, 15)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createDefaultSession(id, outputProgramDir, goal) {
+  const focus = {
+    programs: [],
+    tables: [],
+    searchScopes: [],
+  };
+  return {
+    schemaVersion: INVESTIGATION_SESSION_VERSION,
+    contract: INVESTIGATION_SESSION_CONTRACT,
+    id,
+    createdAt: new Date().toISOString(),
+    lastActiveAt: new Date().toISOString(),
+    baseAnalysisDir: outputProgramDir,
+    goal: goal || '',
+    // Legacy focus kept for CLI/API compat
+    focus,
+    // Conceptual sections per package 04
+    scope: { ...focus, sourceRuns: focus.searchScopes || [] },
+    evidence: [],           // factual references (artifact ids, search results, etc.)
+    searches: [],           // performed searches/queries
+    findings: [],           // observations
+    uncertainties: [],      // unresolved items
+    impact: [],             // impact/risk observations
+    recommendations: [],    // tests/checks
+    decisions: [],          // human decisions/notes
+    artifacts: [],          // generated artifact references
+    history: [],            // append-only chronology
+    metadata: {},
+  };
+}
+
+function normalizeLegacySession(raw, outputProgramDir) {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const normalized = { ...raw };
+
+  // Add version/contract if missing (legacy pre-contract sessions)
+  if (!normalized.schemaVersion) {
+    normalized.schemaVersion = INVESTIGATION_SESSION_VERSION;
+    normalized.contract = INVESTIGATION_SESSION_CONTRACT;
+  }
+
+  // Map old focus to scope for compatibility
+  if (raw.focus && !normalized.scope) {
+    normalized.scope = {
+      programs: raw.focus.programs || [],
+      tables: raw.focus.tables || [],
+      sourceRuns: raw.focus.searchScopes || [],
+    };
+  }
+  if (!normalized.scope) {
+    normalized.scope = { programs: [], tables: [], sourceRuns: [] };
+  }
+
+  // Move history if present
+  if (!Array.isArray(normalized.history)) normalized.history = [];
+
+  // Ensure new sections exist
+  ['evidence', 'searches', 'findings', 'uncertainties', 'impact', 'recommendations', 'decisions', 'artifacts'].forEach(sec => {
+    if (!Array.isArray(normalized[sec])) normalized[sec] = [];
+  });
+
+  if (!normalized.metadata) normalized.metadata = {};
+
+  // Preserve old goal/focus for CLI compat where accessed directly
+  normalized.goal = raw.goal || normalized.goal || '';
+  normalized.focus = raw.focus || normalized.scope; // alias for backward
+
+  normalized.lastActiveAt = new Date().toISOString();
+
+  return normalized;
 }
 
 /**
@@ -63,33 +151,28 @@ function createOrLoadSession({ outputProgramDir, sessionId = null, goal = '' }) 
   let session;
   if (fs.existsSync(sessionPath)) {
     try {
-      session = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+      const raw = JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+      session = normalizeLegacySession(raw, outputProgramDir);
     } catch (_) {
       session = null;
     }
   }
 
   if (!session) {
-    session = {
-      id: activeSessionId,
-      createdAt: new Date().toISOString(),
-      lastActiveAt: new Date().toISOString(),
-      baseAnalysisDir: outputProgramDir,
-      goal: goal || '',
-      focus: {
-        programs: [],
-        tables: [],
-        searchScopes: [],
-      },
-      history: [],
-      metadata: {},
-    };
+    session = createDefaultSession(activeSessionId, outputProgramDir, goal);
   } else {
     session.lastActiveAt = new Date().toISOString();
   }
 
-  // Persist
-  fs.writeFileSync(sessionPath, JSON.stringify(session, null, 2), 'utf8');
+  // Validate against contract (package 04)
+  const validation = schemaRegistry.validate(CONTRACT_IDS.INVESTIGATION_SESSION, INVESTIGATION_SESSION_VERSION, session);
+  if (!validation.ok) {
+    // Attach for diagnostics but do not block load for legacy compat
+    session._validation = { ok: false, errors: validation.errors };
+  }
+
+  // Atomic write
+  writeSessionAtomic(sessionPath, session);
 
   return {
     session,
@@ -98,28 +181,35 @@ function createOrLoadSession({ outputProgramDir, sessionId = null, goal = '' }) 
   };
 }
 
+function writeSessionAtomic(sessionPath, session) {
+  const tmp = sessionPath + '.tmp-' + process.pid + '-' + Date.now();
+  fs.writeFileSync(tmp, JSON.stringify(session, null, 2), 'utf8');
+  fs.renameSync(tmp, sessionPath);
+}
+
 function recordInvestigationEvent(sessionContext, event) {
   const { session, sessionPath } = sessionContext;
-  if (!session.history) session.history = [];
+  if (!Array.isArray(session.history)) session.history = [];
 
   session.history.push({
     at: new Date().toISOString(),
     ...event,
   });
 
-  fs.writeFileSync(sessionPath, JSON.stringify(session, null, 2), 'utf8');
+  writeSessionAtomic(sessionPath, session);
   return session;
 }
 
 function updateFocus(sessionContext, focusUpdate) {
   const { session, sessionPath } = sessionContext;
-  session.focus = {
-    ...session.focus,
-    ...focusUpdate,
-  };
+  if (!session.scope) session.scope = { programs: [], tables: [], sourceRuns: [] };
+  if (!session.focus) session.focus = session.scope;
+
+  session.focus = { ...session.focus, ...focusUpdate };
+  session.scope = { ...session.scope, ...focusUpdate };
   session.lastActiveAt = new Date().toISOString();
 
-  fs.writeFileSync(sessionPath, JSON.stringify(session, null, 2), 'utf8');
+  writeSessionAtomic(sessionPath, session);
   return session;
 }
 
@@ -140,6 +230,7 @@ function listSessions(outputProgramDir) {
           createdAt: data.createdAt,
           lastActiveAt: data.lastActiveAt,
           goal: data.goal || '',
+          schemaVersion: data.schemaVersion || 0,
         };
       } catch {
         return { id: name, createdAt: null };
@@ -152,8 +243,9 @@ function listSessions(outputProgramDir) {
  * Apply a focus update to the session (e.g. narrow to certain programs/tables).
  */
 function applyFocus(sessionContext, focusPatch) {
-  const { session } = sessionContext;
-  if (!session.focus) session.focus = { programs: [], tables: [], searchScopes: [] };
+  const { session, sessionPath } = sessionContext;
+  if (!session.scope) session.scope = { programs: [], tables: [], sourceRuns: [] };
+  if (!session.focus) session.focus = session.scope;
 
   const current = session.focus;
   const next = {
@@ -163,9 +255,10 @@ function applyFocus(sessionContext, focusPatch) {
   };
 
   session.focus = next;
+  session.scope = next;
   session.lastActiveAt = new Date().toISOString();
 
-  fs.writeFileSync(sessionContext.sessionPath, JSON.stringify(session, null, 2), 'utf8');
+  writeSessionAtomic(sessionPath, session);
 
   recordInvestigationEvent(sessionContext, {
     type: 'focus-applied',
@@ -192,10 +285,15 @@ function recordSearch(sessionContext, searchResult) {
  * Get the current focused context summary.
  */
 function getFocusedContext(session) {
-  if (!session || !session.focus) {
+  if (!session) {
     return { programs: [], tables: [], searchScopes: [] };
   }
-  return { ...session.focus };
+  const f = session.focus || session.scope || {};
+  return {
+    programs: f.programs || [],
+    tables: f.tables || [],
+    searchScopes: f.searchScopes || f.sourceRuns || [],
+  };
 }
 
 module.exports = {

@@ -79,7 +79,31 @@ const artifactReferenceSchema = (value) => {
   return errors;
 };
 
-const investigationSessionSchema = basicHeaderValidator(1);
+const investigationSessionSchema = (value) => {
+  const errors = basicHeaderValidator(1)(value);
+  if (!value || typeof value !== 'object') return errors;
+
+  if (typeof value.id !== 'string' || !value.id) {
+    errors.push({ path: '/id', message: 'id is required' });
+  }
+  if (typeof value.goal !== 'string') {
+    errors.push({ path: '/goal', message: 'goal must be a string' });
+  }
+  if (!value.focus || typeof value.focus !== 'object') {
+    errors.push({ path: '/focus', message: 'focus object is required' });
+  }
+  if (!Array.isArray(value.history)) {
+    errors.push({ path: '/history', message: 'history must be an array' });
+  }
+  // Evidence vs interpretation separation hint (future strict)
+  if (value.evidence && !Array.isArray(value.evidence)) {
+    errors.push({ path: '/evidence', message: 'evidence should be an array if present' });
+  }
+  if (value.findings && !Array.isArray(value.findings)) {
+    errors.push({ path: '/findings', message: 'findings should be an array if present' });
+  }
+  return errors;
+};
 
 const safetyPolicySchema = (value) => {
   const errors = basicHeaderValidator(1)(value);
