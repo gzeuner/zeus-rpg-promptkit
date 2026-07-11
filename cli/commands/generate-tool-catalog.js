@@ -210,6 +210,9 @@ function buildCatalogModel({ repoRoot }) {
         profiles: 'configure.profiles',
         resources: 'configure.resources',
         'discover-environment': 'configure.discover-environment',
+        analyze: 'analysis.analyze',
+        workflow: 'analysis.workflow',
+        bundle: 'bundle.create',
       };
       const capId = capIdMap[command];
       if (capId) {
