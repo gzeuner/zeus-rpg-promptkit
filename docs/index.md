@@ -23,7 +23,7 @@ Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 | `ai/` | KI-Verträge, Session-Patterns, Validierung | [`ai/session-prompt.md`](ai/session-prompt.md) | AI Agents, Prompt Engineers |
 | `cli/` | Referenz und praxisnahe Kommando-Beispiele | [`cli/reference.md`](cli/reference.md) | Entwickler:innen, Operatoren |
 | `quickstart/` | Schneller produktiver Einstieg inkl. **How-To: Credentials verschlüsseln/entschlüsseln** | [`quickstart/5-minutes.md`](quickstart/5-minutes.md), [`quickstart/secrets-and-overrides.md`](quickstart/secrets-and-overrides.md) (Secret Vault), [`quickstart/onboarding-new-ibm-i.md`](quickstart/onboarding-new-ibm-i.md) | Neue Teammitglieder, System-Onboarding |
-| `architecture/` | Runtime-, Config- und Systemmodell-Reviews | [`architecture/runtime-config-model-review.md`](architecture/runtime-config-model-review.md) | Maintainer, Tooling Engineers |
+| `architecture/` | Architecture baseline, ADRs, runtime config, dependency rules, capability model, and safety trust zones | [`architecture/index.md`](architecture/index.md) | Maintainer, Tooling Engineers, Architects |
 | `mcp/` | Lokaler MCP-Betrieb, Policy-Grenzen und Troubleshooting | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Operatoren, AI-Integratoren |
 | `workflows/` | Geführte Analyse- und Agenten-Workflows | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Analysten, Architekten |
 | `safety/` | Safety-Guidance, Governance, Sharing | [`safety/best-practice-guide.md`](safety/best-practice-guide.md) | Reviewer, Security, Leads |
@@ -39,7 +39,7 @@ Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 | MCP operator setup | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Start-/Policy-/Audit-Referenz fuer lokalen MCP-Betrieb |
 | Prompt schema and constraints | [`ai/prompt-contracts.md`](ai/prompt-contracts.md) | Verhindert inkonsistente Prompt-Ausgaben |
 | Workflow options | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Zeigt Opt-in Vertiefungsfeatures |
-| Runtime config architecture | [`architecture/runtime-config-model-review.md`](architecture/runtime-config-model-review.md) | Erklaert Prioritaeten, Profilstruktur und lokale Tooling-Vertraege |
+| Architecture decisions & baseline | [`architecture/index.md`](architecture/index.md) | ADRs for kernel, dependencies, contracts, registry, and safety zones |
 | Safe sharing guidance | [`safety/safe-sharing.md`](safety/safe-sharing.md) | Reduktions-/Sanitization-Regeln für externe Nutzung |
 | CLI examples | [`cli/examples.md`](cli/examples.md) | Schnell nutzbare, reproduzierbare Befehlsmuster |
 | DB2 discovery SQL | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql) | Standardisierte Discovery-Queries fuer System- und Ticketkontext |
@@ -72,6 +72,7 @@ flowchart TD
 ## Governance Notes
 
 - `docs/tool-catalog.md` bleibt die verbindliche Referenz für KI-Assistenten.
+- `docs/architecture/index.md` (und die ADRs darin) sind die autoritative Quelle für Produkt-Kernel, Abhängigkeitsrichtung, versionierte Verträge, Capability-Registry und Safety-Trust-Zones.
 - CLI und MCP bleiben der unterstützte Produktpfad; der lokale Viewer ist optional und experimentell.
 - Dokumentänderungen sollen Safety-Level und Scope-Terminologie konsistent halten (`S0` bis `S4`).
 - Regenerierung funktioniert direkt ueber `zeus docs:generate-catalog` oder `zeus docs generate-catalog` und haelt den Tool-Katalog aktuell.

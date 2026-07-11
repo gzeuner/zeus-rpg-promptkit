@@ -11,6 +11,8 @@ Env-vars must always be set by the user (security boundary). AI and users share 
 
 ## 1. Project Architecture
 
+**Authoritative source:** See `docs/architecture/index.md` and the ADRs (001–005) for the accepted product kernel definition, dependency direction rules, versioned contract policy, capability registry strategy, and safety trust zones (S0–S4). The diagram and notes below reflect the implementation at the time the baseline was captured.
+
 ```
 cli/zeus.js                    Entry point. Routes commands to src/cli/commands/.
 src/
