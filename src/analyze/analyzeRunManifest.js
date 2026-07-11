@@ -23,8 +23,24 @@ const {
   replaceExactStringsDeep,
 } = require('../reproducibility/reproducibility');
 
+const { buildRunManifestBase } = require('../core/contracts/runManifest');
+const { buildArtifactReference } = require('../core/contracts/artifactReference');
+const { createSchemaRegistry } = require('../core/contracts');
+const { INITIAL_SCHEMAS, CONTRACT_IDS } = require('../core/contracts/schemas');
+
 const ANALYZE_RUN_MANIFEST_FILE = 'analyze-run-manifest.json';
 const MANIFEST_SCHEMA_VERSION = 1;
+const RUN_MANIFEST_CONTRACT = `${CONTRACT_IDS.RUN_MANIFEST}@${MANIFEST_SCHEMA_VERSION}`;
+
+// Shared registry instance for validation in this module (seeded with package 02+03 shells)
+const schemaRegistry = createSchemaRegistry();
+try {
+  Object.entries(INITIAL_SCHEMAS).forEach(([id, def]) => {
+    schemaRegistry.register({ id, version: def.version, schema: def.schema });
+  });
+} catch (e) {
+  // ignore if already registered in some load orders
+}
 
 function hashContent(content) {
   return crypto.createHash('sha256').update(content).digest('hex');
@@ -69,12 +85,19 @@ function buildArtifacts(outputProgramDir, generatedFiles) {
     const sizeBytes = exists ? fs.statSync(absolutePath).size : 0;
     const sha256 = exists ? hashContent(fs.readFileSync(absolutePath)) : null;
 
-    return {
+    // Use normalized builder (package 03) but keep legacy fields for compatibility
+    const ref = buildArtifactReference({
       path: fileName,
       kind: inferArtifactKind(fileName),
-      exists,
       sizeBytes,
       sha256,
+      producer: 'analyze',
+    });
+
+    // Preserve the previous flat shape + exists for backward compat with existing consumers/tests
+    return {
+      ...ref,
+      exists,
     };
   });
 }
@@ -191,12 +214,10 @@ function buildAnalyzeRunManifest({
     result && Array.isArray(result.generatedFiles) ? result.generatedFiles : null,
   );
 
-  const manifest = {
-    schemaVersion: MANIFEST_SCHEMA_VERSION,
-    tool: {
-      name: 'zeus-rpg-promptkit',
-      command: 'analyze',
-    },
+  // Use shared run manifest builder (package 03) for consistent contract
+  const baseManifest = buildRunManifestBase({
+    tool: { name: 'zeus-rpg-promptkit', command: 'analyze' },
+    command: 'analyze',
     run: {
       status,
       startedAt: context.startedAt,
@@ -260,6 +281,13 @@ function buildAnalyzeRunManifest({
       sourceSnapshot,
       importManifest: importManifestSummary,
     },
+    artifacts,
+  });
+
+  // Preserve full legacy structure for compatibility (enrich, do not break)
+  const manifest = {
+    ...baseManifest,
+    schemaVersion: MANIFEST_SCHEMA_VERSION, // keep for existing readers
     summary: buildSummary(stageReports, diagnostics, artifacts, sourceSnapshot),
     cacheStatus: result && result.cacheStatus ? result.cacheStatus : null,
     diagnostics,
@@ -273,7 +301,7 @@ function buildAnalyzeRunManifest({
       metadata: stage.metadata || {},
       diagnostics: stage.diagnostics || [],
     })),
-    artifacts,
+    artifacts, // already normalized + legacy fields
   };
 
   const pathReplacements = reproducibility.enabled
@@ -317,6 +345,13 @@ function buildAnalyzeRunManifest({
   });
   manifest.comparison = buildComparison(previousManifest, manifest, reproducibility);
 
+  // Package 03: validate against contract before returning/writing
+  const validation = schemaRegistry.validate(CONTRACT_IDS.RUN_MANIFEST, MANIFEST_SCHEMA_VERSION, manifest);
+  if (!validation.ok) {
+    // Attach validation errors but do not break existing runs (log-style for now, tests will cover failure paths)
+    manifest.validationErrors = validation.errors;
+  }
+
   if (!reproducibility.enabled) {
     return manifest;
   }
@@ -333,7 +368,14 @@ function readAnalyzeRunManifest(outputProgramDir) {
     return null;
   }
 
-  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+  // Package 03: validate on read at trust boundary
+  const validation = schemaRegistry.validate(CONTRACT_IDS.RUN_MANIFEST, MANIFEST_SCHEMA_VERSION, manifest);
+  if (!validation.ok) {
+    manifest._validation = { ok: false, errors: validation.errors };
+  }
+  return manifest;
 }
 
 function writeAnalyzeRunManifest(outputProgramDir, manifest) {

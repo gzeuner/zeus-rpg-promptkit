@@ -32,10 +32,22 @@ const {
   resolveTimestamp,
 } = require('../reproducibility/reproducibility');
 
+const { buildRunManifestBase } = require('../core/contracts/runManifest');
+const { buildArtifactReference } = require('../core/contracts/artifactReference');
+const { createSchemaRegistry } = require('../core/contracts');
+const { INITIAL_SCHEMAS, CONTRACT_IDS } = require('../core/contracts/schemas');
+
 const MANIFEST_FILE = 'bundle-manifest.json';
 const ZIP_MANIFEST_FILE = 'manifest.json';
 const README_FILE = 'README.txt';
 const BUNDLE_MANIFEST_SCHEMA_VERSION = 1;
+
+const schemaRegistry = createSchemaRegistry();
+try {
+  Object.entries(INITIAL_SCHEMAS).forEach(([id, def]) => {
+    schemaRegistry.register({ id, version: def.version, schema: def.schema });
+  });
+} catch (e) {}
 
 function hashContent(content) {
   return crypto.createHash('sha256').update(content).digest('hex');
@@ -183,12 +195,23 @@ function buildArtifactMetadata(files, analyzeManifest) {
 function buildManifest(program, files, analyzeManifest, workflowPreset, safeSharingEnabled, reproducibility) {
   const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
   const artifacts = buildArtifactMetadata(files, analyzeManifest);
-  const manifest = {
-    schemaVersion: BUNDLE_MANIFEST_SCHEMA_VERSION,
-    tool: {
-      name: 'zeus-rpg-promptkit',
-      command: 'bundle',
+
+  // Use shared builder (package 03) for contract consistency, keep legacy shape
+  const base = buildRunManifestBase({
+    tool: { name: 'zeus-rpg-promptkit', command: 'bundle' },
+    command: 'bundle',
+    run: {
+      startedAt: resolveTimestamp(reproducibilitySettings),
     },
+    inputs: {
+      program: normalizeProgramName(program).toUpperCase(),
+    },
+    artifacts: artifacts.map((a) => ({ ...a, producer: 'bundle' })),
+  });
+
+  const manifest = {
+    ...base,
+    schemaVersion: BUNDLE_MANIFEST_SCHEMA_VERSION,
     program: normalizeProgramName(program).toUpperCase(),
     generatedAt: resolveTimestamp(reproducibilitySettings),
     files: files.map((file) => file.name),
@@ -277,6 +300,12 @@ function buildManifest(program, files, analyzeManifest, workflowPreset, safeShar
       workflowPreset: manifest.workflowPreset,
     }),
   );
+
+  // Package 03: validate bundle manifest contract before writing
+  const validation = schemaRegistry.validate(CONTRACT_IDS.RUN_MANIFEST, BUNDLE_MANIFEST_SCHEMA_VERSION, manifest);
+  if (!validation.ok) {
+    manifest._validation = { ok: false, errors: validation.errors };
+  }
 
   return manifest;
 }
