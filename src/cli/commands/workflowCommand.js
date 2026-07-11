@@ -143,7 +143,18 @@ async function runWorkflow(args) {
       return;
     }
     try {
-      const state = await runWorkflowEngine(args);
+      // Route through capability (package 07)
+      let state;
+      try {
+        const { capabilities } = require('../../api/zeusApi');
+        const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('analysis.workflow', { cwd: process.cwd(), env: process.env, args }, args) : null;
+        if (res && res.ok && res.result) {
+          state = res.result;
+        }
+      } catch (e) {}
+      if (!state) {
+        state = await runWorkflowEngine(args);
+      }
       const json = createJsonOutput(args);
       if (json.isJsonMode) {
         json.print(state);

@@ -218,6 +218,75 @@ try {
     },
   });
 
+  capabilityRegistry.register({
+    id: 'analysis.analyze',
+    version: 1,
+    title: 'Analyze Workspace',
+    description: 'Analyze RPG/CL/DDS and emit structured evidence artifacts.',
+    category: 'analysis',
+    safety: { level: 'S1', sideEffects: ['local-artifact-write'], requiresExplicitApproval: false },
+    aliases: ['analyze'],
+    inputContract: null,
+    outputContract: null,
+    availability: { cli: true, mcp: true, api: true, viewer: true, vscode: true },
+    docs: { examples: ['zeus analyze --source ./src --program MYPROG --out ./out'], notes: [] },
+    execute: (context, input) => {
+      const args = { ...(context && context.args ? context.args : {}), ...input };
+      const { executeAnalyze } = require('../core/analyzeService');
+      return executeAnalyze(args, { cwd: (context && context.cwd) || process.cwd() });
+    },
+  });
+
+  capabilityRegistry.register({
+    id: 'analysis.workflow',
+    version: 1,
+    title: 'Workflow Execution',
+    description: 'Run preset-guided analyze and bundle flow.',
+    category: 'analysis',
+    safety: { level: 'S1', sideEffects: ['local-artifact-write'], requiresExplicitApproval: false },
+    aliases: ['workflow'],
+    inputContract: null,
+    outputContract: null,
+    availability: { cli: true, mcp: true, api: true, viewer: true, vscode: true },
+    docs: { examples: ['zeus workflow --preset architecture-review --source ./src --program MYPROG --out ./out'], notes: [] },
+    execute: async (context, input) => {
+      const args = { ...(context && context.args ? context.args : {}), ...input };
+      return runWorkflowEngine(args, { cwd: (context && context.cwd) || process.cwd(), env: (context && context.env) || process.env });
+    },
+  });
+
+  const { buildOutputBundle } = require('../bundle/outputBundleBuilder');
+  capabilityRegistry.register({
+    id: 'bundle.create',
+    version: 1,
+    title: 'Bundle Creation',
+    description: 'Package analysis artifacts for sharing and review.',
+    category: 'bundle',
+    safety: { level: 'S1', sideEffects: ['local-artifact-write'], requiresExplicitApproval: false },
+    aliases: ['bundle'],
+    inputContract: null,
+    outputContract: null,
+    availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
+    docs: { examples: ['zeus bundle --program MYPROG --source-output-root ./out'], notes: [] },
+    execute: (context, input) => {
+      const args = { ...(context && context.args ? context.args : {}), ...input };
+      const config = require('../config/runtimeConfig').resolveBundleConfig ? require('../config/runtimeConfig').resolveBundleConfig(args) : {};
+      return buildOutputBundle({
+        program: String(args.program || '').trim(),
+        sourceOutputRoot: config.sourceOutputRoot || (context && context.cwd),
+        bundleOutputRoot: config.bundleOutputRoot,
+        includeJson: !!args['include-json'],
+        includeMd: !!args['include-md'],
+        includeHtml: !!args['include-html'],
+        safeSharingEnabled: !!args['safe-sharing'],
+        reproducibility: require('../reproducibility/reproducibility').normalizeReproducibilitySettings(!!args.reproducible),
+        artifactPaths: Array.isArray(args['artifact-paths']) ? args['artifact-paths'] : null,
+        workflowPreset: args['workflow-preset-settings'] || null,
+        bundleFileName: args['bundle-file-name'] || null,
+      });
+    },
+  });
+
 } catch (e) {
   // graceful
 }
@@ -225,6 +294,15 @@ try {
 // Core functions
 async function runWorkflow(profile, preset, options = {}) {
   const { runtime = {}, ...args } = options;
+  // Route through capability (package 07)
+  const cap = capabilities && capabilities.resolve ? capabilities.resolve('analysis.workflow') : null;
+  if (cap && typeof cap.execute === 'function') {
+    const ctx = { ...runtime, args: { profile, preset, ...args } };
+    const res = await cap.execute(ctx, { profile, preset, ...args });
+    if (res && res.ok && res.result) {
+      return res.result;
+    }
+  }
   return runWorkflowEngine({
     profile,
     preset,
@@ -252,6 +330,15 @@ function analyze(profile, options = {}) {
     });
   }
   try {
+    // Route through capability (package 07)
+    const cap = capabilities && capabilities.resolve ? capabilities.resolve('analysis.analyze') : null;
+    if (cap && typeof cap.execute === 'function') {
+      const ctx = { ...runtime, args: { profile, ...args } };
+      const res = cap.execute(ctx, { profile, ...args });
+      if (res && res.ok && res.result) {
+        return res.result;
+      }
+    }
     return executeAnalyze({
       profile,
       ...args,

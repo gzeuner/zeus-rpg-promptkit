@@ -41,7 +41,7 @@ function printDiagnosticPacks() {
   }
 }
 
-function runAnalyze(args) {
+async function runAnalyze(args) {
   if (args['list-modes']) {
     printWorkflowModes();
     return;
@@ -51,7 +51,20 @@ function runAnalyze(args) {
     return;
   }
   try {
-    const execution = executeAnalyze(args);
+    // Route through capability (package 07)
+    let execution;
+    try {
+      const { capabilities } = require('../../api/zeusApi');
+      const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('analysis.analyze', { cwd: process.cwd(), env: process.env, args }, args) : null;
+      if (res && res.ok && res.result) {
+        execution = res.result;
+      }
+    } catch (e) {
+      // fallthrough
+    }
+    if (!execution) {
+      execution = executeAnalyze(args);
+    }
     const { result, program, outputProgramDir, guidedMode, workflowPreset, safeSharingEnabled, denseLevel, searchTerms, diagnosticPacks, emitDiagnostics } = execution;
 
     console.log(`Analysis complete for program ${program}`);

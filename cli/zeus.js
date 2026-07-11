@@ -380,7 +380,7 @@ async function main() {
   checkEnvLoaded(command);
 
   if (command === 'analyze') {
-    runAnalyze(args);
+    await runAnalyze(args);
     return;
   }
 
