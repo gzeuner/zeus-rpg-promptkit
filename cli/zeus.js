@@ -419,23 +419,12 @@ async function main() {
     return;
   }
 
-  if (command === 'doctor') {
-    await runDoctor(args);
-    return;
-  }
-
-  if (command === 'profiles') {
-    await runProfiles(args);
-    return;
-  }
-
-  if (command === 'resources') {
-    await runResources(args);
-    return;
-  }
-
-  if (command === 'discover-environment') {
-    await runDiscoverEnvironment(args);
+  const foundationCommands = ['doctor', 'profiles', 'resources', 'discover-environment'];
+  if (foundationCommands.includes(command)) {
+    if (command === 'doctor') await runDoctor(args);
+    else if (command === 'profiles') await runProfiles(args);
+    else if (command === 'resources') await runResources(args);
+    else if (command === 'discover-environment') await runDiscoverEnvironment(args);
     return;
   }
 

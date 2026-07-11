@@ -948,7 +948,24 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
 }
 
 async function runDoctor(args) {
-  const result = runDoctorChecks(args);
+  // Route compute through capability (package 06)
+  let result;
+  try {
+    const { capabilities } = require('../../api/zeusApi');
+    const cap = capabilities && capabilities.resolve ? capabilities.resolve('configure.doctor') : null;
+    if (cap && typeof cap.execute === 'function') {
+      const ctx = { cwd: process.cwd(), env: process.env, args };
+      const res = await cap.execute(ctx, args);
+      if (res && res.ok && res.result) {
+        result = res.result;
+      }
+    }
+  } catch (e) {
+    // fallthrough
+  }
+  if (!result) {
+    result = runDoctorChecks(args);
+  }
 
   if (args['show-resolved']) {
     const cwd = process.cwd();

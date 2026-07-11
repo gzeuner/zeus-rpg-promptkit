@@ -195,12 +195,38 @@ function buildCatalogModel({ repoRoot }) {
   ordered.push(...extras);
 
   const commandRows = ordered.map((command) => {
-    const metadata = COMMAND_METADATA[command] || {
+    let metadata = COMMAND_METADATA[command] || {
       safety: 'S0',
       scope: 'Local',
       purpose: 'Command metadata missing; update src/docs/toolCatalogMetadata.js.',
       example: `node cli/zeus.js ${command}`,
     };
+
+    // Package 06: prefer capability registry as source of truth for foundation commands
+    try {
+      const { capabilities } = require('../src/api/zeusApi');
+      const capIdMap = {
+        doctor: 'configure.doctor',
+        profiles: 'configure.profiles',
+        resources: 'configure.resources',
+        'discover-environment': 'configure.discover-environment',
+      };
+      const capId = capIdMap[command];
+      if (capId) {
+        const cap = capabilities && capabilities.resolve ? capabilities.resolve(capId) : null;
+        console.error("DEBUG cap for", command, "capId", capId, "found?", !!cap);
+        if (cap) {
+          metadata = {
+            safety: cap.safety && cap.safety.level ? cap.safety.level : metadata.safety,
+            scope: 'Local',
+            purpose: cap.description || cap.title || metadata.purpose,
+            example: (cap.docs && cap.docs.examples && cap.docs.examples[0]) || metadata.example,
+          };
+        }
+      }
+    } catch (e) {
+      // fall back to static metadata
+    }
 
     const usage = usageByCommand.get(command) || [];
     const options = [...new Set(usage.flatMap(extractOptionsFromUsage))];

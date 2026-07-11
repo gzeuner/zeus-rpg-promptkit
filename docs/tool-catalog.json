@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-11T09:52:32.347Z",
+  "generatedAt": "2026-07-11T12:14:41.211Z",
   "commandRows": [
     {
       "command": "doctor",
@@ -858,8 +858,8 @@
       "command": "discover-environment",
       "safety": "S0",
       "scope": "Local",
-      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
-      "example": "node cli/zeus.js discover-environment",
+      "purpose": "Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.",
+      "example": "node cli/zeus.js discover-environment --profile dev --json",
       "usage": [
         "[--config <path>] discover-environment --profile <name> [--libraries L1,L2] [--schemas S1,S2] [--include-members] [--no-tables] [--role metadata|data] [--system <name>] [--json] [--out <path>]  # Read-only Auto-Discovery von Bibliotheken/Source-Files/Members/Tabellen + Resource-Vorschlag"
       ],
@@ -903,8 +903,8 @@
       "command": "resources",
       "safety": "S0",
       "scope": "Local",
-      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
-      "example": "node cli/zeus.js resources",
+      "purpose": "Show resolved resource model (Source/Objects/Metadata/Data) per system.",
+      "example": "node cli/zeus.js resources --profile dev --json",
       "usage": [
         "[--config <path>] resources --profile <name> [--json]  # Zeigt das aufgeloeste Resource-Modell (Source/Objects/Metadata/Data) pro System"
       ],

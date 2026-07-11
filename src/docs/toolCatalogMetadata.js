@@ -31,6 +31,18 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'List profiles and show masked runtime defaults and resolved routing hints.',
     example: 'node cli/zeus.js profiles --profile default --show-env',
   }),
+  resources: Object.freeze({
+    safety: 'S0',
+    scope: 'Local',
+    purpose: 'Show resolved resource model (Source/Objects/Metadata/Data) per system.',
+    example: 'node cli/zeus.js resources --profile dev --json',
+  }),
+  'discover-environment': Object.freeze({
+    safety: 'S0',
+    scope: 'Local',
+    purpose: 'Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.',
+    example: 'node cli/zeus.js discover-environment --profile dev --json',
+  }),
   fetch: Object.freeze({
     safety: 'S2',
     scope: 'IBM i read',
