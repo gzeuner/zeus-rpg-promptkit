@@ -98,6 +98,19 @@ const analyzers = new AnalyzerRegistry();
 const mcpTools = new McpToolRegistry();
 const knowledgeProviders = new ComponentRegistry();
 
+const { createSchemaRegistry } = require('../core/contracts');
+const schemaRegistry = createSchemaRegistry();
+
+// Seed the initial metadata shells from package 02 (additive, no migration)
+try {
+  const { INITIAL_SCHEMAS } = require('../core/contracts/schemas');
+  for (const [id, def] of Object.entries(INITIAL_SCHEMAS)) {
+    schemaRegistry.register({ id, version: def.version, schema: def.schema });
+  }
+} catch (e) {
+  // Graceful: callers can always create their own isolated registries.
+}
+
 // Core functions
 async function runWorkflow(profile, preset, options = {}) {
   const { runtime = {}, ...args } = options;
@@ -209,6 +222,12 @@ const zeus = {
   components: new ComponentRegistry(),
   analyzeStages: analyzeStageRegistry,
 
+  // Package 02: versioned domain schema registry (additive)
+  contracts: {
+    schemaRegistry,
+    createSchemaRegistry,
+  },
+
   // Investigation Sessions (Prio 1)
   investigations: {
     createOrLoad: investigationSession.createOrLoadSession,
@@ -251,6 +270,10 @@ module.exports = {
   readRun,
   readRunViews,
   runWorkflow,
+
+  // Schema / contract foundation (package 02)
+  createSchemaRegistry,
+  contracts: zeus.contracts,
 
   zeus,
   createZeus: () => ({ ...zeus }),
