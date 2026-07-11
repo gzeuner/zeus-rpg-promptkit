@@ -24,7 +24,7 @@
     "test:ci": "npm run test:contract && npm run test:smoke",
     "test:unit": "node scripts/run-tests.js --unit",
     "test:unit:list": "node scripts/run-tests.js --unit --list",
-    "test:contract": "node scripts/run-tests.js tests/analyze-run-manifest.test.js tests/bundle-manifest.test.js tests/fetch-readability-contract.test.js tests/ai-knowledge-projection.test.js tests/task-oriented-analysis-index.test.js tests/workflow-presets.test.js",
+    "test:contract": "node scripts/run-tests.js tests/analyze-run-manifest.test.js tests/bundle-manifest.test.js tests/fetch-readability-contract.test.js tests/ai-knowledge-projection.test.js tests/task-oriented-analysis-index.test.js tests/workflow-presets.test.js tests/schema-registry.test.js",
     "test:smoke": "node scripts/run-tests.js tests/v1-smoke.test.js tests/safe-sharing.test.js tests/reproducible-output.test.js",
     "test:corpus": "node scripts/run-tests.js tests/scanner-corpus.test.js",
     "test:benchmark": "node scripts/run-tests.js tests/analyze-benchmark.test.js",
