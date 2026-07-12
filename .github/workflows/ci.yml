@@ -28,6 +28,8 @@ jobs:
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run typecheck:verify-scope
+      - run: npm run check:repo-portability
       - run: npm run check:public-knowledge-claims
       - run: npm run test:quality
       - run: npm run docs:check

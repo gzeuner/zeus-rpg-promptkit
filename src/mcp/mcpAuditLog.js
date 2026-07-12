@@ -31,13 +31,14 @@ function normalizeMcpAuditEvent(entry, options = {}) {
     return null;
   }
 
-  const legacySchemaVersion = String(
-    options.legacySchemaVersion || MCP_AUDIT_LEGACY_SCHEMA_VERSION,
-  ).trim() || MCP_AUDIT_LEGACY_SCHEMA_VERSION;
+  const legacySchemaVersion =
+    String(options.legacySchemaVersion || MCP_AUDIT_LEGACY_SCHEMA_VERSION).trim() ||
+    MCP_AUDIT_LEGACY_SCHEMA_VERSION;
 
-  const schemaVersion = typeof entry.schemaVersion === 'string' && entry.schemaVersion.trim()
-    ? entry.schemaVersion.trim()
-    : legacySchemaVersion;
+  const schemaVersion =
+    typeof entry.schemaVersion === 'string' && entry.schemaVersion.trim()
+      ? entry.schemaVersion.trim()
+      : legacySchemaVersion;
 
   return {
     ...entry,
@@ -89,13 +90,15 @@ function readMcpAuditEvents(runtime = {}) {
 
 function createMcpAuditLogger(runtime = {}, redactor = null) {
   const enabled = runtime.auditEnabled !== false;
-  const schemaVersion = String(runtime.auditSchemaVersion || MCP_AUDIT_SCHEMA_VERSION).trim()
-    || MCP_AUDIT_SCHEMA_VERSION;
+  const schemaVersion =
+    String(runtime.auditSchemaVersion || MCP_AUDIT_SCHEMA_VERSION).trim() ||
+    MCP_AUDIT_SCHEMA_VERSION;
   const auditPath = resolveMcpAuditPath(runtime);
 
-  const sanitizePayload = redactor && typeof redactor.sanitizePayload === 'function'
-    ? redactor.sanitizePayload
-    : (value) => sanitizeValue(value);
+  const sanitizePayload =
+    redactor && typeof redactor.sanitizePayload === 'function'
+      ? redactor.sanitizePayload
+      : value => sanitizeValue(value);
 
   function appendToolCallEvent(event = {}) {
     if (!enabled) {

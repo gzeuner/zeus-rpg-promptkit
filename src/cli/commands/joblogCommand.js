@@ -15,7 +15,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const { renderAsciiTable } = require('../helpers/asciiTable');
 const { createJsonOutput } = require('../helpers/jsonOutput');
-const { resolveAnalyzeConfig, resolveAnalyzeDbConfig, loadProfiles, resolveProfile } = require('../../config/runtimeConfig');
+const {
+  resolveAnalyzeConfig,
+  resolveAnalyzeDbConfig,
+  loadProfiles,
+  resolveProfile,
+} = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query, escapeSqlLiteral } = require('../../db2/readOnlyQueryService');
 const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');

@@ -28,8 +28,9 @@ function readTextFile(filePath) {
 }
 
 function sortUnique(values) {
-  return Array.from(new Set((values || []).filter(Boolean).map((value) => String(value).trim().toUpperCase())))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set((values || []).filter(Boolean).map(value => String(value).trim().toUpperCase()))
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function toName(value) {
@@ -42,19 +43,19 @@ function toName(value) {
 function collectTables(context) {
   const dependencies = (context && context.dependencies) || {};
   const sql = (context && context.sql) || {};
-  const tableNames = (dependencies.tables || []).map((entry) => toName(entry));
-  const sqlTableNames = (sql.tableNames || []).map((entry) => toName(entry));
+  const tableNames = (dependencies.tables || []).map(entry => toName(entry));
+  const sqlTableNames = (sql.tableNames || []).map(entry => toName(entry));
   return sortUnique([...tableNames, ...sqlTableNames]);
 }
 
 function collectProgramCalls(context) {
   const dependencies = (context && context.dependencies) || {};
-  return sortUnique((dependencies.programCalls || []).map((entry) => toName(entry)));
+  return sortUnique((dependencies.programCalls || []).map(entry => toName(entry)));
 }
 
 function collectCopyMembers(context) {
   const dependencies = (context && context.dependencies) || {};
-  return sortUnique((dependencies.copyMembers || []).map((entry) => toName(entry)));
+  return sortUnique((dependencies.copyMembers || []).map(entry => toName(entry)));
 }
 
 function collectSqlStats(context) {
@@ -89,14 +90,21 @@ function collectNativeFileUsage(context) {
 }
 
 function collectBindingAnalysis(context) {
-  return (context && context.bindingAnalysis) || { summary: {}, modules: [], servicePrograms: [], bindingDirectories: [] };
+  return (
+    (context && context.bindingAnalysis) || {
+      summary: {},
+      modules: [],
+      servicePrograms: [],
+      bindingDirectories: [],
+    }
+  );
 }
 
 function listSection(items, emptyLabel = 'None detected') {
   if (!items || items.length === 0) {
     return `- ${emptyLabel}`;
   }
-  return items.map((item) => `- ${item}`).join('\n');
+  return items.map(item => `- ${item}`).join('\n');
 }
 
 function sqlSection(stats, sqlSummary, optimizedContext) {
@@ -131,7 +139,16 @@ function sqlSection(stats, sqlSummary, optimizedContext) {
   return lines.join('\n');
 }
 
-function buildOverview(program, tables, calls, copies, sqlSummary, nativeFileUsage, bindingAnalysis, denseLevel = null) {
+function buildOverview(
+  program,
+  tables,
+  calls,
+  copies,
+  sqlSummary,
+  nativeFileUsage,
+  bindingAnalysis,
+  denseLevel = null
+) {
   const sqlCount = Number(sqlSummary && sqlSummary.statementCount) || 0;
   const hasSql = sqlCount > 0;
   const nativeSummary = (nativeFileUsage && nativeFileUsage.summary) || {};
@@ -140,7 +157,9 @@ function buildOverview(program, tables, calls, copies, sqlSummary, nativeFileUsa
   if (useDense) {
     const base = [
       `${program}: t=${tables.length} c=${calls.length} cp=${copies.length}`,
-      hasSql ? `sql r=${sqlSummary.readStatementCount || 0} w=${sqlSummary.writeStatementCount || 0} d=${sqlSummary.dynamicStatementCount || 0}` : 'no-sql',
+      hasSql
+        ? `sql r=${sqlSummary.readStatementCount || 0} w=${sqlSummary.writeStatementCount || 0} d=${sqlSummary.dynamicStatementCount || 0}`
+        : 'no-sql',
       `nat f=${nativeSummary.fileCount || 0} m=${nativeSummary.mutatingFileCount || 0} i=${nativeSummary.interactiveFileCount || 0}`,
       `bind m=${bindingSummary.moduleCount || 0} s=${bindingSummary.serviceProgramCount || 0}`,
     ].join(' ');
@@ -186,7 +205,9 @@ function buildDataFlow(program, tables, calls, sqlSummary, nativeFileUsage, bind
   }
 
   if (callList.length > 0) {
-    parts.push(`invokes external program${callList.length === 1 ? '' : 's'} ${callList.join(', ')}`);
+    parts.push(
+      `invokes external program${callList.length === 1 ? '' : 's'} ${callList.join(', ')}`
+    );
   }
 
   if ((nativeSummary.interactiveFileCount || 0) > 0) {
@@ -208,22 +229,25 @@ function nativeFileSection(nativeFileUsage) {
   const summary = (nativeFileUsage && nativeFileUsage.summary) || {};
   const files = (nativeFileUsage && nativeFileUsage.files) || [];
 
-  const details = files.length > 0
-    ? files.map((file) => {
-      const flags = [];
-      if (file.kind) flags.push(file.kind);
-      if (file.access && file.access.read) flags.push('READ');
-      if (file.access && file.access.write) flags.push('WRITE');
-      if (file.access && file.access.update) flags.push('UPDATE');
-      if (file.access && file.access.delete) flags.push('DELETE');
-      if (file.access && file.access.display) flags.push('DISPLAY');
-      if (file.keyed) flags.push('KEYED');
-      if (file.access && file.access.interactive) flags.push('INTERACTIVE');
-      if (file.access && file.access.mutating) flags.push('MUTATING');
-      const recordFormats = (file.recordFormats || []).map((entry) => entry.name).join(', ');
-      return `- ${file.name}${flags.length ? ` [${flags.join(', ')}]` : ''}${recordFormats ? ` record formats: ${recordFormats}` : ''}`;
-    }).join('\n')
-    : '- None detected';
+  const details =
+    files.length > 0
+      ? files
+          .map(file => {
+            const flags = [];
+            if (file.kind) flags.push(file.kind);
+            if (file.access && file.access.read) flags.push('READ');
+            if (file.access && file.access.write) flags.push('WRITE');
+            if (file.access && file.access.update) flags.push('UPDATE');
+            if (file.access && file.access.delete) flags.push('DELETE');
+            if (file.access && file.access.display) flags.push('DISPLAY');
+            if (file.keyed) flags.push('KEYED');
+            if (file.access && file.access.interactive) flags.push('INTERACTIVE');
+            if (file.access && file.access.mutating) flags.push('MUTATING');
+            const recordFormats = (file.recordFormats || []).map(entry => entry.name).join(', ');
+            return `- ${file.name}${flags.length ? ` [${flags.join(', ')}]` : ''}${recordFormats ? ` record formats: ${recordFormats}` : ''}`;
+          })
+          .join('\n')
+      : '- None detected';
 
   return `- Native Files: ${summary.fileCount || 0}\n- Mutating Files: ${summary.mutatingFileCount || 0}\n- Interactive Files: ${summary.interactiveFileCount || 0}\n- Workstation Files: ${summary.workstationFileCount || 0}\n- Printer Files: ${summary.printerFileCount || 0}\n- Keyed Files: ${summary.keyedFileCount || 0}\n- Record Formats: ${summary.recordFormatCount || 0}\n\n${details}`;
 }
@@ -233,23 +257,34 @@ function bindingSection(bindingAnalysis) {
   const modules = (bindingAnalysis && bindingAnalysis.modules) || [];
   const servicePrograms = (bindingAnalysis && bindingAnalysis.servicePrograms) || [];
 
-  const moduleLines = modules.length > 0
-    ? modules.map((module) => {
-      const parts = [`${module.name} [${module.kind || 'MODULE'}]`];
-      if ((module.bindingDirectories || []).length > 0) parts.push(`bnddir: ${module.bindingDirectories.join(', ')}`);
-      if ((module.servicePrograms || []).length > 0) parts.push(`srvpgm: ${module.servicePrograms.join(', ')}`);
-      if ((module.importedProcedures || []).length > 0) parts.push(`imports: ${module.importedProcedures.join(', ')}`);
-      if (module.unresolvedBindings) parts.push('UNRESOLVED');
-      return `- ${parts.join(' | ')}`;
-    }).join('\n')
-    : '- None detected';
+  const moduleLines =
+    modules.length > 0
+      ? modules
+          .map(module => {
+            const parts = [`${module.name} [${module.kind || 'MODULE'}]`];
+            if ((module.bindingDirectories || []).length > 0)
+              parts.push(`bnddir: ${module.bindingDirectories.join(', ')}`);
+            if ((module.servicePrograms || []).length > 0)
+              parts.push(`srvpgm: ${module.servicePrograms.join(', ')}`);
+            if ((module.importedProcedures || []).length > 0)
+              parts.push(`imports: ${module.importedProcedures.join(', ')}`);
+            if (module.unresolvedBindings) parts.push('UNRESOLVED');
+            return `- ${parts.join(' | ')}`;
+          })
+          .join('\n')
+      : '- None detected';
 
-  const serviceProgramLines = servicePrograms.length > 0
-    ? servicePrograms.map((serviceProgram) => {
-      const exports = (serviceProgram.exports || []).map((entry) => `${entry.symbol}${entry.resolved ? '' : ' (unresolved)'}`).join(', ');
-      return `- ${serviceProgram.name}${serviceProgram.sourceKind ? ` [${serviceProgram.sourceKind}]` : ''}${exports ? ` exports: ${exports}` : ''}`;
-    }).join('\n')
-    : '- None detected';
+  const serviceProgramLines =
+    servicePrograms.length > 0
+      ? servicePrograms
+          .map(serviceProgram => {
+            const exports = (serviceProgram.exports || [])
+              .map(entry => `${entry.symbol}${entry.resolved ? '' : ' (unresolved)'}`)
+              .join(', ');
+            return `- ${serviceProgram.name}${serviceProgram.sourceKind ? ` [${serviceProgram.sourceKind}]` : ''}${exports ? ` exports: ${exports}` : ''}`;
+          })
+          .join('\n')
+      : '- None detected';
 
   return `- Modules: ${summary.moduleCount || 0}\n- NoMain Modules: ${summary.noMainModuleCount || 0}\n- Service Programs: ${summary.serviceProgramCount || 0}\n- Binder Sources: ${summary.binderSourceCount || 0}\n- Binding Directories: ${summary.bindingDirectoryCount || 0}\n- Bound Modules: ${summary.boundModuleCount || 0}\n- Unresolved Bindings: ${summary.unresolvedModuleCount || 0}\n- Exported Symbols: ${summary.exportCount || 0}\n\n### Modules\n${moduleLines}\n\n### Service Programs\n${serviceProgramLines}`;
 }
@@ -271,7 +306,13 @@ function renderMermaidBlock(graph, fallbackText) {
   return lines.join('\n');
 }
 
-function renderArchitectureReport({ context, graph, optimizedContext, mermaidText, denseLevel = null }) {
+function renderArchitectureReport({
+  context,
+  graph,
+  optimizedContext,
+  mermaidText,
+  denseLevel = null,
+}) {
   const program = String((context && context.program) || 'UNKNOWN');
   const generatedAt = (context && context.scannedAt) || new Date().toISOString();
   let tables = collectTables(context);
@@ -291,8 +332,24 @@ function renderArchitectureReport({ context, graph, optimizedContext, mermaidTex
   const nativeFileUsage = collectNativeFileUsage(context);
   const bindingAnalysis = collectBindingAnalysis(context);
   const sqlCount = sqlStats.reduce((sum, entry) => sum + entry.count, 0);
-  const overview = buildOverview(program, tables, calls, copyMembers, sqlSummary, nativeFileUsage, bindingAnalysis, denseLevel);
-  const dataFlow = buildDataFlow(program, tables, calls, sqlSummary, nativeFileUsage, bindingAnalysis);
+  const overview = buildOverview(
+    program,
+    tables,
+    calls,
+    copyMembers,
+    sqlSummary,
+    nativeFileUsage,
+    bindingAnalysis,
+    denseLevel
+  );
+  const dataFlow = buildDataFlow(
+    program,
+    tables,
+    calls,
+    sqlSummary,
+    nativeFileUsage,
+    bindingAnalysis
+  );
   const mermaid = renderMermaidBlock(graph, mermaidText);
 
   const isDense = Boolean(denseLevel);

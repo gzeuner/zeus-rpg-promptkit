@@ -15,7 +15,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
-const { assessCanonicalModel, formatAssessmentMarkdown } = require('../../impact/riskAssessmentAnalyzer');
+const {
+  assessCanonicalModel,
+  formatAssessmentMarkdown,
+} = require('../../impact/riskAssessmentAnalyzer');
 const { createJsonOutput } = require('../helpers/jsonOutput');
 
 async function runAssessRisk(args) {
@@ -53,7 +56,10 @@ async function runAssessRisk(args) {
     let assessment;
     try {
       const { capabilities } = require('../../api/zeusApi');
-      const res = capabilities && typeof capabilities.execute === 'function' ? capabilities.execute('investigation.assess-risk', { cwd, env: process.env, args }, args) : null;
+      const res =
+        capabilities && typeof capabilities.execute === 'function'
+          ? capabilities.execute('investigation.assess-risk', { cwd, env: process.env, args }, args)
+          : null;
       if (res && res.ok && res.result) {
         assessment = res.result;
       }
@@ -74,7 +80,7 @@ async function runAssessRisk(args) {
 
     if (assessment.recommendations.length > 0) {
       console.log('\nRecommendations:');
-      assessment.recommendations.forEach((rec) => {
+      assessment.recommendations.forEach(rec => {
         console.log(`  • ${rec}`);
       });
     }
@@ -97,7 +103,7 @@ async function runAssessRisk(args) {
       json.print(assessment);
     } else if (verbose) {
       console.log(`[verbose] Assessment details:`);
-      console.log(json.stringify(assessment));  // use helper even in verbose for consistency
+      console.log(json.stringify(assessment)); // use helper even in verbose for consistency
     }
   } catch (error) {
     console.error(error.message);

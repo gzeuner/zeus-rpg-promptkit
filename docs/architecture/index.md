@@ -12,13 +12,13 @@ All subsequent implementation and agent guidance must be consistent with these d
 
 ## Accepted Architecture Decision Records (ADRs)
 
-| ADR | Title | Status |
-|-----|-------|--------|
-| [001](adr-001-product-kernel.md) | Product Kernel | Accepted |
+| ADR                                    | Title                | Status   |
+| -------------------------------------- | -------------------- | -------- |
+| [001](adr-001-product-kernel.md)       | Product Kernel       | Accepted |
 | [002](adr-002-dependency-direction.md) | Dependency Direction | Accepted |
-| [003](adr-003-versioned-contracts.md) | Versioned Contracts | Accepted |
-| [004](adr-004-capability-registry.md) | Capability Registry | Accepted |
-| [005](adr-005-safety-trust-zones.md) | Safety Trust Zones | Accepted |
+| [003](adr-003-versioned-contracts.md)  | Versioned Contracts  | Accepted |
+| [004](adr-004-capability-registry.md)  | Capability Registry  | Accepted |
+| [005](adr-005-safety-trust-zones.md)   | Safety Trust Zones   | Accepted |
 
 ## Related Reviews
 

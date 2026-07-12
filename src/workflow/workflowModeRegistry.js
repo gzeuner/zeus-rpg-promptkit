@@ -19,7 +19,8 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
   architecture: Object.freeze({
     name: 'architecture',
     title: 'Architecture Review',
-    description: 'Focus on dependency structure, semantic relationships, and architecture-facing documentation artifacts.',
+    description:
+      'Focus on dependency structure, semantic relationships, and architecture-facing documentation artifacts.',
     promptTemplates: Object.freeze(['documentation', 'architecture-review']),
     autoOptimizeContext: true,
     primaryArtifacts: Object.freeze([
@@ -56,17 +57,30 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
         'The documentation prompt contract for architecture-facing narrative output.',
       ],
       recommendedOutputs: [
-        { path: 'architecture-report.md', purpose: 'Narrative architecture summary for review and sharing.' },
-        { path: 'dependency-graph.md', purpose: 'Single-program dependency structure for quick inspection.' },
-        { path: 'program-call-tree.md', purpose: 'Cross-program call chain view for boundary tracing.' },
-        { path: 'ai_prompt_documentation.md', purpose: 'AI-assisted architecture walkthrough grounded in the workflow evidence.' },
+        {
+          path: 'architecture-report.md',
+          purpose: 'Narrative architecture summary for review and sharing.',
+        },
+        {
+          path: 'dependency-graph.md',
+          purpose: 'Single-program dependency structure for quick inspection.',
+        },
+        {
+          path: 'program-call-tree.md',
+          purpose: 'Cross-program call chain view for boundary tracing.',
+        },
+        {
+          path: 'ai_prompt_documentation.md',
+          purpose: 'AI-assisted architecture walkthrough grounded in the workflow evidence.',
+        },
       ],
     }),
   }),
   documentation: Object.freeze({
     name: 'documentation',
     title: 'Documentation',
-    description: 'Generate prompt-ready technical documentation grounded in the canonical and AI projections.',
+    description:
+      'Generate prompt-ready technical documentation grounded in the canonical and AI projections.',
     promptTemplates: Object.freeze(['documentation']),
     autoOptimizeContext: true,
     primaryArtifacts: Object.freeze([
@@ -101,15 +115,22 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
       ],
       recommendedOutputs: [
         { path: 'report.md', purpose: 'Broad run summary with source-backed counts and notes.' },
-        { path: 'ai_prompt_documentation.md', purpose: 'Documentation-first prompt for onboarding or explanation.' },
-        { path: 'ai-knowledge.json', purpose: 'Prompt-ready evidence projection for follow-up AI tasks.' },
+        {
+          path: 'ai_prompt_documentation.md',
+          purpose: 'Documentation-first prompt for onboarding or explanation.',
+        },
+        {
+          path: 'ai-knowledge.json',
+          purpose: 'Prompt-ready evidence projection for follow-up AI tasks.',
+        },
       ],
     }),
   }),
   'error-analysis': Object.freeze({
     name: 'error-analysis',
     title: 'Error Analysis',
-    description: 'Prioritize risky SQL, error paths, and operational failure signals for troubleshooting.',
+    description:
+      'Prioritize risky SQL, error paths, and operational failure signals for troubleshooting.',
     promptTemplates: Object.freeze(['error-analysis']),
     autoOptimizeContext: true,
     primaryArtifacts: Object.freeze([
@@ -143,16 +164,26 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
         'Risk markers, SQL semantics, and ranked evidence highlights.',
       ],
       recommendedOutputs: [
-        { path: 'ai_prompt_error_analysis.md', purpose: 'Prompt for structured troubleshooting and risk review.' },
-        { path: 'report.md', purpose: 'Human-readable summary of analysis notes and operational risk signals.' },
-        { path: 'ai-knowledge.json', purpose: 'Workflow-specific evidence used by error analysis prompts.' },
+        {
+          path: 'ai_prompt_error_analysis.md',
+          purpose: 'Prompt for structured troubleshooting and risk review.',
+        },
+        {
+          path: 'report.md',
+          purpose: 'Human-readable summary of analysis notes and operational risk signals.',
+        },
+        {
+          path: 'ai-knowledge.json',
+          purpose: 'Workflow-specific evidence used by error analysis prompts.',
+        },
       ],
     }),
   }),
   'defect-analysis': Object.freeze({
     name: 'defect-analysis',
     title: 'Defect Analysis',
-    description: 'Package evidence for defect hypotheses, trigger conditions, and verification steps.',
+    description:
+      'Package evidence for defect hypotheses, trigger conditions, and verification steps.',
     promptTemplates: Object.freeze(['error-analysis', 'defect-analysis']),
     autoOptimizeContext: true,
     primaryArtifacts: Object.freeze([
@@ -187,8 +218,14 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
         'Dependency graph and program-call-tree artifacts for blast-radius review.',
       ],
       recommendedOutputs: [
-        { path: 'ai_prompt_error_analysis.md', purpose: 'Evidence-oriented risk prompt for suspicious behavior and hotspots.' },
-        { path: 'ai_prompt_defect_analysis.md', purpose: 'Decision-oriented defect and dependency risk prompt.' },
+        {
+          path: 'ai_prompt_error_analysis.md',
+          purpose: 'Evidence-oriented risk prompt for suspicious behavior and hotspots.',
+        },
+        {
+          path: 'ai_prompt_defect_analysis.md',
+          purpose: 'Decision-oriented defect and dependency risk prompt.',
+        },
         { path: 'report.md', purpose: 'Human-readable summary to pair with prompt conclusions.' },
       ],
     }),
@@ -196,7 +233,8 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
   modernization: Object.freeze({
     name: 'modernization',
     title: 'Modernization',
-    description: 'Highlight extraction boundaries, change blockers, and evidence-backed modernization candidates.',
+    description:
+      'Highlight extraction boundaries, change blockers, and evidence-backed modernization candidates.',
     promptTemplates: Object.freeze(['documentation', 'architecture-review', 'modernization']),
     autoOptimizeContext: true,
     primaryArtifacts: Object.freeze([
@@ -232,17 +270,30 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
         'Architecture and dependency artifacts that expose extraction boundaries and risky integrations.',
       ],
       recommendedOutputs: [
-        { path: 'ai_prompt_modernization.md', purpose: 'Opinionated modernization review prompt with blockers and candidates.' },
-        { path: 'architecture-report.md', purpose: 'Architecture narrative for reviewing seams and dependencies.' },
-        { path: 'canonical-analysis.json', purpose: 'Semantic source of truth for validating modernization claims.' },
-        { path: 'ai_prompt_documentation.md', purpose: 'Supporting documentation prompt for reviewer context.' },
+        {
+          path: 'ai_prompt_modernization.md',
+          purpose: 'Opinionated modernization review prompt with blockers and candidates.',
+        },
+        {
+          path: 'architecture-report.md',
+          purpose: 'Architecture narrative for reviewing seams and dependencies.',
+        },
+        {
+          path: 'canonical-analysis.json',
+          purpose: 'Semantic source of truth for validating modernization claims.',
+        },
+        {
+          path: 'ai_prompt_documentation.md',
+          purpose: 'Supporting documentation prompt for reviewer context.',
+        },
       ],
     }),
   }),
   refactoring: Object.freeze({
     name: 'refactoring',
     title: 'Refactoring',
-    description: 'Focus on small safe change seams, dependency-aware sequencing, and verification guidance.',
+    description:
+      'Focus on small safe change seams, dependency-aware sequencing, and verification guidance.',
     promptTemplates: Object.freeze(['architecture-review', 'refactoring-plan']),
     autoOptimizeContext: true,
     primaryArtifacts: Object.freeze([
@@ -278,16 +329,26 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
         'Refactoring and architecture prompt packs grounded in the same shared context model.',
       ],
       recommendedOutputs: [
-        { path: 'ai_prompt_refactoring_plan.md', purpose: 'Primary refactoring plan with sequencing and validation guidance.' },
-        { path: 'ai_prompt_architecture_review.md', purpose: 'Supporting architecture prompt for boundary checks.' },
-        { path: 'dependency-graph.md', purpose: 'Readable dependency structure used to limit change scope.' },
+        {
+          path: 'ai_prompt_refactoring_plan.md',
+          purpose: 'Primary refactoring plan with sequencing and validation guidance.',
+        },
+        {
+          path: 'ai_prompt_architecture_review.md',
+          purpose: 'Supporting architecture prompt for boundary checks.',
+        },
+        {
+          path: 'dependency-graph.md',
+          purpose: 'Readable dependency structure used to limit change scope.',
+        },
       ],
     }),
   }),
   'test-generation': Object.freeze({
     name: 'test-generation',
     title: 'Test Generation',
-    description: 'Package scenario, data-setup, and assertion guidance for evidence-backed test planning.',
+    description:
+      'Package scenario, data-setup, and assertion guidance for evidence-backed test planning.',
     promptTemplates: Object.freeze(['documentation', 'test-generation']),
     autoOptimizeContext: true,
     primaryArtifacts: Object.freeze([
@@ -322,16 +383,26 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
         'Documentation and test-generation prompt packs that consume the shared context model.',
       ],
       recommendedOutputs: [
-        { path: 'ai_prompt_test_generation.md', purpose: 'Primary test-generation prompt with scenarios, fixtures, and assertions.' },
-        { path: 'ai_prompt_documentation.md', purpose: 'Supporting documentation prompt for system context.' },
-        { path: 'report.md', purpose: 'Human-readable summary for manual validation of the proposed tests.' },
+        {
+          path: 'ai_prompt_test_generation.md',
+          purpose: 'Primary test-generation prompt with scenarios, fixtures, and assertions.',
+        },
+        {
+          path: 'ai_prompt_documentation.md',
+          purpose: 'Supporting documentation prompt for system context.',
+        },
+        {
+          path: 'report.md',
+          purpose: 'Human-readable summary for manual validation of the proposed tests.',
+        },
       ],
     }),
   }),
   impact: Object.freeze({
     name: 'impact',
     title: 'Impact Investigation',
-    description: 'Prepare graph artifacts and next-step guidance for reverse dependency and blast-radius analysis.',
+    description:
+      'Prepare graph artifacts and next-step guidance for reverse dependency and blast-radius analysis.',
     promptTemplates: Object.freeze([]),
     autoOptimizeContext: false,
     primaryArtifacts: Object.freeze([
@@ -365,16 +436,23 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
         'Canonical analysis and architecture report for context before reverse impact review.',
       ],
       recommendedOutputs: [
-        { path: 'dependency-graph.json', purpose: 'Machine-readable dependency structure for impact follow-up.' },
+        {
+          path: 'dependency-graph.json',
+          purpose: 'Machine-readable dependency structure for impact follow-up.',
+        },
         { path: 'program-call-tree.json', purpose: 'Cross-program graph used by zeus impact.' },
-        { path: 'architecture-report.md', purpose: 'Narrative context before selecting an impact target.' },
+        {
+          path: 'architecture-report.md',
+          purpose: 'Narrative context before selecting an impact target.',
+        },
       ],
     }),
   }),
   security: Object.freeze({
     name: 'security',
     title: 'Security Analysis',
-    description: 'Identify injection risks, authorization gaps, missing error handling, and commitment control issues in IBM i RPG source.',
+    description:
+      'Identify injection risks, authorization gaps, missing error handling, and commitment control issues in IBM i RPG source.',
     promptTemplates: Object.freeze(['security-analysis']),
     autoOptimizeContext: true,
     primaryArtifacts: Object.freeze([
@@ -409,16 +487,27 @@ const WORKFLOW_MODE_REGISTRY = Object.freeze({
         'Security analysis prompt grounded in source-backed evidence.',
       ],
       recommendedOutputs: [
-        { path: 'ai_prompt_security_analysis.md', purpose: 'Primary security review prompt with IBM i specific risk categories.' },
-        { path: 'report.md', purpose: 'Human-readable summary for tracking identified security risks.' },
-        { path: 'ai-knowledge.json', purpose: 'Workflow-specific evidence for security-focused AI analysis.' },
+        {
+          path: 'ai_prompt_security_analysis.md',
+          purpose: 'Primary security review prompt with IBM i specific risk categories.',
+        },
+        {
+          path: 'report.md',
+          purpose: 'Human-readable summary for tracking identified security risks.',
+        },
+        {
+          path: 'ai-knowledge.json',
+          purpose: 'Workflow-specific evidence for security-focused AI analysis.',
+        },
       ],
     }),
   }),
 });
 
 function normalizeWorkflowModeName(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase();
 }
 
 function getWorkflowMode(modeName) {
@@ -441,9 +530,11 @@ function resolveWorkflowModeSettings(modeName) {
 
   const mode = getWorkflowMode(modeName);
   const promptTemplates = resolvePromptTemplates(mode.promptTemplates);
-  const workflowKeys = Array.from(new Set(promptTemplates
-    .map((templateName) => getPromptContract(templateName).workflow)
-    .filter(Boolean)));
+  const workflowKeys = Array.from(
+    new Set(
+      promptTemplates.map(templateName => getPromptContract(templateName).workflow).filter(Boolean)
+    )
+  );
 
   return {
     name: mode.name,

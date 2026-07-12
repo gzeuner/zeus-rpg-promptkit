@@ -27,14 +27,14 @@ function parseBoolean(value, fallback) {
   return fallback;
 }
 
-function parseCsv(value, fallback, transform = (item) => item) {
+function parseCsv(value, fallback, transform = item => item) {
   if (!value) return fallback;
   if (Array.isArray(value)) {
-    return value.map((item) => transform(String(item).trim())).filter(Boolean);
+    return value.map(item => transform(String(item).trim())).filter(Boolean);
   }
   return String(value)
     .split(',')
-    .map((item) => transform(item.trim()))
+    .map(item => transform(item.trim()))
     .filter(Boolean);
 }
 
@@ -49,11 +49,11 @@ function resolveEnvPlaceholdersDeep(value, env) {
     return resolveSecretValue(substituted, { env });
   }
   if (Array.isArray(value)) {
-    return value.map((entry) => resolveEnvPlaceholdersDeep(entry, env));
+    return value.map(entry => resolveEnvPlaceholdersDeep(entry, env));
   }
   if (isPlainObject(value)) {
     return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [key, resolveEnvPlaceholdersDeep(entry, env)]),
+      Object.entries(value).map(([key, entry]) => [key, resolveEnvPlaceholdersDeep(entry, env)])
     );
   }
   return value;

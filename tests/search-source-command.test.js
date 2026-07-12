@@ -5,10 +5,7 @@ const os = require('os');
 const path = require('path');
 
 const { runSearchSource } = require('../src/cli/commands/searchSourceCommand');
-const {
-  executeSearchSource,
-  normalizeFilePattern,
-} = require('../src/core/searchSourceService');
+const { executeSearchSource, normalizeFilePattern } = require('../src/core/searchSourceService');
 
 function captureConsoleLogs(fn) {
   const logs = [];
@@ -30,21 +27,19 @@ test('search-source finds matches in synthetic source files', async () => {
 
   try {
     fs.writeFileSync(
-        path.join(tempDir, 'PROGRAM_001.rpgle'),
-        [
-          '**FREE',
-          'dcl-s id int(10);',
-          'exec sql SELECT * FROM TABLE_A;',
-        ].join('\n'),
-        'utf8',
-      );
+      path.join(tempDir, 'PROGRAM_001.rpgle'),
+      ['**FREE', 'dcl-s id int(10);', 'exec sql SELECT * FROM TABLE_A;'].join('\n'),
+      'utf8'
+    );
 
-    const logs = await captureConsoleLogs(() => runSearchSource({
-      'source-root': tempDir,
-      'search-term': 'SELECT',
-      'file-pattern': '*.rpgle',
-      'max-results': '10',
-    }));
+    const logs = await captureConsoleLogs(() =>
+      runSearchSource({
+        'source-root': tempDir,
+        'search-term': 'SELECT',
+        'file-pattern': '*.rpgle',
+        'max-results': '10',
+      })
+    );
 
     const output = logs.join('\n');
     assert.match(output, /PROGRAM_001\.rpgle/);
@@ -78,11 +73,8 @@ test('search-source service scans nested source folders with default file patter
     fs.mkdirSync(nestedDir, { recursive: true });
     fs.writeFileSync(
       path.join(nestedDir, 'PROGRAM_200.sqlrpgle'),
-      [
-        '**FREE',
-        "exec sql set STATUS = 'READY';",
-      ].join('\n'),
-      'utf8',
+      ['**FREE', "exec sql set STATUS = 'READY';"].join('\n'),
+      'utf8'
     );
 
     const execution = await executeSearchSource({
@@ -109,7 +101,7 @@ test('search-source exits with code 2 when no criteria are provided', async () =
   let exitCode = null;
   const errors = [];
 
-  process.exit = (code) => {
+  process.exit = code => {
     exitCode = code;
     throw new Error(`__EXIT__${code}`);
   };
@@ -119,10 +111,11 @@ test('search-source exits with code 2 when no criteria are provided', async () =
 
   try {
     await assert.rejects(
-      () => runSearchSource({
-        'source-root': tempDir,
-      }),
-      /__EXIT__2/,
+      () =>
+        runSearchSource({
+          'source-root': tempDir,
+        }),
+      /__EXIT__2/
     );
     assert.equal(exitCode, 2);
     assert.match(errors.join('\n'), /Provide at least one search criterion/);

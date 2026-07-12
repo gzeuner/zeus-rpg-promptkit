@@ -1,22 +1,16 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const {
-  createSchemaRegistry,
-  SchemaValidationError,
-} = require('../src/core/contracts');
+const { createSchemaRegistry, SchemaValidationError } = require('../src/core/contracts');
 
-const {
-  CONTRACT_IDS,
-  INITIAL_SCHEMAS,
-} = require('../src/core/contracts/schemas');
+const { CONTRACT_IDS, INITIAL_SCHEMAS } = require('../src/core/contracts/schemas');
 
 test('createSchemaRegistry allows registration and successful validation', () => {
   const registry = createSchemaRegistry();
   registry.register({
     id: 'zeus.test-contract',
     version: 1,
-    schema: (v) => (v && v.ok === true ? [] : [{ path: '', message: 'must have ok:true' }]),
+    schema: v => (v && v.ok === true ? [] : [{ path: '', message: 'must have ok:true' }]),
   });
 
   const good = registry.validate('zeus.test-contract', 1, { ok: true, extra: 42 });
@@ -115,7 +109,7 @@ test('validation errors do not leak secrets', () => {
   registry.register({
     id: 'zeus.secret-test',
     version: 1,
-    schema: (v) => {
+    schema: v => {
       if (v && v.password) {
         return [{ path: '/password', message: `bad password value was ${v.password}` }];
       }

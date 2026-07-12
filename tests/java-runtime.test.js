@@ -27,11 +27,7 @@ test('resolveJavaClasspathEntries includes java/bin and jar files from bin and l
 
     const classpathEntries = resolveJavaClasspathEntries({ cwd: tempRoot });
 
-    assert.deepEqual(classpathEntries, [
-      path.join(tempRoot, 'java', 'bin'),
-      binJar,
-      libJar,
-    ]);
+    assert.deepEqual(classpathEntries, [path.join(tempRoot, 'java', 'bin'), binJar, libJar]);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -50,7 +46,7 @@ test('shouldCompileJavaSources detects missing or stale class files', () => {
         sourceFiles: [sourceFile],
         binDir: path.join(tempRoot, 'java', 'bin'),
       }),
-      true,
+      true
     );
 
     fs.writeFileSync(classFile, '', 'utf8');
@@ -64,7 +60,7 @@ test('shouldCompileJavaSources detects missing or stale class files', () => {
         sourceFiles: [sourceFile],
         binDir: path.join(tempRoot, 'java', 'bin'),
       }),
-      true,
+      true
     );
 
     const newest = new Date();
@@ -75,7 +71,7 @@ test('shouldCompileJavaSources detects missing or stale class files', () => {
         sourceFiles: [sourceFile],
         binDir: path.join(tempRoot, 'java', 'bin'),
       }),
-      false,
+      false
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

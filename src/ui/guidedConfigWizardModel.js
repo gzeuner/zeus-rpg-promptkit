@@ -45,20 +45,76 @@ const SAFETY_LEVELS = Object.freeze([
 ]);
 
 const PURPOSE_LABELS = Object.freeze([
-  Object.freeze({ id: 'source', label: 'Source', description: 'Primary source members and source physical files.' }),
-  Object.freeze({ id: 'data', label: 'Data', description: 'Business data libraries and runtime tables.' }),
-  Object.freeze({ id: 'metadata', label: 'Metadata', description: 'DB2 metadata targets and discovery libraries.' }),
-  Object.freeze({ id: 'runtime-objects', label: 'Runtime Objects', description: 'Programs, service programs, modules, commands, and related runtime objects.' }),
-  Object.freeze({ id: 'test-data', label: 'Test Data', description: 'Libraries used for bounded test data reads only.' }),
-  Object.freeze({ id: 'reference-data', label: 'Reference Data', description: 'Read-mostly lookup or reference libraries.' }),
-  Object.freeze({ id: 'system-vendor-ignore', label: 'System/Vendor/Ignore', description: 'Vendor, system, or intentionally excluded areas.' }),
-  Object.freeze({ id: 'rpg-sources', label: 'RPG Sources', description: 'Source locations that mainly contain RPG or RPGLE members.' }),
-  Object.freeze({ id: 'cl-sources', label: 'CL Sources', description: 'Source locations that mainly contain CL members.' }),
-  Object.freeze({ id: 'dds-sources', label: 'DDS Sources', description: 'Source locations for display, printer, or physical file DDS members.' }),
-  Object.freeze({ id: 'sql-sources', label: 'SQL Sources', description: 'Source locations for SQL and SQLRPGLE members.' }),
-  Object.freeze({ id: 'command-sources', label: 'Command Sources', description: 'Source locations for CMD source or command definitions.' }),
-  Object.freeze({ id: 'service-program-sources', label: 'Service Program / Module Sources', description: 'Source locations for service program, binder, or module related members.' }),
-  Object.freeze({ id: 'unknown', label: 'Unknown / User-defined', description: 'User-defined or not-yet-classified purpose.' }),
+  Object.freeze({
+    id: 'source',
+    label: 'Source',
+    description: 'Primary source members and source physical files.',
+  }),
+  Object.freeze({
+    id: 'data',
+    label: 'Data',
+    description: 'Business data libraries and runtime tables.',
+  }),
+  Object.freeze({
+    id: 'metadata',
+    label: 'Metadata',
+    description: 'DB2 metadata targets and discovery libraries.',
+  }),
+  Object.freeze({
+    id: 'runtime-objects',
+    label: 'Runtime Objects',
+    description: 'Programs, service programs, modules, commands, and related runtime objects.',
+  }),
+  Object.freeze({
+    id: 'test-data',
+    label: 'Test Data',
+    description: 'Libraries used for bounded test data reads only.',
+  }),
+  Object.freeze({
+    id: 'reference-data',
+    label: 'Reference Data',
+    description: 'Read-mostly lookup or reference libraries.',
+  }),
+  Object.freeze({
+    id: 'system-vendor-ignore',
+    label: 'System/Vendor/Ignore',
+    description: 'Vendor, system, or intentionally excluded areas.',
+  }),
+  Object.freeze({
+    id: 'rpg-sources',
+    label: 'RPG Sources',
+    description: 'Source locations that mainly contain RPG or RPGLE members.',
+  }),
+  Object.freeze({
+    id: 'cl-sources',
+    label: 'CL Sources',
+    description: 'Source locations that mainly contain CL members.',
+  }),
+  Object.freeze({
+    id: 'dds-sources',
+    label: 'DDS Sources',
+    description: 'Source locations for display, printer, or physical file DDS members.',
+  }),
+  Object.freeze({
+    id: 'sql-sources',
+    label: 'SQL Sources',
+    description: 'Source locations for SQL and SQLRPGLE members.',
+  }),
+  Object.freeze({
+    id: 'command-sources',
+    label: 'Command Sources',
+    description: 'Source locations for CMD source or command definitions.',
+  }),
+  Object.freeze({
+    id: 'service-program-sources',
+    label: 'Service Program / Module Sources',
+    description: 'Source locations for service program, binder, or module related members.',
+  }),
+  Object.freeze({
+    id: 'unknown',
+    label: 'Unknown / User-defined',
+    description: 'User-defined or not-yet-classified purpose.',
+  }),
 ]);
 
 const GUIDED_CONFIG_STEPS = Object.freeze([
@@ -69,14 +125,20 @@ const GUIDED_CONFIG_STEPS = Object.freeze([
     description: 'Confirm local workspace and output roots and explain what Zeus stores locally.',
     safetyLevel: 'S0',
     focusAreas: Object.freeze(['workspace']),
-    fieldKeys: Object.freeze(['runtime.configPath', 'profile.sourceRoot', 'profile.outputRoot', 'profile.analysesRegistryPath']),
+    fieldKeys: Object.freeze([
+      'runtime.configPath',
+      'profile.sourceRoot',
+      'profile.outputRoot',
+      'profile.analysesRegistryPath',
+    ]),
     status: 'foundation-ready',
   }),
   Object.freeze({
     id: 'system-profile',
     title: 'Step 2: System Profile',
     shortTitle: 'System Profile',
-    description: 'Choose or validate an IBM i profile with masked resolved values and doctor readiness.',
+    description:
+      'Choose or validate an IBM i profile with masked resolved values and doctor readiness.',
     safetyLevel: 'S0',
     focusAreas: Object.freeze(['systemProfile']),
     fieldKeys: Object.freeze([
@@ -99,7 +161,8 @@ const GUIDED_CONFIG_STEPS = Object.freeze([
     id: 'source-discovery',
     title: 'Step 3: Source Discovery',
     shortTitle: 'Source Discovery',
-    description: 'Capture likely source libraries and source physical files without auto-selecting everything.',
+    description:
+      'Capture likely source libraries and source physical files without auto-selecting everything.',
     safetyLevel: 'S2',
     focusAreas: Object.freeze(['sourceLocations']),
     fieldKeys: Object.freeze([
@@ -137,7 +200,8 @@ const GUIDED_CONFIG_STEPS = Object.freeze([
     id: 'object-discovery',
     title: 'Step 5: Object Discovery',
     shortTitle: 'Object Discovery',
-    description: 'Prepare read-only discovery of programs, service programs, modules, files, and commands.',
+    description:
+      'Prepare read-only discovery of programs, service programs, modules, files, and commands.',
     safetyLevel: 'S2',
     focusAreas: Object.freeze(['objectLibraries']),
     fieldKeys: Object.freeze(['profile.systems', 'profile.workflow.members']),
@@ -148,7 +212,8 @@ const GUIDED_CONFIG_STEPS = Object.freeze([
     id: 'analysis-intent',
     title: 'Step 6: Analysis Intent',
     shortTitle: 'Intent',
-    description: 'Map user intent to required, recommended, optional, and not-needed configuration areas.',
+    description:
+      'Map user intent to required, recommended, optional, and not-needed configuration areas.',
     safetyLevel: 'S1',
     focusAreas: Object.freeze(['analysisIntent']),
     fieldKeys: Object.freeze([
@@ -163,7 +228,8 @@ const GUIDED_CONFIG_STEPS = Object.freeze([
     id: 'review-save',
     title: 'Step 7: Review and Save',
     shortTitle: 'Review & Save',
-    description: 'Preview read-only remote access, local writes, warnings, and safe CLI commands before saving locally.',
+    description:
+      'Preview read-only remote access, local writes, warnings, and safe CLI commands before saving locally.',
     safetyLevel: 'S1',
     focusAreas: Object.freeze(['review']),
     fieldKeys: Object.freeze(['profile.outputRoot', 'profile.analysesRegistryPath']),
@@ -176,37 +242,59 @@ const GUIDED_ANALYSIS_INTENTS = Object.freeze([
     id: 'onboarding',
     title: 'Onboarding',
     description: 'Orient a new engineer quickly with safe defaults and broad context.',
-    requiredAreas: Object.freeze(['workspace', 'systemProfile', 'sourceLocations', 'analysisIntent', 'review']),
+    requiredAreas: Object.freeze([
+      'workspace',
+      'systemProfile',
+      'sourceLocations',
+      'analysisIntent',
+      'review',
+    ]),
     recommendedAreas: Object.freeze(['metadataLibraries', 'objectLibraries']),
     optionalAreas: Object.freeze(['dataLibraries']),
     preset: 'onboarding',
-    rationale: 'Onboarding benefits from source context first and only lightweight metadata expansion.',
+    rationale:
+      'Onboarding benefits from source context first and only lightweight metadata expansion.',
   }),
   Object.freeze({
     id: 'documentation-generation',
     title: 'Documentation Generation',
-    description: 'Generate readable documentation and analysis artifacts from local or fetched sources.',
+    description:
+      'Generate readable documentation and analysis artifacts from local or fetched sources.',
     requiredAreas: Object.freeze(['workspace', 'sourceLocations', 'analysisIntent', 'review']),
     recommendedAreas: Object.freeze(['metadataLibraries']),
     optionalAreas: Object.freeze(['systemProfile', 'dataLibraries']),
     analyzeMode: 'documentation',
-    rationale: 'Documentation depends on source evidence first and can enrich with metadata when available.',
+    rationale:
+      'Documentation depends on source evidence first and can enrich with metadata when available.',
   }),
   Object.freeze({
     id: 'impact-analysis',
     title: 'Impact Analysis',
     description: 'Estimate blast radius and dependency chains before change work starts.',
-    requiredAreas: Object.freeze(['workspace', 'sourceLocations', 'objectLibraries', 'analysisIntent', 'review']),
+    requiredAreas: Object.freeze([
+      'workspace',
+      'sourceLocations',
+      'objectLibraries',
+      'analysisIntent',
+      'review',
+    ]),
     recommendedAreas: Object.freeze(['systemProfile', 'metadataLibraries']),
     optionalAreas: Object.freeze(['dataLibraries']),
     analyzeMode: 'impact',
-    rationale: 'Impact analysis should see runtime objects and source dependencies before deeper data reads.',
+    rationale:
+      'Impact analysis should see runtime objects and source dependencies before deeper data reads.',
   }),
   Object.freeze({
     id: 'modernization-review',
     title: 'Modernization Review',
     description: 'Prepare architecture and change-boundary evidence for modernization decisions.',
-    requiredAreas: Object.freeze(['workspace', 'sourceLocations', 'objectLibraries', 'analysisIntent', 'review']),
+    requiredAreas: Object.freeze([
+      'workspace',
+      'sourceLocations',
+      'objectLibraries',
+      'analysisIntent',
+      'review',
+    ]),
     recommendedAreas: Object.freeze(['systemProfile', 'metadataLibraries']),
     optionalAreas: Object.freeze(['dataLibraries']),
     preset: 'modernization-review',
@@ -216,17 +304,32 @@ const GUIDED_ANALYSIS_INTENTS = Object.freeze([
     id: 'security-access-review',
     title: 'Security / Access Review',
     description: 'Review access-sensitive sources and safe runtime/DB evidence without mutation.',
-    requiredAreas: Object.freeze(['workspace', 'systemProfile', 'sourceLocations', 'metadataLibraries', 'analysisIntent', 'review']),
+    requiredAreas: Object.freeze([
+      'workspace',
+      'systemProfile',
+      'sourceLocations',
+      'metadataLibraries',
+      'analysisIntent',
+      'review',
+    ]),
     recommendedAreas: Object.freeze(['objectLibraries', 'dataLibraries']),
     optionalAreas: Object.freeze([]),
     preset: 'security-review',
-    rationale: 'Security review needs clear target visibility plus explicit remote read boundaries.',
+    rationale:
+      'Security review needs clear target visibility plus explicit remote read boundaries.',
   }),
   Object.freeze({
     id: 'db2-table-field-deep-dive',
     title: 'DB2 Table / Field Deep-dive',
-    description: 'Investigate specific DB2 tables or fields with read-only metadata and source evidence.',
-    requiredAreas: Object.freeze(['workspace', 'systemProfile', 'metadataLibraries', 'analysisIntent', 'review']),
+    description:
+      'Investigate specific DB2 tables or fields with read-only metadata and source evidence.',
+    requiredAreas: Object.freeze([
+      'workspace',
+      'systemProfile',
+      'metadataLibraries',
+      'analysisIntent',
+      'review',
+    ]),
     recommendedAreas: Object.freeze(['sourceLocations', 'dataLibraries']),
     optionalAreas: Object.freeze(['objectLibraries']),
     analyzeMode: 'documentation',
@@ -236,11 +339,18 @@ const GUIDED_ANALYSIS_INTENTS = Object.freeze([
     id: 'call-graph-review',
     title: 'Call Graph / Dependency Review',
     description: 'Inspect program-to-program and source-to-table relationships.',
-    requiredAreas: Object.freeze(['workspace', 'sourceLocations', 'objectLibraries', 'analysisIntent', 'review']),
+    requiredAreas: Object.freeze([
+      'workspace',
+      'sourceLocations',
+      'objectLibraries',
+      'analysisIntent',
+      'review',
+    ]),
     recommendedAreas: Object.freeze(['systemProfile']),
     optionalAreas: Object.freeze(['metadataLibraries', 'dataLibraries']),
     analyzeMode: 'architecture',
-    rationale: 'Dependency review is source and object heavy; DB2 metadata is helpful but not always mandatory.',
+    rationale:
+      'Dependency review is source and object heavy; DB2 metadata is helpful but not always mandatory.',
   }),
   Object.freeze({
     id: 'test-generation',
@@ -250,7 +360,8 @@ const GUIDED_ANALYSIS_INTENTS = Object.freeze([
     recommendedAreas: Object.freeze(['systemProfile', 'metadataLibraries', 'dataLibraries']),
     optionalAreas: Object.freeze(['objectLibraries']),
     preset: 'test-generation-review',
-    rationale: 'Test generation starts with source and can enrich with metadata or sample data later.',
+    rationale:
+      'Test generation starts with source and can enrich with metadata or sample data later.',
   }),
   Object.freeze({
     id: 'code-quality-refactoring-review',
@@ -260,7 +371,8 @@ const GUIDED_ANALYSIS_INTENTS = Object.freeze([
     recommendedAreas: Object.freeze(['objectLibraries', 'metadataLibraries']),
     optionalAreas: Object.freeze(['systemProfile', 'dataLibraries']),
     preset: 'refactoring-review',
-    rationale: 'Refactoring review should stay source-first and safe, with optional remote enrichment.',
+    rationale:
+      'Refactoring review should stay source-first and safe, with optional remote enrichment.',
   }),
 ]);
 
@@ -268,7 +380,8 @@ const GUIDED_DISCOVERY_ACTIONS = Object.freeze([
   Object.freeze({
     id: 'discover-source-libraries',
     title: 'Discover Source Libraries',
-    description: 'Preview source-library scope from the resolved runtime profile before any remote-read action is attempted.',
+    description:
+      'Preview source-library scope from the resolved runtime profile before any remote-read action is attempted.',
     safetyLevel: 'S2',
     status: 'config-preview-ready',
     scope: 'IBM i read-only',
@@ -284,7 +397,8 @@ const GUIDED_DISCOVERY_ACTIONS = Object.freeze([
   Object.freeze({
     id: 'discover-source-physical-files',
     title: 'Discover Source Physical Files',
-    description: 'Preview source physical file scope from resolved fetch settings and Zeus defaults.',
+    description:
+      'Preview source physical file scope from resolved fetch settings and Zeus defaults.',
     safetyLevel: 'S2',
     status: 'config-preview-ready',
     scope: 'IBM i read-only',
@@ -332,7 +446,8 @@ const GUIDED_DISCOVERY_ACTIONS = Object.freeze([
   Object.freeze({
     id: 'discover-object-types',
     title: 'Discover Object Types',
-    description: 'Prepare a read-only object-library review for programs, service programs, modules, files, and commands.',
+    description:
+      'Prepare a read-only object-library review for programs, service programs, modules, files, and commands.',
     safetyLevel: 'S2',
     status: 'config-preview-ready',
     scope: 'IBM i read-only',
@@ -351,7 +466,8 @@ const GUIDED_DISCOVERY_ACTIONS = Object.freeze([
 const FIELD_RENDERING_HINTS = Object.freeze({
   'runtime.profile': Object.freeze({
     wizardStepId: 'system-profile',
-    helpText: 'Use a short local profile alias. The GUI should orchestrate existing CLI/profile contracts instead of inventing a second profile system.',
+    helpText:
+      'Use a short local profile alias. The GUI should orchestrate existing CLI/profile contracts instead of inventing a second profile system.',
     examples: Object.freeze(['dev', 'readonly-prod']),
     discoveryActionId: null,
   }),
@@ -363,25 +479,29 @@ const FIELD_RENDERING_HINTS = Object.freeze({
   }),
   'profile.sourceRoot': Object.freeze({
     wizardStepId: 'workspace',
-    helpText: 'Required for local analyze and workflow runs. The browser should never push arbitrary filesystem paths into runtime execution.',
+    helpText:
+      'Required for local analyze and workflow runs. The browser should never push arbitrary filesystem paths into runtime execution.',
     examples: Object.freeze(['./workspace/source', './rpg_sources']),
     discoveryActionId: null,
   }),
   'profile.outputRoot': Object.freeze({
     wizardStepId: 'review-save',
-    helpText: 'Generated artifacts stay local. Review this path before any UI-triggered analyze run.',
+    helpText:
+      'Generated artifacts stay local. Review this path before any UI-triggered analyze run.',
     examples: Object.freeze(['./workspace/output', './output']),
     discoveryActionId: null,
   }),
   'profile.db.host': Object.freeze({
     wizardStepId: 'system-profile',
-    helpText: 'Prefer named systems and masked resolved previews over repeating hostnames manually.',
+    helpText:
+      'Prefer named systems and masked resolved previews over repeating hostnames manually.',
     examples: Object.freeze(['sysdev.example.local']),
     discoveryActionId: null,
   }),
   'profile.db.password': Object.freeze({
     wizardStepId: 'system-profile',
-    helpText: 'Prefer environment-variable references. Plain passwords must not be echoed back into UI previews.',
+    helpText:
+      'Prefer environment-variable references. Plain passwords must not be echoed back into UI previews.',
     examples: Object.freeze(['${env:ZEUS_DB_PASSWORD}']),
     discoveryActionId: null,
   }),
@@ -393,25 +513,29 @@ const FIELD_RENDERING_HINTS = Object.freeze({
   }),
   'profile.fetch.sourceLibrary': Object.freeze({
     wizardStepId: 'source-discovery',
-    helpText: 'Treat source-library selection as guided scope selection, not as a dump-all default.',
+    helpText:
+      'Treat source-library selection as guided scope selection, not as a dump-all default.',
     examples: Object.freeze(['QRPGLESRC']),
     discoveryActionId: 'discover-source-libraries',
   }),
   'profile.fetch.sourceLib': Object.freeze({
     wizardStepId: 'source-discovery',
-    helpText: 'Legacy-compatible alias for sourceLibrary. Keep backward compatibility visible in the GUI.',
+    helpText:
+      'Legacy-compatible alias for sourceLibrary. Keep backward compatibility visible in the GUI.',
     examples: Object.freeze(['APPLIB']),
     discoveryActionId: 'discover-source-libraries',
   }),
   'profile.fetch.sourceFiles': Object.freeze({
     wizardStepId: 'source-discovery',
-    helpText: 'Suggested source physical files should be accepted or edited intentionally, never auto-selected blindly.',
+    helpText:
+      'Suggested source physical files should be accepted or edited intentionally, never auto-selected blindly.',
     examples: Object.freeze(['QRPGLESRC,QCLSRC,QDDSSRC']),
     discoveryActionId: 'discover-source-physical-files',
   }),
   'profile.fetch.files': Object.freeze({
     wizardStepId: 'source-discovery',
-    helpText: 'Suggested source physical files should be accepted or edited intentionally, never auto-selected blindly.',
+    helpText:
+      'Suggested source physical files should be accepted or edited intentionally, never auto-selected blindly.',
     examples: Object.freeze(['QRPGLESRC,QCLSRC,QDDSSRC']),
     discoveryActionId: 'discover-source-physical-files',
   }),
@@ -441,34 +565,37 @@ const FIELD_RENDERING_HINTS = Object.freeze({
   }),
   'profile.workflow.reviewers': Object.freeze({
     wizardStepId: 'review-save',
-    helpText: 'Use reviewer metadata to explain who should validate outputs, not to expose contacts or secrets.',
+    helpText:
+      'Use reviewer metadata to explain who should validate outputs, not to expose contacts or secrets.',
     examples: Object.freeze(['architecture-leads']),
     discoveryActionId: null,
   }),
 });
 
 function uniqueStrings(values) {
-  return Array.from(new Set((values || []).map((entry) => String(entry || '').trim()).filter(Boolean)));
+  return Array.from(
+    new Set((values || []).map(entry => String(entry || '').trim()).filter(Boolean))
+  );
 }
 
 function toUppercaseList(values) {
-  return uniqueStrings(values).map((entry) => entry.toUpperCase());
+  return uniqueStrings(values).map(entry => entry.toUpperCase());
 }
 
 function getPurposeLabel(id) {
-  return PURPOSE_LABELS.find((entry) => entry.id === id) || null;
+  return PURPOSE_LABELS.find(entry => entry.id === id) || null;
 }
 
 function getGuidedConfigStep(stepId) {
-  return GUIDED_CONFIG_STEPS.find((entry) => entry.id === stepId) || null;
+  return GUIDED_CONFIG_STEPS.find(entry => entry.id === stepId) || null;
 }
 
 function getGuidedAnalysisIntent(intentId) {
-  return GUIDED_ANALYSIS_INTENTS.find((entry) => entry.id === intentId) || null;
+  return GUIDED_ANALYSIS_INTENTS.find(entry => entry.id === intentId) || null;
 }
 
 function getGuidedDiscoveryAction(actionId) {
-  return GUIDED_DISCOVERY_ACTIONS.find((entry) => entry.id === actionId) || null;
+  return GUIDED_DISCOVERY_ACTIONS.find(entry => entry.id === actionId) || null;
 }
 
 function inferFieldSafetyLevel(field) {
@@ -476,14 +603,19 @@ function inferFieldSafetyLevel(field) {
   if (capabilities.includes('fetch') || capabilities.includes('query')) {
     return 'S2';
   }
-  if (capabilities.includes('analyze') || capabilities.includes('workflow') || capabilities.includes('bundle') || capabilities.includes('serve')) {
+  if (
+    capabilities.includes('analyze') ||
+    capabilities.includes('workflow') ||
+    capabilities.includes('bundle') ||
+    capabilities.includes('serve')
+  ) {
     return 'S1';
   }
   return 'S0';
 }
 
 function inferWizardStepId(field) {
-  const section = String(field && field.section || '').trim();
+  const section = String((field && field.section) || '').trim();
   if (section === 'profile' || section === 'db2') return 'system-profile';
   if (section === 'workspace') return 'workspace';
   if (section === 'fetch') return 'source-discovery';
@@ -508,7 +640,8 @@ function summarizeValidationRule(validation = {}) {
   if (validation.acceptsJsonFile) lines.push('accepts JSON file or directory');
   if (validation.allowEnvPlaceholder) lines.push('environment-variable placeholder allowed');
   if (validation.cliOnly) lines.push('CLI-only runtime option');
-  if (validation.mutuallyExclusiveWith) lines.push(`mutually exclusive with ${validation.mutuallyExclusiveWith}`);
+  if (validation.mutuallyExclusiveWith)
+    lines.push(`mutually exclusive with ${validation.mutuallyExclusiveWith}`);
   if (Array.isArray(validation.allowedKeys) && validation.allowedKeys.length > 0) {
     lines.push(`allowed keys: ${validation.allowedKeys.join(', ')}`);
   }
@@ -531,7 +664,7 @@ function enrichConfigField(field) {
 }
 
 function listGuidedConfigFields(configFields = []) {
-  return (Array.isArray(configFields) ? configFields : []).map((field) => enrichConfigField(field));
+  return (Array.isArray(configFields) ? configFields : []).map(field => enrichConfigField(field));
 }
 
 function classifyIntentAreas(intentId) {
@@ -540,15 +673,15 @@ function classifyIntentAreas(intentId) {
     throw new Error(`Unknown guided analysis intent: ${intentId}`);
   }
 
-  return GUIDED_CONFIG_STEPS.map((step) => {
+  return GUIDED_CONFIG_STEPS.map(step => {
     const classifications = [];
-    if (step.focusAreas.some((entry) => intent.requiredAreas.includes(entry))) {
+    if (step.focusAreas.some(entry => intent.requiredAreas.includes(entry))) {
       classifications.push('required');
     }
-    if (step.focusAreas.some((entry) => intent.recommendedAreas.includes(entry))) {
+    if (step.focusAreas.some(entry => intent.recommendedAreas.includes(entry))) {
       classifications.push('recommended');
     }
-    if (step.focusAreas.some((entry) => intent.optionalAreas.includes(entry))) {
+    if (step.focusAreas.some(entry => intent.optionalAreas.includes(entry))) {
       classifications.push('optional');
     }
 
@@ -567,13 +700,13 @@ function classifyIntentAreas(intentId) {
 }
 
 function getNextGuidedConfigStepId(stepId) {
-  const currentIndex = GUIDED_CONFIG_STEPS.findIndex((entry) => entry.id === stepId);
+  const currentIndex = GUIDED_CONFIG_STEPS.findIndex(entry => entry.id === stepId);
   if (currentIndex < 0) return GUIDED_CONFIG_STEPS[0].id;
   return GUIDED_CONFIG_STEPS[Math.min(currentIndex + 1, GUIDED_CONFIG_STEPS.length - 1)].id;
 }
 
 function getPreviousGuidedConfigStepId(stepId) {
-  const currentIndex = GUIDED_CONFIG_STEPS.findIndex((entry) => entry.id === stepId);
+  const currentIndex = GUIDED_CONFIG_STEPS.findIndex(entry => entry.id === stepId);
   if (currentIndex < 0) return GUIDED_CONFIG_STEPS[0].id;
   return GUIDED_CONFIG_STEPS[Math.max(currentIndex - 1, 0)].id;
 }
@@ -584,34 +717,43 @@ function buildCliPreviewTemplates(intentId) {
     throw new Error(`Unknown guided analysis intent: ${intentId}`);
   }
 
-  const commands = [
-    'node ./cli/zeus.js doctor --profile {{profile}} --show-resolved',
-  ];
+  const commands = ['node ./cli/zeus.js doctor --profile {{profile}} --show-resolved'];
 
   if (intent.requiredAreas.includes('sourceLocations')) {
-    commands.push('node ./cli/zeus.js analyze --profile {{profile}} --source {{sourceRoot}} --program {{program}} --out {{outputRoot}}');
+    commands.push(
+      'node ./cli/zeus.js analyze --profile {{profile}} --source {{sourceRoot}} --program {{program}} --out {{outputRoot}}'
+    );
   }
 
   if (intent.preset) {
-    commands.push(`node ./cli/zeus.js workflow --preset ${intent.preset} --profile {{profile}} --source {{sourceRoot}} --program {{program}} --out {{outputRoot}}`);
+    commands.push(
+      `node ./cli/zeus.js workflow --preset ${intent.preset} --profile {{profile}} --source {{sourceRoot}} --program {{program}} --out {{outputRoot}}`
+    );
   } else if (intent.analyzeMode) {
-    commands.push(`node ./cli/zeus.js analyze --profile {{profile}} --source {{sourceRoot}} --program {{program}} --out {{outputRoot}} --mode ${intent.analyzeMode}`);
+    commands.push(
+      `node ./cli/zeus.js analyze --profile {{profile}} --source {{sourceRoot}} --program {{program}} --out {{outputRoot}} --mode ${intent.analyzeMode}`
+    );
   }
 
   return uniqueStrings(commands);
 }
 
-function renderCliPreviewTemplate(templateLines, {
-  profile = 'dev',
-  sourceRoot = './workspace/source',
-  outputRoot = './workspace/output',
-  program = 'ORDERPGM',
-} = {}) {
-  return (templateLines || []).map((line) => String(line || '')
-    .replace(/\{\{profile\}\}/g, profile)
-    .replace(/\{\{sourceRoot\}\}/g, sourceRoot)
-    .replace(/\{\{outputRoot\}\}/g, outputRoot)
-    .replace(/\{\{program\}\}/g, program));
+function renderCliPreviewTemplate(
+  templateLines,
+  {
+    profile = 'dev',
+    sourceRoot = './workspace/source',
+    outputRoot = './workspace/output',
+    program = 'ORDERPGM',
+  } = {}
+) {
+  return (templateLines || []).map(line =>
+    String(line || '')
+      .replace(/\{\{profile\}\}/g, profile)
+      .replace(/\{\{sourceRoot\}\}/g, sourceRoot)
+      .replace(/\{\{outputRoot\}\}/g, outputRoot)
+      .replace(/\{\{program\}\}/g, program)
+  );
 }
 
 function buildSafeCliPreview(draft = {}) {
@@ -619,13 +761,17 @@ function buildSafeCliPreview(draft = {}) {
   const templateLines = buildCliPreviewTemplates(normalized.normalized.intentId);
   return {
     intentId: normalized.normalized.intentId,
-    safetyLevels: uniqueStrings(['S0', 'S1', ...(normalized.normalized.requiresRemoteRead ? ['S2'] : [])]),
+    safetyLevels: uniqueStrings([
+      'S0',
+      'S1',
+      ...(normalized.normalized.requiresRemoteRead ? ['S2'] : []),
+    ]),
     commands: renderCliPreviewTemplate(templateLines, {
       profile: normalized.normalized.profileName || 'dev',
       sourceRoot: normalized.normalized.sourceRoot || './workspace/source',
       outputRoot: normalized.normalized.outputRoot || './workspace/output',
       program: normalized.normalized.program || 'ORDERPGM',
-    }).filter((line) => !/password|secret|token/i.test(line)),
+    }).filter(line => !/password|secret|token/i.test(line)),
     warnings: normalized.warnings,
   };
 }
@@ -653,13 +799,19 @@ function validateGuidedConfigurationDraft(draft = {}) {
   }
 
   if (secretReference && !ENV_REFERENCE_PATTERN.test(secretReference)) {
-    errors.push('Secrets must be referenced through environment variables or placeholders, not plain text.');
+    errors.push(
+      'Secrets must be referenced through environment variables or placeholders, not plain text.'
+    );
   }
 
-  const normalizedSources = sourceLocations.map((entry) => ({
-    library: String(entry && entry.library || '').trim().toUpperCase(),
-    sourceFile: String(entry && entry.sourceFile || '').trim().toUpperCase(),
-    purposeLabel: String(entry && entry.purposeLabel || 'unknown').trim(),
+  const normalizedSources = sourceLocations.map(entry => ({
+    library: String((entry && entry.library) || '')
+      .trim()
+      .toUpperCase(),
+    sourceFile: String((entry && entry.sourceFile) || '')
+      .trim()
+      .toUpperCase(),
+    purposeLabel: String((entry && entry.purposeLabel) || 'unknown').trim(),
   }));
 
   for (const source of normalizedSources) {
@@ -669,18 +821,23 @@ function validateGuidedConfigurationDraft(draft = {}) {
   }
 
   if (sourceRoot && /^[A-Za-z]:\\|^\//.test(sourceRoot)) {
-    warnings.push('Absolute workspace paths should be reviewed carefully in the GUI and kept inside allowed local boundaries.');
+    warnings.push(
+      'Absolute workspace paths should be reviewed carefully in the GUI and kept inside allowed local boundaries.'
+    );
   }
   if (outputRoot && /^[A-Za-z]:\\|^\//.test(outputRoot)) {
-    warnings.push('Absolute output paths should be reviewed carefully in the GUI and kept inside allowed local boundaries.');
+    warnings.push(
+      'Absolute output paths should be reviewed carefully in the GUI and kept inside allowed local boundaries.'
+    );
   }
 
   const intent = getGuidedAnalysisIntent(intentId);
-  const requiresRemoteRead = Boolean(intent && (
-    intent.requiredAreas.includes('systemProfile')
-    || intent.requiredAreas.includes('metadataLibraries')
-    || intent.requiredAreas.includes('objectLibraries')
-  ));
+  const requiresRemoteRead = Boolean(
+    intent &&
+    (intent.requiredAreas.includes('systemProfile') ||
+      intent.requiredAreas.includes('metadataLibraries') ||
+      intent.requiredAreas.includes('objectLibraries'))
+  );
 
   return {
     valid: errors.length === 0,
@@ -700,7 +857,9 @@ function validateGuidedConfigurationDraft(draft = {}) {
 }
 
 function buildConfigDerivedDiscoveryPreview(definition, profile, configContext = {}) {
-  const sourceLibrary = String(configContext.sourceLibrary || '').trim().toUpperCase();
+  const sourceLibrary = String(configContext.sourceLibrary || '')
+    .trim()
+    .toUpperCase();
   const sourceFiles = toUppercaseList(configContext.sourceFiles || []);
   const members = toUppercaseList(configContext.members || []);
   const outputRoot = String(configContext.outputRoot || '').trim();
@@ -727,7 +886,8 @@ function buildConfigDerivedDiscoveryPreview(definition, profile, configContext =
     return {
       ...basePreview,
       status: 'needs-profile-input',
-      summary: 'Profile-based preview is unavailable until the selected fetch profile resolves cleanly.',
+      summary:
+        'Profile-based preview is unavailable until the selected fetch profile resolves cleanly.',
       candidates: [],
       warnings: [unavailableReason],
     };
@@ -735,20 +895,26 @@ function buildConfigDerivedDiscoveryPreview(definition, profile, configContext =
 
   if (definition.id === 'discover-source-libraries') {
     const candidates = sourceLibrary
-      ? [{
-        value: sourceLibrary,
-        kind: 'source-library',
-        confidence: 'high',
-        origin: hasSourceLibOverride ? 'resolved env override' : 'resolved fetch config',
-        rationale: 'Current runtime profile already resolves a source library for fetch scope.',
-      }]
+      ? [
+          {
+            value: sourceLibrary,
+            kind: 'source-library',
+            confidence: 'high',
+            origin: hasSourceLibOverride ? 'resolved env override' : 'resolved fetch config',
+            rationale: 'Current runtime profile already resolves a source library for fetch scope.',
+          },
+        ]
       : [];
     const warnings = [];
     if (!sourceLibrary) {
-      warnings.push('No source library resolves for the selected profile yet. Add fetch.sourceLibrary or fetch.sourceLib before remote discovery.');
+      warnings.push(
+        'No source library resolves for the selected profile yet. Add fetch.sourceLibrary or fetch.sourceLib before remote discovery.'
+      );
     }
     if (hasSourceLibOverride) {
-      warnings.push('An environment override currently changes the resolved source library for this preview.');
+      warnings.push(
+        'An environment override currently changes the resolved source library for this preview.'
+      );
     }
     return {
       ...basePreview,
@@ -768,25 +934,30 @@ function buildConfigDerivedDiscoveryPreview(definition, profile, configContext =
   }
 
   if (definition.id === 'discover-source-physical-files') {
-    const candidates = sourceFiles.map((value) => ({
+    const candidates = sourceFiles.map(value => ({
       value,
       kind: 'source-file',
       confidence: matchesDefaultSourceFiles ? 'medium' : 'high',
-      origin: matchesDefaultSourceFiles ? 'resolved fetch scope (matches Zeus defaults)' : 'resolved fetch config',
+      origin: matchesDefaultSourceFiles
+        ? 'resolved fetch scope (matches Zeus defaults)'
+        : 'resolved fetch config',
       rationale: matchesDefaultSourceFiles
         ? 'Resolved fetch scope currently matches the standard Zeus source-file set.'
         : 'Resolved fetch scope already narrows the source physical files.',
     }));
     const warnings = [];
     if (!sourceLibrary) {
-      warnings.push('Confirm a source library before treating these source-file candidates as remote fetch scope.');
+      warnings.push(
+        'Confirm a source library before treating these source-file candidates as remote fetch scope.'
+      );
     }
     return {
       ...basePreview,
       status: candidates.length > 0 ? 'config-preview-ready' : 'needs-profile-input',
-      summary: candidates.length > 0
-        ? `The selected profile resolves ${candidates.length} source physical file candidate${candidates.length === 1 ? '' : 's'}.`
-        : 'No source physical files resolve for the selected profile yet.',
+      summary:
+        candidates.length > 0
+          ? `The selected profile resolves ${candidates.length} source physical file candidate${candidates.length === 1 ? '' : 's'}.`
+          : 'No source physical files resolve for the selected profile yet.',
       candidates,
       warnings,
       resolvedScope: {
@@ -798,7 +969,7 @@ function buildConfigDerivedDiscoveryPreview(definition, profile, configContext =
     };
   }
 
-  const candidates = members.map((value) => ({
+  const candidates = members.map(value => ({
     value,
     kind: 'member',
     confidence: 'high',
@@ -807,7 +978,9 @@ function buildConfigDerivedDiscoveryPreview(definition, profile, configContext =
   }));
   const warnings = [];
   if (!candidates.length) {
-    warnings.push('No member filter is configured yet. Keep member discovery bounded before attempting broader remote scans.');
+    warnings.push(
+      'No member filter is configured yet. Keep member discovery bounded before attempting broader remote scans.'
+    );
   }
   if (!sourceLibrary) {
     warnings.push('Confirm the source library before running any member-level remote read.');
@@ -815,9 +988,10 @@ function buildConfigDerivedDiscoveryPreview(definition, profile, configContext =
   return {
     ...basePreview,
     status: candidates.length > 0 ? 'config-preview-ready' : 'needs-scope',
-    summary: candidates.length > 0
-      ? `The selected profile already limits fetch scope to ${candidates.length} member${candidates.length === 1 ? '' : 's'}.`
-      : 'No explicit member filter resolves for the selected profile yet.',
+    summary:
+      candidates.length > 0
+        ? `The selected profile already limits fetch scope to ${candidates.length} member${candidates.length === 1 ? '' : 's'}.`
+        : 'No explicit member filter resolves for the selected profile yet.',
     candidates,
     warnings,
     resolvedScope: {
@@ -830,9 +1004,15 @@ function buildConfigDerivedDiscoveryPreview(definition, profile, configContext =
 }
 
 function buildDb2ConfigDerivedDiscoveryPreview(definition, profile, configContext = {}) {
-  const metadataSchema = String(configContext.metadataSchema || '').trim().toUpperCase();
-  const testDataSchema = String(configContext.testDataSchema || '').trim().toUpperCase();
-  const workflowTables = Array.isArray(configContext.workflowTables) ? configContext.workflowTables : [];
+  const metadataSchema = String(configContext.metadataSchema || '')
+    .trim()
+    .toUpperCase();
+  const testDataSchema = String(configContext.testDataSchema || '')
+    .trim()
+    .toUpperCase();
+  const workflowTables = Array.isArray(configContext.workflowTables)
+    ? configContext.workflowTables
+    : [];
   const allowTables = toUppercaseList(configContext.allowTables || []);
   const denyTables = toUppercaseList(configContext.denyTables || []);
   const maskColumns = toUppercaseList(configContext.maskColumns || []);
@@ -857,7 +1037,8 @@ function buildDb2ConfigDerivedDiscoveryPreview(definition, profile, configContex
     return {
       ...basePreview,
       status: 'needs-profile-input',
-      summary: 'Profile-based metadata preview is unavailable until the selected analyze profile resolves cleanly.',
+      summary:
+        'Profile-based metadata preview is unavailable until the selected analyze profile resolves cleanly.',
       candidates: [],
       warnings: [unavailableReason],
     };
@@ -870,7 +1051,8 @@ function buildDb2ConfigDerivedDiscoveryPreview(definition, profile, configContex
       kind: 'metadata-schema',
       confidence: 'high',
       origin: String(configContext.metadataRoleProfileKey || 'db'),
-      rationale: 'Resolved metadata role already defines a default schema for read-only DB2 metadata work.',
+      rationale:
+        'Resolved metadata role already defines a default schema for read-only DB2 metadata work.',
     });
   }
   if (testDataSchema) {
@@ -878,10 +1060,13 @@ function buildDb2ConfigDerivedDiscoveryPreview(definition, profile, configContex
       value: testDataSchema,
       kind: 'test-data-schema',
       confidence: testDataSchema === metadataSchema ? 'medium' : 'high',
-      origin: String(configContext.testDataRoleProfileKey || configContext.metadataRoleProfileKey || 'db'),
-      rationale: testDataSchema === metadataSchema
-        ? 'Resolved test-data scope currently inherits the same default schema.'
-        : 'Resolved test-data role narrows reads to a distinct default schema.',
+      origin: String(
+        configContext.testDataRoleProfileKey || configContext.metadataRoleProfileKey || 'db'
+      ),
+      rationale:
+        testDataSchema === metadataSchema
+          ? 'Resolved test-data scope currently inherits the same default schema.'
+          : 'Resolved test-data role narrows reads to a distinct default schema.',
     });
   }
   for (const table of workflowTables) {
@@ -908,24 +1093,33 @@ function buildDb2ConfigDerivedDiscoveryPreview(definition, profile, configContex
 
   const warnings = [];
   if (!metadataSchema) {
-    warnings.push('No metadata default schema resolves yet. Add profile.db.defaultSchema or dbRoles.metadata.defaultSchema for clearer DB2 preview scope.');
+    warnings.push(
+      'No metadata default schema resolves yet. Add profile.db.defaultSchema or dbRoles.metadata.defaultSchema for clearer DB2 preview scope.'
+    );
   }
   if (!workflowTables.length && !allowTables.length) {
-    warnings.push('No bounded workflow.tables or testData.allowTables are configured yet. Narrow future remote reads before execution.');
+    warnings.push(
+      'No bounded workflow.tables or testData.allowTables are configured yet. Narrow future remote reads before execution.'
+    );
   }
   if (denyTables.length > 0) {
-    warnings.push(`Test-data policy already excludes ${denyTables.length} table${denyTables.length === 1 ? '' : 's'} from future bounded reads.`);
+    warnings.push(
+      `Test-data policy already excludes ${denyTables.length} table${denyTables.length === 1 ? '' : 's'} from future bounded reads.`
+    );
   }
   if (maskColumns.length > 0 || Number(configContext.maskRuleCount || 0) > 0) {
-    warnings.push('Test-data masking rules are configured and should remain part of any later read-only backend flow.');
+    warnings.push(
+      'Test-data masking rules are configured and should remain part of any later read-only backend flow.'
+    );
   }
 
   return {
     ...basePreview,
     status: candidates.length > 0 ? 'config-preview-ready' : 'needs-scope',
-    summary: candidates.length > 0
-      ? `The selected profile resolves ${candidates.length} DB2 scope candidate${candidates.length === 1 ? '' : 's'} without contacting DB2.`
-      : 'No metadata schema or bounded DB2 scope resolves for the selected profile yet.',
+    summary:
+      candidates.length > 0
+        ? `The selected profile resolves ${candidates.length} DB2 scope candidate${candidates.length === 1 ? '' : 's'} without contacting DB2.`
+        : 'No metadata schema or bounded DB2 scope resolves for the selected profile yet.',
     candidates,
     warnings,
     resolvedScope: {
@@ -941,12 +1135,14 @@ function buildDb2ConfigDerivedDiscoveryPreview(definition, profile, configContex
 }
 
 function buildObjectConfigDerivedDiscoveryPreview(definition, profile, configContext = {}) {
-  const objectLibrary = String(configContext.objectLibrary || '').trim().toUpperCase();
+  const objectLibrary = String(configContext.objectLibrary || '')
+    .trim()
+    .toUpperCase();
   const sourceFiles = toUppercaseList(configContext.sourceFiles || []);
   const fetchMembers = toUppercaseList(configContext.fetchMembers || []);
   const workflowMembers = toUppercaseList(configContext.workflowMembers || []);
   const initialWarnings = Array.isArray(configContext.warnings)
-    ? configContext.warnings.map((entry) => String(entry || '').trim()).filter(Boolean)
+    ? configContext.warnings.map(entry => String(entry || '').trim()).filter(Boolean)
     : [];
   const basePreview = {
     actionId: definition.id,
@@ -964,11 +1160,17 @@ function buildObjectConfigDerivedDiscoveryPreview(definition, profile, configCon
     ],
   };
 
-  if (!objectLibrary && !workflowMembers.length && !fetchMembers.length && initialWarnings.length > 0) {
+  if (
+    !objectLibrary &&
+    !workflowMembers.length &&
+    !fetchMembers.length &&
+    initialWarnings.length > 0
+  ) {
     return {
       ...basePreview,
       status: 'needs-profile-input',
-      summary: 'Profile-based object preview is unavailable until the selected fetch/workflow scope resolves cleanly.',
+      summary:
+        'Profile-based object preview is unavailable until the selected fetch/workflow scope resolves cleanly.',
       candidates: [],
       warnings: initialWarnings,
     };
@@ -981,7 +1183,8 @@ function buildObjectConfigDerivedDiscoveryPreview(definition, profile, configCon
       kind: 'object-library',
       confidence: 'medium',
       origin: 'resolved fetch config',
-      rationale: 'The current fetch library is the strongest local candidate for a bounded object review starting point.',
+      rationale:
+        'The current fetch library is the strongest local candidate for a bounded object review starting point.',
     });
   }
   for (const value of workflowMembers) {
@@ -990,7 +1193,8 @@ function buildObjectConfigDerivedDiscoveryPreview(definition, profile, configCon
       kind: 'workflow-member',
       confidence: 'high',
       origin: 'workflow.members',
-      rationale: 'Workflow scope already names this program/member as an intentional bounded analysis target.',
+      rationale:
+        'Workflow scope already names this program/member as an intentional bounded analysis target.',
     });
   }
   for (const value of fetchMembers) {
@@ -1002,27 +1206,35 @@ function buildObjectConfigDerivedDiscoveryPreview(definition, profile, configCon
       kind: 'fetch-member',
       confidence: 'high',
       origin: 'resolved fetch config',
-      rationale: 'Fetch scope already includes this member, which keeps later object inspection bounded.',
+      rationale:
+        'Fetch scope already includes this member, which keeps later object inspection bounded.',
     });
   }
 
   const warnings = [...initialWarnings];
   if (!objectLibrary) {
-    warnings.push('No object-library candidate resolves yet. Confirm the application/source library before any remote object inspection.');
+    warnings.push(
+      'No object-library candidate resolves yet. Confirm the application/source library before any remote object inspection.'
+    );
   }
   if (!workflowMembers.length && !fetchMembers.length) {
-    warnings.push('No bounded workflow.members or fetch.members are configured yet. Add explicit program/member hints before broader object discovery.');
+    warnings.push(
+      'No bounded workflow.members or fetch.members are configured yet. Add explicit program/member hints before broader object discovery.'
+    );
   }
   if (!sourceFiles.length) {
-    warnings.push('No source physical files resolve yet, so object review should stay especially narrow and intentional.');
+    warnings.push(
+      'No source physical files resolve yet, so object review should stay especially narrow and intentional.'
+    );
   }
 
   return {
     ...basePreview,
     status: candidates.length > 0 ? 'config-preview-ready' : 'needs-scope',
-    summary: candidates.length > 0
-      ? `The selected profile resolves ${candidates.length} object-scope candidate${candidates.length === 1 ? '' : 's'} without contacting IBM i.`
-      : 'No bounded object-library or member hints resolve for the selected profile yet.',
+    summary:
+      candidates.length > 0
+        ? `The selected profile resolves ${candidates.length} object-scope candidate${candidates.length === 1 ? '' : 's'} without contacting IBM i.`
+        : 'No bounded object-library or member hints resolve for the selected profile yet.',
     candidates,
     warnings,
     resolvedScope: {
@@ -1043,11 +1255,12 @@ function buildDiscoveryActionPreview({ actionId, profile = 'dev', configContext 
     throw new Error('Profile name contains unsupported characters.');
   }
 
-  if (configContext && (
-    definition.id === 'discover-source-libraries'
-    || definition.id === 'discover-source-physical-files'
-    || definition.id === 'discover-members'
-  )) {
+  if (
+    configContext &&
+    (definition.id === 'discover-source-libraries' ||
+      definition.id === 'discover-source-physical-files' ||
+      definition.id === 'discover-members')
+  ) {
     return buildConfigDerivedDiscoveryPreview(definition, profile, configContext);
   }
 
@@ -1069,10 +1282,7 @@ function buildDiscoveryActionPreview({ actionId, profile = 'dev', configContext 
     scope: definition.scope,
     expensive: Boolean(definition.expensive),
     commandPreview: renderCliPreviewTemplate(definition.commandPreviewTemplates, { profile }),
-    notes: [
-      'This GUI discovery action is currently a contract-first stub.',
-      ...definition.notes,
-    ],
+    notes: ['This GUI discovery action is currently a contract-first stub.', ...definition.notes],
   };
 }
 
@@ -1088,11 +1298,11 @@ function buildGuidedConfigurationPayload({ configFields = [] } = {}) {
     ]),
     safetyLevels: SAFETY_LEVELS,
     purposeLabels: PURPOSE_LABELS,
-    steps: GUIDED_CONFIG_STEPS.map((step) => ({
+    steps: GUIDED_CONFIG_STEPS.map(step => ({
       ...step,
-      fields: enrichedFields.filter((field) => field.wizardStepId === step.id),
+      fields: enrichedFields.filter(field => field.wizardStepId === step.id),
     })),
-    intents: GUIDED_ANALYSIS_INTENTS.map((intent) => ({
+    intents: GUIDED_ANALYSIS_INTENTS.map(intent => ({
       ...intent,
       classifications: classifyIntentAreas(intent.id),
       cliPreviewTemplate: buildCliPreviewTemplates(intent.id),

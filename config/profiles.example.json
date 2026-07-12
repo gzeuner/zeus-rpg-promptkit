@@ -133,7 +133,19 @@
       "ifsDir": "${env:ZEUS_FETCH_IFS_DIR}",
       "out": "${env:ZEUS_FETCH_OUT}",
       "port": 22,
-      "sourceFiles": ["QRPGLESRC", "QSRVSRC", "QCPYSRC", "QCLLESRC", "QCLSRC", "QSQLSRC", "SQLTBLSRC", "SQLVIEWSRC", "SQLIDXSRC", "FORMSRC", "QDDSSRC"],
+      "sourceFiles": [
+        "QRPGLESRC",
+        "QSRVSRC",
+        "QCPYSRC",
+        "QCLLESRC",
+        "QCLSRC",
+        "QSQLSRC",
+        "SQLTBLSRC",
+        "SQLVIEWSRC",
+        "SQLIDXSRC",
+        "FORMSRC",
+        "QDDSSRC"
+      ],
       "members": ["ORDERPGM", "CUSTSRV"],
       "streamFileCcsid": 1208,
       "replace": true,
@@ -478,10 +490,7 @@
     },
     "runtimeContext": {
       "_comment": "Runtime context currently supports journaledTables for doctor reporting.",
-      "journaledTables": [
-        "DATA_EXAMPLE.CUSTOMERS",
-        "REPORTING_EXAMPLE.ORDERS"
-      ]
+      "journaledTables": ["DATA_EXAMPLE.CUSTOMERS", "REPORTING_EXAMPLE.ORDERS"]
     },
     "resources": {
       "_comment": "Optional explicit resource model. Distinguishes the locations of source code, objects, DB metadata, and DB data per system. When omitted, the resource model is derived from fetch/db/dbRoles. Inspect with: node cli/zeus.js resources --profile combined-fetch-and-query. Auto-discover and refine with: node cli/zeus.js discover-environment --profile combined-fetch-and-query.",

@@ -30,18 +30,21 @@ test('analyze --safe-sharing writes redacted variants with stable placeholders',
   fs.cpSync(fixtureRoot, sourceRoot, { recursive: true });
 
   try {
-    runCli([
-      'analyze',
-      '--source',
-      sourceRoot,
-      '--program',
-      'ORDERPGM',
-      '--out',
-      outputRoot,
-      '--safe-sharing',
-      '--mode',
-      'modernization',
-    ], projectRoot);
+    runCli(
+      [
+        'analyze',
+        '--source',
+        sourceRoot,
+        '--program',
+        'ORDERPGM',
+        '--out',
+        outputRoot,
+        '--safe-sharing',
+        '--mode',
+        'modernization',
+      ],
+      projectRoot
+    );
 
     const safeDir = path.join(outputRoot, 'ORDERPGM', 'safe-sharing');
     assert.equal(fs.existsSync(path.join(safeDir, 'context.json')), true);
@@ -60,8 +63,10 @@ test('analyze --safe-sharing writes redacted variants with stable placeholders',
     const safeViewer = fs.readFileSync(path.join(safeDir, 'architecture.html'), 'utf8');
 
     assert.equal(safeContext.program, 'PROGRAM_001');
-    assert.ok(safeContext.dependencies.tables.every((entry) => /^TABLE_\d{3}$/.test(entry.name)));
-    assert.ok(safeContext.dependencies.programCalls.every((entry) => /^PROGRAM_\d{3}$/.test(entry.name)));
+    assert.ok(safeContext.dependencies.tables.every(entry => /^TABLE_\d{3}$/.test(entry.name)));
+    assert.ok(
+      safeContext.dependencies.programCalls.every(entry => /^PROGRAM_\d{3}$/.test(entry.name))
+    );
     assert.match(safeReport, /PROGRAM_001/);
     assert.match(safePrompt, /PROGRAM_001/);
     assert.match(safePrompt, /VALUE_\d{3}/);
@@ -87,37 +92,46 @@ test('bundle --safe-sharing packages only redacted shareable artifacts', () => {
   fs.cpSync(fixtureRoot, sourceRoot, { recursive: true });
 
   try {
-    runCli([
-      'analyze',
-      '--source',
-      sourceRoot,
-      '--program',
-      'ORDERPGM',
-      '--out',
-      outputRoot,
-      '--safe-sharing',
-    ], projectRoot);
+    runCli(
+      [
+        'analyze',
+        '--source',
+        sourceRoot,
+        '--program',
+        'ORDERPGM',
+        '--out',
+        outputRoot,
+        '--safe-sharing',
+      ],
+      projectRoot
+    );
 
-    runCli([
-      'bundle',
-      '--program',
-      'ORDERPGM',
-      '--source-output-root',
-      outputRoot,
-      '--output',
-      bundleRoot,
-      '--safe-sharing',
-    ], projectRoot);
+    runCli(
+      [
+        'bundle',
+        '--program',
+        'ORDERPGM',
+        '--source-output-root',
+        outputRoot,
+        '--output',
+        bundleRoot,
+        '--safe-sharing',
+      ],
+      projectRoot
+    );
 
     const bundlePath = path.join(bundleRoot, 'ORDERPGM-safe-sharing-bundle.zip');
     const bundleManifest = readJson(path.join(outputRoot, 'ORDERPGM', 'bundle-manifest.json'));
     const zip = new AdmZip(bundlePath);
-    const entryNames = zip.getEntries().map((entry) => entry.entryName).sort();
+    const entryNames = zip
+      .getEntries()
+      .map(entry => entry.entryName)
+      .sort();
     const readme = zip.readAsText('README.txt');
 
     assert.equal(fs.existsSync(bundlePath), true);
     assert.equal(bundleManifest.safeSharing.enabled, true);
-    assert.ok(bundleManifest.files.every((entry) => entry.startsWith('safe-sharing/')));
+    assert.ok(bundleManifest.files.every(entry => entry.startsWith('safe-sharing/')));
     assert.ok(entryNames.includes('safe-sharing/report.md'));
     assert.ok(entryNames.includes('safe-sharing/context.json'));
     assert.ok(entryNames.includes('safe-sharing/redaction-manifest.json'));

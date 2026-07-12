@@ -12,10 +12,7 @@ const {
 test('parseMaxRows defaults to the larger read-only query budget', () => {
   assert.equal(parseMaxRows(undefined), DEFAULT_MAX_ROWS);
   assert.equal(parseMaxRows('250'), 250);
-  assert.throws(
-    () => parseMaxRows('0'),
-    /--max-rows/,
-  );
+  assert.throws(() => parseMaxRows('0'), /--max-rows/);
 });
 
 test('normalizeOutput accepts table, csv, and json', () => {
@@ -25,10 +22,13 @@ test('normalizeOutput accepts table, csv, and json', () => {
 });
 
 test('toRowMatrix preserves column order for object rows', () => {
-  const matrix = toRowMatrix(['ID', 'NAME'], [
-    { NAME: 'Alpha', ID: 1 },
-    { NAME: 'Beta', ID: 2 },
-  ]);
+  const matrix = toRowMatrix(
+    ['ID', 'NAME'],
+    [
+      { NAME: 'Alpha', ID: 1 },
+      { NAME: 'Beta', ID: 2 },
+    ]
+  );
 
   assert.deepEqual(matrix, [
     [1, 'Alpha'],
@@ -38,10 +38,9 @@ test('toRowMatrix preserves column order for object rows', () => {
 
 test('splitSqlStatements supports quoted semicolons and multiple statements', () => {
   assert.deepEqual(
-    splitSqlStatements("SELECT 'A;B' AS X FROM SYSIBM.SYSDUMMY1; SELECT 2 AS Y FROM SYSIBM.SYSDUMMY1;"),
-    [
-      "SELECT 'A;B' AS X FROM SYSIBM.SYSDUMMY1",
-      'SELECT 2 AS Y FROM SYSIBM.SYSDUMMY1',
-    ],
+    splitSqlStatements(
+      "SELECT 'A;B' AS X FROM SYSIBM.SYSDUMMY1; SELECT 2 AS Y FROM SYSIBM.SYSDUMMY1;"
+    ),
+    ["SELECT 'A;B' AS X FROM SYSIBM.SYSDUMMY1", 'SELECT 2 AS Y FROM SYSIBM.SYSDUMMY1']
   );
 });

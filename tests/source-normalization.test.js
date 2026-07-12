@@ -23,12 +23,9 @@ test('analyze pipeline normalizes BOM-marked and UTF-16 sources into a consisten
     Buffer.concat([
       Buffer.from([0xef, 0xbb, 0xbf]),
       Buffer.from('**FREE\r\nCALL INVPGM;\r\n', 'utf8'),
-    ]),
+    ])
   );
-  fs.writeFileSync(
-    calleeFile,
-    Buffer.from('\ufeff**FREE\r\nDCL-F ORDERS DISK;\r\n', 'utf16le'),
-  );
+  fs.writeFileSync(calleeFile, Buffer.from('\ufeff**FREE\r\nDCL-F ORDERS DISK;\r\n', 'utf16le'));
 
   try {
     const result = runAnalyzePipeline({
@@ -49,19 +46,21 @@ test('analyze pipeline normalizes BOM-marked and UTF-16 sources into a consisten
       logVerbose() {},
     });
 
-    const collectStage = result.stageReports.find((stage) => stage.id === 'collect-scan');
+    const collectStage = result.stageReports.find(stage => stage.id === 'collect-scan');
     assert.ok(collectStage);
     assert.equal(collectStage.metadata.scannableSourceFileCount, 2);
     assert.equal(collectStage.metadata.sourceNormalization.convertedEncodingCount, 1);
     assert.equal(collectStage.metadata.sourceNormalization.bomRemovedCount, 2);
     assert.equal(collectStage.metadata.sourceNormalization.normalizedLineEndingCount, 2);
-    assert.ok(collectStage.diagnostics.some((entry) => entry.code === 'SOURCE_ENCODING_CONVERTED'));
-    assert.ok(collectStage.diagnostics.some((entry) => entry.code === 'SOURCE_BOM_REMOVED'));
-    assert.ok(collectStage.diagnostics.some((entry) => entry.code === 'SOURCE_LINE_ENDINGS_NORMALIZED'));
+    assert.ok(collectStage.diagnostics.some(entry => entry.code === 'SOURCE_ENCODING_CONVERTED'));
+    assert.ok(collectStage.diagnostics.some(entry => entry.code === 'SOURCE_BOM_REMOVED'));
+    assert.ok(
+      collectStage.diagnostics.some(entry => entry.code === 'SOURCE_LINE_ENDINGS_NORMALIZED')
+    );
 
     assert.deepEqual(
-      result.context.dependencies.programCalls.map((entry) => entry.name),
-      ['INVPGM'],
+      result.context.dependencies.programCalls.map(entry => entry.name),
+      ['INVPGM']
     );
     const sourceFiles = result.context.sourceFiles.reduce((acc, entry) => {
       acc[entry.path] = entry;

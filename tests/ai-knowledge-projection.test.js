@@ -8,13 +8,24 @@ const { scanSourceFiles } = require('../src/scanner/rpgScanner');
 const { buildCanonicalAnalysisModel } = require('../src/context/canonicalAnalysisModel');
 const { buildContext } = require('../src/context/contextBuilder');
 const { optimizeContext } = require('../src/ai/contextOptimizer');
-const { AI_KNOWLEDGE_PROJECTION_SCHEMA_VERSION, buildAiKnowledgeProjection } = require('../src/ai/knowledgeProjection');
+const {
+  AI_KNOWLEDGE_PROJECTION_SCHEMA_VERSION,
+  buildAiKnowledgeProjection,
+} = require('../src/ai/knowledgeProjection');
 const { buildPrompt } = require('../src/prompt/promptBuilder');
-const { buildCompactDb2TableLink, buildCompactTestDataLink, buildDb2SourceLinkage } = require('../src/db2/db2EvidenceLinker');
+const {
+  buildCompactDb2TableLink,
+  buildCompactTestDataLink,
+  buildDb2SourceLinkage,
+} = require('../src/db2/db2EvidenceLinker');
 const { readSanitizedFixtureJson, readSanitizedFixtureText } = require('./helpers/fixtureCorpus');
 
 const db2Fixture = readSanitizedFixtureJson('db2', 'catalog-linkage.json');
-const sqlAnalysisSource = readSanitizedFixtureText('source', 'sql-analysis', 'PROGRAM_001.sqlrpgle');
+const sqlAnalysisSource = readSanitizedFixtureText(
+  'source',
+  'sql-analysis',
+  'PROGRAM_001.sqlrpgle'
+);
 
 test('buildAiKnowledgeProjection emits a versioned prompt-ready projection with evidence and workflows', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-ai-projection-'));
@@ -46,14 +57,18 @@ test('buildAiKnowledgeProjection emits a versioned prompt-ready projection with 
     });
     const context = buildContext({ canonicalAnalysis });
     const baseProjection = buildAiKnowledgeProjection({ canonicalAnalysis, context });
-    const optimizedContext = optimizeContext(context, {
-      maxSQLStatements: 1,
-      maxSourceSnippets: 2,
-      workflowTokenBudgets: {
-        documentation: 800,
-        errorAnalysis: 700,
+    const optimizedContext = optimizeContext(
+      context,
+      {
+        maxSQLStatements: 1,
+        maxSourceSnippets: 2,
+        workflowTokenBudgets: {
+          documentation: 800,
+          errorAnalysis: 700,
+        },
       },
-    }, baseProjection);
+      baseProjection
+    );
     const projection = buildAiKnowledgeProjection({ canonicalAnalysis, context, optimizedContext });
 
     assert.equal(projection.schemaVersion, AI_KNOWLEDGE_PROJECTION_SCHEMA_VERSION);
@@ -69,11 +84,15 @@ test('buildAiKnowledgeProjection emits a versioned prompt-ready projection with 
     assert.equal(projection.workflows.documentation.sqlStatements.length, 1);
     assert.ok(projection.workflows.documentation.tokenBudget >= 1);
     assert.ok(Array.isArray(projection.workflows.documentation.evidencePacks.sql));
-    assert.ok(projection.entities.sqlStatements.some((entry) => entry.dynamic === true));
-    assert.ok(projection.entities.sqlStatements.some((entry) => entry.evidenceRefs.length > 0));
-    assert.ok(projection.entities.sqlStatements.every((entry) => Object.prototype.hasOwnProperty.call(entry, 'driverTable')));
-    assert.ok(projection.entities.sqlStatements.every((entry) => Array.isArray(entry.joins)));
-    assert.ok(projection.entities.sqlStatements.every((entry) => Array.isArray(entry.filters)));
+    assert.ok(projection.entities.sqlStatements.some(entry => entry.dynamic === true));
+    assert.ok(projection.entities.sqlStatements.some(entry => entry.evidenceRefs.length > 0));
+    assert.ok(
+      projection.entities.sqlStatements.every(entry =>
+        Object.prototype.hasOwnProperty.call(entry, 'driverTable')
+      )
+    );
+    assert.ok(projection.entities.sqlStatements.every(entry => Array.isArray(entry.joins)));
+    assert.ok(projection.entities.sqlStatements.every(entry => Array.isArray(entry.filters)));
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -93,20 +112,33 @@ test('buildPrompt consumes ai-knowledge projection workflows', () => {
         documentation: {
           summary: 'Program ORDERPGM reads ORDERS.',
           tables: [{ name: 'ORDERS', kind: 'TABLE' }],
-          programCalls: [{ name: 'INVPGM', kind: 'PROGRAM', resolutionSource: 'CATALOG', catalogObjectType: '*PGM' }],
-          procedureCalls: [{ target: 'POSTINV', resolutionSource: 'CATALOG', catalogObjectType: '*SRVPGM' }],
+          programCalls: [
+            {
+              name: 'INVPGM',
+              kind: 'PROGRAM',
+              resolutionSource: 'CATALOG',
+              catalogObjectType: '*PGM',
+            },
+          ],
+          procedureCalls: [
+            { target: 'POSTINV', resolutionSource: 'CATALOG', catalogObjectType: '*SRVPGM' },
+          ],
           copyMembers: [],
-          sqlStatements: [{ type: 'SELECT', intent: 'READ', tables: ['ORDERS'], text: 'select * from orders' }],
+          sqlStatements: [
+            { type: 'SELECT', intent: 'READ', tables: ['ORDERS'], text: 'select * from orders' },
+          ],
           riskMarkers: ['Dynamic SQL detected'],
           uncertaintyMarkers: ['DYNAMIC_SQL'],
-          evidenceHighlights: [{
-            rank: 1,
-            score: 120,
-            file: 'ORDERPGM.sqlrpgle',
-            startLine: 4,
-            label: 'SQL',
-            snippet: 'exec sql select * from orders;',
-          }],
+          evidenceHighlights: [
+            {
+              rank: 1,
+              score: 120,
+              file: 'ORDERPGM.sqlrpgle',
+              startLine: 4,
+              label: 'SQL',
+              snippet: 'exec sql select * from orders;',
+            },
+          ],
           dependencyGraphSummary: { nodeCount: 3, edgeCount: 2 },
           testData: { status: 'skipped' },
         },

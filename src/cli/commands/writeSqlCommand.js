@@ -15,7 +15,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const fs = require('fs');
 const path = require('path');
-const { resolveAnalyzeConfig, resolveAnalyzeDbConfig, loadProfiles, resolveProfile } = require('../../config/runtimeConfig');
+const {
+  resolveAnalyzeConfig,
+  resolveAnalyzeDbConfig,
+  loadProfiles,
+  resolveProfile,
+} = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
 const { runWriteDb2Query } = require('../../db2/writeQueryService');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
@@ -60,7 +65,9 @@ const WRITE_MODES = Object.freeze({
 });
 
 function resolveWriteMode(mode = 'upsert-sql') {
-  const key = String(mode || 'upsert-sql').trim().toLowerCase();
+  const key = String(mode || 'upsert-sql')
+    .trim()
+    .toLowerCase();
   return WRITE_MODES[key] || WRITE_MODES['upsert-sql'];
 }
 
@@ -69,7 +76,7 @@ function validateWriteSql(sql, { mode = 'upsert-sql' } = {}) {
   if (!writeMode.pattern.test(sql)) {
     throw new Error(
       `${writeMode.command} only accepts DML statements: ${writeMode.accepted}. ` +
-      'Use query-sql for SELECT statements.'
+        'Use query-sql for SELECT statements.'
     );
   }
 }
@@ -117,7 +124,9 @@ function buildPreflightCountSql(sql) {
   }
 
   // UPDATE <table> SET ... [WHERE ...]
-  const updateWhere = sql.match(/^\s*UPDATE\s+[\w$.]+\s+SET\s+[\s\S]+?(?:\s+(WHERE\s+[\s\S]+?))?\s*$/i);
+  const updateWhere = sql.match(
+    /^\s*UPDATE\s+[\w$.]+\s+SET\s+[\s\S]+?(?:\s+(WHERE\s+[\s\S]+?))?\s*$/i
+  );
   if (updateWhere) {
     const where = updateWhere[1] ? updateWhere[1].trim() : null;
     return where
@@ -154,7 +163,10 @@ function formatBackupTimestamp(now = new Date()) {
 
 function buildBackupObjectName(tableName, { now = new Date() } = {}) {
   const timestamp = formatBackupTimestamp(now);
-  const maxTableLength = Math.max(1, BACKUP_NAME_MAX_LENGTH - BACKUP_PREFIX.length - BACKUP_TIMESTAMP_LENGTH);
+  const maxTableLength = Math.max(
+    1,
+    BACKUP_NAME_MAX_LENGTH - BACKUP_PREFIX.length - BACKUP_TIMESTAMP_LENGTH
+  );
   const tableSegment = sanitizeBackupNameSegment(tableName).slice(0, maxTableLength) || 'T';
   return `${BACKUP_PREFIX}${tableSegment}${timestamp}`.slice(0, BACKUP_NAME_MAX_LENGTH);
 }
@@ -170,13 +182,7 @@ function resolveBackupSchema(args, config, targetTable) {
   return parts.length > 1 ? String(parts[0]).trim().toUpperCase() : null;
 }
 
-function ensureBackupCreated({
-  args,
-  config,
-  dbConfig,
-  sql,
-  services = {},
-}) {
+function ensureBackupCreated({ args, config, dbConfig, sql, services = {} }) {
   const shouldBackup = Boolean(args.backup || args['require-backup']);
   if (!shouldBackup) {
     return null;
@@ -186,9 +192,13 @@ function ensureBackupCreated({
   const targetTable = extractTargetTable(sql);
   if (!targetTable) {
     if (args['require-backup']) {
-      throw new Error('Zieltabelle konnte nicht aus SQL ermittelt werden. --require-backup verhindert die Schreiboperation.');
+      throw new Error(
+        'Zieltabelle konnte nicht aus SQL ermittelt werden. --require-backup verhindert die Schreiboperation.'
+      );
     }
-    console.error('[backup] Zieltabelle konnte nicht aus SQL ermittelt werden — Backup übersprungen.');
+    console.error(
+      '[backup] Zieltabelle konnte nicht aus SQL ermittelt werden — Backup übersprungen.'
+    );
     return null;
   }
 
@@ -226,7 +236,9 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
     if (profile && profile.productionSystem) {
       console.error('');
       console.error('  *** FEHLER: Dieses Profil ist als productionSystem=true markiert!      ***');
-      console.error(`  *** ${writeMode.command} verweigert Write-Operationen auf Produktionssystemen.   ***`);
+      console.error(
+        `  *** ${writeMode.command} verweigert Write-Operationen auf Produktionssystemen.   ***`
+      );
       console.error('  *** Bitte SQL manuell in ACS ausführen.                                ***');
       console.error('');
       process.exit(3);
@@ -250,7 +262,7 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
   }
 
   try {
-    statements.forEach((statement) => validateWriteSql(statement, { mode }));
+    statements.forEach(statement => validateWriteSql(statement, { mode }));
   } catch (err) {
     console.error(err.message);
     process.exit(2);
@@ -274,7 +286,7 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
   console.log('');
 
   // Pre-flight: Row-Count für DELETE/UPDATE anzeigen und ggf. auf --confirm warten
-  const preflightStatements = statements.filter((statement) => PREFLIGHT_OPERATIONS.test(statement));
+  const preflightStatements = statements.filter(statement => PREFLIGHT_OPERATIONS.test(statement));
   for (let i = 0; i < preflightStatements.length; i += 1) {
     const statement = preflightStatements[i];
     const countSql = buildPreflightCountSql(statement);
@@ -292,23 +304,29 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
         },
       });
       const row = (countResult.rows || [])[0];
-      rowCount = row ? (row.ANZAHL || row.anzahl || Object.values(row)[0] || '?') : '?';
+      rowCount = row ? row.ANZAHL || row.anzahl || Object.values(row)[0] || '?' : '?';
     } catch (_) {
       // Count-Fehler ist nicht kritisch — weiter ohne Zahl
     }
-    console.log(`[preflight] Statement ${i + 1}/${preflightStatements.length}: Betroffene Zeilen: ${rowCount}`);
+    console.log(
+      `[preflight] Statement ${i + 1}/${preflightStatements.length}: Betroffene Zeilen: ${rowCount}`
+    );
     if (args['dry-run']) {
       continue;
     }
     if (!args.confirm && !args.force) {
       console.error('');
-      console.error('[preflight] Abbruch \u2014 bitte --confirm zum Ausf\u00fchren oder --force zum \u00dcberspringen der Pr\u00fcfung angeben.');
+      console.error(
+        '[preflight] Abbruch \u2014 bitte --confirm zum Ausf\u00fchren oder --force zum \u00dcberspringen der Pr\u00fcfung angeben.'
+      );
       process.exit(4);
     }
   }
   if (args['dry-run']) {
     console.log('');
-    console.log('[dry-run] Kein SQL ausgef\u00fchrt. Beende mit --confirm oder --force um tats\u00e4chlich auszuf\u00fchren.');
+    console.log(
+      '[dry-run] Kein SQL ausgef\u00fchrt. Beende mit --confirm oder --force um tats\u00e4chlich auszuf\u00fchren.'
+    );
     process.exit(0);
   }
   if (preflightStatements.length > 0) {
@@ -350,7 +368,9 @@ async function runWriteSql(args, { mode = 'upsert-sql' } = {}) {
 
   if (result.statementCount > 1) {
     for (let i = 0; i < result.results.length; i += 1) {
-      console.log(`[${i + 1}/${result.results.length}] ${result.results[i].rowsAffected} row(s) affected`);
+      console.log(
+        `[${i + 1}/${result.results.length}] ${result.results[i].rowsAffected} row(s) affected`
+      );
     }
   }
   console.log(`${result.rowsAffected} row(s) affected`);

@@ -97,17 +97,23 @@ function describeTarget(connectionConfig, systemDefinition) {
     extractAuthorityName(connectionConfig && connectionConfig.host),
     extractAuthorityName(connectionConfig && connectionConfig.url),
     extractAuthorityName(systemDefinition && systemDefinition.host),
-    extractAuthorityName(systemDefinition && systemDefinition.url),
+    extractAuthorityName(systemDefinition && systemDefinition.url)
   );
-  const systemKey = firstString(metadata && metadata.systemKey, systemDefinition && systemDefinition.systemName);
+  const systemKey = firstString(
+    metadata && metadata.systemKey,
+    systemDefinition && systemDefinition.systemName
+  );
   const displayName = firstString(
     metadata && metadata.displayName,
     systemDefinition && systemDefinition.displayName,
     systemDefinition && systemDefinition.systemName,
     systemKey,
-    host,
+    host
   );
-  const systemName = firstString(metadata && metadata.systemName, systemDefinition && systemDefinition.systemName);
+  const systemName = firstString(
+    metadata && metadata.systemName,
+    systemDefinition && systemDefinition.systemName
+  );
   return {
     systemKey: systemKey || '',
     displayName: displayName || '',
@@ -141,7 +147,10 @@ function deriveLegacyResources(profile) {
   const testDataDb = isPlainObject(dbRoles.testData) ? dbRoles.testData : metadataDb;
 
   const sourceTarget = describeTarget(Object.keys(fetch).length ? fetch : null, null);
-  const objectsTarget = describeTarget(Object.keys(db).length ? db : (Object.keys(fetch).length ? fetch : null), null);
+  const objectsTarget = describeTarget(
+    Object.keys(db).length ? db : Object.keys(fetch).length ? fetch : null,
+    null
+  );
   const metadataTarget = describeTarget(Object.keys(metadataDb).length ? metadataDb : null, null);
   const dataTarget = describeTarget(Object.keys(testDataDb).length ? testDataDb : null, null);
 
@@ -176,9 +185,20 @@ function deriveLegacyResources(profile) {
 
 function resolveSystemTarget(systems, systemKey) {
   if (!systemKey) return { target: null, definition: null };
-  const definition = isPlainObject(systems) && isPlainObject(systems[systemKey]) ? systems[systemKey] : null;
+  const definition =
+    isPlainObject(systems) && isPlainObject(systems[systemKey]) ? systems[systemKey] : null;
   if (!definition) {
-    return { target: { systemKey, displayName: systemKey, systemName: '', host: '', names: [], configured: false }, definition: null };
+    return {
+      target: {
+        systemKey,
+        displayName: systemKey,
+        systemName: '',
+        host: '',
+        names: [],
+        configured: false,
+      },
+      definition: null,
+    };
   }
   const described = describeTarget(definition, definition);
   // The model echoes the configured systems-block key (e.g. "test"), not the
@@ -216,10 +236,13 @@ function resolveResourceKind(kind, { profile, systems, declaredResources, derive
   const systemKey = firstString(
     declared && declared.system,
     declaredResources.system,
-    derivedKind.target && derivedKind.target.systemKey,
+    derivedKind.target && derivedKind.target.systemKey
   );
 
-  const { target: systemTarget, definition: systemDefinition } = resolveSystemTarget(systems, systemKey);
+  const { target: systemTarget, definition: systemDefinition } = resolveSystemTarget(
+    systems,
+    systemKey
+  );
 
   // System-level resource defaults (systems.<name>.resources.<kind>).
   const systemResources = isPlainObject(systemDefinition && systemDefinition.resources)
@@ -230,15 +253,25 @@ function resolveResourceKind(kind, { profile, systems, declaredResources, derive
   // Precedence: derived scope < system-level resource < profile-level declared.
   const scope = mergeScopeLists(kind, derivedKind, systemResourceKind, declared);
 
-  const target = systemTarget && systemTarget.configured
-    ? systemTarget
-    : (derivedKind.target || { systemKey: systemKey || '', displayName: systemKey || '', systemName: '', host: '', names: [], configured: false });
+  const target =
+    systemTarget && systemTarget.configured
+      ? systemTarget
+      : derivedKind.target || {
+          systemKey: systemKey || '',
+          displayName: systemKey || '',
+          systemName: '',
+          host: '',
+          names: [],
+          configured: false,
+        };
 
   return Object.freeze({
     kind,
     system: target.systemKey || systemKey || '',
     target: Object.freeze({ ...target, names: Object.freeze((target.names || []).slice()) }),
-    ...Object.fromEntries(RESOURCE_KIND_FIELDS[kind].map((field) => [field, Object.freeze(scope[field])])),
+    ...Object.fromEntries(
+      RESOURCE_KIND_FIELDS[kind].map(field => [field, Object.freeze(scope[field])])
+    ),
     declared: Boolean(declared),
   });
 }
@@ -247,7 +280,7 @@ function summarizeSystems(systems) {
   if (!isPlainObject(systems)) return [];
   return Object.keys(systems)
     .sort()
-    .map((key) => {
+    .map(key => {
       const definition = isPlainObject(systems[key]) ? systems[key] : {};
       const target = describeTarget(definition, definition);
       return Object.freeze({
@@ -255,7 +288,7 @@ function summarizeSystems(systems) {
         displayName: firstString(definition.displayName, definition.systemName, key),
         systemName: firstString(definition.systemName),
         host: target.host,
-        aliases: Object.freeze(normalizeListValue('members', definition.aliases).map((a) => a)),
+        aliases: Object.freeze(normalizeListValue('members', definition.aliases).map(a => a)),
         hasResources: isPlainObject(definition.resources),
       });
     });
@@ -277,7 +310,12 @@ function resolveResourceModel(profile, options = {}) {
 
   const resources = {};
   for (const kind of RESOURCE_KINDS) {
-    resources[kind] = resolveResourceKind(kind, { profile: safeProfile, systems, declaredResources, derived });
+    resources[kind] = resolveResourceKind(kind, {
+      profile: safeProfile,
+      systems,
+      declaredResources,
+      derived,
+    });
   }
 
   const systemKeysInUse = new Set();

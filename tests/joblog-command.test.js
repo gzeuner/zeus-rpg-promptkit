@@ -11,20 +11,14 @@ test('parseMaxMessages validates positive integers and enforces ceiling', () => 
   assert.equal(parseMaxMessages(undefined), 100);
   assert.equal(parseMaxMessages('25'), 25);
   assert.equal(parseMaxMessages('999'), 500);
-  assert.throws(
-    () => parseMaxMessages('0'),
-    /--max-messages/,
-  );
+  assert.throws(() => parseMaxMessages('0'), /--max-messages/);
 });
 
 test('normalizeSeverity accepts INFO/WARNING/ERROR only', () => {
   assert.equal(normalizeSeverity(undefined), null);
   assert.equal(normalizeSeverity('warning'), 'WARNING');
   assert.equal(normalizeSeverity('ERROR'), 'ERROR');
-  assert.throws(
-    () => normalizeSeverity('fatal'),
-    /--severity/,
-  );
+  assert.throws(() => normalizeSeverity('fatal'), /--severity/);
 });
 
 test('joblog exits with code 2 when profile is missing', async () => {
@@ -33,7 +27,7 @@ test('joblog exits with code 2 when profile is missing', async () => {
   let exitCode = null;
   const errors = [];
 
-  process.exit = (code) => {
+  process.exit = code => {
     exitCode = code;
     throw new Error(`__EXIT__${code}`);
   };
@@ -42,10 +36,7 @@ test('joblog exits with code 2 when profile is missing', async () => {
   };
 
   try {
-    await assert.rejects(
-      () => runJoblog({}),
-      /__EXIT__2/,
-    );
+    await assert.rejects(() => runJoblog({}), /__EXIT__2/);
     assert.equal(exitCode, 2);
     assert.match(errors.join('\n'), /--profile/);
   } finally {

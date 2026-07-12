@@ -17,7 +17,7 @@ function createTempProject(profiles) {
   fs.writeFileSync(
     path.join(tempRoot, 'config', 'profiles.example.json'),
     `${JSON.stringify(profiles, null, 2)}\n`,
-    'utf8',
+    'utf8'
   );
   return tempRoot;
 }
@@ -42,7 +42,7 @@ test('runtime DB warnings describe env/profile target mismatches', () => {
           ZEUS_DB_HOST: 'secondary-system',
           ZEUS_DB_PASSWORD: 'runtime-pass',
         },
-      },
+      }
     );
     const dbConfig = resolveAnalyzeDbConfig(config, 'metadata');
     const warnings = getDbRuntimeConflictWarnings(dbConfig);
@@ -50,7 +50,7 @@ test('runtime DB warnings describe env/profile target mismatches', () => {
 
     assert.equal(warnings.length, 1);
     printDbRuntimeConflictWarnings(dbConfig, {
-      writeLine: (line) => lines.push(line),
+      writeLine: line => lines.push(line),
     });
 
     assert.match(lines[0], /Runtime config mismatch detected/);
@@ -82,7 +82,7 @@ test('runtime DB diagnostics expose safe structured conflict details', () => {
           ZEUS_DB_HOST: 'secondary-system',
           ZEUS_DB_PASSWORD: 'runtime-pass',
         },
-      },
+      }
     );
     const dbConfig = resolveAnalyzeDbConfig(config, 'metadata');
     const diagnostics = buildDbRuntimeConflictDiagnostics(dbConfig, {
@@ -98,7 +98,8 @@ test('runtime DB diagnostics expose safe structured conflict details', () => {
       profileValue: 'primary-system',
       envVar: 'ZEUS_DB_HOST',
       effectiveValue: 'secondary-system',
-      message: 'Profile "primary-readonly" declares db.host="primary-system", but ZEUS_DB_HOST overrides it with "secondary-system". Env vars have precedence.',
+      message:
+        'Profile "primary-readonly" declares db.host="primary-system", but ZEUS_DB_HOST overrides it with "secondary-system". Env vars have precedence.',
     });
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

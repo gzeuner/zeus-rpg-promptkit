@@ -4,7 +4,9 @@ const assert = require('node:assert/strict');
 const { createFinalKnowledgeCatalog } = require('../src/knowledge/final/finalKnowledgeCatalog');
 const { evaluateFinalCatalogPrivacy } = require('../src/knowledge/privacy/privacyGate');
 const { createRawEvidenceEnvelope } = require('../src/knowledge/raw/rawEvidence');
-const { createSanitizedCandidateEnvelope } = require('../src/knowledge/sanitized/sanitizedCandidate');
+const {
+  createSanitizedCandidateEnvelope,
+} = require('../src/knowledge/sanitized/sanitizedCandidate');
 
 function buildGenericCatalog() {
   return createFinalKnowledgeCatalog({
@@ -48,7 +50,7 @@ function buildGenericCatalog() {
 }
 
 function hasReasonCode(result, code) {
-  return Array.isArray(result.reasons) && result.reasons.some((reason) => reason.code === code);
+  return Array.isArray(result.reasons) && result.reasons.some(reason => reason.code === code);
 }
 
 test('privacy gate passes a minimal generic final catalog', () => {
@@ -114,7 +116,9 @@ test('privacy gate rejects legacy .zeus knowledge path references', () => {
 test('privacy gate rejects .local MCP audit/session-note path references', () => {
   const catalog = buildGenericCatalog();
   catalog.patterns[0].limitations.push('.local/mcp/audit/mcp-audit.jsonl');
-  catalog.patterns[0].limitations.push('.local/session-notes/2026-05-22-pui-pattern-import/docs/runbook.md');
+  catalog.patterns[0].limitations.push(
+    '.local/session-notes/2026-05-22-pui-pattern-import/docs/runbook.md'
+  );
 
   const result = evaluateFinalCatalogPrivacy(catalog);
   assert.equal(result.passed, false);

@@ -49,24 +49,28 @@ function buildAnalysisDiagnostics(state) {
     generatedAt: state.context ? state.context.scannedAt : null,
     cacheStatus: state.cacheStatus || null,
     diagnostics: Array.isArray(state.diagnostics) ? state.diagnostics : [],
-    stages: Array.isArray(state.stageReports) ? state.stageReports.map((stage) => ({
-      id: stage.id,
-      status: stage.status,
-      durationMs: stage.durationMs,
-      definition: stage.definition || null,
-      metadata: stage.metadata || {},
-      diagnostics: stage.diagnostics || [],
-    })) : [],
+    stages: Array.isArray(state.stageReports)
+      ? state.stageReports.map(stage => ({
+          id: stage.id,
+          status: stage.status,
+          durationMs: stage.durationMs,
+          definition: stage.definition || null,
+          metadata: stage.metadata || {},
+          diagnostics: stage.diagnostics || [],
+        }))
+      : [],
   };
 }
 
 function buildKnownFactsArtifact(context) {
-  const knownFacts = context && context.knownFacts && typeof context.knownFacts === 'object'
-    ? context.knownFacts
-    : {};
-  const versionMarker = knownFacts.versionMarker && typeof knownFacts.versionMarker === 'object'
-    ? knownFacts.versionMarker
-    : {};
+  const knownFacts =
+    context && context.knownFacts && typeof context.knownFacts === 'object'
+      ? context.knownFacts
+      : {};
+  const versionMarker =
+    knownFacts.versionMarker && typeof knownFacts.versionMarker === 'object'
+      ? knownFacts.versionMarker
+      : {};
 
   return {
     schemaVersion: 1,
@@ -126,19 +130,20 @@ function writeAnalyzeArtifacts(state) {
     env: state.env,
   });
 
-  const generatedPromptFiles = selectedPromptTemplates.map((templateName) => getPromptContract(templateName).outputFileName);
-  const generatedDb2Files = context.db2Metadata && context.db2Metadata.status === 'exported'
-    ? [
-      context.db2Metadata.file || 'db2-metadata.json',
-      context.db2Metadata.markdownFile || 'db2-metadata.md',
-    ]
-    : [];
-  const generatedTestDataFiles = context.testData && context.testData.status === 'exported'
-    ? [
-      context.testData.file || 'test-data.json',
-      context.testData.markdownFile || 'test-data.md',
-    ]
-    : [];
+  const generatedPromptFiles = selectedPromptTemplates.map(
+    templateName => getPromptContract(templateName).outputFileName
+  );
+  const generatedDb2Files =
+    context.db2Metadata && context.db2Metadata.status === 'exported'
+      ? [
+          context.db2Metadata.file || 'db2-metadata.json',
+          context.db2Metadata.markdownFile || 'db2-metadata.md',
+        ]
+      : [];
+  const generatedTestDataFiles =
+    context.testData && context.testData.status === 'exported'
+      ? [context.testData.file || 'test-data.json', context.testData.markdownFile || 'test-data.md']
+      : [];
   const generatedInvestigationFiles = [];
   if (ifsPathReport && ifsPathReport.enabled) {
     generatedInvestigationFiles.push('ifs-paths.json', 'ifs-paths.md');
@@ -150,14 +155,14 @@ function writeAnalyzeArtifacts(state) {
     generatedInvestigationFiles.push(
       'diagnostic-query-packs.json',
       'diagnostic-query-packs.md',
-      'diagnostic-query-pack-manifest.json',
+      'diagnostic-query-pack-manifest.json'
     );
   }
   const knownFactsArtifactEnabled = Boolean(
-    context
-    && context.knownFacts
-    && context.knownFacts.status
-    && context.knownFacts.status !== 'disabled',
+    context &&
+    context.knownFacts &&
+    context.knownFacts.status &&
+    context.knownFacts.status !== 'disabled'
   );
   const generatedFiles = [
     'canonical-analysis.json',
@@ -193,12 +198,12 @@ function writeAnalyzeArtifacts(state) {
   });
   const pathReplacements = reproducibilitySettings.enabled
     ? buildReproduciblePathReplacements({
-      cwd: process.cwd(),
-      sourceRoot: state.sourceRoot,
-      outputRoot: state.outputRoot,
-      outputProgramDir,
-      program: state.program,
-    })
+        cwd: process.cwd(),
+        sourceRoot: state.sourceRoot,
+        outputRoot: state.outputRoot,
+        outputProgramDir,
+        program: state.program,
+      })
     : null;
   const writtenCanonicalAnalysis = reproducibilitySettings.enabled
     ? replaceExactStringsDeep(canonicalAnalysis, pathReplacements)
@@ -206,9 +211,10 @@ function writeAnalyzeArtifacts(state) {
   const writtenContext = reproducibilitySettings.enabled
     ? replaceExactStringsDeep(context, pathReplacements)
     : context;
-  const writtenOptimizedContext = reproducibilitySettings.enabled && optimizedContext
-    ? replaceExactStringsDeep(optimizedContext, pathReplacements)
-    : optimizedContext;
+  const writtenOptimizedContext =
+    reproducibilitySettings.enabled && optimizedContext
+      ? replaceExactStringsDeep(optimizedContext, pathReplacements)
+      : optimizedContext;
   const writtenAiKnowledge = reproducibilitySettings.enabled
     ? replaceExactStringsDeep(aiKnowledge, pathReplacements)
     : aiKnowledge;
@@ -230,29 +236,59 @@ function writeAnalyzeArtifacts(state) {
   }
   if (ifsPathReport && ifsPathReport.enabled) {
     writeJsonReport(path.join(outputProgramDir, 'ifs-paths.json'), ifsPathReport);
-    fs.writeFileSync(path.join(outputProgramDir, 'ifs-paths.md'), renderIfsPathMarkdown(ifsPathReport), 'utf8');
+    fs.writeFileSync(
+      path.join(outputProgramDir, 'ifs-paths.md'),
+      renderIfsPathMarkdown(ifsPathReport),
+      'utf8'
+    );
   }
   if (searchResults && searchResults.enabled) {
     writeJsonReport(path.join(outputProgramDir, 'search-results.json'), searchResults);
-    fs.writeFileSync(path.join(outputProgramDir, 'search-results.md'), renderFullTextSearchMarkdown(searchResults), 'utf8');
+    fs.writeFileSync(
+      path.join(outputProgramDir, 'search-results.md'),
+      renderFullTextSearchMarkdown(searchResults),
+      'utf8'
+    );
   }
   if (diagnosticPackReport && diagnosticPackReport.enabled) {
-    writeJsonReport(path.join(outputProgramDir, 'diagnostic-query-packs.json'), diagnosticPackReport);
-    writeJsonReport(path.join(outputProgramDir, 'diagnostic-query-pack-manifest.json'), diagnosticPackManifest);
+    writeJsonReport(
+      path.join(outputProgramDir, 'diagnostic-query-packs.json'),
+      diagnosticPackReport
+    );
+    writeJsonReport(
+      path.join(outputProgramDir, 'diagnostic-query-pack-manifest.json'),
+      diagnosticPackManifest
+    );
     fs.writeFileSync(
       path.join(outputProgramDir, 'diagnostic-query-packs.md'),
       renderDiagnosticPackMarkdown(diagnosticPackReport),
-      'utf8',
+      'utf8'
     );
   }
 
   const programCallTreeJsonPath = path.join(outputProgramDir, 'program-call-tree.json');
   fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.json'), renderJson(graph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.mmd'), renderMermaid(graph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'dependency-graph.md'), renderMarkdown(graph), 'utf8');
+  fs.writeFileSync(
+    path.join(outputProgramDir, 'dependency-graph.mmd'),
+    renderMermaid(graph),
+    'utf8'
+  );
+  fs.writeFileSync(
+    path.join(outputProgramDir, 'dependency-graph.md'),
+    renderMarkdown(graph),
+    'utf8'
+  );
   fs.writeFileSync(programCallTreeJsonPath, renderJson(crossProgramGraph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.mmd'), renderMermaid(crossProgramGraph), 'utf8');
-  fs.writeFileSync(path.join(outputProgramDir, 'program-call-tree.md'), renderCrossProgramMarkdown(crossProgramGraph), 'utf8');
+  fs.writeFileSync(
+    path.join(outputProgramDir, 'program-call-tree.mmd'),
+    renderMermaid(crossProgramGraph),
+    'utf8'
+  );
+  fs.writeFileSync(
+    path.join(outputProgramDir, 'program-call-tree.md'),
+    renderCrossProgramMarkdown(crossProgramGraph),
+    'utf8'
+  );
   generateArchitectureViewer({
     graphPath: programCallTreeJsonPath,
     outputPath: path.join(outputProgramDir, 'architecture.html'),
@@ -263,7 +299,9 @@ function writeAnalyzeArtifacts(state) {
     contextPath: path.join(outputProgramDir, 'context.json'),
     graphPath: path.join(outputProgramDir, 'dependency-graph.json'),
     outputPath: path.join(outputProgramDir, 'architecture-report.md'),
-    optimizedContextPath: writtenOptimizedContext ? path.join(outputProgramDir, 'optimized-context.json') : null,
+    optimizedContextPath: writtenOptimizedContext
+      ? path.join(outputProgramDir, 'optimized-context.json')
+      : null,
     mermaidPath: path.join(outputProgramDir, 'dependency-graph.mmd'),
     denseLevel,
   });

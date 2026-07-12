@@ -95,9 +95,9 @@ function shouldIncludeFile(fileName, includeTypes) {
 
 function mapBundleFiles(programOutputDir, fileNames, includeTypes) {
   return fileNames
-    .filter((fileName) => shouldIncludeFile(fileName, includeTypes))
+    .filter(fileName => shouldIncludeFile(fileName, includeTypes))
     .sort((a, b) => a.localeCompare(b))
-    .map((fileName) => ({
+    .map(fileName => ({
       name: fileName,
       path: path.join(programOutputDir, fileName),
       ext: path.extname(fileName).toLowerCase(),
@@ -107,35 +107,43 @@ function mapBundleFiles(programOutputDir, fileNames, includeTypes) {
 function collectExplicitBundleFiles(programOutputDir, includeTypes, artifactPaths) {
   return mapBundleFiles(
     programOutputDir,
-    Array.from(new Set((Array.isArray(artifactPaths) ? artifactPaths : [])
-      .map((entry) => String(entry || '').trim())
-      .filter(Boolean))),
-    includeTypes,
-  ).filter((file) => fs.existsSync(file.path));
+    Array.from(
+      new Set(
+        (Array.isArray(artifactPaths) ? artifactPaths : [])
+          .map(entry => String(entry || '').trim())
+          .filter(Boolean)
+      )
+    ),
+    includeTypes
+  ).filter(file => fs.existsSync(file.path));
 }
 
 function collectLegacyBundleFiles(programOutputDir, includeTypes) {
   return mapBundleFiles(
     programOutputDir,
-    fs.readdirSync(programOutputDir, { withFileTypes: true })
-      .filter((entry) => entry.isFile())
-      .map((entry) => entry.name),
-    includeTypes,
+    fs
+      .readdirSync(programOutputDir, { withFileTypes: true })
+      .filter(entry => entry.isFile())
+      .map(entry => entry.name),
+    includeTypes
   );
 }
 
 function collectSafeSharingBundleFiles(programOutputDir, includeTypes) {
   const safeSharingDir = path.join(programOutputDir, SAFE_SHARING_DIR);
   if (!fs.existsSync(safeSharingDir)) {
-    throw new Error(`Safe-sharing artifacts not found: ${safeSharingDir}. Run analyze --safe-sharing first.`);
+    throw new Error(
+      `Safe-sharing artifacts not found: ${safeSharingDir}. Run analyze --safe-sharing first.`
+    );
   }
 
   return mapBundleFiles(
     programOutputDir,
-    fs.readdirSync(safeSharingDir, { withFileTypes: true })
-      .filter((entry) => entry.isFile())
-      .map((entry) => path.posix.join(SAFE_SHARING_DIR, entry.name)),
-    includeTypes,
+    fs
+      .readdirSync(safeSharingDir, { withFileTypes: true })
+      .filter(entry => entry.isFile())
+      .map(entry => path.posix.join(SAFE_SHARING_DIR, entry.name)),
+    includeTypes
   );
 }
 
@@ -144,13 +152,16 @@ function collectManifestBundleFiles(programOutputDir, includeTypes, analyzeManif
     return collectLegacyBundleFiles(programOutputDir, includeTypes);
   }
 
-  const fileNames = Array.from(new Set([
-    ...analyzeManifest.artifacts.map((artifact) => artifact.path),
-    ANALYZE_RUN_MANIFEST_FILE,
-  ]));
+  const fileNames = Array.from(
+    new Set([
+      ...analyzeManifest.artifacts.map(artifact => artifact.path),
+      ANALYZE_RUN_MANIFEST_FILE,
+    ])
+  );
 
-  return mapBundleFiles(programOutputDir, fileNames, includeTypes)
-    .filter((file) => fs.existsSync(file.path));
+  return mapBundleFiles(programOutputDir, fileNames, includeTypes).filter(file =>
+    fs.existsSync(file.path)
+  );
 }
 
 function buildSummary(files) {
@@ -172,27 +183,39 @@ function buildSummary(files) {
 
 function buildArtifactMetadata(files, analyzeManifest) {
   const analyzeArtifacts = new Map(
-    (analyzeManifest && Array.isArray(analyzeManifest.artifacts) ? analyzeManifest.artifacts : [])
-      .map((artifact) => [artifact.path, artifact]),
+    (analyzeManifest && Array.isArray(analyzeManifest.artifacts)
+      ? analyzeManifest.artifacts
+      : []
+    ).map(artifact => [artifact.path, artifact])
   );
 
-  return files.map((file) => {
+  return files.map(file => {
     const baseArtifact = analyzeArtifacts.get(file.name);
     return {
       path: file.name,
-      kind: baseArtifact && baseArtifact.kind ? baseArtifact.kind : inferBundleArtifactKind(file.name),
-      sizeBytes: baseArtifact && Number.isFinite(Number(baseArtifact.sizeBytes))
-        ? Number(baseArtifact.sizeBytes)
-        : fs.statSync(file.path).size,
-      sha256: baseArtifact && typeof baseArtifact.sha256 === 'string' && baseArtifact.sha256
-        ? baseArtifact.sha256
-        : hashContent(fs.readFileSync(file.path)),
+      kind:
+        baseArtifact && baseArtifact.kind ? baseArtifact.kind : inferBundleArtifactKind(file.name),
+      sizeBytes:
+        baseArtifact && Number.isFinite(Number(baseArtifact.sizeBytes))
+          ? Number(baseArtifact.sizeBytes)
+          : fs.statSync(file.path).size,
+      sha256:
+        baseArtifact && typeof baseArtifact.sha256 === 'string' && baseArtifact.sha256
+          ? baseArtifact.sha256
+          : hashContent(fs.readFileSync(file.path)),
       source: baseArtifact ? 'analyze-manifest' : 'bundle-scan',
     };
   });
 }
 
-function buildManifest(program, files, analyzeManifest, workflowPreset, safeSharingEnabled, reproducibility) {
+function buildManifest(
+  program,
+  files,
+  analyzeManifest,
+  workflowPreset,
+  safeSharingEnabled,
+  reproducibility
+) {
   const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
   const artifacts = buildArtifactMetadata(files, analyzeManifest);
 
@@ -206,7 +229,7 @@ function buildManifest(program, files, analyzeManifest, workflowPreset, safeShar
     inputs: {
       program: normalizeProgramName(program).toUpperCase(),
     },
-    artifacts: artifacts.map((a) => ({ ...a, producer: 'bundle' })),
+    artifacts: artifacts.map(a => ({ ...a, producer: 'bundle' })),
   });
 
   const manifest = {
@@ -214,7 +237,7 @@ function buildManifest(program, files, analyzeManifest, workflowPreset, safeShar
     schemaVersion: BUNDLE_MANIFEST_SCHEMA_VERSION,
     program: normalizeProgramName(program).toUpperCase(),
     generatedAt: resolveTimestamp(reproducibilitySettings),
-    files: files.map((file) => file.name),
+    files: files.map(file => file.name),
     artifacts,
     summary: {
       ...buildSummary(files),
@@ -223,7 +246,9 @@ function buildManifest(program, files, analyzeManifest, workflowPreset, safeShar
     safeSharing: {
       enabled: Boolean(safeSharingEnabled),
       sourceDir: safeSharingEnabled ? SAFE_SHARING_DIR : null,
-      redactionManifestFile: safeSharingEnabled ? path.posix.join(SAFE_SHARING_DIR, REDACTION_MANIFEST_FILE) : null,
+      redactionManifestFile: safeSharingEnabled
+        ? path.posix.join(SAFE_SHARING_DIR, REDACTION_MANIFEST_FILE)
+        : null,
     },
   };
 
@@ -232,35 +257,44 @@ function buildManifest(program, files, analyzeManifest, workflowPreset, safeShar
       schemaVersion: analyzeManifest.schemaVersion || null,
       manifestFile: ANALYZE_RUN_MANIFEST_FILE,
       status: analyzeManifest.run && analyzeManifest.run.status ? analyzeManifest.run.status : null,
-      completedAt: analyzeManifest.run && analyzeManifest.run.completedAt ? analyzeManifest.run.completedAt : null,
-      sourceFingerprint: analyzeManifest.inputs
-        && analyzeManifest.inputs.sourceSnapshot
-        && analyzeManifest.inputs.sourceSnapshot.fingerprint
-        ? analyzeManifest.inputs.sourceSnapshot.fingerprint
-        : null,
-      artifactCount: Array.isArray(analyzeManifest.artifacts) ? analyzeManifest.artifacts.length : 0,
+      completedAt:
+        analyzeManifest.run && analyzeManifest.run.completedAt
+          ? analyzeManifest.run.completedAt
+          : null,
+      sourceFingerprint:
+        analyzeManifest.inputs &&
+        analyzeManifest.inputs.sourceSnapshot &&
+        analyzeManifest.inputs.sourceSnapshot.fingerprint
+          ? analyzeManifest.inputs.sourceSnapshot.fingerprint
+          : null,
+      artifactCount: Array.isArray(analyzeManifest.artifacts)
+        ? analyzeManifest.artifacts.length
+        : 0,
     };
-    manifest.sourceProvenance = analyzeManifest.inputs && analyzeManifest.inputs.importManifest
-      ? {
-        manifestFile: analyzeManifest.inputs.importManifest.manifestFile || null,
-        schemaVersion: analyzeManifest.inputs.importManifest.schemaVersion || null,
-        fetchedAt: analyzeManifest.inputs.importManifest.fetchedAt || null,
-        sourceLib: analyzeManifest.inputs.importManifest.sourceLib || null,
-        transportUsed: analyzeManifest.inputs.importManifest.transportUsed || null,
-        encodingPolicy: analyzeManifest.inputs.importManifest.encodingPolicy || null,
-        fileCount: Number(analyzeManifest.inputs.importManifest.fileCount) || 0,
-        exportedFileCount: Number(analyzeManifest.inputs.importManifest.exportedFileCount) || 0,
-        failedFileCount: Number(analyzeManifest.inputs.importManifest.failedFileCount) || 0,
-        traceableFileCount: Number(analyzeManifest.inputs.importManifest.traceableFileCount) || 0,
-      }
-      : null;
+    manifest.sourceProvenance =
+      analyzeManifest.inputs && analyzeManifest.inputs.importManifest
+        ? {
+            manifestFile: analyzeManifest.inputs.importManifest.manifestFile || null,
+            schemaVersion: analyzeManifest.inputs.importManifest.schemaVersion || null,
+            fetchedAt: analyzeManifest.inputs.importManifest.fetchedAt || null,
+            sourceLib: analyzeManifest.inputs.importManifest.sourceLib || null,
+            transportUsed: analyzeManifest.inputs.importManifest.transportUsed || null,
+            encodingPolicy: analyzeManifest.inputs.importManifest.encodingPolicy || null,
+            fileCount: Number(analyzeManifest.inputs.importManifest.fileCount) || 0,
+            exportedFileCount: Number(analyzeManifest.inputs.importManifest.exportedFileCount) || 0,
+            failedFileCount: Number(analyzeManifest.inputs.importManifest.failedFileCount) || 0,
+            traceableFileCount:
+              Number(analyzeManifest.inputs.importManifest.traceableFileCount) || 0,
+          }
+        : null;
   }
 
-  const effectiveWorkflowPreset = workflowPreset
-    || (analyzeManifest
-      && analyzeManifest.inputs
-      && analyzeManifest.inputs.options
-      && analyzeManifest.inputs.options.workflowPreset
+  const effectiveWorkflowPreset =
+    workflowPreset ||
+    (analyzeManifest &&
+    analyzeManifest.inputs &&
+    analyzeManifest.inputs.options &&
+    analyzeManifest.inputs.options.workflowPreset
       ? analyzeManifest.inputs.options.workflowPreset
       : null);
   if (effectiveWorkflowPreset) {
@@ -287,7 +321,7 @@ function buildManifest(program, files, analyzeManifest, workflowPreset, safeShar
     hashNormalizedValue({
       program: manifest.program,
       files: manifest.files,
-      artifacts: manifest.artifacts.map((artifact) => ({
+      artifacts: manifest.artifacts.map(artifact => ({
         path: artifact.path,
         kind: artifact.kind,
         sizeBytes: artifact.sizeBytes,
@@ -298,11 +332,15 @@ function buildManifest(program, files, analyzeManifest, workflowPreset, safeShar
       analyzeRun: manifest.analyzeRun,
       sourceProvenance: manifest.sourceProvenance,
       workflowPreset: manifest.workflowPreset,
-    }),
+    })
   );
 
   // Package 03: validate bundle manifest contract before writing
-  const validation = schemaRegistry.validate(CONTRACT_IDS.RUN_MANIFEST, BUNDLE_MANIFEST_SCHEMA_VERSION, manifest);
+  const validation = schemaRegistry.validate(
+    CONTRACT_IDS.RUN_MANIFEST,
+    BUNDLE_MANIFEST_SCHEMA_VERSION,
+    manifest
+  );
   if (!validation.ok) {
     manifest._validation = { ok: false, errors: validation.errors };
   }
@@ -325,8 +363,12 @@ function buildReadmeText(program, manifest) {
     lines.push(`Redaction manifest: ${manifest.safeSharing.redactionManifestFile}`);
   }
   if (manifest.sourceProvenance) {
-    lines.push(`Source provenance manifest: ${manifest.sourceProvenance.manifestFile || 'zeus-import-manifest.json'}`);
-    lines.push(`Imported members: ${manifest.sourceProvenance.exportedFileCount}/${manifest.sourceProvenance.fileCount}`);
+    lines.push(
+      `Source provenance manifest: ${manifest.sourceProvenance.manifestFile || 'zeus-import-manifest.json'}`
+    );
+    lines.push(
+      `Imported members: ${manifest.sourceProvenance.exportedFileCount}/${manifest.sourceProvenance.fileCount}`
+    );
     if (manifest.sourceProvenance.sourceLib) {
       lines.push(`Source library: ${manifest.sourceProvenance.sourceLib}`);
     }
@@ -403,21 +445,23 @@ function buildOutputBundle({
 
   const includeTypes = resolveIncludeTypes({ includeJson, includeMd, includeHtml });
   const analyzeManifest = readAnalyzeRunManifest(programOutputDir);
-  const selectedArtifactPaths = safeSharingEnabled && Array.isArray(artifactPaths) && artifactPaths.length > 0
-    ? artifactPaths.map((artifactPath) => buildSafeArtifactPath(artifactPath))
-    : artifactPaths;
-  const files = Array.isArray(selectedArtifactPaths) && selectedArtifactPaths.length > 0
-    ? collectExplicitBundleFiles(programOutputDir, includeTypes, selectedArtifactPaths)
-    : safeSharingEnabled
-      ? collectSafeSharingBundleFiles(programOutputDir, includeTypes)
-      : collectManifestBundleFiles(programOutputDir, includeTypes, analyzeManifest);
+  const selectedArtifactPaths =
+    safeSharingEnabled && Array.isArray(artifactPaths) && artifactPaths.length > 0
+      ? artifactPaths.map(artifactPath => buildSafeArtifactPath(artifactPath))
+      : artifactPaths;
+  const files =
+    Array.isArray(selectedArtifactPaths) && selectedArtifactPaths.length > 0
+      ? collectExplicitBundleFiles(programOutputDir, includeTypes, selectedArtifactPaths)
+      : safeSharingEnabled
+        ? collectSafeSharingBundleFiles(programOutputDir, includeTypes)
+        : collectManifestBundleFiles(programOutputDir, includeTypes, analyzeManifest);
   const manifest = buildManifest(
     resolvedProgram,
     files,
     analyzeManifest,
     workflowPreset,
     safeSharingEnabled,
-    reproducibility,
+    reproducibility
   );
   const zip = new AdmZip();
 
@@ -429,13 +473,17 @@ function buildOutputBundle({
   addZipEntry(zip, README_FILE, `${buildReadmeText(resolvedProgram, manifest)}\n`);
 
   fs.mkdirSync(resolvedBundleRoot, { recursive: true });
-  fs.writeFileSync(path.join(programOutputDir, MANIFEST_FILE), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(
+    path.join(programOutputDir, MANIFEST_FILE),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    'utf8'
+  );
 
   const zipPath = path.join(
     resolvedBundleRoot,
     bundleFileName && String(bundleFileName).trim()
       ? String(bundleFileName).trim()
-      : `${resolvedProgram}${safeSharingEnabled ? '-safe-sharing' : '-analysis'}-bundle.zip`,
+      : `${resolvedProgram}${safeSharingEnabled ? '-safe-sharing' : '-analysis'}-bundle.zip`
   );
   zip.writeZip(zipPath);
 

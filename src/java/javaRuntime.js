@@ -36,9 +36,10 @@ function listJavaSourceFiles(sourceDir) {
     return [];
   }
 
-  return fs.readdirSync(sourceDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.java'))
-    .map((entry) => path.join(sourceDir, entry.name))
+  return fs
+    .readdirSync(sourceDir, { withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name.endsWith('.java'))
+    .map(entry => path.join(sourceDir, entry.name))
     .sort((a, b) => a.localeCompare(b));
 }
 
@@ -50,9 +51,10 @@ function listClasspathJarEntries(paths) {
       continue;
     }
 
-    const jars = fs.readdirSync(dirPath, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.jar'))
-      .map((entry) => path.join(dirPath, entry.name))
+    const jars = fs
+      .readdirSync(dirPath, { withFileTypes: true })
+      .filter(entry => entry.isFile() && entry.name.toLowerCase().endsWith('.jar'))
+      .map(entry => path.join(dirPath, entry.name))
       .sort((a, b) => a.localeCompare(b));
     jarEntries.push(...jars);
   }
@@ -80,7 +82,7 @@ function shouldCompileJavaSources({ sourceFiles, binDir }) {
     return false;
   }
 
-  return sourceFiles.some((sourceFilePath) => {
+  return sourceFiles.some(sourceFilePath => {
     const classFilePath = getClassFilePath(binDir, sourceFilePath);
     if (!fs.existsSync(classFilePath)) {
       return true;
@@ -104,7 +106,10 @@ function runProcess(command, args, errorLabel, env, timeoutMs) {
   const result = spawnSync(command, args, spawnOpts);
 
   if (result.error) {
-    if (result.error.code === 'ETIMEDOUT' || (result.signal && String(result.signal).toUpperCase().includes('SIG'))) {
+    if (
+      result.error.code === 'ETIMEDOUT' ||
+      (result.signal && String(result.signal).toUpperCase().includes('SIG'))
+    ) {
       throw new Error(`${errorLabel}: timed out after ${timeoutMs}ms`);
     }
     throw new Error(`${errorLabel}: ${result.error.message}`);
@@ -113,7 +118,18 @@ function runProcess(command, args, errorLabel, env, timeoutMs) {
   return result;
 }
 
-function ensureJavaSourcesCompiled({ cwd = process.cwd(), verbose = false } = {}) {
+function ensureJavaSourcesCompiled({ cwd = process.cwd(), verbose = false, runtime = {} } = {}) {
+  if (runtime && (runtime.skipJavaCompile || runtime.runJavaHelper)) {
+    // In mocked test runtimes, skip real compile (jt400.jar not present in clean CI; tests simulate via runJavaHelper)
+    return {
+      compiled: false,
+      sourceFiles: [],
+      classpath: '',
+      binDir: '',
+      sourceDir: '',
+    };
+  }
+
   const paths = resolveJavaPaths({ cwd });
   const sourceFiles = listJavaSourceFiles(paths.sourceDir);
 
@@ -158,7 +174,11 @@ const HEARTBEAT_CLASSES = new Set([
   'Db2TestDataExtractor',
 ]);
 
-function runJavaClass(className, args, { cwd = process.cwd(), heartbeat = false, password, timeout } = {}) {
+function runJavaClass(
+  className,
+  args,
+  { cwd = process.cwd(), heartbeat = false, password, timeout } = {}
+) {
   const classpath = resolveJavaClasspath({ cwd });
   const showHeartbeat = heartbeat || HEARTBEAT_CLASSES.has(className);
   if (showHeartbeat) {
@@ -170,15 +190,16 @@ function runJavaClass(className, args, { cwd = process.cwd(), heartbeat = false,
   // appears in the OS process list. The caller places SECRET_ENV_SENTINEL in the
   // argument vector where the password would otherwise go; ZeusSecrets.resolve()
   // swaps it back inside the JVM.
-  const childEnv = (password !== undefined && password !== null)
-    ? { ...process.env, [SECRET_ENV_VAR]: String(password) }
-    : undefined;
+  const childEnv =
+    password !== undefined && password !== null
+      ? { ...process.env, [SECRET_ENV_VAR]: String(password) }
+      : undefined;
   const result = runProcess(
     'java',
     ['-cp', classpath, className, ...args],
     `Failed to run Java helper ${className}`,
     childEnv,
-    timeout,
+    timeout
   );
   if (showHeartbeat) {
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);

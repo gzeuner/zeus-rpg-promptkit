@@ -48,14 +48,14 @@ function parseList(value, fallback) {
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim().toUpperCase()).filter(Boolean);
+    return value.map(item => String(item).trim().toUpperCase()).filter(Boolean);
   }
 
   return String(value)
     .split(',')
-    .map((item) => item.trim())
+    .map(item => item.trim())
     .filter(Boolean)
-    .map((item) => item.toUpperCase());
+    .map(item => item.toUpperCase());
 }
 
 async function resolveMembersForFile(options, sourceFile, services = {}) {
@@ -79,20 +79,24 @@ async function resolveMembersForFile(options, sourceFile, services = {}) {
   if (!result.ok) {
     return {
       members: [],
-      notes: [`Failed to list members for ${options.sourceLib}/${sourceFile}: ${(result.messages || []).join('; ') || result.stderr || `exit ${result.exitCode}`}`],
+      notes: [
+        `Failed to list members for ${options.sourceLib}/${sourceFile}: ${(result.messages || []).join('; ') || result.stderr || `exit ${result.exitCode}`}`,
+      ],
     };
   }
 
   return {
-    members: result.members.map((member) => String(member).trim().toUpperCase()).filter(Boolean),
+    members: result.members.map(member => String(member).trim().toUpperCase()).filter(Boolean),
     notes: [],
   };
 }
 
 async function fetchSources(options, services = {}) {
-  const exportMembersForSourceFileFn = services.exportMembersForSourceFileFn || exportMembersForSourceFile;
+  const exportMembersForSourceFileFn =
+    services.exportMembersForSourceFileFn || exportMembersForSourceFile;
   const downloadDirectoryFn = services.downloadDirectoryFn || downloadDirectory;
-  const downloadDirectoryViaJt400Fn = services.downloadDirectoryViaJt400Fn || downloadDirectoryViaJt400;
+  const downloadDirectoryViaJt400Fn =
+    services.downloadDirectoryViaJt400Fn || downloadDirectoryViaJt400;
   const downloadDirectoryViaFtpFn = services.downloadDirectoryViaFtpFn || downloadDirectoryViaFtp;
   const writeImportManifestFn = services.writeImportManifestFn || writeImportManifest;
   const files = parseList(options.files, DEFAULT_SOURCE_FILES);
@@ -113,10 +117,14 @@ async function fetchSources(options, services = {}) {
   };
 
   for (const sourceFile of files) {
-    const memberResolution = await resolveMembersForFile({
-      ...options,
-      members: globalMembers,
-    }, sourceFile, services);
+    const memberResolution = await resolveMembersForFile(
+      {
+        ...options,
+        members: globalMembers,
+      },
+      sourceFile,
+      services
+    );
 
     const members = Array.isArray(memberResolution.members) ? memberResolution.members : [];
     summary.notes.push(...(memberResolution.notes || []));
@@ -144,7 +152,9 @@ async function fetchSources(options, services = {}) {
       if (result.ok) {
         summary.exportedSuccess += 1;
       } else {
-        summary.notes.push(`Export failed ${result.sourceFile}/${result.member}: ${(result.messages || []).join('; ') || result.stderr || 'unknown error'}`);
+        summary.notes.push(
+          `Export failed ${result.sourceFile}/${result.member}: ${(result.messages || []).join('; ') || result.stderr || 'unknown error'}`
+        );
       }
 
       exportRecords.push({
@@ -164,7 +174,9 @@ async function fetchSources(options, services = {}) {
     }
   }
 
-  const transport = String(options.transport || DEFAULT_TRANSPORT).trim().toLowerCase();
+  const transport = String(options.transport || DEFAULT_TRANSPORT)
+    .trim()
+    .toLowerCase();
   if (!TRANSPORTS.includes(transport)) {
     throw new Error(`Unsupported transport "${transport}". Valid values: ${TRANSPORTS.join(', ')}`);
   }
@@ -180,18 +192,21 @@ async function fetchSources(options, services = {}) {
     });
   }
 
-  const strategies = selectTransportStrategy({
-    transport,
-    networkType: options.networkType,
-    preferSftp: options.preferTransport === 'sftp',
-    preferJt400: options.preferTransport === 'jt400',
-    ftpOnly: options.preferTransport === 'ftp',
-    encrypted: options.encrypted,
-  }, (summary.transportDiagnostics && summary.transportDiagnostics.networkProfile) || {});
+  const strategies = selectTransportStrategy(
+    {
+      transport,
+      networkType: options.networkType,
+      preferSftp: options.preferTransport === 'sftp',
+      preferJt400: options.preferTransport === 'jt400',
+      ftpOnly: options.preferTransport === 'ftp',
+      encrypted: options.encrypted,
+    },
+    (summary.transportDiagnostics && summary.transportDiagnostics.networkProfile) || {}
+  );
 
   const transportRun = await executeWithTransportDiagnostics(
     strategies,
-    async (strategy) => {
+    async strategy => {
       if (strategy === 'sftp') {
         return downloadDirectoryFn({
           host: options.host,
@@ -225,7 +240,7 @@ async function fetchSources(options, services = {}) {
     {
       verbose: options.verbose,
       timeout: options.transportTimeoutMs,
-    },
+    }
   );
 
   if (!transportRun.success) {
@@ -233,7 +248,9 @@ async function fetchSources(options, services = {}) {
     for (const attempt of transportRun.diagnostics || []) {
       summary.notes.push(`Download via ${formatTransportAttempt(attempt)} failed`);
     }
-    throw new Error(`All download transports failed. Last error: ${transportRun.lastError.message}`);
+    throw new Error(
+      `All download transports failed. Last error: ${transportRun.lastError.message}`
+    );
   }
 
   summary.downloadedCount = transportRun.result.downloadedCount || 0;

@@ -43,8 +43,8 @@ function parseAllowlistedTools(value, knownToolNames = null) {
 
   const parsed = String(value)
     .split(',')
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0);
+    .map(entry => entry.trim())
+    .filter(entry => entry.length > 0);
 
   if (parsed.length === 0) {
     throw new Error('Invalid --allow-tools value: provide at least one tool name.');
@@ -53,11 +53,11 @@ function parseAllowlistedTools(value, knownToolNames = null) {
   const unique = Array.from(new Set(parsed));
   const known = Array.isArray(knownToolNames) ? knownToolNames : [];
   const knownSet = new Set(known);
-  const unknown = unique.filter((entry) => !knownSet.has(entry));
+  const unknown = unique.filter(entry => !knownSet.has(entry));
   if (unknown.length > 0) {
     const knownList = known.join(', ');
     throw new Error(
-      `Invalid --allow-tools value: unknown tool name(s): ${unknown.join(', ')}. Known tools: ${knownList}`,
+      `Invalid --allow-tools value: unknown tool name(s): ${unknown.join(', ')}. Known tools: ${knownList}`
     );
   }
 
@@ -69,18 +69,26 @@ function printMcpHelp() {
   console.log('  zeus mcp serve [--stdio true|false] [--allow-tools <name1,name2>] [--verbose]');
   console.log('');
   console.log('Notes:');
-  console.log('  - Without --allow-tools, MCP exposes the safe default surface (see DEFAULT_MCP_SAFE_TOOL_NAMES in policy: health, doctor, profiles, analyze, search, queries, review tools, etc.).');
-  console.log('  - Use --allow-tools to further restrict or customize (e.g. for minimal agent exposure). Dangerous tools (write-sql, bridge) are never in defaults.');
+  console.log(
+    '  - Without --allow-tools, MCP exposes the safe default surface (see DEFAULT_MCP_SAFE_TOOL_NAMES in policy: health, doctor, profiles, analyze, search, queries, review tools, etc.).'
+  );
+  console.log(
+    '  - Use --allow-tools to further restrict or customize (e.g. for minimal agent exposure). Dangerous tools (write-sql, bridge) are never in defaults.'
+  );
   console.log('  - Runs local-only over stdio transport.');
   console.log('  - Local path inputs are workspace-bounded, including absolute paths.');
-  console.log('  - Cursor-enabled tools return opaque versioned nextCursor tokens; legacy numeric cursor input is rejected and no longer supported.');
+  console.log(
+    '  - Cursor-enabled tools return opaque versioned nextCursor tokens; legacy numeric cursor input is rejected and no longer supported.'
+  );
 }
 
 async function runMcp(args = {}, dependencies = {}) {
   try {
     const createServer = dependencies.createMcpServer || createMcpServer;
     const cwd = dependencies.cwd || process.cwd();
-    const subcommand = String((Array.isArray(args._) && args._[0]) || 'serve').trim().toLowerCase();
+    const subcommand = String((Array.isArray(args._) && args._[0]) || 'serve')
+      .trim()
+      .toLowerCase();
     if (!subcommand || subcommand === 'help') {
       printMcpHelp();
       return;
@@ -94,10 +102,12 @@ async function runMcp(args = {}, dependencies = {}) {
       throw new Error('Only stdio transport is supported in the MCP MVP.');
     }
 
-    const knownToolNames = listMcpTools().map((tool) => tool.name);
+    const knownToolNames = listMcpTools().map(tool => tool.name);
     const allowlistedTools = parseAllowlistedTools(args['allow-tools'], knownToolNames);
     if (Object.prototype.hasOwnProperty.call(args, 'legacy-cursor-fallback')) {
-      throw new Error('The --legacy-cursor-fallback option was removed. Numeric cursors are no longer supported; use opaque cursor tokens.');
+      throw new Error(
+        'The --legacy-cursor-fallback option was removed. Numeric cursors are no longer supported; use opaque cursor tokens.'
+      );
     }
     const verbose = parseBoolean(args.verbose, false);
     const server = createServer({

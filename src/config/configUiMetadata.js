@@ -208,7 +208,9 @@ const CONFIG_UI_FIELDS = Object.freeze([
     example: '{ "system": "readonly" }',
     envVar: null,
     profilePath: 'dbRoles.metadata',
-    validation: Object.freeze({ allowedKeys: ['host', 'url', 'user', 'password', 'defaultSchema', 'defaultLibrary', 'system'] }),
+    validation: Object.freeze({
+      allowedKeys: ['host', 'url', 'user', 'password', 'defaultSchema', 'defaultLibrary', 'system'],
+    }),
     sources: Object.freeze(['profile', 'env']),
     capabilities: Object.freeze(['analyze', 'query', 'doctor']),
   }),
@@ -225,24 +227,41 @@ const CONFIG_UI_FIELDS = Object.freeze([
     example: '{ "system": "dev" }',
     envVar: null,
     profilePath: 'dbRoles.testData',
-    validation: Object.freeze({ allowedKeys: ['host', 'url', 'user', 'password', 'defaultSchema', 'defaultLibrary', 'system'] }),
+    validation: Object.freeze({
+      allowedKeys: ['host', 'url', 'user', 'password', 'defaultSchema', 'defaultLibrary', 'system'],
+    }),
     sources: Object.freeze(['profile', 'env']),
     capabilities: Object.freeze(['analyze', 'doctor']),
   }),
   Object.freeze({
     key: 'profile.systems',
     label: 'Named Systems',
-    description: 'Optional named IBM i system definitions with canonical names and aliases for role routing.',
+    description:
+      'Optional named IBM i system definitions with canonical names and aliases for role routing.',
     section: 'db2',
     type: 'object',
     required: false,
     sensitive: false,
     safeToDisplay: true,
-    placeholder: '{ "dev": { "host": "dev.example", "systemName": "SYSDEV", "aliases": ["DEVALIAS"] } }',
-    example: '{ "readonly": { "host": "ro.example", "displayName": "Read-only PROD", "systemName": "SYSPROD", "aliases": ["PRODALIAS"] } }',
+    placeholder:
+      '{ "dev": { "host": "dev.example", "systemName": "SYSDEV", "aliases": ["DEVALIAS"] } }',
+    example:
+      '{ "readonly": { "host": "ro.example", "displayName": "Read-only PROD", "systemName": "SYSPROD", "aliases": ["PRODALIAS"] } }',
     envVar: null,
     profilePath: 'systems',
-    validation: Object.freeze({ allowedKeys: ['host', 'url', 'user', 'password', 'defaultSchema', 'defaultLibrary', 'displayName', 'systemName', 'aliases'] }),
+    validation: Object.freeze({
+      allowedKeys: [
+        'host',
+        'url',
+        'user',
+        'password',
+        'defaultSchema',
+        'defaultLibrary',
+        'displayName',
+        'systemName',
+        'aliases',
+      ],
+    }),
     sources: Object.freeze(['profile']),
     capabilities: Object.freeze(['fetch', 'query', 'analyze', 'doctor']),
   }),
@@ -709,9 +728,18 @@ const CONFIG_UI_FIELDS = Object.freeze([
 
 function validateConfigUiMetadata(fields = CONFIG_UI_FIELDS, sections = CONFIG_UI_SECTIONS) {
   const errors = [];
-  const sectionIds = new Set((sections || []).map((entry) => entry.id));
+  const sectionIds = new Set((sections || []).map(entry => entry.id));
   const keys = new Set();
-  const allowedTypes = new Set(['string', 'number', 'boolean', 'path', 'password', 'enum', 'stringArray', 'object']);
+  const allowedTypes = new Set([
+    'string',
+    'number',
+    'boolean',
+    'path',
+    'password',
+    'enum',
+    'stringArray',
+    'object',
+  ]);
 
   for (const field of fields || []) {
     if (!field || typeof field !== 'object') {
@@ -753,7 +781,7 @@ function validateConfigUiMetadata(fields = CONFIG_UI_FIELDS, sections = CONFIG_U
 }
 
 function listConfigUiFields({ includeSensitive = true, section = null, capability = null } = {}) {
-  return CONFIG_UI_FIELDS.filter((entry) => {
+  return CONFIG_UI_FIELDS.filter(entry => {
     if (!includeSensitive && entry.sensitive) return false;
     if (section && entry.section !== section) return false;
     if (capability && !entry.capabilities.includes(capability)) return false;
@@ -762,7 +790,7 @@ function listConfigUiFields({ includeSensitive = true, section = null, capabilit
 }
 
 function getConfigUiField(key) {
-  return CONFIG_UI_FIELDS.find((entry) => entry.key === key) || null;
+  return CONFIG_UI_FIELDS.find(entry => entry.key === key) || null;
 }
 
 const CONFIG_UI_METADATA_ERRORS = Object.freeze(validateConfigUiMetadata());

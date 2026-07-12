@@ -15,10 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const { DEFAULT_TEST_DATA_LIMIT } = require('../db2/testDataExportService');
 const { resolveAnalyzeConfig } = require('../config/runtimeConfig');
-const {
-  runAnalyzeArtifactAdapter,
-  runAnalyzeCore,
-} = require('../analyze/analyzePipeline');
+const { runAnalyzeArtifactAdapter, runAnalyzeCore } = require('../analyze/analyzePipeline');
 const {
   buildAnalyzeRunManifest,
   readAnalyzeRunManifest,
@@ -45,11 +42,14 @@ function parseCsv(value) {
   if (value === undefined || value === null || value === true) {
     return [];
   }
-  return Array.from(new Set(String(value)
-    .split(',')
-    .map((entry) => entry.trim())
-    .filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      String(value)
+        .split(',')
+        .map(entry => entry.trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function normalizeDenseLevel(value) {
@@ -65,7 +65,7 @@ function normalizeDenseLevel(value) {
 
 function executeAnalyze(args, { cwd = process.cwd() } = {}) {
   const verbose = Boolean(args.verbose);
-  const logVerbose = (message) => {
+  const logVerbose = message => {
     if (verbose) {
       console.log(`[verbose] ${message}`);
     }
@@ -103,31 +103,36 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
   const sourceRoot = resolvedSourceRoot;
   const outputRoot = path.resolve(cwd, config.outputRoot);
   const program = String(resolvedProgram).trim();
-  const workflowPreset = args['workflow-preset-settings'] && typeof args['workflow-preset-settings'] === 'object'
-    ? {
-      ...args['workflow-preset-settings'],
-      promptTemplates: [...(args['workflow-preset-settings'].promptTemplates || [])],
-      workflowKeys: [...(args['workflow-preset-settings'].workflowKeys || [])],
-      bundleArtifacts: [...(args['workflow-preset-settings'].bundleArtifacts || [])],
-    }
-    : null;
+  const workflowPreset =
+    args['workflow-preset-settings'] && typeof args['workflow-preset-settings'] === 'object'
+      ? {
+          ...args['workflow-preset-settings'],
+          promptTemplates: [...(args['workflow-preset-settings'].promptTemplates || [])],
+          workflowKeys: [...(args['workflow-preset-settings'].workflowKeys || [])],
+          bundleArtifacts: [...(args['workflow-preset-settings'].bundleArtifacts || [])],
+        }
+      : null;
   let workflowModeSettings = null;
   if (args.mode) {
     workflowModeSettings = resolveWorkflowModeSettings(args.mode);
   }
-  const optimizeContextEnabled = Boolean(args['optimize-context'])
-    || Boolean(workflowModeSettings && workflowModeSettings.autoOptimizeContext);
+  const optimizeContextEnabled =
+    Boolean(args['optimize-context']) ||
+    Boolean(workflowModeSettings && workflowModeSettings.autoOptimizeContext);
   const denseLevel = normalizeDenseLevel(args.dense);
   const guidedMode = workflowModeSettings
     ? {
-      ...workflowModeSettings,
-      effectiveOptimizeContext: optimizeContextEnabled,
-    }
+        ...workflowModeSettings,
+        effectiveOptimizeContext: optimizeContextEnabled,
+      }
     : null;
   const promptTemplates = workflowModeSettings
     ? resolvePromptTemplates(workflowModeSettings.promptTemplates)
     : resolvePromptTemplates();
-  const testDataLimit = parsePositiveInteger(args['test-data-limit'], Number(config.testData.limit) || DEFAULT_TEST_DATA_LIMIT);
+  const testDataLimit = parsePositiveInteger(
+    args['test-data-limit'],
+    Number(config.testData.limit) || DEFAULT_TEST_DATA_LIMIT
+  );
   const searchMaxResults = parsePositiveInteger(args['search-max-results'], 200);
   const skipTestData = Boolean(args['skip-test-data']);
   const safeSharingEnabled = Boolean(args['safe-sharing']);
@@ -136,26 +141,40 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
   const searchTerms = parseCsv(args['search-terms']);
   const searchIgnorePatterns = parseCsv(args['search-ignore']);
   const diagnosticPacks = parseCsv(args['diagnostic-packs']);
-  const diagnosticParameterString = typeof args['diagnostic-params'] === 'string' ? args['diagnostic-params'] : '';
+  const diagnosticParameterString =
+    typeof args['diagnostic-params'] === 'string' ? args['diagnostic-params'] : '';
   const loadKnownFactsEnabled = Boolean(args['with-known-facts']);
-  const knownFactsProfile = typeof args['known-facts-profile'] === 'string'
-    ? String(args['known-facts-profile']).trim()
-    : '';
-  const knownFactsStorePath = typeof args['known-facts-path'] === 'string'
-    ? String(args['known-facts-path']).trim()
-    : '';
+  const knownFactsProfile =
+    typeof args['known-facts-profile'] === 'string'
+      ? String(args['known-facts-profile']).trim()
+      : '';
+  const knownFactsStorePath =
+    typeof args['known-facts-path'] === 'string' ? String(args['known-facts-path']).trim() : '';
   const reproducibility = normalizeReproducibilitySettings(Boolean(args.reproducible));
 
   // CLI override for prompt budgets (addresses #6: configurable instead of only registry/profile)
-  const promptMaxTokens = parsePositiveInteger(args['prompt-max-tokens'] || args['promptMaxTokens']);
+  const promptMaxTokens = parsePositiveInteger(
+    args['prompt-max-tokens'] || args['promptMaxTokens']
+  );
   const cliTokenBudgets = {};
   if (promptMaxTokens) {
     // Apply as global max for common prompt keys (profile tokenBudget still takes precedence if set per-key)
-    const keys = ['documentation', 'errorAnalysis', 'defectAnalysis', 'architectureReview', 'refactoringPlan', 'testGeneration', 'securityAnalysis', 'modernization'];
+    const keys = [
+      'documentation',
+      'errorAnalysis',
+      'defectAnalysis',
+      'architectureReview',
+      'refactoringPlan',
+      'testGeneration',
+      'securityAnalysis',
+      'modernization',
+    ];
     for (const k of keys) cliTokenBudgets[k] = promptMaxTokens;
   }
 
-  const skipDb2Metadata = Boolean(args['skip-db2-metadata'] || args['skipDb2Metadata'] || args['skip-db2']);
+  const skipDb2Metadata = Boolean(
+    args['skip-db2-metadata'] || args['skipDb2Metadata'] || args['skip-db2']
+  );
 
   if (testDataLimit === null) {
     throw new Error('Invalid option: --test-data-limit must be a positive integer');
@@ -165,12 +184,16 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
   }
 
   if (!fs.existsSync(sourceRoot)) {
-    const error = new Error(`Source directory not found: ${sourceRoot}. Provide a valid --source path.`);
+    const error = new Error(
+      `Source directory not found: ${sourceRoot}. Provide a valid --source path.`
+    );
     error.code = 'SOURCE_ROOT_MISSING';
     throw error;
   }
   if (loadKnownFactsEnabled && !knownFactsStorePath && !knownFactsProfile && !args.profile) {
-    throw new Error('Invalid option: --with-known-facts requires --known-facts-profile, --known-facts-path, or --profile');
+    throw new Error(
+      'Invalid option: --with-known-facts requires --known-facts-profile, --known-facts-path, or --profile'
+    );
   }
 
   const outputProgramDir = path.join(outputRoot, program);
@@ -211,7 +234,7 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
       ibmiConfig: config.ibmi,
       reproducibility,
       logVerbose,
-      cliTokenBudgets,  // for prompt max override
+      cliTokenBudgets, // for prompt max override
       skipDb2Metadata,
     });
     const effectiveTokenBudgets = {
@@ -223,7 +246,10 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
       emitDiagnostics,
       tokenBudgets: effectiveTokenBudgets,
     });
-    const durationMs = resolveDurationMs(reproducibility, Number((process.hrtime.bigint() - startedNs) / 1000000n));
+    const durationMs = resolveDurationMs(
+      reproducibility,
+      Number((process.hrtime.bigint() - startedNs) / 1000000n)
+    );
     const manifest = buildAnalyzeRunManifest({
       status: 'succeeded',
       context: {
@@ -245,26 +271,34 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
         testDataPolicy: config.testData,
         tokenBudget: config.tokenBudget,
         extensions: config.extensions,
-        connectionRoles: config.connections ? {
-          source: config.connections.source ? {
-            kind: config.connections.source.kind,
-            profileKey: config.connections.source.profileKey,
-            target: config.connections.source.target,
-            acceptedNames: config.connections.source.acceptedNames,
-          } : null,
-          metadata: config.connections.metadata ? {
-            kind: config.connections.metadata.kind,
-            profileKey: config.connections.metadata.profileKey,
-            target: config.connections.metadata.target,
-            acceptedNames: config.connections.metadata.acceptedNames,
-          } : null,
-          testData: config.connections.testData ? {
-            kind: config.connections.testData.kind,
-            profileKey: config.connections.testData.profileKey,
-            target: config.connections.testData.target,
-            acceptedNames: config.connections.testData.acceptedNames,
-          } : null,
-        } : null,
+        connectionRoles: config.connections
+          ? {
+              source: config.connections.source
+                ? {
+                    kind: config.connections.source.kind,
+                    profileKey: config.connections.source.profileKey,
+                    target: config.connections.source.target,
+                    acceptedNames: config.connections.source.acceptedNames,
+                  }
+                : null,
+              metadata: config.connections.metadata
+                ? {
+                    kind: config.connections.metadata.kind,
+                    profileKey: config.connections.metadata.profileKey,
+                    target: config.connections.metadata.target,
+                    acceptedNames: config.connections.metadata.acceptedNames,
+                  }
+                : null,
+              testData: config.connections.testData
+                ? {
+                    kind: config.connections.testData.kind,
+                    profileKey: config.connections.testData.profileKey,
+                    target: config.connections.testData.target,
+                    acceptedNames: config.connections.testData.acceptedNames,
+                  }
+                : null,
+            }
+          : null,
         reproducibility,
         guidedMode,
         workflowPreset,
@@ -313,7 +347,10 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
       reproducibility,
     };
   } catch (error) {
-    const durationMs = resolveDurationMs(reproducibility, Number((process.hrtime.bigint() - startedNs) / 1000000n));
+    const durationMs = resolveDurationMs(
+      reproducibility,
+      Number((process.hrtime.bigint() - startedNs) / 1000000n)
+    );
     const manifest = buildAnalyzeRunManifest({
       status: 'failed',
       context: {
@@ -335,26 +372,34 @@ function executeAnalyze(args, { cwd = process.cwd() } = {}) {
         testDataPolicy: config.testData,
         tokenBudget: config.tokenBudget,
         extensions: config.extensions,
-        connectionRoles: config.connections ? {
-          source: config.connections.source ? {
-            kind: config.connections.source.kind,
-            profileKey: config.connections.source.profileKey,
-            target: config.connections.source.target,
-            acceptedNames: config.connections.source.acceptedNames,
-          } : null,
-          metadata: config.connections.metadata ? {
-            kind: config.connections.metadata.kind,
-            profileKey: config.connections.metadata.profileKey,
-            target: config.connections.metadata.target,
-            acceptedNames: config.connections.metadata.acceptedNames,
-          } : null,
-          testData: config.connections.testData ? {
-            kind: config.connections.testData.kind,
-            profileKey: config.connections.testData.profileKey,
-            target: config.connections.testData.target,
-            acceptedNames: config.connections.testData.acceptedNames,
-          } : null,
-        } : null,
+        connectionRoles: config.connections
+          ? {
+              source: config.connections.source
+                ? {
+                    kind: config.connections.source.kind,
+                    profileKey: config.connections.source.profileKey,
+                    target: config.connections.source.target,
+                    acceptedNames: config.connections.source.acceptedNames,
+                  }
+                : null,
+              metadata: config.connections.metadata
+                ? {
+                    kind: config.connections.metadata.kind,
+                    profileKey: config.connections.metadata.profileKey,
+                    target: config.connections.metadata.target,
+                    acceptedNames: config.connections.metadata.acceptedNames,
+                  }
+                : null,
+              testData: config.connections.testData
+                ? {
+                    kind: config.connections.testData.kind,
+                    profileKey: config.connections.testData.profileKey,
+                    target: config.connections.testData.target,
+                    acceptedNames: config.connections.testData.acceptedNames,
+                  }
+                : null,
+            }
+          : null,
         reproducibility,
         guidedMode,
         workflowPreset,

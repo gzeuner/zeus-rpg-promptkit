@@ -1,21 +1,21 @@
-name: "Epic (V2)"
-description: "Epic for Version 2 roadmap"
-title: "EPIC: <short title>"
-labels: ["epic", "enhancement"]
+name: 'Epic (V2)'
+description: 'Epic for Version 2 roadmap'
+title: 'EPIC: <short title>'
+labels: ['epic', 'enhancement']
 body:
   - type: textarea
     id: goal
     attributes:
       label: Goal
-      description: "What outcome does this epic deliver?"
-      placeholder: "Outcome + success metrics"
+      description: 'What outcome does this epic deliver?'
+      placeholder: 'Outcome + success metrics'
     validations:
       required: true
   - type: textarea
     id: scope
     attributes:
       label: Scope (In / Out)
-      description: "Define what is included and explicitly excluded."
+      description: 'Define what is included and explicitly excluded.'
       placeholder: |
         In:
         - ...
@@ -27,7 +27,7 @@ body:
     id: checklist
     attributes:
       label: Work items (Issues)
-      description: "Checklist of issues that belong to this epic."
+      description: 'Checklist of issues that belong to this epic.'
       placeholder: |
         - [ ] #123 Feature: ...
         - [ ] #124 Enabler: ...
@@ -37,7 +37,7 @@ body:
     id: acceptance
     attributes:
       label: Epic acceptance criteria
-      description: "How do we know the epic is done?"
+      description: 'How do we know the epic is done?'
       placeholder: |
         - [ ] ...
         - [ ] ...

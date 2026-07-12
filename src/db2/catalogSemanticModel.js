@@ -22,12 +22,19 @@ function asArray(value) {
 }
 
 function normalizeIdentifier(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function uniqueSortedStrings(values) {
-  return Array.from(new Set(asArray(values).map((value) => String(value || '').trim()).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      asArray(values)
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function createEntityId(type, name) {
@@ -69,13 +76,17 @@ function mergeEntityEvidence(existing, additional) {
 }
 
 function buildTableEntityIndex(canonicalAnalysis) {
-  return new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.tables)
-    .map((entry) => [normalizeIdentifier(entry && entry.name), entry]));
+  return new Map(
+    asArray(
+      canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.tables
+    ).map(entry => [normalizeIdentifier(entry && entry.name), entry])
+  );
 }
 
 function buildGeneralEntityIndex(canonicalAnalysis) {
   const index = new Map();
-  const entities = canonicalAnalysis && canonicalAnalysis.entities ? canonicalAnalysis.entities : {};
+  const entities =
+    canonicalAnalysis && canonicalAnalysis.entities ? canonicalAnalysis.entities : {};
   for (const collection of Object.values(entities)) {
     if (!Array.isArray(collection)) continue;
     for (const entity of collection) {
@@ -92,17 +103,23 @@ function buildDb2Identity(link, table) {
   const normalizedTable = normalizeCatalogTable(table);
   return {
     requestedName: normalizeIdentifier(link && link.requestedName),
-    matchStatus: String(link && link.matchStatus || 'unresolved'),
+    matchStatus: String((link && link.matchStatus) || 'unresolved'),
     matchedBy: primaryMatch.matchType || null,
-    primaryDisplayName: normalizedTable.table || normalizedTable.systemName || normalizeIdentifier(link && link.requestedName),
+    primaryDisplayName:
+      normalizedTable.table ||
+      normalizedTable.systemName ||
+      normalizeIdentifier(link && link.requestedName),
     schema: normalizedTable.schema,
     sqlName: normalizedTable.table,
     systemSchema: normalizedTable.systemSchema,
     systemName: normalizedTable.systemName,
     objectType: normalizedTable.objectType,
     textDescription: String(normalizedTable.textDescription || '').trim() || null,
-    estimatedRowCount: Number.isFinite(Number(normalizedTable.estimatedRowCount)) ? Number(normalizedTable.estimatedRowCount) : null,
-    lookupStrategy: normalizedTable.lookupStrategy || primaryMatch.lookupStrategy || 'JDBC_METADATA',
+    estimatedRowCount: Number.isFinite(Number(normalizedTable.estimatedRowCount))
+      ? Number(normalizedTable.estimatedRowCount)
+      : null,
+    lookupStrategy:
+      normalizedTable.lookupStrategy || primaryMatch.lookupStrategy || 'JDBC_METADATA',
     triggerCount: asArray(normalizedTable.triggers).length,
     derivedObjectCount: asArray(normalizedTable.derivedObjects).length,
     foreignKeyCount: asArray(normalizedTable.foreignKeys).length,
@@ -120,7 +137,9 @@ function chooseCanonicalTableName(link, table, tableEntitiesByName) {
       return candidate;
     }
   }
-  return normalizeIdentifier((table && (table.table || table.systemName)) || (link && link.requestedName));
+  return normalizeIdentifier(
+    (table && (table.table || table.systemName)) || (link && link.requestedName)
+  );
 }
 
 function normalizeTrigger(trigger) {
@@ -144,7 +163,7 @@ function normalizeDerivedObject(derivedObject) {
     systemSchema: normalizeIdentifier(derivedObject && derivedObject.systemSchema),
     systemName: normalizeIdentifier(derivedObject && derivedObject.systemName),
     objectType: normalizeIdentifier(derivedObject && derivedObject.objectType) || 'VIEW',
-    textDescription: String(derivedObject && derivedObject.textDescription || '').trim() || null,
+    textDescription: String((derivedObject && derivedObject.textDescription) || '').trim() || null,
   };
 }
 
@@ -183,14 +202,17 @@ function normalizeExternalObject(entry) {
     systemName: normalizeIdentifier(entry && (entry.systemName || entry.name)),
     objectType: normalizeIdentifier(entry && entry.objectType),
     sqlObjectType: normalizeIdentifier(entry && entry.sqlObjectType),
-    textDescription: String(entry && entry.textDescription || entry && entry.text || '').trim() || null,
-    evidenceSource: String(entry && entry.evidenceSource || 'OBJECT_STATISTICS').trim() || 'OBJECT_STATISTICS',
+    textDescription:
+      String((entry && entry.textDescription) || (entry && entry.text) || '').trim() || null,
+    evidenceSource:
+      String((entry && entry.evidenceSource) || 'OBJECT_STATISTICS').trim() || 'OBJECT_STATISTICS',
     matchedBy: normalizeIdentifier(entry && entry.matchedBy) || 'SYSTEM_NAME',
   };
 }
 
 function buildExternalCallRequests(canonicalAnalysis) {
-  const entities = canonicalAnalysis && canonicalAnalysis.entities ? canonicalAnalysis.entities : {};
+  const entities =
+    canonicalAnalysis && canonicalAnalysis.entities ? canonicalAnalysis.entities : {};
   const requests = [];
 
   for (const program of asArray(entities.programs)) {
@@ -220,9 +242,10 @@ function buildExternalCallRequests(canonicalAnalysis) {
   }
 
   return requests
-    .filter((entry) => entry.requestedName)
+    .filter(entry => entry.requestedName)
     .sort((a, b) => {
-      if (a.requestedName !== b.requestedName) return a.requestedName.localeCompare(b.requestedName);
+      if (a.requestedName !== b.requestedName)
+        return a.requestedName.localeCompare(b.requestedName);
       if (a.entityType !== b.entityType) return a.entityType.localeCompare(b.entityType);
       return a.entityId.localeCompare(b.entityId);
     });
@@ -239,12 +262,19 @@ function isExternalObjectMatch(requestedName, externalObject) {
     external.library && external.systemName ? `${external.library}/${external.systemName}` : '',
   ]);
 
-  return aliases.includes(requested && requested.qualified)
-    || aliases.includes(requested && requested.name)
-    || aliases.includes(requested && requested.systemName);
+  return (
+    aliases.includes(requested && requested.qualified) ||
+    aliases.includes(requested && requested.name) ||
+    aliases.includes(requested && requested.systemName)
+  );
 }
 
-function buildDb2CatalogSemanticUpdates({ canonicalAnalysis, tableLinks, exportedTables, externalObjects }) {
+function buildDb2CatalogSemanticUpdates({
+  canonicalAnalysis,
+  tableLinks,
+  exportedTables,
+  externalObjects,
+}) {
   const tableEntitiesByName = buildTableEntityIndex(canonicalAnalysis);
   const existingEntitiesById = buildGeneralEntityIndex(canonicalAnalysis);
   const entityUpdates = {
@@ -291,18 +321,21 @@ function buildDb2CatalogSemanticUpdates({ canonicalAnalysis, tableLinks, exporte
       continue;
     }
 
-    const matchedTable = normalizedTables.find((table) => (
-      table.schema === match.schema
-      && table.table === match.table
-      && table.systemSchema === match.systemSchema
-      && table.systemName === match.systemName
-    ));
+    const matchedTable = normalizedTables.find(
+      table =>
+        table.schema === match.schema &&
+        table.table === match.table &&
+        table.systemSchema === match.systemSchema &&
+        table.systemName === match.systemName
+    );
     if (!matchedTable) {
       continue;
     }
 
     const canonicalTableName = chooseCanonicalTableName(link, matchedTable, tableEntitiesByName);
-    const existingTable = tableEntitiesByName.get(canonicalTableName) || existingEntitiesById.get(createEntityId('TABLE', canonicalTableName));
+    const existingTable =
+      tableEntitiesByName.get(canonicalTableName) ||
+      existingEntitiesById.get(createEntityId('TABLE', canonicalTableName));
     const tableEntityId = createEntityId('TABLE', canonicalTableName);
     const mergedEvidence = mergeEntityEvidence(existingTable, [
       ...asArray(link.sourceEvidence),
@@ -320,12 +353,12 @@ function buildDb2CatalogSemanticUpdates({ canonicalAnalysis, tableLinks, exporte
     });
 
     for (const trigger of asArray(matchedTable.triggers).map(normalizeTrigger)) {
-      const triggerName = uniqueSortedStrings([
-        trigger.name,
-        trigger.systemName,
-      ])[0];
+      const triggerName = uniqueSortedStrings([trigger.name, trigger.systemName])[0];
       if (!triggerName) continue;
-      const triggerEntityId = createEntityId('TRIGGER', `${trigger.schema || trigger.systemSchema}:${triggerName}`);
+      const triggerEntityId = createEntityId(
+        'TRIGGER',
+        `${trigger.schema || trigger.systemSchema}:${triggerName}`
+      );
       entityUpdates.db2Triggers.set(triggerEntityId, {
         id: triggerEntityId,
         name: triggerName,
@@ -358,25 +391,30 @@ function buildDb2CatalogSemanticUpdates({ canonicalAnalysis, tableLinks, exporte
     for (const derivedObject of asArray(matchedTable.derivedObjects).map(normalizeDerivedObject)) {
       const derivedTableName = normalizeIdentifier(derivedObject.name || derivedObject.systemName);
       if (!derivedTableName) continue;
-      const derivedTable = ensureTableEntity(entityUpdates.tables, relationUpdates, derivedTableName, {
-        db2Identity: {
-          requestedName: derivedTableName,
-          matchStatus: 'derived',
-          matchedBy: 'CATALOG_RELATION',
-          primaryDisplayName: derivedObject.name || derivedObject.systemName,
-          schema: derivedObject.schema,
-          sqlName: derivedObject.name,
-          systemSchema: derivedObject.systemSchema,
-          systemName: derivedObject.systemName,
-          objectType: derivedObject.objectType,
-          textDescription: derivedObject.textDescription,
-          estimatedRowCount: null,
-          lookupStrategy: 'IBM_I_CATALOG',
-          triggerCount: 0,
-          derivedObjectCount: 0,
-          foreignKeyCount: 0,
-        },
-      });
+      const derivedTable = ensureTableEntity(
+        entityUpdates.tables,
+        relationUpdates,
+        derivedTableName,
+        {
+          db2Identity: {
+            requestedName: derivedTableName,
+            matchStatus: 'derived',
+            matchedBy: 'CATALOG_RELATION',
+            primaryDisplayName: derivedObject.name || derivedObject.systemName,
+            schema: derivedObject.schema,
+            sqlName: derivedObject.name,
+            systemSchema: derivedObject.systemSchema,
+            systemName: derivedObject.systemName,
+            objectType: derivedObject.objectType,
+            textDescription: derivedObject.textDescription,
+            estimatedRowCount: null,
+            lookupStrategy: 'IBM_I_CATALOG',
+            triggerCount: 0,
+            derivedObjectCount: 0,
+            foreignKeyCount: 0,
+          },
+        }
+      );
       if (!derivedTable) continue;
       const relationId = createRelationId('DERIVES_OBJECT', tableEntityId, derivedTable.id);
       relationUpdates.set(relationId, {
@@ -395,25 +433,30 @@ function buildDb2CatalogSemanticUpdates({ canonicalAnalysis, tableLinks, exporte
     for (const foreignKey of asArray(matchedTable.foreignKeys)) {
       const referencedName = normalizeIdentifier(foreignKey && foreignKey.referencesTable);
       if (!referencedName) continue;
-      const referencedEntity = ensureTableEntity(entityUpdates.tables, relationUpdates, referencedName, {
-        db2Identity: {
-          requestedName: referencedName,
-          matchStatus: 'referenced',
-          matchedBy: 'CATALOG_RELATION',
-          primaryDisplayName: referencedName,
-          schema: normalizeIdentifier(foreignKey.referencesSchema),
-          sqlName: referencedName,
-          systemSchema: '',
-          systemName: '',
-          objectType: 'TABLE',
-          textDescription: null,
-          estimatedRowCount: null,
-          lookupStrategy: 'IBM_I_CATALOG',
-          triggerCount: 0,
-          derivedObjectCount: 0,
-          foreignKeyCount: 0,
-        },
-      });
+      const referencedEntity = ensureTableEntity(
+        entityUpdates.tables,
+        relationUpdates,
+        referencedName,
+        {
+          db2Identity: {
+            requestedName: referencedName,
+            matchStatus: 'referenced',
+            matchedBy: 'CATALOG_RELATION',
+            primaryDisplayName: referencedName,
+            schema: normalizeIdentifier(foreignKey.referencesSchema),
+            sqlName: referencedName,
+            systemSchema: '',
+            systemName: '',
+            objectType: 'TABLE',
+            textDescription: null,
+            estimatedRowCount: null,
+            lookupStrategy: 'IBM_I_CATALOG',
+            triggerCount: 0,
+            derivedObjectCount: 0,
+            foreignKeyCount: 0,
+          },
+        }
+      );
       if (!referencedEntity) continue;
       const relationId = `${createRelationId('REFERENCES_TABLE', tableEntityId, referencedEntity.id)}:${normalizeIdentifier(foreignKey.column)}:${normalizeIdentifier(foreignKey.referencesColumn)}`;
       relationUpdates.set(relationId, {
@@ -436,14 +479,21 @@ function buildDb2CatalogSemanticUpdates({ canonicalAnalysis, tableLinks, exporte
 
   const externalCallRequests = buildExternalCallRequests(canonicalAnalysis);
   for (const request of externalCallRequests) {
-    const matches = normalizedExternalObjects.filter((entry) => isExternalObjectMatch(request.requestedName, entry));
+    const matches = normalizedExternalObjects.filter(entry =>
+      isExternalObjectMatch(request.requestedName, entry)
+    );
     if (matches.length !== 1) {
       continue;
     }
 
     const match = matches[0];
-    const externalName = normalizeIdentifier(match.sqlName || match.systemName || request.requestedName);
-    const externalEntityId = createEntityId('EXTERNAL_OBJECT', `${match.library || match.schema}:${externalName}:${match.objectType || 'OBJECT'}`);
+    const externalName = normalizeIdentifier(
+      match.sqlName || match.systemName || request.requestedName
+    );
+    const externalEntityId = createEntityId(
+      'EXTERNAL_OBJECT',
+      `${match.library || match.schema}:${externalName}:${match.objectType || 'OBJECT'}`
+    );
     entityUpdates.externalObjects.set(externalEntityId, {
       id: externalEntityId,
       name: externalName,
@@ -485,7 +535,11 @@ function buildDb2CatalogSemanticUpdates({ canonicalAnalysis, tableLinks, exporte
       entityUpdates.procedureReferences.set(request.entityId, enrichedEntity);
     }
 
-    const relationId = createRelationId('RESOLVES_TO_EXTERNAL_OBJECT', request.entityId, externalEntityId);
+    const relationId = createRelationId(
+      'RESOLVES_TO_EXTERNAL_OBJECT',
+      request.entityId,
+      externalEntityId
+    );
     relationUpdates.set(relationId, {
       id: relationId,
       type: 'RESOLVES_TO_EXTERNAL_OBJECT',
@@ -504,8 +558,13 @@ function buildDb2CatalogSemanticUpdates({ canonicalAnalysis, tableLinks, exporte
   return {
     entities: Object.fromEntries(
       Object.entries(entityUpdates)
-        .map(([key, value]) => [key, Array.from(value.values()).sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')))])
-        .filter(([, value]) => value.length > 0),
+        .map(([key, value]) => [
+          key,
+          Array.from(value.values()).sort((a, b) =>
+            String(a.id || '').localeCompare(String(b.id || ''))
+          ),
+        ])
+        .filter(([, value]) => value.length > 0)
     ),
     relations: Array.from(relationUpdates.values()).sort((a, b) => a.id.localeCompare(b.id)),
   };

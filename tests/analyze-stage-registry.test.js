@@ -4,10 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const {
-  buildAnalyzeStageRegistry,
-  runAnalyzeCore,
-} = require('../src/analyze/analyzePipeline');
+const { buildAnalyzeStageRegistry, runAnalyzeCore } = require('../src/analyze/analyzePipeline');
 const { createAnalyzeStageRegistry } = require('../src/analyze/stageRegistry');
 
 function createAnalyzeFixture() {
@@ -24,28 +21,30 @@ function createAnalyzeFixture() {
 
 test('analyze stage registry resolves plugin stages deterministically around core stages', () => {
   const registry = buildAnalyzeStageRegistry({
-    plugins: [{
-      name: 'custom-audit',
-      register({ registerStage }) {
-        registerStage({
-          id: 'plugin-audit',
-          title: 'Plugin audit stage',
-          category: 'plugin',
-          after: 'build-context',
-          before: 'optimize-context',
-          run(state) {
-            return state;
-          },
-        });
+    plugins: [
+      {
+        name: 'custom-audit',
+        register({ registerStage }) {
+          registerStage({
+            id: 'plugin-audit',
+            title: 'Plugin audit stage',
+            category: 'plugin',
+            after: 'build-context',
+            before: 'optimize-context',
+            run(state) {
+              return state;
+            },
+          });
+        },
       },
-    }],
+    ],
   });
 
-  const stageIds = registry.resolveStages().map((stage) => stage.id);
+  const stageIds = registry.resolveStages().map(stage => stage.id);
   assert.equal(stageIds.indexOf('plugin-audit') > stageIds.indexOf('build-context'), true);
   assert.equal(stageIds.indexOf('plugin-audit') < stageIds.indexOf('optimize-context'), true);
 
-  const stage = registry.listStages().find((entry) => entry.id === 'plugin-audit');
+  const stage = registry.listStages().find(entry => entry.id === 'plugin-audit');
   assert.equal(stage.pluginName, 'custom-audit');
   assert.deepEqual(stage.before, ['optimize-context']);
   assert.deepEqual(stage.after, ['build-context']);
@@ -100,53 +99,57 @@ test('runAnalyzeCore accepts plugin stages and lifecycle hooks without changing 
       verbose: false,
       optimizeContextEnabled: false,
       logVerbose() {},
-      analyzePlugins: [{
-        name: 'custom-note-plugin',
-        register({ registerStage, registerLifecycleHooks }) {
-          registerLifecycleHooks({
-            beforeStage({ stage }) {
-              lifecycleEvents.push(`before:${stage.id}`);
-            },
-            afterStage({ stage, stageReport }) {
-              lifecycleEvents.push(`after:${stage.id}:${stageReport.status}`);
-            },
-          });
+      analyzePlugins: [
+        {
+          name: 'custom-note-plugin',
+          register({ registerStage, registerLifecycleHooks }) {
+            registerLifecycleHooks({
+              beforeStage({ stage }) {
+                lifecycleEvents.push(`before:${stage.id}`);
+              },
+              afterStage({ stage, stageReport }) {
+                lifecycleEvents.push(`after:${stage.id}:${stageReport.status}`);
+              },
+            });
 
-          registerStage({
-            id: 'plugin-note',
-            title: 'Inject plugin note',
-            description: 'Adds a small plugin-owned marker into the analyze state.',
-            category: 'plugin',
-            after: 'build-context',
-            before: 'investigate-sources',
-            run(state) {
-              return {
-                ...state,
-                pluginNote: 'injected',
-                stageMetadata: {
-                  injected: true,
-                },
-                stageDiagnostics: [{
-                  severity: 'info',
-                  code: 'PLUGIN_NOTE',
-                  message: 'Plugin stage injected marker state.',
-                }],
-              };
-            },
-          });
+            registerStage({
+              id: 'plugin-note',
+              title: 'Inject plugin note',
+              description: 'Adds a small plugin-owned marker into the analyze state.',
+              category: 'plugin',
+              after: 'build-context',
+              before: 'investigate-sources',
+              run(state) {
+                return {
+                  ...state,
+                  pluginNote: 'injected',
+                  stageMetadata: {
+                    injected: true,
+                  },
+                  stageDiagnostics: [
+                    {
+                      severity: 'info',
+                      code: 'PLUGIN_NOTE',
+                      message: 'Plugin stage injected marker state.',
+                    },
+                  ],
+                };
+              },
+            });
+          },
         },
-      }],
+      ],
     });
 
     assert.equal(result.pluginNote, 'injected');
-    const pluginStage = result.stageReports.find((stage) => stage.id === 'plugin-note');
+    const pluginStage = result.stageReports.find(stage => stage.id === 'plugin-note');
     assert.ok(pluginStage);
     assert.equal(pluginStage.status, 'completed');
     assert.equal(pluginStage.definition.pluginName, 'custom-note-plugin');
     assert.equal(pluginStage.definition.category, 'plugin');
     assert.equal(pluginStage.definition.registrationOrder >= 0, true);
     assert.deepEqual(pluginStage.metadata, { injected: true });
-    assert.ok(result.diagnostics.some((entry) => entry.code === 'PLUGIN_NOTE'));
+    assert.ok(result.diagnostics.some(entry => entry.code === 'PLUGIN_NOTE'));
     assert.ok(lifecycleEvents.includes('before:plugin-note'));
     assert.ok(lifecycleEvents.includes('after:plugin-note:completed'));
   } finally {

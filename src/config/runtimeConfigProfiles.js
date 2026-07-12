@@ -29,9 +29,10 @@ function findNearestConfigDir(startDir) {
   const maxDepth = 12;
   for (let i = 0; i < maxDepth; i += 1) {
     const configDir = path.join(current, 'config');
-    const hasProfiles = fs.existsSync(path.join(configDir, 'profiles.json'))
-      || fs.existsSync(path.join(configDir, 'local-only', 'profiles.json'))
-      || fs.existsSync(path.join(configDir, 'profiles.example.json'));
+    const hasProfiles =
+      fs.existsSync(path.join(configDir, 'profiles.json')) ||
+      fs.existsSync(path.join(configDir, 'local-only', 'profiles.json')) ||
+      fs.existsSync(path.join(configDir, 'profiles.example.json'));
     if (hasProfiles) {
       return configDir;
     }
@@ -60,14 +61,13 @@ function getProfilesMetadata(profiles) {
 }
 
 function resolveProfilesConfigPaths({ args = {}, cwd = process.cwd(), env = process.env } = {}) {
-  const cliConfig = args && args.config !== undefined && args.config !== null && args.config !== true
-    ? String(args.config).trim()
-    : '';
+  const cliConfig =
+    args && args.config !== undefined && args.config !== null && args.config !== true
+      ? String(args.config).trim()
+      : '';
   const envConfig = env.ZEUS_CONFIG_DIR ? String(env.ZEUS_CONFIG_DIR).trim() : '';
   const rawLocation = cliConfig || envConfig;
-  const source = cliConfig
-    ? 'cli'
-    : (envConfig ? 'env' : 'default');
+  const source = cliConfig ? 'cli' : envConfig ? 'env' : 'default';
   const explicitLocation = source !== 'default';
 
   let resolvedLocation;
@@ -115,27 +115,33 @@ function loadProfiles({
   validateProfiles,
 } = {}) {
   const configPaths = resolveProfilesConfigPaths({ args, cwd, env });
-  const candidatePaths = (configPaths.attemptedPaths || [configPaths.preferredPath, configPaths.fallbackPath])
-    .filter(Boolean);
-  const profilePath = candidatePaths.find((candidate) => fsModule.existsSync(candidate)) || null;
+  const candidatePaths = (
+    configPaths.attemptedPaths || [configPaths.preferredPath, configPaths.fallbackPath]
+  ).filter(Boolean);
+  const profilePath = candidatePaths.find(candidate => fsModule.existsSync(candidate)) || null;
   const baseFileName = profilePath ? path.basename(profilePath).toLowerCase() : '';
-  const shouldLoadOverlays = !profilePath || baseFileName === 'profiles.json' || baseFileName === 'profiles.example.json';
+  const shouldLoadOverlays =
+    !profilePath || baseFileName === 'profiles.json' || baseFileName === 'profiles.example.json';
   const overlayPaths = shouldLoadOverlays
-    ? ((configPaths.configDir && fsModule.existsSync(configPaths.configDir))
-      ? fsModule.readdirSync(configPaths.configDir)
-        .filter((entry) => /^profiles\.[^.]+\.json$/i.test(entry))
-        .map((entry) => path.join(configPaths.configDir, entry))
-        .filter((entry) => fsModule.existsSync(entry))
-        .sort((left, right) => left.localeCompare(right))
-      : [])
+    ? configPaths.configDir && fsModule.existsSync(configPaths.configDir)
+      ? fsModule
+          .readdirSync(configPaths.configDir)
+          .filter(entry => /^profiles\.[^.]+\.json$/i.test(entry))
+          .map(entry => path.join(configPaths.configDir, entry))
+          .filter(entry => fsModule.existsSync(entry))
+          .sort((left, right) => left.localeCompare(right))
+      : []
     : [];
 
   if (!profilePath) {
-    return attachProfilesMetadata({}, {
-      ...configPaths,
-      profilePath: null,
-      sourceFileLabel: [...candidatePaths, ...overlayPaths].join(' or '),
-    });
+    return attachProfilesMetadata(
+      {},
+      {
+        ...configPaths,
+        profilePath: null,
+        sourceFileLabel: [...candidatePaths, ...overlayPaths].join(' or '),
+      }
+    );
   }
 
   try {
@@ -146,7 +152,8 @@ function loadProfiles({
     for (const overlayPath of overlayPaths) {
       const overlayRaw = fsModule.readFileSync(overlayPath, 'utf8');
       const overlayParsed = JSON.parse(overlayRaw);
-      const overlayProfiles = overlayParsed && typeof overlayParsed === 'object' ? overlayParsed : {};
+      const overlayProfiles =
+        overlayParsed && typeof overlayParsed === 'object' ? overlayParsed : {};
       profiles = mergeConfigLayers(profiles, overlayProfiles);
     }
 
@@ -157,8 +164,12 @@ function loadProfiles({
       try {
         const hygiene = detectPlaintextSecrets({ cwd, checkProfiles: true, env: process.env });
         if (hygiene.length > 0) {
-          console.warn(`[WARN] Secrets-Hygiene: ${hygiene.length} Klartext-Credential(s) in .env oder Profilen erkannt beim Laden von Profilen.`);
-          console.warn('  Migriere mit "zeus secret encrypt". Details im "zeus doctor" oder "zeus secret status".');
+          console.warn(
+            `[WARN] Secrets-Hygiene: ${hygiene.length} Klartext-Credential(s) in .env oder Profilen erkannt beim Laden von Profilen.`
+          );
+          console.warn(
+            '  Migriere mit "zeus secret encrypt". Details im "zeus doctor" oder "zeus secret status".'
+          );
           warnedPlaintextProfiles = true;
         }
       } catch (_) {}
@@ -183,7 +194,11 @@ function describeProfilesLocation(profiles) {
   if (metadata.profilePath) {
     return metadata.profilePath;
   }
-  return (metadata.attemptedPaths || []).join(' or ') || metadata.description || 'config/local-only/profiles.json';
+  return (
+    (metadata.attemptedPaths || []).join(' or ') ||
+    metadata.description ||
+    'config/local-only/profiles.json'
+  );
 }
 
 module.exports = {

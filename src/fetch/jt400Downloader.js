@@ -12,7 +12,11 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
-const { ensureJavaHelperCompiled, runJavaHelper, SECRET_ENV_SENTINEL } = require('./jt400CommandRunner');
+const {
+  ensureJavaHelperCompiled,
+  runJavaHelper,
+  SECRET_ENV_SENTINEL,
+} = require('./jt400CommandRunner');
 
 function parseJsonResult(stdout, fallback) {
   const text = (stdout || '').trim();
@@ -24,21 +28,18 @@ function parseJsonResult(stdout, fallback) {
   }
 }
 
-async function downloadDirectoryViaJt400({
-  host,
-  user,
-  password,
-  remoteDir,
-  localDir,
-  verbose,
-}) {
+async function downloadDirectoryViaJt400({ host, user, password, remoteDir, localDir, verbose }) {
   ensureJavaHelperCompiled('IbmiIfsDownloader.java', 'IbmiIfsDownloader');
   const resolvedLocal = path.resolve(process.cwd(), localDir);
   if (verbose) {
     console.log(`[verbose] JT400 IFS download ${remoteDir} -> ${resolvedLocal}`);
   }
 
-  const result = runJavaHelper('IbmiIfsDownloader', [host, user, SECRET_ENV_SENTINEL, remoteDir, resolvedLocal], { password });
+  const result = runJavaHelper(
+    'IbmiIfsDownloader',
+    [host, user, SECRET_ENV_SENTINEL, remoteDir, resolvedLocal],
+    { password }
+  );
   const parsed = parseJsonResult(result.stdout, {
     ok: result.status === 0,
     downloadedCount: 0,
@@ -47,7 +48,8 @@ async function downloadDirectoryViaJt400({
   });
 
   if (result.status !== 0 || parsed.ok !== true) {
-    const details = (parsed.messages || []).join('; ') || (result.stderr || '').trim() || `exit ${result.status}`;
+    const details =
+      (parsed.messages || []).join('; ') || (result.stderr || '').trim() || `exit ${result.status}`;
     throw new Error(`JT400 download failed: ${details}`);
   }
 
@@ -59,4 +61,3 @@ async function downloadDirectoryViaJt400({
 module.exports = {
   downloadDirectoryViaJt400,
 };
-

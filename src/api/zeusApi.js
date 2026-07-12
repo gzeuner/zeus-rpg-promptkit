@@ -26,11 +26,18 @@ const {
 const { createAnalyzeStageRegistry } = require('../analyze/stageRegistry');
 const analyzeStageRegistry = createAnalyzeStageRegistry();
 
+// @ts-ignore - provided by node types / d.ts in scoped check
+const path = require('path');
+// @ts-ignore - provided by node types / d.ts in scoped check
+const fs = require('fs');
+
 // Populate with core stages on load (for zeus.analyzeStages consumers)
 try {
   const { registerCoreAnalyzeStages } = require('../analyze/analyzePipeline');
   registerCoreAnalyzeStages(analyzeStageRegistry);
-} catch (e) { /* ignore if circular or early */ }
+} catch (e) {
+  /* ignore if circular or early */
+}
 
 /**
  * Zeus API - Central service object for extensibility.
@@ -163,7 +170,7 @@ try {
       const profiles = loadProfiles({ cwd, env, args });
       const filterName = args.profile ? String(args.profile).trim() : null;
       const names = Object.keys(profiles || {});
-      const toShow = filterName ? names.filter((n) => n === filterName) : names; // simplified for cap
+      const toShow = filterName ? names.filter(n => n === filterName) : names; // simplified for cap
       const jsonProfiles = {};
       for (const name of toShow) {
         try {
@@ -204,7 +211,8 @@ try {
     id: 'configure.discover-environment',
     version: 1,
     title: 'Discover Environment',
-    description: 'Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.',
+    description:
+      'Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.',
     category: 'configure',
     safety: { level: 'S0', sideEffects: [], requiresExplicitApproval: false },
     aliases: ['discover-environment'],
@@ -248,10 +256,18 @@ try {
     inputContract: null,
     outputContract: null,
     availability: { cli: true, mcp: true, api: true, viewer: true, vscode: true },
-    docs: { examples: ['zeus workflow --preset architecture-review --source ./src --program MYPROG --out ./out'], notes: [] },
+    docs: {
+      examples: [
+        'zeus workflow --preset architecture-review --source ./src --program MYPROG --out ./out',
+      ],
+      notes: [],
+    },
     execute: async (context, input) => {
       const args = { ...(context && context.args ? context.args : {}), ...input };
-      return runWorkflowEngine(args, { cwd: (context && context.cwd) || process.cwd(), env: (context && context.env) || process.env });
+      return runWorkflowEngine(args, {
+        cwd: (context && context.cwd) || process.cwd(),
+        env: (context && context.env) || process.env,
+      });
     },
   });
 
@@ -270,7 +286,9 @@ try {
     docs: { examples: ['zeus bundle --program MYPROG --source-output-root ./out'], notes: [] },
     execute: (context, input) => {
       const args = { ...(context && context.args ? context.args : {}), ...input };
-      const config = require('../config/runtimeConfig').resolveBundleConfig ? require('../config/runtimeConfig').resolveBundleConfig(args) : {};
+      const config = require('../config/runtimeConfig').resolveBundleConfig
+        ? require('../config/runtimeConfig').resolveBundleConfig(args)
+        : {};
       return buildOutputBundle({
         program: String(args.program || '').trim(),
         sourceOutputRoot: config.sourceOutputRoot || (context && context.cwd),
@@ -279,7 +297,10 @@ try {
         includeMd: !!args['include-md'],
         includeHtml: !!args['include-html'],
         safeSharingEnabled: !!args['safe-sharing'],
-        reproducibility: require('../reproducibility/reproducibility').normalizeReproducibilitySettings(!!args.reproducible),
+        reproducibility:
+          require('../reproducibility/reproducibility').normalizeReproducibilitySettings(
+            !!args.reproducible
+          ),
         artifactPaths: Array.isArray(args['artifact-paths']) ? args['artifact-paths'] : null,
         workflowPreset: args['workflow-preset-settings'] || null,
         bundleFileName: args['bundle-file-name'] || null,
@@ -296,7 +317,11 @@ try {
       title: 'Impact Analysis',
       description: 'Build reverse-impact evidence for target programs or fields.',
       category: 'investigation',
-      safety: { level: 'S1', sideEffects: ['local-artifact-write'], requiresExplicitApproval: false },
+      safety: {
+        level: 'S1',
+        sideEffects: ['local-artifact-write'],
+        requiresExplicitApproval: false,
+      },
       aliases: ['impact'],
       inputContract: null,
       outputContract: null,
@@ -315,7 +340,11 @@ try {
       title: 'Assess Risk',
       description: 'Produce risk-oriented summary for a program.',
       category: 'investigation',
-      safety: { level: 'S1', sideEffects: ['local-artifact-write'], requiresExplicitApproval: false },
+      safety: {
+        level: 'S1',
+        sideEffects: ['local-artifact-write'],
+        requiresExplicitApproval: false,
+      },
       aliases: ['assess-risk'],
       inputContract: null,
       outputContract: null,
@@ -325,7 +354,9 @@ try {
         const args = { ...(context && context.args ? context.args : {}), ...input };
         const cwd = (context && context.cwd) || process.cwd();
         const outputRoot = path.resolve(cwd, 'output');
-        const program = String(args.program || '').trim().toUpperCase();
+        const program = String(args.program || '')
+          .trim()
+          .toUpperCase();
         const analysisPath = path.join(outputRoot, program, 'canonical-analysis.json');
         if (!fs.existsSync(analysisPath)) {
           return { error: 'Analysis not found', program };
@@ -335,45 +366,72 @@ try {
       },
     });
 
-    const { generateJestTestTemplate, generateMarkdownTestPlan, generateChangeTestScenario } = require('../investigation/testScenarioGenerator');
+    const {
+      generateJestTestTemplate,
+      generateMarkdownTestPlan,
+      generateChangeTestScenario,
+    } = require('../investigation/testScenarioGenerator');
     capabilityRegistry.register({
       id: 'investigation.generate-test',
       version: 1,
       title: 'Generate Test',
       description: 'Generate test plan or test template artifacts.',
       category: 'investigation',
-      safety: { level: 'S1', sideEffects: ['local-artifact-write'], requiresExplicitApproval: false },
+      safety: {
+        level: 'S1',
+        sideEffects: ['local-artifact-write'],
+        requiresExplicitApproval: false,
+      },
       aliases: ['generate-test'],
       inputContract: null,
       outputContract: null,
       availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
-      docs: { examples: ['zeus generate-test --program MYPROG --format markdown --out ./out'], notes: [] },
+      docs: {
+        examples: ['zeus generate-test --program MYPROG --format markdown --out ./out'],
+        notes: [],
+      },
       execute: (context, input) => {
         const args = { ...(context && context.args ? context.args : {}), ...input };
         const cwd = (context && context.cwd) || process.cwd();
         const outputRoot = path.resolve(cwd, 'output');
-        const program = String(args.program || '').trim().toUpperCase();
+        const program = String(args.program || '')
+          .trim()
+          .toUpperCase();
         const analysisPath = path.join(outputRoot, program, 'canonical-analysis.json');
         let canonical = null;
         if (fs.existsSync(analysisPath)) {
-          try { canonical = JSON.parse(fs.readFileSync(analysisPath, 'utf8')); } catch (_) {}
+          try {
+            canonical = JSON.parse(fs.readFileSync(analysisPath, 'utf8'));
+          } catch (_) {}
         }
         const format = String(args.format || 'markdown').toLowerCase();
         if (format === 'jest') {
-          return generateJestTestTemplate({ program, canonical, critical: !!args.critical, change: !!args.change });
+          return generateJestTestTemplate({
+            program,
+            canonical,
+            critical: !!args.critical,
+            change: !!args.change,
+          });
         }
         return generateMarkdownTestPlan({ program, canonical });
       },
     });
 
-    const { generateDeploymentChecklist, estimateDeploymentTimeline } = require('../report/deploymentChecklistBuilder');
+    const {
+      generateDeploymentChecklist,
+      estimateDeploymentTimeline,
+    } = require('../report/deploymentChecklistBuilder');
     capabilityRegistry.register({
       id: 'investigation.generate-checklist',
       version: 1,
       title: 'Generate Checklist',
       description: 'Generate deployment and change checklist artifacts.',
       category: 'investigation',
-      safety: { level: 'S1', sideEffects: ['local-artifact-write'], requiresExplicitApproval: false },
+      safety: {
+        level: 'S1',
+        sideEffects: ['local-artifact-write'],
+        requiresExplicitApproval: false,
+      },
       aliases: ['generate-checklist'],
       inputContract: null,
       outputContract: null,
@@ -383,13 +441,23 @@ try {
         const args = { ...(context && context.args ? context.args : {}), ...input };
         const cwd = (context && context.cwd) || process.cwd();
         const outputRoot = path.resolve(cwd, 'output');
-        const program = String(args.program || '').trim().toUpperCase();
+        const program = String(args.program || '')
+          .trim()
+          .toUpperCase();
         const analysisPath = path.join(outputRoot, program, 'canonical-analysis.json');
         let canonical = null;
         if (fs.existsSync(analysisPath)) {
-          try { canonical = JSON.parse(fs.readFileSync(analysisPath, 'utf8')); } catch (_) {}
+          try {
+            canonical = JSON.parse(fs.readFileSync(analysisPath, 'utf8'));
+          } catch (_) {}
         }
-        const checklist = generateDeploymentChecklist({ program, canonical, type: args.type, impact: args.impact, affected: args.affected });
+        const checklist = generateDeploymentChecklist({
+          program,
+          canonical,
+          type: args.type,
+          impact: args.impact,
+          affected: args.affected,
+        });
         const timeline = estimateDeploymentTimeline(checklist);
         return { checklist, timeline };
       },
@@ -402,12 +470,19 @@ try {
       title: 'QA Validation',
       description: 'Render QA validations/checks to jira, markdown, or json.',
       category: 'investigation',
-      safety: { level: 'S1', sideEffects: ['local-artifact-write'], requiresExplicitApproval: false },
+      safety: {
+        level: 'S1',
+        sideEffects: ['local-artifact-write'],
+        requiresExplicitApproval: false,
+      },
       aliases: ['qa'],
       inputContract: null,
       outputContract: null,
       availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
-      docs: { examples: ['zeus qa --input ./out/MYPROG --format markdown --strict STRICT'], notes: [] },
+      docs: {
+        examples: ['zeus qa --input ./out/MYPROG --format markdown --strict STRICT'],
+        notes: [],
+      },
       execute: async (context, input) => {
         const args = { ...(context && context.args ? context.args : {}), ...input };
         const cwd = (context && context.cwd) || process.cwd();
@@ -415,12 +490,20 @@ try {
         let canonicalAnalysis = null;
         if (inputPath) {
           const stats = fs.existsSync(inputPath) ? fs.statSync(inputPath) : null;
-          const canonicalPath = stats && stats.isDirectory() ? path.join(inputPath, 'canonical-analysis.json') : inputPath;
+          const canonicalPath =
+            stats && stats.isDirectory()
+              ? path.join(inputPath, 'canonical-analysis.json')
+              : inputPath;
           if (canonicalPath && fs.existsSync(canonicalPath)) {
-            try { canonicalAnalysis = JSON.parse(fs.readFileSync(canonicalPath, 'utf8')); } catch (_) {}
+            try {
+              canonicalAnalysis = JSON.parse(fs.readFileSync(canonicalPath, 'utf8'));
+            } catch (_) {}
           }
         }
-        const qaResults = await runQAPipeline({ canonicalAnalysis: canonicalAnalysis || {}, sourceFiles: [], config: {} }, { qa: { qaMode: true, qaStrict: args.strict || 'LENIENT' } });
+        const qaResults = await runQAPipeline(
+          { canonicalAnalysis: canonicalAnalysis || {}, sourceFiles: [], config: {} },
+          { qa: { qaMode: true, qaStrict: args.strict || 'LENIENT' } }
+        );
         const format = args.format || 'markdown';
         return generateQAReport(qaResults, { format });
       },
@@ -518,17 +601,20 @@ try {
       inputContract: null,
       outputContract: null,
       availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
-      docs: { examples: ['zeus investigate --program MYPROG --goal "understand orders" --search "customer"'], notes: [] },
+      docs: {
+        examples: [
+          'zeus investigate --program MYPROG --goal "understand orders" --search "customer"',
+        ],
+        notes: [],
+      },
       execute: (context, input) => {
         const args = { ...(context && context.args ? context.args : {}), ...input, _cap: true };
         return runInvestigate(args);
       },
     });
-
   } catch (e) {
     // graceful, registration errors are non-fatal in foundation
   }
-
 } catch (e) {
   // graceful
 }
@@ -537,7 +623,10 @@ try {
 async function runWorkflow(profile, preset, options = {}) {
   const { runtime = {}, ...args } = options;
   // Route through capability (package 07)
-  const cap = capabilityRegistry && capabilityRegistry.resolve ? capabilityRegistry.resolve('analysis.workflow') : null;
+  const cap =
+    capabilityRegistry && capabilityRegistry.resolve
+      ? capabilityRegistry.resolve('analysis.workflow')
+      : null;
   if (cap && typeof cap.execute === 'function') {
     const ctx = { ...runtime, args: { profile, preset, ...args } };
     const res = await cap.execute(ctx, { profile, preset, ...args });
@@ -545,19 +634,25 @@ async function runWorkflow(profile, preset, options = {}) {
       return res.result;
     }
   }
-  return runWorkflowEngine({
-    profile,
-    preset,
-    ...args,
-  }, runtime);
+  return runWorkflowEngine(
+    {
+      profile,
+      preset,
+      ...args,
+    },
+    runtime
+  );
 }
 
 async function fetch(profile, options = {}) {
   const { runtime = {}, ...args } = options;
-  return executeFetch({
-    profile,
-    ...args,
-  }, runtime);
+  return executeFetch(
+    {
+      profile,
+      ...args,
+    },
+    runtime
+  );
 }
 
 function analyze(profile, options = {}) {
@@ -573,7 +668,10 @@ function analyze(profile, options = {}) {
   }
   try {
     // Route through capability (package 07)
-    const cap = capabilityRegistry && capabilityRegistry.resolve ? capabilityRegistry.resolve('analysis.analyze') : null;
+    const cap =
+      capabilityRegistry && capabilityRegistry.resolve
+        ? capabilityRegistry.resolve('analysis.analyze')
+        : null;
     if (cap && typeof cap.execute === 'function') {
       const ctx = { ...runtime, args: { profile, ...args } };
       const res = cap.execute(ctx, { profile, ...args });
@@ -581,10 +679,13 @@ function analyze(profile, options = {}) {
         return res.result;
       }
     }
-    return executeAnalyze({
-      profile,
-      ...args,
-    }, runtime);
+    return executeAnalyze(
+      {
+        profile,
+        ...args,
+      },
+      runtime
+    );
   } finally {
     // cleanup temp
     tempRegistered.forEach(id => analyzers.unregister(id));
@@ -593,47 +694,62 @@ function analyze(profile, options = {}) {
 
 function queryTable(profile, table, options = {}) {
   const { runtime = {}, ...args } = options;
-  return executeQueryTable({
-    profile,
-    table,
-    ...args,
-  }, runtime);
+  return executeQueryTable(
+    {
+      profile,
+      table,
+      ...args,
+    },
+    runtime
+  );
 }
 
 function listRuns(profile, options = {}) {
   const { runtime = {}, ...args } = options;
-  return executeListRuns({
-    profile,
-    ...args,
-  }, runtime);
+  return executeListRuns(
+    {
+      profile,
+      ...args,
+    },
+    runtime
+  );
 }
 
 function readRun(profile, program, options = {}) {
   const { runtime = {}, ...args } = options;
-  return executeReadRun({
-    profile,
-    program,
-    ...args,
-  }, runtime);
+  return executeReadRun(
+    {
+      profile,
+      program,
+      ...args,
+    },
+    runtime
+  );
 }
 
 function readRunViews(profile, program, options = {}) {
   const { runtime = {}, ...args } = options;
-  return executeReadRunViews({
-    profile,
-    program,
-    ...args,
-  }, runtime);
+  return executeReadRunViews(
+    {
+      profile,
+      program,
+      ...args,
+    },
+    runtime
+  );
 }
 
 function readArtifact(profile, program, artifactPath, options = {}) {
   const { runtime = {}, ...args } = options;
-  return executeReadArtifact({
-    profile,
-    program,
-    artifactPath,
-    ...args,
-  }, runtime);
+  return executeReadArtifact(
+    {
+      profile,
+      program,
+      artifactPath,
+      ...args,
+    },
+    runtime
+  );
 }
 
 function readKnowledge(options = {}) {
@@ -691,7 +807,9 @@ const zeus = {
       return this;
     }
     if (plugin && plugin.analyzers) {
-      Object.entries(plugin.analyzers || {}).forEach(([id, a]) => this.analyzers.registerAnalyzer(id, a));
+      Object.entries(plugin.analyzers || {}).forEach(([id, a]) =>
+        this.analyzers.registerAnalyzer(id, a)
+      );
     }
     return this;
   },

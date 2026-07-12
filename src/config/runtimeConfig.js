@@ -47,7 +47,8 @@ const {
   resolveWorkflowPresetConfig: resolveWorkflowPresetConfigModule,
 } = require('./runtimeConfigWorkflow');
 const { mergeConfigLayers, resolveSystemReferences } = require('./runtimeConfigCore');
-const { resolveResourceModel } = require('./resourceModel');const {
+const { resolveResourceModel } = require('./resourceModel');
+const {
   applyDbEnvOverrides,
   parseBoolean,
   parseCsv,
@@ -93,17 +94,15 @@ function loadProfiles(options = {}) {
 }
 
 function resolveProfile(profiles, profileName, options = {}) {
-  const {
-    env = process.env,
-    stack = [],
-    expandEnvPlaceholders = true,
-  } = options;
+  const { env = process.env, stack = [], expandEnvPlaceholders = true } = options;
   if (!profileName) {
     return null;
   }
 
   if (stack.includes(profileName)) {
-    throw new Error(`Profile "${profileName}" has a cyclic inheritance chain: ${[...stack, profileName].join(' -> ')}`);
+    throw new Error(
+      `Profile "${profileName}" has a cyclic inheritance chain: ${[...stack, profileName].join(' -> ')}`
+    );
   }
 
   const profile = profiles[profileName];
@@ -115,23 +114,25 @@ function resolveProfile(profiles, profileName, options = {}) {
   // Direktaufruf ist technisch möglich, wird aber als WARN behandelt.
   if (isMixinProfile(profileName) && stack.length === 0) {
     process.stderr.write(
-      `[WARN] Profil "${profileName}" ist ein Mixin-Profil (beginnt mit '_') und sollte nur über 'extends' eingebunden werden.\n`,
+      `[WARN] Profil "${profileName}" ist ein Mixin-Profil (beginnt mit '_') und sollte nur über 'extends' eingebunden werden.\n`
     );
   }
 
   const parents = normalizeExtendsList(profile.extends);
-  const inherited = parents.reduce((merged, parentName) => mergeConfigLayers(
-    merged,
-    resolveProfile(profiles, parentName, {
-      env,
-      stack: [...stack, profileName],
-    }),
-  ), {});
+  const inherited = parents.reduce(
+    (merged, parentName) =>
+      mergeConfigLayers(
+        merged,
+        resolveProfile(profiles, parentName, {
+          env,
+          stack: [...stack, profileName],
+        })
+      ),
+    {}
+  );
   const merged = mergeConfigLayers(inherited, profile);
   delete merged.extends;
-  const resolved = expandEnvPlaceholders
-    ? resolveEnvPlaceholdersDeep(merged, env)
-    : merged;
+  const resolved = expandEnvPlaceholders ? resolveEnvPlaceholdersDeep(merged, env) : merged;
 
   // System-Referenzen nur beim Top-Level-Aufruf auflösen (stack.length === 0).
   // Eltern-Profile behalten ihre { system: '...' }-Referenzen bis zur finalen
@@ -146,20 +147,24 @@ function resolveProfile(profiles, profileName, options = {}) {
 }
 
 function readWorkCopyConfig(profile, env) {
-  const profileConfig = profile && typeof profile.workCopy === 'object'
-    ? resolveEnvPlaceholdersDeep(profile.workCopy, env)
-    : {};
+  const profileConfig =
+    profile && typeof profile.workCopy === 'object'
+      ? resolveEnvPlaceholdersDeep(profile.workCopy, env)
+      : {};
 
   return {
     root: profileConfig.root || DEFAULT_WORK_COPY.root,
-    extension: String(profileConfig.extension || DEFAULT_WORK_COPY.extension).trim().toLowerCase(),
+    extension: String(profileConfig.extension || DEFAULT_WORK_COPY.extension)
+      .trim()
+      .toLowerCase(),
   };
 }
 
 function readTokenBudgetConfig(profile, env) {
-  const profileConfig = profile && typeof profile.tokenBudget === 'object'
-    ? resolveEnvPlaceholdersDeep(profile.tokenBudget, env)
-    : {};
+  const profileConfig =
+    profile && typeof profile.tokenBudget === 'object'
+      ? resolveEnvPlaceholdersDeep(profile.tokenBudget, env)
+      : {};
   const resolved = {};
 
   for (const [key, value] of Object.entries(profileConfig)) {
@@ -188,12 +193,14 @@ function resolveWorkflowPresetConfig(profiles, profile, presetName, env = proces
 }
 
 function readContextOptimizerConfig(profiles, profile, env) {
-  const globalConfig = profiles && typeof profiles.contextOptimizer === 'object'
-    ? resolveEnvPlaceholdersDeep(profiles.contextOptimizer, env)
-    : {};
-  const profileConfig = profile && typeof profile.contextOptimizer === 'object'
-    ? resolveEnvPlaceholdersDeep(profile.contextOptimizer, env)
-    : {};
+  const globalConfig =
+    profiles && typeof profiles.contextOptimizer === 'object'
+      ? resolveEnvPlaceholdersDeep(profiles.contextOptimizer, env)
+      : {};
+  const profileConfig =
+    profile && typeof profile.contextOptimizer === 'object'
+      ? resolveEnvPlaceholdersDeep(profile.contextOptimizer, env)
+      : {};
 
   return {
     ...DEFAULT_CONTEXT_OPTIMIZER_OPTIONS,
@@ -208,12 +215,14 @@ function readContextOptimizerConfig(profiles, profile, env) {
 }
 
 function readAnalysisLimitConfig(profiles, profile, env) {
-  const globalConfig = profiles && typeof profiles.analysisLimits === 'object'
-    ? resolveEnvPlaceholdersDeep(profiles.analysisLimits, env)
-    : {};
-  const profileConfig = profile && typeof profile.analysisLimits === 'object'
-    ? resolveEnvPlaceholdersDeep(profile.analysisLimits, env)
-    : {};
+  const globalConfig =
+    profiles && typeof profiles.analysisLimits === 'object'
+      ? resolveEnvPlaceholdersDeep(profiles.analysisLimits, env)
+      : {};
+  const profileConfig =
+    profile && typeof profile.analysisLimits === 'object'
+      ? resolveEnvPlaceholdersDeep(profile.analysisLimits, env)
+      : {};
 
   return {
     ...DEFAULT_ANALYSIS_LIMITS,
@@ -223,12 +232,14 @@ function readAnalysisLimitConfig(profiles, profile, env) {
 }
 
 function readTestDataConfig(profiles, profile, env) {
-  const globalConfig = profiles && typeof profiles.testData === 'object'
-    ? resolveEnvPlaceholdersDeep(profiles.testData, env)
-    : {};
-  const profileConfig = profile && typeof profile.testData === 'object'
-    ? resolveEnvPlaceholdersDeep(profile.testData, env)
-    : {};
+  const globalConfig =
+    profiles && typeof profiles.testData === 'object'
+      ? resolveEnvPlaceholdersDeep(profiles.testData, env)
+      : {};
+  const profileConfig =
+    profile && typeof profile.testData === 'object'
+      ? resolveEnvPlaceholdersDeep(profile.testData, env)
+      : {};
 
   return {
     limit: DEFAULT_TEST_DATA_LIMIT,
@@ -264,41 +275,53 @@ function resolveAnalyzeDbConfig(config, role = 'metadata') {
 }
 
 function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
-  return resolveAnalyzeConfigModule(args, { cwd, env }, {
-    DEFAULT_EXTENSIONS,
-    buildAnalyzeConnectionRoles,
-    loadProfiles,
-    parseCsv,
-    readAnalysisLimitConfig,
-    readContextOptimizerConfig,
-    readTestDataConfig,
-    readTokenBudgetConfig,
-    resolveAnalyzeDbRoleConfigs,
-    resolveProfile,
-    validateAnalyzeConfig,
-  });
+  return resolveAnalyzeConfigModule(
+    args,
+    { cwd, env },
+    {
+      DEFAULT_EXTENSIONS,
+      buildAnalyzeConnectionRoles,
+      loadProfiles,
+      parseCsv,
+      readAnalysisLimitConfig,
+      readContextOptimizerConfig,
+      readTestDataConfig,
+      readTokenBudgetConfig,
+      resolveAnalyzeDbRoleConfigs,
+      resolveProfile,
+      validateAnalyzeConfig,
+    }
+  );
 }
 
 function resolveFetchConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
-  return resolveFetchConfigModule(args, { cwd, env }, {
-    DEFAULT_SOURCE_FILES,
-    DEFAULT_STREAM_FILE_CCSID,
-    DEFAULT_TRANSPORT,
-    loadProfiles,
-    parseBoolean,
-    parseCsv,
-    resolveEnvPlaceholdersDeep,
-    resolveProfile,
-    validateFetchConfig,
-  });
+  return resolveFetchConfigModule(
+    args,
+    { cwd, env },
+    {
+      DEFAULT_SOURCE_FILES,
+      DEFAULT_STREAM_FILE_CCSID,
+      DEFAULT_TRANSPORT,
+      loadProfiles,
+      parseBoolean,
+      parseCsv,
+      resolveEnvPlaceholdersDeep,
+      resolveProfile,
+      validateFetchConfig,
+    }
+  );
 }
 
 function resolveBundleConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
-  return resolveBundleConfigModule(args, { cwd, env }, {
-    loadProfiles,
-    resolveProfile,
-    validateBundleConfig,
-  });
+  return resolveBundleConfigModule(
+    args,
+    { cwd, env },
+    {
+      loadProfiles,
+      resolveProfile,
+      validateBundleConfig,
+    }
+  );
 }
 
 /**

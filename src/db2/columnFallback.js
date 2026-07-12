@@ -40,14 +40,30 @@ ORDER BY ORDINAL_POSITION`,
     runtime,
   });
   return (result.rows || [])
-    .map((row) => String((row && row.COLUMN_NAME) || '').trim().toUpperCase())
+    .map(row =>
+      String((row && row.COLUMN_NAME) || '')
+        .trim()
+        .toUpperCase()
+    )
     .filter(Boolean);
 }
 
 function resolveColumn(dbConfig, schema, table, logicalName, runtime = {}) {
-  const candidates = COLUMN_ALIASES[String(logicalName || '').trim().toUpperCase()] || [String(logicalName || '').trim().toUpperCase()];
+  const candidates = COLUMN_ALIASES[
+    String(logicalName || '')
+      .trim()
+      .toUpperCase()
+  ] || [
+    String(logicalName || '')
+      .trim()
+      .toUpperCase(),
+  ];
   const actualColumns = getActualColumns(dbConfig, schema, table, runtime);
-  return candidates.find((candidate) => actualColumns.some((column) => column === String(candidate).trim().toUpperCase())) || null;
+  return (
+    candidates.find(candidate =>
+      actualColumns.some(column => column === String(candidate).trim().toUpperCase())
+    ) || null
+  );
 }
 
 module.exports = {

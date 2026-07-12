@@ -6,7 +6,7 @@ const { parseDds, findJsonSegmentGroup, parseJsonFromGroup } = require('../src/p
 test('findJsonSegmentGroup keeps collecting when a JSON chunk starts with Q', () => {
   const lines = [
     '     A                                  1  2HTML(\'{"items":[{"value":"\')',
-    '     A                                  1  2HTML(\'QSTART"}]}\')',
+    "     A                                  1  2HTML('QSTART\"}]}')",
     "     A                                  1  2HTML('QPUISFLTEST')",
   ];
 

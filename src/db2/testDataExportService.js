@@ -13,7 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
-const { ensureJavaHelperCompiled, runJavaHelper, SECRET_ENV_SENTINEL } = require('../fetch/jt400CommandRunner');
+const {
+  ensureJavaHelperCompiled,
+  runJavaHelper,
+  SECRET_ENV_SENTINEL,
+} = require('../fetch/jt400CommandRunner');
 const {
   normalizeIdentifier,
   resolveDefaultSchema,
@@ -34,15 +38,21 @@ const MARKDOWN_COLUMN_LIMIT = 8;
 const MARKDOWN_ROW_LIMIT = 10;
 
 function normalizeMaskColumns(testDataConfig) {
-  return Array.from(new Set(
-    ((testDataConfig && testDataConfig.maskColumns) || [])
-      .map((value) => normalizeIdentifier(value))
-      .filter(Boolean),
-  )).sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      ((testDataConfig && testDataConfig.maskColumns) || [])
+        .map(value => normalizeIdentifier(value))
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function writeOutputs(outputDir, payload, markdown) {
-  fs.writeFileSync(path.join(outputDir, JSON_FILE), `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(
+    path.join(outputDir, JSON_FILE),
+    `${JSON.stringify(payload, null, 2)}\n`,
+    'utf8'
+  );
   fs.writeFileSync(path.join(outputDir, MARKDOWN_FILE), markdown, 'utf8');
 }
 
@@ -91,44 +101,55 @@ function formatQualifiedPolicyTable(entry) {
 
 function buildTestDataPolicy(testDataConfig) {
   return {
-    allowTables: Array.from(new Map(
-      ((testDataConfig && testDataConfig.allowTables) || [])
-        .map((value) => parseQualifiedTableName(value))
-        .filter(Boolean)
-        .map((entry) => [`${entry.schema}|${entry.table}`, entry]),
-    ).values()).sort((a, b) => formatQualifiedPolicyTable(a).localeCompare(formatQualifiedPolicyTable(b))),
-    denyTables: Array.from(new Map(
-      ((testDataConfig && testDataConfig.denyTables) || [])
-        .map((value) => parseQualifiedTableName(value))
-        .filter(Boolean)
-        .map((entry) => [`${entry.schema}|${entry.table}`, entry]),
-    ).values()).sort((a, b) => formatQualifiedPolicyTable(a).localeCompare(formatQualifiedPolicyTable(b))),
+    allowTables: Array.from(
+      new Map(
+        ((testDataConfig && testDataConfig.allowTables) || [])
+          .map(value => parseQualifiedTableName(value))
+          .filter(Boolean)
+          .map(entry => [`${entry.schema}|${entry.table}`, entry])
+      ).values()
+    ).sort((a, b) => formatQualifiedPolicyTable(a).localeCompare(formatQualifiedPolicyTable(b))),
+    denyTables: Array.from(
+      new Map(
+        ((testDataConfig && testDataConfig.denyTables) || [])
+          .map(value => parseQualifiedTableName(value))
+          .filter(Boolean)
+          .map(entry => [`${entry.schema}|${entry.table}`, entry])
+      ).values()
+    ).sort((a, b) => formatQualifiedPolicyTable(a).localeCompare(formatQualifiedPolicyTable(b))),
     maskColumns: normalizeMaskColumns(testDataConfig),
     maskRules: ((testDataConfig && testDataConfig.maskRules) || [])
-      .map((rule) => ({
+      .map(rule => ({
         schema: normalizeIdentifier(rule && rule.schema),
         table: normalizeIdentifier(rule && rule.table),
-        columns: Array.from(new Set((rule && Array.isArray(rule.columns) ? rule.columns : [])
-          .map((value) => normalizeIdentifier(value))
-          .filter(Boolean))).sort((a, b) => a.localeCompare(b)),
-        value: typeof rule === 'object' && typeof rule.value === 'string' && rule.value.trim()
-          ? rule.value.trim()
-          : 'MASKED',
+        columns: Array.from(
+          new Set(
+            (rule && Array.isArray(rule.columns) ? rule.columns : [])
+              .map(value => normalizeIdentifier(value))
+              .filter(Boolean)
+          )
+        ).sort((a, b) => a.localeCompare(b)),
+        value:
+          typeof rule === 'object' && typeof rule.value === 'string' && rule.value.trim()
+            ? rule.value.trim()
+            : 'MASKED',
       }))
-      .filter((rule) => (rule.schema || rule.table) && rule.columns.length > 0),
+      .filter(rule => (rule.schema || rule.table) && rule.columns.length > 0),
   };
 }
 
 function policyCandidates(entry) {
   return {
-    tables: Array.from(new Set([
-      normalizeIdentifier(entry.table),
-      normalizeIdentifier(entry.systemName),
-    ].filter(Boolean))),
-    schemas: Array.from(new Set([
-      normalizeIdentifier(entry.schema),
-      normalizeIdentifier(entry.systemSchema),
-    ].filter(Boolean))),
+    tables: Array.from(
+      new Set(
+        [normalizeIdentifier(entry.table), normalizeIdentifier(entry.systemName)].filter(Boolean)
+      )
+    ),
+    schemas: Array.from(
+      new Set(
+        [normalizeIdentifier(entry.schema), normalizeIdentifier(entry.systemSchema)].filter(Boolean)
+      )
+    ),
   };
 }
 
@@ -159,14 +180,17 @@ function resolvePolicyDecision(entry, policy) {
   const allowTables = Array.isArray(policy && policy.allowTables) ? policy.allowTables : [];
   const denyTables = Array.isArray(policy && policy.denyTables) ? policy.denyTables : [];
 
-  if (allowTables.length > 0 && !allowTables.some((allowEntry) => matchesPolicyTable(entry, allowEntry))) {
+  if (
+    allowTables.length > 0 &&
+    !allowTables.some(allowEntry => matchesPolicyTable(entry, allowEntry))
+  ) {
     return {
       eligibility: 'not-allowlisted',
       reason: `Skipped because ${entry.table} is not included in the configured test-data allowlist.`,
     };
   }
 
-  const denyMatch = denyTables.find((denyEntry) => matchesPolicyTable(entry, denyEntry));
+  const denyMatch = denyTables.find(denyEntry => matchesPolicyTable(entry, denyEntry));
   if (denyMatch) {
     return {
       eligibility: 'denied',
@@ -220,12 +244,12 @@ function buildRequestedTables(dependencies) {
   return Array.from(
     new Set(
       ((dependencies && dependencies.tables) || [])
-        .map((entry) => parseQualifiedTableName(entry && entry.name ? entry.name : entry))
+        .map(entry => parseQualifiedTableName(entry && entry.name ? entry.name : entry))
         .filter(Boolean)
-        .map((entry) => `${entry.schema}|${entry.table}`),
-    ),
+        .map(entry => `${entry.schema}|${entry.table}`)
+    )
   )
-    .map((key) => {
+    .map(key => {
       const [schema, table] = key.split('|');
       return { schema, table };
     })
@@ -262,13 +286,21 @@ function applyPolicyToPlanEntry(entry, policy) {
   };
 }
 
-function buildExtractionPlan({ requestedTables, metadataPayload, defaultSchema, policy = buildTestDataPolicy({}) }) {
+function buildExtractionPlan({
+  requestedTables,
+  metadataPayload,
+  defaultSchema,
+  policy = buildTestDataPolicy({}),
+}) {
   const plan = new Map();
-  const metadataTables = (metadataPayload && Array.isArray(metadataPayload.tables) ? metadataPayload.tables : [])
-    .map((table) => normalizeCatalogTable({
+  const metadataTables = (
+    metadataPayload && Array.isArray(metadataPayload.tables) ? metadataPayload.tables : []
+  ).map(table =>
+    normalizeCatalogTable({
       ...table,
       columns: Array.isArray(table && table.columns) ? table.columns : [],
-    }));
+    })
+  );
   const lookupIndex = buildDb2TableLookupIndex(metadataTables);
 
   for (const table of metadataTables) {
@@ -286,14 +318,26 @@ function buildExtractionPlan({ requestedTables, metadataPayload, defaultSchema, 
 
   for (const requestedTable of requestedTables) {
     const requestedAliases = [
-      requestedTable.schema && requestedTable.table ? `${requestedTable.schema}.${requestedTable.table}` : '',
-      requestedTable.schema && requestedTable.table ? `${requestedTable.schema}/${requestedTable.table}` : '',
+      requestedTable.schema && requestedTable.table
+        ? `${requestedTable.schema}.${requestedTable.table}`
+        : '',
+      requestedTable.schema && requestedTable.table
+        ? `${requestedTable.schema}/${requestedTable.table}`
+        : '',
       requestedTable.table,
-    ].filter(Boolean).map((value) => normalizeIdentifier(value));
-    const matches = Array.from(new Map(
-      requestedAliases.flatMap((alias) => (lookupIndex.aliasIndex.get(alias) || []))
-        .map((entry) => [`${entry.schema}|${entry.table}|${entry.systemSchema}|${entry.systemName}`, entry]),
-    ).values());
+    ]
+      .filter(Boolean)
+      .map(value => normalizeIdentifier(value));
+    const matches = Array.from(
+      new Map(
+        requestedAliases
+          .flatMap(alias => lookupIndex.aliasIndex.get(alias) || [])
+          .map(entry => [
+            `${entry.schema}|${entry.table}|${entry.systemSchema}|${entry.systemName}`,
+            entry,
+          ])
+      ).values()
+    );
 
     if (matches.length === 1) {
       const match = matches[0];
@@ -353,7 +397,7 @@ function buildExtractionPlan({ requestedTables, metadataPayload, defaultSchema, 
   }
 
   return Array.from(plan.values())
-    .map((entry) => applyPolicyToPlanEntry(entry, policy))
+    .map(entry => applyPolicyToPlanEntry(entry, policy))
     .sort((a, b) => {
       if (a.table !== b.table) return a.table.localeCompare(b.table);
       return a.schema.localeCompare(b.schema);
@@ -361,17 +405,24 @@ function buildExtractionPlan({ requestedTables, metadataPayload, defaultSchema, 
 }
 
 function maskRows(rows, columns, maskingPlan) {
-  if (!maskingPlan || !(maskingPlan.maskedColumnValues instanceof Map) || maskingPlan.maskedColumnValues.size === 0) {
+  if (
+    !maskingPlan ||
+    !(maskingPlan.maskedColumnValues instanceof Map) ||
+    maskingPlan.maskedColumnValues.size === 0
+  ) {
     return rows;
   }
 
-  return rows.map((row) => {
+  return rows.map(row => {
     const masked = {};
     for (const columnName of columns) {
       const normalizedColumn = normalizeIdentifier(columnName);
       const replacement = maskingPlan.maskedColumnValues.get(normalizedColumn);
       if (replacement) {
-        masked[columnName] = row[columnName] === null || row[columnName] === undefined ? row[columnName] : replacement.value;
+        masked[columnName] =
+          row[columnName] === null || row[columnName] === undefined
+            ? row[columnName]
+            : replacement.value;
       } else {
         masked[columnName] = row[columnName];
       }
@@ -470,7 +521,7 @@ function renderTableMarkdown(table) {
     lines.push(`| ${visibleColumns.map(() => '').join(' | ')} |`);
   } else {
     for (const row of rows) {
-      lines.push(`| ${visibleColumns.map((column) => renderValue(row[column])).join(' | ')} |`);
+      lines.push(`| ${visibleColumns.map(column => renderValue(row[column])).join(' | ')} |`);
     }
   }
 
@@ -522,10 +573,23 @@ function summarizePolicyApplication(policy, tables) {
     denylistCount: Array.isArray(policy.denyTables) ? policy.denyTables.length : 0,
     maskRuleCount: Array.isArray(policy.maskRules) ? policy.maskRules.length : 0,
     globalMaskColumnCount: Array.isArray(policy.maskColumns) ? policy.maskColumns.length : 0,
-    deniedTableCount: entries.filter((table) => table.policyDecision && table.policyDecision.eligibility === 'denied').length,
-    notAllowlistedTableCount: entries.filter((table) => table.policyDecision && table.policyDecision.eligibility === 'not-allowlisted').length,
-    maskedTableCount: entries.filter((table) => table.policyDecision && (table.policyDecision.maskedColumns || []).length > 0).length,
-    maskedColumnCount: entries.reduce((sum, table) => sum + ((table.policyDecision && table.policyDecision.maskedColumns) ? table.policyDecision.maskedColumns.length : 0), 0),
+    deniedTableCount: entries.filter(
+      table => table.policyDecision && table.policyDecision.eligibility === 'denied'
+    ).length,
+    notAllowlistedTableCount: entries.filter(
+      table => table.policyDecision && table.policyDecision.eligibility === 'not-allowlisted'
+    ).length,
+    maskedTableCount: entries.filter(
+      table => table.policyDecision && (table.policyDecision.maskedColumns || []).length > 0
+    ).length,
+    maskedColumnCount: entries.reduce(
+      (sum, table) =>
+        sum +
+        (table.policyDecision && table.policyDecision.maskedColumns
+          ? table.policyDecision.maskedColumns.length
+          : 0),
+      0
+    ),
   };
 }
 
@@ -570,7 +634,7 @@ function exportTestData({
       'Test data extraction was skipped because --skip-test-data was provided.',
       rowLimit,
       requestedTables.length,
-      policy,
+      policy
     );
   }
 
@@ -580,7 +644,7 @@ function exportTestData({
       'Test data extraction was skipped because no DB2 connection configuration was available.',
       rowLimit,
       requestedTables.length,
-      policy,
+      policy
     );
   }
 
@@ -592,7 +656,7 @@ function exportTestData({
       'Test data extraction was skipped because DB2 connection configuration is incomplete.',
       rowLimit,
       requestedTables.length,
-      policy,
+      policy
     );
   }
 
@@ -602,22 +666,25 @@ function exportTestData({
     defaultSchema,
     policy,
   });
-  const metadataLinkage = metadataPayload && Array.isArray(metadataPayload.tableLinks)
-    ? {
-      tableLinks: metadataPayload.tableLinks,
-      tableLinkByExactKey: new Map(
-        metadataPayload.tableLinks.flatMap((link) => (link.matches || []).map((match) => [
-          `${normalizeIdentifier(match.schema)}|${normalizeIdentifier(match.table)}`,
-          link,
-        ])),
-      ),
-    }
-    : buildDb2SourceLinkage({
-      requestedTables: requestedTables.map((entry) => entry.table),
-      exportedTables: plan,
-      canonicalAnalysis,
-      context,
-    });
+  const metadataLinkage =
+    metadataPayload && Array.isArray(metadataPayload.tableLinks)
+      ? {
+          tableLinks: metadataPayload.tableLinks,
+          tableLinkByExactKey: new Map(
+            metadataPayload.tableLinks.flatMap(link =>
+              (link.matches || []).map(match => [
+                `${normalizeIdentifier(match.schema)}|${normalizeIdentifier(match.table)}`,
+                link,
+              ])
+            )
+          ),
+        }
+      : buildDb2SourceLinkage({
+          requestedTables: requestedTables.map(entry => entry.table),
+          exportedTables: plan,
+          canonicalAnalysis,
+          context,
+        });
   const notes = [];
   const tables = [];
 
@@ -655,7 +722,7 @@ function exportTestData({
       `Test data extraction was skipped because the DB2 helper could not run: ${error.message}`,
       rowLimit,
       requestedTables.length,
-      policy,
+      policy
     );
   }
 
@@ -670,30 +737,39 @@ function exportTestData({
         rows: [],
         note: entry.note,
         policyDecision: entry.policyDecision,
-        sourceLink: metadataLinkage.tableLinkByExactKey.get(`${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`) || null,
+        sourceLink:
+          metadataLinkage.tableLinkByExactKey.get(
+            `${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`
+          ) || null,
       });
       notes.push(`Skipped test data extraction for ${entry.table}: ${entry.note}`);
       continue;
     }
 
     const primaryKeyColumns = (entry.columns || [])
-      .filter((column) => column && column.primaryKey)
-      .map((column) => String(column.name || '').trim())
+      .filter(column => column && column.primaryKey)
+      .map(column => String(column.name || '').trim())
       .filter(Boolean);
 
     if (verbose) {
-      console.log(`[verbose] Extracting test data for ${entry.schema}.${entry.table} (limit ${rowLimit})`);
+      console.log(
+        `[verbose] Extracting test data for ${entry.schema}.${entry.table} (limit ${rowLimit})`
+      );
     }
 
-    const result = runJavaHelper('Db2TestDataExtractor', [
-      jdbcUrl,
-      String(dbConfig.user),
-      SECRET_ENV_SENTINEL,
-      entry.schema,
-      entry.table,
-      String(rowLimit),
-      primaryKeyColumns.join(','),
-    ], { password: String(dbConfig.password) });
+    const result = runJavaHelper(
+      'Db2TestDataExtractor',
+      [
+        jdbcUrl,
+        String(dbConfig.user),
+        SECRET_ENV_SENTINEL,
+        entry.schema,
+        entry.table,
+        String(rowLimit),
+        primaryKeyColumns.join(','),
+      ],
+      { password: String(dbConfig.password) }
+    );
 
     if (result.status !== 0) {
       const errorText = (result.stderr || '').trim() || 'unknown DB2 test data error';
@@ -706,7 +782,10 @@ function exportTestData({
         rows: [],
         note: errorText,
         policyDecision: entry.policyDecision,
-        sourceLink: metadataLinkage.tableLinkByExactKey.get(`${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`) || null,
+        sourceLink:
+          metadataLinkage.tableLinkByExactKey.get(
+            `${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`
+          ) || null,
       });
       notes.push(`Test data extraction failed for ${entry.schema}.${entry.table}: ${errorText}`);
       continue;
@@ -722,11 +801,7 @@ function exportTestData({
         systemName: normalizeIdentifier(entry.systemName || parsed.table || entry.table),
       };
       const maskingPlan = resolveMaskingPlanForTable(resolvedEntry, policy);
-      const rows = maskRows(
-        Array.isArray(parsed.rows) ? parsed.rows : [],
-        columns,
-        maskingPlan,
-      );
+      const rows = maskRows(Array.isArray(parsed.rows) ? parsed.rows : [], columns, maskingPlan);
       const tableEntry = {
         schema: resolvedEntry.schema,
         table: resolvedEntry.table,
@@ -739,9 +814,10 @@ function exportTestData({
           maskedColumns: maskingPlan.maskedColumns,
           matchedMaskRules: maskingPlan.matchedRules,
         },
-        sourceLink: metadataLinkage.tableLinkByExactKey.get(
-          `${resolvedEntry.schema}|${resolvedEntry.table}`,
-        ) || null,
+        sourceLink:
+          metadataLinkage.tableLinkByExactKey.get(
+            `${resolvedEntry.schema}|${resolvedEntry.table}`
+          ) || null,
       };
       if (primaryKeyColumns.length > 0) {
         tableEntry.note = `Rows ordered by primary key: ${primaryKeyColumns.join(', ')}.`;
@@ -757,9 +833,14 @@ function exportTestData({
         rows: [],
         note: `Invalid helper output: ${error.message}`,
         policyDecision: entry.policyDecision,
-        sourceLink: metadataLinkage.tableLinkByExactKey.get(`${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`) || null,
+        sourceLink:
+          metadataLinkage.tableLinkByExactKey.get(
+            `${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`
+          ) || null,
       });
-      notes.push(`Test data extraction returned invalid output for ${entry.schema}.${entry.table}: ${error.message}`);
+      notes.push(
+        `Test data extraction returned invalid output for ${entry.schema}.${entry.table}: ${error.message}`
+      );
     }
   }
 
@@ -772,7 +853,11 @@ function exportTestData({
     tables,
     notes: sortedNotes,
   };
-  writeOutputs(outputDir, payload, renderTestDataMarkdown(program, rowLimit, tables, sortedNotes, policy));
+  writeOutputs(
+    outputDir,
+    payload,
+    renderTestDataMarkdown(program, rowLimit, tables, sortedNotes, policy)
+  );
 
   return {
     payload,
@@ -780,13 +865,13 @@ function exportTestData({
       status: 'exported',
       file: JSON_FILE,
       markdownFile: MARKDOWN_FILE,
-      tableCount: tables.filter((table) => table.status === 'exported').length,
+      tableCount: tables.filter(table => table.status === 'exported').length,
       requestedTableCount: requestedTables.length,
-      skippedTableCount: tables.filter((table) => table.status !== 'exported').length,
+      skippedTableCount: tables.filter(table => table.status !== 'exported').length,
       rowLimit,
       policy,
       policySummary,
-      tables: tables.map((table) => {
+      tables: tables.map(table => {
         const link = table.sourceLink || {
           requestedName: normalizeIdentifier(table.table),
           matchStatus: 'resolved',

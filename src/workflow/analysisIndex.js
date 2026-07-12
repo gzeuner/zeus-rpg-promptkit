@@ -23,8 +23,13 @@ function asArray(value) {
 }
 
 function uniqueSortedStrings(values) {
-  return Array.from(new Set(asArray(values).map((value) => String(value || '').trim()).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      asArray(values)
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function inferArtifactKind(fileName) {
@@ -38,7 +43,7 @@ function inferArtifactKind(fileName) {
 
 function buildArtifactRefs(primaryArtifacts, generatedFiles) {
   const generated = new Set(uniqueSortedStrings(generatedFiles));
-  return uniqueSortedStrings(primaryArtifacts).map((artifactPath) => ({
+  return uniqueSortedStrings(primaryArtifacts).map(artifactPath => ({
     path: artifactPath,
     kind: inferArtifactKind(artifactPath),
     generated: generated.has(artifactPath),
@@ -54,7 +59,7 @@ function resolveWorkflowProjection(aiKnowledge, workflowKey) {
 
 function buildPromptEntries(mode, aiKnowledge, generatedFiles) {
   const generated = new Set(uniqueSortedStrings(generatedFiles));
-  return asArray(mode.promptTemplates).map((templateName) => {
+  return asArray(mode.promptTemplates).map(templateName => {
     const contract = getPromptContract(templateName);
     const applicability = validatePromptApplicability(templateName, aiKnowledge);
     return {
@@ -73,7 +78,10 @@ function buildEvidenceSummary(mode, aiKnowledge, context) {
   const promptContract = asArray(mode.promptTemplates)[0]
     ? getPromptContract(mode.promptTemplates[0])
     : null;
-  const workflow = resolveWorkflowProjection(aiKnowledge, promptContract && promptContract.workflow);
+  const workflow = resolveWorkflowProjection(
+    aiKnowledge,
+    promptContract && promptContract.workflow
+  );
 
   if (workflow) {
     return {
@@ -103,7 +111,9 @@ function buildEvidenceSummary(mode, aiKnowledge, context) {
 }
 
 function buildNextActions(mode, program) {
-  const programName = String(program || '').trim().toUpperCase();
+  const programName = String(program || '')
+    .trim()
+    .toUpperCase();
 
   switch (mode.name) {
     case 'architecture':
@@ -169,7 +179,7 @@ function buildTask(mode, aiKnowledge, context, generatedFiles, selectedMode) {
 }
 
 function buildGuidedModeSummary(modes, selectedMode) {
-  return modes.map((mode) => ({
+  return modes.map(mode => ({
     name: mode.name,
     title: mode.title,
     description: mode.description,
@@ -213,7 +223,9 @@ function buildAnalysisIndex({
   selectedPreset = null,
 }) {
   const modes = listWorkflowModes();
-  const tasks = modes.map((mode) => buildTask(mode, aiKnowledge, context, generatedFiles, selectedMode));
+  const tasks = modes.map(mode =>
+    buildTask(mode, aiKnowledge, context, generatedFiles, selectedMode)
+  );
   const selectedPresetSummary = buildSelectedPresetSummary(selectedPreset);
 
   return {
@@ -227,9 +239,12 @@ function buildAnalysisIndex({
     selectedPreset: selectedPresetSummary,
     summary: {
       taskCount: tasks.length,
-      selectedTaskCount: tasks.filter((task) => task.selected).length,
+      selectedTaskCount: tasks.filter(task => task.selected).length,
       generatedArtifactCount: uniqueSortedStrings(generatedFiles).length,
-      applicablePromptCount: tasks.reduce((count, task) => count + task.prompts.filter((prompt) => prompt.applicable).length, 0),
+      applicablePromptCount: tasks.reduce(
+        (count, task) => count + task.prompts.filter(prompt => prompt.applicable).length,
+        0
+      ),
       selectedPresetCount: selectedPresetSummary ? 1 : 0,
     },
     guidedModes: buildGuidedModeSummary(modes, selectedMode),

@@ -23,7 +23,10 @@ test('buildCopyCommand allows an explicit stream file CCSID override', () => {
 
   assert.match(command, /STMFOPT\(\*NONE\)/);
   assert.match(command, new RegExp(`STMFCODPAG\\(${ifsFixtures.explicitCcsid.expectedCcsid}\\)`));
-  assert.match(command, new RegExp(`${ifsFixtures.explicitCcsid.expectedSuffix.replace('.', '\\.')}`));
+  assert.match(
+    command,
+    new RegExp(`${ifsFixtures.explicitCcsid.expectedSuffix.replace('.', '\\.')}`)
+  );
 });
 
 test('buildRemoteTargetPath resolves the remote IFS stream file path', () => {

@@ -19,7 +19,9 @@ const { runQAPipeline, generateQAReport } = require('../../qa/qaIntegration');
 const { createJsonOutput } = require('../helpers/jsonOutput');
 
 function normalizeFormat(value) {
-  const format = String(value || 'markdown').trim().toLowerCase();
+  const format = String(value || 'markdown')
+    .trim()
+    .toLowerCase();
   if (!['jira', 'markdown', 'json'].includes(format)) {
     throw new Error('Invalid option: --format must be one of jira, markdown, json');
   }
@@ -27,7 +29,9 @@ function normalizeFormat(value) {
 }
 
 function normalizeStrict(value) {
-  const strict = String(value || 'LENIENT').trim().toUpperCase();
+  const strict = String(value || 'LENIENT')
+    .trim()
+    .toUpperCase();
   if (!['LENIENT', 'STRICT'].includes(strict)) {
     throw new Error('Invalid option: --strict must be LENIENT or STRICT');
   }
@@ -85,10 +89,22 @@ async function run(args, config = {}) {
   // Route through capability (package 08) - additive only; cap uses qaIntegration directly so no recursion
   try {
     const { capabilities } = require('../../api/zeusApi');
-    const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.qa', { cwd: process.cwd(), env: process.env, args }, args) : null;
+    const res =
+      capabilities && typeof capabilities.execute === 'function'
+        ? await capabilities.execute(
+            'investigation.qa',
+            { cwd: process.cwd(), env: process.env, args },
+            args
+          )
+        : null;
     if (res && res.ok && res.result) {
       // Cap produced the report; print it here for CLI
-      const out = (typeof res.result === 'string') ? res.result : (res.result && res.result.content ? res.result.content : JSON.stringify(res.result, null, 2));
+      const out =
+        typeof res.result === 'string'
+          ? res.result
+          : res.result && res.result.content
+            ? res.result.content
+            : JSON.stringify(res.result, null, 2);
       process.stdout.write(out.endsWith('\n') ? out : out + '\n');
       return;
     }

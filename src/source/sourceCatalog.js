@@ -21,12 +21,15 @@ const {
 const { normalizeRelativePath } = require('./sourceIntegrity');
 
 function normalizeName(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function toSortedUniquePaths(paths) {
-  return Array.from(new Set((paths || []).filter(Boolean).map((entry) => path.resolve(String(entry)))))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set((paths || []).filter(Boolean).map(entry => path.resolve(String(entry))))
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function inferMemberName(filePath) {
@@ -64,22 +67,21 @@ function buildManifestEntryMap(importManifest) {
   }
 
   for (const entry of importManifest.files) {
-    const relativePath = String(entry && entry.localPath ? entry.localPath : '').trim().replace(/\\/g, '/');
+    const relativePath = String(entry && entry.localPath ? entry.localPath : '')
+      .trim()
+      .replace(/\\/g, '/');
     if (!relativePath) continue;
     map.set(relativePath, entry);
   }
   return map;
 }
 
-function buildSourceCatalog({
-  sourceFiles,
-  sourceRoot,
-  importManifest = undefined,
-} = {}) {
+function buildSourceCatalog({ sourceFiles, sourceRoot, importManifest = undefined } = {}) {
   const resolvedRoot = sourceRoot ? path.resolve(sourceRoot) : process.cwd();
-  const importManifestResult = importManifest === undefined
-    ? readImportManifest(resolvedRoot)
-    : { manifestPath: null, manifest: importManifest || null, error: null };
+  const importManifestResult =
+    importManifest === undefined
+      ? readImportManifest(resolvedRoot)
+      : { manifestPath: null, manifest: importManifest || null, error: null };
   const manifestEntryMap = buildManifestEntryMap(importManifestResult.manifest);
   const entries = [];
   const byMemberName = new Map();
@@ -89,23 +91,41 @@ function buildSourceCatalog({
     const relativePath = normalizeRelativePath(resolvedRoot, filePath);
     const manifestEntry = manifestEntryMap.get(relativePath) || null;
     const manifestOrigin = manifestEntry ? getImportManifestEntryOrigin(manifestEntry) : null;
-    const manifestExport = manifestEntry ? getImportManifestEntryExport(manifestEntry, importManifestResult.manifest) : null;
-    const manifestValidation = manifestEntry ? getImportManifestEntryValidation(manifestEntry) : null;
+    const manifestExport = manifestEntry
+      ? getImportManifestEntryExport(manifestEntry, importManifestResult.manifest)
+      : null;
+    const manifestValidation = manifestEntry
+      ? getImportManifestEntryValidation(manifestEntry)
+      : null;
     const entry = {
       path: path.resolve(filePath),
       relativePath,
-      memberName: normalizeName(manifestOrigin && manifestOrigin.member ? manifestOrigin.member : inferMemberName(filePath)),
-      sourceLib: normalizeName(manifestOrigin && manifestOrigin.sourceLib ? manifestOrigin.sourceLib : ''),
-      sourceFile: normalizeName(manifestOrigin && manifestOrigin.sourceFile ? manifestOrigin.sourceFile : inferSourceFile(relativePath)),
-      sourceType: normalizeName(manifestOrigin && manifestOrigin.sourceType ? manifestOrigin.sourceType : inferSourceType(filePath)),
+      memberName: normalizeName(
+        manifestOrigin && manifestOrigin.member ? manifestOrigin.member : inferMemberName(filePath)
+      ),
+      sourceLib: normalizeName(
+        manifestOrigin && manifestOrigin.sourceLib ? manifestOrigin.sourceLib : ''
+      ),
+      sourceFile: normalizeName(
+        manifestOrigin && manifestOrigin.sourceFile
+          ? manifestOrigin.sourceFile
+          : inferSourceFile(relativePath)
+      ),
+      sourceType: normalizeName(
+        manifestOrigin && manifestOrigin.sourceType
+          ? manifestOrigin.sourceType
+          : inferSourceType(filePath)
+      ),
       provenance: manifestEntry ? 'IMPORT_MANIFEST' : 'LOCAL',
-      provenanceDetails: manifestEntry ? {
-        memberPath: manifestOrigin.memberPath || '',
-        remotePath: manifestOrigin.remotePath || '',
-        localPath: manifestOrigin.localPath || relativePath,
-        exportStatus: manifestExport.status || null,
-        validationStatus: manifestValidation.status || null,
-      } : null,
+      provenanceDetails: manifestEntry
+        ? {
+            memberPath: manifestOrigin.memberPath || '',
+            remotePath: manifestOrigin.remotePath || '',
+            localPath: manifestOrigin.localPath || relativePath,
+            exportStatus: manifestExport.status || null,
+            validationStatus: manifestValidation.status || null,
+          }
+        : null,
     };
     entry.identity = buildIdentity(entry);
 
@@ -124,10 +144,13 @@ function buildSourceCatalog({
     .sort((a, b) => a.localeCompare(b));
 
   for (const [memberName, matches] of byMemberName.entries()) {
-    byMemberName.set(memberName, [...matches].sort((a, b) => {
-      if (a.identity !== b.identity) return a.identity.localeCompare(b.identity);
-      return a.relativePath.localeCompare(b.relativePath);
-    }));
+    byMemberName.set(
+      memberName,
+      [...matches].sort((a, b) => {
+        if (a.identity !== b.identity) return a.identity.localeCompare(b.identity);
+        return a.relativePath.localeCompare(b.relativePath);
+      })
+    );
   }
 
   return {
@@ -144,7 +167,7 @@ function buildSourceCatalog({
     summary: {
       fileCount: entries.length,
       distinctMemberCount: byMemberName.size,
-      manifestBackedCount: entries.filter((entry) => entry.provenance === 'IMPORT_MANIFEST').length,
+      manifestBackedCount: entries.filter(entry => entry.provenance === 'IMPORT_MANIFEST').length,
       ambiguousMemberCount: ambiguousMembers.length,
       ambiguousMembers,
     },

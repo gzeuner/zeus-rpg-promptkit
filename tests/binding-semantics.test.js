@@ -15,7 +15,9 @@ test('canonical analysis models modules, service programs, binding directories, 
   const moduleFile = path.join(tempRoot, 'ORDMOD.rpgle');
   const binderFile = path.join(tempRoot, 'ORDERSRV.bnd');
 
-  fs.writeFileSync(moduleFile, `**FREE
+  fs.writeFileSync(
+    moduleFile,
+    `**FREE
 ctl-opt nomain bnddir('APPBNDDIR') bndsrvpgm('ORDERSRV');
 
 dcl-pr ProcessOrder extproc('PROCESSORDER');
@@ -23,12 +25,18 @@ end-pr;
 
 dcl-proc LocalExport export;
 end-proc;
-`, 'utf8');
+`,
+    'utf8'
+  );
 
-  fs.writeFileSync(binderFile, `STRPGMEXP PGMLVL(*CURRENT)
+  fs.writeFileSync(
+    binderFile,
+    `STRPGMEXP PGMLVL(*CURRENT)
   EXPORT SYMBOL('LOCALEXPORT')
 ENDPGMEXP
-`, 'utf8');
+`,
+    'utf8'
+  );
 
   try {
     const scanSummary = scanSourceFiles([moduleFile, binderFile]);
@@ -55,20 +63,22 @@ ENDPGMEXP
     const context = buildContext({ canonicalAnalysis });
     const graph = buildDependencyGraph(context);
 
-    assert.ok(canonicalAnalysis.entities.modules.some((entry) => entry.name === 'ORDMOD'));
-    assert.ok(canonicalAnalysis.entities.servicePrograms.some((entry) => entry.name === 'ORDERSRV'));
-    assert.ok(canonicalAnalysis.entities.bindingDirectories.some((entry) => entry.name === 'APPBNDDIR'));
-    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'HAS_MODULE'));
-    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'USES_BINDING_DIRECTORY'));
-    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'BINDS_SERVICE_PROGRAM'));
-    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'IMPORTS_PROCEDURE'));
-    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'EXPORTS_PROCEDURE'));
+    assert.ok(canonicalAnalysis.entities.modules.some(entry => entry.name === 'ORDMOD'));
+    assert.ok(canonicalAnalysis.entities.servicePrograms.some(entry => entry.name === 'ORDERSRV'));
+    assert.ok(
+      canonicalAnalysis.entities.bindingDirectories.some(entry => entry.name === 'APPBNDDIR')
+    );
+    assert.ok(canonicalAnalysis.relations.some(entry => entry.type === 'HAS_MODULE'));
+    assert.ok(canonicalAnalysis.relations.some(entry => entry.type === 'USES_BINDING_DIRECTORY'));
+    assert.ok(canonicalAnalysis.relations.some(entry => entry.type === 'BINDS_SERVICE_PROGRAM'));
+    assert.ok(canonicalAnalysis.relations.some(entry => entry.type === 'IMPORTS_PROCEDURE'));
+    assert.ok(canonicalAnalysis.relations.some(entry => entry.type === 'EXPORTS_PROCEDURE'));
     assert.equal(context.bindingAnalysis.summary.moduleCount, 1);
     assert.equal(context.bindingAnalysis.summary.serviceProgramCount, 1);
     assert.equal(context.bindingAnalysis.summary.bindingDirectoryCount, 1);
     assert.equal(context.bindingAnalysis.summary.unresolvedModuleCount, 0);
-    assert.ok(graph.edges.some((edge) => edge.type === 'BINDS_SERVICE_PROGRAM'));
-    assert.ok(graph.edges.some((edge) => edge.type === 'USES_BINDING_DIRECTORY'));
+    assert.ok(graph.edges.some(edge => edge.type === 'BINDS_SERVICE_PROGRAM'));
+    assert.ok(graph.edges.some(edge => edge.type === 'USES_BINDING_DIRECTORY'));
     assert.equal(graph.summary.bindEdgeCount >= 3, true);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -84,15 +94,23 @@ test('analyze pipeline surfaces structured unresolved binding diagnostics', () =
   fs.mkdirSync(sourceRoot, { recursive: true });
   fs.mkdirSync(outputProgramDir, { recursive: true });
 
-  fs.writeFileSync(path.join(sourceRoot, 'ORDMOD.rpgle'), `**FREE
+  fs.writeFileSync(
+    path.join(sourceRoot, 'ORDMOD.rpgle'),
+    `**FREE
 dcl-pr ProcessOrder extproc('PROCESSORDER');
 end-pr;
-`, 'utf8');
+`,
+    'utf8'
+  );
 
-  fs.writeFileSync(path.join(sourceRoot, 'ORDERSRV.bnd'), `STRPGMEXP PGMLVL(*CURRENT)
+  fs.writeFileSync(
+    path.join(sourceRoot, 'ORDERSRV.bnd'),
+    `STRPGMEXP PGMLVL(*CURRENT)
   EXPORT SYMBOL('MISSINGEXPORT')
 ENDPGMEXP
-`, 'utf8');
+`,
+    'utf8'
+  );
 
   try {
     const result = runAnalyzePipeline({
@@ -113,10 +131,10 @@ ENDPGMEXP
       logVerbose() {},
     });
 
-    const collectStage = result.stageReports.find((stage) => stage.id === 'collect-scan');
+    const collectStage = result.stageReports.find(stage => stage.id === 'collect-scan');
     assert.ok(collectStage);
-    assert.ok(collectStage.diagnostics.some((entry) => entry.code === 'UNRESOLVED_BINDING_IMPORTS'));
-    assert.ok(collectStage.diagnostics.some((entry) => entry.code === 'UNRESOLVED_BINDER_EXPORT'));
+    assert.ok(collectStage.diagnostics.some(entry => entry.code === 'UNRESOLVED_BINDING_IMPORTS'));
+    assert.ok(collectStage.diagnostics.some(entry => entry.code === 'UNRESOLVED_BINDER_EXPORT'));
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

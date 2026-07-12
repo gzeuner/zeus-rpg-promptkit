@@ -14,7 +14,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const { OBJECT_NAME_PATTERN } = require('./bridgeConfig');
 
 function normalizeTargetType(value) {
-  const normalized = String(value || 'source-member').trim().toLowerCase();
+  const normalized = String(value || 'source-member')
+    .trim()
+    .toLowerCase();
   if (normalized !== 'source-member' && normalized !== 'ifs-streamfile') {
     throw new Error(`Invalid bridge target type: ${value}`);
   }
@@ -22,7 +24,9 @@ function normalizeTargetType(value) {
 }
 
 function normalizeObjectName(value, label) {
-  const normalized = String(value || '').trim().toUpperCase();
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase();
   if (!normalized) {
     throw new Error(`Missing bridge target field: ${label}`);
   }
@@ -52,7 +56,7 @@ function normalizeIfsPath(value, label) {
 function targetIsAllowlisted(target, allowlist) {
   const allowed = allowlist || {};
   if (target.targetType === 'ifs-streamfile') {
-    return (allowed.ifsPaths || []).some((entry) => target.ifsPath.startsWith(entry));
+    return (allowed.ifsPaths || []).some(entry => target.ifsPath.startsWith(entry));
   }
   const libraries = allowed.libraries || [];
   const sourceFiles = allowed.sourceFiles || [];
@@ -77,7 +81,8 @@ function validateBridgeTarget(target, allowlist) {
     library: normalizeObjectName(target && target.library, 'library'),
     sourceFile: normalizeObjectName(target && target.sourceFile, 'sourceFile'),
     member: normalizeObjectName(target && target.member, 'member'),
-    memberType: target && target.memberType ? normalizeObjectName(target.memberType, 'memberType') : '',
+    memberType:
+      target && target.memberType ? normalizeObjectName(target.memberType, 'memberType') : '',
   };
   return {
     target: normalizedTarget,

@@ -216,7 +216,7 @@ function identifyRiskAreas(canonicalAnalysis, changeContext) {
   // Check for complex UPDATE patterns
   if (entities && entities.sqlStatements) {
     const complexUpdates = entities.sqlStatements.filter(
-      (s) => s.type === 'UPDATE' && s.tables && s.tables.length > 2,
+      s => s.type === 'UPDATE' && s.tables && s.tables.length > 2
     );
     if (complexUpdates.length > 0) {
       risks.push({
@@ -230,7 +230,7 @@ function identifyRiskAreas(canonicalAnalysis, changeContext) {
 
   // Check for DELETE operations
   if (entities && entities.sqlStatements) {
-    const deletes = entities.sqlStatements.filter((s) => s.type === 'DELETE');
+    const deletes = entities.sqlStatements.filter(s => s.type === 'DELETE');
     if (deletes.length > 0) {
       risks.push({
         type: 'DATA_DELETION',

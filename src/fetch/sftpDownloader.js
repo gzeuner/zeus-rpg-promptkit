@@ -25,7 +25,7 @@ function getSftpClient() {
       _SftpClientClass = require('ssh2-sftp-client');
     } catch (_err) {
       throw new Error(
-        'SFTP transport benötigt das Paket "ssh2-sftp-client". Ausführen: npm install',
+        'SFTP transport benötigt das Paket "ssh2-sftp-client". Ausführen: npm install'
       );
     }
   }

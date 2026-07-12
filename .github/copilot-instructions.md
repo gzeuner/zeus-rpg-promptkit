@@ -75,7 +75,9 @@ config/
 ## 2. Core Data Contracts
 
 ### Canonical Analysis Model (`canonical-analysis.json`)
+
 Produced by `buildCanonicalAnalysisModel()`. Key fields:
+
 - `entities.tables[]` — tables with evidence (file, startLine, endLine)
 - `entities.sqlStatements[]` — SQL with type, intent, tables, hostVariables, cursors
 - `entities.programCalls[]` — called programs with evidence
@@ -87,7 +89,9 @@ Produced by `buildCanonicalAnalysisModel()`. Key fields:
 - `relations[]` — typed edges between entities with evidence
 
 ### AI Knowledge Projection (`ai-knowledge.json`)
+
 Produced by `buildAiKnowledgeProjection()`. Key fields:
+
 - `kind: "ai-knowledge-projection"`, `schemaVersion: 1`
 - `program` — root program name
 - `evidenceIndex[]` — all evidence with IDs (EV0001…), file, line, snippet
@@ -100,6 +104,7 @@ Produced by `buildAiKnowledgeProjection()`. Key fields:
 ## 3. How to Add Features
 
 ### New Scanner Rule (RPG heuristic)
+
 1. Edit `src/scanner/rpgScanner.js`
 2. Add regex pattern inside the appropriate scan function
 3. Call `addEntity()` or `addStructuredItem()` with evidence `{ file, startLine, endLine, text }`
@@ -107,6 +112,7 @@ Produced by `buildAiKnowledgeProjection()`. Key fields:
 5. Ensure the new entity type is picked up in `buildCanonicalAnalysisModel()`
 
 ### New Risk Assessment Feature (v0.2+)
+
 1. Extend `src/impact/riskAssessmentAnalyzer.js` with new assessment functions
 2. Add assessment rules to `assessCanonicalModel()` or new `assessXxxPattern()` function
 3. Create corresponding CLI command wrapper in `src/cli/commands/assessXxxCommand.js`
@@ -114,12 +120,14 @@ Produced by `buildAiKnowledgeProjection()`. Key fields:
 5. Update help text in `printHelp()` in `cli/zeus.js`
 
 ### New Test/Deployment Planning Feature (v0.2+)
+
 1. Add generator function in `src/investigation/testScenarioGenerator.js` or `src/report/deploymentChecklistBuilder.js`
 2. Create CLI command wrapper in `src/cli/commands/generateXxxCommand.js`
 3. Register in `cli/zeus.js`
 4. Test with: `node cli/zeus.js generate-xxx --program TESTPROG --verbose`
 
 ### New Workflow Mode
+
 1. Add entry to `WORKFLOW_MODE_REGISTRY` in `src/workflow/workflowModeRegistry.js`
 2. Add entry to `WORKFLOW_PRESET_REGISTRY` in `src/workflow/workflowPresetRegistry.js`
 3. Add prompt template in `src/prompt/templates/<name>.md`
@@ -127,6 +135,7 @@ Produced by `buildAiKnowledgeProjection()`. Key fields:
 5. Add token budget in `DEFAULT_WORKFLOW_TOKEN_BUDGETS` in `src/ai/contextOptimizer.js`
 
 ### New CLI Command
+
 1. Create `src/cli/commands/<name>Command.js`
 2. Export `run(args, config)` (async)
 3. Register in `cli/zeus.js`
@@ -134,6 +143,7 @@ Produced by `buildAiKnowledgeProjection()`. Key fields:
 5. Document in `config/profiles.example.json`
 
 ### New Prompt Template
+
 1. Create `src/prompt/templates/<name>.md` with `{{variable}}` slots
 2. Register in `src/prompt/promptRegistry.js` (name, templateFile, workflow, requiredInputs)
 3. Wire template filling in `src/prompt/promptBuilder.js`
@@ -177,6 +187,7 @@ node --test tests/<file>    # single test file
 ```
 
 Key test categories:
+
 - `tests/scanner-corpus.test.js` — scanner output against known fixtures
 - `tests/analyze-run-manifest.test.js` — analyze artifact contract
 - `tests/ai-knowledge-projection.test.js` — AI projection schema
@@ -186,19 +197,19 @@ Key test categories:
 
 ## 7. IBM i Platform Knowledge (critical for correct scanner/DB2 work)
 
-| Topic | Rule |
-|---|---|
-| Source file priority | QRPGLESRC → QSRVSRC → QCPYSRC → QCLLESRC → QCLSRC → QSQLSRC → QDDSSRC |
-| CCSID contract | Always use stream file CCSID 1208 (UTF-8) for local analysis |
-| Schema discovery | Never hardcode schema — query QSYS2.SYSTABLES first |
-| Column names | Short IBM i names diverge from logical names — use COLUMN_ALIASES + resolveColumn |
-| No ROW_COUNT in SYSTABLES | Neither ROW_COUNT nor NUMBER_ROWS are universal — omit both |
-| SQL qualifier syntax | Use SCHEMA.TABLE not LIBRARY/FILE in SQL contexts |
-| QSYS2 UDTFs | Call `QSYS2.OBJECT_STATISTICS` via `FROM TABLE(...) AS X`, never as a plain table |
-| Unknown object library | If the library is unknown, search `*ALLUSR` first and never guess a library |
-| Service program source | BOUND_MODULE_INFO → fallback to OBJECT_STATISTICS → fallback to member convention |
-| Fixed-format RPG columns | Column 6 = indicator area, col 7 = form type (C/F/D/P/…), col 8–80 = spec |
-| Free-format RPG | Starts with `/FREE` or uses `**FREE` header; column layout does not apply |
+| Topic                     | Rule                                                                              |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| Source file priority      | QRPGLESRC → QSRVSRC → QCPYSRC → QCLLESRC → QCLSRC → QSQLSRC → QDDSSRC             |
+| CCSID contract            | Always use stream file CCSID 1208 (UTF-8) for local analysis                      |
+| Schema discovery          | Never hardcode schema — query QSYS2.SYSTABLES first                               |
+| Column names              | Short IBM i names diverge from logical names — use COLUMN_ALIASES + resolveColumn |
+| No ROW_COUNT in SYSTABLES | Neither ROW_COUNT nor NUMBER_ROWS are universal — omit both                       |
+| SQL qualifier syntax      | Use SCHEMA.TABLE not LIBRARY/FILE in SQL contexts                                 |
+| QSYS2 UDTFs               | Call `QSYS2.OBJECT_STATISTICS` via `FROM TABLE(...) AS X`, never as a plain table |
+| Unknown object library    | If the library is unknown, search `*ALLUSR` first and never guess a library       |
+| Service program source    | BOUND_MODULE_INFO → fallback to OBJECT_STATISTICS → fallback to member convention |
+| Fixed-format RPG columns  | Column 6 = indicator area, col 7 = form type (C/F/D/P/…), col 8–80 = spec         |
+| Free-format RPG           | Starts with `/FREE` or uses `**FREE` header; column layout does not apply         |
 
 ---
 
@@ -242,18 +253,19 @@ CL command that changes objects or data.
 All Java helpers live in `java/` and are pre-compiled to `java/bin/`. They are invoked
 through `src/java/javaRuntime.js` (central bridge using `child_process.spawnSync`).
 
-| Java Class | Called from (Node.js) | CLI command |
-|---|---|---|
-| `IbmiCommandRunner` | `src/fetch/jt400CommandRunner.js` → `runClCommand()` | `fetch` |
-| `IbmiMemberLister` | `src/fetch/jt400CommandRunner.js` → `listMembers()` | `fetch` |
-| `IbmiSourceMemberExporter` | `src/fetch/jt400CommandRunner.js` → `exportSourceMemberViaJdbc()` | `fetch` |
-| `IbmiIfsDownloader` | `src/fetch/jt400Downloader.js` → `downloadDirectoryViaJt400()` | `fetch` |
-| `Db2DiagnosticQueryRunner` | `src/db2/readOnlyQueryService.js` → `runReadOnlyDb2Query()` | `query-sql`, `query-table`, `analyze` |
-| `Db2MetadataExporter` | `src/db2/metadataExportService.js` → `exportDb2Metadata()` | `analyze` |
-| `Db2ExternalObjectResolver` | `src/db2/metadataExportService.js` → `resolveExternalObjects()` | `analyze` |
-| `Db2TestDataExtractor` | `src/db2/testDataExportService.js` → `exportTestData()` | `analyze` |
+| Java Class                  | Called from (Node.js)                                             | CLI command                           |
+| --------------------------- | ----------------------------------------------------------------- | ------------------------------------- |
+| `IbmiCommandRunner`         | `src/fetch/jt400CommandRunner.js` → `runClCommand()`              | `fetch`                               |
+| `IbmiMemberLister`          | `src/fetch/jt400CommandRunner.js` → `listMembers()`               | `fetch`                               |
+| `IbmiSourceMemberExporter`  | `src/fetch/jt400CommandRunner.js` → `exportSourceMemberViaJdbc()` | `fetch`                               |
+| `IbmiIfsDownloader`         | `src/fetch/jt400Downloader.js` → `downloadDirectoryViaJt400()`    | `fetch`                               |
+| `Db2DiagnosticQueryRunner`  | `src/db2/readOnlyQueryService.js` → `runReadOnlyDb2Query()`       | `query-sql`, `query-table`, `analyze` |
+| `Db2MetadataExporter`       | `src/db2/metadataExportService.js` → `exportDb2Metadata()`        | `analyze`                             |
+| `Db2ExternalObjectResolver` | `src/db2/metadataExportService.js` → `resolveExternalObjects()`   | `analyze`                             |
+| `Db2TestDataExtractor`      | `src/db2/testDataExportService.js` → `exportTestData()`           | `analyze`                             |
 
 **Direct Java invocation** (diagnostic / scripting use):
+
 ```powershell
 cd java
 java -cp "bin;lib\jt400.jar" IbmiCommandRunner <host> <user> <pw> "<CL-Command>"
@@ -267,6 +279,7 @@ Display commands (`DSP*`, `WRK*`) return no output — use `QSYS2.*` SQL views i
 ## 10. Environment Setup (Project)
 
 Standard env load for project development sessions:
+
 ```powershell
 cd C:\Users\Developer.User\Tools\zeus-rpg-promptkit
 . .\config\load-env.ps1 -Environment project   # loads .env.local + .env.project.local
@@ -274,6 +287,7 @@ node cli/zeus.js doctor --profile development --show-resolved
 ```
 
 Systems:
+
 - **secondary-system** — active development / read-oriented integration system, profile `development`
 - **primary-system** — protected system, metadata read-only, NEVER write
 

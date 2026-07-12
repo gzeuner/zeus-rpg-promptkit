@@ -12,19 +12,21 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 function normalizeStrings(values) {
-  return Object.freeze((Array.isArray(values) ? values : [])
-    .map((value) => String(value || '').trim())
-    .filter(Boolean));
+  return Object.freeze(
+    (Array.isArray(values) ? values : []).map(value => String(value || '').trim()).filter(Boolean)
+  );
 }
 
 function normalizeOutputEntries(entries) {
-  return Object.freeze((Array.isArray(entries) ? entries : [])
-    .map((entry) => ({
-      path: String(entry && entry.path || '').trim(),
-      purpose: String(entry && entry.purpose || '').trim(),
-    }))
-    .filter((entry) => entry.path && entry.purpose)
-    .map((entry) => Object.freeze(entry)));
+  return Object.freeze(
+    (Array.isArray(entries) ? entries : [])
+      .map(entry => ({
+        path: String((entry && entry.path) || '').trim(),
+        purpose: String((entry && entry.purpose) || '').trim(),
+      }))
+      .filter(entry => entry.path && entry.purpose)
+      .map(entry => Object.freeze(entry))
+  );
 }
 
 function freezeReviewWorkflow(reviewWorkflow) {
@@ -53,7 +55,7 @@ function cloneReviewWorkflow(reviewWorkflow) {
     expectedDecisions: [...(reviewWorkflow.expectedDecisions || [])],
     interpretationGuidance: [...(reviewWorkflow.interpretationGuidance || [])],
     requiredInputs: [...(reviewWorkflow.requiredInputs || [])],
-    recommendedOutputs: (reviewWorkflow.recommendedOutputs || []).map((entry) => ({
+    recommendedOutputs: (reviewWorkflow.recommendedOutputs || []).map(entry => ({
       path: entry.path,
       purpose: entry.purpose,
     })),

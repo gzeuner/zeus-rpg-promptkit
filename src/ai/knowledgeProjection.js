@@ -17,7 +17,9 @@ const path = require('path');
 const AI_KNOWLEDGE_PROJECTION_SCHEMA_VERSION = 1;
 
 function normalizeName(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function asArray(value) {
@@ -25,8 +27,9 @@ function asArray(value) {
 }
 
 function sortStrings(values) {
-  return Array.from(new Set((values || []).map((value) => String(value || '').trim()).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set((values || []).map(value => String(value || '').trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function toRelativeEvidenceKey(evidence) {
@@ -51,9 +54,15 @@ function loadSnippet(sourceRoot, evidence, maxSnippetLines = 6, sourceTextByRela
   }
   const lines = content.split(/\r?\n/);
   const startLine = Math.max(1, Number(evidence.startLine || evidence.line || 1));
-  const evidenceEndLine = Math.max(startLine, Number(evidence.endLine || evidence.line || startLine));
+  const evidenceEndLine = Math.max(
+    startLine,
+    Number(evidence.endLine || evidence.line || startLine)
+  );
   const endLine = Math.min(evidenceEndLine, startLine + maxSnippetLines - 1);
-  return lines.slice(startLine - 1, endLine).join('\n').trim();
+  return lines
+    .slice(startLine - 1, endLine)
+    .join('\n')
+    .trim();
 }
 
 function createEvidenceIndex(sourceRoot, canonicalAnalysis, sourceTextByRelativePath = null) {
@@ -106,13 +115,17 @@ function createEvidenceIndex(sourceRoot, canonicalAnalysis, sourceTextByRelative
 }
 
 function evidenceRefsFor(evidenceIndex, evidenceList) {
-  const indexByKey = new Map(evidenceIndex.map((entry) => [toRelativeEvidenceKey(entry), entry.id]));
-  return sortStrings(asArray(evidenceList).map((evidence) => indexByKey.get(toRelativeEvidenceKey(evidence))).filter(Boolean));
+  const indexByKey = new Map(evidenceIndex.map(entry => [toRelativeEvidenceKey(entry), entry.id]));
+  return sortStrings(
+    asArray(evidenceList)
+      .map(evidence => indexByKey.get(toRelativeEvidenceKey(evidence)))
+      .filter(Boolean)
+  );
 }
 
 function collectUncertaintyMarkers(canonicalAnalysis, context) {
   const markers = new Set();
-  const sqlStatements = (((canonicalAnalysis || {}).entities || {}).sqlStatements) || [];
+  const sqlStatements = ((canonicalAnalysis || {}).entities || {}).sqlStatements || [];
   const bindingAnalysis = (context && context.bindingAnalysis) || {};
   const procedureAnalysis = (context && context.procedureAnalysis) || {};
 
@@ -136,8 +149,10 @@ function collectUncertaintyMarkers(canonicalAnalysis, context) {
 }
 
 function projectSqlStatements(canonicalAnalysis, evidenceIndex) {
-  return asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.sqlStatements)
-    .map((statement) => ({
+  return asArray(
+    canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.sqlStatements
+  )
+    .map(statement => ({
       id: statement.id,
       type: statement.type,
       intent: statement.intent || 'OTHER',
@@ -145,14 +160,14 @@ function projectSqlStatements(canonicalAnalysis, evidenceIndex) {
       tables: asArray(statement.tables),
       hostVariables: asArray(statement.hostVariables),
       driverTable: statement.driverTable || null,
-      joins: asArray(statement.joins).map((join) => ({
+      joins: asArray(statement.joins).map(join => ({
         table: join.table,
         alias: join.alias || null,
         joinType: join.joinType || 'INNER',
         condition: join.condition || null,
         hostVariables: asArray(join.hostVariables),
       })),
-      filters: asArray(statement.filters).map((filter) => ({
+      filters: asArray(statement.filters).map(filter => ({
         text: filter.text,
         hostVariables: asArray(filter.hostVariables),
       })),
@@ -169,10 +184,13 @@ function projectSqlStatements(canonicalAnalysis, evidenceIndex) {
 }
 
 function projectTableDependencies(context, canonicalAnalysis, evidenceIndex) {
-  const tableEntities = new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.tables)
-    .map((entry) => [entry.name, entry]));
+  const tableEntities = new Map(
+    asArray(
+      canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.tables
+    ).map(entry => [entry.name, entry])
+  );
   return asArray(context && context.dependencies && context.dependencies.tables)
-    .map((entry) => {
+    .map(entry => {
       const entity = tableEntities.get(entry.name);
       return {
         name: entry.name,
@@ -185,7 +203,7 @@ function projectTableDependencies(context, canonicalAnalysis, evidenceIndex) {
 
 function projectProgramCalls(context) {
   return asArray(context && context.dependencies && context.dependencies.programCalls)
-    .map((entry) => ({
+    .map(entry => ({
       name: entry.name,
       kind: entry.kind || 'PROGRAM',
     }))
@@ -194,24 +212,38 @@ function projectProgramCalls(context) {
 
 function projectCopyMembers(context) {
   return asArray(context && context.dependencies && context.dependencies.copyMembers)
-    .map((entry) => ({
+    .map(entry => ({
       name: entry.name,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function projectProgramCallRelations(canonicalAnalysis, evidenceIndex) {
-  const programEntitiesByName = new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.programs)
-    .map((entry) => [entry.name, entry]));
+  const programEntitiesByName = new Map(
+    asArray(
+      canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.programs
+    ).map(entry => [entry.name, entry])
+  );
   return asArray(canonicalAnalysis && canonicalAnalysis.relations)
-    .filter((relation) => relation.type === 'CALLS_PROGRAM')
-    .map((relation) => ({
+    .filter(relation => relation.type === 'CALLS_PROGRAM')
+    .map(relation => ({
       name: String(relation.to || '').replace(/^PROGRAM:/, ''),
-      kind: relation.attributes && relation.attributes.callKind ? relation.attributes.callKind : 'PROGRAM',
-      resolutionSource: (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {}).resolutionSource || 'UNRESOLVED',
-      catalogObjectType: (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {}).catalogObjectType || null,
-      catalogLibrary: (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {}).catalogLibrary || null,
-      catalogSchema: (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {}).catalogSchema || null,
+      kind:
+        relation.attributes && relation.attributes.callKind
+          ? relation.attributes.callKind
+          : 'PROGRAM',
+      resolutionSource:
+        (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {})
+          .resolutionSource || 'UNRESOLVED',
+      catalogObjectType:
+        (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {})
+          .catalogObjectType || null,
+      catalogLibrary:
+        (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {})
+          .catalogLibrary || null,
+      catalogSchema:
+        (programEntitiesByName.get(String(relation.to || '').replace(/^PROGRAM:/, '')) || {})
+          .catalogSchema || null,
       evidenceRefs: evidenceRefsFor(evidenceIndex, relation.evidence),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -219,22 +251,43 @@ function projectProgramCallRelations(canonicalAnalysis, evidenceIndex) {
 
 function projectProcedureCalls(canonicalAnalysis, evidenceIndex) {
   const targetEntities = new Map([
-    ...asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.prototypes).map((entry) => [entry.id, entry]),
-    ...asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.procedureReferences).map((entry) => [entry.id, entry]),
-    ...asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.procedures).map((entry) => [entry.id, entry]),
+    ...asArray(
+      canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.prototypes
+    ).map(entry => [entry.id, entry]),
+    ...asArray(
+      canonicalAnalysis &&
+        canonicalAnalysis.entities &&
+        canonicalAnalysis.entities.procedureReferences
+    ).map(entry => [entry.id, entry]),
+    ...asArray(
+      canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.procedures
+    ).map(entry => [entry.id, entry]),
   ]);
   return asArray(canonicalAnalysis && canonicalAnalysis.relations)
-    .filter((relation) => relation.type === 'CALLS_PROCEDURE')
-    .map((relation) => {
+    .filter(relation => relation.type === 'CALLS_PROCEDURE')
+    .map(relation => {
       const targetEntity = targetEntities.get(String(relation.to || ''));
       return {
-        target: relation.attributes && relation.attributes.targetName ? relation.attributes.targetName : String(relation.to || ''),
-        resolution: relation.attributes && relation.attributes.resolution ? relation.attributes.resolution : 'UNKNOWN',
-        targetKind: relation.attributes && relation.attributes.targetKind ? relation.attributes.targetKind : 'UNKNOWN',
-        resolutionSource: targetEntity && targetEntity.resolutionSource ? targetEntity.resolutionSource : 'SOURCE',
-        catalogObjectType: targetEntity && targetEntity.catalogObjectType ? targetEntity.catalogObjectType : null,
-        catalogLibrary: targetEntity && targetEntity.catalogLibrary ? targetEntity.catalogLibrary : null,
-        catalogSchema: targetEntity && targetEntity.catalogSchema ? targetEntity.catalogSchema : null,
+        target:
+          relation.attributes && relation.attributes.targetName
+            ? relation.attributes.targetName
+            : String(relation.to || ''),
+        resolution:
+          relation.attributes && relation.attributes.resolution
+            ? relation.attributes.resolution
+            : 'UNKNOWN',
+        targetKind:
+          relation.attributes && relation.attributes.targetKind
+            ? relation.attributes.targetKind
+            : 'UNKNOWN',
+        resolutionSource:
+          targetEntity && targetEntity.resolutionSource ? targetEntity.resolutionSource : 'SOURCE',
+        catalogObjectType:
+          targetEntity && targetEntity.catalogObjectType ? targetEntity.catalogObjectType : null,
+        catalogLibrary:
+          targetEntity && targetEntity.catalogLibrary ? targetEntity.catalogLibrary : null,
+        catalogSchema:
+          targetEntity && targetEntity.catalogSchema ? targetEntity.catalogSchema : null,
         evidenceRefs: evidenceRefsFor(evidenceIndex, relation.evidence),
       };
     })
@@ -246,8 +299,8 @@ function projectProcedureCalls(canonicalAnalysis, evidenceIndex) {
 
 function projectCopyMemberRelations(canonicalAnalysis, evidenceIndex) {
   return asArray(canonicalAnalysis && canonicalAnalysis.relations)
-    .filter((relation) => relation.type === 'INCLUDES_COPY')
-    .map((relation) => ({
+    .filter(relation => relation.type === 'INCLUDES_COPY')
+    .map(relation => ({
       name: String(relation.to || '').replace(/^COPY_MEMBER:/, ''),
       evidenceRefs: evidenceRefsFor(evidenceIndex, relation.evidence),
     }))
@@ -255,25 +308,32 @@ function projectCopyMemberRelations(canonicalAnalysis, evidenceIndex) {
 }
 
 function projectNativeFiles(context, canonicalAnalysis, evidenceIndex) {
-  const nativeFileEntities = new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.nativeFiles)
-    .map((entry) => [entry.name, entry]));
+  const nativeFileEntities = new Map(
+    asArray(
+      canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.nativeFiles
+    ).map(entry => [entry.name, entry])
+  );
   return asArray(context && context.nativeFileUsage && context.nativeFileUsage.files)
-    .map((entry) => ({
+    .map(entry => ({
       name: entry.name,
       kind: entry.kind || 'FILE',
       keyed: Boolean(entry.keyed),
       mutating: Boolean(entry.access && entry.access.mutating),
       interactive: Boolean(entry.access && entry.access.interactive),
-      recordFormats: asArray(entry.recordFormats).map((item) => item.name),
-      evidenceRefs: evidenceRefsFor(evidenceIndex, nativeFileEntities.get(entry.name) && nativeFileEntities.get(entry.name).evidence),
+      recordFormats: asArray(entry.recordFormats).map(item => item.name),
+      evidenceRefs: evidenceRefsFor(
+        evidenceIndex,
+        nativeFileEntities.get(entry.name) && nativeFileEntities.get(entry.name).evidence
+      ),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function projectUiPatterns(context) {
-  const puiPatterns = context && context.puiPatterns && typeof context.puiPatterns === 'object'
-    ? context.puiPatterns
-    : null;
+  const puiPatterns =
+    context && context.puiPatterns && typeof context.puiPatterns === 'object'
+      ? context.puiPatterns
+      : null;
   if (!puiPatterns || !puiPatterns.enabled) {
     return {
       enabled: false,
@@ -331,9 +391,10 @@ function projectUiPatterns(context) {
 }
 
 function projectKnownFacts(context) {
-  const knownFacts = context && context.knownFacts && typeof context.knownFacts === 'object'
-    ? context.knownFacts
-    : null;
+  const knownFacts =
+    context && context.knownFacts && typeof context.knownFacts === 'object'
+      ? context.knownFacts
+      : null;
 
   if (!knownFacts || !knownFacts.enabled) {
     return {
@@ -342,12 +403,15 @@ function projectKnownFacts(context) {
       mode: 'local-only',
       profile: knownFacts && knownFacts.profile ? knownFacts.profile : null,
       factCount: 0,
-      versionMarker: knownFacts && knownFacts.versionMarker ? knownFacts.versionMarker : {
-        toolVersion: null,
-        updatedAt: null,
-        expiresAt: null,
-        ttlDays: null,
-      },
+      versionMarker:
+        knownFacts && knownFacts.versionMarker
+          ? knownFacts.versionMarker
+          : {
+              toolVersion: null,
+              updatedAt: null,
+              expiresAt: null,
+              ttlDays: null,
+            },
       facts: [],
       notes: Array.isArray(knownFacts && knownFacts.notes) ? knownFacts.notes : [],
     };
@@ -365,7 +429,7 @@ function projectKnownFacts(context) {
       expiresAt: null,
       ttlDays: null,
     },
-    facts: asArray(knownFacts.facts).map((entry) => ({
+    facts: asArray(knownFacts.facts).map(entry => ({
       id: entry.id || null,
       subject: entry.subject || '',
       attribute: entry.attribute || '',
@@ -386,7 +450,8 @@ function projectUiPatternKnowledge({ cwd = process.cwd(), env = process.env } = 
   return {
     enabled: false,
     status: 'disabled',
-    reason: 'Project-neutral knowledge catalog is not implemented yet. Source-derived local knowledge paths were removed during the privacy reset.',
+    reason:
+      'Project-neutral knowledge catalog is not implemented yet. Source-derived local knowledge paths were removed during the privacy reset.',
     libraryId: null,
     knowledgeBaseId: null,
     generatedAt: null,
@@ -420,41 +485,62 @@ function projectUiPatternKnowledge({ cwd = process.cwd(), env = process.env } = 
 
 function projectBinding(context, canonicalAnalysis, evidenceIndex) {
   const bindingAnalysis = (context && context.bindingAnalysis) || {};
-  const moduleEntities = new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.modules)
-    .map((entry) => [entry.name, entry]));
-  const serviceProgramEntities = new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.servicePrograms)
-    .map((entry) => [entry.name, entry]));
-  const bindingDirectoryEntities = new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.bindingDirectories)
-    .map((entry) => [entry.name, entry]));
+  const moduleEntities = new Map(
+    asArray(
+      canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.modules
+    ).map(entry => [entry.name, entry])
+  );
+  const serviceProgramEntities = new Map(
+    asArray(
+      canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.servicePrograms
+    ).map(entry => [entry.name, entry])
+  );
+  const bindingDirectoryEntities = new Map(
+    asArray(
+      canonicalAnalysis &&
+        canonicalAnalysis.entities &&
+        canonicalAnalysis.entities.bindingDirectories
+    ).map(entry => [entry.name, entry])
+  );
   return {
-    modules: asArray(bindingAnalysis.modules).map((entry) => ({
+    modules: asArray(bindingAnalysis.modules).map(entry => ({
       name: entry.name,
       kind: entry.kind || 'MODULE',
       bindingDirectories: asArray(entry.bindingDirectories),
       servicePrograms: asArray(entry.servicePrograms),
       importedProcedures: asArray(entry.importedProcedures),
       unresolvedBindings: Boolean(entry.unresolvedBindings),
-      evidenceRefs: evidenceRefsFor(evidenceIndex, moduleEntities.get(entry.name) && moduleEntities.get(entry.name).evidence),
+      evidenceRefs: evidenceRefsFor(
+        evidenceIndex,
+        moduleEntities.get(entry.name) && moduleEntities.get(entry.name).evidence
+      ),
     })),
-    servicePrograms: asArray(bindingAnalysis.servicePrograms).map((entry) => ({
+    servicePrograms: asArray(bindingAnalysis.servicePrograms).map(entry => ({
       name: entry.name,
       sourceKind: entry.sourceKind || 'HINT',
-      exports: asArray(entry.exports).map((item) => ({
+      exports: asArray(entry.exports).map(item => ({
         symbol: item.symbol,
         resolved: Boolean(item.resolved),
       })),
-      evidenceRefs: evidenceRefsFor(evidenceIndex, serviceProgramEntities.get(entry.name) && serviceProgramEntities.get(entry.name).evidence),
+      evidenceRefs: evidenceRefsFor(
+        evidenceIndex,
+        serviceProgramEntities.get(entry.name) && serviceProgramEntities.get(entry.name).evidence
+      ),
     })),
-    bindingDirectories: asArray(bindingAnalysis.bindingDirectories).map((entry) => ({
+    bindingDirectories: asArray(bindingAnalysis.bindingDirectories).map(entry => ({
       name: entry.name,
-      evidenceRefs: evidenceRefsFor(evidenceIndex, bindingDirectoryEntities.get(entry.name) && bindingDirectoryEntities.get(entry.name).evidence),
+      evidenceRefs: evidenceRefsFor(
+        evidenceIndex,
+        bindingDirectoryEntities.get(entry.name) &&
+          bindingDirectoryEntities.get(entry.name).evidence
+      ),
     })),
   };
 }
 
 function projectDb2Tables(context, evidenceIndex) {
   return asArray(context && context.db2Metadata && context.db2Metadata.tables)
-    .map((entry) => ({
+    .map(entry => ({
       requestedName: entry.requestedName,
       displayName: entry.displayName || entry.table || entry.systemName,
       schema: entry.schema,
@@ -466,7 +552,9 @@ function projectDb2Tables(context, evidenceIndex) {
       lookupStrategy: entry.lookupStrategy || null,
       objectType: entry.objectType || 'TABLE',
       textDescription: entry.textDescription || null,
-      estimatedRowCount: Number.isFinite(Number(entry.estimatedRowCount)) ? Number(entry.estimatedRowCount) : null,
+      estimatedRowCount: Number.isFinite(Number(entry.estimatedRowCount))
+        ? Number(entry.estimatedRowCount)
+        : null,
       columnCount: Number(entry.columnCount) || 0,
       foreignKeyCount: Number(entry.foreignKeyCount) || 0,
       triggerCount: Number(entry.triggerCount) || 0,
@@ -483,8 +571,10 @@ function projectDb2Tables(context, evidenceIndex) {
 }
 
 function projectExternalObjects(canonicalAnalysis) {
-  return asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.externalObjects)
-    .map((entry) => ({
+  return asArray(
+    canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.externalObjects
+  )
+    .map(entry => ({
       name: entry.name,
       requestedName: entry.requestedName || entry.name,
       schema: entry.schema || null,
@@ -498,14 +588,15 @@ function projectExternalObjects(canonicalAnalysis) {
       matchedBy: entry.matchedBy || null,
     }))
     .sort((a, b) => {
-      if (a.requestedName !== b.requestedName) return a.requestedName.localeCompare(b.requestedName);
+      if (a.requestedName !== b.requestedName)
+        return a.requestedName.localeCompare(b.requestedName);
       return a.name.localeCompare(b.name);
     });
 }
 
 function projectIfsPaths(context, evidenceIndex) {
   return asArray(context && context.ifsPaths && context.ifsPaths.paths)
-    .map((entry) => ({
+    .map(entry => ({
       path: entry.path,
       family: entry.family,
       evidenceRefs: evidenceRefsFor(evidenceIndex, entry.evidence),
@@ -519,7 +610,7 @@ function projectIfsPaths(context, evidenceIndex) {
 function projectSearchFindings(context) {
   return asArray(context && context.searchResults && context.searchResults.matches)
     .slice(0, 25)
-    .map((entry) => ({
+    .map(entry => ({
       term: entry.term,
       sourcePath: entry.sourcePath,
       sourceCategory: entry.sourceCategory,
@@ -529,7 +620,8 @@ function projectSearchFindings(context) {
     }))
     .sort((a, b) => {
       if (a.term !== b.term) return a.term.localeCompare(b.term);
-      if (a.sourceCategory !== b.sourceCategory) return a.sourceCategory.localeCompare(b.sourceCategory);
+      if (a.sourceCategory !== b.sourceCategory)
+        return a.sourceCategory.localeCompare(b.sourceCategory);
       if (a.sourcePath !== b.sourcePath) return a.sourcePath.localeCompare(b.sourcePath);
       return a.line - b.line;
     });
@@ -537,14 +629,14 @@ function projectSearchFindings(context) {
 
 function projectDiagnosticPacks(context) {
   return asArray(context && context.diagnosticPacks && context.diagnosticPacks.packs)
-    .map((entry) => ({
+    .map(entry => ({
       name: entry.name,
       title: entry.title,
       summary: entry.summary || {},
       highlights: asArray(entry.steps)
-        .filter((step) => step.status === 'failed' || step.status === 'succeeded')
+        .filter(step => step.status === 'failed' || step.status === 'succeeded')
         .slice(0, 5)
-        .map((step) => ({
+        .map(step => ({
           id: step.id,
           title: step.title,
           kind: step.kind,
@@ -557,8 +649,10 @@ function projectDiagnosticPacks(context) {
 }
 
 function projectWorkflowDb2Tables(projectionTables, workflow) {
-  const workflowTableNames = new Set(asArray(workflow && workflow.tables).map((entry) => normalizeName(entry && entry.name)));
-  const selected = asArray(projectionTables).filter((entry) => {
+  const workflowTableNames = new Set(
+    asArray(workflow && workflow.tables).map(entry => normalizeName(entry && entry.name))
+  );
+  const selected = asArray(projectionTables).filter(entry => {
     const requested = normalizeName(entry.requestedName || entry.table);
     const exact = normalizeName(entry.table);
     return workflowTableNames.has(requested) || workflowTableNames.has(exact);
@@ -568,9 +662,13 @@ function projectWorkflowDb2Tables(projectionTables, workflow) {
 
 function projectWorkflowTestData(context, workflowDb2Tables) {
   const testData = context && context.testData ? context.testData : { status: 'skipped' };
-  const workflowTableNames = new Set(asArray(workflowDb2Tables).map((entry) => normalizeName(entry.table)));
+  const workflowTableNames = new Set(
+    asArray(workflowDb2Tables).map(entry => normalizeName(entry.table))
+  );
   const tables = asArray(testData.tables)
-    .filter((entry) => workflowTableNames.size === 0 || workflowTableNames.has(normalizeName(entry.table)))
+    .filter(
+      entry => workflowTableNames.size === 0 || workflowTableNames.has(normalizeName(entry.table))
+    )
     .slice(0, 5);
 
   return {
@@ -580,52 +678,99 @@ function projectWorkflowTestData(context, workflowDb2Tables) {
 }
 
 function cloneEntityList(items, mapper) {
-  return asArray(items).map((entry) => (mapper ? mapper(entry) : { ...entry }));
+  return asArray(items).map(entry => (mapper ? mapper(entry) : { ...entry }));
 }
 
 function buildWorkflow(name, context, projection, payload = {}) {
   return {
     name,
-    summary: typeof payload.summary === 'string'
-      ? payload.summary
-      : (context && context.summary ? context.summary.text : ''),
-    tables: cloneEntityList(payload.tables && payload.tables.length > 0 ? payload.tables : projection.entities.tables),
-    programCalls: cloneEntityList(payload.programCalls && payload.programCalls.length > 0 ? payload.programCalls : projection.entities.programCalls),
-    procedureCalls: cloneEntityList(payload.procedureCalls && payload.procedureCalls.length > 0 ? payload.procedureCalls : projection.entities.procedureCalls),
-    copyMembers: cloneEntityList(payload.copyMembers && payload.copyMembers.length > 0 ? payload.copyMembers : projection.entities.copyMembers),
+    summary:
+      typeof payload.summary === 'string'
+        ? payload.summary
+        : context && context.summary
+          ? context.summary.text
+          : '',
+    tables: cloneEntityList(
+      payload.tables && payload.tables.length > 0 ? payload.tables : projection.entities.tables
+    ),
+    programCalls: cloneEntityList(
+      payload.programCalls && payload.programCalls.length > 0
+        ? payload.programCalls
+        : projection.entities.programCalls
+    ),
+    procedureCalls: cloneEntityList(
+      payload.procedureCalls && payload.procedureCalls.length > 0
+        ? payload.procedureCalls
+        : projection.entities.procedureCalls
+    ),
+    copyMembers: cloneEntityList(
+      payload.copyMembers && payload.copyMembers.length > 0
+        ? payload.copyMembers
+        : projection.entities.copyMembers
+    ),
     sqlStatements: cloneEntityList(payload.sqlStatements),
-    nativeFiles: cloneEntityList(payload.nativeFiles && payload.nativeFiles.length > 0 ? payload.nativeFiles : projection.entities.nativeFiles),
-    db2Tables: cloneEntityList(payload.db2Tables && payload.db2Tables.length > 0 ? payload.db2Tables : projection.entities.db2Tables),
-    externalObjects: cloneEntityList(payload.externalObjects && payload.externalObjects.length > 0 ? payload.externalObjects : projection.entities.externalObjects),
-    ifsPaths: cloneEntityList(payload.ifsPaths && payload.ifsPaths.length > 0 ? payload.ifsPaths : projection.entities.ifsPaths),
-    searchFindings: cloneEntityList(payload.searchFindings && payload.searchFindings.length > 0 ? payload.searchFindings : projection.entities.searchFindings),
-    diagnosticPacks: cloneEntityList(payload.diagnosticPacks && payload.diagnosticPacks.length > 0 ? payload.diagnosticPacks : projection.entities.diagnosticPacks),
+    nativeFiles: cloneEntityList(
+      payload.nativeFiles && payload.nativeFiles.length > 0
+        ? payload.nativeFiles
+        : projection.entities.nativeFiles
+    ),
+    db2Tables: cloneEntityList(
+      payload.db2Tables && payload.db2Tables.length > 0
+        ? payload.db2Tables
+        : projection.entities.db2Tables
+    ),
+    externalObjects: cloneEntityList(
+      payload.externalObjects && payload.externalObjects.length > 0
+        ? payload.externalObjects
+        : projection.entities.externalObjects
+    ),
+    ifsPaths: cloneEntityList(
+      payload.ifsPaths && payload.ifsPaths.length > 0
+        ? payload.ifsPaths
+        : projection.entities.ifsPaths
+    ),
+    searchFindings: cloneEntityList(
+      payload.searchFindings && payload.searchFindings.length > 0
+        ? payload.searchFindings
+        : projection.entities.searchFindings
+    ),
+    diagnosticPacks: cloneEntityList(
+      payload.diagnosticPacks && payload.diagnosticPacks.length > 0
+        ? payload.diagnosticPacks
+        : projection.entities.diagnosticPacks
+    ),
     riskMarkers: projection.riskMarkers,
     uncertaintyMarkers: projection.uncertaintyMarkers,
     tokenBudget: Number(payload.tokenBudget) || null,
     estimatedTokens: Number(payload.estimatedTokens) || null,
-    evidencePacks: payload.evidencePacks && typeof payload.evidencePacks === 'object'
-      ? {
-        sql: cloneEntityList(payload.evidencePacks.sql),
-        calls: cloneEntityList(payload.evidencePacks.calls),
-        fileUsage: cloneEntityList(payload.evidencePacks.fileUsage),
-        conditionals: cloneEntityList(payload.evidencePacks.conditionals),
-        errorPaths: cloneEntityList(payload.evidencePacks.errorPaths),
-      }
-      : {
-        sql: [],
-        calls: [],
-        fileUsage: [],
-        conditionals: [],
-        errorPaths: [],
-      },
+    evidencePacks:
+      payload.evidencePacks && typeof payload.evidencePacks === 'object'
+        ? {
+            sql: cloneEntityList(payload.evidencePacks.sql),
+            calls: cloneEntityList(payload.evidencePacks.calls),
+            fileUsage: cloneEntityList(payload.evidencePacks.fileUsage),
+            conditionals: cloneEntityList(payload.evidencePacks.conditionals),
+            errorPaths: cloneEntityList(payload.evidencePacks.errorPaths),
+          }
+        : {
+            sql: [],
+            calls: [],
+            fileUsage: [],
+            conditionals: [],
+            errorPaths: [],
+          },
     evidenceHighlights: cloneEntityList(payload.evidenceHighlights),
-    rankedEvidence: cloneEntityList(payload.rankedEvidence && payload.rankedEvidence.length > 0 ? payload.rankedEvidence : payload.evidenceHighlights),
+    rankedEvidence: cloneEntityList(
+      payload.rankedEvidence && payload.rankedEvidence.length > 0
+        ? payload.rankedEvidence
+        : payload.evidenceHighlights
+    ),
     dependencyGraphSummary: {
       nodeCount: Number(context && context.graph && context.graph.nodeCount) || 0,
       edgeCount: Number(context && context.graph && context.graph.edgeCount) || 0,
     },
-    testData: payload.testData || (context && context.testData ? context.testData : { status: 'skipped' }),
+    testData:
+      payload.testData || (context && context.testData ? context.testData : { status: 'skipped' }),
   };
 }
 
@@ -634,17 +779,25 @@ function buildEvidenceHighlights(evidenceIndex, projection) {
   const seen = new Set();
 
   const priorityRefs = [
-    ...projection.entities.sqlStatements.filter((entry) => entry.dynamic || entry.unresolved).flatMap((entry) => entry.evidenceRefs),
-    ...projection.entities.nativeFiles.filter((entry) => entry.mutating || entry.interactive).flatMap((entry) => entry.evidenceRefs),
-    ...projection.entities.binding.modules.filter((entry) => entry.unresolvedBindings).flatMap((entry) => {
-      const moduleEntity = asArray(projection.entities.modules || []).find((item) => item.name === entry.name);
-      return moduleEntity ? moduleEntity.evidenceRefs || [] : [];
-    }),
+    ...projection.entities.sqlStatements
+      .filter(entry => entry.dynamic || entry.unresolved)
+      .flatMap(entry => entry.evidenceRefs),
+    ...projection.entities.nativeFiles
+      .filter(entry => entry.mutating || entry.interactive)
+      .flatMap(entry => entry.evidenceRefs),
+    ...projection.entities.binding.modules
+      .filter(entry => entry.unresolvedBindings)
+      .flatMap(entry => {
+        const moduleEntity = asArray(projection.entities.modules || []).find(
+          item => item.name === entry.name
+        );
+        return moduleEntity ? moduleEntity.evidenceRefs || [] : [];
+      }),
   ];
 
   for (const ref of priorityRefs) {
     if (seen.has(ref)) continue;
-    const evidence = evidenceIndex.find((entry) => entry.id === ref);
+    const evidence = evidenceIndex.find(entry => entry.id === ref);
     if (!evidence) continue;
     seen.add(ref);
     selected.push({
@@ -663,7 +816,7 @@ function buildEvidenceHighlights(evidenceIndex, projection) {
 
 function projectSqlSelection(optimizedContext, fallbackStatements) {
   if (optimizedContext && optimizedContext.workflows && optimizedContext.workflows.documentation) {
-    return cloneEntityList(optimizedContext.workflows.documentation.sqlStatements).map((entry) => ({
+    return cloneEntityList(optimizedContext.workflows.documentation.sqlStatements).map(entry => ({
       id: entry.id,
       type: entry.type,
       intent: entry.intent || 'OTHER',
@@ -678,7 +831,7 @@ function projectSqlSelection(optimizedContext, fallbackStatements) {
   }
 
   if (asArray(optimizedContext && optimizedContext.sqlStatements).length > 0) {
-    return asArray(optimizedContext.sqlStatements).map((entry) => ({
+    return asArray(optimizedContext.sqlStatements).map(entry => ({
       type: entry.type,
       intent: entry.intent || 'OTHER',
       tables: asArray(entry.tables),
@@ -688,7 +841,7 @@ function projectSqlSelection(optimizedContext, fallbackStatements) {
     }));
   }
 
-  return fallbackStatements.slice(0, 10).map((entry) => ({
+  return fallbackStatements.slice(0, 10).map(entry => ({
     type: entry.type,
     intent: entry.intent,
     tables: entry.tables,
@@ -701,17 +854,21 @@ function projectSqlSelection(optimizedContext, fallbackStatements) {
   }));
 }
 
-function buildWorkflowPayload(workflowName, optimizedContext, fallbackSqlStatements, fallbackEvidenceHighlights) {
+function buildWorkflowPayload(
+  workflowName,
+  optimizedContext,
+  fallbackSqlStatements,
+  fallbackEvidenceHighlights
+) {
   const WORKFLOW_KEY_MAP = {
     'error-analysis': 'errorAnalysis',
-    'security': 'security',
-    'modernization': 'modernization',
-    'documentation': 'documentation',
+    security: 'security',
+    modernization: 'modernization',
+    documentation: 'documentation',
   };
   const workflowKey = WORKFLOW_KEY_MAP[workflowName] || 'documentation';
-  const optimizedWorkflow = optimizedContext && optimizedContext.workflows
-    ? optimizedContext.workflows[workflowKey]
-    : null;
+  const optimizedWorkflow =
+    optimizedContext && optimizedContext.workflows ? optimizedContext.workflows[workflowKey] : null;
 
   if (optimizedWorkflow) {
     return {
@@ -736,9 +893,13 @@ function buildWorkflowPayload(workflowName, optimizedContext, fallbackSqlStateme
     copyMembers: [],
     nativeFiles: [],
     evidencePacks: {
-      sql: cloneEntityList(fallbackEvidenceHighlights.filter((entry) => entry.label && /SQL/i.test(entry.label))),
+      sql: cloneEntityList(
+        fallbackEvidenceHighlights.filter(entry => entry.label && /SQL/i.test(entry.label))
+      ),
       calls: [],
-      fileUsage: cloneEntityList(fallbackEvidenceHighlights.filter((entry) => entry.label && /FILE/i.test(entry.label))),
+      fileUsage: cloneEntityList(
+        fallbackEvidenceHighlights.filter(entry => entry.label && /FILE/i.test(entry.label))
+      ),
       conditionals: [],
       errorPaths: [],
     },
@@ -757,7 +918,11 @@ function buildAiKnowledgeProjection({
     throw new Error('AI knowledge projection requires canonical analysis input.');
   }
 
-  const evidenceIndex = createEvidenceIndex(canonicalAnalysis.sourceRoot, canonicalAnalysis, sourceTextByRelativePath);
+  const evidenceIndex = createEvidenceIndex(
+    canonicalAnalysis.sourceRoot,
+    canonicalAnalysis,
+    sourceTextByRelativePath
+  );
   const sqlStatements = projectSqlStatements(canonicalAnalysis, evidenceIndex);
   const selectedSqlStatements = projectSqlSelection(optimizedContext, sqlStatements);
 
@@ -777,7 +942,9 @@ function buildAiKnowledgeProjection({
       ]),
     },
     summary: context && context.summary ? context.summary : {},
-    riskMarkers: sortStrings((((canonicalAnalysis.enrichments || {}).aiContext || {}).riskHints) || []),
+    riskMarkers: sortStrings(
+      ((canonicalAnalysis.enrichments || {}).aiContext || {}).riskHints || []
+    ),
     uncertaintyMarkers: [],
     evidenceIndex,
     entities: {
@@ -796,53 +963,82 @@ function buildAiKnowledgeProjection({
       knownFacts: projectKnownFacts(context),
       uiPatternKnowledge: projectUiPatternKnowledge({ cwd, env }),
       binding: projectBinding(context, canonicalAnalysis, evidenceIndex),
-      modules: asArray(canonicalAnalysis.entities && canonicalAnalysis.entities.modules).map((entry) => ({
-        name: entry.name,
-        evidenceRefs: evidenceRefsFor(evidenceIndex, entry.evidence),
-      })),
+      modules: asArray(canonicalAnalysis.entities && canonicalAnalysis.entities.modules).map(
+        entry => ({
+          name: entry.name,
+          evidenceRefs: evidenceRefsFor(evidenceIndex, entry.evidence),
+        })
+      ),
     },
     workflows: {},
   };
 
   projection.uncertaintyMarkers = collectUncertaintyMarkers(canonicalAnalysis, context);
   const evidenceHighlights = buildEvidenceHighlights(evidenceIndex, projection);
-  const documentationPayload = buildWorkflowPayload('documentation', optimizedContext, selectedSqlStatements, evidenceHighlights);
-  documentationPayload.db2Tables = projectWorkflowDb2Tables(projection.entities.db2Tables, documentationPayload);
+  const documentationPayload = buildWorkflowPayload(
+    'documentation',
+    optimizedContext,
+    selectedSqlStatements,
+    evidenceHighlights
+  );
+  documentationPayload.db2Tables = projectWorkflowDb2Tables(
+    projection.entities.db2Tables,
+    documentationPayload
+  );
   documentationPayload.testData = projectWorkflowTestData(context, documentationPayload.db2Tables);
   projection.workflows.documentation = buildWorkflow(
     'documentation',
     context,
     projection,
-    documentationPayload,
+    documentationPayload
   );
-  const errorAnalysisPayload = buildWorkflowPayload('error-analysis', optimizedContext, selectedSqlStatements, evidenceHighlights);
-  errorAnalysisPayload.db2Tables = projectWorkflowDb2Tables(projection.entities.db2Tables, errorAnalysisPayload);
+  const errorAnalysisPayload = buildWorkflowPayload(
+    'error-analysis',
+    optimizedContext,
+    selectedSqlStatements,
+    evidenceHighlights
+  );
+  errorAnalysisPayload.db2Tables = projectWorkflowDb2Tables(
+    projection.entities.db2Tables,
+    errorAnalysisPayload
+  );
   errorAnalysisPayload.testData = projectWorkflowTestData(context, errorAnalysisPayload.db2Tables);
   projection.workflows.errorAnalysis = buildWorkflow(
     'error-analysis',
     context,
     projection,
-    errorAnalysisPayload,
+    errorAnalysisPayload
   );
 
-  const securityPayload = buildWorkflowPayload('security', optimizedContext, selectedSqlStatements, evidenceHighlights);
-  securityPayload.db2Tables = projectWorkflowDb2Tables(projection.entities.db2Tables, securityPayload);
-  securityPayload.testData = projectWorkflowTestData(context, securityPayload.db2Tables);
-  projection.workflows.security = buildWorkflow(
+  const securityPayload = buildWorkflowPayload(
     'security',
-    context,
-    projection,
-    securityPayload,
+    optimizedContext,
+    selectedSqlStatements,
+    evidenceHighlights
   );
+  securityPayload.db2Tables = projectWorkflowDb2Tables(
+    projection.entities.db2Tables,
+    securityPayload
+  );
+  securityPayload.testData = projectWorkflowTestData(context, securityPayload.db2Tables);
+  projection.workflows.security = buildWorkflow('security', context, projection, securityPayload);
 
-  const modernizationPayload = buildWorkflowPayload('modernization', optimizedContext, selectedSqlStatements, evidenceHighlights);
-  modernizationPayload.db2Tables = projectWorkflowDb2Tables(projection.entities.db2Tables, modernizationPayload);
+  const modernizationPayload = buildWorkflowPayload(
+    'modernization',
+    optimizedContext,
+    selectedSqlStatements,
+    evidenceHighlights
+  );
+  modernizationPayload.db2Tables = projectWorkflowDb2Tables(
+    projection.entities.db2Tables,
+    modernizationPayload
+  );
   modernizationPayload.testData = projectWorkflowTestData(context, modernizationPayload.db2Tables);
   projection.workflows.modernization = buildWorkflow(
     'modernization',
     context,
     projection,
-    modernizationPayload,
+    modernizationPayload
   );
 
   return projection;

@@ -16,10 +16,17 @@ const path = require('path');
 const { sanitizeValue } = require('../security/secretMasking');
 
 function normalizeActionList(value) {
-  return Array.from(new Set((Array.isArray(value) ? value : [])
-    .map((entry) => String(entry || '').trim().toLowerCase())
-    .filter(Boolean)))
-    .sort((left, right) => left.localeCompare(right));
+  return Array.from(
+    new Set(
+      (Array.isArray(value) ? value : [])
+        .map(entry =>
+          String(entry || '')
+            .trim()
+            .toLowerCase()
+        )
+        .filter(Boolean)
+    )
+  ).sort((left, right) => left.localeCompare(right));
 }
 
 function buildApprovalRecord({
@@ -41,7 +48,9 @@ function buildApprovalRecord({
     throw new Error('Approval record requires plan.planId and plan.planHash.');
   }
 
-  const normalizedProgram = String(program || plan.program || '').trim().toUpperCase();
+  const normalizedProgram = String(program || plan.program || '')
+    .trim()
+    .toUpperCase();
   const normalizedProfile = String(profileName || plan.profileName || '').trim();
   const normalizedApprovedBy = String(approvedBy || '').trim();
   if (!normalizedProgram) {
@@ -76,19 +85,19 @@ function buildApprovalRecord({
       afterHash: String(plan.afterHash || '').trim(),
     },
     warningsAcknowledged: Array.isArray(warningsAcknowledged)
-      ? warningsAcknowledged.map((entry) => String(entry || '').trim()).filter(Boolean)
+      ? warningsAcknowledged.map(entry => String(entry || '').trim()).filter(Boolean)
       : [],
     dryRun: Boolean(dryRun),
   };
 }
 
 function renderApprovalMarkdown(approval) {
-  const warnings = (approval.warningsAcknowledged || []).length > 0
-    ? approval.warningsAcknowledged.map((entry) => `- ${entry}`).join('\n')
-    : '- none';
-  const actions = (approval.approvedActions || []).length > 0
-    ? approval.approvedActions.join(', ')
-    : 'none';
+  const warnings =
+    (approval.warningsAcknowledged || []).length > 0
+      ? approval.warningsAcknowledged.map(entry => `- ${entry}`).join('\n')
+      : '- none';
+  const actions =
+    (approval.approvedActions || []).length > 0 ? approval.approvedActions.join(', ') : 'none';
 
   return `# Bridge Approval: ${approval.program}
 
@@ -123,12 +132,10 @@ ${JSON.stringify(approval.localSourceSummary || {}, null, 2)}
 `;
 }
 
-function writeApprovalArtifacts({
-  outputRoot,
-  program,
-  approval,
-}) {
-  const programName = String(program || approval.program || '').trim().toUpperCase();
+function writeApprovalArtifacts({ outputRoot, program, approval }) {
+  const programName = String(program || approval.program || '')
+    .trim()
+    .toUpperCase();
   const programDir = path.join(outputRoot, programName);
   fs.mkdirSync(programDir, { recursive: true });
   const jsonPath = path.join(programDir, 'bridge-approval.json');
@@ -143,12 +150,10 @@ function writeApprovalArtifacts({
   };
 }
 
-function readApprovalArtifact({
-  outputRoot,
-  program,
-  approvalFile = '',
-}) {
-  const programName = String(program || '').trim().toUpperCase();
+function readApprovalArtifact({ outputRoot, program, approvalFile = '' }) {
+  const programName = String(program || '')
+    .trim()
+    .toUpperCase();
   const defaultPath = path.join(outputRoot, programName, 'bridge-approval.json');
   const approvalPath = approvalFile ? path.resolve(approvalFile) : defaultPath;
   if (!fs.existsSync(approvalPath)) {
@@ -185,26 +190,53 @@ function validateApprovalForAction({
     throw buildApprovalValidationError('APPROVAL_MISSING', 'Approval artifact is missing.');
   }
 
-  const normalizedProgram = String(expectedProgram || '').trim().toUpperCase();
-  if (normalizedProgram && String(approval.program || '').trim().toUpperCase() !== normalizedProgram) {
-    throw buildApprovalValidationError('APPROVAL_PROGRAM_MISMATCH', 'Approval program does not match command program.');
+  const normalizedProgram = String(expectedProgram || '')
+    .trim()
+    .toUpperCase();
+  if (
+    normalizedProgram &&
+    String(approval.program || '')
+      .trim()
+      .toUpperCase() !== normalizedProgram
+  ) {
+    throw buildApprovalValidationError(
+      'APPROVAL_PROGRAM_MISMATCH',
+      'Approval program does not match command program.'
+    );
   }
   const normalizedProfile = String(expectedProfileName || '').trim();
   if (normalizedProfile && String(approval.profileName || '').trim() !== normalizedProfile) {
-    throw buildApprovalValidationError('APPROVAL_PROFILE_MISMATCH', 'Approval profile does not match command profile.');
+    throw buildApprovalValidationError(
+      'APPROVAL_PROFILE_MISMATCH',
+      'Approval profile does not match command profile.'
+    );
   }
 
   if (expectedPlanId && String(approval.planId || '').trim() !== String(expectedPlanId).trim()) {
-    throw buildApprovalValidationError('APPROVAL_PLAN_MISMATCH', 'Approval planId does not match current change plan.');
+    throw buildApprovalValidationError(
+      'APPROVAL_PLAN_MISMATCH',
+      'Approval planId does not match current change plan.'
+    );
   }
-  if (expectedPlanHash && String(approval.planHash || '').trim() !== String(expectedPlanHash).trim()) {
-    throw buildApprovalValidationError('APPROVAL_PLAN_MISMATCH', 'Approval planHash does not match current change plan.');
+  if (
+    expectedPlanHash &&
+    String(approval.planHash || '').trim() !== String(expectedPlanHash).trim()
+  ) {
+    throw buildApprovalValidationError(
+      'APPROVAL_PLAN_MISMATCH',
+      'Approval planHash does not match current change plan.'
+    );
   }
 
-  const normalizedAction = String(requiredAction || '').trim().toLowerCase();
+  const normalizedAction = String(requiredAction || '')
+    .trim()
+    .toLowerCase();
   const approvedActions = normalizeActionList(approval.approvedActions);
   if (normalizedAction && !approvedActions.includes(normalizedAction)) {
-    throw buildApprovalValidationError('APPROVAL_ACTION_NOT_APPROVED', `Approval does not include required action: ${normalizedAction}`);
+    throw buildApprovalValidationError(
+      'APPROVAL_ACTION_NOT_APPROVED',
+      `Approval does not include required action: ${normalizedAction}`
+    );
   }
 
   const normalizedExpiresAt = String(approval.expiresAt || '').trim();
@@ -212,7 +244,10 @@ function validateApprovalForAction({
     const expiryMs = Date.parse(normalizedExpiresAt);
     const nowMs = Date.parse(String(now || '').trim());
     if (!Number.isFinite(expiryMs) || !Number.isFinite(nowMs)) {
-      throw buildApprovalValidationError('APPROVAL_EXPIRED', 'Approval expiry timestamp is invalid.');
+      throw buildApprovalValidationError(
+        'APPROVAL_EXPIRED',
+        'Approval expiry timestamp is invalid.'
+      );
     }
     if (expiryMs < nowMs) {
       throw buildApprovalValidationError('APPROVAL_EXPIRED', 'Approval has expired.');

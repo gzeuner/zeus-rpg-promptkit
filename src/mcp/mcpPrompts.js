@@ -2,9 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const {
-  createAiSessionPromptService,
-} = require('../ui/aiSessionPromptService');
+const { createAiSessionPromptService } = require('../ui/aiSessionPromptService');
 const { listPromptContracts } = require('../prompt/promptRegistry');
 
 const SESSION_START_PROMPT = Object.freeze({
@@ -28,7 +26,8 @@ const SESSION_START_PROMPT = Object.freeze({
     }),
     Object.freeze({
       name: 'includeDoctorSummary',
-      description: 'When true, include a compact doctor summary block if doctorSummary is provided.',
+      description:
+        'When true, include a compact doctor summary block if doctorSummary is provided.',
       required: false,
     }),
     Object.freeze({
@@ -40,16 +39,13 @@ const SESSION_START_PROMPT = Object.freeze({
 });
 
 function listMcpPrompts() {
-  const templatePrompts = listPromptContracts().map((contract) => ({
+  const templatePrompts = listPromptContracts().map(contract => ({
     name: buildTemplatePromptName(contract.name),
     description: `Returns the curated Zeus prompt template for ${contract.name}.`,
     arguments: [],
   }));
 
-  return [
-    SESSION_START_PROMPT,
-    ...templatePrompts,
-  ];
+  return [SESSION_START_PROMPT, ...templatePrompts];
 }
 
 function getMcpPrompt(name, args = {}, context = {}) {
@@ -64,7 +60,9 @@ function getMcpPrompt(name, args = {}, context = {}) {
     return buildSessionStartPrompt(args);
   }
 
-  const contract = listPromptContracts().find((entry) => buildTemplatePromptName(entry.name) === normalizedName);
+  const contract = listPromptContracts().find(
+    entry => buildTemplatePromptName(entry.name) === normalizedName
+  );
   if (!contract) {
     const error = new Error(`Prompt not found: ${normalizedName}`);
     error.code = 'PROMPT_NOT_FOUND';
@@ -81,18 +79,22 @@ function buildTemplatePromptName(contractName) {
 function buildSessionStartPrompt(args) {
   const goal = typeof args.goal === 'string' ? args.goal.trim() : '';
   if (!goal) {
-    const error = new Error('Invalid params: prompts/get zeus.session.start requires arguments.goal');
+    const error = new Error(
+      'Invalid params: prompts/get zeus.session.start requires arguments.goal'
+    );
     error.code = 'PROMPT_INVALID_ARGUMENTS';
     throw error;
   }
 
   const promptService = createAiSessionPromptService();
   const result = promptService.generatePrompt({
-    profile: typeof args.profile === 'string' && args.profile.trim() ? args.profile.trim() : 'default',
+    profile:
+      typeof args.profile === 'string' && args.profile.trim() ? args.profile.trim() : 'default',
     environment: typeof args.environment === 'string' ? args.environment.trim() : '',
     goal,
     includeDoctorSummary: args.includeDoctorSummary === true,
-    doctorSummary: args.doctorSummary && typeof args.doctorSummary === 'object' ? args.doctorSummary : null,
+    doctorSummary:
+      args.doctorSummary && typeof args.doctorSummary === 'object' ? args.doctorSummary : null,
   });
 
   return {
@@ -115,7 +117,7 @@ function buildTemplatePrompt(contract, context = {}) {
     'src',
     'prompt',
     'templates',
-    `${contract.templateFile}.md`,
+    `${contract.templateFile}.md`
   );
   const templateText = fs.readFileSync(templatePath, 'utf8');
   const prelude = [
@@ -126,7 +128,7 @@ function buildTemplatePrompt(contract, context = {}) {
     `Output file: ${contract.outputFileName}`,
     '',
     'Preferred output shape:',
-    ...contract.preferredOutputShape.map((entry) => `- ${entry}`),
+    ...contract.preferredOutputShape.map(entry => `- ${entry}`),
     '',
     'Template body:',
     '',

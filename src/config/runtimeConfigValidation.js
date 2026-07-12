@@ -35,7 +35,7 @@ function assertOptionalString(value, label) {
 }
 
 function assertStringArray(value, label) {
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string')) {
+  if (!Array.isArray(value) || value.some(entry => typeof entry !== 'string')) {
     failValidation(`${label} must be an array of strings`);
   }
 }
@@ -122,7 +122,9 @@ function validateTestDataConfig(value, label) {
     if (!Array.isArray(value.maskRules)) {
       failValidation(`${label}.maskRules must be an array`);
     }
-    value.maskRules.forEach((rule, index) => validateMaskRule(rule, `${label}.maskRules[${index}]`));
+    value.maskRules.forEach((rule, index) =>
+      validateMaskRule(rule, `${label}.maskRules[${index}]`)
+    );
   }
 }
 
@@ -177,7 +179,9 @@ function validateResourceKind(kind, value, label) {
     if (field === 'system') continue;
     if (field.startsWith('_')) continue;
     if (!allowedFields.has(field)) {
-      failValidation(`${label}.${field} is not supported for resource kind "${kind}"; valid fields are ${RESOURCE_KIND_FIELD_RULES[kind].join(', ')}`);
+      failValidation(
+        `${label}.${field} is not supported for resource kind "${kind}"; valid fields are ${RESOURCE_KIND_FIELD_RULES[kind].join(', ')}`
+      );
     }
     if (fieldValue === undefined || fieldValue === null) continue;
     assertStringArray(fieldValue, `${label}.${field}`);
@@ -194,7 +198,9 @@ function validateResourcesConfig(value, label) {
     if (key === 'system') continue;
     if (key.startsWith('_')) continue;
     if (!validKinds.has(key)) {
-      failValidation(`${label}.${key} is not a supported resource kind; valid kinds are ${Object.keys(RESOURCE_KIND_FIELD_RULES).join(', ')}`);
+      failValidation(
+        `${label}.${key} is not a supported resource kind; valid kinds are ${Object.keys(RESOURCE_KIND_FIELD_RULES).join(', ')}`
+      );
     }
     validateResourceKind(key, kindValue, `${label}.${key}`);
   }
@@ -337,7 +343,9 @@ function validateWorkflowPresetDefinition(value, label) {
     failValidation(`${label}.steps must be a non-empty array`);
   }
   for (const step of value.steps) {
-    const normalized = String(step || '').trim().toLowerCase();
+    const normalized = String(step || '')
+      .trim()
+      .toLowerCase();
     if (!ALLOWED_WORKFLOW_STEPS.has(normalized)) {
       failValidation(`${label}.steps contains an unsupported value: ${step}`);
     }
@@ -352,13 +360,17 @@ function validateWorkflowPresetDefinition(value, label) {
     if (!Array.isArray(value.tables)) {
       failValidation(`${label}.tables must be an array`);
     }
-    value.tables.forEach((entry, index) => validateWorkflowTableConfig(entry, `${label}.tables[${index}]`));
+    value.tables.forEach((entry, index) =>
+      validateWorkflowTableConfig(entry, `${label}.tables[${index}]`)
+    );
   }
   if (value.impact !== undefined) {
     if (!Array.isArray(value.impact)) {
       failValidation(`${label}.impact must be an array`);
     }
-    value.impact.forEach((entry, index) => validateWorkflowImpactConfig(entry, `${label}.impact[${index}]`));
+    value.impact.forEach((entry, index) =>
+      validateWorkflowImpactConfig(entry, `${label}.impact[${index}]`)
+    );
   }
   if (value.continueOnError !== undefined && typeof value.continueOnError !== 'boolean') {
     failValidation(`${label}.continueOnError must be a boolean`);
@@ -390,13 +402,17 @@ function validateWorkflowConfig(value, label) {
     if (!Array.isArray(value.tables)) {
       failValidation(`${label}.tables must be an array`);
     }
-    value.tables.forEach((entry, index) => validateWorkflowTableConfig(entry, `${label}.tables[${index}]`));
+    value.tables.forEach((entry, index) =>
+      validateWorkflowTableConfig(entry, `${label}.tables[${index}]`)
+    );
   }
   if (value.impact !== undefined) {
     if (!Array.isArray(value.impact)) {
       failValidation(`${label}.impact must be an array`);
     }
-    value.impact.forEach((entry, index) => validateWorkflowImpactConfig(entry, `${label}.impact[${index}]`));
+    value.impact.forEach((entry, index) =>
+      validateWorkflowImpactConfig(entry, `${label}.impact[${index}]`)
+    );
   }
   if (value.continueOnError !== undefined && typeof value.continueOnError !== 'boolean') {
     failValidation(`${label}.continueOnError must be a boolean`);
@@ -415,9 +431,13 @@ function validateBridgeProfile(value, label) {
   }
   if (value.mode !== undefined) {
     assertOptionalString(value.mode, `${label}.mode`);
-    const normalized = String(value.mode || '').trim().toLowerCase();
+    const normalized = String(value.mode || '')
+      .trim()
+      .toLowerCase();
     if (normalized && !ALLOWED_BRIDGE_MODES.has(normalized)) {
-      failValidation(`${label}.mode must be one of: plan-only, plan-stage-apply, plan-stage-apply-compile`);
+      failValidation(
+        `${label}.mode must be one of: plan-only, plan-stage-apply, plan-stage-apply-compile`
+      );
     }
   }
   if (value.requireConfirmation !== undefined && typeof value.requireConfirmation !== 'boolean') {
@@ -467,7 +487,10 @@ function validateBridgeProfile(value, label) {
     if (value.compile.requirePlan !== undefined && typeof value.compile.requirePlan !== 'boolean') {
       failValidation(`${label}.compile.requirePlan must be a boolean`);
     }
-    if (value.compile.requireApproval !== undefined && typeof value.compile.requireApproval !== 'boolean') {
+    if (
+      value.compile.requireApproval !== undefined &&
+      typeof value.compile.requireApproval !== 'boolean'
+    ) {
       failValidation(`${label}.compile.requireApproval must be a boolean`);
     }
   }
@@ -564,7 +587,11 @@ function validateProfiles(profiles) {
 }
 
 function validateAnalyzeConfig(config) {
-  if (config.sourceRoot !== undefined && config.sourceRoot !== null && typeof config.sourceRoot !== 'string') {
+  if (
+    config.sourceRoot !== undefined &&
+    config.sourceRoot !== null &&
+    typeof config.sourceRoot !== 'string'
+  ) {
     failValidation('analyze.sourceRoot must be a string');
   }
   assertOptionalString(config.outputRoot, 'analyze.outputRoot');

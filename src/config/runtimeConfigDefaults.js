@@ -11,10 +11,32 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
-const DEFAULT_EXTENSIONS = ['.rpg', '.rpgle', '.sqlrpgle', '.rpgile', '.bnd', '.binder', '.bndsrc', '.clp', '.clle', '.dds', '.dspf', '.prtf', '.pf', '.lf'];
+const DEFAULT_EXTENSIONS = [
+  '.rpg',
+  '.rpgle',
+  '.sqlrpgle',
+  '.rpgile',
+  '.bnd',
+  '.binder',
+  '.bndsrc',
+  '.clp',
+  '.clle',
+  '.dds',
+  '.dspf',
+  '.prtf',
+  '.pf',
+  '.lf',
+];
 const ALLOWED_FETCH_TRANSPORTS = new Set(['auto', 'sftp', 'jt400', 'ftp']);
 const ALLOWED_WORK_COPY_EXTENSIONS = new Set(['txt', 'original', 'suffixed']);
-const ALLOWED_WORKFLOW_STEPS = new Set(['fetch', 'copy', 'analyze', 'impact', 'query-table', 'report']);
+const ALLOWED_WORKFLOW_STEPS = new Set([
+  'fetch',
+  'copy',
+  'analyze',
+  'impact',
+  'query-table',
+  'report',
+]);
 const ALLOWED_BRIDGE_MODES = new Set(['plan-only', 'plan-stage-apply', 'plan-stage-apply-compile']);
 const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits', 'presets']);
 const PROFILES_METADATA_KEY = Symbol('zeusProfilesMetadata');

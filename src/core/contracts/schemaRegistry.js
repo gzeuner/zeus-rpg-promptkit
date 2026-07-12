@@ -67,11 +67,14 @@ function createSchemaRegistry(options = {}) {
       validateFn = schema;
     } else if (schema && typeof schema === 'object') {
       // Minimal descriptor support for now: treat as "has schemaVersion" + passthrough
-      validateFn = (value) => {
+      validateFn = value => {
         const errs = [];
         if (value && typeof value === 'object' && 'schemaVersion' in value) {
           if (Number(value.schemaVersion) !== version) {
-            errs.push({ path: '/schemaVersion', message: `expected ${version}, got ${value.schemaVersion}` });
+            errs.push({
+              path: '/schemaVersion',
+              message: `expected ${version}, got ${value.schemaVersion}`,
+            });
           }
         }
         return errs;
@@ -95,10 +98,12 @@ function createSchemaRegistry(options = {}) {
     if (!entry) {
       return {
         ok: false,
-        errors: normalizeValidationErrors([{
-          path: '',
-          message: `Unknown contract or unsupported version: ${id} v${version}`,
-        }]),
+        errors: normalizeValidationErrors([
+          {
+            path: '',
+            message: `Unknown contract or unsupported version: ${id} v${version}`,
+          },
+        ]),
       };
     }
 

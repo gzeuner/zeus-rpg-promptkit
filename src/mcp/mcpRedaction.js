@@ -37,7 +37,7 @@ function createMcpRedactor(runtime = {}) {
         code: Number.isFinite(safeError.code) ? safeError.code : -32000,
         message: maskSensitiveTermsInText(
           maskSecretsInText(String(safeError.message || 'Internal error')),
-          sensitiveTerms,
+          sensitiveTerms
         ),
         ...(safeError.data !== undefined
           ? { data: sanitizeValue(safeError.data, { sensitiveTerms }) }

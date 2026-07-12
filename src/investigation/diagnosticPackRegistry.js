@@ -16,10 +16,19 @@ const DIAGNOSTIC_PACK_REGISTRY = Object.freeze({
   'table-investigation': Object.freeze({
     name: 'table-investigation',
     title: 'Table Investigation',
-    description: 'Inspect table identity, schema shape, and related object statistics with read-only queries.',
+    description:
+      'Inspect table identity, schema shape, and related object statistics with read-only queries.',
     parameters: Object.freeze([
-      Object.freeze({ name: 'table', required: true, description: 'Table or file name to inspect.' }),
-      Object.freeze({ name: 'schema', required: false, description: 'Optional schema or library filter.' }),
+      Object.freeze({
+        name: 'table',
+        required: true,
+        description: 'Table or file name to inspect.',
+      }),
+      Object.freeze({
+        name: 'schema',
+        required: false,
+        description: 'Optional schema or library filter.',
+      }),
     ]),
     steps: Object.freeze([
       Object.freeze({
@@ -30,8 +39,8 @@ const DIAGNOSTIC_PACK_REGISTRY = Object.freeze({
         query: [
           'SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, SYSTEM_TABLE_SCHEMA, SYSTEM_TABLE_NAME',
           'FROM QSYS2.SYSTABLES',
-          'WHERE TABLE_NAME = UPPER(\'${table}\')',
-          '  AND (\'${schema}\' = \'\' OR TABLE_SCHEMA = UPPER(\'${schema}\') OR SYSTEM_TABLE_SCHEMA = UPPER(\'${schema}\'))',
+          "WHERE TABLE_NAME = UPPER('${table}')",
+          "  AND ('${schema}' = '' OR TABLE_SCHEMA = UPPER('${schema}') OR SYSTEM_TABLE_SCHEMA = UPPER('${schema}'))",
           'ORDER BY TABLE_SCHEMA, TABLE_NAME',
         ].join(' '),
       }),
@@ -43,8 +52,8 @@ const DIAGNOSTIC_PACK_REGISTRY = Object.freeze({
         query: [
           'SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE, IS_NULLABLE',
           'FROM QSYS2.SYSCOLUMNS',
-          'WHERE TABLE_NAME = UPPER(\'${table}\')',
-          '  AND (\'${schema}\' = \'\' OR TABLE_SCHEMA = UPPER(\'${schema}\'))',
+          "WHERE TABLE_NAME = UPPER('${table}')",
+          "  AND ('${schema}' = '' OR TABLE_SCHEMA = UPPER('${schema}'))",
           'ORDER BY TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION',
         ].join(' '),
       }),
@@ -53,7 +62,8 @@ const DIAGNOSTIC_PACK_REGISTRY = Object.freeze({
   'program-investigation': Object.freeze({
     name: 'program-investigation',
     title: 'Program Investigation',
-    description: 'Inspect program object identity and related object statistics through safe read-only steps.',
+    description:
+      'Inspect program object identity and related object statistics through safe read-only steps.',
     parameters: Object.freeze([
       Object.freeze({ name: 'program', required: true, description: 'Program name to inspect.' }),
       Object.freeze({ name: 'library', required: false, description: 'Optional library filter.' }),
@@ -66,8 +76,8 @@ const DIAGNOSTIC_PACK_REGISTRY = Object.freeze({
         maxRows: 20,
         query: [
           'SELECT OBJNAME, OBJLONGNAME, OBJTYPE, OBJATTRIBUTE, OBJOWNER, OBJLIB',
-          'FROM TABLE(QSYS2.OBJECT_STATISTICS(OBJECT_SCHEMA => CASE WHEN \'${library}\' = \'\' THEN \'*ALL\' ELSE UPPER(\'${library}\') END,',
-          'OBJECT_NAME => UPPER(\'${program}\'), OBJECT_TYPE_LIST => \'*PGM\'))',
+          "FROM TABLE(QSYS2.OBJECT_STATISTICS(OBJECT_SCHEMA => CASE WHEN '${library}' = '' THEN '*ALL' ELSE UPPER('${library}') END,",
+          "OBJECT_NAME => UPPER('${program}'), OBJECT_TYPE_LIST => '*PGM'))",
           'ORDER BY OBJLIB, OBJNAME',
         ].join(' '),
       }),
@@ -86,7 +96,11 @@ const DIAGNOSTIC_PACK_REGISTRY = Object.freeze({
     parameters: Object.freeze([
       Object.freeze({ name: 'object', required: true, description: 'Object name to inspect.' }),
       Object.freeze({ name: 'library', required: false, description: 'Optional object library.' }),
-      Object.freeze({ name: 'objectType', required: false, description: 'Optional IBM i object type, for example *FILE or *PGM.' }),
+      Object.freeze({
+        name: 'objectType',
+        required: false,
+        description: 'Optional IBM i object type, for example *FILE or *PGM.',
+      }),
     ]),
     steps: Object.freeze([
       Object.freeze({
@@ -96,8 +110,8 @@ const DIAGNOSTIC_PACK_REGISTRY = Object.freeze({
         maxRows: 20,
         query: [
           'SELECT OBJNAME, OBJLONGNAME, OBJTYPE, OBJATTRIBUTE, OBJTEXT, OBJOWNER, OBJLIB',
-          'FROM TABLE(QSYS2.OBJECT_STATISTICS(OBJECT_SCHEMA => CASE WHEN \'${library}\' = \'\' THEN \'*ALL\' ELSE UPPER(\'${library}\') END,',
-          'OBJECT_NAME => UPPER(\'${object}\'), OBJECT_TYPE_LIST => CASE WHEN \'${objectType}\' = \'\' THEN \'*ALL\' ELSE UPPER(\'${objectType}\') END))',
+          "FROM TABLE(QSYS2.OBJECT_STATISTICS(OBJECT_SCHEMA => CASE WHEN '${library}' = '' THEN '*ALL' ELSE UPPER('${library}') END,",
+          "OBJECT_NAME => UPPER('${object}'), OBJECT_TYPE_LIST => CASE WHEN '${objectType}' = '' THEN '*ALL' ELSE UPPER('${objectType}') END))",
           'ORDER BY OBJLIB, OBJTYPE, OBJNAME',
         ].join(' '),
       }),
@@ -112,7 +126,9 @@ const DIAGNOSTIC_PACK_REGISTRY = Object.freeze({
 });
 
 function normalizeDiagnosticPackName(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase();
 }
 
 function listDiagnosticPacks() {

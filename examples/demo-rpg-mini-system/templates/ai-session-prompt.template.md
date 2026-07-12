@@ -26,4 +26,3 @@ Task style:
 - List findings with explicit artifact references.
 - Separate facts from assumptions.
 - Provide next-step recommendations with risk notes.
-

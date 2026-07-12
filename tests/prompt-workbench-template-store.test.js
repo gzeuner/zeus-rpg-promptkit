@@ -19,7 +19,10 @@ test('template store supports CRUD and validation boundaries', () => {
   const storePath = normalizeTemplateStorePath('', tempRoot);
 
   try {
-    assert.equal(storePath.endsWith(path.join('config', 'local-only', 'prompt-workbench', 'templates.json')), true);
+    assert.equal(
+      storePath.endsWith(path.join('config', 'local-only', 'prompt-workbench', 'templates.json')),
+      true
+    );
     assert.deepEqual(readTemplateStore(storePath), {
       schemaVersion: 1,
       templates: [],
@@ -68,24 +71,36 @@ test('template store supports CRUD and validation boundaries', () => {
     assert.equal(deleted.id, created.id);
     assert.deepEqual(listTemplates(storePath), []);
 
-    assert.throws(() => createTemplate(storePath, {
-      name: '',
-      useCaseId: 'documentation-generation',
-      moduleIds: ['system-role'],
-    }), /name is required/i);
+    assert.throws(
+      () =>
+        createTemplate(storePath, {
+          name: '',
+          useCaseId: 'documentation-generation',
+          moduleIds: ['system-role'],
+        }),
+      /name is required/i
+    );
 
-    assert.throws(() => createTemplate(storePath, {
-      name: 'Invalid Modules',
-      useCaseId: 'documentation-generation',
-      moduleIds: [],
-    }), /at least one moduleid/i);
+    assert.throws(
+      () =>
+        createTemplate(storePath, {
+          name: 'Invalid Modules',
+          useCaseId: 'documentation-generation',
+          moduleIds: [],
+        }),
+      /at least one moduleid/i
+    );
 
     assert.throws(() => readTemplate(storePath, 'missing-template-id'), /not found/i);
-    assert.throws(() => updateTemplate(storePath, 'missing-template-id', {
-      name: 'x',
-      useCaseId: 'documentation-generation',
-      moduleIds: ['system-role'],
-    }), /not found/i);
+    assert.throws(
+      () =>
+        updateTemplate(storePath, 'missing-template-id', {
+          name: 'x',
+          useCaseId: 'documentation-generation',
+          moduleIds: ['system-role'],
+        }),
+      /not found/i
+    );
     assert.throws(() => deleteTemplate(storePath, 'missing-template-id'), /not found/i);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

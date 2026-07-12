@@ -13,7 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
-const { renderJson, renderMermaid, renderMarkdown, renderCrossProgramMarkdown } = require('../dependency/graphSerializer');
+const {
+  renderJson,
+  renderMermaid,
+  renderMarkdown,
+  renderCrossProgramMarkdown,
+} = require('../dependency/graphSerializer');
 const { generateMarkdownReport } = require('../report/markdownReport');
 const { renderArchitectureReport } = require('../report/architectureReport');
 const { buildPrompts, resolvePromptTemplates } = require('../prompt/promptBuilder');
@@ -87,22 +92,26 @@ function escapeRegExp(value) {
 }
 
 function uniqueSortedStrings(values) {
-  return Array.from(new Set(asArray(values).map((value) => String(value || '').trim()).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      asArray(values)
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function normalizePathString(value) {
-  return String(value || '').trim().replace(/\\/g, '/');
+  return String(value || '')
+    .trim()
+    .replace(/\\/g, '/');
 }
 
 function collectSourceArtifactPaths(analyzeManifest) {
   const artifactPaths = Array.isArray(analyzeManifest && analyzeManifest.artifacts)
-    ? analyzeManifest.artifacts.map((artifact) => artifact.path)
+    ? analyzeManifest.artifacts.map(artifact => artifact.path)
     : [];
-  return uniqueSortedStrings([
-    'analyze-run-manifest.json',
-    ...artifactPaths,
-  ]);
+  return uniqueSortedStrings(['analyze-run-manifest.json', ...artifactPaths]);
 }
 
 function buildSafeArtifactPath(artifactPath) {
@@ -110,13 +119,16 @@ function buildSafeArtifactPath(artifactPath) {
 }
 
 function extractOptimizationReport(analyzeManifest) {
-  const stage = asArray(analyzeManifest && analyzeManifest.stages)
-    .find((entry) => entry.id === 'optimize-context');
+  const stage = asArray(analyzeManifest && analyzeManifest.stages).find(
+    entry => entry.id === 'optimize-context'
+  );
   const metadata = stage && stage.metadata ? stage.metadata : {};
-  const safeSharingEnabled = Boolean(analyzeManifest
-    && analyzeManifest.inputs
-    && analyzeManifest.inputs.options
-    && analyzeManifest.inputs.options.safeSharingEnabled);
+  const safeSharingEnabled = Boolean(
+    analyzeManifest &&
+    analyzeManifest.inputs &&
+    analyzeManifest.inputs.options &&
+    analyzeManifest.inputs.options.safeSharingEnabled
+  );
   return {
     enabled: Boolean(metadata.enabled),
     contextTokens: Number(metadata.contextTokens) || 0,
@@ -129,30 +141,36 @@ function extractOptimizationReport(analyzeManifest) {
 }
 
 function resolvePromptTemplatesFromManifest(analyzeManifest) {
-  const options = analyzeManifest && analyzeManifest.inputs && analyzeManifest.inputs.options
-    ? analyzeManifest.inputs.options
-    : {};
-  const presetTemplates = options.workflowPreset && Array.isArray(options.workflowPreset.promptTemplates)
-    ? options.workflowPreset.promptTemplates
-    : [];
-  const guidedTemplates = options.guidedMode && Array.isArray(options.guidedMode.promptTemplates)
-    ? options.guidedMode.promptTemplates
-    : [];
+  const options =
+    analyzeManifest && analyzeManifest.inputs && analyzeManifest.inputs.options
+      ? analyzeManifest.inputs.options
+      : {};
+  const presetTemplates =
+    options.workflowPreset && Array.isArray(options.workflowPreset.promptTemplates)
+      ? options.workflowPreset.promptTemplates
+      : [];
+  const guidedTemplates =
+    options.guidedMode && Array.isArray(options.guidedMode.promptTemplates)
+      ? options.guidedMode.promptTemplates
+      : [];
   const selected = presetTemplates.length > 0 ? presetTemplates : guidedTemplates;
   return resolvePromptTemplates(selected.length > 0 ? selected : null);
 }
 
 function resolveTokenBudgetsFromManifest(analyzeManifest) {
-  const options = analyzeManifest && analyzeManifest.inputs && analyzeManifest.inputs.options
-    ? analyzeManifest.inputs.options
-    : {};
+  const options =
+    analyzeManifest && analyzeManifest.inputs && analyzeManifest.inputs.options
+      ? analyzeManifest.inputs.options
+      : {};
   return options.tokenBudget && typeof options.tokenBudget === 'object'
     ? options.tokenBudget
     : null;
 }
 
 function buildArtifactContext(outputProgramDir, sourceArtifactPaths) {
-  const canonicalAnalysis = readJsonIfExists(path.join(outputProgramDir, 'canonical-analysis.json'));
+  const canonicalAnalysis = readJsonIfExists(
+    path.join(outputProgramDir, 'canonical-analysis.json')
+  );
   const context = readJsonIfExists(path.join(outputProgramDir, 'context.json'));
   const optimizedContext = readJsonIfExists(path.join(outputProgramDir, 'optimized-context.json'));
   const aiKnowledge = readJsonIfExists(path.join(outputProgramDir, 'ai-knowledge.json'));
@@ -161,8 +179,12 @@ function buildArtifactContext(outputProgramDir, sourceArtifactPaths) {
   const crossProgramGraph = readJsonIfExists(path.join(outputProgramDir, 'program-call-tree.json'));
   const db2Metadata = readJsonIfExists(path.join(outputProgramDir, 'db2-metadata.json'));
   const testData = readJsonIfExists(path.join(outputProgramDir, 'test-data.json'));
-  const analyzeManifest = readJsonIfExists(path.join(outputProgramDir, 'analyze-run-manifest.json'));
-  const safeArtifactPaths = sourceArtifactPaths.map((artifactPath) => buildSafeArtifactPath(artifactPath));
+  const analyzeManifest = readJsonIfExists(
+    path.join(outputProgramDir, 'analyze-run-manifest.json')
+  );
+  const safeArtifactPaths = sourceArtifactPaths.map(artifactPath =>
+    buildSafeArtifactPath(artifactPath)
+  );
 
   return {
     canonicalAnalysis,
@@ -191,8 +213,10 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
     `${SAFE_SHARING_DIR}/${REDACTION_MANIFEST_FILE}`,
   ]);
   const exactFixedPaths = new Map();
-  const sourceRoot = analyzeManifest && analyzeManifest.inputs ? analyzeManifest.inputs.sourceRoot : null;
-  const outputRoot = analyzeManifest && analyzeManifest.inputs ? analyzeManifest.inputs.outputRoot : null;
+  const sourceRoot =
+    analyzeManifest && analyzeManifest.inputs ? analyzeManifest.inputs.sourceRoot : null;
+  const outputRoot =
+    analyzeManifest && analyzeManifest.inputs ? analyzeManifest.inputs.outputRoot : null;
   const outputDir = analyzeManifest && analyzeManifest.run ? analyzeManifest.run.outputDir : null;
   const cwd = analyzeManifest && analyzeManifest.run ? analyzeManifest.run.cwd : null;
 
@@ -242,11 +266,11 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
   }
 
   function pathEndsWith(pathValue, suffixes) {
-    return suffixes.some((suffix) => pathValue.endsWith(suffix));
+    return suffixes.some(suffix => pathValue.endsWith(suffix));
   }
 
   function isPathFragment(pathValue, fragments) {
-    return fragments.some((fragment) => pathValue.includes(fragment));
+    return fragments.some(fragment => pathValue.includes(fragment));
   }
 
   function collectString(pathValue, rawValue) {
@@ -267,8 +291,8 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
         '.ownerProgram',
         '.catalogSystemName',
         '.catalogSqlName',
-      ])
-      || isPathFragment(pathValue, [
+      ]) ||
+      isPathFragment(pathValue, [
         '.entities.programs.[].name',
         '.entities.externalObjects.[].name',
         '.dependencies.programCalls.[].name',
@@ -398,8 +422,16 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
     }
 
     if (
-      pathEndsWith(pathValue, ['.schema', '.referencesSchema', '.systemSchema', '.library', '.catalogLibrary', '.catalogSchema', '.programLibrary'])
-      || isPathFragment(pathValue, ['.matchedSchemas.[]'])
+      pathEndsWith(pathValue, [
+        '.schema',
+        '.referencesSchema',
+        '.systemSchema',
+        '.library',
+        '.catalogLibrary',
+        '.catalogSchema',
+        '.programLibrary',
+      ]) ||
+      isPathFragment(pathValue, ['.matchedSchemas.[]'])
     ) {
       registerCategoryValue('SCHEMA', value);
       return;
@@ -421,8 +453,8 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
     }
 
     if (
-      pathEndsWith(pathValue, ['.sourceRoot', '.outputRoot', '.outputDir', '.cwd'])
-      || isPathFragment(pathValue, [
+      pathEndsWith(pathValue, ['.sourceRoot', '.outputRoot', '.outputDir', '.cwd']) ||
+      isPathFragment(pathValue, [
         '.sourceFiles.[].path',
         '.sourceSnapshot.files.[].path',
         '.evidence.[].file',
@@ -433,11 +465,7 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
     }
 
     if (
-      isPathFragment(pathValue, [
-        '.sqlStatements.[].text',
-        '.sql.statements.[].text',
-        '.snippet',
-      ])
+      isPathFragment(pathValue, ['.sqlStatements.[].text', '.sql.statements.[].text', '.snippet'])
     ) {
       const matches = value.matchAll(/\b([A-Z][A-Z0-9_#$@]*)[/.]([A-Z][A-Z0-9_#$@]*)\b/g);
       for (const match of matches) {
@@ -449,7 +477,7 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
 
   function collectObject(value, pathSegments = []) {
     if (Array.isArray(value)) {
-      value.forEach((entry) => collectObject(entry, [...pathSegments, '[]']));
+      value.forEach(entry => collectObject(entry, [...pathSegments, '[]']));
       return;
     }
     if (!value || typeof value !== 'object') {
@@ -470,7 +498,10 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
   }
 
   function redactQuotedLiterals(text) {
-    return String(text || '').replace(/'([^']*)'/g, (match, literal) => `'${registerDataValue(literal)}'`);
+    return String(text || '').replace(
+      /'([^']*)'/g,
+      (match, literal) => `'${registerDataValue(literal)}'`
+    );
   }
 
   function redactText(text) {
@@ -483,8 +514,9 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
     }
 
     let redacted = redactQuotedLiterals(raw);
-    const entries = Array.from(replacementMap.entries())
-      .sort((a, b) => b[0].length - a[0].length || a[0].localeCompare(b[0]));
+    const entries = Array.from(replacementMap.entries()).sort(
+      (a, b) => b[0].length - a[0].length || a[0].localeCompare(b[0])
+    );
     for (const [rawValue, placeholder] of entries) {
       redacted = redacted.replace(new RegExp(escapeRegExp(rawValue), 'g'), placeholder);
     }
@@ -498,7 +530,7 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
   function redactObject(value, pathSegments = []) {
     const pathValue = pathSegments.join('.');
     if (Array.isArray(value)) {
-      return value.map((entry) => redactObject(entry, [...pathSegments, '[]']));
+      return value.map(entry => redactObject(entry, [...pathSegments, '[]']));
     }
     if (!value || typeof value !== 'object') {
       if (typeof value === 'string') {
@@ -514,7 +546,10 @@ function createRedactor({ sourceArtifactPaths, safeArtifactPaths, analyzeManifes
         }
         return redactText(value);
       }
-      if (shouldRedactDataValue(pathValue) && (typeof value === 'number' || typeof value === 'bigint')) {
+      if (
+        shouldRedactDataValue(pathValue) &&
+        (typeof value === 'number' || typeof value === 'bigint')
+      ) {
         return registerDataValue(value);
       }
       return value;
@@ -579,16 +614,36 @@ function buildGeneratedArtifactSet(context) {
   }
   redactor.finalize();
 
-  const redactedCanonical = context.canonicalAnalysis ? redactor.redactObject(context.canonicalAnalysis, ['canonical']) : null;
-  const redactedContext = context.context ? redactor.redactObject(context.context, ['context']) : null;
-  const redactedOptimizedContext = context.optimizedContext ? redactor.redactObject(context.optimizedContext, ['optimizedContext']) : null;
-  const redactedAiKnowledge = context.aiKnowledge ? redactor.redactObject(context.aiKnowledge, ['aiKnowledge']) : null;
-  const redactedAnalysisIndex = context.analysisIndex ? redactor.redactObject(context.analysisIndex, ['analysisIndex']) : null;
-  const redactedDependencyGraph = context.dependencyGraph ? redactor.redactObject(context.dependencyGraph, ['dependencyGraph']) : null;
-  const redactedCrossProgramGraph = context.crossProgramGraph ? redactor.redactObject(context.crossProgramGraph, ['crossProgramGraph']) : null;
-  const redactedDb2Metadata = context.db2Metadata ? redactor.redactObject(context.db2Metadata, ['db2Metadata']) : null;
-  const redactedTestData = context.testData ? redactor.redactObject(context.testData, ['testData']) : null;
-  const redactedAnalyzeManifest = context.analyzeManifest ? redactor.redactObject(context.analyzeManifest, ['analyzeManifest']) : null;
+  const redactedCanonical = context.canonicalAnalysis
+    ? redactor.redactObject(context.canonicalAnalysis, ['canonical'])
+    : null;
+  const redactedContext = context.context
+    ? redactor.redactObject(context.context, ['context'])
+    : null;
+  const redactedOptimizedContext = context.optimizedContext
+    ? redactor.redactObject(context.optimizedContext, ['optimizedContext'])
+    : null;
+  const redactedAiKnowledge = context.aiKnowledge
+    ? redactor.redactObject(context.aiKnowledge, ['aiKnowledge'])
+    : null;
+  const redactedAnalysisIndex = context.analysisIndex
+    ? redactor.redactObject(context.analysisIndex, ['analysisIndex'])
+    : null;
+  const redactedDependencyGraph = context.dependencyGraph
+    ? redactor.redactObject(context.dependencyGraph, ['dependencyGraph'])
+    : null;
+  const redactedCrossProgramGraph = context.crossProgramGraph
+    ? redactor.redactObject(context.crossProgramGraph, ['crossProgramGraph'])
+    : null;
+  const redactedDb2Metadata = context.db2Metadata
+    ? redactor.redactObject(context.db2Metadata, ['db2Metadata'])
+    : null;
+  const redactedTestData = context.testData
+    ? redactor.redactObject(context.testData, ['testData'])
+    : null;
+  const redactedAnalyzeManifest = context.analyzeManifest
+    ? redactor.redactObject(context.analyzeManifest, ['analyzeManifest'])
+    : null;
 
   if (redactedCanonical) {
     writeJson(path.join(safeDir, 'canonical-analysis.json'), redactedCanonical);
@@ -617,23 +672,33 @@ function buildGeneratedArtifactSet(context) {
     generated.push(
       buildSafeArtifactPath('dependency-graph.json'),
       buildSafeArtifactPath('dependency-graph.mmd'),
-      buildSafeArtifactPath('dependency-graph.md'),
+      buildSafeArtifactPath('dependency-graph.md')
     );
   }
   if (redactedCrossProgramGraph) {
     writeText(path.join(safeDir, 'program-call-tree.json'), renderJson(redactedCrossProgramGraph));
-    writeText(path.join(safeDir, 'program-call-tree.mmd'), renderMermaid(redactedCrossProgramGraph));
-    writeText(path.join(safeDir, 'program-call-tree.md'), renderCrossProgramMarkdown(redactedCrossProgramGraph));
+    writeText(
+      path.join(safeDir, 'program-call-tree.mmd'),
+      renderMermaid(redactedCrossProgramGraph)
+    );
+    writeText(
+      path.join(safeDir, 'program-call-tree.md'),
+      renderCrossProgramMarkdown(redactedCrossProgramGraph)
+    );
     writeText(path.join(safeDir, 'architecture.html'), renderHtml(redactedCrossProgramGraph));
     generated.push(
       buildSafeArtifactPath('program-call-tree.json'),
       buildSafeArtifactPath('program-call-tree.mmd'),
       buildSafeArtifactPath('program-call-tree.md'),
-      buildSafeArtifactPath('architecture.html'),
+      buildSafeArtifactPath('architecture.html')
     );
   }
   if (redactedContext) {
-    const reportMarkdown = generateMarkdownReport(redactedContext, extractOptimizationReport(context.analyzeManifest), { denseLevel: context && context.denseLevel || null });
+    const reportMarkdown = generateMarkdownReport(
+      redactedContext,
+      extractOptimizationReport(context.analyzeManifest),
+      { denseLevel: (context && context.denseLevel) || null }
+    );
     writeText(path.join(safeDir, 'report.md'), reportMarkdown);
     generated.push(buildSafeArtifactPath('report.md'));
   }
@@ -642,7 +707,7 @@ function buildGeneratedArtifactSet(context) {
       context: redactedContext,
       graph: redactedDependencyGraph,
       optimizedContext: redactedOptimizedContext,
-      denseLevel: context && context.denseLevel || null,
+      denseLevel: (context && context.denseLevel) || null,
       mermaidText: '',
     });
     writeText(path.join(safeDir, 'architecture-report.md'), architectureReport);
@@ -665,9 +730,12 @@ function buildGeneratedArtifactSet(context) {
     writeJson(path.join(safeDir, 'db2-metadata.json'), redactedDb2Metadata);
     writeText(
       path.join(safeDir, 'db2-metadata.md'),
-      renderDb2MetadataMarkdown(redactedDb2Metadata.program, redactedDb2Metadata.tables || []),
+      renderDb2MetadataMarkdown(redactedDb2Metadata.program, redactedDb2Metadata.tables || [])
     );
-    generated.push(buildSafeArtifactPath('db2-metadata.json'), buildSafeArtifactPath('db2-metadata.md'));
+    generated.push(
+      buildSafeArtifactPath('db2-metadata.json'),
+      buildSafeArtifactPath('db2-metadata.md')
+    );
   }
   if (redactedTestData) {
     writeJson(path.join(safeDir, 'test-data.json'), redactedTestData);
@@ -677,8 +745,8 @@ function buildGeneratedArtifactSet(context) {
         redactedTestData.program,
         redactedTestData.rowLimit,
         redactedTestData.tables || [],
-        redactedTestData.notes || [],
-      ),
+        redactedTestData.notes || []
+      )
     );
     generated.push(buildSafeArtifactPath('test-data.json'), buildSafeArtifactPath('test-data.md'));
   }
@@ -699,7 +767,10 @@ function buildGeneratedArtifactSet(context) {
       writeText(safePath, redactor.redactText(readTextIfExists(sourcePath)));
       generated.push(buildSafeArtifactPath(artifactPath));
     } else if (ext === '.json') {
-      writeJson(safePath, redactor.redactObject(readJsonIfExists(sourcePath), ['artifact', artifactPath]));
+      writeJson(
+        safePath,
+        redactor.redactObject(readJsonIfExists(sourcePath), ['artifact', artifactPath])
+      );
       generated.push(buildSafeArtifactPath(artifactPath));
     }
   }
@@ -737,10 +808,10 @@ function buildSafeSharingArtifacts({ outputProgramDir, analyzeManifest = null })
   const sourceArtifactPaths = collectSourceArtifactPaths(resolvedManifest);
   const context = buildArtifactContext(outputProgramDir, sourceArtifactPaths);
   const reproducibility = normalizeReproducibilitySettings(
-    context.analyzeManifest
-    && context.analyzeManifest.inputs
-    && context.analyzeManifest.inputs.options
-    && context.analyzeManifest.inputs.options.reproducibleEnabled,
+    context.analyzeManifest &&
+      context.analyzeManifest.inputs &&
+      context.analyzeManifest.inputs.options &&
+      context.analyzeManifest.inputs.options.reproducibleEnabled
   );
   return buildGeneratedArtifactSet({
     ...context,

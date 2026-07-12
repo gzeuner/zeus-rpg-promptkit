@@ -13,7 +13,9 @@ if (!fs.existsSync(rulesPath)) {
 
 const rules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
 const scanRoot = path.resolve(rootDir, String(rules.scanRoot || 'examples/demo-rpg-mini-system'));
-const includeExtensions = new Set((rules.includeExtensions || []).map((entry) => String(entry).toLowerCase()));
+const includeExtensions = new Set(
+  (rules.includeExtensions || []).map(entry => String(entry).toLowerCase())
+);
 function compilePattern(entry, fallbackName) {
   const name = String(entry.name || fallbackName);
   const raw = String(entry.regex || '');
@@ -28,8 +30,12 @@ function compilePattern(entry, fallbackName) {
   };
 }
 
-const denyPatterns = (rules.denyPatterns || []).map((entry) => compilePattern(entry, 'unnamed-pattern'));
-const allowPatterns = (rules.allowPatterns || []).map((entry) => compilePattern(entry, 'unnamed-allow'));
+const denyPatterns = (rules.denyPatterns || []).map(entry =>
+  compilePattern(entry, 'unnamed-pattern')
+);
+const allowPatterns = (rules.allowPatterns || []).map(entry =>
+  compilePattern(entry, 'unnamed-allow')
+);
 
 function listFiles(dirPath) {
   const collected = [];

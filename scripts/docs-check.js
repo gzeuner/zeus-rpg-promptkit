@@ -20,7 +20,7 @@ const { execSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..');
 const DEMO_SRC = path.join(ROOT, 'examples/demo-rpg-mini-system/rpg_sources');
 const TMP = fs.mkdtempSync(path.join(require('os').tmpdir(), 'zeus-docs-check-'));
-const OUT = path.join(TMP, 'out');
+const _OUT = path.join(TMP, 'out');
 
 function sh(cmd, opts = {}) {
   console.log('> ' + cmd);
@@ -44,11 +44,11 @@ try {
   // Use a simple local doctor that doesn't require full profile for smoke
   try {
     sh('node cli/zeus.js doctor --help');
-  } catch (e) {
-    /* help always works */
+  } catch (_e) {
+    console.log('optional: doctor --help (always works but caught for demo)');
   }
 
-  // 2-3. Analyze demo (documentation mode, reproducible, local only)
+  // 2-3. Analyze demo (documentation mode, reproducible, local only) — REQUIRED golden path
   console.log('=== 2-3. Analyze demo source ===');
   const ANALYZE_OUT = path.join(TMP, 'output');
   sh(
@@ -60,45 +60,89 @@ try {
   assertExists(path.join(progOut, 'canonical-analysis.json'), 'canonical');
   assertExists(path.join(progOut, 'analyze-run-manifest.json'), 'manifest');
 
-  // 4-5. Investigation + search/trace/xref
+  // 4-5. Investigation + search/trace/xref — optional (may require more env)
   console.log('=== 4-5. Investigation + evidence deepening ===');
-  sh(
-    `node cli/zeus.js investigate --program PROGRAM_100 --out ${ANALYZE_OUT} --goal "Golden path demo: impact of ID field change" --search "ID,STATUS" || true`
-  );
-  sh(`node cli/zeus.js trace --field ID --start-program PROGRAM_200 --source ${DEMO_SRC} || true`);
-  sh(`node cli/zeus.js xref --program PROGRAM_200 --source ${DEMO_SRC} || true`);
+  try {
+    sh(
+      `node cli/zeus.js investigate --program PROGRAM_100 --out ${ANALYZE_OUT} --goal "Golden path demo: impact of ID field change" --search "ID,STATUS"`
+    );
+  } catch (e) {
+    console.log('optional: investigate (', e.message, ')');
+  }
+  try {
+    sh(`node cli/zeus.js trace --field ID --start-program PROGRAM_200 --source ${DEMO_SRC}`);
+  } catch (e) {
+    console.log('optional: trace (', e.message, ')');
+  }
+  try {
+    sh(`node cli/zeus.js xref --program PROGRAM_200 --source ${DEMO_SRC}`);
+  } catch (e) {
+    console.log('optional: xref (', e.message, ')');
+  }
 
-  // 6-7. Impact, risk, generate
+  // 6-7. Impact, risk, generate — optional
   console.log('=== 6-7. Impact + risk + generate ===');
-  sh(
-    `node cli/zeus.js impact --target ID --program PROGRAM_100 --out ${ANALYZE_OUT} --source ${DEMO_SRC} || true`
-  );
-  sh(`node cli/zeus.js assess-risk --program PROGRAM_100 --out ${ANALYZE_OUT} || true`);
-  sh(
-    `node cli/zeus.js generate-test --program PROGRAM_100 --format markdown --out ${ANALYZE_OUT} || true`
-  );
-  sh(`node cli/zeus.js generate-checklist --program PROGRAM_100 --out ${ANALYZE_OUT} || true`);
+  try {
+    sh(
+      `node cli/zeus.js impact --target ID --program PROGRAM_100 --out ${ANALYZE_OUT} --source ${DEMO_SRC}`
+    );
+  } catch (e) {
+    console.log('optional: impact (', e.message, ')');
+  }
+  try {
+    sh(`node cli/zeus.js assess-risk --program PROGRAM_100 --out ${ANALYZE_OUT}`);
+  } catch (e) {
+    console.log('optional: assess-risk (', e.message, ')');
+  }
+  try {
+    sh(
+      `node cli/zeus.js generate-test --program PROGRAM_100 --format markdown --out ${ANALYZE_OUT}`
+    );
+  } catch (e) {
+    console.log('optional: generate-test (', e.message, ')');
+  }
+  try {
+    sh(`node cli/zeus.js generate-checklist --program PROGRAM_100 --out ${ANALYZE_OUT}`);
+  } catch (e) {
+    console.log('optional: generate-checklist (', e.message, ')');
+  }
 
-  // 8-9. QA + bundle (use same output root + source-output-root)
+  // 8-9. QA + bundle (use same output root + source-output-root) — bundle assert required
   console.log('=== 8-9. QA + safe bundle ===');
-  sh(`node cli/zeus.js qa --input ${progOut} --format markdown || true`);
-  sh(
-    `node cli/zeus.js bundle --program PROGRAM_100 --source-output-root ${ANALYZE_OUT} --output ${ANALYZE_OUT}/bundle --include-json || true`
-  );
+  try {
+    sh(`node cli/zeus.js qa --input ${progOut} --format markdown`);
+  } catch (e) {
+    console.log('optional: qa (', e.message, ')');
+  }
+  try {
+    sh(
+      `node cli/zeus.js bundle --program PROGRAM_100 --source-output-root ${ANALYZE_OUT} --output ${ANALYZE_OUT}/bundle --include-json`
+    );
+  } catch (e) {
+    console.log('optional: bundle (', e.message, ')');
+  }
 
   assertExists(path.join(ANALYZE_OUT, 'bundle'), 'bundle dir');
 
   // 10-11. Optional MCP surface + verify
   console.log('=== 10-11. MCP surface + verify ===');
-  sh('node cli/zeus.js mcp --help || true');
+  try {
+    sh('node cli/zeus.js mcp --help');
+  } catch (e) {
+    console.log('optional: mcp --help (', e.message, ')');
+  }
 
   // Verify bundle contents (basic)
   const bundleFiles = fs.readdirSync(path.join(ANALYZE_OUT, 'bundle'));
   if (bundleFiles.length === 0) throw new Error('Empty bundle');
 
-  // Run catalog generator (validates examples against current metadata)
+  // Run catalog generator (validates examples against current metadata) — optional
   console.log('=== Catalog generation ===');
-  sh('node cli/zeus.js docs:generate-catalog --output /tmp/zeus-docs-catalog.md || true');
+  try {
+    sh('node cli/zeus.js docs:generate-catalog --output /tmp/zeus-docs-catalog.md');
+  } catch (e) {
+    console.log('optional: catalog gen (', e.message, ')');
+  }
 
   // Basic link/file checks in key docs (offline)
   console.log('=== Basic doc sanity ===');

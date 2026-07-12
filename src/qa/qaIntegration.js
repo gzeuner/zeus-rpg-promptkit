@@ -1,6 +1,6 @@
 /**
  * QA Mode Integration
- * 
+ *
  * This module integrates the QA system into the existing workflow.
  * Non-breaking: All QA features are optional.
  */
@@ -11,7 +11,7 @@ const qaReportGenerator = require('../report/qaReportGenerator');
 
 /**
  * Run QA validation pipeline
- * 
+ *
  * @param {Object} context - Analysis context
  * @param {Object} config - Configuration
  * @returns {Promise<Object>} QA results
@@ -54,9 +54,11 @@ async function runQAPipeline(context, config = {}) {
     }
 
     // Check if should fail hard
-    if (result.status === 'COMPLETED' && result.result && 
-        (result.result.inconsistencies?.length > 0 || result.result.issues?.length > 0)) {
-      
+    if (
+      result.status === 'COMPLETED' &&
+      result.result &&
+      (result.result.inconsistencies?.length > 0 || result.result.issues?.length > 0)
+    ) {
       if (runner.shouldFailHard(qaConfig.qaStrict)) {
         failures.push({
           stage: stageConfig.name,
@@ -83,7 +85,7 @@ async function runQAPipeline(context, config = {}) {
 
 /**
  * Generate QA report
- * 
+ *
  * @param {Object} qaResults - QA results
  * @param {Object} config - Report configuration
  * @returns {Object} Generated report

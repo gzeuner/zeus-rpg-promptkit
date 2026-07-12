@@ -22,6 +22,7 @@ Expose a safe, local-only subset of Zeus capabilities over MCP stdio for AI clie
 - Local path policy: local path inputs for local source-root tools must resolve inside the current workspace root, including absolute paths
 
 Out of scope for MVP:
+
 - remote apply/compile style operations
 - ungated write execution
 - bridge mutation execution (`apply` / non-dry-run compile paths)
@@ -64,6 +65,7 @@ Curated prompts expose the standard Zeus session bootstrap prompt plus prompt-te
 The safe default surface (when running without `--allow-tools`) is defined in `src/mcp/mcpPolicy.js` (includes health, doctor, profiles, analyze, searches, queries, review tools, etc.).
 
 For reproducibility and explicit control, we recommend always passing this single list:
+
 ```bash
 node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run
 ```
@@ -71,6 +73,7 @@ node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus
 Use a smaller subset via `--allow-tools` when you want to restrict the agent more tightly.
 
 Example with a profile (recommended for real-target agent sessions):
+
 ```bash
 source ./config/load-env.sh myenv
 node cli/zeus.js doctor --profile my-profile
@@ -95,7 +98,8 @@ An AI can bootstrap and operate fully via MCP without prior hard-coded knowledge
 9. `tools/call` `zeus.help` "bundle" for usage.
 
 All via stdio, all outputs structured + enveloped, all bounded to workspace, secrets redacted. Use the default allowlist for pure local evidence work.
-```
+
+````
 
 Curated resources currently include:
 
@@ -183,7 +187,7 @@ Default path:
 
 ```text
 .local/mcp/audit/mcp-audit.jsonl
-```
+````
 
 Event contract highlights:
 

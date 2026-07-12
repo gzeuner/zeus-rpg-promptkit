@@ -71,11 +71,16 @@ function resolveCommandContext(args, runtime = {}) {
 }
 
 function requireSubcommand(args) {
-  const subcommand = Array.isArray(args._) && args._.length > 0
-    ? String(args._[0] || '').trim().toLowerCase()
-    : '';
+  const subcommand =
+    Array.isArray(args._) && args._.length > 0
+      ? String(args._[0] || '')
+          .trim()
+          .toLowerCase()
+      : '';
   if (!subcommand) {
-    throw new Error('Missing analyses subcommand. Use: list | register | index | open | show | unregister');
+    throw new Error(
+      'Missing analyses subcommand. Use: list | register | index | open | show | unregister'
+    );
   }
   return subcommand;
 }
@@ -101,7 +106,7 @@ function printWorkspaceList(context) {
     return;
   }
 
-  const rows = workspaces.map((workspace) => {
+  const rows = workspaces.map(workspace => {
     const index = readWorkspaceIndex(workspace.path);
     const programCount = index && Array.isArray(index.programs) ? index.programs.length : 0;
     return [
@@ -113,11 +118,11 @@ function printWorkspaceList(context) {
     ];
   });
 
-  console.log(renderAsciiTable(
-    ['ID', 'Name', 'Output Dir', 'Programs', 'Last Accessed'],
-    rows,
-    { maxCellWidth: 42 },
-  ));
+  console.log(
+    renderAsciiTable(['ID', 'Name', 'Output Dir', 'Programs', 'Last Accessed'], rows, {
+      maxCellWidth: 42,
+    })
+  );
 }
 
 function runRegister(args, context) {
@@ -126,7 +131,9 @@ function runRegister(args, context) {
   }
 
   const workspacePath = path.resolve(context.cwd, String(args.path));
-  const id = args.id ? String(args.id).trim().toLowerCase() : deriveWorkspaceId(path.basename(workspacePath));
+  const id = args.id
+    ? String(args.id).trim().toLowerCase()
+    : deriveWorkspaceId(path.basename(workspacePath));
   const workspace = registerWorkspace(context.registryPath, {
     id,
     name: args.name || id,
@@ -137,7 +144,12 @@ function runRegister(args, context) {
     path: workspacePath,
     outputDir: args['output-dir'] || 'output',
     sourceDir: args['source-dir'] || 'rpg_sources',
-    tags: args.tags ? String(args.tags).split(',').map((entry) => entry.trim()).filter(Boolean) : [],
+    tags: args.tags
+      ? String(args.tags)
+          .split(',')
+          .map(entry => entry.trim())
+          .filter(Boolean)
+      : [],
   });
 
   const indexResult = writeWorkspaceIndex(workspace.path, workspace);

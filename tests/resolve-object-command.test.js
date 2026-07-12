@@ -8,7 +8,10 @@ const {
 
 test('normalizeRequireColumns normalizes scalar and array input', () => {
   assert.deepEqual(normalizeRequireColumns(' order_id '), ['order_id']);
-  assert.deepEqual(normalizeRequireColumns([' order_id ', '', 'CUSTOMER_ID']), ['order_id', 'CUSTOMER_ID']);
+  assert.deepEqual(normalizeRequireColumns([' order_id ', '', 'CUSTOMER_ID']), [
+    'order_id',
+    'CUSTOMER_ID',
+  ]);
   assert.deepEqual(normalizeRequireColumns(false), []);
 });
 

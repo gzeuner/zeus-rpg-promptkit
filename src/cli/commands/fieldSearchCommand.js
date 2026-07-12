@@ -44,7 +44,9 @@ function parseMaxResultsOption(value) {
 }
 
 function normalizeMode(value) {
-  const normalized = String(value || 'all').trim().toLowerCase();
+  const normalized = String(value || 'all')
+    .trim()
+    .toLowerCase();
   if (['local', 'remote', 'xref', 'all'].includes(normalized)) {
     return normalized;
   }
@@ -90,7 +92,9 @@ function printSectionHeader(title) {
 }
 
 function printLocalMatches(result, { verbose }) {
-  printSectionHeader(`Stufe 1 — Lokale Quellsuche: "${result.field}"${result.table ? ` in Tabelle ${result.table}` : ''}`);
+  printSectionHeader(
+    `Stufe 1 — Lokale Quellsuche: "${result.field}"${result.table ? ` in Tabelle ${result.table}` : ''}`
+  );
 
   if (result.matchCount === 0) {
     console.log('  Keine Treffer in lokalen Quellen.');
@@ -110,9 +114,10 @@ function printLocalMatches(result, { verbose }) {
   for (const [file, matches] of Object.entries(byFile)) {
     console.log(`  ${file}`);
     for (const m of matches) {
-      const contexts = m.tableContexts.length > 0
-        ? m.tableContexts.map((tc) => `${tc.intent}:${tc.table}`).join(', ')
-        : '';
+      const contexts =
+        m.tableContexts.length > 0
+          ? m.tableContexts.map(tc => `${tc.intent}:${tc.table}`).join(', ')
+          : '';
       const contextStr = contexts ? `  [${contexts}]` : '';
       console.log(`    Zeile ${m.line}: ${m.text.trim()}${contextStr}`);
       if (verbose && m.contextBefore.length > 0) {
@@ -130,7 +135,7 @@ function printLocalMatches(result, { verbose }) {
   }
 }
 
-function printRemoteMatches(result) {
+function printRemoteMatches(result, args = {}) {
   printSectionHeader(`Stufe 2 — Remote-Suche auf IBM i: ${result.sourceLib}/${result.sourceFile}`);
 
   if (result.error) {
@@ -139,7 +144,8 @@ function printRemoteMatches(result) {
   }
 
   const scanned = result.scannedCount !== undefined ? result.scannedCount : result.memberCount;
-  const elapsed = result.elapsedMs !== undefined ? ` in ${(result.elapsedMs / 1000).toFixed(1)}s` : '';
+  const elapsed =
+    result.elapsedMs !== undefined ? ` in ${(result.elapsedMs / 1000).toFixed(1)}s` : '';
   console.log(`  Durchsucht: ${scanned}/${result.memberCount} Member${elapsed}`);
   console.log(`  Treffer: ${result.matchCount}${result.truncated ? ' (truncated)' : ''}`);
 
@@ -187,14 +193,18 @@ function printXrefMatches(result) {
     return;
   }
 
-  const rows = result.matches.map((row) => [
+  const rows = result.matches.map(row => [
     row.DEP_TYPE || row.DEPTPYE || '',
     row.PROGRAM_LIB || row.DEPLIB || '',
     row.PROGRAM_NAME || row.DEPOBJ || '',
     row.DEPENDS_LIB || row.DEPLIB2 || '',
   ]);
 
-  console.log(renderAsciiTable(['Typ', 'Programm-Library', 'Programm', 'Referenziert in Lib'], rows, { maxCellWidth: 40 }));
+  console.log(
+    renderAsciiTable(['Typ', 'Programm-Library', 'Programm', 'Referenziert in Lib'], rows, {
+      maxCellWidth: 40,
+    })
+  );
 }
 
 /**
@@ -218,7 +228,14 @@ async function runFieldSearch(args) {
   if (!args || !args._cap) {
     try {
       const { capabilities } = require('../../api/zeusApi');
-      const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.field-search', { cwd: process.cwd(), env: process.env, args }, args) : null;
+      const res =
+        capabilities && typeof capabilities.execute === 'function'
+          ? await capabilities.execute(
+              'investigation.field-search',
+              { cwd: process.cwd(), env: process.env, args },
+              args
+            )
+          : null;
       if (res && res.ok) {
         return res.result;
       }
@@ -226,7 +243,9 @@ async function runFieldSearch(args) {
       // fallthrough to local impl
     }
   }
-  if (args && args._cap) { delete args._cap; }
+  if (args && args._cap) {
+    delete args._cap;
+  }
 
   const field = args.field ? String(args.field).toUpperCase().trim() : null;
   if (!field) {
@@ -267,9 +286,10 @@ async function runFieldSearch(args) {
   }
 
   // Resolve source root
-  const sourceRoot = args.source || (profile && profile.sourceRoot)
-    ? path.resolve(process.cwd(), args.source || profile.sourceRoot)
-    : null;
+  const sourceRoot =
+    args.source || (profile && profile.sourceRoot)
+      ? path.resolve(process.cwd(), args.source || profile.sourceRoot)
+      : null;
 
   console.log(`Zeus Field Search — Feld: "${field}"${table ? ` | Tabelle: "${table}"` : ''}`);
   console.log(`Profil: ${args.profile || '(keins)'}`);
@@ -285,7 +305,12 @@ async function runFieldSearch(args) {
       const fileCount = Object.keys(sourceFiles).length;
       console.log(`  ${fileCount} Dateien geladen`);
 
-      const localResult = searchLocalSources(sourceFiles, { field, table, maxResults, contextLines: verbose ? 2 : 0 });
+      const localResult = searchLocalSources(sourceFiles, {
+        field,
+        table,
+        maxResults,
+        contextLines: verbose ? 2 : 0,
+      });
       printLocalMatches(localResult, { verbose });
     }
   }
@@ -295,7 +320,13 @@ async function runFieldSearch(args) {
     const host = fetchConfig && fetchConfig.host ? fetchConfig.host : null;
     const user = fetchConfig && fetchConfig.user ? fetchConfig.user : null;
     const password = fetchConfig && fetchConfig.password ? fetchConfig.password : null;
-    const sourceLib = String(args['source-lib'] || (fetchConfig && (fetchConfig.sourceLib || fetchConfig.sourceLibrary)) || '').trim().toUpperCase();
+    const sourceLib = String(
+      args['source-lib'] ||
+        (fetchConfig && (fetchConfig.sourceLib || fetchConfig.sourceLibrary)) ||
+        ''
+    )
+      .trim()
+      .toUpperCase();
     const sourceFile = args['source-file'] || 'QRPGLESRC';
 
     if (!host || !user || !password) {
@@ -309,9 +340,10 @@ async function runFieldSearch(args) {
       // (fully buffered) Java process is still running.
       let progressFile = args['progress-file'] ? String(args['progress-file']).trim() : null;
       if (!progressFile) {
-        const outputRoot = (analyzeConfig && analyzeConfig.outputRoot)
-          ? path.resolve(process.cwd(), analyzeConfig.outputRoot)
-          : process.cwd();
+        const outputRoot =
+          analyzeConfig && analyzeConfig.outputRoot
+            ? path.resolve(process.cwd(), analyzeConfig.outputRoot)
+            : process.cwd();
         progressFile = path.join(outputRoot, 'field-search-progress.txt');
       }
       try {
@@ -333,10 +365,18 @@ async function runFieldSearch(args) {
       console.log(`  Tipp: in zweitem Terminal mitlesen mit  Get-Content -Wait '${progressFile}'`);
       try {
         const remoteResult = searchRemoteSources({
-          host, user, password, sourceLib, sourceFile, field, table, maxResults,
-          progressFile, threads,
+          host,
+          user,
+          password,
+          sourceLib,
+          sourceFile,
+          field,
+          table,
+          maxResults,
+          progressFile,
+          threads,
         });
-        printRemoteMatches(remoteResult);
+        printRemoteMatches(remoteResult, args);
       } catch (err) {
         console.log(`\n[Stufe 2] Fehler: ${err.message}`);
       }
@@ -351,7 +391,9 @@ async function runFieldSearch(args) {
     if (!hasDb) {
       console.log('\n[Stufe 3] Keine Datenbankverbindung — übersprungen.');
     } else {
-      console.log(`\n[Stufe 3] Suche Datei-Querverweise für Tabelle "${table}" in QSYS2.SYSDEPEND...`);
+      console.log(
+        `\n[Stufe 3] Suche Datei-Querverweise für Tabelle "${table}" in QSYS2.SYSDEPEND...`
+      );
       try {
         const queryFn = async (sql, maxRows) => {
           const raw = runReadOnlyDb2Query({
@@ -373,7 +415,9 @@ async function runFieldSearch(args) {
       }
     }
   } else if (runXref && !table) {
-    console.log('\n[Stufe 3] --table nicht angegeben — Stufe 3 übersprungen (benötigt Tabellenname).');
+    console.log(
+      '\n[Stufe 3] --table nicht angegeben — Stufe 3 übersprungen (benötigt Tabellenname).'
+    );
   }
 
   console.log('');

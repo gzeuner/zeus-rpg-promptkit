@@ -15,15 +15,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
-const { generateDeploymentChecklist, estimateDeploymentTimeline, identifyRiskAreas } = require('../../report/deploymentChecklistBuilder');
+const {
+  generateDeploymentChecklist,
+  estimateDeploymentTimeline,
+  identifyRiskAreas,
+} = require('../../report/deploymentChecklistBuilder');
 
 async function runGenerateChecklist(args) {
   // Route through capability (package 08) - additive; cap uses checklist builder directly
   try {
     const { capabilities } = require('../../api/zeusApi');
-    const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.generate-checklist', { cwd: process.cwd(), env: process.env, args }, args) : null;
+    const res =
+      capabilities && typeof capabilities.execute === 'function'
+        ? await capabilities.execute(
+            'investigation.generate-checklist',
+            { cwd: process.cwd(), env: process.env, args },
+            args
+          )
+        : null;
     if (res && res.ok && res.result) {
-      const out = (typeof res.result === 'string') ? res.result : JSON.stringify(res.result, null, 2);
+      const out = typeof res.result === 'string' ? res.result : JSON.stringify(res.result, null, 2);
       console.log(out);
       return;
     }
@@ -41,7 +52,9 @@ async function runGenerateChecklist(args) {
 
   try {
     const program = String(args.program).trim().toUpperCase();
-    const changeType = String(args.type || 'CODE_CHANGE').trim().toUpperCase(); // 'DDL_CHANGE', 'CODE_CHANGE', 'BOTH'
+    const changeType = String(args.type || 'CODE_CHANGE')
+      .trim()
+      .toUpperCase(); // 'DDL_CHANGE', 'CODE_CHANGE', 'BOTH'
     if (!['DDL_CHANGE', 'CODE_CHANGE', 'BOTH'].includes(changeType)) {
       console.error(`Invalid type "${changeType}". Use --type DDL_CHANGE, CODE_CHANGE, or BOTH.`);
       process.exit(2);
@@ -74,7 +87,8 @@ async function runGenerateChecklist(args) {
     }
 
     // Generate checklist
-    const hasCriticalPath = riskAssessment && riskAssessment.summary && riskAssessment.summary.riskLevel === 'RED';
+    const hasCriticalPath =
+      riskAssessment && riskAssessment.summary && riskAssessment.summary.riskLevel === 'RED';
     const affectedPrograms = args.affected ? args.affected.split(',') : [program];
 
     const checklist = generateDeploymentChecklist({
@@ -115,7 +129,7 @@ async function runGenerateChecklist(args) {
 
     if (riskAreas.length > 0) {
       document += `\n## Identified Risk Areas\n\n`;
-      riskAreas.forEach((risk) => {
+      riskAreas.forEach(risk => {
         const sevEmoji = risk.severity === 'CRITICAL' ? '🔴' : '🟡';
         document += `${sevEmoji} **${risk.type}** (${risk.severity})\n`;
         document += `   Description: ${risk.description}\n`;

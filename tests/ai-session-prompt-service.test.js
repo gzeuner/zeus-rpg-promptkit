@@ -32,23 +32,25 @@ test('extractSessionPromptTemplate reads the fenced text block', () => {
 });
 
 test('extractSessionPromptTemplate stops at the first closing fence inside the section', () => {
-  const promptTemplate = extractSessionPromptTemplate([
-    '# Title',
-    '',
-    '## Session Start Prompt (Copy/Paste)',
-    '',
-    '````text',
-    'Prompt body line 1',
-    '```bash',
-    'echo nested example',
-    '```',
-    AI_SESSION_PROMPT_PLACEHOLDER,
-    '````',
-    '',
-    'Additional notes in the same section should not be captured.',
-    '',
-    '## Notes',
-  ].join('\n'));
+  const promptTemplate = extractSessionPromptTemplate(
+    [
+      '# Title',
+      '',
+      '## Session Start Prompt (Copy/Paste)',
+      '',
+      '````text',
+      'Prompt body line 1',
+      '```bash',
+      'echo nested example',
+      '```',
+      AI_SESSION_PROMPT_PLACEHOLDER,
+      '````',
+      '',
+      'Additional notes in the same section should not be captured.',
+      '',
+      '## Notes',
+    ].join('\n')
+  );
 
   assert.match(promptTemplate, /Prompt body line 1/);
   assert.match(promptTemplate, /echo nested example/);
@@ -109,11 +111,14 @@ test('AI session prompt service fails safely when the template block is missing'
   });
 
   assert.throws(
-    () => service.generatePrompt({
-      profile: 'development',
-      goal: 'Review dependencies.',
-    }),
-    (error) => error instanceof AiSessionPromptError && /Session Start Prompt text block/i.test(error.message),
+    () =>
+      service.generatePrompt({
+        profile: 'development',
+        goal: 'Review dependencies.',
+      }),
+    error =>
+      error instanceof AiSessionPromptError &&
+      /Session Start Prompt text block/i.test(error.message)
   );
 });
 
@@ -123,10 +128,12 @@ test('AI session prompt service fails safely when the placeholder is missing', (
   });
 
   assert.throws(
-    () => service.generatePrompt({
-      profile: 'development',
-      goal: 'Review dependencies.',
-    }),
-    (error) => error instanceof AiSessionPromptError && /session goal placeholder/i.test(error.message),
+    () =>
+      service.generatePrompt({
+        profile: 'development',
+        goal: 'Review dependencies.',
+      }),
+    error =>
+      error instanceof AiSessionPromptError && /session goal placeholder/i.test(error.message)
   );
 });

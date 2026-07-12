@@ -43,7 +43,14 @@ async function runXref(args) {
   if (!args || !args._cap) {
     try {
       const { capabilities } = require('../../api/zeusApi');
-      const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.xref', { cwd: process.cwd(), env: process.env, args }, args) : null;
+      const res =
+        capabilities && typeof capabilities.execute === 'function'
+          ? await capabilities.execute(
+              'investigation.xref',
+              { cwd: process.cwd(), env: process.env, args },
+              args
+            )
+          : null;
       if (res && res.ok) {
         return res.result;
       }
@@ -51,7 +58,9 @@ async function runXref(args) {
       // fallthrough
     }
   }
-  if (args && args._cap) { delete args._cap; }
+  if (args && args._cap) {
+    delete args._cap;
+  }
 
   const program = args.program ? String(args.program).trim().toUpperCase() : null;
   const table = args.table ? String(args.table).trim().toUpperCase() : null;
@@ -62,7 +71,9 @@ async function runXref(args) {
     process.exit(2);
   }
 
-  console.log(`Zeus Xref — ${program ? 'Program: ' + program : ''}${table ? 'Table: ' + table : ''}${field ? ' | Field: ' + field : ''}`);
+  console.log(
+    `Zeus Xref — ${program ? 'Program: ' + program : ''}${table ? 'Table: ' + table : ''}${field ? ' | Field: ' + field : ''}`
+  );
 
   let profile;
   let analyzeConfig;
@@ -74,7 +85,9 @@ async function runXref(args) {
     console.warn('Profile warning:', e.message);
   }
 
-  const dbConfig = resolveAnalyzeDbConfig(analyzeConfig || {}, 'metadata') || (profile ? resolveAnalyzeDbConfig({ db: profile.db }, 'metadata') : null);
+  const dbConfig =
+    resolveAnalyzeDbConfig(analyzeConfig || {}, 'metadata') ||
+    (profile ? resolveAnalyzeDbConfig({ db: profile.db }, 'metadata') : null);
   const hasDb = dbConfig && dbConfig.host && dbConfig.user && dbConfig.password;
 
   const results = { target: program || table, type: program ? 'program' : 'table', refs: [] };
@@ -85,7 +98,11 @@ async function runXref(args) {
       try {
         const dbConfigForXref = dbConfig;
         const queryFn = async (sql, maxRows) => {
-          const raw = runReadOnlyDb2Query({ dbConfig: dbConfigForXref, query: sql, maxRows: maxRows || 100 });
+          const raw = runReadOnlyDb2Query({
+            dbConfig: dbConfigForXref,
+            query: sql,
+            maxRows: maxRows || 100,
+          });
           return { rows: raw.rows || [], columns: raw.columns || [] };
         };
         const xrefRes = await searchFileXrefViaSql({ runQuery: queryFn, table, schema: null });
@@ -115,7 +132,12 @@ async function runXref(args) {
         const q = runReadOnlyDb2Query({ dbConfig, query: sql, maxRows: 100 });
         results.refs = q.rows || [];
         if (results.refs.length) {
-          console.log(renderAsciiTable(['REFERENCED_BY', 'LIB', 'TYPE'], results.refs.map(r => [r.REFERENCED_BY, r.LIB, r.TYPE])));
+          console.log(
+            renderAsciiTable(
+              ['REFERENCED_BY', 'LIB', 'TYPE'],
+              results.refs.map(r => [r.REFERENCED_BY, r.LIB, r.TYPE])
+            )
+          );
         } else {
           console.log('No references found via catalog.');
         }
@@ -124,12 +146,16 @@ async function runXref(args) {
       }
     }
   } else {
-    console.log('\n[Catalog] No DB config — using local/graph only (run with profile for catalogs).');
+    console.log(
+      '\n[Catalog] No DB config — using local/graph only (run with profile for catalogs).'
+    );
   }
 
   // If source available, could fall back to field-search xref, but for now note it.
   if (args.source || (profile && profile.sourceRoot)) {
-    console.log('\n[Source] For deeper local xref use "field-search --mode xref --table ..." or full analyze.');
+    console.log(
+      '\n[Source] For deeper local xref use "field-search --mode xref --table ..." or full analyze.'
+    );
   }
 
   if (args.json) {

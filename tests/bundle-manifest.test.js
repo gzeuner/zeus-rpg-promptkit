@@ -28,36 +28,45 @@ test('buildOutputBundle prefers analyze-run-manifest artifacts over directory sc
   const { tempRoot, outputRoot, bundleRoot, programOutputDir } = createTempBundleProject();
 
   try {
-    fs.writeFileSync(path.join(programOutputDir, 'context.json'), '{"program":"ORDERPGM"}\n', 'utf8');
+    fs.writeFileSync(
+      path.join(programOutputDir, 'context.json'),
+      '{"program":"ORDERPGM"}\n',
+      'utf8'
+    );
     fs.writeFileSync(path.join(programOutputDir, 'report.md'), '# Report\n', 'utf8');
     fs.writeFileSync(path.join(programOutputDir, 'legacy.json'), '{"legacy":true}\n', 'utf8');
-    fs.writeFileSync(path.join(programOutputDir, 'analyze-run-manifest.json'), `${JSON.stringify({
-      run: {
-        status: 'succeeded',
-        completedAt: '2026-03-16T10:00:00.000Z',
-      },
-      inputs: {
-        importManifest: {
-          manifestFile: 'zeus-import-manifest.json',
-          schemaVersion: 2,
-          fetchedAt: '2026-03-16T09:58:00.000Z',
-          sourceLib: 'APPLIB',
-          transportUsed: 'sftp',
-          encodingPolicy: 'UTF-8 stream files (CCSID 1208)',
-          fileCount: 1,
-          exportedFileCount: 1,
-          failedFileCount: 0,
-          traceableFileCount: 1,
+    fs.writeFileSync(
+      path.join(programOutputDir, 'analyze-run-manifest.json'),
+      `${JSON.stringify(
+        {
+          run: {
+            status: 'succeeded',
+            completedAt: '2026-03-16T10:00:00.000Z',
+          },
+          inputs: {
+            importManifest: {
+              manifestFile: 'zeus-import-manifest.json',
+              schemaVersion: 2,
+              fetchedAt: '2026-03-16T09:58:00.000Z',
+              sourceLib: 'APPLIB',
+              transportUsed: 'sftp',
+              encodingPolicy: 'UTF-8 stream files (CCSID 1208)',
+              fileCount: 1,
+              exportedFileCount: 1,
+              failedFileCount: 0,
+              traceableFileCount: 1,
+            },
+            sourceSnapshot: {
+              fingerprint: 'abc123',
+            },
+          },
+          artifacts: [{ path: 'context.json' }, { path: 'report.md' }],
         },
-        sourceSnapshot: {
-          fingerprint: 'abc123',
-        },
-      },
-      artifacts: [
-        { path: 'context.json' },
-        { path: 'report.md' },
-      ],
-    }, null, 2)}\n`, 'utf8');
+        null,
+        2
+      )}\n`,
+      'utf8'
+    );
 
     const result = buildOutputBundle({
       program: 'ORDERPGM',
@@ -82,7 +91,7 @@ test('buildOutputBundle prefers analyze-run-manifest artifacts over directory sc
     assert.equal(result.manifest.summary.totalFiles, 3);
     assert.ok(result.manifest.summary.totalSizeBytes > 0);
     assert.deepEqual(
-      result.manifest.artifacts.map((artifact) => ({
+      result.manifest.artifacts.map(artifact => ({
         path: artifact.path,
         kind: artifact.kind,
         source: artifact.source,
@@ -91,12 +100,15 @@ test('buildOutputBundle prefers analyze-run-manifest artifacts over directory sc
         { path: 'analyze-run-manifest.json', kind: 'json', source: 'bundle-scan' },
         { path: 'context.json', kind: 'json', source: 'analyze-manifest' },
         { path: 'report.md', kind: 'markdown', source: 'analyze-manifest' },
-      ],
+      ]
     );
-    assert.ok(result.manifest.artifacts.find((artifact) => artifact.path === 'context.json').sha256);
+    assert.ok(result.manifest.artifacts.find(artifact => artifact.path === 'context.json').sha256);
 
     const zip = new AdmZip(result.zipPath);
-    const entryNames = zip.getEntries().map((entry) => entry.entryName).sort();
+    const entryNames = zip
+      .getEntries()
+      .map(entry => entry.entryName)
+      .sort();
     assert.deepEqual(entryNames, [
       'README.txt',
       'analyze-run-manifest.json',
@@ -113,56 +125,72 @@ test('buildOutputBundle can package explicit workflow preset artifacts with pres
   const { tempRoot, outputRoot, bundleRoot, programOutputDir } = createTempBundleProject();
 
   try {
-    fs.writeFileSync(path.join(programOutputDir, 'analysis-index.json'), '{"kind":"analysis-task-index"}\n', 'utf8');
+    fs.writeFileSync(
+      path.join(programOutputDir, 'analysis-index.json'),
+      '{"kind":"analysis-task-index"}\n',
+      'utf8'
+    );
     fs.writeFileSync(path.join(programOutputDir, 'report.md'), '# Report\n', 'utf8');
-    fs.writeFileSync(path.join(programOutputDir, 'context.json'), '{"program":"ORDERPGM"}\n', 'utf8');
-    fs.writeFileSync(path.join(programOutputDir, 'analyze-run-manifest.json'), `${JSON.stringify({
-      run: {
-        status: 'succeeded',
-        completedAt: '2026-04-09T10:00:00.000Z',
-      },
-      inputs: {
-        importManifest: {
-          manifestFile: 'zeus-import-manifest.json',
-          schemaVersion: 2,
-          sourceLib: 'APPLIB',
-          transportUsed: 'sftp',
-          encodingPolicy: 'UTF-8 stream files (CCSID 1208)',
-          fileCount: 3,
-          exportedFileCount: 3,
-          failedFileCount: 0,
-          traceableFileCount: 3,
-        },
-        options: {
-          workflowPreset: {
-            name: 'onboarding',
-            title: 'Onboarding',
-            analyzeMode: 'documentation',
-            promptTemplates: ['documentation'],
-            workflowKeys: ['documentation'],
-            bundleArtifacts: ['analyze-run-manifest.json', 'analysis-index.json', 'report.md'],
-            reviewWorkflow: {
-              intendedAudience: ['New engineers'],
-              keyQuestionsAnswered: ['Which artifacts explain the program quickly?'],
-              expectedDecisions: ['Decide whether deeper architecture review is needed.'],
-              interpretationGuidance: ['Start with report.md before deeper review.'],
-              requiredInputs: ['Prompt-ready documentation artifacts.'],
-              recommendedOutputs: [
-                { path: 'report.md', purpose: 'Quick orientation summary.' },
-              ],
+    fs.writeFileSync(
+      path.join(programOutputDir, 'context.json'),
+      '{"program":"ORDERPGM"}\n',
+      'utf8'
+    );
+    fs.writeFileSync(
+      path.join(programOutputDir, 'analyze-run-manifest.json'),
+      `${JSON.stringify(
+        {
+          run: {
+            status: 'succeeded',
+            completedAt: '2026-04-09T10:00:00.000Z',
+          },
+          inputs: {
+            importManifest: {
+              manifestFile: 'zeus-import-manifest.json',
+              schemaVersion: 2,
+              sourceLib: 'APPLIB',
+              transportUsed: 'sftp',
+              encodingPolicy: 'UTF-8 stream files (CCSID 1208)',
+              fileCount: 3,
+              exportedFileCount: 3,
+              failedFileCount: 0,
+              traceableFileCount: 3,
+            },
+            options: {
+              workflowPreset: {
+                name: 'onboarding',
+                title: 'Onboarding',
+                analyzeMode: 'documentation',
+                promptTemplates: ['documentation'],
+                workflowKeys: ['documentation'],
+                bundleArtifacts: ['analyze-run-manifest.json', 'analysis-index.json', 'report.md'],
+                reviewWorkflow: {
+                  intendedAudience: ['New engineers'],
+                  keyQuestionsAnswered: ['Which artifacts explain the program quickly?'],
+                  expectedDecisions: ['Decide whether deeper architecture review is needed.'],
+                  interpretationGuidance: ['Start with report.md before deeper review.'],
+                  requiredInputs: ['Prompt-ready documentation artifacts.'],
+                  recommendedOutputs: [
+                    { path: 'report.md', purpose: 'Quick orientation summary.' },
+                  ],
+                },
+              },
+            },
+            sourceSnapshot: {
+              fingerprint: 'wf-123',
             },
           },
+          artifacts: [
+            { path: 'analysis-index.json', kind: 'json', sizeBytes: 32, sha256: 'a' },
+            { path: 'report.md', kind: 'markdown', sizeBytes: 9, sha256: 'b' },
+            { path: 'context.json', kind: 'json', sizeBytes: 24, sha256: 'c' },
+          ],
         },
-        sourceSnapshot: {
-          fingerprint: 'wf-123',
-        },
-      },
-      artifacts: [
-        { path: 'analysis-index.json', kind: 'json', sizeBytes: 32, sha256: 'a' },
-        { path: 'report.md', kind: 'markdown', sizeBytes: 9, sha256: 'b' },
-        { path: 'context.json', kind: 'json', sizeBytes: 24, sha256: 'c' },
-      ],
-    }, null, 2)}\n`, 'utf8');
+        null,
+        2
+      )}\n`,
+      'utf8'
+    );
 
     const result = buildOutputBundle({
       program: 'ORDERPGM',
@@ -181,11 +209,17 @@ test('buildOutputBundle can package explicit workflow preset artifacts with pres
     assert.equal(result.manifest.workflowPreset.name, 'onboarding');
     assert.equal(result.manifest.sourceProvenance.fileCount, 3);
     assert.deepEqual(result.manifest.workflowPreset.promptTemplates, ['documentation']);
-    assert.match(result.manifest.workflowPreset.reviewWorkflow.intendedAudience.join('\n'), /New engineers/);
+    assert.match(
+      result.manifest.workflowPreset.reviewWorkflow.intendedAudience.join('\n'),
+      /New engineers/
+    );
     assert.equal(path.basename(result.zipPath), 'ORDERPGM-onboarding-bundle.zip');
 
     const zip = new AdmZip(result.zipPath);
-    const entryNames = zip.getEntries().map((entry) => entry.entryName).sort();
+    const entryNames = zip
+      .getEntries()
+      .map(entry => entry.entryName)
+      .sort();
     assert.deepEqual(entryNames, [
       'README.txt',
       'analysis-index.json',

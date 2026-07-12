@@ -15,42 +15,47 @@ function sectionList(values) {
   if (!values || values.length === 0) {
     return '- None detected';
   }
-  return values.map((value) => {
-    if (typeof value === 'string') {
-      return `- ${value}`;
-    }
-
-    if (value && typeof value === 'object') {
-      if (value.path) {
-        const details = [];
-        if (typeof value.sizeBytes === 'number') details.push(`${value.sizeBytes} bytes`);
-        if (typeof value.lines === 'number') details.push(`${value.lines} lines`);
-        if (value.sourceType) details.push(value.sourceType);
-        if (value.normalization && value.normalization.status) details.push(`normalization: ${value.normalization.status}`);
-        return `- ${value.path}${details.length ? ` (${details.join(', ')})` : ''}`;
+  return values
+    .map(value => {
+      if (typeof value === 'string') {
+        return `- ${value}`;
       }
 
-      if (value.name && value.kind) {
-        const extras = [];
-        if (value.resolutionSource && value.resolutionSource !== 'SOURCE') extras.push(value.resolutionSource);
-        if (value.catalogObjectType) extras.push(value.catalogObjectType);
-        return `- ${value.name} (${[value.kind, ...extras].filter(Boolean).join(', ')})`;
+      if (value && typeof value === 'object') {
+        if (value.path) {
+          const details = [];
+          if (typeof value.sizeBytes === 'number') details.push(`${value.sizeBytes} bytes`);
+          if (typeof value.lines === 'number') details.push(`${value.lines} lines`);
+          if (value.sourceType) details.push(value.sourceType);
+          if (value.normalization && value.normalization.status)
+            details.push(`normalization: ${value.normalization.status}`);
+          return `- ${value.path}${details.length ? ` (${details.join(', ')})` : ''}`;
+        }
+
+        if (value.name && value.kind) {
+          const extras = [];
+          if (value.resolutionSource && value.resolutionSource !== 'SOURCE')
+            extras.push(value.resolutionSource);
+          if (value.catalogObjectType) extras.push(value.catalogObjectType);
+          return `- ${value.name} (${[value.kind, ...extras].filter(Boolean).join(', ')})`;
+        }
+
+        if (value.name) {
+          const extras = [];
+          if (value.resolutionSource && value.resolutionSource !== 'SOURCE')
+            extras.push(value.resolutionSource);
+          if (value.catalogObjectType) extras.push(value.catalogObjectType);
+          return `- ${value.name}${extras.length ? ` (${extras.join(', ')})` : ''}`;
+        }
+
+        if (value.text && value.type) {
+          return `- [${value.type}] ${value.text}`;
+        }
       }
 
-      if (value.name) {
-        const extras = [];
-        if (value.resolutionSource && value.resolutionSource !== 'SOURCE') extras.push(value.resolutionSource);
-        if (value.catalogObjectType) extras.push(value.catalogObjectType);
-        return `- ${value.name}${extras.length ? ` (${extras.join(', ')})` : ''}`;
-      }
-
-      if (value.text && value.type) {
-        return `- [${value.type}] ${value.text}`;
-      }
-    }
-
-    return `- ${String(value)}`;
-  }).join('\n');
+      return `- ${String(value)}`;
+    })
+    .join('\n');
 }
 
 function sourceNormalizationSection(sourceNormalization) {
@@ -59,22 +64,42 @@ function sourceNormalizationSection(sourceNormalization) {
 }
 
 function sourceTypeAnalysisSection(sourceTypeAnalysis) {
-  const summary = (sourceTypeAnalysis && sourceTypeAnalysis.summary) || { byType: {}, byFamily: {} };
-  const byType = Object.keys(summary.byType || {}).length > 0
-    ? Object.entries(summary.byType).map(([key, value]) => `- ${key}: ${value}`).join('\n')
-    : '- None detected';
+  const summary = (sourceTypeAnalysis && sourceTypeAnalysis.summary) || {
+    byType: {},
+    byFamily: {},
+  };
+  const byType =
+    Object.keys(summary.byType || {}).length > 0
+      ? Object.entries(summary.byType)
+          .map(([key, value]) => `- ${key}: ${value}`)
+          .join('\n')
+      : '- None detected';
   const clCommands = (sourceTypeAnalysis && sourceTypeAnalysis.commands) || [];
   const objectUsages = (sourceTypeAnalysis && sourceTypeAnalysis.objectUsages) || [];
   const ddsFiles = (sourceTypeAnalysis && sourceTypeAnalysis.ddsFiles) || [];
-  const commandLines = clCommands.length > 0
-    ? clCommands.slice(0, 10).map((entry) => `- ${entry.command || entry.name}: ${entry.text}`).join('\n')
-    : '- None detected';
-  const objectLines = objectUsages.length > 0
-    ? objectUsages.slice(0, 10).map((entry) => `- ${entry.name} (${entry.objectType}) via ${entry.command}`).join('\n')
-    : '- None detected';
-  const ddsLines = ddsFiles.length > 0
-    ? ddsFiles.map((entry) => `- ${entry.name} [${entry.kind}]${(entry.recordFormats || []).length > 0 ? ` formats: ${(entry.recordFormats || []).join(', ')}` : ''}${(entry.referencedFiles || []).length > 0 ? ` refs: ${(entry.referencedFiles || []).join(', ')}` : ''}`).join('\n')
-    : '- None detected';
+  const commandLines =
+    clCommands.length > 0
+      ? clCommands
+          .slice(0, 10)
+          .map(entry => `- ${entry.command || entry.name}: ${entry.text}`)
+          .join('\n')
+      : '- None detected';
+  const objectLines =
+    objectUsages.length > 0
+      ? objectUsages
+          .slice(0, 10)
+          .map(entry => `- ${entry.name} (${entry.objectType}) via ${entry.command}`)
+          .join('\n')
+      : '- None detected';
+  const ddsLines =
+    ddsFiles.length > 0
+      ? ddsFiles
+          .map(
+            entry =>
+              `- ${entry.name} [${entry.kind}]${(entry.recordFormats || []).length > 0 ? ` formats: ${(entry.recordFormats || []).join(', ')}` : ''}${(entry.referencedFiles || []).length > 0 ? ` refs: ${(entry.referencedFiles || []).join(', ')}` : ''}`
+          )
+          .join('\n')
+      : '- None detected';
 
   return `## Source Type Analysis\n### Source Types\n${byType}\n\n### CL Commands\n${commandLines}\n\n### CL Object Usage\n${objectLines}\n\n### DDS Metadata\n${ddsLines}\n`;
 }
@@ -106,23 +131,26 @@ function nativeFileUsageSection(nativeFileUsage) {
   const summary = (nativeFileUsage && nativeFileUsage.summary) || {};
   const files = (nativeFileUsage && nativeFileUsage.files) || [];
 
-  const detailLines = files.length > 0
-    ? files.map((file) => {
-      const flags = [];
-      if (file.kind) flags.push(file.kind);
-      if (file.access && file.access.read) flags.push('READ');
-      if (file.access && file.access.write) flags.push('WRITE');
-      if (file.access && file.access.update) flags.push('UPDATE');
-      if (file.access && file.access.delete) flags.push('DELETE');
-      if (file.access && file.access.position) flags.push('POSITION');
-      if (file.access && file.access.display) flags.push('DISPLAY');
-      if (file.keyed) flags.push('KEYED');
-      if (file.access && file.access.interactive) flags.push('INTERACTIVE');
-      if (file.access && file.access.mutating) flags.push('MUTATING');
-      const recordFormats = (file.recordFormats || []).map((entry) => entry.name).join(', ');
-      return `- ${file.name}${flags.length ? ` [${flags.join(', ')}]` : ''}${recordFormats ? ` record formats: ${recordFormats}` : ''}`;
-    }).join('\n')
-    : '- None detected';
+  const detailLines =
+    files.length > 0
+      ? files
+          .map(file => {
+            const flags = [];
+            if (file.kind) flags.push(file.kind);
+            if (file.access && file.access.read) flags.push('READ');
+            if (file.access && file.access.write) flags.push('WRITE');
+            if (file.access && file.access.update) flags.push('UPDATE');
+            if (file.access && file.access.delete) flags.push('DELETE');
+            if (file.access && file.access.position) flags.push('POSITION');
+            if (file.access && file.access.display) flags.push('DISPLAY');
+            if (file.keyed) flags.push('KEYED');
+            if (file.access && file.access.interactive) flags.push('INTERACTIVE');
+            if (file.access && file.access.mutating) flags.push('MUTATING');
+            const recordFormats = (file.recordFormats || []).map(entry => entry.name).join(', ');
+            return `- ${file.name}${flags.length ? ` [${flags.join(', ')}]` : ''}${recordFormats ? ` record formats: ${recordFormats}` : ''}`;
+          })
+          .join('\n')
+      : '- None detected';
 
   return `## Native File I/O\n- Native Files: ${summary.fileCount || 0}\n- Read-Only Files: ${summary.readOnlyFileCount || 0}\n- Mutating Files: ${summary.mutatingFileCount || 0}\n- Interactive Files: ${summary.interactiveFileCount || 0}\n- Workstation Files: ${summary.workstationFileCount || 0}\n- Printer Files: ${summary.printerFileCount || 0}\n- Keyed Files: ${summary.keyedFileCount || 0}\n- Record Formats: ${summary.recordFormatCount || 0}\n\n${detailLines}\n`;
 }
@@ -131,20 +159,30 @@ function sqlSection(sql) {
   const summary = (sql && sql.summary) || {};
   const statements = (sql && sql.statements) || [];
 
-  const detailLines = statements.length > 0
-    ? statements.map((statement) => {
-      const flags = [];
-      if (statement.intent && statement.intent !== 'OTHER') flags.push(statement.intent);
-      if (statement.dynamic) flags.push('DYNAMIC');
-      if (statement.unresolved) flags.push('UNRESOLVED');
-      const tables = (statement.tables || []).length > 0 ? ` tables: ${(statement.tables || []).join(', ')}` : '';
-      const hostVariables = (statement.hostVariables || []).length > 0 ? ` host vars: ${(statement.hostVariables || []).join(', ')}` : '';
-      const cursors = (statement.cursors || []).length > 0
-        ? ` cursors: ${(statement.cursors || []).map((cursor) => `${cursor.name}/${cursor.action}`).join(', ')}`
-        : '';
-      return `- [${statement.type}${flags.length ? `/${flags.join('/')}` : ''}] ${statement.text}${tables}${hostVariables}${cursors}`;
-    }).join('\n')
-    : '- None detected';
+  const detailLines =
+    statements.length > 0
+      ? statements
+          .map(statement => {
+            const flags = [];
+            if (statement.intent && statement.intent !== 'OTHER') flags.push(statement.intent);
+            if (statement.dynamic) flags.push('DYNAMIC');
+            if (statement.unresolved) flags.push('UNRESOLVED');
+            const tables =
+              (statement.tables || []).length > 0
+                ? ` tables: ${(statement.tables || []).join(', ')}`
+                : '';
+            const hostVariables =
+              (statement.hostVariables || []).length > 0
+                ? ` host vars: ${(statement.hostVariables || []).join(', ')}`
+                : '';
+            const cursors =
+              (statement.cursors || []).length > 0
+                ? ` cursors: ${(statement.cursors || []).map(cursor => `${cursor.name}/${cursor.action}`).join(', ')}`
+                : '';
+            return `- [${statement.type}${flags.length ? `/${flags.join('/')}` : ''}] ${statement.text}${tables}${hostVariables}${cursors}`;
+          })
+          .join('\n')
+      : '- None detected';
 
   return `## SQL Statements\n- SQL Statements: ${summary.statementCount || 0}\n- Read Statements: ${summary.readStatementCount || 0}\n- Write Statements: ${summary.writeStatementCount || 0}\n- Dynamic Statements: ${summary.dynamicStatementCount || 0}\n- Unresolved Statements: ${summary.unresolvedStatementCount || 0}\n- Cursor Statements: ${summary.cursorStatementCount || 0}\n- Host Variables: ${summary.hostVariableCount || 0}\n- Cursors: ${summary.cursorCount || 0}\n\n${detailLines}\n`;
 }
@@ -154,31 +192,39 @@ function bindingAnalysisSection(bindingAnalysis) {
   const modules = (bindingAnalysis && bindingAnalysis.modules) || [];
   const servicePrograms = (bindingAnalysis && bindingAnalysis.servicePrograms) || [];
 
-  const detailLines = modules.length > 0
-    ? modules.map((module) => {
-      const parts = [`${module.name} (${module.kind || 'MODULE'})`];
-      if ((module.bindingDirectories || []).length > 0) {
-        parts.push(`bnddir: ${module.bindingDirectories.join(', ')}`);
-      }
-      if ((module.servicePrograms || []).length > 0) {
-        parts.push(`srvpgm: ${module.servicePrograms.join(', ')}`);
-      }
-      if ((module.importedProcedures || []).length > 0) {
-        parts.push(`imports: ${module.importedProcedures.join(', ')}`);
-      }
-      if (module.unresolvedBindings) {
-        parts.push('UNRESOLVED');
-      }
-      return `- ${parts.join(' | ')}`;
-    }).join('\n')
-    : '- None detected';
+  const detailLines =
+    modules.length > 0
+      ? modules
+          .map(module => {
+            const parts = [`${module.name} (${module.kind || 'MODULE'})`];
+            if ((module.bindingDirectories || []).length > 0) {
+              parts.push(`bnddir: ${module.bindingDirectories.join(', ')}`);
+            }
+            if ((module.servicePrograms || []).length > 0) {
+              parts.push(`srvpgm: ${module.servicePrograms.join(', ')}`);
+            }
+            if ((module.importedProcedures || []).length > 0) {
+              parts.push(`imports: ${module.importedProcedures.join(', ')}`);
+            }
+            if (module.unresolvedBindings) {
+              parts.push('UNRESOLVED');
+            }
+            return `- ${parts.join(' | ')}`;
+          })
+          .join('\n')
+      : '- None detected';
 
-  const serviceProgramLines = servicePrograms.length > 0
-    ? servicePrograms.map((serviceProgram) => {
-      const exports = (serviceProgram.exports || []).map((entry) => `${entry.symbol}${entry.resolved ? '' : ' (unresolved)'}`).join(', ');
-      return `- ${serviceProgram.name}${serviceProgram.sourceKind ? ` [${serviceProgram.sourceKind}]` : ''}${exports ? ` exports: ${exports}` : ''}`;
-    }).join('\n')
-    : '- None detected';
+  const serviceProgramLines =
+    servicePrograms.length > 0
+      ? servicePrograms
+          .map(serviceProgram => {
+            const exports = (serviceProgram.exports || [])
+              .map(entry => `${entry.symbol}${entry.resolved ? '' : ' (unresolved)'}`)
+              .join(', ');
+            return `- ${serviceProgram.name}${serviceProgram.sourceKind ? ` [${serviceProgram.sourceKind}]` : ''}${exports ? ` exports: ${exports}` : ''}`;
+          })
+          .join('\n')
+      : '- None detected';
 
   return `## Binding Analysis\n- Modules: ${summary.moduleCount || 0}\n- NoMain Modules: ${summary.noMainModuleCount || 0}\n- Service Programs: ${summary.serviceProgramCount || 0}\n- Binder Sources: ${summary.binderSourceCount || 0}\n- Binding Directories: ${summary.bindingDirectoryCount || 0}\n- Bound Modules: ${summary.boundModuleCount || 0}\n- Unresolved Bindings: ${summary.unresolvedModuleCount || 0}\n- Exported Symbols: ${summary.exportCount || 0}\n\n### Modules\n${detailLines}\n\n### Service Programs\n${serviceProgramLines}\n`;
 }
@@ -189,9 +235,10 @@ function ifsPathSection(ifsPaths) {
   if (!ifsPaths || !ifsPaths.enabled) {
     return '## IFS Path Usage\nIFS path scanning was not enabled for this run.\n';
   }
-  const detailLines = paths.length > 0
-    ? paths.map((entry) => `- ${entry.path} [${entry.family}]`).join('\n')
-    : '- None detected';
+  const detailLines =
+    paths.length > 0
+      ? paths.map(entry => `- ${entry.path} [${entry.family}]`).join('\n')
+      : '- None detected';
   return `## IFS Path Usage\n- Unique Paths: ${summary.uniquePathCount || 0}\n- Evidence Locations: ${summary.evidenceCount || 0}\n- Files With Matches: ${summary.fileCount || 0}\n\n${detailLines}\n`;
 }
 
@@ -201,9 +248,13 @@ function searchResultsSection(searchResults) {
   if (!searchResults || !searchResults.enabled) {
     return '## Full-Text Search\nNo search terms were configured for this run.\n';
   }
-  const detailLines = matches.length > 0
-    ? matches.slice(0, 20).map((entry) => `- [${entry.term}] ${entry.sourcePath}:${entry.line} ${entry.context}`).join('\n')
-    : '- None detected';
+  const detailLines =
+    matches.length > 0
+      ? matches
+          .slice(0, 20)
+          .map(entry => `- [${entry.term}] ${entry.sourcePath}:${entry.line} ${entry.context}`)
+          .join('\n')
+      : '- None detected';
   return `## Full-Text Search\n- Terms: ${(searchResults.terms || []).join(', ')}\n- Matches: ${summary.matchCount || 0}\n- Scanned Files: ${summary.scannedFileCount || 0}\n- Ignored Files: ${summary.ignoredFileCount || 0}\n- Truncated: ${summary.truncated ? 'Yes' : 'No'}\n\n${detailLines}\n`;
 }
 
@@ -213,9 +264,15 @@ function diagnosticPackSection(diagnosticPacks) {
   if (!diagnosticPacks || !diagnosticPacks.enabled) {
     return '## Diagnostic Query Packs\nNo diagnostic packs were selected for this run.\n';
   }
-  const detailLines = packs.length > 0
-    ? packs.map((entry) => `- ${entry.name}: ${entry.summary.succeededStepCount || 0} succeeded, ${entry.summary.failedStepCount || 0} failed, ${entry.summary.skippedStepCount || 0} skipped`).join('\n')
-    : '- None detected';
+  const detailLines =
+    packs.length > 0
+      ? packs
+          .map(
+            entry =>
+              `- ${entry.name}: ${entry.summary.succeededStepCount || 0} succeeded, ${entry.summary.failedStepCount || 0} failed, ${entry.summary.skippedStepCount || 0} skipped`
+          )
+          .join('\n')
+      : '- None detected';
   return `## Diagnostic Query Packs\n- Packs: ${summary.packCount || 0}\n- Steps: ${summary.stepCount || 0}\n- Failed Packs: ${summary.failedPackCount || 0}\n- Skipped Packs: ${summary.skippedPackCount || 0}\n\n${detailLines}\n`;
 }
 
@@ -288,7 +345,9 @@ function generateMarkdownReport(context, tokenReport, options = {}) {
         programCalls: truncateForDense(dependencies.programCalls || [], denseLevel, 'calls'),
         copyMembers: truncateForDense(dependencies.copyMembers || [], denseLevel, 'copymembers'),
       };
-    } catch (_) { /* fallback to full if helper not loadable */ }
+    } catch (_) {
+      /* fallback to full if helper not loadable */
+    }
   }
   const graph = context.graph || {};
   const crossProgramGraph = context.crossProgramGraph || {};
@@ -308,20 +367,18 @@ function generateMarkdownReport(context, tokenReport, options = {}) {
   const ambiguousPrograms = crossProgramGraph.ambiguousPrograms || [];
   const crossProgramTruncated = Boolean(crossProgramGraph.truncated);
   const crossProgramLimitsReached = crossProgramGraph.limitsReached || {};
-  const unresolvedText = unresolvedPrograms.length > 0
-    ? unresolvedPrograms.join(', ')
-    : 'None';
-  const ambiguousText = ambiguousPrograms.length > 0
-    ? ambiguousPrograms.join(', ')
-    : 'None';
+  const unresolvedText = unresolvedPrograms.length > 0 ? unresolvedPrograms.join(', ') : 'None';
+  const ambiguousText = ambiguousPrograms.length > 0 ? ambiguousPrograms.join(', ') : 'None';
   const db2Resolved = Array.isArray(db2Metadata.tables)
-    ? db2Metadata.tables.filter((entry) => entry.matchStatus === 'resolved').length
+    ? db2Metadata.tables.filter(entry => entry.matchStatus === 'resolved').length
     : 0;
   const db2Unresolved = Array.isArray(db2Metadata.tables)
-    ? db2Metadata.tables.filter((entry) => entry.matchStatus === 'unresolved').map((entry) => entry.requestedName || entry.table)
+    ? db2Metadata.tables
+        .filter(entry => entry.matchStatus === 'unresolved')
+        .map(entry => entry.requestedName || entry.table)
     : [];
   const db2Ambiguous = Array.isArray(db2Metadata.ambiguousTables)
-    ? db2Metadata.ambiguousTables.map((entry) => entry.requestedName || entry.table)
+    ? db2Metadata.ambiguousTables.map(entry => entry.requestedName || entry.table)
     : [];
   const db2TriggerCount = Number(db2Metadata.triggerCount) || 0;
   const db2DerivedObjectCount = Number(db2Metadata.derivedObjectCount) || 0;
@@ -329,26 +386,47 @@ function generateMarkdownReport(context, tokenReport, options = {}) {
   const db2CatalogResolvedProgramCount = Number(db2Metadata.catalogResolvedProgramCount) || 0;
   const db2CatalogResolvedProcedureCount = Number(db2Metadata.catalogResolvedProcedureCount) || 0;
   const db2FallbackLookupCount = Number(db2Metadata.fallbackLookupCount) || 0;
-  const db2Section = db2Metadata.status === 'exported'
-    ? `## DB2 Metadata\nDB2 metadata was exported for ${db2Metadata.tableCount || 0} tables.\n\n- Resolved source-linked tables: ${db2Resolved}\n- Unresolved matches: ${db2Unresolved.length}\n- Ambiguous matches: ${db2Ambiguous.length}\n- Trigger count: ${db2TriggerCount}\n- Derived object count: ${db2DerivedObjectCount}\n- Catalog-resolved external objects: ${db2ExternalObjectCount}\n- Catalog-resolved program calls: ${db2CatalogResolvedProgramCount}\n- Catalog-resolved procedure references: ${db2CatalogResolvedProcedureCount}\n- Catalog fallback lookups: ${db2FallbackLookupCount}\n${db2Unresolved.length > 0 ? `- Unresolved table names: ${db2Unresolved.join(', ')}\n` : ''}${db2Ambiguous.length > 0 ? `- Ambiguous table names: ${db2Ambiguous.join(', ')}\n` : ''}\nSee:\n- ${db2Metadata.file || 'db2-metadata.json'}\n- ${db2Metadata.markdownFile || 'db2-metadata.md'}\n`
-    : `## DB2 Metadata\nDB2 metadata export was skipped because ${db2Metadata.reason || 'no DB2 connection configuration was available'}.\n`;
+  const db2Section =
+    db2Metadata.status === 'exported'
+      ? `## DB2 Metadata\nDB2 metadata was exported for ${db2Metadata.tableCount || 0} tables.\n\n- Resolved source-linked tables: ${db2Resolved}\n- Unresolved matches: ${db2Unresolved.length}\n- Ambiguous matches: ${db2Ambiguous.length}\n- Trigger count: ${db2TriggerCount}\n- Derived object count: ${db2DerivedObjectCount}\n- Catalog-resolved external objects: ${db2ExternalObjectCount}\n- Catalog-resolved program calls: ${db2CatalogResolvedProgramCount}\n- Catalog-resolved procedure references: ${db2CatalogResolvedProcedureCount}\n- Catalog fallback lookups: ${db2FallbackLookupCount}\n${db2Unresolved.length > 0 ? `- Unresolved table names: ${db2Unresolved.join(', ')}\n` : ''}${db2Ambiguous.length > 0 ? `- Ambiguous table names: ${db2Ambiguous.join(', ')}\n` : ''}\nSee:\n- ${db2Metadata.file || 'db2-metadata.json'}\n- ${db2Metadata.markdownFile || 'db2-metadata.md'}\n`
+      : `## DB2 Metadata\nDB2 metadata export was skipped because ${db2Metadata.reason || 'no DB2 connection configuration was available'}.\n`;
   const testDataLinked = Array.isArray(testData.tables)
-    ? testData.tables.filter((entry) => entry.sourceEvidenceCount > 0).length
+    ? testData.tables.filter(entry => entry.sourceEvidenceCount > 0).length
     : 0;
   const testDataPolicySummary = testData.policySummary || {};
-  const testDataSection = testData.status === 'exported'
-    ? `## Test Data Extract\nSample data was extracted for ${testData.tableCount || 0} tables.\n\n- Row Limit per Table: ${testData.rowLimit || 0}\n- Source-linked extracted tables: ${testDataLinked}\n- Allowlist entries: ${testDataPolicySummary.allowlistCount || 0}\n- Denylist entries: ${testDataPolicySummary.denylistCount || 0}\n- Mask rules: ${testDataPolicySummary.maskRuleCount || 0}\n- Masked tables: ${testDataPolicySummary.maskedTableCount || 0}\n\nSee:\n- ${testData.file || 'test-data.json'}\n- ${testData.markdownFile || 'test-data.md'}\n`
-    : `## Test Data Extract\nTest data extraction was skipped because ${testData.reason || 'no DB2 connection configuration was available'}.\n\n- Allowlist entries: ${testDataPolicySummary.allowlistCount || 0}\n- Denylist entries: ${testDataPolicySummary.denylistCount || 0}\n- Mask rules: ${testDataPolicySummary.maskRuleCount || 0}\n`;
+  const testDataSection =
+    testData.status === 'exported'
+      ? `## Test Data Extract\nSample data was extracted for ${testData.tableCount || 0} tables.\n\n- Row Limit per Table: ${testData.rowLimit || 0}\n- Source-linked extracted tables: ${testDataLinked}\n- Allowlist entries: ${testDataPolicySummary.allowlistCount || 0}\n- Denylist entries: ${testDataPolicySummary.denylistCount || 0}\n- Mask rules: ${testDataPolicySummary.maskRuleCount || 0}\n- Masked tables: ${testDataPolicySummary.maskedTableCount || 0}\n\nSee:\n- ${testData.file || 'test-data.json'}\n- ${testData.markdownFile || 'test-data.md'}\n`
+      : `## Test Data Extract\nTest data extraction was skipped because ${testData.reason || 'no DB2 connection configuration was available'}.\n\n- Allowlist entries: ${testDataPolicySummary.allowlistCount || 0}\n- Denylist entries: ${testDataPolicySummary.denylistCount || 0}\n- Mask rules: ${testDataPolicySummary.maskRuleCount || 0}\n`;
   const procedureSection = `## Procedure Semantics\n- Procedures: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCount) || 0}\n- Prototypes: ${(procedureAnalysis.summary && procedureAnalysis.summary.prototypeCount) || 0}\n- Procedure Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.procedureCallCount) || 0}\n- Internal Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.internalCallCount) || 0}\n- External Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.externalCallCount) || 0}\n- Dynamic Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.dynamicCallCount) || 0}\n- Unresolved Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.unresolvedCallCount) || 0}\n- Catalog-Resolved Calls: ${(procedureAnalysis.summary && procedureAnalysis.summary.catalogResolvedCallCount) || 0}\n`;
 
   const rpgSection = (() => {
     const r = context.rpgConstructs || {};
     const lf = r.languageFeatures || summary || {};
-    const bifs = (r.bifUsages || []).slice(0, 8).map(u => u.name).join(', ') || (lf.uniqueBifs || []).slice(0,8).join(', ');
-    const inds = (r.indicatorUsages || []).slice(0, 8).map(u => u.name).join(', ') || (lf.uniqueIndicators || []).slice(0,8).join(', ');
-    const ds = (r.dataStructures || []).slice(0, 6).map(d => d.name).join(', ');
-    const fields = (r.standaloneFields || []).slice(0, 6).map(f => f.name).join(', ');
-    const hasRpg = (lf.bifCount || 0) + (lf.indicatorCount || 0) + (lf.dataStructureCount || 0) + (lf.standaloneFieldCount || 0) > 0;
+    const bifs =
+      (r.bifUsages || [])
+        .slice(0, 8)
+        .map(u => u.name)
+        .join(', ') || (lf.uniqueBifs || []).slice(0, 8).join(', ');
+    const inds =
+      (r.indicatorUsages || [])
+        .slice(0, 8)
+        .map(u => u.name)
+        .join(', ') || (lf.uniqueIndicators || []).slice(0, 8).join(', ');
+    const ds = (r.dataStructures || [])
+      .slice(0, 6)
+      .map(d => d.name)
+      .join(', ');
+    const fields = (r.standaloneFields || [])
+      .slice(0, 6)
+      .map(f => f.name)
+      .join(', ');
+    const hasRpg =
+      (lf.bifCount || 0) +
+        (lf.indicatorCount || 0) +
+        (lf.dataStructureCount || 0) +
+        (lf.standaloneFieldCount || 0) >
+      0;
     if (!hasRpg) return '';
     return `## RPG Language Features\n- BIF usages: ${lf.bifCount || 0} (${bifs || 'n/a'})\n- Indicator usages: ${lf.indicatorCount || 0} (${inds || 'n/a'})\n- Data Structures: ${lf.dataStructureCount || 0} (${ds || 'n/a'})\n- Standalone fields (DCL-S): ${lf.standaloneFieldCount || 0} (${fields || 'n/a'})\n- Note: Structures, fields, *INxx and %BIF are key evidence for safe RPG development and modernization.\n`;
   })();
@@ -360,7 +438,14 @@ function generateMarkdownReport(context, tokenReport, options = {}) {
     ? `Dependency graph: ${graph.nodeCount || 0} nodes, ${graph.edgeCount || 0} edges.`
     : `Dependency graph generated for ${context.program}.\n\n- Nodes: ${graph.nodeCount || 0}\n- Edges: ${graph.edgeCount || 0}\n- Tables: ${graph.tableCount || 0}\n- Programs Called: ${graph.programCallCount || 0}\n- Copy Members: ${graph.copyMemberCount || 0}\n- Modules: ${graph.moduleCount || 0}\n- Service Programs: ${graph.serviceProgramCount || 0}\n- Binding Directories: ${graph.bindingDirectoryCount || 0}\n- Bind Relationships: ${graph.bindEdgeCount || 0}`;
 
-  return `${title}\n\n## Overview\n- Program: ${context.program}\n- Scanned At: ${context.scannedAt}\n- Source Root: ${context.sourceRoot}\n- Source File Count: ${summary.sourceFileCount || 0}\n- Table Count: ${summary.tableCount || 0}\n- Program Call Count: ${summary.programCallCount || 0}\n- Copy Member Count: ${summary.copyMemberCount || 0}\n- SQL Statement Count: ${summary.sqlStatementCount || 0}\n${summary.text ? `- Summary: ${summary.text}\n` : ''}\n${optimizationSection(tokenReport)}\n## Source Files\n${sectionList(context.sourceFiles)}\n\n${sourceNormalizationSection(sourceNormalization)}\n${sourceTypeAnalysisSection(sourceTypeAnalysis)}\n${ifsPathSection(ifsPaths)}\n${searchResultsSection(searchResults)}\n${diagnosticPackSection(diagnosticPacks)}\n${knownFactsSection(knownFacts)}\n${analysisCacheSection(analysisCache)}\n## Tables\n${sectionList(dependencies.tables)}\n\n## Program Calls\n${sectionList(dependencies.programCalls)}\n\n## Copy Members\n${sectionList(dependencies.copyMembers)}\n\n${procedureSection}\n${rpgSection}\n${bindingAnalysisSection(bindingAnalysis)}\n${nativeFileUsageSection(nativeFileUsage)}\n${sqlSection(sql)}\n${db2Section}\n${testDataSection}\n## Dependency Graph\n${depGraphIntro}\n\nSee files:\n- ${(graph.files && graph.files.json) || 'dependency-graph.json'}\n- ${(graph.files && graph.files.mermaid) || 'dependency-graph.mmd'}\n- ${(graph.files && graph.files.markdown) || 'dependency-graph.md'}\n\n## Cross Program Dependency Graph\nSee program-call-tree.* for recursive call details.\n\n- Programs discovered: ${crossProgramGraph.programCount || 0}\n- Ambiguous program calls: ${ambiguousPrograms.length}\n- Ambiguous list: ${ambiguousText}\n- Unresolved program calls: ${unresolvedPrograms.length}\n- Unresolved list: ${unresolvedText}\n- Truncated by safety limits: ${crossProgramTruncated ? 'Yes' : 'No'}\n${crossProgramTruncated ? `- Limits reached: ${Object.entries(crossProgramLimitsReached).filter(([, reached]) => reached).map(([name]) => name).join(', ')}\n` : ''}\nSee:\n- ${(crossProgramGraph.files && crossProgramGraph.files.json) || 'program-call-tree.json'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.mermaid) || 'program-call-tree.mmd'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.markdown) || 'program-call-tree.md'}\n\n## Impact Analysis\nImpact analysis can identify affected programs if a component changes.\n\nSee:\n- impact-analysis.json\n- impact-analysis.md\n\n${isDense ? (denseLevel === 'ultra' ? '## Notes\nSee ai-knowledge.json + canonical-analysis.json. Evidence exact.\n' : '## Notes (dense)\n- Full details: architecture-report.md, ai-knowledge.json, canonical-analysis.json.\n- Evidence preserved exactly.\n') : '## Interactive Architecture Viewer\nAn interactive architecture visualization has been generated.\n\nOpen architecture.html in browser.\n\n## Next Steps\n- Validate dependencies.\n- Use canonical-analysis.json + ai-knowledge.json as primary context.\n- Bundle with `zeus bundle` for sharing.\n'}`;
+  return `${title}\n\n## Overview\n- Program: ${context.program}\n- Scanned At: ${context.scannedAt}\n- Source Root: ${context.sourceRoot}\n- Source File Count: ${summary.sourceFileCount || 0}\n- Table Count: ${summary.tableCount || 0}\n- Program Call Count: ${summary.programCallCount || 0}\n- Copy Member Count: ${summary.copyMemberCount || 0}\n- SQL Statement Count: ${summary.sqlStatementCount || 0}\n${summary.text ? `- Summary: ${summary.text}\n` : ''}\n${optimizationSection(tokenReport)}\n## Source Files\n${sectionList(context.sourceFiles)}\n\n${sourceNormalizationSection(sourceNormalization)}\n${sourceTypeAnalysisSection(sourceTypeAnalysis)}\n${ifsPathSection(ifsPaths)}\n${searchResultsSection(searchResults)}\n${diagnosticPackSection(diagnosticPacks)}\n${knownFactsSection(knownFacts)}\n${analysisCacheSection(analysisCache)}\n## Tables\n${sectionList(dependencies.tables)}\n\n## Program Calls\n${sectionList(dependencies.programCalls)}\n\n## Copy Members\n${sectionList(dependencies.copyMembers)}\n\n${procedureSection}\n${rpgSection}\n${bindingAnalysisSection(bindingAnalysis)}\n${nativeFileUsageSection(nativeFileUsage)}\n${sqlSection(sql)}\n${db2Section}\n${testDataSection}\n## Dependency Graph\n${depGraphIntro}\n\nSee files:\n- ${(graph.files && graph.files.json) || 'dependency-graph.json'}\n- ${(graph.files && graph.files.mermaid) || 'dependency-graph.mmd'}\n- ${(graph.files && graph.files.markdown) || 'dependency-graph.md'}\n\n## Cross Program Dependency Graph\nSee program-call-tree.* for recursive call details.\n\n- Programs discovered: ${crossProgramGraph.programCount || 0}\n- Ambiguous program calls: ${ambiguousPrograms.length}\n- Ambiguous list: ${ambiguousText}\n- Unresolved program calls: ${unresolvedPrograms.length}\n- Unresolved list: ${unresolvedText}\n- Truncated by safety limits: ${crossProgramTruncated ? 'Yes' : 'No'}\n${
+    crossProgramTruncated
+      ? `- Limits reached: ${Object.entries(crossProgramLimitsReached)
+          .filter(([, reached]) => reached)
+          .map(([name]) => name)
+          .join(', ')}\n`
+      : ''
+  }\nSee:\n- ${(crossProgramGraph.files && crossProgramGraph.files.json) || 'program-call-tree.json'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.mermaid) || 'program-call-tree.mmd'}\n- ${(crossProgramGraph.files && crossProgramGraph.files.markdown) || 'program-call-tree.md'}\n\n## Impact Analysis\nImpact analysis can identify affected programs if a component changes.\n\nSee:\n- impact-analysis.json\n- impact-analysis.md\n\n${isDense ? (denseLevel === 'ultra' ? '## Notes\nSee ai-knowledge.json + canonical-analysis.json. Evidence exact.\n' : '## Notes (dense)\n- Full details: architecture-report.md, ai-knowledge.json, canonical-analysis.json.\n- Evidence preserved exactly.\n') : '## Interactive Architecture Viewer\nAn interactive architecture visualization has been generated.\n\nOpen architecture.html in browser.\n\n## Next Steps\n- Validate dependencies.\n- Use canonical-analysis.json + ai-knowledge.json as primary context.\n- Bundle with `zeus bundle` for sharing.\n'}`;
 }
 
 module.exports = {

@@ -15,13 +15,24 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-const { ensureJavaSourcesCompiled, runJavaClass, SECRET_ENV_SENTINEL } = require('../java/javaRuntime');
+const {
+  ensureJavaSourcesCompiled,
+  runJavaClass,
+  SECRET_ENV_SENTINEL,
+} = require('../java/javaRuntime');
 const { ensureFetchConnectionGuard } = require('../security/connectionGuards');
 
 const COMMAND_FILE_THRESHOLD = 1800;
 
-function ensureJavaHelperCompiled() {
-  return ensureJavaSourcesCompiled();
+function ensureJavaHelperCompiled(runtimeOrFile, className) {
+  let runtime = {};
+  if (runtimeOrFile && typeof runtimeOrFile === 'object' && !Array.isArray(runtimeOrFile)) {
+    runtime = runtimeOrFile;
+  }
+  if (runtime.ensureJavaSourcesCompiled) {
+    return runtime.ensureJavaSourcesCompiled({ runtime });
+  }
+  return ensureJavaSourcesCompiled({ runtime });
 }
 
 function parseJsonResult(stdout, fallback) {
@@ -43,10 +54,10 @@ function runJavaHelper(className, args, options) {
 
 function normalizeCommandList({ command, commands }) {
   if (Array.isArray(commands)) {
-    return commands.map((entry) => String(entry || '').trim()).filter(Boolean);
+    return commands.map(entry => String(entry || '').trim()).filter(Boolean);
   }
   if (Array.isArray(command)) {
-    return command.map((entry) => String(entry || '').trim()).filter(Boolean);
+    return command.map(entry => String(entry || '').trim()).filter(Boolean);
   }
   const single = String(command || '').trim();
   return single ? [single] : [];
@@ -66,7 +77,7 @@ function shouldUseCommandFile(commands, runtime = {}) {
   if (runtime.forceCommandFile) {
     return true;
   }
-  return commands.length !== 1 || commands.some((entry) => entry.length > COMMAND_FILE_THRESHOLD);
+  return commands.length !== 1 || commands.some(entry => entry.length > COMMAND_FILE_THRESHOLD);
 }
 
 function buildCommandRunnerArgs({
@@ -137,7 +148,7 @@ function executeClCommandRaw({
   verbose,
   runtime = {},
 }) {
-  ensureJavaHelperCompiled();
+  ensureJavaHelperCompiled(runtime);
   const commandList = normalizeCommandList({ command, commands });
   if (commandList.length === 0) {
     throw new Error('IBM i command runner requires at least one command.');
@@ -209,7 +220,7 @@ function runClCommand({
     ensureFetchConnectionGuard({
       fetchConfig: { host, user, password },
       scopeLabel: runtime.scopeLabel || 'IBM i command connection',
-      probe: (probeOptions) => {
+      probe: probeOptions => {
         const result = executeClCommandRaw({
           ...probeOptions,
           runtime: {
@@ -218,7 +229,9 @@ function runClCommand({
           },
         });
         if (!result.ok) {
-          throw new Error(result.messages.join('; ') || result.stderr || 'IBM i command probe failed.');
+          throw new Error(
+            result.messages.join('; ') || result.stderr || 'IBM i command probe failed.'
+          );
         }
         return result;
       },
@@ -265,9 +278,8 @@ function runQshCommand({
   runtime = {},
 }) {
   const capture = buildQshCaptureCommand(script, outputFile);
-  const shouldDeleteOutputFile = deleteOutputFile !== undefined
-    ? Boolean(deleteOutputFile)
-    : !outputFile;
+  const shouldDeleteOutputFile =
+    deleteOutputFile !== undefined ? Boolean(deleteOutputFile) : !outputFile;
   const result = runClCommand({
     host,
     user,
@@ -288,14 +300,26 @@ function runQshCommand({
   };
 }
 
-function executeListMembersRaw({ host, user, password, sourceLib, sourceFile, verbose, runtime = {} }) {
-  ensureJavaHelperCompiled();
+function executeListMembersRaw({
+  host,
+  user,
+  password,
+  sourceLib,
+  sourceFile,
+  verbose,
+  runtime = {},
+}) {
+  ensureJavaHelperCompiled(runtime);
   if (verbose) {
     console.log(`[verbose] Listing members in ${sourceLib}/${sourceFile}`);
   }
 
   const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
-  const result = runJavaHelperFn('IbmiMemberLister', [host, user, SECRET_ENV_SENTINEL, sourceLib, sourceFile], { password });
+  const result = runJavaHelperFn(
+    'IbmiMemberLister',
+    [host, user, SECRET_ENV_SENTINEL, sourceLib, sourceFile],
+    { password }
+  );
   const parsed = parseJsonResult(result.stdout, {
     ok: false,
     members: [],
@@ -317,7 +341,7 @@ function listMembers({ host, user, password, sourceLib, sourceFile, verbose, run
     ensureFetchConnectionGuard({
       fetchConfig: { host, user, password },
       scopeLabel: runtime.scopeLabel || 'IBM i fetch connection',
-      probe: (probeOptions) => {
+      probe: probeOptions => {
         const result = executeClCommandRaw({
           ...probeOptions,
           runtime: {
@@ -326,7 +350,9 @@ function listMembers({ host, user, password, sourceLib, sourceFile, verbose, run
           },
         });
         if (!result.ok) {
-          throw new Error(result.messages.join('; ') || result.stderr || 'IBM i fetch probe failed.');
+          throw new Error(
+            result.messages.join('; ') || result.stderr || 'IBM i fetch probe failed.'
+          );
         }
         return result;
       },
@@ -349,23 +375,29 @@ function executeExportSourceMemberViaJdbcRaw({
   verbose,
   runtime = {},
 }) {
-  ensureJavaHelperCompiled();
+  ensureJavaHelperCompiled(runtime);
   if (verbose) {
-    console.log(`[verbose] JDBC source export fallback for ${sourceLib}/${sourceFile}(${member}) -> ${targetPath}`);
+    console.log(
+      `[verbose] JDBC source export fallback for ${sourceLib}/${sourceFile}(${member}) -> ${targetPath}`
+    );
   }
 
   const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
-  const result = runJavaHelperFn('IbmiSourceMemberExporter', [
-    host,
-    user,
-    SECRET_ENV_SENTINEL,
-    sourceLib,
-    sourceFile,
-    member,
-    targetPath,
-    String(streamFileCcsid),
-    String(writeMode || 'ifs'),
-  ], { password });
+  const result = runJavaHelperFn(
+    'IbmiSourceMemberExporter',
+    [
+      host,
+      user,
+      SECRET_ENV_SENTINEL,
+      sourceLib,
+      sourceFile,
+      member,
+      targetPath,
+      String(streamFileCcsid),
+      String(writeMode || 'ifs'),
+    ],
+    { password }
+  );
 
   const parsed = parseJsonResult(result.stdout, {
     ok: false,
@@ -400,7 +432,7 @@ function exportSourceMemberViaJdbc({
     ensureFetchConnectionGuard({
       fetchConfig: { host, user, password },
       scopeLabel: runtime.scopeLabel || 'IBM i member export connection',
-      probe: (probeOptions) => {
+      probe: probeOptions => {
         const result = executeClCommandRaw({
           ...probeOptions,
           runtime: {
@@ -409,7 +441,9 @@ function exportSourceMemberViaJdbc({
           },
         });
         if (!result.ok) {
-          throw new Error(result.messages.join('; ') || result.stderr || 'IBM i member export probe failed.');
+          throw new Error(
+            result.messages.join('; ') || result.stderr || 'IBM i member export probe failed.'
+          );
         }
         return result;
       },

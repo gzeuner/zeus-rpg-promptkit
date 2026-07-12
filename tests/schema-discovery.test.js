@@ -26,18 +26,22 @@ test('sortSchemaCandidates prefers production-like schemas first', () => {
     { TABLE_SCHEMA: 'PROD' },
   ]);
 
-  assert.deepEqual(sorted.map((entry) => entry.TABLE_SCHEMA), ['APPDATA', 'PROD', 'ARCHIVE']);
+  assert.deepEqual(
+    sorted.map(entry => entry.TABLE_SCHEMA),
+    ['APPDATA', 'PROD', 'ARCHIVE']
+  );
 });
 
 test('discoverSchema returns the preferred schema candidate', () => {
-  const resolved = discoverSchema({
-    host: 'ibmi.example.com',
-    user: 'ZEUS',
-    password: 'secret',
-  }, 'meine_tabelle', buildRuntimeWithRows([
-    { TABLE_SCHEMA: 'ARCHIVE' },
-    { TABLE_SCHEMA: 'APPDATA' },
-  ]));
+  const resolved = discoverSchema(
+    {
+      host: 'ibmi.example.com',
+      user: 'ZEUS',
+      password: 'secret',
+    },
+    'meine_tabelle',
+    buildRuntimeWithRows([{ TABLE_SCHEMA: 'ARCHIVE' }, { TABLE_SCHEMA: 'APPDATA' }])
+  );
 
   assert.equal(resolved.TABLE_SCHEMA, 'APPDATA');
 });

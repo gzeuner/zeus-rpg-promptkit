@@ -91,10 +91,14 @@ async function runResources(args) {
   console.log(`Configuration: ${result.configSource}`);
   console.log(`Multi-system: ${model.multiSystem ? 'yes' : 'no'}`);
   if (Array.isArray(model.systems) && model.systems.length > 0) {
-    console.log(`Systems: ${model.systems.map((s) => `${s.key}${s.host ? ` (${s.host})` : ''}`).join(', ')}`);
+    console.log(
+      `Systems: ${model.systems.map(s => `${s.key}${s.host ? ` (${s.host})` : ''}`).join(', ')}`
+    );
   }
   if (!model.hasExplicitResources) {
-    console.log('Note: no explicit "resources" block — model derived from fetch/db/dbRoles (backward compatible).');
+    console.log(
+      'Note: no explicit "resources" block — model derived from fetch/db/dbRoles (backward compatible).'
+    );
   }
   console.log('');
   console.log(renderAsciiTable(['Resource', 'System', 'Host', 'Scope'], buildResourceRows(model)));

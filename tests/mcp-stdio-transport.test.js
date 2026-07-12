@@ -1,10 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const {
-  encodeJsonRpcMessage,
-  parseIncomingMessages,
-} = require('../src/mcp/stdioTransport');
+const { encodeJsonRpcMessage, parseIncomingMessages } = require('../src/mcp/stdioTransport');
 
 test('mcp transport parses content-length framed messages', () => {
   const payload = { jsonrpc: '2.0', id: 1, method: 'ping' };

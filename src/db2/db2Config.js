@@ -12,7 +12,9 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 function normalizeIdentifier(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function normalizeLibraryList(value) {
@@ -23,11 +25,11 @@ function normalizeLibraryList(value) {
   const entries = Array.isArray(value)
     ? value
     : String(value)
-      .split(/[\s,]+/)
-      .filter(Boolean);
+        .split(/[\s,]+/)
+        .filter(Boolean);
 
   return entries
-    .map((entry) => normalizeIdentifier(entry))
+    .map(entry => normalizeIdentifier(entry))
     .filter(Boolean)
     .filter((entry, index, list) => list.indexOf(entry) === index)
     .join(',');
@@ -35,7 +37,9 @@ function normalizeLibraryList(value) {
 
 function resolveDefaultSchema(dbConfig) {
   return normalizeIdentifier(
-    (dbConfig && (dbConfig.defaultSchema || dbConfig.defaultLibrary || dbConfig.schema || dbConfig.library)) || '',
+    (dbConfig &&
+      (dbConfig.defaultSchema || dbConfig.defaultLibrary || dbConfig.schema || dbConfig.library)) ||
+      ''
   );
 }
 
@@ -53,7 +57,10 @@ function buildJdbcUrl(dbConfig, defaultSchema) {
       return baseUrl;
     }
     if (/(?:^|;)(libraries|library)\s*=/i.test(baseUrl)) {
-      return baseUrl.replace(/(?:^|;)(libraries|library)\s*=[^;]*/i, `;libraries=${requestedLibraries}`);
+      return baseUrl.replace(
+        /(?:^|;)(libraries|library)\s*=[^;]*/i,
+        `;libraries=${requestedLibraries}`
+      );
     }
     return `${baseUrl};libraries=${requestedLibraries}`;
   }

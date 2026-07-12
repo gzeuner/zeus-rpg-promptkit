@@ -15,7 +15,7 @@ test('source scan cache reuses unchanged file scans and invalidates on file chan
 
   let scanCount = 0;
   const cache = createSourceScanCache();
-  const scanFn = (filePath) => {
+  const scanFn = filePath => {
     scanCount += 1;
     return {
       sourceFile: { path: filePath, sizeBytes: fs.statSync(filePath).size, lines: 2 },
@@ -66,7 +66,7 @@ test('source scan cache reuses persisted entries across cache instances', () => 
 
   let firstScanCount = 0;
   const firstCache = createSourceScanCache({ cacheDir });
-  firstCache.getOrScan(sourceFile, (filePath) => {
+  firstCache.getOrScan(sourceFile, filePath => {
     firstScanCount += 1;
     return {
       sourceFile: { path: filePath, sizeBytes: fs.statSync(filePath).size, lines: 2 },
@@ -127,8 +127,8 @@ test('analyze pipeline reuses scan results during cross-program graph traversal'
     logVerbose() {},
   });
 
-  const collectStage = result.stageReports.find((stage) => stage.id === 'collect-scan');
-  const buildContextStage = result.stageReports.find((stage) => stage.id === 'build-context');
+  const collectStage = result.stageReports.find(stage => stage.id === 'collect-scan');
+  const buildContextStage = result.stageReports.find(stage => stage.id === 'build-context');
 
   assert.ok(collectStage);
   assert.ok(buildContextStage);

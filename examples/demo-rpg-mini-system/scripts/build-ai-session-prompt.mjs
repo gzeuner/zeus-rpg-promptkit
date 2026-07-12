@@ -19,4 +19,3 @@ const content = `${template.trim()}\n\n## Artifact Paths\n\n- report: \`report.m
 
 fs.writeFileSync(outputPath, content, 'utf8');
 console.log(`Wrote ${outputPath}`);
-

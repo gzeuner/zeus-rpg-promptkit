@@ -36,8 +36,13 @@ function findPlaintextInObject(obj, path = '') {
 
   for (const [key, value] of Object.entries(obj)) {
     const currentPath = path ? `${path}.${key}` : key;
-    if (typeof value === 'string' && SECRET_KEYS.test(key) && value.trim()
-        && !value.startsWith('enc:v1:') && !isPlaceholder(value)) {
+    if (
+      typeof value === 'string' &&
+      SECRET_KEYS.test(key) &&
+      value.trim() &&
+      !value.startsWith('enc:v1:') &&
+      !isPlaceholder(value)
+    ) {
       results.push(currentPath);
     } else if (typeof value === 'object') {
       results.push(...findPlaintextInObject(value, currentPath));
@@ -65,11 +70,7 @@ function detectPlaintextSecrets({
 
   if (filesToScan.length === 0) {
     const base = configDir ? path.resolve(cwd, configDir) : path.join(cwd, 'config');
-    const searchDirs = [
-      path.join(base, 'local-only'),
-      base,
-      cwd,
-    ];
+    const searchDirs = [path.join(base, 'local-only'), base, cwd];
     const seen = new Set();
     for (const dir of searchDirs) {
       if (!fs.existsSync(dir)) continue;
@@ -104,8 +105,16 @@ function detectPlaintextSecrets({
         const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
         if (!match) continue;
         const key = match[1];
-        let value = match[2].trim().replace(/\s+#.*$/, '').trim();
-        if (SECRET_KEYS.test(key) && value && !value.startsWith('enc:v1:') && !isPlaceholder(value)) {
+        let value = match[2]
+          .trim()
+          .replace(/\s+#.*$/, '')
+          .trim();
+        if (
+          SECRET_KEYS.test(key) &&
+          value &&
+          !value.startsWith('enc:v1:') &&
+          !isPlaceholder(value)
+        ) {
           if (!seenKeys.has(key)) {
             seenKeys.add(key);
             findings.push({
@@ -123,7 +132,14 @@ function detectPlaintextSecrets({
   // Scan currently loaded env for plaintext (e.g. already exported in shell or auto-loaded)
   if (env && typeof env === 'object') {
     for (const [key, val] of Object.entries(env)) {
-      if (SECRET_KEYS.test(key) && val && typeof val === 'string' && val.trim() && !val.startsWith('enc:v1:') && !isPlaceholder(val)) {
+      if (
+        SECRET_KEYS.test(key) &&
+        val &&
+        typeof val === 'string' &&
+        val.trim() &&
+        !val.startsWith('enc:v1:') &&
+        !isPlaceholder(val)
+      ) {
         if (!seenKeys.has(key)) {
           seenKeys.add(key);
           findings.push({

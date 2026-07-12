@@ -58,7 +58,10 @@ function buildArtifactReference({
   }
 
   // Enforce relative, safe path
-  const normalizedPath = relPath.split(path.sep).join('/').replace(/^\.\/+/, '');
+  const normalizedPath = relPath
+    .split(path.sep)
+    .join('/')
+    .replace(/^\.\/+/, '');
   if (normalizedPath.startsWith('/') || normalizedPath.includes('..')) {
     throw new Error(`unsafe artifact path: ${relPath}`);
   }
@@ -80,7 +83,7 @@ function buildArtifactReference({
   };
 
   // Remove nulls for cleaner output
-  Object.keys(ref).forEach((k) => {
+  Object.keys(ref).forEach(k => {
     if (ref[k] === null) delete ref[k];
   });
 

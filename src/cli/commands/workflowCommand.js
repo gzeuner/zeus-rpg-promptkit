@@ -21,8 +21,14 @@ const {
   resolveAnalyzeConfig,
   resolveProfile,
 } = require('../../config/runtimeConfig');
-const { resolveWorkflowPresetSettings, listWorkflowPresets } = require('../../workflow/workflowPresetRegistry');
-const { buildWorkflowRunManifest, writeWorkflowRunManifest } = require('../../workflow/workflowRunManifest');
+const {
+  resolveWorkflowPresetSettings,
+  listWorkflowPresets,
+} = require('../../workflow/workflowPresetRegistry');
+const {
+  buildWorkflowRunManifest,
+  writeWorkflowRunManifest,
+} = require('../../workflow/workflowRunManifest');
 const { normalizeReproducibilitySettings } = require('../../reproducibility/reproducibility');
 const { runWorkflowEngine } = require('../../workflow/workflowRunner');
 const { createJsonOutput } = require('../helpers/jsonOutput');
@@ -33,11 +39,17 @@ function printWorkflowPresets() {
     const settings = resolveWorkflowPresetSettings(preset.name);
     console.log(`- ${preset.name}: ${preset.description}`);
     console.log(`  analyze mode: ${settings.analyzeMode}`);
-    console.log(`  prompt templates: ${settings.promptTemplates.length > 0 ? settings.promptTemplates.join(', ') : 'none'}`);
+    console.log(
+      `  prompt templates: ${settings.promptTemplates.length > 0 ? settings.promptTemplates.join(', ') : 'none'}`
+    );
     console.log(`  bundle artifacts: ${settings.bundleArtifacts.length}`);
     if (settings.reviewWorkflow) {
-      console.log(`  intended audience: ${(settings.reviewWorkflow.intendedAudience || []).join('; ') || 'n/a'}`);
-      console.log(`  expected decisions: ${(settings.reviewWorkflow.expectedDecisions || []).join('; ') || 'n/a'}`);
+      console.log(
+        `  intended audience: ${(settings.reviewWorkflow.intendedAudience || []).join('; ') || 'n/a'}`
+      );
+      console.log(
+        `  expected decisions: ${(settings.reviewWorkflow.expectedDecisions || []).join('; ') || 'n/a'}`
+      );
     }
   }
 }
@@ -123,15 +135,21 @@ function runLegacyWorkflowPreset(args) {
 
   const json = createJsonOutput(args);
   if (json.isJsonMode) {
-    json.print({ preset: preset.name, manifestPath: path.join(outputProgramDir, 'workflow-run-manifest.json') });
+    json.print({
+      preset: preset.name,
+      manifestPath: path.join(outputProgramDir, 'workflow-run-manifest.json'),
+    });
     return;
   }
   console.log(`Workflow preset complete: ${preset.name}`);
-  console.log(`Workflow manifest written to: ${path.join(outputProgramDir, 'workflow-run-manifest.json')}`);
+  console.log(
+    `Workflow manifest written to: ${path.join(outputProgramDir, 'workflow-run-manifest.json')}`
+  );
 }
 
 async function runWorkflow(args) {
-  const subcommand = Array.isArray(args._) && args._.length > 0 ? String(args._[0]).trim().toLowerCase() : '';
+  const subcommand =
+    Array.isArray(args._) && args._.length > 0 ? String(args._[0]).trim().toLowerCase() : '';
   if (subcommand === 'run') {
     if (args['list-presets']) {
       try {
@@ -147,7 +165,14 @@ async function runWorkflow(args) {
       let state;
       try {
         const { capabilities } = require('../../api/zeusApi');
-        const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('analysis.workflow', { cwd: process.cwd(), env: process.env, args }, args) : null;
+        const res =
+          capabilities && typeof capabilities.execute === 'function'
+            ? await capabilities.execute(
+                'analysis.workflow',
+                { cwd: process.cwd(), env: process.env, args },
+                args
+              )
+            : null;
         if (res && res.ok && res.result) {
           state = res.result;
         }

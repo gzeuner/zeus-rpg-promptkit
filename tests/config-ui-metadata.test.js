@@ -35,38 +35,22 @@ test('config UI metadata validates and is ready for GUI rendering', () => {
 });
 
 test('sensitive config fields are marked and excluded from safe listing', () => {
-  const sensitiveKeys = CONFIG_UI_FIELDS
-    .filter((field) => field.sensitive)
-    .map((field) => field.key)
+  const sensitiveKeys = CONFIG_UI_FIELDS.filter(field => field.sensitive)
+    .map(field => field.key)
     .sort();
 
-  assert.deepEqual(sensitiveKeys, [
-    'profile.db.password',
-    'profile.fetch.password',
-  ]);
+  assert.deepEqual(sensitiveKeys, ['profile.db.password', 'profile.fetch.password']);
 
-  const safeFieldKeys = listConfigUiFields({ includeSensitive: false }).map((field) => field.key);
+  const safeFieldKeys = listConfigUiFields({ includeSensitive: false }).map(field => field.key);
   assert.equal(safeFieldKeys.includes('profile.db.password'), false);
   assert.equal(safeFieldKeys.includes('profile.fetch.password'), false);
 });
 
 test('config UI metadata avoids secret-like placeholder content', () => {
-  const suspiciousTokens = [
-    '/home/',
-    'BEGIN RSA',
-    'BEGIN OPENSSH',
-    'PRIVATE KEY',
-    'AKIA',
-    'ghp_',
-  ];
+  const suspiciousTokens = ['/home/', 'BEGIN RSA', 'BEGIN OPENSSH', 'PRIVATE KEY', 'AKIA', 'ghp_'];
 
   for (const field of CONFIG_UI_FIELDS) {
-    const text = [
-      field.placeholder,
-      field.example,
-    ]
-      .filter(Boolean)
-      .join(' ');
+    const text = [field.placeholder, field.example].filter(Boolean).join(' ');
     for (const token of suspiciousTokens) {
       assert.equal(text.includes(token), false, `unexpected token "${token}" in ${field.key}`);
     }
@@ -76,11 +60,11 @@ test('config UI metadata avoids secret-like placeholder content', () => {
 test('config UI metadata supports section and capability filtering', () => {
   const fetchFields = listConfigUiFields({ capability: 'fetch' });
   assert.ok(fetchFields.length > 0);
-  assert.ok(fetchFields.every((field) => field.capabilities.includes('fetch')));
+  assert.ok(fetchFields.every(field => field.capabilities.includes('fetch')));
 
   const dbSectionFields = listConfigUiFields({ section: 'db2' });
   assert.ok(dbSectionFields.length > 0);
-  assert.ok(dbSectionFields.every((field) => field.section === 'db2'));
+  assert.ok(dbSectionFields.every(field => field.section === 'db2'));
 
   const profileField = getConfigUiField('runtime.profile');
   assert.ok(profileField);

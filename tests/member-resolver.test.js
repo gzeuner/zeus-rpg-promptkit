@@ -36,12 +36,13 @@ test('resolveMemberProgram rejects ambiguous duplicate members', () => {
 
   try {
     assert.throws(
-      () => resolveMemberProgram({
-        member: 'PROGRAM_010',
-        sourceRoot,
-        extensions: ['.rpgle', '.clle'],
-      }),
-      /Ambiguous local sources found/,
+      () =>
+        resolveMemberProgram({
+          member: 'PROGRAM_010',
+          sourceRoot,
+          extensions: ['.rpgle', '.clle'],
+        }),
+      /Ambiguous local sources found/
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

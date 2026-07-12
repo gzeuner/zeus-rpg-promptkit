@@ -14,10 +14,18 @@ test('command UI metadata validates and includes workflow-card categories', () =
   assert.deepEqual(COMMAND_UI_METADATA_ERRORS, []);
   assert.deepEqual(validateCommandUiMetadata(), []);
 
-  const categories = COMMAND_CATEGORIES.map((entry) => entry.id).sort();
-  assert.deepEqual(categories, ['analyze', 'configure', 'context', 'fetch', 'investigation', 'query', 'review']);
+  const categories = COMMAND_CATEGORIES.map(entry => entry.id).sort();
+  assert.deepEqual(categories, [
+    'analyze',
+    'configure',
+    'context',
+    'fetch',
+    'investigation',
+    'query',
+    'review',
+  ]);
 
-  const commandNames = COMMAND_UI_METADATA.map((entry) => entry.name);
+  const commandNames = COMMAND_UI_METADATA.map(entry => entry.name);
   for (const required of [
     'profiles',
     'doctor',
@@ -38,11 +46,14 @@ test('command UI metadata validates and includes workflow-card categories', () =
 });
 
 test('recommended next commands point to known command metadata entries', () => {
-  const knownCommands = new Set(COMMAND_UI_METADATA.map((entry) => entry.name));
+  const knownCommands = new Set(COMMAND_UI_METADATA.map(entry => entry.name));
 
   for (const entry of COMMAND_UI_METADATA) {
     for (const next of entry.recommendedNextCommands) {
-      assert.ok(knownCommands.has(next), `unknown next command "${next}" referenced by "${entry.name}"`);
+      assert.ok(
+        knownCommands.has(next),
+        `unknown next command "${next}" referenced by "${entry.name}"`
+      );
     }
   }
 });
@@ -50,7 +61,7 @@ test('recommended next commands point to known command metadata entries', () => 
 test('command metadata supports category filtering and lookup', () => {
   const configureEntries = listCommandUiMetadata({ category: 'configure' });
   assert.ok(configureEntries.length >= 2);
-  assert.ok(configureEntries.every((entry) => entry.category === 'configure'));
+  assert.ok(configureEntries.every(entry => entry.category === 'configure'));
 
   const fetchEntry = getCommandUiMetadata('fetch');
   assert.ok(fetchEntry);

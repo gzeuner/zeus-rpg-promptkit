@@ -8,7 +8,7 @@ const { createMcpServer, DEFAULT_MCP_SAFE_TOOL_NAMES } = require('../src/mcp/mcp
 const { listMcpTools } = require('../src/mcp/mcpTools');
 const { buildHtmlLines } = require('../src/pui/puiDdsParser');
 
-const ALL_TOOL_NAMES = listMcpTools().map((tool) => tool.name);
+const ALL_TOOL_NAMES = listMcpTools().map(tool => tool.name);
 
 function writeSyntheticDisplay(filePath) {
   const uiJson = {
@@ -39,16 +39,13 @@ function writeSyntheticDisplay(filePath) {
     ],
   };
 
-  const lines = [
-    '     A          R GRIDFMT',
-    ...buildHtmlLines(JSON.stringify(uiJson)),
-  ];
+  const lines = ['     A          R GRIDFMT', ...buildHtmlLines(JSON.stringify(uiJson))];
 
   fs.writeFileSync(filePath, lines.join('\n'), 'utf8');
 }
 
 test('listMcpTools exposes zeus.pui-inspect with file required', () => {
-  const byName = new Map(listMcpTools().map((tool) => [tool.name, tool]));
+  const byName = new Map(listMcpTools().map(tool => [tool.name, tool]));
   const tool = byName.get('zeus.pui-inspect');
   assert.ok(tool, 'zeus.pui-inspect should be registered');
   assert.deepEqual(tool.inputSchema.required, ['file']);
@@ -156,10 +153,10 @@ test('mcp tools call zeus.pui-inspect rejects file outside workspace root', asyn
           arguments: { file: outsideFile },
         },
       }),
-      (error) => {
+      error => {
         assert.equal(error.code, -32602);
         return true;
-      },
+      }
     );
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });

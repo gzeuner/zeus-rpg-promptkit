@@ -35,14 +35,20 @@ async function runServe(args) {
     const verbose = Boolean(args.verbose);
     const config = resolveBundleConfig(args);
     const profiles = loadProfiles({ cwd: process.cwd(), env: process.env, args });
-    const profile = args.profile ? resolveProfile(profiles, args.profile, { env: process.env }) : null;
-    const hasRegistryConfig = Boolean(args['registry-path'] || process.env.ZEUS_ANALYSES_REGISTRY || (profile && profile.analysesRegistryPath));
+    const profile = args.profile
+      ? resolveProfile(profiles, args.profile, { env: process.env })
+      : null;
+    const hasRegistryConfig = Boolean(
+      args['registry-path'] ||
+      process.env.ZEUS_ANALYSES_REGISTRY ||
+      (profile && profile.analysesRegistryPath)
+    );
     const registryPath = hasRegistryConfig
       ? resolveRegistryPath({
-        registryPath: args['registry-path'],
-        profile,
-        env: process.env,
-      })
+          registryPath: args['registry-path'],
+          profile,
+          env: process.env,
+        })
       : null;
     const outputRoot = path.resolve(process.cwd(), config.sourceOutputRoot);
     const host = args.host || DEFAULT_UI_HOST;
@@ -57,8 +63,12 @@ async function runServe(args) {
 
     if (verbose) {
       console.log(`[verbose] Output root: ${result.outputRoot}`);
-      console.log(`[verbose] Registry path: ${registryPath || 'not configured (fallback workspace mode)'}`);
-      console.log('[verbose] API routes: /api/health, /api/ui-metadata, /api/ui-actions/doctor, /api/runs, /api/runs/:program, /api/runs/:program/artifacts/content, /api/analyses*, /api/prompt-builder/*');
+      console.log(
+        `[verbose] Registry path: ${registryPath || 'not configured (fallback workspace mode)'}`
+      );
+      console.log(
+        '[verbose] API routes: /api/health, /api/ui-metadata, /api/ui-actions/doctor, /api/runs, /api/runs/:program, /api/runs/:program/artifacts/content, /api/analyses*, /api/prompt-builder/*'
+      );
     }
 
     console.log(`Zeus local UI available at: ${result.url}`);

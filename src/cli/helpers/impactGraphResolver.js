@@ -35,9 +35,10 @@ function findImpactGraph({ outputRoot, target, program }) {
     throw new Error(`Output directory not found: ${outputRoot}`);
   }
 
-  const candidateDirs = fs.readdirSync(outputRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
+  const candidateDirs = fs
+    .readdirSync(outputRoot, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => entry.name)
     .sort((a, b) => a.localeCompare(b));
 
   const candidates = [];
@@ -47,7 +48,9 @@ function findImpactGraph({ outputRoot, target, program }) {
     if (!fs.existsSync(graphPath)) continue;
 
     const parsed = JSON.parse(fs.readFileSync(graphPath, 'utf8'));
-    const nodeIds = new Set(((parsed && parsed.nodes) || []).map((node) => normalizeId(node.id)).filter(Boolean));
+    const nodeIds = new Set(
+      ((parsed && parsed.nodes) || []).map(node => normalizeId(node.id)).filter(Boolean)
+    );
     candidates.push({
       program: normalizeId(directory),
       graphPath,
@@ -60,10 +63,12 @@ function findImpactGraph({ outputRoot, target, program }) {
     throw new Error(`No program-call-tree.json found under ${outputRoot}. Run analyze first.`);
   }
 
-  const matching = candidates.filter((entry) => entry.hasTarget);
+  const matching = candidates.filter(entry => entry.hasTarget);
   if (matching.length > 1) {
-    const options = matching.map((entry) => entry.program).join(', ');
-    throw new Error(`Target "${normalizedTarget}" found in multiple program graphs (${options}). Use --program to disambiguate.`);
+    const options = matching.map(entry => entry.program).join(', ');
+    throw new Error(
+      `Target "${normalizedTarget}" found in multiple program graphs (${options}). Use --program to disambiguate.`
+    );
   }
   if (matching.length === 1) {
     return matching[0];
@@ -72,8 +77,10 @@ function findImpactGraph({ outputRoot, target, program }) {
     return candidates[0];
   }
 
-  const options = candidates.map((entry) => entry.program).join(', ');
-  throw new Error(`Could not infer graph for target "${normalizedTarget}". Available program outputs: ${options}. Use --program.`);
+  const options = candidates.map(entry => entry.program).join(', ');
+  throw new Error(
+    `Could not infer graph for target "${normalizedTarget}". Available program outputs: ${options}. Use --program.`
+  );
 }
 
 module.exports = {

@@ -12,7 +12,9 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 function normalizeIdentifier(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function extractName(entry) {
@@ -85,17 +87,19 @@ function buildDependencyGraph(context) {
   addNode(program, 'PROGRAM');
 
   const dependencyTables = (dependencies.tables || [])
-    .map((table) => normalizeIdentifier(extractName(table)))
+    .map(table => normalizeIdentifier(extractName(table)))
     .filter(Boolean);
   const sqlTables = collectSqlTableNames((context && context.sql) || {});
-  const tableNames = Array.from(new Set([...dependencyTables, ...sqlTables])).sort((a, b) => a.localeCompare(b));
+  const tableNames = Array.from(new Set([...dependencyTables, ...sqlTables])).sort((a, b) =>
+    a.localeCompare(b)
+  );
   for (const tableName of tableNames) {
     addNode(tableName, 'TABLE');
     addEdge(program, tableName, 'USES_TABLE');
   }
 
   const programCalls = (dependencies.programCalls || [])
-    .map((call) => normalizeIdentifier(extractName(call)))
+    .map(call => normalizeIdentifier(extractName(call)))
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
   for (const calledProgram of programCalls) {
@@ -104,7 +108,7 @@ function buildDependencyGraph(context) {
   }
 
   const copyMembers = (dependencies.copyMembers || [])
-    .map((copy) => normalizeIdentifier(extractName(copy)))
+    .map(copy => normalizeIdentifier(extractName(copy)))
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
   for (const copyMember of copyMembers) {
@@ -113,12 +117,16 @@ function buildDependencyGraph(context) {
   }
 
   const modules = (bindingAnalysis.modules || [])
-    .map((module) => ({
+    .map(module => ({
       id: `MODULE_${normalizeIdentifier(module.name)}`,
       label: normalizeIdentifier(module.name),
       type: normalizeIdentifier(module.kind || 'MODULE'),
-      bindingDirectories: (module.bindingDirectories || []).map((entry) => normalizeIdentifier(entry)).filter(Boolean),
-      servicePrograms: (module.servicePrograms || []).map((entry) => normalizeIdentifier(entry)).filter(Boolean),
+      bindingDirectories: (module.bindingDirectories || [])
+        .map(entry => normalizeIdentifier(entry))
+        .filter(Boolean),
+      servicePrograms: (module.servicePrograms || [])
+        .map(entry => normalizeIdentifier(entry))
+        .filter(Boolean),
     }))
     .sort((a, b) => a.id.localeCompare(b.id));
   for (const module of modules) {
@@ -137,7 +145,7 @@ function buildDependencyGraph(context) {
   }
 
   const servicePrograms = (bindingAnalysis.servicePrograms || [])
-    .map((serviceProgram) => normalizeIdentifier(extractName(serviceProgram)))
+    .map(serviceProgram => normalizeIdentifier(extractName(serviceProgram)))
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
   for (const serviceProgram of servicePrograms) {
@@ -145,7 +153,7 @@ function buildDependencyGraph(context) {
   }
 
   const bindingDirectories = (bindingAnalysis.bindingDirectories || [])
-    .map((bindingDirectory) => normalizeIdentifier(extractName(bindingDirectory)))
+    .map(bindingDirectory => normalizeIdentifier(extractName(bindingDirectory)))
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
   for (const bindingDirectory of bindingDirectories) {
@@ -168,7 +176,9 @@ function buildDependencyGraph(context) {
       moduleCount: modules.length,
       serviceProgramCount: servicePrograms.length,
       bindingDirectoryCount: bindingDirectories.length,
-      bindEdgeCount: sortedEdges.filter((edge) => ['HAS_MODULE', 'USES_BINDING_DIRECTORY', 'BINDS_SERVICE_PROGRAM'].includes(edge.type)).length,
+      bindEdgeCount: sortedEdges.filter(edge =>
+        ['HAS_MODULE', 'USES_BINDING_DIRECTORY', 'BINDS_SERVICE_PROGRAM'].includes(edge.type)
+      ).length,
     },
   };
 }
@@ -182,7 +192,8 @@ function buildGraphSummary(graph) {
     copyMemberCount: Number(graph && graph.summary && graph.summary.copyMemberCount) || 0,
     moduleCount: Number(graph && graph.summary && graph.summary.moduleCount) || 0,
     serviceProgramCount: Number(graph && graph.summary && graph.summary.serviceProgramCount) || 0,
-    bindingDirectoryCount: Number(graph && graph.summary && graph.summary.bindingDirectoryCount) || 0,
+    bindingDirectoryCount:
+      Number(graph && graph.summary && graph.summary.bindingDirectoryCount) || 0,
     bindEdgeCount: Number(graph && graph.summary && graph.summary.bindEdgeCount) || 0,
     files: {
       json: 'dependency-graph.json',

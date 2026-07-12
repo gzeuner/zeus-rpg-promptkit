@@ -26,39 +26,50 @@ test('refactoring and test-generation prompt packs are emitted through guided mo
   fs.cpSync(fixtureRoot, sourceRoot, { recursive: true });
 
   try {
-    runCli([
-      'analyze',
-      '--source',
-      sourceRoot,
-      '--program',
-      'ORDERPGM',
-      '--out',
-      outputRoot,
-      '--mode',
-      'refactoring',
-    ], projectRoot);
+    runCli(
+      [
+        'analyze',
+        '--source',
+        sourceRoot,
+        '--program',
+        'ORDERPGM',
+        '--out',
+        outputRoot,
+        '--mode',
+        'refactoring',
+      ],
+      projectRoot
+    );
 
     const refactoringDir = path.join(outputRoot, 'ORDERPGM');
-    assert.equal(fs.existsSync(path.join(refactoringDir, 'ai_prompt_architecture_review.md')), true);
+    assert.equal(
+      fs.existsSync(path.join(refactoringDir, 'ai_prompt_architecture_review.md')),
+      true
+    );
     assert.equal(fs.existsSync(path.join(refactoringDir, 'ai_prompt_refactoring_plan.md')), true);
 
-    runCli([
-      'workflow',
-      '--preset',
-      'test-generation-review',
-      '--source',
-      sourceRoot,
-      '--program',
-      'ORDERPGM',
-      '--out',
-      outputRoot,
-      '--bundle-output',
-      bundleRoot,
-    ], projectRoot);
+    runCli(
+      [
+        'workflow',
+        '--preset',
+        'test-generation-review',
+        '--source',
+        sourceRoot,
+        '--program',
+        'ORDERPGM',
+        '--out',
+        outputRoot,
+        '--bundle-output',
+        bundleRoot,
+      ],
+      projectRoot
+    );
 
     const workflowDir = path.join(outputRoot, 'ORDERPGM');
     assert.equal(fs.existsSync(path.join(workflowDir, 'ai_prompt_test_generation.md')), true);
-    const workflowManifest = JSON.parse(fs.readFileSync(path.join(workflowDir, 'workflow-run-manifest.json'), 'utf8'));
+    const workflowManifest = JSON.parse(
+      fs.readFileSync(path.join(workflowDir, 'workflow-run-manifest.json'), 'utf8')
+    );
     assert.equal(workflowManifest.preset.name, 'test-generation-review');
     assert.equal(workflowManifest.preset.analyzeMode, 'test-generation');
   } finally {

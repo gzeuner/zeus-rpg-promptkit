@@ -28,20 +28,22 @@ test('DB2 connection guard aborts repeated auth failures after the first probe',
   };
 
   assert.throws(
-    () => runReadOnlyDb2Query({
-      dbConfig: sampleDbConfig(),
-      query: 'SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 1 ROW ONLY',
-      runtime,
-    }),
-    /Pre-flight login check failed/i,
+    () =>
+      runReadOnlyDb2Query({
+        dbConfig: sampleDbConfig(),
+        query: 'SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 1 ROW ONLY',
+        runtime,
+      }),
+    /Pre-flight login check failed/i
   );
   assert.throws(
-    () => runReadOnlyDb2Query({
-      dbConfig: sampleDbConfig(),
-      query: 'SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 1 ROW ONLY',
-      runtime,
-    }),
-    /already failed/i,
+    () =>
+      runReadOnlyDb2Query({
+        dbConfig: sampleDbConfig(),
+        query: 'SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 1 ROW ONLY',
+        runtime,
+      }),
+    /already failed/i
   );
 
   assert.deepEqual(calls, ['SELECT 1 AS HEALTHCHECK FROM SYSIBM.SYSDUMMY1']);
@@ -70,26 +72,28 @@ test('fetch connection guard aborts repeated auth failures before member listing
   };
 
   assert.throws(
-    () => listMembers({
-      host: 'ibmi.example.com',
-      user: 'ZEUS',
-      password: 'secret',
-      sourceLib: 'DEMO',
-      sourceFile: 'QRPGLESRC',
-      runtime,
-    }),
-    /Pre-flight login check failed/i,
+    () =>
+      listMembers({
+        host: 'ibmi.example.com',
+        user: 'ZEUS',
+        password: 'secret',
+        sourceLib: 'DEMO',
+        sourceFile: 'QRPGLESRC',
+        runtime,
+      }),
+    /Pre-flight login check failed/i
   );
   assert.throws(
-    () => listMembers({
-      host: 'ibmi.example.com',
-      user: 'ZEUS',
-      password: 'secret',
-      sourceLib: 'DEMO',
-      sourceFile: 'QRPGLESRC',
-      runtime,
-    }),
-    /already failed/i,
+    () =>
+      listMembers({
+        host: 'ibmi.example.com',
+        user: 'ZEUS',
+        password: 'secret',
+        sourceLib: 'DEMO',
+        sourceFile: 'QRPGLESRC',
+        runtime,
+      }),
+    /already failed/i
   );
 
   assert.deepEqual(calls, [

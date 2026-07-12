@@ -26,10 +26,18 @@ async function runCopyToWorkspace(args) {
 
   const { result } = execution;
 
-  console.log(renderAsciiTable(
-    ['Status', 'Member', 'Source', 'Target', 'Note'],
-    result.results.map((entry) => [entry.status, entry.member, entry.source, entry.target, entry.note]),
-  ));
+  console.log(
+    renderAsciiTable(
+      ['Status', 'Member', 'Source', 'Target', 'Note'],
+      result.results.map(entry => [
+        entry.status,
+        entry.member,
+        entry.source,
+        entry.target,
+        entry.note,
+      ])
+    )
+  );
   console.log(`Selected sources: ${result.selectedCount}/${result.discoveredCount}`);
   console.log(`Copied: ${result.copiedCount}`);
   console.log(`Already exists: ${result.existingCount}`);

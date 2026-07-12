@@ -145,7 +145,10 @@ function queryJournalStatus({ schema, tableName, dbConfig, runtime = {} }) {
     const row = result.rows && result.rows[0];
     if (!row) return null;
     return {
-      journaled: String(row.JOURNALED || row['JOURNALED'] || 'NO').trim().toUpperCase() === 'YES',
+      journaled:
+        String(row.JOURNALED || row['JOURNALED'] || 'NO')
+          .trim()
+          .toUpperCase() === 'YES',
       journalName: String(row.JOURNAL_NAME || row['JOURNAL_NAME'] || '').trim(),
       journalLibrary: String(row.JOURNAL_LIBRARY || row['JOURNAL_LIBRARY'] || '').trim(),
       journalImages: String(row.JOURNAL_IMAGES || row['JOURNAL_IMAGES'] || '').trim(),
@@ -173,7 +176,10 @@ function queryJournalStatusBatch({ tables, dbConfig, runtime = {} }) {
     const key = `${String(t.schema || '').toUpperCase()}.${String(t.name || '').toUpperCase()}`;
     if (!seen.has(key)) {
       seen.add(key);
-      unique.push({ schema: String(t.schema || '').toUpperCase(), name: String(t.name || '').toUpperCase() });
+      unique.push({
+        schema: String(t.schema || '').toUpperCase(),
+        name: String(t.name || '').toUpperCase(),
+      });
     }
   }
 

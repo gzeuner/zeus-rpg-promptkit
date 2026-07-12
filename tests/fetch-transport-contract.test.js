@@ -26,15 +26,17 @@ function buildFetchOptions(outDir, overrides = {}) {
 }
 
 function buildExportResult() {
-  return [{
-    sourceFile: 'QRPGLESRC',
-    member: 'PROGRAM_001',
-    ok: true,
-    command: 'CPYTOSTMF ...',
-    messages: [],
-    stderr: '',
-    fallbackUsed: false,
-  }];
+  return [
+    {
+      sourceFile: 'QRPGLESRC',
+      member: 'PROGRAM_001',
+      ok: true,
+      command: 'CPYTOSTMF ...',
+      messages: [],
+      stderr: '',
+      fallbackUsed: false,
+    },
+  ];
 }
 
 function readManifest(outDir) {
@@ -62,7 +64,10 @@ test('fetchSources records the direct sftp transport contract with CRLF-normaliz
       },
       async downloadDirectoryFn(params) {
         sftpCalls += 1;
-        return writeDownloadedSource(params, Buffer.from('**FREE\r\nDCL-F TABLE_001 DISK;\r\n', 'utf8'));
+        return writeDownloadedSource(
+          params,
+          Buffer.from('**FREE\r\nDCL-F TABLE_001 DISK;\r\n', 'utf8')
+        );
       },
       async downloadDirectoryViaJt400Fn() {
         jt400Calls += 1;
@@ -111,7 +116,10 @@ test('fetchSources falls back from sftp to jt400 and preserves the UTF-8 manifes
       },
       async downloadDirectoryViaJt400Fn(params) {
         jt400Calls += 1;
-        return writeDownloadedSource(params, Buffer.from('**FREE\nDCL-F TABLE_001 DISK;\n', 'utf8'));
+        return writeDownloadedSource(
+          params,
+          Buffer.from('**FREE\nDCL-F TABLE_001 DISK;\n', 'utf8')
+        );
       },
       async downloadDirectoryViaFtpFn() {
         ftpCalls += 1;
@@ -121,7 +129,11 @@ test('fetchSources falls back from sftp to jt400 and preserves the UTF-8 manifes
 
     const manifest = readManifest(outDir);
     assert.equal(summary.transportUsed, 'jt400');
-    assert.ok(summary.notes.some((note) => note.includes('sftp') && note.includes('SFTP unavailable for fixture')));
+    assert.ok(
+      summary.notes.some(
+        note => note.includes('sftp') && note.includes('SFTP unavailable for fixture')
+      )
+    );
     assert.equal(manifest.transportRequested, 'auto');
     assert.equal(manifest.transportUsed, 'jt400');
     assert.equal(manifest.files[0].utf8Valid, true);
@@ -158,14 +170,25 @@ test('fetchSources falls back to ftp and records mixed newline diagnostics in th
       },
       async downloadDirectoryViaFtpFn(params) {
         ftpCalls += 1;
-        return writeDownloadedSource(params, Buffer.from('**FREE\r\nDCL-F TABLE_001 DISK;\n', 'utf8'));
+        return writeDownloadedSource(
+          params,
+          Buffer.from('**FREE\r\nDCL-F TABLE_001 DISK;\n', 'utf8')
+        );
       },
     });
 
     const manifest = readManifest(outDir);
     assert.equal(summary.transportUsed, 'ftp');
-    assert.ok(summary.notes.some((note) => note.includes('sftp') && note.includes('SFTP unavailable for fixture')));
-    assert.ok(summary.notes.some((note) => note.includes('jt400') && note.includes('JT400 unavailable for fixture')));
+    assert.ok(
+      summary.notes.some(
+        note => note.includes('sftp') && note.includes('SFTP unavailable for fixture')
+      )
+    );
+    assert.ok(
+      summary.notes.some(
+        note => note.includes('jt400') && note.includes('JT400 unavailable for fixture')
+      )
+    );
     assert.equal(manifest.transportUsed, 'ftp');
     assert.equal(manifest.files[0].utf8Valid, true);
     assert.equal(manifest.files[0].newlineStyle, 'MIXED');
@@ -210,7 +233,10 @@ test('fetchSources records invalid UTF-8 output as an invalid imported source co
     assert.equal(manifest.files[0].utf8Valid, false);
     assert.equal(manifest.files[0].newlineStyle, 'UNKNOWN');
     assert.equal(manifest.files[0].validationStatus, 'invalid');
-    assert.match(manifest.files[0].validationMessages.join('\n'), /Invalid UTF-8 source encoding detected/);
+    assert.match(
+      manifest.files[0].validationMessages.join('\n'),
+      /Invalid UTF-8 source encoding detected/
+    );
     assert.equal(manifest.summary.invalidFileCount, 1);
     assert.equal(jt400Calls, 1);
   } finally {

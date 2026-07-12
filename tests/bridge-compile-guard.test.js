@@ -12,12 +12,13 @@ const enabledCompileConfig = {
 
 test('validateCompileTemplateRequest refuses arbitrary command text', () => {
   assert.throws(
-    () => validateCompileTemplateRequest({
-      templateId: 'crtbndrpg',
-      commandText: 'CRTBNDRPG PGM(APPLIB/ORDERPGM)',
-      bridgeConfig: enabledCompileConfig,
-    }),
-    /Arbitrary compile command text is not allowed/,
+    () =>
+      validateCompileTemplateRequest({
+        templateId: 'crtbndrpg',
+        commandText: 'CRTBNDRPG PGM(APPLIB/ORDERPGM)',
+        bridgeConfig: enabledCompileConfig,
+      }),
+    /Arbitrary compile command text is not allowed/
   );
 });
 

@@ -63,15 +63,15 @@ function createDefaultSession(id, outputProgramDir, goal) {
     focus,
     // Conceptual sections per package 04
     scope: { ...focus, sourceRuns: focus.searchScopes || [] },
-    evidence: [],           // factual references (artifact ids, search results, etc.)
-    searches: [],           // performed searches/queries
-    findings: [],           // observations
-    uncertainties: [],      // unresolved items
-    impact: [],             // impact/risk observations
-    recommendations: [],    // tests/checks
-    decisions: [],          // human decisions/notes
-    artifacts: [],          // generated artifact references
-    history: [],            // append-only chronology
+    evidence: [], // factual references (artifact ids, search results, etc.)
+    searches: [], // performed searches/queries
+    findings: [], // observations
+    uncertainties: [], // unresolved items
+    impact: [], // impact/risk observations
+    recommendations: [], // tests/checks
+    decisions: [], // human decisions/notes
+    artifacts: [], // generated artifact references
+    history: [], // append-only chronology
     metadata: {},
   };
 }
@@ -104,7 +104,16 @@ function normalizeLegacySession(raw, outputProgramDir) {
   if (!Array.isArray(normalized.history)) normalized.history = [];
 
   // Ensure new sections exist
-  ['evidence', 'searches', 'findings', 'uncertainties', 'impact', 'recommendations', 'decisions', 'artifacts'].forEach(sec => {
+  [
+    'evidence',
+    'searches',
+    'findings',
+    'uncertainties',
+    'impact',
+    'recommendations',
+    'decisions',
+    'artifacts',
+  ].forEach(sec => {
     if (!Array.isArray(normalized[sec])) normalized[sec] = [];
   });
 
@@ -135,8 +144,9 @@ function createOrLoadSession({ outputProgramDir, sessionId = null, goal = '' }) 
 
   if (!activeSessionId) {
     // Try to find the most recent session, or create a new one
-    const entries = fs.readdirSync(investigationsRoot)
-      .filter((name) => fs.statSync(path.join(investigationsRoot, name)).isDirectory())
+    const entries = fs
+      .readdirSync(investigationsRoot)
+      .filter(name => fs.statSync(path.join(investigationsRoot, name)).isDirectory())
       .sort()
       .reverse();
 
@@ -165,7 +175,11 @@ function createOrLoadSession({ outputProgramDir, sessionId = null, goal = '' }) 
   }
 
   // Validate against contract (package 04)
-  const validation = schemaRegistry.validate(CONTRACT_IDS.INVESTIGATION_SESSION, INVESTIGATION_SESSION_VERSION, session);
+  const validation = schemaRegistry.validate(
+    CONTRACT_IDS.INVESTIGATION_SESSION,
+    INVESTIGATION_SESSION_VERSION,
+    session
+  );
   if (!validation.ok) {
     // Attach for diagnostics but do not block load for legacy compat
     session._validation = { ok: false, errors: validation.errors };
@@ -217,12 +231,13 @@ function listSessions(outputProgramDir) {
   const root = getSessionRoot(outputProgramDir);
   if (!fs.existsSync(root)) return [];
 
-  return fs.readdirSync(root)
-    .filter((name) => {
+  return fs
+    .readdirSync(root)
+    .filter(name => {
       const p = path.join(root, name, SESSION_FILE);
       return fs.existsSync(p);
     })
-    .map((name) => {
+    .map(name => {
       try {
         const data = JSON.parse(fs.readFileSync(path.join(root, name, SESSION_FILE), 'utf8'));
         return {
@@ -251,7 +266,9 @@ function applyFocus(sessionContext, focusPatch) {
   const next = {
     programs: Array.from(new Set([...(current.programs || []), ...(focusPatch.programs || [])])),
     tables: Array.from(new Set([...(current.tables || []), ...(focusPatch.tables || [])])),
-    searchScopes: Array.from(new Set([...(current.searchScopes || []), ...(focusPatch.searchScopes || [])])),
+    searchScopes: Array.from(
+      new Set([...(current.searchScopes || []), ...(focusPatch.searchScopes || [])])
+    ),
   };
 
   session.focus = next;

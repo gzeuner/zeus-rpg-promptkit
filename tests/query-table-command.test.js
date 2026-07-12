@@ -24,8 +24,5 @@ test('buildQueryTableQueries constrains table, schema, and optional column filte
 
 test('validateFilterPattern rejects unsafe characters', () => {
   assert.equal(validateFilterPattern('cust%'), 'CUST%');
-  assert.throws(
-    () => validateFilterPattern("X%' OR 1=1 --"),
-    /Invalid --filter pattern/,
-  );
+  assert.throws(() => validateFilterPattern("X%' OR 1=1 --"), /Invalid --filter pattern/);
 });

@@ -33,7 +33,12 @@ const { run: runQA } = require('../src/cli/commands/qaCommand');
 const { runAssessRisk } = require('../src/cli/commands/assessRiskCommand');
 const { runGenerateTest } = require('../src/cli/commands/generateTestCommand');
 const { runGenerateChecklist } = require('../src/cli/commands/generateChecklistCommand');
-const { runUpsertSql, runInsertSql, runUpdateSql, runDeleteSql } = require('../src/cli/commands/writeSqlCommand');
+const {
+  runUpsertSql,
+  runInsertSql,
+  runUpdateSql,
+  runDeleteSql,
+} = require('../src/cli/commands/writeSqlCommand');
 const { runInspectObject } = require('../src/cli/commands/inspectObjectCommand');
 const { run: runTestRun } = require('../src/cli/commands/testRunCommand');
 const { runBridge } = require('../src/cli/commands/bridgeCommand');
@@ -63,59 +68,151 @@ const zeusPackageRoot = path.resolve(__dirname, '..');
 
 function printHelp() {
   console.log('Usage:');
-  console.log('  zeus [--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--source-root <path>] [--schema <name>] [--library <name>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--dense [lite|full|ultra]] [--prompt-max-tokens <n>] [--skip-db2-metadata] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]');
-  console.log('  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list] [--focus "<scope>"] [--search "<term>"] [--generate-prompt]  # Investigation session (focus, search, prompt gen)');
+  console.log(
+    '  zeus [--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--source-root <path>] [--schema <name>] [--library <name>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--dense [lite|full|ultra]] [--prompt-max-tokens <n>] [--skip-db2-metadata] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]'
+  );
+  console.log(
+    '  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list] [--focus "<scope>"] [--search "<term>"] [--generate-prompt]  # Investigation session (focus, search, prompt gen)'
+  );
   // Note: --dense now performs rank-aware selection + compaction (see Phase 1-3 impl)
-  console.log('  zeus [--config <path>] workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--dense [lite|full|ultra]] [--verbose] [--json]');
-  console.log('  zeus [--config <path>] workflow run --profile <name> [--preset <name>] [--out <path>] [--continue-on-error] [--dense [lite|full|ultra]]');
-  console.log('  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list]');
-  console.log('  zeus [--config <path>] bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible] [--profile <name>] [--verbose]');
-  console.log('  zeus [--config <path>] impact (--target <name> | --field <name>) [--program <name> | --member <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose] [--json]');
-  console.log('  zeus [--config <path>] assess-risk --program <name> [--out <path>] [--verbose] [--json]');
-  console.log('  zeus [--config <path>] generate-test --program <name> [--format jest|markdown] [--critical] [--change] [--table <name>] [--column <name>] [--out <path>] [--verbose]');
-  console.log('  zeus [--config <path>] generate-checklist --program <name> [--type DDL_CHANGE|CODE_CHANGE|BOTH] [--affected <P1,P2,...>] [--table <name>] [--impact LOW|MEDIUM|HIGH] [--out <path>] [--verbose]');
-  console.log('  zeus [--config <path>] fetch --host <hostname> --port <n> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--clean-remote] [--profile <name>] [--system <name>] [--verbose]');
-  console.log('  zeus [--config <path>] fetch-member --profile <name> --lib <library> --member <name>[,<name>,...] [--file <QRPGLESRC>] [--out <dir>] [--verbose]  # Einzel- oder Mehrfach-Member-Download');
-  console.log('  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]');
-  console.log('  zeus [--config <path>] analyses <list|register|index|open|show|unregister> [options]');
-  console.log('  zeus [--config <path>] doctor --profile <name> [--probe] [--show-resolved] [--strict]');
-  console.log('    --strict: Hygiene-Probleme (Klartext-Secrets) als kritischer Fehler behandeln (spiegelt "secret check" Exit-Verhalten)');
-  console.log('  zeus secret <init-key|status|encrypt|decrypt|check|migrate> [--value <text>] [--force] [--windows] [--dry-run] [--no-backup]');
-  console.log('    # Passwörter verschlüsselt ablegen (enc:v1:...). "check" prüft Hygiene (Exit 1). --windows für DPAPI. migrate: --no-backup verhindert Klartext-Backup.');
-  console.log('  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query');
-  console.log('  zeus [--config <path>] resources --profile <name> [--json]  # Zeigt das aufgeloeste Resource-Modell (Source/Objects/Metadata/Data) pro System');
-  console.log('  zeus [--config <path>] discover-environment --profile <name> [--libraries L1,L2] [--schemas S1,S2] [--include-members] [--no-tables] [--role metadata|data] [--system <name>] [--json] [--out <path>]  # Read-only Auto-Discovery von Bibliotheken/Source-Files/Members/Tabellen + Resource-Vorschlag');
-  console.log('  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--library <name>] [--filter <pattern>] [--save <datei.csv|datei.json>] [--json]');
-  console.log('  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ...[; SELECT ...]" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--save <datei.csv|datei.json>] [--watch <sek>] [--repl] [--json]');
+  console.log(
+    '  zeus [--config <path>] workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--dense [lite|full|ultra]] [--verbose] [--json]'
+  );
+  console.log(
+    '  zeus [--config <path>] workflow run --profile <name> [--preset <name>] [--out <path>] [--continue-on-error] [--dense [lite|full|ultra]]'
+  );
+  console.log(
+    '  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list]'
+  );
+  console.log(
+    '  zeus [--config <path>] bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible] [--profile <name>] [--verbose]'
+  );
+  console.log(
+    '  zeus [--config <path>] impact (--target <name> | --field <name>) [--program <name> | --member <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose] [--json]'
+  );
+  console.log(
+    '  zeus [--config <path>] assess-risk --program <name> [--out <path>] [--verbose] [--json]'
+  );
+  console.log(
+    '  zeus [--config <path>] generate-test --program <name> [--format jest|markdown] [--critical] [--change] [--table <name>] [--column <name>] [--out <path>] [--verbose]'
+  );
+  console.log(
+    '  zeus [--config <path>] generate-checklist --program <name> [--type DDL_CHANGE|CODE_CHANGE|BOTH] [--affected <P1,P2,...>] [--table <name>] [--impact LOW|MEDIUM|HIGH] [--out <path>] [--verbose]'
+  );
+  console.log(
+    '  zeus [--config <path>] fetch --host <hostname> --port <n> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--clean-remote] [--profile <name>] [--system <name>] [--verbose]'
+  );
+  console.log(
+    '  zeus [--config <path>] fetch-member --profile <name> --lib <library> --member <name>[,<name>,...] [--file <QRPGLESRC>] [--out <dir>] [--verbose]  # Einzel- oder Mehrfach-Member-Download'
+  );
+  console.log(
+    '  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]'
+  );
+  console.log(
+    '  zeus [--config <path>] analyses <list|register|index|open|show|unregister> [options]'
+  );
+  console.log(
+    '  zeus [--config <path>] doctor --profile <name> [--probe] [--show-resolved] [--strict]'
+  );
+  console.log(
+    '    --strict: Hygiene-Probleme (Klartext-Secrets) als kritischer Fehler behandeln (spiegelt "secret check" Exit-Verhalten)'
+  );
+  console.log(
+    '  zeus secret <init-key|status|encrypt|decrypt|check|migrate> [--value <text>] [--force] [--windows] [--dry-run] [--no-backup]'
+  );
+  console.log(
+    '    # Passwörter verschlüsselt ablegen (enc:v1:...). "check" prüft Hygiene (Exit 1). --windows für DPAPI. migrate: --no-backup verhindert Klartext-Backup.'
+  );
+  console.log(
+    '  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query'
+  );
+  console.log(
+    '  zeus [--config <path>] resources --profile <name> [--json]  # Zeigt das aufgeloeste Resource-Modell (Source/Objects/Metadata/Data) pro System'
+  );
+  console.log(
+    '  zeus [--config <path>] discover-environment --profile <name> [--libraries L1,L2] [--schemas S1,S2] [--include-members] [--no-tables] [--role metadata|data] [--system <name>] [--json] [--out <path>]  # Read-only Auto-Discovery von Bibliotheken/Source-Files/Members/Tabellen + Resource-Vorschlag'
+  );
+  console.log(
+    '  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--library <name>] [--filter <pattern>] [--save <datei.csv|datei.json>] [--json]'
+  );
+  console.log(
+    '  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ...[; SELECT ...]" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--save <datei.csv|datei.json>] [--watch <sek>] [--repl] [--json]'
+  );
   console.log('  zeus sql (alias for query-sql, implies --repl if no --sql/--file)');
-  console.log('    --file supports multiple ;-separated statements (batch mode). --repl or no query for interactive REPL (reuses process/guard cache, avoids repeated probes).');
-  console.log('  zeus [--config <path>] resolve-object --profile <name> --table <name> [--schema <name>] [--require-column <COLUMN>] [--include-row-count] [--json]');
-  console.log('  zeus [--config <path>] joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>] [--json]');
-  console.log('  zeus [--config <path>] write-sql --profile <name> (--sql "INSERT/UPDATE/DELETE/MERGE ...[; ...]" | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup] [--backup-schema <schema>]  # allgemeiner DML-Befehl');
-  console.log('  zeus [--config <path>] insert  --profile <name> (--sql "INSERT ..."              | --file <path>)');
-  console.log('  zeus [--config <path>] update  --profile <name> (--sql "UPDATE ..."              | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup]');
-  console.log('  zeus [--config <path>] delete  --profile <name> (--sql "DELETE ..."              | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup]');
-  console.log('    --confirm    Bestaetigt Ausfuehrung nach Row-Count-Pruefung (erforderlich fuer DELETE/UPDATE)');
+  console.log(
+    '    --file supports multiple ;-separated statements (batch mode). --repl or no query for interactive REPL (reuses process/guard cache, avoids repeated probes).'
+  );
+  console.log(
+    '  zeus [--config <path>] resolve-object --profile <name> --table <name> [--schema <name>] [--require-column <COLUMN>] [--include-row-count] [--json]'
+  );
+  console.log(
+    '  zeus [--config <path>] joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>] [--json]'
+  );
+  console.log(
+    '  zeus [--config <path>] write-sql --profile <name> (--sql "INSERT/UPDATE/DELETE/MERGE ...[; ...]" | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup] [--backup-schema <schema>]  # allgemeiner DML-Befehl'
+  );
+  console.log(
+    '  zeus [--config <path>] insert  --profile <name> (--sql "INSERT ..."              | --file <path>)'
+  );
+  console.log(
+    '  zeus [--config <path>] update  --profile <name> (--sql "UPDATE ..."              | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup]'
+  );
+  console.log(
+    '  zeus [--config <path>] delete  --profile <name> (--sql "DELETE ..."              | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup]'
+  );
+  console.log(
+    '    --confirm    Bestaetigt Ausfuehrung nach Row-Count-Pruefung (erforderlich fuer DELETE/UPDATE)'
+  );
   console.log('    --force      Ueberspringt Row-Count-Pruefung (kein --confirm noetig)');
   console.log('    --dry-run    Zeigt nur Row-Count, fuehrt NICHTS aus');
   console.log('    --backup     Legt Backup-Tabelle an bevor DELETE/UPDATE ausgefuehrt wird');
   console.log('    --require-backup  Bricht ab, wenn die Sicherung nicht angelegt werden kann');
-  console.log('  zeus [--config <path>] search-source --source-root <path> (--search-term <term> | --member <name> | --table <name>) [--file-pattern <glob>] [--case-sensitive] [--max-results <n>]');
-  console.log('  zeus [--config <path>] copy-to-workspace --profile <name> [--members <M1,M2,...>] [--force]');
+  console.log(
+    '  zeus [--config <path>] search-source --source-root <path> (--search-term <term> | --member <name> | --table <name>) [--file-pattern <glob>] [--case-sensitive] [--max-results <n>]'
+  );
+  console.log(
+    '  zeus [--config <path>] copy-to-workspace --profile <name> [--members <M1,M2,...>] [--force]'
+  );
   console.log('  zeus [--config <path>] diff --profile <name> --member <name>');
-  console.log('  zeus [--config <path>] field-search --profile <name> --field <name> [--table <name>] [--source <path>] [--source-lib <lib>] [--source-file <file>] [--mode local|remote|xref|all] [--max-results <n>] [--verbose]');
-  console.log('  zeus trace --value <VAL> [--start-table <T>] [--start-program <P>] [--profile <name>] [--source <dir>] [--json]   # Value / data lineage');
-  console.log('  zeus xref (--program <NAME> | --table <NAME>) [--profile <name>] [--json]   # Who-calls / who-uses (catalog + graph)');
-  console.log('  zeus [--config <path>] qa [--input <path>] [--format jira|markdown|json] [--strict LENIENT|STRICT] [--post-comment] [--jira-ticket <ticket>] [--verbose] [--json]');
-  console.log('  zeus [--config <path>] validate-rpg-sql [--source <path>] [--program <name>] [--input <analyze-output>] [--format markdown|json] [--out <path>] [--verbose] [--json]');
-  console.log('  zeus [--config <path>] onboarding | wizard | onboard   # Interactive zeus-onboarding-wizard for new IBM i systems');
-  console.log('  zeus [--config <path>] inspect-object --profile <name> --lib <lib> --name <name> [--type *PGM|*FILE|*SRVPGM|*MODULE] [--journal]');
-  console.log('  zeus [--config <path>] test-run <start|capture|show|rollback> --profile <name> [options]');
-  console.log('  zeus [--config <path>] bridge <plan|stage|apply|compile-plan|compile-run|report> --profile <name> [options]');
-  console.log('  zeus pui-edit --file <path> --action <roundtrip-check|dump-json|validate-json|export-json|import-json|plan|apply|grid-add-column> [--changes-file <path>] [--out <path>] [--in <path>] [--format pretty|compact|dddl] [--confirm] [--sfl-record <name>] [--sfl-field "<DDS line>"]');
-  console.log('  zeus pui-inspect --file <path> [--json] [--trace <fieldName>]  # LOKAL: Grid-Spalten -> Feldbindung -> Tooltip einer PUI-Display-Datei sichtbar machen');
-  console.log('  zeus [--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]');
-  console.log('  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]');
+  console.log(
+    '  zeus [--config <path>] field-search --profile <name> --field <name> [--table <name>] [--source <path>] [--source-lib <lib>] [--source-file <file>] [--mode local|remote|xref|all] [--max-results <n>] [--verbose]'
+  );
+  console.log(
+    '  zeus trace --value <VAL> [--start-table <T>] [--start-program <P>] [--profile <name>] [--source <dir>] [--json]   # Value / data lineage'
+  );
+  console.log(
+    '  zeus xref (--program <NAME> | --table <NAME>) [--profile <name>] [--json]   # Who-calls / who-uses (catalog + graph)'
+  );
+  console.log(
+    '  zeus [--config <path>] qa [--input <path>] [--format jira|markdown|json] [--strict LENIENT|STRICT] [--post-comment] [--jira-ticket <ticket>] [--verbose] [--json]'
+  );
+  console.log(
+    '  zeus [--config <path>] validate-rpg-sql [--source <path>] [--program <name>] [--input <analyze-output>] [--format markdown|json] [--out <path>] [--verbose] [--json]'
+  );
+  console.log(
+    '  zeus [--config <path>] onboarding | wizard | onboard   # Interactive zeus-onboarding-wizard for new IBM i systems'
+  );
+  console.log(
+    '  zeus [--config <path>] inspect-object --profile <name> --lib <lib> --name <name> [--type *PGM|*FILE|*SRVPGM|*MODULE] [--journal]'
+  );
+  console.log(
+    '  zeus [--config <path>] test-run <start|capture|show|rollback> --profile <name> [options]'
+  );
+  console.log(
+    '  zeus [--config <path>] bridge <plan|stage|apply|compile-plan|compile-run|report> --profile <name> [options]'
+  );
+  console.log(
+    '  zeus pui-edit --file <path> --action <roundtrip-check|dump-json|validate-json|export-json|import-json|plan|apply|grid-add-column> [--changes-file <path>] [--out <path>] [--in <path>] [--format pretty|compact|dddl] [--confirm] [--sfl-record <name>] [--sfl-field "<DDS line>"]'
+  );
+  console.log(
+    '  zeus pui-inspect --file <path> [--json] [--trace <fieldName>]  # LOKAL: Grid-Spalten -> Feldbindung -> Tooltip einer PUI-Display-Datei sichtbar machen'
+  );
+  console.log(
+    '  zeus [--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]'
+  );
+  console.log(
+    '  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]'
+  );
   console.log('  zeus [--config <path>] mcp <serve|help> [--stdio true|false] [--verbose]');
 }
 
@@ -167,7 +264,9 @@ function normalizeJsonArgs(args) {
   if (!args || Object.prototype.hasOwnProperty.call(args, 'json')) {
     return;
   }
-  const format = String(args.format || args.output || '').toLowerCase().trim();
+  const format = String(args.format || args.output || '')
+    .toLowerCase()
+    .trim();
   if (format === 'json' || args['json-output']) {
     args.json = true;
   }
@@ -202,10 +301,27 @@ function splitCommandArgs(argv) {
 
 // Befehle die DB2 oder IBM i Verbindung brauchen â€” Env-Check wird nur fÃ¼r diese ausgefÃ¼hrt
 const COMMANDS_NEEDING_ENV = new Set([
-  'query-sql', 'query-table', 'fetch', 'fetch-member', 'analyze', 'workflow',
-  'upsert', 'upsert-sql', 'write-sql', 'insert', 'update', 'delete',
-  'joblog', 'inspect-object', 'diff', 'field-search', 'bridge', 'test-run',
-  'resolve-object', 'trace', 'xref',
+  'query-sql',
+  'query-table',
+  'fetch',
+  'fetch-member',
+  'analyze',
+  'workflow',
+  'upsert',
+  'upsert-sql',
+  'write-sql',
+  'insert',
+  'update',
+  'delete',
+  'joblog',
+  'inspect-object',
+  'diff',
+  'field-search',
+  'bridge',
+  'test-run',
+  'resolve-object',
+  'trace',
+  'xref',
 ]);
 
 const FETCH_ENV_VARS = ['ZEUS_FETCH_USER', 'ZEUS_FETCH_PASSWORD', 'ZEUS_FETCH_HOST'];
@@ -216,12 +332,27 @@ const FETCH_ENV_VARS = ['ZEUS_FETCH_USER', 'ZEUS_FETCH_PASSWORD', 'ZEUS_FETCH_HO
 // credentials and stays deterministic.
 const COMMANDS_AUTO_ENV = new Set([
   'doctor',
-  'query-sql', 'query-table', 'resolve-object', 'joblog',
-  'fetch', 'fetch-member',
-  'inspect-object', 'diff', 'field-search', 'bridge', 'test-run',
-  'discover-environment', 'resources',
-  'upsert', 'upsert-sql', 'write-sql', 'insert', 'update', 'delete',
-  'trace', 'xref',
+  'query-sql',
+  'query-table',
+  'resolve-object',
+  'joblog',
+  'fetch',
+  'fetch-member',
+  'inspect-object',
+  'diff',
+  'field-search',
+  'bridge',
+  'test-run',
+  'discover-environment',
+  'resources',
+  'upsert',
+  'upsert-sql',
+  'write-sql',
+  'insert',
+  'update',
+  'delete',
+  'trace',
+  'xref',
 ]);
 
 function hasNonEmptyEnvVar(name) {
@@ -257,19 +388,19 @@ function autoLoadEnvironment(command, args) {
   if (!COMMANDS_AUTO_ENV.has(command)) {
     return;
   }
-  const optedOut = isFlagDisabled(args['no-auto-env'])
-    || isFlagDisabled(process.env.ZEUS_NO_AUTO_ENV);
+  const optedOut =
+    isFlagDisabled(args['no-auto-env']) || isFlagDisabled(process.env.ZEUS_NO_AUTO_ENV);
   if (optedOut) {
     return;
   }
 
-  const environment = (typeof args.env === 'string' && args.env.trim())
-    || (typeof args.environment === 'string' && args.environment.trim())
-    || (process.env.ZEUS_ENV && String(process.env.ZEUS_ENV).trim())
-    || 'default';
-  const configDir = (typeof args.config === 'string' && args.config.trim())
-    ? args.config.trim()
-    : undefined;
+  const environment =
+    (typeof args.env === 'string' && args.env.trim()) ||
+    (typeof args.environment === 'string' && args.environment.trim()) ||
+    (process.env.ZEUS_ENV && String(process.env.ZEUS_ENV).trim()) ||
+    'default';
+  const configDir =
+    typeof args.config === 'string' && args.config.trim() ? args.config.trim() : undefined;
 
   const primaryCwd = process.cwd();
   // Include the zeus package root as additional search location (lowest priority).
@@ -313,22 +444,27 @@ function autoLoadEnvironment(command, args) {
 
   if (summary && summary.loaded) {
     const loadedFiles = (summary.files || [])
-      .filter((file) => Array.isArray(file.variables) && file.variables.length > 0)
-      .map((file) => path.relative(usedRoot, file.path).replace(/\\/g, '/') || file.path);
+      .filter(file => Array.isArray(file.variables) && file.variables.length > 0)
+      .map(file => path.relative(usedRoot, file.path).replace(/\\/g, '/') || file.path);
     const fileLabel = loadedFiles.length > 0 ? loadedFiles.join(' + ') : '(none)';
     process.stderr.write(
-      `[INFO] Env auto-discovery: ${summary.applied.length} Variable(n) aus ${fileLabel} geladen `
-      + `(bereits gesetzte Werte bleiben unveraendert; Secrets werden nicht ausgegeben).\n`,
+      `[INFO] Env auto-discovery: ${summary.applied.length} Variable(n) aus ${fileLabel} geladen ` +
+        `(bereits gesetzte Werte bleiben unveraendert; Secrets werden nicht ausgegeben).\n`
     );
 
     // Secrets-Hygiene early warning during auto-discovery
     try {
       const hygieneFiles = (summary.files || []).map(f => f.path);
-      const findings = detectPlaintextSecrets({ cwd: usedRoot, envFiles: hygieneFiles, env: process.env, checkProfiles: true });
+      const findings = detectPlaintextSecrets({
+        cwd: usedRoot,
+        envFiles: hygieneFiles,
+        env: process.env,
+        checkProfiles: true,
+      });
       if (findings.length > 0) {
         process.stderr.write(
           `[WARN] Secrets-Hygiene: ${findings.length} Klartext-Credential(s) in .env-Datei(en) erkannt (z. B. ${findings[0].key}). ` +
-          `Bitte mit "zeus secret encrypt" migrieren!\n`
+            `Bitte mit "zeus secret encrypt" migrieren!\n`
         );
       }
     } catch (_) {}
@@ -339,16 +475,16 @@ function checkEnvLoaded(command) {
   if (!COMMANDS_NEEDING_ENV.has(command)) return;
   const missingDb = collectMissingDbEnvVars();
   const missingFetch = command.startsWith('fetch')
-    ? FETCH_ENV_VARS.filter((envVar) => !hasNonEmptyEnvVar(envVar))
+    ? FETCH_ENV_VARS.filter(envVar => !hasNonEmptyEnvVar(envVar))
     : [];
   const missing = [...new Set([...missingDb, ...missingFetch])];
   if (missing.length > 0) {
     process.stderr.write(
-      `[WARN] Umgebungsvariablen nicht geladen: ${missing.join(', ')}\n`
-      + '       Auto-Discovery hat keine passende .env-Datei gefunden oder die Werte fehlen darin.\n'
-      + '       Bitte .env-Datei in config/local-only/ pflegen oder manuell laden:\n'
-      + '       . .\\config\\load-env.ps1 -Environment <name>\n'
-      + '       Ohne Env-Load werden falsche/leere Credentials verwendet -> Kontosperre moeglich!\n\n',
+      `[WARN] Umgebungsvariablen nicht geladen: ${missing.join(', ')}\n` +
+        '       Auto-Discovery hat keine passende .env-Datei gefunden oder die Werte fehlen darin.\n' +
+        '       Bitte .env-Datei in config/local-only/ pflegen oder manuell laden:\n' +
+        '       . .\\config\\load-env.ps1 -Environment <name>\n' +
+        '       Ohne Env-Load werden falsche/leere Credentials verwendet -> Kontosperre moeglich!\n\n'
     );
   }
 }
@@ -522,7 +658,12 @@ async function main() {
     return;
   }
 
-  if (command === 'onboarding' || command === 'wizard' || command === 'onboard' || command === 'zeus-onboarding-wizard') {
+  if (
+    command === 'onboarding' ||
+    command === 'wizard' ||
+    command === 'onboard' ||
+    command === 'zeus-onboarding-wizard'
+  ) {
     await runOnboarding(args);
     return;
   }
@@ -573,7 +714,8 @@ async function main() {
   }
 
   if (command === 'docs') {
-    const subcommand = Array.isArray(args._) && args._.length > 0 ? String(args._[0]).trim().toLowerCase() : '';
+    const subcommand =
+      Array.isArray(args._) && args._.length > 0 ? String(args._[0]).trim().toLowerCase() : '';
     if (subcommand === 'generate-catalog') {
       await runDocsGenerateCatalog(args);
       return;
@@ -600,7 +742,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((error) => {
+  main().catch(error => {
     console.error(error.message);
     process.exit(1);
   });

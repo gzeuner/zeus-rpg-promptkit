@@ -17,32 +17,35 @@ const { discoverFetchedSources } = require('../workspace/workCopyService');
 const { buildWorkCopyTargetName } = require('../workspace/workCopyService');
 
 function normalizeMember(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
-function resolveDiffPaths({
-  member,
-  fetchRoot,
-  workspaceRoot,
-  workCopyMode,
-}) {
+function resolveDiffPaths({ member, fetchRoot, workspaceRoot, workCopyMode }) {
   const normalizedMember = normalizeMember(member);
   const discovered = discoverFetchedSources(fetchRoot);
-  const original = discovered.find((entry) => entry.member === normalizedMember);
+  const original = discovered.find(entry => entry.member === normalizedMember);
   if (!original) {
-    throw new Error(`No fetched source found for member "${normalizedMember}" under ${path.resolve(fetchRoot)}.`);
+    throw new Error(
+      `No fetched source found for member "${normalizedMember}" under ${path.resolve(fetchRoot)}.`
+    );
   }
 
-  const candidateNames = Array.from(new Set([
-    buildWorkCopyTargetName(original, workCopyMode),
-    `${original.member}${original.extension}`,
-  ]));
+  const candidateNames = Array.from(
+    new Set([
+      buildWorkCopyTargetName(original, workCopyMode),
+      `${original.member}${original.extension}`,
+    ])
+  );
   const modifiedPath = candidateNames
-    .map((fileName) => path.join(workspaceRoot, fileName))
-    .find((candidate) => fs.existsSync(candidate));
+    .map(fileName => path.join(workspaceRoot, fileName))
+    .find(candidate => fs.existsSync(candidate));
 
   if (!modifiedPath) {
-    throw new Error(`No workspace copy found for member "${normalizedMember}" under ${path.resolve(workspaceRoot)}.`);
+    throw new Error(
+      `No workspace copy found for member "${normalizedMember}" under ${path.resolve(workspaceRoot)}.`
+    );
   }
 
   return {

@@ -11,12 +11,11 @@ const { IMPORT_MANIFEST_FILE } = require('../src/fetch/importManifest');
 function writeFetchedProgram(params) {
   const filePath = path.join(params.localDir, 'QRPGLESRC', 'ORDERPGM.rpgle');
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, [
-    '**FREE',
-    '// Größe für München',
-    'CALL INVPGM;',
-    '',
-  ].join('\r\n'), 'utf8');
+  fs.writeFileSync(
+    filePath,
+    ['**FREE', '// Größe für München', 'CALL INVPGM;', ''].join('\r\n'),
+    'utf8'
+  );
   return { downloadedCount: 1 };
 }
 
@@ -47,24 +46,26 @@ test('fetched UTF-8 source with national characters remains readable for analyze
 
       const services = {
         exportMembersForSourceFileFn() {
-          return [{
-            sourceFile: 'QRPGLESRC',
-            member: 'ORDERPGM',
-            ok: true,
-            command: 'CPYTOSTMF ...',
-            messages: [],
-            stderr: '',
-            fallbackUsed: false,
-          }];
+          return [
+            {
+              sourceFile: 'QRPGLESRC',
+              member: 'ORDERPGM',
+              ok: true,
+              command: 'CPYTOSTMF ...',
+              messages: [],
+              stderr: '',
+              fallbackUsed: false,
+            },
+          ];
         },
       };
 
       if (transport === 'sftp') {
-        services.downloadDirectoryFn = async (params) => writeFetchedProgram(params);
+        services.downloadDirectoryFn = async params => writeFetchedProgram(params);
       } else if (transport === 'jt400') {
-        services.downloadDirectoryViaJt400Fn = async (params) => writeFetchedProgram(params);
+        services.downloadDirectoryViaJt400Fn = async params => writeFetchedProgram(params);
       } else {
-        services.downloadDirectoryViaFtpFn = async (params) => writeFetchedProgram(params);
+        services.downloadDirectoryViaFtpFn = async params => writeFetchedProgram(params);
       }
 
       const summary = await fetchSources(options, services);
@@ -93,8 +94,11 @@ test('fetched UTF-8 source with national characters remains readable for analyze
       assert.equal(manifest.transportUsed, transport);
       assert.equal(manifest.files[0].utf8Valid, true);
       assert.equal(result.context.program, 'ORDERPGM');
-      assert.deepEqual(result.context.dependencies.programCalls.map((entry) => entry.name), ['INVPGM']);
-      assert.ok(!result.notes.some((note) => /Invalid UTF-8/.test(note)));
+      assert.deepEqual(
+        result.context.dependencies.programCalls.map(entry => entry.name),
+        ['INVPGM']
+      );
+      assert.ok(!result.notes.some(note => /Invalid UTF-8/.test(note)));
     } finally {
       fs.rmSync(tempRoot, { recursive: true, force: true });
     }

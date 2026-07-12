@@ -127,7 +127,9 @@ function matchesCriterion(actual, expected, operator) {
       return pattern.test(String(actual ?? ''));
     }
     case 'in':
-      return Array.isArray(expected) && expected.map((entry) => String(entry)).includes(String(actual));
+      return (
+        Array.isArray(expected) && expected.map(entry => String(entry)).includes(String(actual))
+      );
     default:
       return compareValues(actual, expected);
   }
@@ -156,7 +158,10 @@ function selectItems(items, where) {
 }
 
 function describeItem(item) {
-  return String(item && (item.id || item['record format name'] || item['field type'] || item.name) || 'unnamed item');
+  return String(
+    (item && (item.id || item['record format name'] || item['field type'] || item.name)) ||
+      'unnamed item'
+  );
 }
 
 function ensureItemsArray(json) {
@@ -170,10 +175,14 @@ function applyUpdateItem(json, operation, summaryLines) {
   const items = ensureItemsArray(json);
   const matches = selectItems(items, operation.where || operation.target || {});
   if (matches.length === 0) {
-    throw new Error(`update-item matched no items for selector: ${JSON.stringify(operation.where || operation.target || {})}`);
+    throw new Error(
+      `update-item matched no items for selector: ${JSON.stringify(operation.where || operation.target || {})}`
+    );
   }
   if (matches.length > 1 && !operation.allowMultiple) {
-    throw new Error(`update-item matched multiple items (${matches.length}); set allowMultiple=true to update all matches`);
+    throw new Error(
+      `update-item matched multiple items (${matches.length}); set allowMultiple=true to update all matches`
+    );
   }
 
   const changedItems = matches.length > 0 ? matches : [];
@@ -201,7 +210,9 @@ function applyUpdateItem(json, operation, summaryLines) {
       }
     }
 
-    summaryLines.push(`update-item -> ${describeItem(item)}: ${changeNotes.length > 0 ? changeNotes.join(', ') : 'no effective change'}`);
+    summaryLines.push(
+      `update-item -> ${describeItem(item)}: ${changeNotes.length > 0 ? changeNotes.join(', ') : 'no effective change'}`
+    );
   }
 }
 
@@ -209,10 +220,14 @@ function applyRemoveItem(json, operation, summaryLines) {
   const items = ensureItemsArray(json);
   const matches = selectItems(items, operation.where || operation.target || {});
   if (matches.length === 0) {
-    throw new Error(`remove-item matched no items for selector: ${JSON.stringify(operation.where || operation.target || {})}`);
+    throw new Error(
+      `remove-item matched no items for selector: ${JSON.stringify(operation.where || operation.target || {})}`
+    );
   }
   if (matches.length > 1 && !operation.allowMultiple) {
-    throw new Error(`remove-item matched multiple items (${matches.length}); set allowMultiple=true to remove all matches`);
+    throw new Error(
+      `remove-item matched multiple items (${matches.length}); set allowMultiple=true to remove all matches`
+    );
   }
 
   const removedLabels = [];
@@ -221,17 +236,26 @@ function applyRemoveItem(json, operation, summaryLines) {
     items.splice(match.index, 1);
   }
 
-  summaryLines.push(`remove-item -> removed ${removedLabels.length} item(s): ${removedLabels.join(', ')}`);
+  summaryLines.push(
+    `remove-item -> removed ${removedLabels.length} item(s): ${removedLabels.join(', ')}`
+  );
 }
 
 function applyInsertItemAfter(json, operation, summaryLines) {
   const items = ensureItemsArray(json);
-  const anchorMatches = selectItems(items, operation.after || operation.where || operation.target || {});
+  const anchorMatches = selectItems(
+    items,
+    operation.after || operation.where || operation.target || {}
+  );
   if (anchorMatches.length === 0) {
-    throw new Error(`insert-item-after matched no anchor items for selector: ${JSON.stringify(operation.after || operation.where || operation.target || {})}`);
+    throw new Error(
+      `insert-item-after matched no anchor items for selector: ${JSON.stringify(operation.after || operation.where || operation.target || {})}`
+    );
   }
   if (anchorMatches.length > 1 && !operation.allowMultiple) {
-    throw new Error(`insert-item-after matched multiple anchors (${anchorMatches.length}); set allowMultiple=true to use the last match`);
+    throw new Error(
+      `insert-item-after matched multiple anchors (${anchorMatches.length}); set allowMultiple=true to use the last match`
+    );
   }
 
   const anchor = anchorMatches[anchorMatches.length - 1];
@@ -241,25 +265,28 @@ function applyInsertItemAfter(json, operation, summaryLines) {
   }
 
   items.splice(anchor.index + 1, 0, cloneJson(newItem));
-  summaryLines.push(`insert-item-after -> inserted ${describeItem(newItem)} after ${describeItem(anchor.item)}`);
+  summaryLines.push(
+    `insert-item-after -> inserted ${describeItem(newItem)} after ${describeItem(anchor.item)}`
+  );
 }
 
 function applyAddColumn(json, operation, summaryLines) {
   const items = ensureItemsArray(json);
-  
+
   // Find the grid by record format name or id
   const gridName = operation.grid;
   if (!gridName) {
     throw new Error('add-column requires a grid name (e.g., "grid": "gridMain")');
   }
 
-  const gridMatches = selectItems(items, { 'field type': 'grid' })
-    .filter(({ item }) => {
-      return item['record format name'] === gridName || item.id === gridName;
-    });
+  const gridMatches = selectItems(items, { 'field type': 'grid' }).filter(({ item }) => {
+    return item['record format name'] === gridName || item.id === gridName;
+  });
 
   if (gridMatches.length === 0) {
-    throw new Error(`add-column: grid "${gridName}" not found (searched by record format name and id)`);
+    throw new Error(
+      `add-column: grid "${gridName}" not found (searched by record format name and id)`
+    );
   }
 
   const grid = gridMatches[0].item;
@@ -273,7 +300,7 @@ function applyAddColumn(json, operation, summaryLines) {
   // Update column widths if provided
   if (operation.columnWidth) {
     const widthsStr = grid['column widths'] || '';
-    const widths = widthsStr ? widthsStr.split(',').map((w) => w.trim()) : [];
+    const widths = widthsStr ? widthsStr.split(',').map(w => w.trim()) : [];
     widths.push(String(operation.columnWidth));
     grid['column widths'] = widths.join(',');
   }
@@ -281,7 +308,7 @@ function applyAddColumn(json, operation, summaryLines) {
   // Update column headings if provided
   if (operation.columnHeading) {
     const headingsStr = grid['column headings'] || '';
-    const headings = headingsStr ? headingsStr.split(',').map((h) => h.trim()) : [];
+    const headings = headingsStr ? headingsStr.split(',').map(h => h.trim()) : [];
     headings.push(operation.columnHeading);
     grid['column headings'] = headings.join(',');
   }
@@ -290,8 +317,8 @@ function applyAddColumn(json, operation, summaryLines) {
   const newColumnItem = operation.columnItem || {
     id: operation.columnId || `${gridName}_col${newColumnNum}`,
     'field type': operation.fieldType || 'output field',
-    'grid': grid.id || gridName,
-    'column': String(newColumnNum),
+    grid: grid.id || gridName,
+    column: String(newColumnNum),
   };
 
   if (operation.set && typeof operation.set === 'object') {
@@ -299,7 +326,9 @@ function applyAddColumn(json, operation, summaryLines) {
   }
 
   items.push(newColumnItem);
-  summaryLines.push(`add-column -> added column ${newColumnNum} to grid "${gridName}"; column count: ${oldColumnCount} -> ${newColumnNum}`);
+  summaryLines.push(
+    `add-column -> added column ${newColumnNum} to grid "${gridName}"; column count: ${oldColumnCount} -> ${newColumnNum}`
+  );
 }
 
 function applyDeleteColumn(json, operation, summaryLines) {
@@ -316,10 +345,9 @@ function applyDeleteColumn(json, operation, summaryLines) {
   }
 
   // Find grid by record format name or id
-  const gridMatches = selectItems(items, { 'field type': 'grid' })
-    .filter(({ item }) => {
-      return item['record format name'] === gridName || item.id === gridName;
-    });
+  const gridMatches = selectItems(items, { 'field type': 'grid' }).filter(({ item }) => {
+    return item['record format name'] === gridName || item.id === gridName;
+  });
 
   if (gridMatches.length === 0) {
     throw new Error(`delete-column: grid "${gridName}" not found`);
@@ -330,7 +358,9 @@ function applyDeleteColumn(json, operation, summaryLines) {
   const columnCount = parseInt(grid['number of columns'] || '0', 10);
 
   if (columnNum > columnCount) {
-    throw new Error(`delete-column: column ${columnNum} does not exist (grid has ${columnCount} columns)`);
+    throw new Error(
+      `delete-column: column ${columnNum} does not exist (grid has ${columnCount} columns)`
+    );
   }
 
   // Find and remove column items for this column
@@ -356,7 +386,7 @@ function applyDeleteColumn(json, operation, summaryLines) {
 
   // Update column widths if present
   if (grid['column widths']) {
-    const widths = grid['column widths'].split(',').map((w) => w.trim());
+    const widths = grid['column widths'].split(',').map(w => w.trim());
     if (widths.length > columnNum - 1) {
       widths.splice(columnNum - 1, 1);
       grid['column widths'] = widths.join(',');
@@ -365,14 +395,16 @@ function applyDeleteColumn(json, operation, summaryLines) {
 
   // Update column headings if present
   if (grid['column headings']) {
-    const headings = grid['column headings'].split(',').map((h) => h.trim());
+    const headings = grid['column headings'].split(',').map(h => h.trim());
     if (headings.length > columnNum - 1) {
       headings.splice(columnNum - 1, 1);
       grid['column headings'] = headings.join(',');
     }
   }
 
-  summaryLines.push(`delete-column -> removed column ${columnNum} from grid "${gridName}"; column count: ${oldColumnCount} -> ${columnCount - 1}; removed items: ${removedItems.join(', ')}`);
+  summaryLines.push(
+    `delete-column -> removed column ${columnNum} from grid "${gridName}"; column count: ${oldColumnCount} -> ${columnCount - 1}; removed items: ${removedItems.join(', ')}`
+  );
 }
 
 function applyUpdateColumnWidth(json, operation, summaryLines) {
@@ -387,17 +419,18 @@ function applyUpdateColumnWidth(json, operation, summaryLines) {
   }
 
   if (columnNum <= 0) {
-    throw new Error(`update-column-width: column must be a positive number, got ${operation.column}`);
+    throw new Error(
+      `update-column-width: column must be a positive number, got ${operation.column}`
+    );
   }
 
   if (!newWidth) {
     throw new Error('update-column-width requires a width (e.g., "150px" or "150")');
   }
 
-  const gridMatches = selectItems(items, { 'field type': 'grid' })
-    .filter(({ item }) => {
-      return item['record format name'] === gridName || item.id === gridName;
-    });
+  const gridMatches = selectItems(items, { 'field type': 'grid' }).filter(({ item }) => {
+    return item['record format name'] === gridName || item.id === gridName;
+  });
 
   if (gridMatches.length === 0) {
     throw new Error(`update-column-width: grid "${gridName}" not found`);
@@ -407,23 +440,29 @@ function applyUpdateColumnWidth(json, operation, summaryLines) {
   const columnCount = parseInt(grid['number of columns'] || '0', 10);
 
   if (columnNum > columnCount) {
-    throw new Error(`update-column-width: column ${columnNum} does not exist (grid has ${columnCount} columns)`);
+    throw new Error(
+      `update-column-width: column ${columnNum} does not exist (grid has ${columnCount} columns)`
+    );
   }
 
   if (!grid['column widths']) {
     throw new Error(`update-column-width: grid "${gridName}" has no column widths to update`);
   }
 
-  const widths = grid['column widths'].split(',').map((w) => w.trim());
+  const widths = grid['column widths'].split(',').map(w => w.trim());
   if (widths.length !== columnCount) {
-    throw new Error(`update-column-width: width array length (${widths.length}) does not match column count (${columnCount})`);
+    throw new Error(
+      `update-column-width: width array length (${widths.length}) does not match column count (${columnCount})`
+    );
   }
 
   const oldWidth = widths[columnNum - 1];
   widths[columnNum - 1] = newWidth;
   grid['column widths'] = widths.join(',');
 
-  summaryLines.push(`update-column-width -> grid "${gridName}" column ${columnNum}: width: ${oldWidth} -> ${newWidth}`);
+  summaryLines.push(
+    `update-column-width -> grid "${gridName}" column ${columnNum}: width: ${oldWidth} -> ${newWidth}`
+  );
 }
 
 function applyToggleItemVisibility(json, operation, summaryLines) {
@@ -431,11 +470,15 @@ function applyToggleItemVisibility(json, operation, summaryLines) {
   const matches = selectItems(items, operation.where || operation.target || {});
 
   if (matches.length === 0) {
-    throw new Error(`toggle-item-visibility matched no items for selector: ${JSON.stringify(operation.where || operation.target || {})}`);
+    throw new Error(
+      `toggle-item-visibility matched no items for selector: ${JSON.stringify(operation.where || operation.target || {})}`
+    );
   }
 
   if (matches.length > 1 && !operation.allowMultiple) {
-    throw new Error(`toggle-item-visibility matched multiple items (${matches.length}); set allowMultiple=true to toggle all`);
+    throw new Error(
+      `toggle-item-visibility matched multiple items (${matches.length}); set allowMultiple=true to toggle all`
+    );
   }
 
   const mode = (operation.mode || 'toggle').toLowerCase();
@@ -461,7 +504,9 @@ function applyToggleItemVisibility(json, operation, summaryLines) {
   }
 
   if (changedItems.length === 0) {
-    summaryLines.push(`toggle-item-visibility -> ${matches.length} item(s) already had desired visibility`);
+    summaryLines.push(
+      `toggle-item-visibility -> ${matches.length} item(s) already had desired visibility`
+    );
   } else {
     summaryLines.push(`toggle-item-visibility -> ${changedItems.join('; ')}`);
   }
@@ -474,8 +519,10 @@ function applyShowFieldSet(json, operation, summaryLines) {
     throw new Error('show-fieldset requires a fieldset name (e.g., "fieldset": "addressPanel")');
   }
 
-  const fieldsetMatches = selectItems(items, { 'record format name': fieldsetName, 'field type': 'field set panel' })
-    .concat(selectItems(items, { id: fieldsetName, 'field type': 'field set panel' }));
+  const fieldsetMatches = selectItems(items, {
+    'record format name': fieldsetName,
+    'field type': 'field set panel',
+  }).concat(selectItems(items, { id: fieldsetName, 'field type': 'field set panel' }));
 
   if (fieldsetMatches.length === 0) {
     throw new Error(`show-fieldset: field set "${fieldsetName}" not found`);
@@ -495,8 +542,10 @@ function applyHideFieldSet(json, operation, summaryLines) {
     throw new Error('hide-fieldset requires a fieldset name (e.g., "fieldset": "addressPanel")');
   }
 
-  const fieldsetMatches = selectItems(items, { 'record format name': fieldsetName, 'field type': 'field set panel' })
-    .concat(selectItems(items, { id: fieldsetName, 'field type': 'field set panel' }));
+  const fieldsetMatches = selectItems(items, {
+    'record format name': fieldsetName,
+    'field type': 'field set panel',
+  }).concat(selectItems(items, { id: fieldsetName, 'field type': 'field set panel' }));
 
   if (fieldsetMatches.length === 0) {
     throw new Error(`hide-fieldset: field set "${fieldsetName}" not found`);
@@ -516,8 +565,9 @@ function applyAddErrorCondition(json, operation, summaryLines) {
     throw new Error('add-error-condition requires a field name (e.g., "field": "emailAddress")');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`add-error-condition: field "${fieldName}" not found`);
@@ -532,7 +582,9 @@ function applyAddErrorCondition(json, operation, summaryLines) {
 
   field['error messages'].push(message);
 
-  summaryLines.push(`add-error-condition -> field "${fieldName}": added error "${message}" (total: ${field['error messages'].length})`);
+  summaryLines.push(
+    `add-error-condition -> field "${fieldName}": added error "${message}" (total: ${field['error messages'].length})`
+  );
 }
 
 function applyRemoveErrorCondition(json, operation, summaryLines) {
@@ -542,8 +594,9 @@ function applyRemoveErrorCondition(json, operation, summaryLines) {
     throw new Error('remove-error-condition requires a field name');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`remove-error-condition: field "${fieldName}" not found`);
@@ -554,15 +607,20 @@ function applyRemoveErrorCondition(json, operation, summaryLines) {
     throw new Error(`remove-error-condition: field "${fieldName}" has no error messages`);
   }
 
-  const index = operation.index !== undefined ? operation.index : field['error messages'].length - 1;
+  const index =
+    operation.index !== undefined ? operation.index : field['error messages'].length - 1;
   if (index < 0 || index >= field['error messages'].length) {
-    throw new Error(`remove-error-condition: index ${index} out of range (field has ${field['error messages'].length} errors)`);
+    throw new Error(
+      `remove-error-condition: index ${index} out of range (field has ${field['error messages'].length} errors)`
+    );
   }
 
   const removed = field['error messages'][index];
   field['error messages'].splice(index, 1);
 
-  summaryLines.push(`remove-error-condition -> field "${fieldName}": removed error at index ${index}: "${removed}" (remaining: ${field['error messages'].length})`);
+  summaryLines.push(
+    `remove-error-condition -> field "${fieldName}": removed error at index ${index}: "${removed}" (remaining: ${field['error messages'].length})`
+  );
 }
 
 function applyClearErrorConditions(json, operation, summaryLines) {
@@ -572,8 +630,9 @@ function applyClearErrorConditions(json, operation, summaryLines) {
     throw new Error('clear-error-conditions requires a field name');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`clear-error-conditions: field "${fieldName}" not found`);
@@ -602,8 +661,9 @@ function applyAddCssClass(json, operation, summaryLines) {
     throw new Error('add-css-class requires field name and class name');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`add-css-class: field "${fieldName}" not found`);
@@ -611,13 +671,17 @@ function applyAddCssClass(json, operation, summaryLines) {
 
   const field = fieldMatches[0].item;
   const classes = field['css class'] ? String(field['css class']).split(/\s+/) : [];
-  
+
   if (!classes.includes(className)) {
     classes.push(className);
     field['css class'] = classes.join(' ');
-    summaryLines.push(`add-css-class -> field "${fieldName}": added class "${className}" (total: ${classes.length})`);
+    summaryLines.push(
+      `add-css-class -> field "${fieldName}": added class "${className}" (total: ${classes.length})`
+    );
   } else {
-    summaryLines.push(`add-css-class -> field "${fieldName}": class "${className}" already present`);
+    summaryLines.push(
+      `add-css-class -> field "${fieldName}": class "${className}" already present`
+    );
   }
 }
 
@@ -629,8 +693,9 @@ function applyRemoveCssClass(json, operation, summaryLines) {
     throw new Error('remove-css-class requires field name and class name');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`remove-css-class: field "${fieldName}" not found`);
@@ -643,7 +708,9 @@ function applyRemoveCssClass(json, operation, summaryLines) {
   if (index >= 0) {
     classes.splice(index, 1);
     field['css class'] = classes.length > 0 ? classes.join(' ') : undefined;
-    summaryLines.push(`remove-css-class -> field "${fieldName}": removed class "${className}" (remaining: ${classes.length})`);
+    summaryLines.push(
+      `remove-css-class -> field "${fieldName}": removed class "${className}" (remaining: ${classes.length})`
+    );
   } else {
     summaryLines.push(`remove-css-class -> field "${fieldName}": class "${className}" not found`);
   }
@@ -657,8 +724,9 @@ function applyUpdateTheme(json, operation, summaryLines) {
     throw new Error('update-theme requires field name and theme name');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`update-theme: field "${fieldName}" not found`);
@@ -679,8 +747,9 @@ function applyUpdateBorderRadius(json, operation, summaryLines) {
     throw new Error('update-border-radius requires field name and radius value');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`update-border-radius: field "${fieldName}" not found`);
@@ -690,7 +759,9 @@ function applyUpdateBorderRadius(json, operation, summaryLines) {
   const oldRadius = field['border radius'];
   field['border radius'] = String(radius);
 
-  summaryLines.push(`update-border-radius -> field "${fieldName}": ${oldRadius || 'none'} -> ${radius}`);
+  summaryLines.push(
+    `update-border-radius -> field "${fieldName}": ${oldRadius || 'none'} -> ${radius}`
+  );
 }
 
 // ===== DEFAULT VALUE MANAGEMENT =====
@@ -703,8 +774,9 @@ function applySetDesignValue(json, operation, summaryLines) {
     throw new Error('set-design-value requires field name and value');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`set-design-value: field "${fieldName}" not found`);
@@ -718,7 +790,9 @@ function applySetDesignValue(json, operation, summaryLines) {
   const oldDesignValue = field.value.designValue;
   field.value.designValue = value;
 
-  summaryLines.push(`set-design-value -> field "${fieldName}": ${formatValue(oldDesignValue)} -> ${formatValue(value)}`);
+  summaryLines.push(
+    `set-design-value -> field "${fieldName}": ${formatValue(oldDesignValue)} -> ${formatValue(value)}`
+  );
 }
 
 function applySetDefaultValue(json, operation, summaryLines) {
@@ -729,8 +803,9 @@ function applySetDefaultValue(json, operation, summaryLines) {
     throw new Error('set-default-value requires field name and value');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`set-default-value: field "${fieldName}" not found`);
@@ -744,7 +819,9 @@ function applySetDefaultValue(json, operation, summaryLines) {
   const oldDefaultValue = field.value.defaultValue;
   field.value.defaultValue = value;
 
-  summaryLines.push(`set-default-value -> field "${fieldName}": ${formatValue(oldDefaultValue)} -> ${formatValue(value)}`);
+  summaryLines.push(
+    `set-default-value -> field "${fieldName}": ${formatValue(oldDefaultValue)} -> ${formatValue(value)}`
+  );
 }
 
 function applyClearDefaultValue(json, operation, summaryLines) {
@@ -754,8 +831,9 @@ function applyClearDefaultValue(json, operation, summaryLines) {
     throw new Error('clear-default-value requires a field name');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`clear-default-value: field "${fieldName}" not found`);
@@ -765,7 +843,9 @@ function applyClearDefaultValue(json, operation, summaryLines) {
   if (field.value && typeof field.value === 'object' && field.value.defaultValue !== undefined) {
     const removed = field.value.defaultValue;
     delete field.value.defaultValue;
-    summaryLines.push(`clear-default-value -> field "${fieldName}": removed ${formatValue(removed)}`);
+    summaryLines.push(
+      `clear-default-value -> field "${fieldName}": removed ${formatValue(removed)}`
+    );
   } else {
     summaryLines.push(`clear-default-value -> field "${fieldName}": no default value to clear`);
   }
@@ -781,8 +861,9 @@ function applyMoveToLayoutParent(json, operation, summaryLines) {
     throw new Error('move-to-layout-parent requires field name and parent id');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`move-to-layout-parent: field "${fieldName}" not found`);
@@ -797,7 +878,9 @@ function applyMoveToLayoutParent(json, operation, summaryLines) {
   const oldParent = field.layout || 'none';
   field.layout = parentId;
 
-  summaryLines.push(`move-to-layout-parent -> field "${fieldName}": parent ${oldParent} -> ${parentId}`);
+  summaryLines.push(
+    `move-to-layout-parent -> field "${fieldName}": parent ${oldParent} -> ${parentId}`
+  );
 }
 
 function applyChangeLayoutParent(json, operation, summaryLines) {
@@ -808,8 +891,9 @@ function applyChangeLayoutParent(json, operation, summaryLines) {
     throw new Error('change-layout-parent requires field name and new parent id');
   }
 
-  const fieldMatches = selectItems(items, { id: fieldName })
-    .concat(selectItems(items, { name: fieldName }));
+  const fieldMatches = selectItems(items, { id: fieldName }).concat(
+    selectItems(items, { name: fieldName })
+  );
 
   if (fieldMatches.length === 0) {
     throw new Error(`change-layout-parent: field "${fieldName}" not found`);
@@ -824,7 +908,9 @@ function applyChangeLayoutParent(json, operation, summaryLines) {
   const oldParent = field.layout || 'none';
   field.layout = newParentId;
 
-  summaryLines.push(`change-layout-parent -> field "${fieldName}": reparented from ${oldParent} to ${newParentId}`);
+  summaryLines.push(
+    `change-layout-parent -> field "${fieldName}": reparented from ${oldParent} to ${newParentId}`
+  );
 }
 
 function applyCreateLayoutContainer(json, operation, summaryLines) {
@@ -851,12 +937,18 @@ function applyCreateLayoutContainer(json, operation, summaryLines) {
 
   if (position === 'end' || position === 'append') {
     items.push(containerItem);
-    summaryLines.push(`create-layout-container -> created layout container "${containerName}" at end`);
+    summaryLines.push(
+      `create-layout-container -> created layout container "${containerName}" at end`
+    );
   } else if (position === 'start' || position === 'prepend') {
     items.unshift(containerItem);
-    summaryLines.push(`create-layout-container -> created layout container "${containerName}" at start`);
+    summaryLines.push(
+      `create-layout-container -> created layout container "${containerName}" at start`
+    );
   } else {
-    throw new Error(`create-layout-container: invalid position "${position}" (use "start" or "end")`);
+    throw new Error(
+      `create-layout-container: invalid position "${position}" (use "start" or "end")`
+    );
   }
 }
 
@@ -891,15 +983,21 @@ function applyChangeSetToJson(json, changeSet) {
         break;
       case 'toggle-item-visibility':
       case 'hide-item':
-      case 'show-item':
+      case 'show-item': {
         // Normalize hide/show to toggle-item-visibility with mode parameter
         const normalizedOp = {
           ...operation,
           type: 'toggle-item-visibility',
-          mode: operation.type === 'hide-item' ? 'hide' : operation.type === 'show-item' ? 'show' : operation.mode,
+          mode:
+            operation.type === 'hide-item'
+              ? 'hide'
+              : operation.type === 'show-item'
+                ? 'show'
+                : operation.mode,
         };
         applyToggleItemVisibility(json, normalizedOp, summaryLines);
         break;
+      }
       case 'show-fieldset':
         applyShowFieldSet(json, operation, summaryLines);
         break;

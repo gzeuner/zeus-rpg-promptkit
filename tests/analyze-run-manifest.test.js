@@ -28,7 +28,11 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
   try {
     const sourceFile = path.join(sourceRoot, 'ORDERPGM.rpgle');
     fs.writeFileSync(sourceFile, 'dcl-proc ORDERPGM;\nend-proc;\n', 'utf8');
-    fs.writeFileSync(path.join(outputProgramDir, 'context.json'), '{"program":"ORDERPGM"}\n', 'utf8');
+    fs.writeFileSync(
+      path.join(outputProgramDir, 'context.json'),
+      '{"program":"ORDERPGM"}\n',
+      'utf8'
+    );
     fs.writeFileSync(path.join(outputProgramDir, 'report.md'), '# Report\n', 'utf8');
 
     const manifest = buildAnalyzeRunManifest({
@@ -64,7 +68,9 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
           effectiveOptimizeContext: true,
           reviewWorkflow: {
             intendedAudience: ['Modernization leads'],
-            keyQuestionsAnswered: ['Which change boundaries look safest to extract or rewrite first?'],
+            keyQuestionsAnswered: [
+              'Which change boundaries look safest to extract or rewrite first?',
+            ],
             expectedDecisions: ['Choose a pilot modernization target.'],
             interpretationGuidance: ['Validate proposed seams against semantic evidence.'],
             requiredInputs: ['Canonical analysis and modernization prompts.'],
@@ -87,7 +93,10 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
             interpretationGuidance: ['Treat unresolved calls as blockers.'],
             requiredInputs: ['Shareable bundle artifacts.'],
             recommendedOutputs: [
-              { path: 'ai_prompt_modernization.md', purpose: 'Primary modernization bundle output.' },
+              {
+                path: 'ai_prompt_modernization.md',
+                purpose: 'Primary modernization bundle output.',
+              },
             ],
           },
         },
@@ -130,17 +139,19 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
             invalidFileCount: 0,
             warningCount: 0,
           },
-          files: [{
-            origin: {
-              sourceLib: 'APPLIB',
-              sourceFile: 'QRPGLESRC',
-              member: 'ORDERPGM',
-              localPath: 'ORDERPGM.rpgle',
+          files: [
+            {
+              origin: {
+                sourceLib: 'APPLIB',
+                sourceFile: 'QRPGLESRC',
+                member: 'ORDERPGM',
+                localPath: 'ORDERPGM.rpgle',
+              },
+              export: {
+                status: 'exported',
+              },
             },
-            export: {
-              status: 'exported',
-            },
-          }],
+          ],
         },
         importManifestPath: path.join(sourceRoot, 'zeus-import-manifest.json'),
         generatedFiles: ['context.json', 'report.md'],
@@ -151,21 +162,25 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
             misses: 1,
           },
         },
-        stageReports: [{
-          id: 'collect-scan',
-          status: 'completed',
-          startedAt: '2026-03-16T10:00:00.000Z',
-          completedAt: '2026-03-16T10:00:01.000Z',
-          durationMs: 1000,
-          metadata: {
-            sourceFileCount: 1,
+        stageReports: [
+          {
+            id: 'collect-scan',
+            status: 'completed',
+            startedAt: '2026-03-16T10:00:00.000Z',
+            completedAt: '2026-03-16T10:00:01.000Z',
+            durationMs: 1000,
+            metadata: {
+              sourceFileCount: 1,
+            },
+            diagnostics: [
+              {
+                severity: 'warning',
+                code: 'NOTE',
+                message: 'Example warning.',
+              },
+            ],
           },
-          diagnostics: [{
-            severity: 'warning',
-            code: 'NOTE',
-            message: 'Example warning.',
-          }],
-        }],
+        ],
       },
       previousManifest: {
         run: {
@@ -182,9 +197,11 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
             fingerprint: 'older-fingerprint',
           },
         },
-        artifacts: [{
-          path: 'context.json',
-        }],
+        artifacts: [
+          {
+            path: 'context.json',
+          },
+        ],
       },
     });
 
@@ -202,19 +219,36 @@ test('buildAnalyzeRunManifest creates a stable success manifest with artifact me
     assert.equal(manifest.inputs.importManifest.sourceLib, 'APPLIB');
     assert.equal(manifest.inputs.importManifest.traceableFileCount, 1);
     assert.equal(manifest.inputs.options.guidedMode.name, 'modernization');
-    assert.deepEqual(manifest.inputs.options.guidedMode.promptTemplates, ['documentation', 'architecture-review', 'modernization']);
-    assert.match(manifest.inputs.options.guidedMode.reviewWorkflow.intendedAudience.join('\n'), /Modernization leads/);
+    assert.deepEqual(manifest.inputs.options.guidedMode.promptTemplates, [
+      'documentation',
+      'architecture-review',
+      'modernization',
+    ]);
+    assert.match(
+      manifest.inputs.options.guidedMode.reviewWorkflow.intendedAudience.join('\n'),
+      /Modernization leads/
+    );
     assert.equal(manifest.inputs.options.workflowPreset.name, 'modernization-review');
-    assert.match(manifest.inputs.options.workflowPreset.reviewWorkflow.expectedDecisions.join('\n'), /pilot change/i);
+    assert.match(
+      manifest.inputs.options.workflowPreset.reviewWorkflow.expectedDecisions.join('\n'),
+      /pilot change/i
+    );
     assert.equal(manifest.inputs.options.investigation.scanIfsPathsEnabled, true);
     assert.deepEqual(manifest.inputs.options.investigation.searchTerms, ['ORDERS']);
-    assert.deepEqual(manifest.inputs.options.investigation.diagnosticPacks, ['table-investigation']);
+    assert.deepEqual(manifest.inputs.options.investigation.diagnosticPacks, [
+      'table-investigation',
+    ]);
     assert.equal(manifest.inputs.options.knownFacts.enabled, true);
     assert.equal(manifest.inputs.options.knownFacts.profile, 'dev');
-    assert.equal(manifest.inputs.options.knownFacts.storePath, 'config/local-only/known-facts/dev.json');
+    assert.equal(
+      manifest.inputs.options.knownFacts.storePath,
+      'config/local-only/known-facts/dev.json'
+    );
     assert.equal(manifest.artifacts.length, 2);
     assert.equal(manifest.artifacts[0].exists, true);
-    assert.ok(typeof manifest.artifacts[0].sha256 === 'string' && manifest.artifacts[0].sha256.length > 0);
+    assert.ok(
+      typeof manifest.artifacts[0].sha256 === 'string' && manifest.artifacts[0].sha256.length > 0
+    );
     assert.equal(manifest.reproducibility.enabled, false);
     assert.equal(manifest.cacheStatus.sourceScan.hits, 3);
     assert.ok(typeof manifest.reproducibility.contentFingerprint === 'string');
@@ -276,19 +310,23 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
       error: {
         message: 'boom',
         stageId: 'write-artifacts',
-        stageReports: [{
-          id: 'write-artifacts',
-          status: 'failed',
-          startedAt: '2026-03-16T10:00:00.000Z',
-          completedAt: '2026-03-16T10:00:01.000Z',
-          durationMs: 1000,
-          metadata: {},
-          diagnostics: [{
-            severity: 'error',
-            code: 'STAGE_FAILED',
-            message: 'boom',
-          }],
-        }],
+        stageReports: [
+          {
+            id: 'write-artifacts',
+            status: 'failed',
+            startedAt: '2026-03-16T10:00:00.000Z',
+            completedAt: '2026-03-16T10:00:01.000Z',
+            durationMs: 1000,
+            metadata: {},
+            diagnostics: [
+              {
+                severity: 'error',
+                code: 'STAGE_FAILED',
+                message: 'boom',
+              },
+            ],
+          },
+        ],
       },
     });
 
@@ -304,7 +342,10 @@ test('buildAnalyzeRunManifest includes failure details for failed runs', () => {
     assert.equal(manifest.inputs.options.emitDiagnosticsEnabled, false);
     assert.equal(manifest.inputs.options.denseLevel, 'lite');
     assert.equal(manifest.inputs.options.guidedMode.name, 'impact');
-    assert.match(manifest.inputs.options.guidedMode.reviewWorkflow.expectedDecisions.join('\n'), /impact target/i);
+    assert.match(
+      manifest.inputs.options.guidedMode.reviewWorkflow.expectedDecisions.join('\n'),
+      /impact target/i
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

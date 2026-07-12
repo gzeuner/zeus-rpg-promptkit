@@ -25,9 +25,9 @@ const REQUIRED_FETCH_FIELDS = Object.freeze([
 ]);
 
 function findMissingFetchFields(config) {
-  return REQUIRED_FETCH_FIELDS
-    .filter(([key]) => !config[key] || !String(config[key]).trim())
-    .map(([, flag]) => flag);
+  return REQUIRED_FETCH_FIELDS.filter(([key]) => !config[key] || !String(config[key]).trim()).map(
+    ([, flag]) => flag
+  );
 }
 
 async function executeFetch(args, { cwd = process.cwd(), env = process.env } = {}) {

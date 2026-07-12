@@ -40,13 +40,14 @@ function createResponse(id, result) {
 }
 
 function createErrorResponse(id, error, redactor) {
-  const sanitizeError = redactor && typeof redactor.sanitizeError === 'function'
-    ? redactor.sanitizeError
-    : (entry) => ({
-      code: Number.isFinite(entry && entry.code) ? entry.code : -32000,
-      message: (entry && entry.message) || 'Internal error',
-      ...(entry && entry.data !== undefined ? { data: entry.data } : {}),
-    });
+  const sanitizeError =
+    redactor && typeof redactor.sanitizeError === 'function'
+      ? redactor.sanitizeError
+      : entry => ({
+          code: Number.isFinite(entry && entry.code) ? entry.code : -32000,
+          message: (entry && entry.message) || 'Internal error',
+          ...(entry && entry.data !== undefined ? { data: entry.data } : {}),
+        });
   const sanitizedError = sanitizeError(error || {});
   return {
     jsonrpc: JSONRPC_VERSION,
@@ -56,18 +57,20 @@ function createErrorResponse(id, error, redactor) {
 }
 
 function normalizeToolCallResult(payload, redactor, options = {}) {
-  const sanitizePayload = redactor && typeof redactor.sanitizePayload === 'function'
-    ? redactor.sanitizePayload
-    : (value) => value;
+  const sanitizePayload =
+    redactor && typeof redactor.sanitizePayload === 'function'
+      ? redactor.sanitizePayload
+      : value => value;
   const sanitizedPayload = sanitizePayload(payload);
   const text = JSON.stringify(sanitizedPayload, null, 2);
-  const maxResponseBytes = Number.isInteger(options.maxResponseBytes) && options.maxResponseBytes > 0
-    ? options.maxResponseBytes
-    : (1024 * 1024);
+  const maxResponseBytes =
+    Number.isInteger(options.maxResponseBytes) && options.maxResponseBytes > 0
+      ? options.maxResponseBytes
+      : 1024 * 1024;
   const responseBytes = Buffer.byteLength(text, 'utf8');
   if (responseBytes > maxResponseBytes) {
     const error = new Error(
-      `Tool result exceeds maximum response size (${responseBytes} bytes > ${maxResponseBytes} bytes). Narrow the query or reduce payload limits.`,
+      `Tool result exceeds maximum response size (${responseBytes} bytes > ${maxResponseBytes} bytes). Narrow the query or reduce payload limits.`
     );
     error.code = 'TOOL_RESPONSE_TOO_LARGE';
     throw error;
@@ -102,9 +105,9 @@ function normalizeAllowlist(rawAllowlist) {
   }
 
   const normalized = rawAllowlist
-    .filter((entry) => typeof entry === 'string')
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0);
+    .filter(entry => typeof entry === 'string')
+    .map(entry => entry.trim())
+    .filter(entry => entry.length > 0);
 
   return normalized.length > 0 ? Array.from(new Set(normalized)) : [];
 }
@@ -118,17 +121,20 @@ function parsePositiveInteger(value, fallback) {
 }
 
 function createToolPolicy(runtime, tools) {
-  const knownToolNames = new Set(tools.map((tool) => tool.name));
-  const defaultAllowlist = DEFAULT_MCP_SAFE_TOOL_NAMES.filter((toolName) => knownToolNames.has(toolName));
-  const rawAllowlist = runtime && Object.prototype.hasOwnProperty.call(runtime, 'allowlistedTools')
-    ? runtime.allowlistedTools
-    : defaultAllowlist;
+  const knownToolNames = new Set(tools.map(tool => tool.name));
+  const defaultAllowlist = DEFAULT_MCP_SAFE_TOOL_NAMES.filter(toolName =>
+    knownToolNames.has(toolName)
+  );
+  const rawAllowlist =
+    runtime && Object.prototype.hasOwnProperty.call(runtime, 'allowlistedTools')
+      ? runtime.allowlistedTools
+      : defaultAllowlist;
   const allowlist = normalizeAllowlist(rawAllowlist);
   const allowedSet = new Set(allowlist === null ? defaultAllowlist : allowlist);
 
   return {
     listTools() {
-      return tools.filter((tool) => allowedSet.has(tool.name));
+      return tools.filter(tool => allowedSet.has(tool.name));
     },
     assertToolAllowed(name) {
       if (allowedSet.has(name)) {
@@ -159,36 +165,60 @@ function createMcpServer(runtime = {}) {
   const context = {
     cwd: runtime.cwd || process.cwd(),
     env: runtime.env || process.env,
-    assessRiskRunner: typeof runtime.assessRiskRunner === 'function' ? runtime.assessRiskRunner : undefined,
-    analysesRunner: typeof runtime.analysesRunner === 'function' ? runtime.analysesRunner : undefined,
+    assessRiskRunner:
+      typeof runtime.assessRiskRunner === 'function' ? runtime.assessRiskRunner : undefined,
+    analysesRunner:
+      typeof runtime.analysesRunner === 'function' ? runtime.analysesRunner : undefined,
     analyzeRunner: typeof runtime.analyzeRunner === 'function' ? runtime.analyzeRunner : undefined,
     bridgeRunner: typeof runtime.bridgeRunner === 'function' ? runtime.bridgeRunner : undefined,
     bundleRunner: typeof runtime.bundleRunner === 'function' ? runtime.bundleRunner : undefined,
-    copyToWorkspaceRunner: typeof runtime.copyToWorkspaceRunner === 'function' ? runtime.copyToWorkspaceRunner : undefined,
+    copyToWorkspaceRunner:
+      typeof runtime.copyToWorkspaceRunner === 'function'
+        ? runtime.copyToWorkspaceRunner
+        : undefined,
     diffRunner: typeof runtime.diffRunner === 'function' ? runtime.diffRunner : undefined,
     doctorRunner: typeof runtime.doctorRunner === 'function' ? runtime.doctorRunner : undefined,
-    discoverEnvironmentRunner: typeof runtime.discoverEnvironmentRunner === 'function' ? runtime.discoverEnvironmentRunner : undefined,
-    discoveryQueryRunner: typeof runtime.discoveryQueryRunner === 'function' ? runtime.discoveryQueryRunner : undefined,
+    discoverEnvironmentRunner:
+      typeof runtime.discoverEnvironmentRunner === 'function'
+        ? runtime.discoverEnvironmentRunner
+        : undefined,
+    discoveryQueryRunner:
+      typeof runtime.discoveryQueryRunner === 'function' ? runtime.discoveryQueryRunner : undefined,
     fetchRunner: typeof runtime.fetchRunner === 'function' ? runtime.fetchRunner : undefined,
-    fetchMemberRunner: typeof runtime.fetchMemberRunner === 'function' ? runtime.fetchMemberRunner : undefined,
-    fieldSearchRunner: typeof runtime.fieldSearchRunner === 'function' ? runtime.fieldSearchRunner : undefined,
-    generateChecklistRunner: typeof runtime.generateChecklistRunner === 'function' ? runtime.generateChecklistRunner : undefined,
-    generateTestRunner: typeof runtime.generateTestRunner === 'function' ? runtime.generateTestRunner : undefined,
+    fetchMemberRunner:
+      typeof runtime.fetchMemberRunner === 'function' ? runtime.fetchMemberRunner : undefined,
+    fieldSearchRunner:
+      typeof runtime.fieldSearchRunner === 'function' ? runtime.fieldSearchRunner : undefined,
+    generateChecklistRunner:
+      typeof runtime.generateChecklistRunner === 'function'
+        ? runtime.generateChecklistRunner
+        : undefined,
+    generateTestRunner:
+      typeof runtime.generateTestRunner === 'function' ? runtime.generateTestRunner : undefined,
     impactRunner: typeof runtime.impactRunner === 'function' ? runtime.impactRunner : undefined,
-    inspectObjectRunner: typeof runtime.inspectObjectRunner === 'function' ? runtime.inspectObjectRunner : undefined,
+    inspectObjectRunner:
+      typeof runtime.inspectObjectRunner === 'function' ? runtime.inspectObjectRunner : undefined,
     joblogRunner: typeof runtime.joblogRunner === 'function' ? runtime.joblogRunner : undefined,
-    profilesRunner: typeof runtime.profilesRunner === 'function' ? runtime.profilesRunner : undefined,
+    profilesRunner:
+      typeof runtime.profilesRunner === 'function' ? runtime.profilesRunner : undefined,
     puiEditRunner: typeof runtime.puiEditRunner === 'function' ? runtime.puiEditRunner : undefined,
     qaRunner: typeof runtime.qaRunner === 'function' ? runtime.qaRunner : undefined,
-    resolveObjectRunner: typeof runtime.resolveObjectRunner === 'function' ? runtime.resolveObjectRunner : undefined,
-    resourcesRunner: typeof runtime.resourcesRunner === 'function' ? runtime.resourcesRunner : undefined,
-    queryTableRunner: typeof runtime.queryTableRunner === 'function' ? runtime.queryTableRunner : undefined,
-    querySqlRunner: typeof runtime.querySqlRunner === 'function' ? runtime.querySqlRunner : undefined,
-    searchSourceRunner: typeof runtime.searchSourceRunner === 'function' ? runtime.searchSourceRunner : undefined,
+    resolveObjectRunner:
+      typeof runtime.resolveObjectRunner === 'function' ? runtime.resolveObjectRunner : undefined,
+    resourcesRunner:
+      typeof runtime.resourcesRunner === 'function' ? runtime.resourcesRunner : undefined,
+    queryTableRunner:
+      typeof runtime.queryTableRunner === 'function' ? runtime.queryTableRunner : undefined,
+    querySqlRunner:
+      typeof runtime.querySqlRunner === 'function' ? runtime.querySqlRunner : undefined,
+    searchSourceRunner:
+      typeof runtime.searchSourceRunner === 'function' ? runtime.searchSourceRunner : undefined,
     serveRunner: typeof runtime.serveRunner === 'function' ? runtime.serveRunner : undefined,
     testRunRunner: typeof runtime.testRunRunner === 'function' ? runtime.testRunRunner : undefined,
-    writeSqlRunner: typeof runtime.writeSqlRunner === 'function' ? runtime.writeSqlRunner : undefined,
-    workflowRunner: typeof runtime.workflowRunner === 'function' ? runtime.workflowRunner : undefined,
+    writeSqlRunner:
+      typeof runtime.writeSqlRunner === 'function' ? runtime.writeSqlRunner : undefined,
+    workflowRunner:
+      typeof runtime.workflowRunner === 'function' ? runtime.workflowRunner : undefined,
   };
   const stdioInput = runtime.stdioInput || process.stdin;
   const stdioOutput = runtime.stdioOutput || process.stdout;
@@ -205,7 +235,7 @@ function createMcpServer(runtime = {}) {
         new Promise((_, reject) => {
           timer = setTimeout(() => {
             const timeoutError = new Error(
-              `Tool execution timed out after ${toolExecutionTimeoutMs}ms: ${name}`,
+              `Tool execution timed out after ${toolExecutionTimeoutMs}ms: ${name}`
             );
             timeoutError.code = 'TOOL_TIMEOUT';
             reject(timeoutError);
@@ -225,9 +255,8 @@ function createMcpServer(runtime = {}) {
     const method = String(message.method).trim();
     const params = message.params && typeof message.params === 'object' ? message.params : {};
 
-    const respond = (result) => (isNotification
-      ? null
-      : createResponse(message.id, redactor.sanitizePayload(result)));
+    const respond = result =>
+      isNotification ? null : createResponse(message.id, redactor.sanitizePayload(result));
 
     if (method === 'initialize') {
       return respond({
@@ -264,9 +293,7 @@ function createMcpServer(runtime = {}) {
     }
 
     if (method === 'resources/read') {
-      const uri = params && typeof params.uri === 'string'
-        ? params.uri.trim()
-        : '';
+      const uri = params && typeof params.uri === 'string' ? params.uri.trim() : '';
       if (!uri) {
         throw new RpcError(-32602, 'Invalid params: resources/read requires params.uri');
       }
@@ -285,12 +312,9 @@ function createMcpServer(runtime = {}) {
     }
 
     if (method === 'prompts/get') {
-      const name = params && typeof params.name === 'string'
-        ? params.name.trim()
-        : '';
-      const promptArgs = params && params.arguments && typeof params.arguments === 'object'
-        ? params.arguments
-        : {};
+      const name = params && typeof params.name === 'string' ? params.name.trim() : '';
+      const promptArgs =
+        params && params.arguments && typeof params.arguments === 'object' ? params.arguments : {};
       if (!name) {
         throw new RpcError(-32602, 'Invalid params: prompts/get requires params.name');
       }
@@ -309,12 +333,10 @@ function createMcpServer(runtime = {}) {
 
     if (method === 'tools/call') {
       const name = params.name;
-      const callArgs = params.arguments && typeof params.arguments === 'object'
-        ? params.arguments
-        : {};
-      const profile = callArgs && typeof callArgs.profile === 'string'
-        ? callArgs.profile.trim()
-        : '';
+      const callArgs =
+        params.arguments && typeof params.arguments === 'object' ? params.arguments : {};
+      const profile =
+        callArgs && typeof callArgs.profile === 'string' ? callArgs.profile.trim() : '';
       const dryRun = parseDryRunFlag(callArgs);
       if (!name || typeof name !== 'string') {
         try {
@@ -347,9 +369,11 @@ function createMcpServer(runtime = {}) {
         } catch (_) {
           // Audit must never break MCP response handling.
         }
-        return respond(normalizeToolCallResult(payload, redactor, {
-          maxResponseBytes: maxToolResponseBytes,
-        }));
+        return respond(
+          normalizeToolCallResult(payload, redactor, {
+            maxResponseBytes: maxToolResponseBytes,
+          })
+        );
       } catch (error) {
         let rpcError = null;
         let policyDecision = 'allowed';
@@ -396,7 +420,7 @@ function createMcpServer(runtime = {}) {
     const transport = createStdioTransport({
       input: stdioInput,
       output: stdioOutput,
-      onMessage: async (envelope) => {
+      onMessage: async envelope => {
         if (envelope.parseError) {
           transport.send(createErrorResponse(null, new RpcError(-32700, 'Parse error'), redactor));
           return;
@@ -408,9 +432,10 @@ function createMcpServer(runtime = {}) {
             transport.send(response);
           }
         } catch (error) {
-          const requestId = envelope.payload && Object.prototype.hasOwnProperty.call(envelope.payload, 'id')
-            ? envelope.payload.id
-            : null;
+          const requestId =
+            envelope.payload && Object.prototype.hasOwnProperty.call(envelope.payload, 'id')
+              ? envelope.payload.id
+              : null;
           transport.send(createErrorResponse(requestId, error, redactor));
         }
       },

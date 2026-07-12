@@ -21,7 +21,14 @@ function runImpact(args) {
   try {
     // Route through capability (package 08)
     const { capabilities } = require('../../api/zeusApi');
-    const res = capabilities && typeof capabilities.execute === 'function' ? capabilities.execute('investigation.impact', { cwd: process.cwd(), env: process.env, args }, args) : null;
+    const res =
+      capabilities && typeof capabilities.execute === 'function'
+        ? capabilities.execute(
+            'investigation.impact',
+            { cwd: process.cwd(), env: process.env, args },
+            args
+          )
+        : null;
     if (res && res.ok && res.result) {
       execution = res.result;
     }

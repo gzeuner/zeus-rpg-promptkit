@@ -15,52 +15,66 @@ test('buildCanonicalAnalysisModel creates a validated semantic core with provena
   const canonicalAnalysis = buildCanonicalAnalysisModel({
     program: 'orderpgm',
     sourceRoot,
-    sourceFiles: [{
-      path: path.join(sourceRoot, 'ORDERPGM.rpgle'),
-      sizeBytes: 120,
-      lines: 12,
-    }],
+    sourceFiles: [
+      {
+        path: path.join(sourceRoot, 'ORDERPGM.rpgle'),
+        sizeBytes: 120,
+        lines: 12,
+      },
+    ],
     dependencies: {
-      tables: [{
-        name: 'orders',
-        evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 3, endLine: 3 }],
-      }],
-      calls: [{
-        name: 'invpgm',
-        kind: 'program',
-        evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 6, endLine: 6 }],
-      }],
-      copyMembers: [{
-        name: 'QRPGLESRC,ORDCOPY',
-        evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 2, endLine: 2 }],
-      }],
-      sqlStatements: [{
-        type: 'select',
-        text: 'select * from orders',
-        tables: ['orders'],
-        evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 8, endLine: 10 }],
-      }],
-      nativeFiles: [{
-        name: 'orders',
-        kind: 'disk',
-        declaredAccess: ['READ'],
-        keyed: true,
-        evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 3, endLine: 3 }],
-      }],
-      nativeFileAccesses: [{
-        fileName: 'orders',
-        fileKind: 'disk',
-        opcode: 'CHAIN',
-        accessKind: 'READ',
-        ownerProgram: 'orderpgm',
-        ownerName: 'orderpgm',
-        ownerKind: 'program',
-        keyed: true,
-        interactive: false,
-        mutating: false,
-        ownerFile: path.join(sourceRoot, 'ORDERPGM.rpgle'),
-        evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), line: 4 }],
-      }],
+      tables: [
+        {
+          name: 'orders',
+          evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 3, endLine: 3 }],
+        },
+      ],
+      calls: [
+        {
+          name: 'invpgm',
+          kind: 'program',
+          evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 6, endLine: 6 }],
+        },
+      ],
+      copyMembers: [
+        {
+          name: 'QRPGLESRC,ORDCOPY',
+          evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 2, endLine: 2 }],
+        },
+      ],
+      sqlStatements: [
+        {
+          type: 'select',
+          text: 'select * from orders',
+          tables: ['orders'],
+          evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 8, endLine: 10 }],
+        },
+      ],
+      nativeFiles: [
+        {
+          name: 'orders',
+          kind: 'disk',
+          declaredAccess: ['READ'],
+          keyed: true,
+          evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), startLine: 3, endLine: 3 }],
+        },
+      ],
+      nativeFileAccesses: [
+        {
+          fileName: 'orders',
+          fileKind: 'disk',
+          opcode: 'CHAIN',
+          accessKind: 'READ',
+          ownerProgram: 'orderpgm',
+          ownerName: 'orderpgm',
+          ownerKind: 'program',
+          keyed: true,
+          interactive: false,
+          mutating: false,
+          ownerFile: path.join(sourceRoot, 'ORDERPGM.rpgle'),
+          evidence: [{ file: path.join(sourceRoot, 'ORDERPGM.rpgle'), line: 4 }],
+        },
+      ],
     },
     notes: ['Scanner note'],
     importManifest: {
@@ -82,39 +96,41 @@ test('buildCanonicalAnalysisModel creates a validated semantic core with provena
         failedFileCount: 0,
         invalidFileCount: 0,
       },
-      files: [{
-        localPath: 'ORDERPGM.rpgle',
-        origin: {
-          sourceLib: 'APPLIB',
-          sourceFile: 'QRPGLESRC',
-          member: 'ORDERPGM',
-          memberPath: '/QSYS.LIB/APPLIB.LIB/QRPGLESRC.FILE/ORDERPGM.MBR',
-          remotePath: '/tmp/export/QRPGLESRC/ORDERPGM.rpgle',
+      files: [
+        {
           localPath: 'ORDERPGM.rpgle',
-          sourceType: 'RPGLE',
-        },
-        export: {
-          status: 'exported',
-          transportRequested: 'sftp',
-          transportUsed: 'sftp',
-          streamFileCcsid: 1208,
-          encodingPolicy: 'UTF-8 stream files (CCSID 1208)',
-          normalizationPolicy: {
-            contentBytes: 'preserve',
-            lineEndings: 'preserve',
-            localPathFormat: 'relative-forward-slash',
-            checksumAlgorithm: 'sha256',
+          origin: {
+            sourceLib: 'APPLIB',
+            sourceFile: 'QRPGLESRC',
+            member: 'ORDERPGM',
+            memberPath: '/QSYS.LIB/APPLIB.LIB/QRPGLESRC.FILE/ORDERPGM.MBR',
+            remotePath: '/tmp/export/QRPGLESRC/ORDERPGM.rpgle',
+            localPath: 'ORDERPGM.rpgle',
+            sourceType: 'RPGLE',
+          },
+          export: {
+            status: 'exported',
+            transportRequested: 'sftp',
+            transportUsed: 'sftp',
+            streamFileCcsid: 1208,
+            encodingPolicy: 'UTF-8 stream files (CCSID 1208)',
+            normalizationPolicy: {
+              contentBytes: 'preserve',
+              lineEndings: 'preserve',
+              localPathFormat: 'relative-forward-slash',
+              checksumAlgorithm: 'sha256',
+            },
+          },
+          validation: {
+            exists: true,
+            sha256: 'abc123',
+            status: 'ok',
+            utf8Valid: true,
+            newlineStyle: 'LF',
+            messages: [],
           },
         },
-        validation: {
-          exists: true,
-          sha256: 'abc123',
-          status: 'ok',
-          utf8Valid: true,
-          newlineStyle: 'LF',
-          messages: [],
-        },
-      }],
+      ],
     },
   });
 
@@ -123,21 +139,48 @@ test('buildCanonicalAnalysisModel creates a validated semantic core with provena
   assert.equal(canonicalAnalysis.sourceFiles[0].path, 'ORDERPGM.rpgle');
   assert.equal(canonicalAnalysis.sourceFiles[0].provenance.origin, 'imported');
   assert.equal(canonicalAnalysis.sourceFiles[0].provenance.import.member, 'ORDERPGM');
-  assert.equal(canonicalAnalysis.sourceFiles[0].provenance.import.memberPath, '/QSYS.LIB/APPLIB.LIB/QRPGLESRC.FILE/ORDERPGM.MBR');
+  assert.equal(
+    canonicalAnalysis.sourceFiles[0].provenance.import.memberPath,
+    '/QSYS.LIB/APPLIB.LIB/QRPGLESRC.FILE/ORDERPGM.MBR'
+  );
   assert.equal(canonicalAnalysis.sourceFiles[0].provenance.import.validationStatus, 'ok');
   assert.equal(canonicalAnalysis.provenance.importManifest.failedFileCount, 0);
   assert.equal(canonicalAnalysis.provenance.importManifest.traceableFileCount, 1);
-  assert.ok(canonicalAnalysis.entities.programs.some((entry) => entry.id === 'PROGRAM:ORDERPGM' && entry.role === 'ROOT'));
-  assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'USES_TABLE' && entry.to === 'TABLE:ORDERS'));
-  assert.ok(canonicalAnalysis.entities.nativeFiles.some((entry) => entry.id === 'NATIVE_FILE:ORDERS'));
-  assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'USES_NATIVE_FILE' && entry.to === 'NATIVE_FILE:ORDERS'));
-  assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'CALLS_PROGRAM' && entry.to === 'PROGRAM:INVPGM'));
-  assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'EXECUTES_SQL'));
+  assert.ok(
+    canonicalAnalysis.entities.programs.some(
+      entry => entry.id === 'PROGRAM:ORDERPGM' && entry.role === 'ROOT'
+    )
+  );
+  assert.ok(
+    canonicalAnalysis.relations.some(
+      entry => entry.type === 'USES_TABLE' && entry.to === 'TABLE:ORDERS'
+    )
+  );
+  assert.ok(
+    canonicalAnalysis.entities.nativeFiles.some(entry => entry.id === 'NATIVE_FILE:ORDERS')
+  );
+  assert.ok(
+    canonicalAnalysis.relations.some(
+      entry => entry.type === 'USES_NATIVE_FILE' && entry.to === 'NATIVE_FILE:ORDERS'
+    )
+  );
+  assert.ok(
+    canonicalAnalysis.relations.some(
+      entry => entry.type === 'CALLS_PROGRAM' && entry.to === 'PROGRAM:INVPGM'
+    )
+  );
+  assert.ok(canonicalAnalysis.relations.some(entry => entry.type === 'EXECUTES_SQL'));
 
   const projectedContext = buildContext({ canonicalAnalysis });
   assert.equal(projectedContext.program, 'ORDERPGM');
-  assert.deepEqual(projectedContext.dependencies.tables.map((entry) => entry.name), ['ORDERS']);
-  assert.deepEqual(projectedContext.dependencies.programCalls.map((entry) => entry.name), ['INVPGM']);
+  assert.deepEqual(
+    projectedContext.dependencies.tables.map(entry => entry.name),
+    ['ORDERS']
+  );
+  assert.deepEqual(
+    projectedContext.dependencies.programCalls.map(entry => entry.name),
+    ['INVPGM']
+  );
   assert.equal(projectedContext.nativeFileUsage.summary.fileCount, 1);
   assert.equal(projectedContext.nativeFileUsage.summary.keyedFileCount, 1);
   assert.equal(projectedContext.sql.summary.statementCount, 1);

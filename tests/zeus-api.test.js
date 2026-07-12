@@ -21,42 +21,60 @@ test('zeusApi exposes reusable analyze and workflow entry points', async () => {
   fs.cpSync(fixtureRoot, sourceRoot, { recursive: true });
   fs.mkdirSync(configRoot, { recursive: true });
   fs.mkdirSync(localOnlyRoot, { recursive: true });
-  fs.writeFileSync(path.join(configRoot, 'profiles.json'), `${JSON.stringify({
-    local: {
-      sourceRoot: './src',
-      outputRoot: './output',
-      extensions: ['.rpgle', '.clle', '.dds', '.pf', '.lf'],
-      workflow: {
-        outputRoot: './analysis',
-        defaultPreset: 'legacy-rpg-analysis',
-        members: ['ORDERPGM'],
-        analyzeModes: ['documentation'],
-        presets: {
-          'legacy-rpg-analysis': {
-            steps: ['analyze', 'report'],
+  fs.writeFileSync(
+    path.join(configRoot, 'profiles.json'),
+    `${JSON.stringify(
+      {
+        local: {
+          sourceRoot: './src',
+          outputRoot: './output',
+          extensions: ['.rpgle', '.clle', '.dds', '.pf', '.lf'],
+          workflow: {
+            outputRoot: './analysis',
+            defaultPreset: 'legacy-rpg-analysis',
+            members: ['ORDERPGM'],
+            analyzeModes: ['documentation'],
+            presets: {
+              'legacy-rpg-analysis': {
+                steps: ['analyze', 'report'],
+              },
+            },
           },
         },
       },
-    },
-  }, null, 2)}\n`, 'utf8');
-  fs.writeFileSync(path.join(localOnlyRoot, 'local.json'), `${JSON.stringify({
-    schemaVersion: 1,
-    kind: 'zeus-local-known-facts',
-    mode: 'local-only',
-    profile: 'local',
-    versionMarker: {
-      toolVersion: '0.1.0',
-      updatedAt: '2026-06-16T10:00:00.000Z',
-      expiresAt: '2026-07-16T10:00:00.000Z',
-      ttlDays: 30,
-    },
-    facts: [{
-      subject: 'ORDERS',
-      attribute: 'primaryKey',
-      value: 'ORDER_ID',
-      confidence: 'HIGH',
-    }],
-  }, null, 2)}\n`, 'utf8');
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+  fs.writeFileSync(
+    path.join(localOnlyRoot, 'local.json'),
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        kind: 'zeus-local-known-facts',
+        mode: 'local-only',
+        profile: 'local',
+        versionMarker: {
+          toolVersion: '0.1.0',
+          updatedAt: '2026-06-16T10:00:00.000Z',
+          expiresAt: '2026-07-16T10:00:00.000Z',
+          ttlDays: 30,
+        },
+        facts: [
+          {
+            subject: 'ORDERS',
+            attribute: 'primaryKey',
+            value: 'ORDER_ID',
+            confidence: 'HIGH',
+          },
+        ],
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
 
   try {
     const analyzeResult = analyze('local', {
@@ -70,15 +88,22 @@ test('zeusApi exposes reusable analyze and workflow entry points', async () => {
     });
     assert.equal(analyzeResult.program, 'ORDERPGM');
     assert.equal(fs.existsSync(path.join(analyzeResult.outputProgramDir, 'context.json')), true);
-    assert.equal(fs.existsSync(path.join(analyzeResult.outputProgramDir, 'known-facts.json')), true);
+    assert.equal(
+      fs.existsSync(path.join(analyzeResult.outputProgramDir, 'known-facts.json')),
+      true
+    );
     assert.equal(analyzeResult.result.context.knownFacts.enabled, true);
     assert.equal(analyzeResult.result.context.knownFacts.factCount, 1);
     assert.equal(analyzeResult.result.context.knownFacts.facts[0].attribute, 'primaryKey');
-    const knownFactsArtifact = readJson(path.join(analyzeResult.outputProgramDir, 'known-facts.json'));
+    const knownFactsArtifact = readJson(
+      path.join(analyzeResult.outputProgramDir, 'known-facts.json')
+    );
     assert.equal(knownFactsArtifact.kind, 'analysis-known-facts');
     assert.equal(knownFactsArtifact.factCount, 1);
-    const analyzeManifest = readJson(path.join(analyzeResult.outputProgramDir, 'analyze-run-manifest.json'));
-    assert.ok(analyzeManifest.artifacts.some((artifact) => artifact.path === 'known-facts.json'));
+    const analyzeManifest = readJson(
+      path.join(analyzeResult.outputProgramDir, 'analyze-run-manifest.json')
+    );
+    assert.ok(analyzeManifest.artifacts.some(artifact => artifact.path === 'known-facts.json'));
     const report = fs.readFileSync(path.join(analyzeResult.outputProgramDir, 'report.md'), 'utf8');
     assert.match(report, /## Known Facts/);
     assert.match(report, /Artifact: known-facts\.json/);
@@ -104,17 +129,33 @@ test('zeusApi resolves run explorer output roots from the selected profile', () 
 
   fs.mkdirSync(configRoot, { recursive: true });
   fs.mkdirSync(programDir, { recursive: true });
-  fs.writeFileSync(path.join(configRoot, 'profiles.json'), `${JSON.stringify({
-    local: {
-      outputRoot: './output',
-    },
-  }, null, 2)}\n`, 'utf8');
-  fs.writeFileSync(path.join(programDir, 'analyze-run-manifest.json'), `${JSON.stringify({
-    schemaVersion: 1,
-    tool: { name: 'zeus-rpg-promptkit', command: 'analyze' },
-    run: { status: 'succeeded', completedAt: '2026-04-13T12:00:00.000Z' },
-    inputs: { sourceRoot: './src', options: {} },
-  }, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(
+    path.join(configRoot, 'profiles.json'),
+    `${JSON.stringify(
+      {
+        local: {
+          outputRoot: './output',
+        },
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+  fs.writeFileSync(
+    path.join(programDir, 'analyze-run-manifest.json'),
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        tool: { name: 'zeus-rpg-promptkit', command: 'analyze' },
+        run: { status: 'succeeded', completedAt: '2026-04-13T12:00:00.000Z' },
+        inputs: { sourceRoot: './src', options: {} },
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
 
   try {
     const result = listRuns('local', {
@@ -150,7 +191,7 @@ test('zeus rich API supports pluggable registries (analyzers, mcpTools, stages, 
   assert.ok(zeus.analyzeStages && typeof zeus.analyzeStages.registerStage === 'function');
   assert.ok(zeus.components && typeof zeus.components.register === 'function');
 
-  zeus.analyzers.registerAnalyzer('test-plug', { run: () => ({plugged: true}) });
+  zeus.analyzers.registerAnalyzer('test-plug', { run: () => ({ plugged: true }) });
   assert.ok(zeus.analyzers.list().some(a => a.id === 'test-plug'));
   assert.ok(zeus.analyzeStages.listStages().length > 0, 'core stages should be populated');
 });
@@ -165,10 +206,17 @@ test('zeus rich API exposes investigation sessions (Prio 1)', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-zeusapi-inv-'));
   const analysisDir = path.join(tempRoot, 'output', 'TESTPGM');
   fs.mkdirSync(analysisDir, { recursive: true });
-  fs.writeFileSync(path.join(analysisDir, 'context.json'), JSON.stringify({ summary: { text: 'test' } }), 'utf8');
+  fs.writeFileSync(
+    path.join(analysisDir, 'context.json'),
+    JSON.stringify({ summary: { text: 'test' } }),
+    'utf8'
+  );
 
   try {
-    const ctx = zeus.investigations.createOrLoad({ outputProgramDir: analysisDir, goal: 'api test' });
+    const ctx = zeus.investigations.createOrLoad({
+      outputProgramDir: analysisDir,
+      goal: 'api test',
+    });
     assert.ok(ctx.session);
     assert.ok(ctx.session.id);
     assert.equal(ctx.session.goal, 'api test');

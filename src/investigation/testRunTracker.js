@@ -48,9 +48,15 @@ function buildSnapshotQuery(schema, tableName, keyColumns, selectColumns) {
   validateSqlIdentifier(schema, 'schema');
   validateSqlIdentifier(tableName, 'table');
 
-  const selectPart = selectColumns && selectColumns.length > 0
-    ? selectColumns.map((c) => { validateSqlIdentifier(c, 'column'); return c; }).join(', ')
-    : '*';
+  const selectPart =
+    selectColumns && selectColumns.length > 0
+      ? selectColumns
+          .map(c => {
+            validateSqlIdentifier(c, 'column');
+            return c;
+          })
+          .join(', ')
+      : '*';
 
   const whereParts = Object.entries(keyColumns).map(([col, val]) => {
     validateSqlIdentifier(col, 'key column');
@@ -103,18 +109,22 @@ function diffSnapshots({ schema, table, keyColumns, before, after }) {
   const keyCols = Object.keys(keyColumns);
 
   for (const afterRow of afterRows) {
-    const matchingBefore = beforeRows.find((br) =>
-      keyCols.every((k) => String(br[k] || br[k.toLowerCase()] || '').trim() ===
-                           String(afterRow[k] || afterRow[k.toLowerCase()] || '').trim())
+    const matchingBefore = beforeRows.find(br =>
+      keyCols.every(
+        k =>
+          String(br[k] || br[k.toLowerCase()] || '').trim() ===
+          String(afterRow[k] || afterRow[k.toLowerCase()] || '').trim()
+      )
     );
 
     if (!matchingBefore) {
       changedRows.push({ type: 'INSERTED', row: afterRow });
       // Rollback: DELETE
-      const whereParts = keyCols.map((k) => {
+      const whereParts = keyCols.map(k => {
         const val = afterRow[k] || afterRow[k.toLowerCase()];
         if (val === null || val === undefined) return `${k} IS NULL`;
-        if (typeof val === 'number' || /^\d+$/.test(String(val).trim())) return `${k} = ${Number(val)}`;
+        if (typeof val === 'number' || /^\d+$/.test(String(val).trim()))
+          return `${k} = ${Number(val)}`;
         return `${k} = ${escapeSqlLiteral(String(val))}`;
       });
       rollbackSql.push(`DELETE FROM ${schema}.${table} WHERE ${whereParts.join(' AND ')};`);
@@ -136,36 +146,47 @@ function diffSnapshots({ schema, table, keyColumns, before, after }) {
       // Rollback: UPDATE mit Before-Werten
       const setParts = Object.entries(diffs).map(([col, { before: bVal }]) => {
         if (bVal === null || bVal === undefined) return `${col} = NULL`;
-        if (typeof bVal === 'number' || /^\d+$/.test(String(bVal).trim())) return `${col} = ${Number(bVal)}`;
+        if (typeof bVal === 'number' || /^\d+$/.test(String(bVal).trim()))
+          return `${col} = ${Number(bVal)}`;
         return `${col} = ${escapeSqlLiteral(String(bVal))}`;
       });
-      const whereParts = keyCols.map((k) => {
+      const whereParts = keyCols.map(k => {
         const val = afterRow[k] || afterRow[k.toLowerCase()];
         if (val === null || val === undefined) return `${k} IS NULL`;
-        if (typeof val === 'number' || /^\d+$/.test(String(val).trim())) return `${k} = ${Number(val)}`;
+        if (typeof val === 'number' || /^\d+$/.test(String(val).trim()))
+          return `${k} = ${Number(val)}`;
         return `${k} = ${escapeSqlLiteral(String(val))}`;
       });
-      rollbackSql.push(`UPDATE ${schema}.${table} SET ${setParts.join(', ')} WHERE ${whereParts.join(' AND ')};`);
+      rollbackSql.push(
+        `UPDATE ${schema}.${table} SET ${setParts.join(', ')} WHERE ${whereParts.join(' AND ')};`
+      );
     }
   }
 
   // Gelöschte Zeilen (in Before aber nicht in After)
   for (const beforeRow of beforeRows) {
-    const isStillPresent = afterRows.some((ar) =>
-      keyCols.every((k) => String(ar[k] || ar[k.toLowerCase()] || '').trim() ===
-                           String(beforeRow[k] || beforeRow[k.toLowerCase()] || '').trim())
+    const isStillPresent = afterRows.some(ar =>
+      keyCols.every(
+        k =>
+          String(ar[k] || ar[k.toLowerCase()] || '').trim() ===
+          String(beforeRow[k] || beforeRow[k.toLowerCase()] || '').trim()
+      )
     );
 
     if (!isStillPresent) {
       changedRows.push({ type: 'DELETED', row: beforeRow });
       // Rollback: INSERT mit Before-Werten
-      const cols = Object.keys(beforeRow).filter((k) => beforeRow[k] !== null && beforeRow[k] !== undefined);
-      const vals = cols.map((c) => {
+      const cols = Object.keys(beforeRow).filter(
+        k => beforeRow[k] !== null && beforeRow[k] !== undefined
+      );
+      const vals = cols.map(c => {
         const v = beforeRow[c];
         if (typeof v === 'number' || /^\d+$/.test(String(v).trim())) return String(Number(v));
         return escapeSqlLiteral(String(v));
       });
-      rollbackSql.push(`INSERT INTO ${schema}.${table} (${cols.join(', ')}) VALUES (${vals.join(', ')});`);
+      rollbackSql.push(
+        `INSERT INTO ${schema}.${table} (${cols.join(', ')}) VALUES (${vals.join(', ')});`
+      );
     }
   }
 
@@ -191,7 +212,8 @@ function writeTestRunManifest({ runId, label, program, tables, beforeSnapshots, 
     tables: tables || [],
     snapshots: {},
     rollbackSql: [],
-    _note: 'Rollback-SQL ist nur zur manuellen Ausführung in ACS gedacht. Zeus führt es NICHT automatisch aus.',
+    _note:
+      'Rollback-SQL ist nur zur manuellen Ausführung in ACS gedacht. Zeus führt es NICHT automatisch aus.',
   };
 
   if (beforeSnapshots) {

@@ -76,7 +76,11 @@ function assessWorkflowCriticality(program, stage, evidenceContext) {
 
   // Status=5 completion paths are CRITICAL
   if (status === 5 || completionPath) {
-    return { risk: 'RED', score: 90, reason: 'Status=5 completion path (critical workflow milestone)' };
+    return {
+      risk: 'RED',
+      score: 90,
+      reason: 'Status=5 completion path (critical workflow milestone)',
+    };
   }
 
   // Status transitions with no rollback = YELLOW
@@ -111,10 +115,13 @@ function assessCanonicalModel(canonicalAnalysis, options = {}) {
   }
 
   // Analyze SQL statements
-  entities.sqlStatements.forEach((stmt) => {
+  entities.sqlStatements.forEach(stmt => {
     const assessment = assessSqlStatement(stmt, {
       isCriticalPath: stmt.intent === 'WRITE' && stmt.type === 'UPDATE',
-      isTransferPath: stmt.type === 'UPDATE' && stmt.tables && stmt.tables.some((t) => t.toLowerCase().includes('arzusp')),
+      isTransferPath:
+        stmt.type === 'UPDATE' &&
+        stmt.tables &&
+        stmt.tables.some(t => t.toLowerCase().includes('arzusp')),
     });
 
     results.riskMetrics.totalAccesses += 1;
@@ -145,7 +152,7 @@ function assessCanonicalModel(canonicalAnalysis, options = {}) {
 
   // Analyze program calls
   if (entities.programCalls) {
-    entities.programCalls.forEach((call) => {
+    entities.programCalls.forEach(call => {
       // External program calls are YELLOW unless known system program
       const knownSystemPrograms = new Set(['SKZAEAB', 'SKZAEIM', 'RELSKUS']);
       if (!knownSystemPrograms.has(call.name)) {
@@ -161,16 +168,25 @@ function assessCanonicalModel(canonicalAnalysis, options = {}) {
 
   // Build summary
   results.summary = {
-    riskLevel: results.riskMetrics.redCount > 0 ? 'RED' : results.riskMetrics.yellowCount > 0 ? 'YELLOW' : 'GREEN',
+    riskLevel:
+      results.riskMetrics.redCount > 0
+        ? 'RED'
+        : results.riskMetrics.yellowCount > 0
+          ? 'YELLOW'
+          : 'GREEN',
     distribution: `${results.riskMetrics.greenCount}🟢 / ${results.riskMetrics.yellowCount}🟡 / ${results.riskMetrics.redCount}🔴`,
   };
 
   // Generate recommendations
   if (results.riskMetrics.redCount > 0) {
-    results.recommendations.push('⚠️  CRITICAL PATHS DETECTED: Require intensive UAT and regression testing');
+    results.recommendations.push(
+      '⚠️  CRITICAL PATHS DETECTED: Require intensive UAT and regression testing'
+    );
   }
   if (results.accessPoints.length > 5) {
-    results.recommendations.push('ℹ️  High number of access points: Consider refactoring or documentation');
+    results.recommendations.push(
+      'ℹ️  High number of access points: Consider refactoring or documentation'
+    );
   }
 
   return results;
@@ -189,11 +205,11 @@ function formatAssessmentMarkdown(assessment) {
 
   if (criticalPaths.length > 0) {
     markdown += `## 🔴 Critical Paths (${criticalPaths.length})\n\n`;
-    criticalPaths.forEach((path) => {
+    criticalPaths.forEach(path => {
       markdown += `- **${path.type}**: ${path.reason}\n`;
       if (path.tables) markdown += `  Tables: ${path.tables.join(', ')}\n`;
       if (path.evidence && path.evidence.length > 0) {
-        markdown += `  Evidence: ${path.evidence.map((e) => `${e.file}:${e.startLine}`).join(', ')}\n`;
+        markdown += `  Evidence: ${path.evidence.map(e => `${e.file}:${e.startLine}`).join(', ')}\n`;
       }
     });
     markdown += '\n';
@@ -201,20 +217,21 @@ function formatAssessmentMarkdown(assessment) {
 
   if (recommendations.length > 0) {
     markdown += `## Recommendations\n\n`;
-    recommendations.forEach((rec) => {
+    recommendations.forEach(rec => {
       markdown += `- ${rec}\n`;
     });
     markdown += '\n';
   }
 
   markdown += `## All Access Points (${accessPoints.length})\n\n`;
-  accessPoints.forEach((access) => {
-    const riskEmoji = access.assessment.risk === 'GREEN' ? '🟢' : access.assessment.risk === 'YELLOW' ? '🟡' : '🔴';
+  accessPoints.forEach(access => {
+    const riskEmoji =
+      access.assessment.risk === 'GREEN' ? '🟢' : access.assessment.risk === 'YELLOW' ? '🟡' : '🔴';
     markdown += `${riskEmoji} **${access.type}** (${access.assessment.risk})\n`;
     markdown += `   Score: ${access.assessment.score}/100\n`;
     markdown += `   Reason: ${access.assessment.reason}\n`;
     if (access.evidence && access.evidence.length > 0) {
-      markdown += `   Evidence: ${access.evidence.map((e) => `${e.file}:${e.startLine}`).join(', ')}\n`;
+      markdown += `   Evidence: ${access.evidence.map(e => `${e.file}:${e.startLine}`).join(', ')}\n`;
     }
     markdown += '\n';
   });

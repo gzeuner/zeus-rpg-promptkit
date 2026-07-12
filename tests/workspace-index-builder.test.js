@@ -4,7 +4,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { buildWorkspaceIndex, writeWorkspaceIndex } = require('../src/workspace/workspaceIndexBuilder');
+const {
+  buildWorkspaceIndex,
+  writeWorkspaceIndex,
+} = require('../src/workspace/workspaceIndexBuilder');
 
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -36,7 +39,11 @@ test('buildWorkspaceIndex aggregates runs, source members, and reports', () => {
   });
   fs.writeFileSync(path.join(programDir, 'report.md'), '# Report\n', 'utf8');
   fs.writeFileSync(path.join(programDir, 'context.json'), '{"ok":true}\n', 'utf8');
-  fs.writeFileSync(path.join(programDir, 'architecture-report.md'), '# Architecture Report\n', 'utf8');
+  fs.writeFileSync(
+    path.join(programDir, 'architecture-report.md'),
+    '# Architecture Report\n',
+    'utf8'
+  );
 
   fs.mkdirSync(path.join(sourceDir, 'QRPGLESRC'), { recursive: true });
   fs.mkdirSync(path.join(sourceDir, 'QCLLESRC'), { recursive: true });
@@ -57,7 +64,7 @@ test('buildWorkspaceIndex aggregates runs, source members, and reports', () => {
   assert.equal(index.programs[0].workflowMode, 'documentation');
   assert.equal(index.sourceMembers.QRPGLESRC, 2);
   assert.equal(index.sourceMembers.QCLLESRC, 1);
-  assert.ok(index.reports.some((entry) => /architecture-report\.md$/i.test(entry.path)));
+  assert.ok(index.reports.some(entry => /architecture-report\.md$/i.test(entry.path)));
 });
 
 test('writeWorkspaceIndex persists workspace-index.json', () => {

@@ -25,9 +25,7 @@ function normalizeString(value, fallback = '') {
 
 function normalizeArray(value) {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((entry) => String(entry || '').trim())
-    .filter(Boolean);
+  return value.map(entry => String(entry || '').trim()).filter(Boolean);
 }
 
 function normalizeFields(value) {
@@ -84,7 +82,11 @@ function writeTemplateStore(templateStorePath, store) {
     schemaVersion: STORE_SCHEMA_VERSION,
     templates: Array.isArray(store.templates) ? store.templates : [],
   };
-  fs.writeFileSync(path.resolve(templateStorePath), `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(
+    path.resolve(templateStorePath),
+    `${JSON.stringify(payload, null, 2)}\n`,
+    'utf8'
+  );
 }
 
 function sanitizeTemplateName(name) {
@@ -123,11 +125,12 @@ function sanitizeTemplatePayload(input = {}) {
 }
 
 function createTemplateId(name) {
-  const base = normalizeString(name)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .slice(0, 40) || 'prompt-template';
+  const base =
+    normalizeString(name)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+      .slice(0, 40) || 'prompt-template';
   const suffix = randomUUID().split('-')[0];
   return `${base}-${suffix}`;
 }
@@ -148,7 +151,7 @@ function summarizeTemplate(template) {
 function listTemplates(templateStorePath) {
   const store = readTemplateStore(templateStorePath);
   return store.templates
-    .map((entry) => summarizeTemplate(entry))
+    .map(entry => summarizeTemplate(entry))
     .sort((left, right) => {
       const leftTime = Date.parse(left.updatedAt || left.createdAt || 0) || 0;
       const rightTime = Date.parse(right.updatedAt || right.createdAt || 0) || 0;
@@ -165,7 +168,7 @@ function readTemplate(templateStorePath, templateId) {
     throw new Error('Template id is required.');
   }
   const store = readTemplateStore(templateStorePath);
-  const entry = store.templates.find((template) => template.id === normalizedId);
+  const entry = store.templates.find(template => template.id === normalizedId);
   if (!entry) {
     throw new Error(`Prompt template not found: ${normalizedId}`);
   }
@@ -199,7 +202,7 @@ function updateTemplate(templateStorePath, templateId, input = {}) {
   }
 
   const store = readTemplateStore(templateStorePath);
-  const index = store.templates.findIndex((entry) => entry.id === normalizedId);
+  const index = store.templates.findIndex(entry => entry.id === normalizedId);
   if (index < 0) {
     throw new Error(`Prompt template not found: ${normalizedId}`);
   }
@@ -225,7 +228,7 @@ function deleteTemplate(templateStorePath, templateId) {
   }
 
   const store = readTemplateStore(templateStorePath);
-  const index = store.templates.findIndex((entry) => entry.id === normalizedId);
+  const index = store.templates.findIndex(entry => entry.id === normalizedId);
   if (index < 0) {
     throw new Error(`Prompt template not found: ${normalizedId}`);
   }

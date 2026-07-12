@@ -44,7 +44,7 @@ function findValueMentions(sourceRoot, value, maxResults = 50) {
     return { matches: [], count: 0 };
   }
   const matches = [];
-  const walk = (dir) => {
+  const walk = dir => {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const e of entries) {
       const full = path.join(dir, e.name);
@@ -77,7 +77,14 @@ async function runTrace(args) {
   if (!args || !args._cap) {
     try {
       const { capabilities } = require('../../api/zeusApi');
-      const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.trace', { cwd: process.cwd(), env: process.env, args }, args) : null;
+      const res =
+        capabilities && typeof capabilities.execute === 'function'
+          ? await capabilities.execute(
+              'investigation.trace',
+              { cwd: process.cwd(), env: process.env, args },
+              args
+            )
+          : null;
       if (res && res.ok) {
         return res.result;
       }
@@ -85,12 +92,24 @@ async function runTrace(args) {
       // fallthrough
     }
   }
-  if (args && args._cap) { delete args._cap; }
+  if (args && args._cap) {
+    delete args._cap;
+  }
 
   const value = args.value ? String(args.value).trim().toUpperCase() : null;
   const field = args.field ? String(args.field).trim().toUpperCase() : null;
-  const startTable = args['start-table'] || args.table ? String(args['start-table'] || args.table).trim().toUpperCase() : null;
-  const startProgram = args['start-program'] || args.program ? String(args['start-program'] || args.program).trim().toUpperCase() : null;
+  const startTable =
+    args['start-table'] || args.table
+      ? String(args['start-table'] || args.table)
+          .trim()
+          .toUpperCase()
+      : null;
+  const startProgram =
+    args['start-program'] || args.program
+      ? String(args['start-program'] || args.program)
+          .trim()
+          .toUpperCase()
+      : null;
 
   if (!value && !field) {
     console.error('Missing required option: --value <VAL> or --field <FIELD>');
@@ -98,7 +117,9 @@ async function runTrace(args) {
   }
 
   const target = value || field;
-  console.log(`Zeus Trace — ${value ? 'Value' : 'Field'}: "${target}"${startTable ? ` | Start-Table: ${startTable}` : ''}${startProgram ? ` | Start-Program: ${startProgram}` : ''}`);
+  console.log(
+    `Zeus Trace — ${value ? 'Value' : 'Field'}: "${target}"${startTable ? ` | Start-Table: ${startTable}` : ''}${startProgram ? ` | Start-Program: ${startProgram}` : ''}`
+  );
 
   let profile = null;
   let analyzeConfig = null;
@@ -112,11 +133,14 @@ async function runTrace(args) {
 
   const sourceRoot = args.source
     ? path.resolve(process.cwd(), args.source)
-    : (profile && profile.sourceRoot ? path.resolve(process.cwd(), profile.sourceRoot) : null);
+    : profile && profile.sourceRoot
+      ? path.resolve(process.cwd(), profile.sourceRoot)
+      : null;
 
-  const outputRoot = (analyzeConfig && analyzeConfig.outputRoot)
-    ? path.resolve(process.cwd(), analyzeConfig.outputRoot)
-    : path.join(process.cwd(), 'output');
+  const outputRoot =
+    analyzeConfig && analyzeConfig.outputRoot
+      ? path.resolve(process.cwd(), analyzeConfig.outputRoot)
+      : path.join(process.cwd(), 'output');
 
   const results = {
     target,
@@ -148,7 +172,13 @@ async function runTrace(args) {
     results.localMentions = local.matches;
     console.log(`  Found ${local.count} mention(s) in source.`);
     if (local.matches.length > 0) {
-      console.log(renderAsciiTable(['file', 'line', 'snippet'], local.matches.map(m => [m.file, m.line, m.snippet]), { maxCellWidth: 50 }));
+      console.log(
+        renderAsciiTable(
+          ['file', 'line', 'snippet'],
+          local.matches.map(m => [m.file, m.line, m.snippet]),
+          { maxCellWidth: 50 }
+        )
+      );
     }
   } else {
     console.log('\n[Local] No source root — skipped.');
@@ -167,20 +197,29 @@ async function runTrace(args) {
       }
       const nodes = crossProgramGraph.nodes || [];
       const edges = crossProgramGraph.edges || [];
-      const relevantNodes = nodes.filter(n =>
-        String(n.label || n.id || '').toUpperCase().includes(target) ||
-        (startTable && String(n.label || '').toUpperCase() === startTable)
+      const relevantNodes = nodes.filter(
+        n =>
+          String(n.label || n.id || '')
+            .toUpperCase()
+            .includes(target) ||
+          (startTable && String(n.label || '').toUpperCase() === startTable)
       );
       results.graphPaths = relevantNodes.slice(0, 30);
-      console.log(`  Graph: ${crossProgramGraph.summary ? crossProgramGraph.summary.programCount : nodes.length} programs, edges: ${edges.length}`);
+      console.log(
+        `  Graph: ${crossProgramGraph.summary ? crossProgramGraph.summary.programCount : nodes.length} programs, edges: ${edges.length}`
+      );
       if (relevantNodes.length) {
         console.log('  Nodes related to target:');
         relevantNodes.forEach(n => console.log(`    ${n.type || 'NODE'}: ${n.label || n.id}`));
         // Simple lineage hint via edges
-        const relatedEdges = edges.filter(e => relevantNodes.some(n => n.id === e.from || n.id === e.to));
+        const relatedEdges = edges.filter(e =>
+          relevantNodes.some(n => n.id === e.from || n.id === e.to)
+        );
         if (relatedEdges.length) {
           console.log('  Related connections (lineage hints):');
-          relatedEdges.slice(0, 10).forEach(e => console.log(`    ${e.from} -> ${e.to} (${e.type})`));
+          relatedEdges
+            .slice(0, 10)
+            .forEach(e => console.log(`    ${e.from} -> ${e.to} (${e.type})`));
         }
       }
     } catch (e) {
@@ -216,7 +255,9 @@ async function runTrace(args) {
     json.print(results);
   } else {
     console.log('\nTrace summary complete. Use --json for machine readable output.');
-    console.log('Tip: Run full "analyze" first for richer graph data, then trace can use artifacts in future versions.');
+    console.log(
+      'Tip: Run full "analyze" first for richer graph data, then trace can use artifacts in future versions.'
+    );
   }
 }
 

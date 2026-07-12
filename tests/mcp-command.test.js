@@ -6,16 +6,19 @@ const { parseAllowlistedTools, runMcp } = require('../src/cli/commands/mcpComman
 test('parseAllowlistedTools normalizes comma-separated values', () => {
   assert.equal(parseAllowlistedTools(undefined), null);
   assert.deepEqual(
-    parseAllowlistedTools(' zeus.health,zeus.version,zeus.health ', ['zeus.health', 'zeus.version']),
-    ['zeus.health', 'zeus.version'],
+    parseAllowlistedTools(' zeus.health,zeus.version,zeus.health ', [
+      'zeus.health',
+      'zeus.version',
+    ]),
+    ['zeus.health', 'zeus.version']
   );
   assert.throws(
     () => parseAllowlistedTools(' , ', ['zeus.health', 'zeus.version']),
-    /Invalid --allow-tools value/,
+    /Invalid --allow-tools value/
   );
   assert.throws(
     () => parseAllowlistedTools('zeus.health,zeus.unknown', ['zeus.health', 'zeus.version']),
-    /unknown tool name/i,
+    /unknown tool name/i
   );
 });
 
@@ -31,7 +34,7 @@ test('runMcp passes allowlisted tools into MCP server runtime', async () => {
     },
     {
       cwd: '/tmp/mcp-test-cwd',
-      createMcpServer: (runtime) => {
+      createMcpServer: runtime => {
         capturedRuntime = runtime;
         return {
           startStdio() {
@@ -39,7 +42,7 @@ test('runMcp passes allowlisted tools into MCP server runtime', async () => {
           },
         };
       },
-    },
+    }
   );
 
   assert.equal(started, true);
@@ -57,13 +60,13 @@ test('runMcp defaults to strict cursor mode when flag is omitted', async () => {
     },
     {
       cwd: '/tmp/mcp-test-cwd-default',
-      createMcpServer: (runtime) => {
+      createMcpServer: runtime => {
         capturedRuntime = runtime;
         return {
           startStdio() {},
         };
       },
-    },
+    }
   );
 
   assert.equal(typeof capturedRuntime, 'object');
@@ -75,7 +78,7 @@ test('runMcp exits with code 2 when removed legacy-cursor-fallback option is pro
   let exitCode = null;
   const errors = [];
 
-  process.exit = (code) => {
+  process.exit = code => {
     exitCode = code;
     throw new Error(`__EXIT__${code}`);
   };
@@ -86,7 +89,7 @@ test('runMcp exits with code 2 when removed legacy-cursor-fallback option is pro
   try {
     await assert.rejects(
       () => runMcp({ _: ['serve'], 'legacy-cursor-fallback': 'true' }),
-      /__EXIT__2/,
+      /__EXIT__2/
     );
     assert.equal(exitCode, 2);
     assert.match(errors.join('\n'), /--legacy-cursor-fallback option was removed/i);
@@ -103,7 +106,7 @@ test('runMcp exits with code 2 for invalid allow-tools flag usage', async () => 
   let exitCode = null;
   const errors = [];
 
-  process.exit = (code) => {
+  process.exit = code => {
     exitCode = code;
     throw new Error(`__EXIT__${code}`);
   };
@@ -112,10 +115,7 @@ test('runMcp exits with code 2 for invalid allow-tools flag usage', async () => 
   };
 
   try {
-    await assert.rejects(
-      () => runMcp({ _: ['serve'], 'allow-tools': true }),
-      /__EXIT__2/,
-    );
+    await assert.rejects(() => runMcp({ _: ['serve'], 'allow-tools': true }), /__EXIT__2/);
     assert.equal(exitCode, 2);
     assert.match(errors.join('\n'), /Invalid --allow-tools value/);
   } finally {
@@ -130,7 +130,7 @@ test('runMcp exits with code 2 for unknown allow-tools names', async () => {
   let exitCode = null;
   const errors = [];
 
-  process.exit = (code) => {
+  process.exit = code => {
     exitCode = code;
     throw new Error(`__EXIT__${code}`);
   };
@@ -141,7 +141,7 @@ test('runMcp exits with code 2 for unknown allow-tools names', async () => {
   try {
     await assert.rejects(
       () => runMcp({ _: ['serve'], 'allow-tools': 'zeus.unknown' }),
-      /__EXIT__2/,
+      /__EXIT__2/
     );
     assert.equal(exitCode, 2);
     assert.match(errors.join('\n'), /unknown tool name/i);

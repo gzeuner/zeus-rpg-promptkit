@@ -33,11 +33,14 @@ function normalizeStringArray(value, { uppercase = false } = {}) {
   if (!Array.isArray(value)) {
     throw new Error('Bridge configuration expects an array value.');
   }
-  return Array.from(new Set(value
-    .map((entry) => String(entry || '').trim())
-    .filter(Boolean)
-    .map((entry) => uppercase ? entry.toUpperCase() : entry)))
-    .sort((left, right) => left.localeCompare(right));
+  return Array.from(
+    new Set(
+      value
+        .map(entry => String(entry || '').trim())
+        .filter(Boolean)
+        .map(entry => (uppercase ? entry.toUpperCase() : entry))
+    )
+  ).sort((left, right) => left.localeCompare(right));
 }
 
 function validateObjectNameList(values, label) {
@@ -51,7 +54,9 @@ function validateObjectNameList(values, label) {
 function normalizeBridgeConfig(profile) {
   const bridge = isPlainObject(profile && profile.bridge) ? profile.bridge : {};
 
-  const mode = String(bridge.mode || BRIDGE_DEFAULTS.mode).trim().toLowerCase();
+  const mode = String(bridge.mode || BRIDGE_DEFAULTS.mode)
+    .trim()
+    .toLowerCase();
   if (!BRIDGE_MODES.includes(mode)) {
     throw new Error(`Invalid bridge.mode: ${bridge.mode}`);
   }
@@ -62,7 +67,7 @@ function normalizeBridgeConfig(profile) {
   const ifsPaths = normalizeStringArray(allowedTargetsRaw.ifsPaths, { uppercase: false });
   validateObjectNameList(libraries, 'allowedTargets.libraries');
   validateObjectNameList(sourceFiles, 'allowedTargets.sourceFiles');
-  if (ifsPaths.some((entry) => !entry.startsWith('/'))) {
+  if (ifsPaths.some(entry => !entry.startsWith('/'))) {
     throw new Error('Invalid bridge.allowedTargets.ifsPaths entry: expected absolute IFS path.');
   }
 
@@ -73,7 +78,10 @@ function normalizeBridgeConfig(profile) {
   return {
     enabled: normalizeBoolean(bridge.enabled, BRIDGE_DEFAULTS.enabled),
     mode,
-    requireConfirmation: normalizeBoolean(bridge.requireConfirmation, BRIDGE_DEFAULTS.requireConfirmation),
+    requireConfirmation: normalizeBoolean(
+      bridge.requireConfirmation,
+      BRIDGE_DEFAULTS.requireConfirmation
+    ),
     allowAutoApprove: normalizeBoolean(bridge.allowAutoApprove, BRIDGE_DEFAULTS.allowAutoApprove),
     auditLog: normalizeBoolean(bridge.auditLog, BRIDGE_DEFAULTS.auditLog),
     allowedTargets: {
@@ -83,15 +91,22 @@ function normalizeBridgeConfig(profile) {
     },
     staging: {
       enabled: normalizeBoolean(stagingRaw.enabled, BRIDGE_DEFAULTS.staging.enabled),
-      library: String(stagingRaw.library || '').trim().toUpperCase(),
-      sourceFile: String(stagingRaw.sourceFile || '').trim().toUpperCase(),
+      library: String(stagingRaw.library || '')
+        .trim()
+        .toUpperCase(),
+      sourceFile: String(stagingRaw.sourceFile || '')
+        .trim()
+        .toUpperCase(),
       ifsPath: String(stagingRaw.ifsPath || '').trim(),
     },
     compile: {
       enabled: normalizeBoolean(compileRaw.enabled, BRIDGE_DEFAULTS.compile.enabled),
       allowedTemplates: compileTemplates,
       requirePlan: normalizeBoolean(compileRaw.requirePlan, BRIDGE_DEFAULTS.compile.requirePlan),
-      requireApproval: normalizeBoolean(compileRaw.requireApproval, BRIDGE_DEFAULTS.compile.requireApproval),
+      requireApproval: normalizeBoolean(
+        compileRaw.requireApproval,
+        BRIDGE_DEFAULTS.compile.requireApproval
+      ),
     },
   };
 }

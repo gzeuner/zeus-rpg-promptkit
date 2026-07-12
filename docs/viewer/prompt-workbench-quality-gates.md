@@ -12,22 +12,26 @@ They do not change the supported CLI/MCP-first product path.
 ## Testmatrix
 
 ### API Contract und Routing
+
 - Prompt Builder route discovery (`/api/prompt-builder/contracts`)
 - Method guards (`405`) inkl. `Allow` Header
 - Bestehende Run-Explorer-Routen weiterhin stabil (`/api/runs`, `/api/runs/:program`, artifacts)
 
 ### Prompt Rendering und Validation
+
 - Preview success path
 - Invalid JSON payload handling
 - Missing required fields (`useCaseId`) -> `400`
 - Invalid types (`moduleIds` not array) -> `400`
 
 ### Template Persistence
+
 - Create/Read/Update/Delete success path
 - Missing template errors (`404` via server mapping)
 - Payload validation (`name`, `moduleIds`) boundaries
 
 ### Output Context Integration
+
 - Context source list from `output/<PROGRAM>`
 - Prompt artifact list for selected run
 - Import existing `ai_prompt_*.md` as seed

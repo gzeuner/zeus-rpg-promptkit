@@ -42,7 +42,11 @@ const { isDbConfigured, resolveDefaultSchema } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
 const { getIbmiOsVersion } = require('../../db2/ibmiPlatformInfo');
 const { renderAsciiTable } = require('../helpers/asciiTable');
-const { resolveKeyMaterial, KEY_ENV_VAR, KEY_FILE_RELATIVE } = require('../../security/secretVault');
+const {
+  resolveKeyMaterial,
+  KEY_ENV_VAR,
+  KEY_FILE_RELATIVE,
+} = require('../../security/secretVault');
 const { detectPlaintextSecrets } = require('../../security/plaintextSecretDetector');
 const {
   buildDbRuntimeConflictDiagnostics,
@@ -63,10 +67,12 @@ function toDisplayPath(cwd, filePath) {
 }
 
 function extractJavaVersion(output) {
-  return String(output || '')
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find(Boolean) || 'unknown';
+  return (
+    String(output || '')
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .find(Boolean) || 'unknown'
+  );
 }
 
 function isSet(value) {
@@ -82,8 +88,9 @@ function buildSetHint(name, value) {
 // Werte vorliegen, aber kein Schluessel gefunden wird.
 function appendSecretVaultChecks(checks, { env = process.env } = {}) {
   const keyInfo = resolveKeyMaterial({ env });
-  const encryptedEnvVars = Object.keys(env || {})
-    .filter((name) => typeof env[name] === 'string' && env[name].startsWith('enc:v1:'));
+  const encryptedEnvVars = Object.keys(env || {}).filter(
+    name => typeof env[name] === 'string' && env[name].startsWith('enc:v1:')
+  );
 
   if (encryptedEnvVars.length === 0) {
     checks.push({
@@ -108,8 +115,9 @@ function appendSecretVaultChecks(checks, { env = process.env } = {}) {
   checks.push({
     name: 'Secret Vault',
     status: 'FAIL',
-    details: `${encryptedEnvVars.join(', ')} sind verschluesselt (enc:v1:), aber kein Schluessel gefunden. `
-      + `Setze ${KEY_ENV_VAR} oder lege ${KEY_FILE_RELATIVE} an (zeus secret init-key).`,
+    details:
+      `${encryptedEnvVars.join(', ')} sind verschluesselt (enc:v1:), aber kein Schluessel gefunden. ` +
+      `Setze ${KEY_ENV_VAR} oder lege ${KEY_FILE_RELATIVE} an (zeus secret init-key).`,
   });
 }
 
@@ -117,17 +125,25 @@ function appendSecretVaultChecks(checks, { env = process.env } = {}) {
  * Scans discovered .env files for likely plaintext credentials.
  * Warns users to migrate to Secret Vault (enc:v1:...).
  */
-function appendPlaintextSecretWarnings(checks, { env = process.env, cwd = process.cwd(), configDir, discovery } = {}) {
+function appendPlaintextSecretWarnings(
+  checks,
+  { env = process.env, cwd = process.cwd(), configDir, discovery } = {}
+) {
   try {
-    const envFiles = (discovery && Array.isArray(discovery.files) ? discovery.files.map(f => f.path) : []);
+    const envFiles =
+      discovery && Array.isArray(discovery.files) ? discovery.files.map(f => f.path) : [];
     const findings = detectPlaintextSecrets({ cwd, configDir, envFiles, env, checkProfiles: true });
 
     if (findings.length > 0) {
-      const examples = findings.slice(0, 2).map((s) => `${s.key} (${s.source})`).join(', ');
+      const examples = findings
+        .slice(0, 2)
+        .map(s => `${s.key} (${s.source})`)
+        .join(', ');
       checks.push({
         name: 'Secret Hygiene',
         status: 'WARN',
-        details: `${findings.length} Klartext-Credential(s) gefunden (z. B. ${examples}). ` +
+        details:
+          `${findings.length} Klartext-Credential(s) gefunden (z. B. ${examples}). ` +
           `Klartext-Passwörter sind unsicher. Mit --strict als Fehler behandeln (Exit 1). ` +
           `Migriere mit "zeus secret encrypt" oder "zeus secret migrate". ` +
           `Siehe docs/quickstart/secrets-and-overrides.md (auch "secret check --warn-only").`,
@@ -138,7 +154,10 @@ function appendPlaintextSecretWarnings(checks, { env = process.env, cwd = proces
   }
 }
 
-function addEnvCheck(checks, { name, expected = true, envValue, fallbackValue = '', required = true, hint }) {
+function addEnvCheck(
+  checks,
+  { name, expected = true, envValue, fallbackValue = '', required = true, hint }
+) {
   if (!expected) {
     return;
   }
@@ -168,12 +187,7 @@ function addEnvCheck(checks, { name, expected = true, envValue, fallbackValue = 
   });
 }
 
-function addDbEnvironmentChecks(checks, {
-  env,
-  envPrefix,
-  fallbackConfig,
-  requiredLabelPrefix,
-}) {
+function addDbEnvironmentChecks(checks, { env, envPrefix, fallbackConfig, requiredLabelPrefix }) {
   const urlValue = env[`${envPrefix}_URL`];
   const hostValue = env[`${envPrefix}_HOST`];
   const fallbackUrl = fallbackConfig && fallbackConfig.url;
@@ -273,10 +287,15 @@ function appendDbRuntimeConflictChecks(checks, dbConfig, label = 'DB Runtime Ove
   }
 }
 
-function appendResolvedDbChecks(checks, namePrefix, dbConfig, { buildJdbcUrl, resolveDefaultSchema } = {}) {
+function appendResolvedDbChecks(
+  checks,
+  namePrefix,
+  dbConfig,
+  { buildJdbcUrl, resolveDefaultSchema } = {}
+) {
   const metadata = getRuntimeConfigMetadata(dbConfig);
   const warningsByField = new Set(
-    getDbRuntimeConflictWarnings(dbConfig).map((warning) => warning.field),
+    getDbRuntimeConflictWarnings(dbConfig).map(warning => warning.field)
   );
   const fields = [
     { key: 'url', label: 'url', secret: false },
@@ -288,9 +307,11 @@ function appendResolvedDbChecks(checks, namePrefix, dbConfig, { buildJdbcUrl, re
 
   for (const field of fields) {
     const fieldMetadata = metadata && metadata.fields ? metadata.fields[field.key] : null;
-    const value = field.key === 'defaultSchema'
-      ? (dbConfig && (dbConfig.defaultSchema || dbConfig.defaultLibrary || dbConfig.schema || dbConfig.library))
-      : (dbConfig && dbConfig[field.key]);
+    const value =
+      field.key === 'defaultSchema'
+        ? dbConfig &&
+          (dbConfig.defaultSchema || dbConfig.defaultLibrary || dbConfig.schema || dbConfig.library)
+        : dbConfig && dbConfig[field.key];
     checks.push({
       name: `${namePrefix}.${field.label}`,
       status: warningsByField.has(field.key) ? 'WARN' : 'INFO',
@@ -302,7 +323,9 @@ function appendResolvedDbChecks(checks, namePrefix, dbConfig, { buildJdbcUrl, re
   checks.push({
     name: `${namePrefix}.jdbcUrl`,
     status: 'INFO',
-    value: dbConfig ? buildJdbcUrl(dbConfig, resolveDefaultSchema(dbConfig)) || '(leer)' : '(nicht konfiguriert)',
+    value: dbConfig
+      ? buildJdbcUrl(dbConfig, resolveDefaultSchema(dbConfig)) || '(leer)'
+      : '(nicht konfiguriert)',
     origin: 'derived',
   });
   checks.push({
@@ -366,11 +389,11 @@ function appendResolvedFetchChecks(checks, fetchConfig) {
 
 function hasExplicitTestDataRole(profile, env) {
   return Boolean(
-    (profile && profile.dbRoles && profile.dbRoles.testData)
-    || env.ZEUS_TESTDATA_DB_HOST
-    || env.ZEUS_TESTDATA_DB_URL
-    || env.ZEUS_TESTDATA_DB_USER
-    || env.ZEUS_TESTDATA_DB_PASSWORD !== undefined,
+    (profile && profile.dbRoles && profile.dbRoles.testData) ||
+    env.ZEUS_TESTDATA_DB_HOST ||
+    env.ZEUS_TESTDATA_DB_URL ||
+    env.ZEUS_TESTDATA_DB_USER ||
+    env.ZEUS_TESTDATA_DB_PASSWORD !== undefined
   );
 }
 
@@ -519,17 +542,17 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
   }
 
   try {
-    const environment = (typeof args.env === 'string' && args.env.trim())
-      || (typeof args.environment === 'string' && args.environment.trim())
-      || (env.ZEUS_ENV && String(env.ZEUS_ENV).trim())
-      || 'default';
-    const configDir = (typeof args.config === 'string' && args.config.trim())
-      ? args.config.trim()
-      : undefined;
+    const environment =
+      (typeof args.env === 'string' && args.env.trim()) ||
+      (typeof args.environment === 'string' && args.environment.trim()) ||
+      (env.ZEUS_ENV && String(env.ZEUS_ENV).trim()) ||
+      'default';
+    const configDir =
+      typeof args.config === 'string' && args.config.trim() ? args.config.trim() : undefined;
     const discovery = discoverEnvFiles({ cwd, configDir, environment });
     if (discovery.files.length > 0) {
       const fileLabel = discovery.files
-        .map((file) => `${path.relative(cwd, file.path).replace(/\\/g, '/')} (${file.role})`)
+        .map(file => `${path.relative(cwd, file.path).replace(/\\/g, '/')} (${file.role})`)
         .join(', ');
       checks.push({
         name: 'Env Auto-Discovery',
@@ -538,7 +561,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
       });
     } else {
       const searchedDirs = discovery.searchDirs
-        .map((dir) => path.relative(cwd, dir).replace(/\\/g, '/') || '.')
+        .map(dir => path.relative(cwd, dir).replace(/\\/g, '/') || '.')
         .join(', ');
       checks.push({
         name: 'Env Auto-Discovery',
@@ -546,13 +569,16 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
         details: `Keine .env-Datei automatisch gefunden (gesucht in: ${searchedDirs}). Profil-Platzhalter benoetigen ggf. manuelles Laden via load-env.ps1/.sh.`,
       });
     }
-  } catch { /* Env-Discovery ist optional — Fehler nicht kritisch */ }
+  } catch {
+    /* Env-Discovery ist optional — Fehler nicht kritisch */
+  }
 
   try {
     const profiles = loadProfiles({ cwd, env, args });
     resolvedProfile = resolveProfile(profiles, args.profile, { env });
     resolvedAnalyzeConfig = resolveAnalyzeConfig(args, { cwd, env });
-    resolvedFetchConfig = resolvedProfile && resolvedProfile.fetch ? resolveFetchConfig(args, { cwd, env }) : null;
+    resolvedFetchConfig =
+      resolvedProfile && resolvedProfile.fetch ? resolveFetchConfig(args, { cwd, env }) : null;
     const metadata = getProfilesMetadata(profiles);
     checks.push({
       name: 'Config/Profile',
@@ -564,17 +590,22 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
     let profileFailDetails = error.message;
     try {
       const configPaths = resolveProfilesConfigPaths({ args, cwd, env });
-      const searchedPaths = (configPaths.attemptedPaths || [
-        configPaths.preferredPath,
-        configPaths.secondaryPath,
-        configPaths.fallbackPath,
-      ]).filter(Boolean);
+      const searchedPaths = (
+        configPaths.attemptedPaths || [
+          configPaths.preferredPath,
+          configPaths.secondaryPath,
+          configPaths.fallbackPath,
+        ]
+      ).filter(Boolean);
       if (searchedPaths.length > 0) {
         const pathList = searchedPaths
-          .map((p, i) => `  ${i + 1}. ${path.relative(cwd, p).replace(/\\/g, '/')}`)          .join('\n');
+          .map((p, i) => `  ${i + 1}. ${path.relative(cwd, p).replace(/\\/g, '/')}`)
+          .join('\n');
         profileFailDetails = `${error.message}\nGesuchte Pfade:\n${pathList}\nTipp: config/local-only/profiles.json anlegen (basierend auf config/profiles.example.json)`;
       }
-    } catch { /* Pfad-Auflösung optional — Fehler ignorieren */ }
+    } catch {
+      /* Pfad-Auflösung optional — Fehler ignorieren */
+    }
     checks.push({
       name: 'Config/Profile',
       status: 'FAIL',
@@ -589,7 +620,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
     env,
   });
   checks.push(...envChecks);
-  if (envChecks.some((entry) => entry.status === 'FAIL')) {
+  if (envChecks.some(entry => entry.status === 'FAIL')) {
     hasCriticalFailure = true;
   }
   appendSecretVaultChecks(checks, { env });
@@ -605,14 +636,18 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
     const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
     const testDataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'testData');
     appendDbRuntimeConflictChecks(checks, metadataDbConfig);
-    diagnostics.push(...buildDbRuntimeConflictDiagnostics(metadataDbConfig, {
-      profile: args.profile,
-    }));
+    diagnostics.push(
+      ...buildDbRuntimeConflictDiagnostics(metadataDbConfig, {
+        profile: args.profile,
+      })
+    );
     if (hasExplicitTestDataRole(resolvedProfile, env)) {
       appendDbRuntimeConflictChecks(checks, testDataDbConfig, 'DB Runtime Override (testData)');
-      diagnostics.push(...buildDbRuntimeConflictDiagnostics(testDataDbConfig, {
-        profile: args.profile,
-      }));
+      diagnostics.push(
+        ...buildDbRuntimeConflictDiagnostics(testDataDbConfig, {
+          profile: args.profile,
+        })
+      );
     }
   }
   if (resolvedFetchConfig && resolvedFetchConfig.hostEnvOverride) {
@@ -641,7 +676,9 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
     checks.push({
       name: 'Java',
       status: 'FAIL',
-      details: javaResult.error ? javaResult.error.message : (javaResult.stderr || javaResult.stdout || 'java -version failed').trim(),
+      details: javaResult.error
+        ? javaResult.error.message
+        : (javaResult.stderr || javaResult.stdout || 'java -version failed').trim(),
     });
   } else {
     checks.push({
@@ -655,8 +692,8 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
     const javaPaths = resolveJavaPaths({ cwd });
     const sourceFiles = listJavaSourceFiles(javaPaths.sourceDir);
     const jarEntries = listClasspathJarEntries(javaPaths);
-    const binJars = jarEntries.filter((entry) => path.dirname(entry) === javaPaths.binDir);
-    const libJars = jarEntries.filter((entry) => path.dirname(entry) === javaPaths.libDir);
+    const binJars = jarEntries.filter(entry => path.dirname(entry) === javaPaths.binDir);
+    const libJars = jarEntries.filter(entry => path.dirname(entry) === javaPaths.libDir);
     ensureJavaSourcesCompiled({ cwd, verbose: false });
 
     checks.push({
@@ -702,7 +739,8 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
     checks.push({
       name: 'Probe Mode',
       status: 'INFO',
-      details: 'Live smoke tests are disabled. Run doctor with --probe to execute read-only remote checks.',
+      details:
+        'Live smoke tests are disabled. Run doctor with --probe to execute read-only remote checks.',
     });
   }
 
@@ -726,20 +764,24 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
           },
         });
         if (!fetchProbe.ok) {
-          throw new Error(fetchProbe.messages.join('; ') || fetchProbe.stderr || 'IBM i fetch probe failed.');
+          throw new Error(
+            fetchProbe.messages.join('; ') || fetchProbe.stderr || 'IBM i fetch probe failed.'
+          );
         }
         checks.push({
           name: 'Fetch Probe',
           status: 'PASS',
           details: `IBM i fetch login succeeded (${describeConnectionTarget(resolvedFetchConfig)}).`,
         });
-        probeRows.push(buildProbeRow({
-          system: describeConnectionTarget(resolvedFetchConfig),
-          profile: args.profile,
-          functionName: 'fetch',
-          status: 'OK',
-          details: `Read-only CL probe succeeded; configured stream file CCSID ${resolvedFetchConfig.streamFileCcsid || 'unknown'}.`,
-        }));
+        probeRows.push(
+          buildProbeRow({
+            system: describeConnectionTarget(resolvedFetchConfig),
+            profile: args.profile,
+            functionName: 'fetch',
+            status: 'OK',
+            details: `Read-only CL probe succeeded; configured stream file CCSID ${resolvedFetchConfig.streamFileCcsid || 'unknown'}.`,
+          })
+        );
       } catch (error) {
         hasCriticalFailure = true;
         checks.push({
@@ -747,13 +789,15 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
           status: 'FAIL',
           details: error.message,
         });
-        probeRows.push(buildProbeRow({
-          system: describeConnectionTarget(resolvedFetchConfig),
-          profile: args.profile,
-          functionName: 'fetch',
-          status: 'FAIL',
-          details: error.message,
-        }));
+        probeRows.push(
+          buildProbeRow({
+            system: describeConnectionTarget(resolvedFetchConfig),
+            profile: args.profile,
+            functionName: 'fetch',
+            status: 'FAIL',
+            details: error.message,
+          })
+        );
       }
     }
   }
@@ -792,13 +836,15 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
         status: 'PASS',
         details: `Read-only query succeeded${resolveDefaultSchema(metadataDbConfig) ? ` (default schema ${resolveDefaultSchema(metadataDbConfig)})` : ''}.`,
       });
-      probeRows.push(buildProbeRow({
-        system: describeConnectionTarget(metadataDbConfig),
-        profile: args.profile,
-        functionName: 'metadata-db',
-        status: 'OK',
-        details: `SELECT 1 succeeded${resolveDefaultSchema(metadataDbConfig) ? `; default schema ${resolveDefaultSchema(metadataDbConfig)}` : ''}.`,
-      }));
+      probeRows.push(
+        buildProbeRow({
+          system: describeConnectionTarget(metadataDbConfig),
+          profile: args.profile,
+          functionName: 'metadata-db',
+          status: 'OK',
+          details: `SELECT 1 succeeded${resolveDefaultSchema(metadataDbConfig) ? `; default schema ${resolveDefaultSchema(metadataDbConfig)}` : ''}.`,
+        })
+      );
     } catch (error) {
       hasCriticalFailure = true;
       checks.push({
@@ -807,27 +853,34 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
         details: error.message,
       });
       const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
-      probeRows.push(buildProbeRow({
-        system: describeConnectionTarget(metadataDbConfig),
-        profile: args.profile,
-        functionName: 'metadata-db',
-        status: 'FAIL',
-        details: error.message,
-      }));
+      probeRows.push(
+        buildProbeRow({
+          system: describeConnectionTarget(metadataDbConfig),
+          profile: args.profile,
+          functionName: 'metadata-db',
+          status: 'FAIL',
+          details: error.message,
+        })
+      );
     }
   }
 
   // IBM i OS-Version Check
-  if (probeEnabled && resolvedAnalyzeConfig && isDbConfigured(resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata'))) {
+  if (
+    probeEnabled &&
+    resolvedAnalyzeConfig &&
+    isDbConfigured(resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata'))
+  ) {
     try {
       const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
       const versionInfo = getIbmiOsVersionFn(metadataDbConfig);
       checks.push({
         name: 'IBM i OS-Version',
         status: versionInfo.versionString !== 'UNKNOWN' ? 'PASS' : 'WARN',
-        details: versionInfo.versionString !== 'UNKNOWN'
-          ? `${versionInfo.versionString} (ermittelt via QSYS2.SYSTEM_STATUS_INFO)`
-          : 'OS-Version konnte nicht ermittelt werden — Catalog-Queries ohne Versions-Awareness.',
+        details:
+          versionInfo.versionString !== 'UNKNOWN'
+            ? `${versionInfo.versionString} (ermittelt via QSYS2.SYSTEM_STATUS_INFO)`
+            : 'OS-Version konnte nicht ermittelt werden — Catalog-Queries ohne Versions-Awareness.',
       });
     } catch (_err) {
       checks.push({
@@ -840,19 +893,20 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
 
   // Journal-Status Check für runtimeContext-Tabellen
   if (
-    probeEnabled
-    &&
-    resolvedAnalyzeConfig
-    && isDbConfigured(resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata'))
-    && resolvedProfile
-    && resolvedProfile.runtimeContext
-    && Array.isArray(resolvedProfile.runtimeContext.journaledTables)
-    && resolvedProfile.runtimeContext.journaledTables.length > 0
+    probeEnabled &&
+    resolvedAnalyzeConfig &&
+    isDbConfigured(resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata')) &&
+    resolvedProfile &&
+    resolvedProfile.runtimeContext &&
+    Array.isArray(resolvedProfile.runtimeContext.journaledTables) &&
+    resolvedProfile.runtimeContext.journaledTables.length > 0
   ) {
     const { queryJournalStatus } = require('../../db2/ibmiPlatformInfo');
     const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
     for (const tableSpec of resolvedProfile.runtimeContext.journaledTables) {
-      const [schema, tableName] = String(tableSpec).split('.').map((s) => s.trim().toUpperCase());
+      const [schema, tableName] = String(tableSpec)
+        .split('.')
+        .map(s => s.trim().toUpperCase());
       if (!schema || !tableName) continue;
       try {
         const journalInfo = queryJournalStatus({ schema, tableName, dbConfig: metadataDbConfig });
@@ -914,13 +968,15 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
           status: 'PASS',
           details: `Read-only query succeeded${resolveDefaultSchema(testDataDbConfig) ? ` (default schema ${resolveDefaultSchema(testDataDbConfig)})` : ''}.`,
         });
-        probeRows.push(buildProbeRow({
-          system: describeConnectionTarget(testDataDbConfig),
-          profile: args.profile,
-          functionName: 'testdata-db',
-          status: 'OK',
-          details: `SELECT 1 succeeded${resolveDefaultSchema(testDataDbConfig) ? `; default schema ${resolveDefaultSchema(testDataDbConfig)}` : ''}.`,
-        }));
+        probeRows.push(
+          buildProbeRow({
+            system: describeConnectionTarget(testDataDbConfig),
+            profile: args.profile,
+            functionName: 'testdata-db',
+            status: 'OK',
+            details: `SELECT 1 succeeded${resolveDefaultSchema(testDataDbConfig) ? `; default schema ${resolveDefaultSchema(testDataDbConfig)}` : ''}.`,
+          })
+        );
       } catch (error) {
         hasCriticalFailure = true;
         checks.push({
@@ -928,13 +984,15 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
           status: 'FAIL',
           details: error.message,
         });
-        probeRows.push(buildProbeRow({
-          system: describeConnectionTarget(testDataDbConfig),
-          profile: args.profile,
-          functionName: 'testdata-db',
-          status: 'FAIL',
-          details: error.message,
-        }));
+        probeRows.push(
+          buildProbeRow({
+            system: describeConnectionTarget(testDataDbConfig),
+            profile: args.profile,
+            functionName: 'testdata-db',
+            status: 'FAIL',
+            details: error.message,
+          })
+        );
       }
     }
   }
@@ -952,7 +1010,8 @@ async function runDoctor(args) {
   let result;
   try {
     const { capabilities } = require('../../api/zeusApi');
-    const cap = capabilities && capabilities.resolve ? capabilities.resolve('configure.doctor') : null;
+    const cap =
+      capabilities && capabilities.resolve ? capabilities.resolve('configure.doctor') : null;
     if (cap && typeof cap.execute === 'function') {
       const ctx = { cwd: process.cwd(), env: process.env, args };
       const res = await cap.execute(ctx, args);
@@ -972,17 +1031,29 @@ async function runDoctor(args) {
     const env = process.env;
     let resolvedChecks = [];
     try {
-      const { resolveProfile, loadProfiles, resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../../config/runtimeConfig');
+      const {
+        resolveProfile,
+        loadProfiles,
+        resolveAnalyzeConfig,
+        resolveAnalyzeDbConfig,
+      } = require('../../config/runtimeConfig');
       const { buildJdbcUrl, resolveDefaultSchema } = require('../../db2/db2Config');
       const profiles = loadProfiles({ cwd, env, args });
       const resolvedProfile = resolveProfile(profiles, args.profile, { env });
       const resolvedAnalyzeConfig = resolveAnalyzeConfig(args, { cwd, env });
-      const resolvedFetchConfig = resolvedProfile && resolvedProfile.fetch ? resolveFetchConfig(args, { cwd, env }) : null;
+      const resolvedFetchConfig =
+        resolvedProfile && resolvedProfile.fetch ? resolveFetchConfig(args, { cwd, env }) : null;
       const metadataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
       const testDataDbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'testData');
-      appendResolvedDbChecks(resolvedChecks, 'db', metadataDbConfig, { buildJdbcUrl, resolveDefaultSchema });
+      appendResolvedDbChecks(resolvedChecks, 'db', metadataDbConfig, {
+        buildJdbcUrl,
+        resolveDefaultSchema,
+      });
       if (testDataDbConfig && testDataDbConfig !== metadataDbConfig) {
-        appendResolvedDbChecks(resolvedChecks, 'testDataDb', testDataDbConfig, { buildJdbcUrl, resolveDefaultSchema });
+        appendResolvedDbChecks(resolvedChecks, 'testDataDb', testDataDbConfig, {
+          buildJdbcUrl,
+          resolveDefaultSchema,
+        });
       }
       appendResolvedFetchChecks(resolvedChecks, resolvedFetchConfig);
 
@@ -1000,12 +1071,25 @@ async function runDoctor(args) {
               scopeLabel: 'doctor show-resolved probe connection',
             },
           });
-          const currentServer = serverResult.rows && serverResult.rows[0] && (serverResult.rows[0].SYS || serverResult.rows[0].sys || Object.values(serverResult.rows[0])[0]);
-          const configuredHost = String(metadataDbConfig.host || metadataDbConfig.url || '').toUpperCase();
-          const reportedServer = String(currentServer || '').trim().toUpperCase();
+          const currentServer =
+            serverResult.rows &&
+            serverResult.rows[0] &&
+            (serverResult.rows[0].SYS ||
+              serverResult.rows[0].sys ||
+              Object.values(serverResult.rows[0])[0]);
+          const configuredHost = String(
+            metadataDbConfig.host || metadataDbConfig.url || ''
+          ).toUpperCase();
+          const reportedServer = String(currentServer || '')
+            .trim()
+            .toUpperCase();
           const targetMatched = matchesConnectionTargetName(metadataDbConfig, reportedServer);
           const hasExplicitNames = listConnectionTargetNames(metadataDbConfig).length > 0;
-          const mismatch = reportedServer && (hasExplicitNames ? !targetMatched : (configuredHost && configuredHost !== reportedServer));
+          const mismatch =
+            reportedServer &&
+            (hasExplicitNames
+              ? !targetMatched
+              : configuredHost && configuredHost !== reportedServer);
           resolvedChecks.push({
             name: 'CURRENT_SERVER',
             status: mismatch ? 'WARN' : 'PASS',
@@ -1015,7 +1099,12 @@ async function runDoctor(args) {
             origin: '',
           });
         } catch (err) {
-          resolvedChecks.push({ name: 'CURRENT_SERVER', status: 'WARN', value: `Konnte nicht abgefragt werden: ${err.message}`, origin: '' });
+          resolvedChecks.push({
+            name: 'CURRENT_SERVER',
+            status: 'WARN',
+            value: `Konnte nicht abgefragt werden: ${err.message}`,
+            origin: '',
+          });
         }
 
         // IBM i OS-Version anzeigen
@@ -1028,7 +1117,12 @@ async function runDoctor(args) {
             origin: '',
           });
         } catch (_err) {
-          resolvedChecks.push({ name: 'IBM i OS-Version', status: 'WARN', value: 'Nicht ermittelbar', origin: '' });
+          resolvedChecks.push({
+            name: 'IBM i OS-Version',
+            status: 'WARN',
+            value: 'Nicht ermittelbar',
+            origin: '',
+          });
         }
       } else if (!args.probe) {
         resolvedChecks.push({
@@ -1042,7 +1136,12 @@ async function runDoctor(args) {
       // productionSystem-Warnung
       const profObj = resolvedProfile || {};
       if (profObj.productionSystem) {
-        resolvedChecks.push({ name: 'Produktionssystem', status: 'WARN', value: 'Dieses Profil ist als productionSystem=true markiert!', origin: '' });
+        resolvedChecks.push({
+          name: 'Produktionssystem',
+          status: 'WARN',
+          value: 'Dieses Profil ist als productionSystem=true markiert!',
+          origin: '',
+        });
       }
 
       // Systems-Block anzeigen (wenn vorhanden)
@@ -1051,12 +1150,17 @@ async function runDoctor(args) {
         resolvedChecks.push({
           name: 'systems (Def.)',
           status: 'INFO',
-          value: systemNames.map((s) => {
-            const sys = profObj.systems[s];
-            const aliases = Array.isArray(sys.aliases) && sys.aliases.length > 0 ? ` aliases=${sys.aliases.join(',')}` : '';
-            const systemName = sys.systemName ? ` name=${sys.systemName}` : '';
-            return `${s}: ${sys.displayName || sys.host || '?'}${systemName}${aliases}`;
-          }).join(' | '),
+          value: systemNames
+            .map(s => {
+              const sys = profObj.systems[s];
+              const aliases =
+                Array.isArray(sys.aliases) && sys.aliases.length > 0
+                  ? ` aliases=${sys.aliases.join(',')}`
+                  : '';
+              const systemName = sys.systemName ? ` name=${sys.systemName}` : '';
+              return `${s}: ${sys.displayName || sys.host || '?'}${systemName}${aliases}`;
+            })
+            .join(' | '),
           origin: '',
         });
         // Welche Rollen auf welches System zeigen
@@ -1072,35 +1176,53 @@ async function runDoctor(args) {
           resolvedChecks.push({
             name: 'systems (Routing)',
             status: 'INFO',
-            value: Object.entries(roleMap).map(([role, target]) => `${role}→${target}`).join(' | '),
+            value: Object.entries(roleMap)
+              .map(([role, target]) => `${role}→${target}`)
+              .join(' | '),
             origin: '',
           });
         }
       }
-
     } catch (err) {
-      resolvedChecks.push({ name: 'show-resolved', status: 'FAIL', value: err.message, origin: '' });
+      resolvedChecks.push({
+        name: 'show-resolved',
+        status: 'FAIL',
+        value: err.message,
+        origin: '',
+      });
     }
 
     console.log('\n--- Aufgelöste Verbindung ---');
-    console.log(renderAsciiTable(
-      ['Status', 'Parameter', 'Wert', 'Origin'],
-      resolvedChecks.map((c) => [formatStatus(c.status), c.name, c.value || '', c.origin || '']),
-    ));
+    console.log(
+      renderAsciiTable(
+        ['Status', 'Parameter', 'Wert', 'Origin'],
+        resolvedChecks.map(c => [formatStatus(c.status), c.name, c.value || '', c.origin || ''])
+      )
+    );
   }
 
-  console.log(renderAsciiTable(
-    ['Status', 'Check', 'Details'],
-    result.checks.map((check) => [formatStatus(check.status), check.name, check.details]),
-  ));
+  console.log(
+    renderAsciiTable(
+      ['Status', 'Check', 'Details'],
+      result.checks.map(check => [formatStatus(check.status), check.name, check.details])
+    )
+  );
 
   if (args.probe && result.probeRows.length > 0) {
     console.log('\n--- Probe Matrix ---');
-    console.log(renderAsciiTable(
-      ['System', 'Profile', 'Function', 'Status', 'Hint'],
-      result.probeRows.map((row) => [row.system, row.profile, row.functionName, row.status, row.details]),
-      { maxCellWidth: 50 },
-    ));
+    console.log(
+      renderAsciiTable(
+        ['System', 'Profile', 'Function', 'Status', 'Hint'],
+        result.probeRows.map(row => [
+          row.system,
+          row.profile,
+          row.functionName,
+          row.status,
+          row.details,
+        ]),
+        { maxCellWidth: 50 }
+      )
+    );
   }
 
   const json = createJsonOutput(args);

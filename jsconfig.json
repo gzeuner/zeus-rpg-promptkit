@@ -8,7 +8,18 @@
     "strict": false,
     "skipLibCheck": true,
     "allowJs": true,
-    "types": ["node"]
+    "types": ["node"],
+    "resolveJsonModule": true
   },
-  "files": ["src/core/capabilityRegistry.js", "src/mcp/mcpPolicy.js", "src/api/zeusApi.js"]
+  "files": [
+    "src/core/capabilityRegistry.js",
+    "src/mcp/mcpPolicy.js",
+    "src/api/zeusApi.js",
+    "types.d.ts"
+  ],
+  "exclude": ["node_modules", "output", "**/output*/**", "java", "bundles"]
+  // Intentionally scoped "core type checking" (JSDoc) to the listed maintained entry points above.
+  // This is NOT a project-wide claim. Expanding scope requires updating this list + the prevention test.
+  // Uses --noResolve to keep check strictly limited to declared files without pulling in unrelated module errors.
+  // See package.json#typecheck (direct tsc preserves exit code; no output filtering).
 }

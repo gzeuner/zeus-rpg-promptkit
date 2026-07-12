@@ -30,7 +30,9 @@ function buildPlanIdentityPayload({
   staging,
 }) {
   return {
-    program: String(program || '').trim().toUpperCase(),
+    program: String(program || '')
+      .trim()
+      .toUpperCase(),
     profileName: String(profileName || '').trim(),
     localSourcePath: String(localSourcePath || '').trim(),
     remoteTarget: target || null,
@@ -38,7 +40,9 @@ function buildPlanIdentityPayload({
     beforeHash: String(beforeHash || '').trim(),
     afterHash: String(afterHash || '').trim(),
     diffSummary: String(diffSummary || '').trim(),
-    riskLevel: String(riskLevel || '').trim().toUpperCase(),
+    riskLevel: String(riskLevel || '')
+      .trim()
+      .toUpperCase(),
     requiredApprovals: Array.isArray(requiredApprovals) ? requiredApprovals : [],
     intendedAction: String(intendedAction || '').trim(),
     staging: staging || {},
@@ -91,7 +95,9 @@ function buildChangePlan({
     planHash,
     createdAt,
     generatedAt: createdAt,
-    program: String(program || '').trim().toUpperCase(),
+    program: String(program || '')
+      .trim()
+      .toUpperCase(),
     profileName: String(profileName || '').trim(),
     localSourcePath: String(localSourcePath || '').trim(),
     remoteTarget: target,
@@ -99,7 +105,9 @@ function buildChangePlan({
     beforeHash: String(beforeHash || '').trim(),
     afterHash: String(afterHash || '').trim(),
     diffSummary: String(diffSummary || '').trim(),
-    riskLevel: String(riskLevel || '').trim().toUpperCase(),
+    riskLevel: String(riskLevel || '')
+      .trim()
+      .toUpperCase(),
     requiredApprovals: Array.isArray(requiredApprovals) ? requiredApprovals : [],
     intendedAction: String(intendedAction || '').trim(),
     staging,
@@ -109,16 +117,22 @@ function buildChangePlan({
 }
 
 function renderChangePlanMarkdown(plan) {
-  const targetSummary = plan && plan.remoteTarget && plan.targetType === 'source-member'
-    ? `${plan.remoteTarget.library}/${plan.remoteTarget.sourceFile}(${plan.remoteTarget.member})`
-    : (plan && plan.remoteTarget && plan.remoteTarget.ifsPath ? plan.remoteTarget.ifsPath : 'n/a');
-  const approvals = (plan.requiredApprovals || []).length > 0 ? plan.requiredApprovals.join(', ') : 'none';
-  const warnings = (plan.warnings || []).length > 0
-    ? plan.warnings.map((warning) => `- ${warning}`).join('\n')
-    : '- none';
-  const rollbackHints = (plan.rollbackHints || []).length > 0
-    ? plan.rollbackHints.map((hint) => `- ${hint}`).join('\n')
-    : '- none';
+  const targetSummary =
+    plan && plan.remoteTarget && plan.targetType === 'source-member'
+      ? `${plan.remoteTarget.library}/${plan.remoteTarget.sourceFile}(${plan.remoteTarget.member})`
+      : plan && plan.remoteTarget && plan.remoteTarget.ifsPath
+        ? plan.remoteTarget.ifsPath
+        : 'n/a';
+  const approvals =
+    (plan.requiredApprovals || []).length > 0 ? plan.requiredApprovals.join(', ') : 'none';
+  const warnings =
+    (plan.warnings || []).length > 0
+      ? plan.warnings.map(warning => `- ${warning}`).join('\n')
+      : '- none';
+  const rollbackHints =
+    (plan.rollbackHints || []).length > 0
+      ? plan.rollbackHints.map(hint => `- ${hint}`).join('\n')
+      : '- none';
 
   return `# Change Plan: ${plan.program}
 
@@ -153,12 +167,10 @@ ${warnings}
 `;
 }
 
-function writeChangePlanArtifacts({
-  outputRoot,
-  program,
-  plan,
-}) {
-  const programName = String(program || '').trim().toUpperCase();
+function writeChangePlanArtifacts({ outputRoot, program, plan }) {
+  const programName = String(program || '')
+    .trim()
+    .toUpperCase();
   const programDir = path.join(outputRoot, programName);
   fs.mkdirSync(programDir, { recursive: true });
   const jsonPath = path.join(programDir, 'change-plan.json');
@@ -171,11 +183,10 @@ function writeChangePlanArtifacts({
   };
 }
 
-function readChangePlanArtifact({
-  outputRoot,
-  program,
-}) {
-  const programName = String(program || '').trim().toUpperCase();
+function readChangePlanArtifact({ outputRoot, program }) {
+  const programName = String(program || '')
+    .trim()
+    .toUpperCase();
   const planPath = path.join(outputRoot, programName, 'change-plan.json');
   if (!fs.existsSync(planPath)) {
     return {

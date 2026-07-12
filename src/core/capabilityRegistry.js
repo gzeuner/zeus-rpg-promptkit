@@ -167,11 +167,13 @@ function createCapabilityRegistry() {
     const desc = resolve(idOrAlias);
     if (!desc) {
       const err = new Error(`unknown capability: ${idOrAlias}`);
+      // @ts-ignore - augment Error for code (JSDoc project style)
       err.code = 'UNKNOWN_CAPABILITY';
       throw err;
     }
     if (typeof desc.execute !== 'function') {
       const err = new Error(`capability ${desc.id} has no execute handler`);
+      // @ts-ignore - augment Error for code (JSDoc project style)
       err.code = 'NO_EXECUTE';
       throw err;
     }
@@ -255,6 +257,7 @@ const TINY_VERSION_CAPABILITY = {
     notes: ['Foundation registration only. Full CLI exposure in later package.'],
   },
   execute: async ctx => {
+    // @ts-ignore - json resolve in scoped core check
     const pkg = require('../../package.json');
     return {
       name: pkg.name,

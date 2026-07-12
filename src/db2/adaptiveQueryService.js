@@ -17,23 +17,23 @@ const SYSTABLES_COLUMN_VARIANTS = [
   {
     name: 'complete',
     columns: ['TABLE_SCHEMA', 'TABLE_NAME', 'ROW_COUNT', 'CREATE_TIMESTAMP'],
-    minVersion: '7.4'
+    minVersion: '7.4',
   },
   {
     name: 'standard',
     columns: ['TABLE_SCHEMA', 'TABLE_NAME', 'CREATE_TIMESTAMP'],
-    minVersion: '7.2'
+    minVersion: '7.2',
   },
   {
     name: 'minimal',
     columns: ['TABLE_SCHEMA', 'TABLE_NAME'],
-    minVersion: '7.0'
-  }
+    minVersion: '7.0',
+  },
 ];
 
 /**
  * Build a query for SYSTABLES with column adaptation
- * 
+ *
  * @param {Object} options
  * @param {string} options.tableName - Table to query
  * @param {Array<string>} options.preferredColumns - Columns to try first
@@ -42,19 +42,19 @@ const SYSTABLES_COLUMN_VARIANTS = [
  */
 function buildSystablesQueries(options) {
   const { tableName, preferredColumns = [], verbose = false } = options;
-  
+
   const queries = [];
-  
+
   // 1. Try with preferred columns first
   if (preferredColumns.length > 0) {
     const cols = preferredColumns.join(', ');
     queries.push({
       name: 'preferred',
       sql: `SELECT ${cols} FROM QSYS2.SYSTABLES WHERE TABLE_NAME = '${tableName}'`,
-      expectedColumns: preferredColumns
+      expectedColumns: preferredColumns,
     });
   }
-  
+
   // 2. Try standard variants in order
   for (const variant of SYSTABLES_COLUMN_VARIANTS) {
     const cols = variant.columns.join(', ');
@@ -62,23 +62,23 @@ function buildSystablesQueries(options) {
       name: `variant_${variant.name}`,
       sql: `SELECT ${cols} FROM QSYS2.SYSTABLES WHERE TABLE_NAME = '${tableName}'`,
       expectedColumns: variant.columns,
-      minVersion: variant.minVersion
+      minVersion: variant.minVersion,
     });
   }
-  
+
   // 3. Fallback: absolute minimal
   queries.push({
     name: 'fallback_minimal',
     sql: `SELECT TABLE_SCHEMA FROM QSYS2.SYSTABLES WHERE TABLE_NAME = '${tableName}' FETCH FIRST 1 ROW ONLY`,
-    expectedColumns: ['TABLE_SCHEMA']
+    expectedColumns: ['TABLE_SCHEMA'],
   });
-  
+
   return queries;
 }
 
 /**
  * Adaptive query executor with SQLSTATE-aware recovery
- * 
+ *
  * @param {Function} queryExecutor - Function that executes SQL and throws on error
  * @param {Array} queryVariants - Array of { name, sql, expectedColumns }
  * @param {Object} options
@@ -87,24 +87,24 @@ function buildSystablesQueries(options) {
  */
 function executeWithAdaptiveRetry(queryExecutor, queryVariants, options = {}) {
   const { verbose = false, onError } = options;
-  
+
   let lastError = null;
   const sqlStateErrors = {};
   const attempts = Array.isArray(queryVariants) ? [...queryVariants] : [];
-  
+
   for (let index = 0; index < attempts.length; index += 1) {
     const variant = attempts[index];
     try {
       if (verbose) {
         console.log(`[adaptive-query] Attempting: ${variant.name}`);
       }
-      
+
       const result = queryExecutor(variant);
-      
+
       if (verbose) {
         console.log(`[adaptive-query] ✅ Success with ${variant.name}`);
       }
-      
+
       return {
         success: true,
         result,
@@ -115,14 +115,14 @@ function executeWithAdaptiveRetry(queryExecutor, queryVariants, options = {}) {
     } catch (error) {
       const sqlState = extractSqlState(error);
       lastError = error;
-      
+
       if (sqlState) {
         if (!sqlStateErrors[sqlState]) {
           sqlStateErrors[sqlState] = [];
         }
         sqlStateErrors[sqlState].push(variant.name);
       }
-      
+
       if (verbose) {
         console.log(`[adaptive-query] ❌ ${variant.name} failed: ${sqlState || 'unknown'}`);
       }
@@ -138,19 +138,21 @@ function executeWithAdaptiveRetry(queryExecutor, queryVariants, options = {}) {
       }
     }
   }
-  
+
   // All attempts failed — analyze and return degraded mode
   return {
     success: false,
     sqlStateErrors,
     lastError,
     degradedMode: shouldEnterDegradedMode(sqlStateErrors),
-    recommendations: generateRecoveryRecommendations(sqlStateErrors, lastError)
+    recommendations: generateRecoveryRecommendations(sqlStateErrors, lastError),
   };
 }
 
 function normalizeSqlState(sqlState) {
-  const normalized = String(sqlState || '').trim().toUpperCase();
+  const normalized = String(sqlState || '')
+    .trim()
+    .toUpperCase();
   if (!normalized) {
     return '';
   }
@@ -168,12 +170,12 @@ function shouldEnterDegradedMode(sqlStateErrors) {
   if (sqlStateErrors['42501']) {
     return true;
   }
-  
+
   // SQL0204 = Table not found AND all variants failed → degraded mode
   if (sqlStateErrors['42704'] && Object.keys(sqlStateErrors).length === 1) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -182,7 +184,7 @@ function shouldEnterDegradedMode(sqlStateErrors) {
  */
 function generateRecoveryRecommendations(sqlStateErrors, lastError) {
   const recommendations = [];
-  
+
   // SQL0206 = Column doesn't exist
   if (sqlStateErrors['42703']) {
     recommendations.push(
@@ -190,7 +192,7 @@ function generateRecoveryRecommendations(sqlStateErrors, lastError) {
       '   Recommendation: Upgrade to IBM i 7.4+ or use source-only analysis (--skip-metadata)'
     );
   }
-  
+
   // SQL0204 = Table not found
   if (sqlStateErrors['42704']) {
     recommendations.push(
@@ -200,7 +202,7 @@ function generateRecoveryRecommendations(sqlStateErrors, lastError) {
       '   Recommendation: Explicitly specify schema with --default-schema or check table exists'
     );
   }
-  
+
   // SQL0551 = No authority
   if (sqlStateErrors['42501']) {
     recommendations.push(
@@ -209,7 +211,7 @@ function generateRecoveryRecommendations(sqlStateErrors, lastError) {
       '   Recommendation: Ask system admin to grant SELECT on QSYS2 views, or use privileged account'
     );
   }
-  
+
   return recommendations;
 }
 
@@ -218,25 +220,27 @@ function generateRecoveryRecommendations(sqlStateErrors, lastError) {
  */
 async function discoverTableSchema(tableName, knownSchemas, queryExecutor, options = {}) {
   const { verbose = false } = options;
-  
+
   if (verbose) {
-    console.log(`[schema-discovery] Searching for ${tableName} in ${knownSchemas.length} known schemas...`);
+    console.log(
+      `[schema-discovery] Searching for ${tableName} in ${knownSchemas.length} known schemas...`
+    );
   }
-  
+
   // Try each schema
   for (const schema of knownSchemas) {
     try {
       const sql = `SELECT 1 FROM ${schema}.${tableName} FETCH FIRST 1 ROW ONLY`;
       await queryExecutor(sql);
-      
+
       if (verbose) {
         console.log(`[schema-discovery] ✅ Found ${tableName} in schema: ${schema}`);
       }
-      
+
       return { found: true, schema };
     } catch (error) {
       const sqlState = extractSqlState(error);
-      
+
       // Not a "not found" error? Real problem.
       if (sqlState !== '42704' && sqlState !== '00000') {
         if (verbose) {
@@ -244,18 +248,18 @@ async function discoverTableSchema(tableName, knownSchemas, queryExecutor, optio
         }
         throw error;
       }
-      
+
       if (verbose) {
         console.log(`[schema-discovery] Not in schema: ${schema}`);
       }
     }
   }
-  
+
   // Try catalog as last resort
   if (verbose) {
     console.log(`[schema-discovery] Querying catalog as fallback...`);
   }
-  
+
   try {
     const catalogQuery = `
       SELECT TABLE_SCHEMA 
@@ -264,9 +268,9 @@ async function discoverTableSchema(tableName, knownSchemas, queryExecutor, optio
       ORDER BY TABLE_SCHEMA
       FETCH FIRST 1 ROW ONLY
     `;
-    
+
     const result = await queryExecutor(catalogQuery);
-    
+
     if (result.rows && result.rows.length > 0) {
       const schema = result.rows[0].TABLE_SCHEMA;
       if (verbose) {
@@ -279,7 +283,7 @@ async function discoverTableSchema(tableName, knownSchemas, queryExecutor, optio
       console.log(`[schema-discovery] Catalog query also failed: ${extractSqlState(error)}`);
     }
   }
-  
+
   return { found: false, schema: null };
 }
 
@@ -291,5 +295,5 @@ module.exports = {
   shouldEnterDegradedMode,
   generateRecoveryRecommendations,
   discoverTableSchema,
-  SYSTABLES_COLUMN_VARIANTS
+  SYSTABLES_COLUMN_VARIANTS,
 };

@@ -22,10 +22,14 @@ function normalizeTargetName(value) {
 }
 
 function normalizeTargetNameList(values) {
-  return Array.from(new Set((Array.isArray(values) ? values : [values])
-    .flatMap((entry) => (Array.isArray(entry) ? entry : [entry]))
-    .map((entry) => normalizeTargetName(entry))
-    .filter(Boolean)));
+  return Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [values])
+        .flatMap(entry => (Array.isArray(entry) ? entry : [entry]))
+        .map(entry => normalizeTargetName(entry))
+        .filter(Boolean)
+    )
+  );
 }
 
 function extractAuthorityName(value) {
@@ -85,9 +89,8 @@ function buildConnectionTargetMetadata({
   source = 'system-ref',
 } = {}) {
   const systemName = normalizeText(systemDefinition.systemName || systemDefinition.name);
-  const displayName = normalizeText(systemDefinition.displayName)
-    || systemName
-    || normalizeText(systemKey);
+  const displayName =
+    normalizeText(systemDefinition.displayName) || systemName || normalizeText(systemKey);
   const aliases = normalizeTargetNameList(systemDefinition.aliases || []);
   const configuredNames = normalizeTargetNameList([
     systemKey,
@@ -111,7 +114,9 @@ function buildConnectionTargetMetadata({
 }
 
 function listConnectionTargetNames(targetOrMetadata) {
-  const metadata = getConnectionTargetMetadata(targetOrMetadata) || cloneConnectionTargetMetadata(targetOrMetadata);
+  const metadata =
+    getConnectionTargetMetadata(targetOrMetadata) ||
+    cloneConnectionTargetMetadata(targetOrMetadata);
   if (!metadata) {
     const host = extractAuthorityName(targetOrMetadata && targetOrMetadata.host);
     const url = extractAuthorityName(targetOrMetadata && targetOrMetadata.url);
@@ -136,15 +141,23 @@ function matchesConnectionTargetName(targetOrMetadata, reportedName) {
 }
 
 function describeConnectionTarget(targetOrMetadata) {
-  const metadata = getConnectionTargetMetadata(targetOrMetadata) || cloneConnectionTargetMetadata(targetOrMetadata);
-  const fallbackHost = extractAuthorityName(targetOrMetadata && targetOrMetadata.host)
-    || extractAuthorityName(targetOrMetadata && targetOrMetadata.url);
+  const metadata =
+    getConnectionTargetMetadata(targetOrMetadata) ||
+    cloneConnectionTargetMetadata(targetOrMetadata);
+  const fallbackHost =
+    extractAuthorityName(targetOrMetadata && targetOrMetadata.host) ||
+    extractAuthorityName(targetOrMetadata && targetOrMetadata.url);
   if (!metadata) {
     return fallbackHost || '(target unknown)';
   }
 
   const parts = [];
-  const title = metadata.displayName || metadata.systemName || metadata.systemKey || fallbackHost || '(target unknown)';
+  const title =
+    metadata.displayName ||
+    metadata.systemName ||
+    metadata.systemKey ||
+    fallbackHost ||
+    '(target unknown)';
   if (metadata.systemKey) {
     parts.push(`key=${metadata.systemKey}`);
   }

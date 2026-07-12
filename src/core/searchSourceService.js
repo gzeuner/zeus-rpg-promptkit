@@ -17,7 +17,8 @@ const fs = require('fs');
 const path = require('path');
 const { glob } = require('glob');
 
-const DEFAULT_SOURCE_FILE_PATTERN = '**/*.{rpgle,rpg,sqlrpgle,rpgile,clle,clp,sql,dds,dspf,prtf,pf,lf,bnd,binder,bndsrc,cpy}';
+const DEFAULT_SOURCE_FILE_PATTERN =
+  '**/*.{rpgle,rpg,sqlrpgle,rpgile,clle,clp,sql,dds,dspf,prtf,pf,lf,bnd,binder,bndsrc,cpy}';
 
 function escapeRegex(str) {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -47,8 +48,13 @@ function buildSearchRegex({ searchTerm, member, table, caseSensitive }) {
   if (member) {
     const escapedMember = escapeRegex(String(member).toUpperCase());
     return caseSensitive
-      ? new RegExp(`(^|[^A-Z0-9_])${escapedMember}([^A-Z0-9_]|$)|// Member: ${escapedMember}|Member: ${escapedMember}`)
-      : new RegExp(`(^|[^A-Z0-9_])${escapedMember.toLowerCase()}([^A-Z0-9_]|$)|// Member: ${escapedMember.toLowerCase()}|Member: ${escapedMember.toLowerCase()}`, 'i');
+      ? new RegExp(
+          `(^|[^A-Z0-9_])${escapedMember}([^A-Z0-9_]|$)|// Member: ${escapedMember}|Member: ${escapedMember}`
+        )
+      : new RegExp(
+          `(^|[^A-Z0-9_])${escapedMember.toLowerCase()}([^A-Z0-9_]|$)|// Member: ${escapedMember.toLowerCase()}|Member: ${escapedMember.toLowerCase()}`,
+          'i'
+        );
   }
 
   if (table) {
@@ -57,9 +63,7 @@ function buildSearchRegex({ searchTerm, member, table, caseSensitive }) {
   }
 
   if (searchTerm) {
-    return caseSensitive
-      ? new RegExp(String(searchTerm))
-      : new RegExp(String(searchTerm), 'i');
+    return caseSensitive ? new RegExp(String(searchTerm)) : new RegExp(String(searchTerm), 'i');
   }
 
   return null;
@@ -84,7 +88,7 @@ async function executeSearchSource(
     readFileSync = fs.readFileSync,
     globFn = glob,
     onWarning = null,
-  } = {},
+  } = {}
 ) {
   if (!args['source-root']) {
     throw new Error('Missing required option: --source-root <path>');

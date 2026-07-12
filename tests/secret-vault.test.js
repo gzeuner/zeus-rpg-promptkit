@@ -35,7 +35,7 @@ function createTempProject(profiles) {
   fs.writeFileSync(
     path.join(tempRoot, 'config', 'profiles.example.json'),
     `${JSON.stringify(profiles, null, 2)}\n`,
-    'utf8',
+    'utf8'
   );
   return tempRoot;
 }
@@ -67,7 +67,10 @@ test('ciphertext is non-deterministic (random IV) but decrypts to the same value
 
 test('decryption with the wrong key fails loudly', () => {
   const token = encryptSecret('secret', { keyMaterial: 'key-one' });
-  assert.throws(() => decryptSecret(token, { keyMaterial: 'key-two' }), /fehlgeschlagen|Entschluesselung/);
+  assert.throws(
+    () => decryptSecret(token, { keyMaterial: 'key-two' }),
+    /fehlgeschlagen|Entschluesselung/
+  );
 });
 
 test('corrupted token throws instead of returning garbage', () => {
@@ -97,29 +100,20 @@ test('generateKeyString produces distinct 32-byte base64 keys', () => {
 test('profile resolution decrypts an encrypted value sourced from env', () => {
   const token = encryptSecret('s3cr3t-db-pass', { keyMaterial: KEY });
   const env = { ZEUS_SECRET_KEY: KEY, ZEUS_DB_PASSWORD: token };
-  const profile = resolveProfileWithEnv(
-    { db: { password: '${env:ZEUS_DB_PASSWORD}' } },
-    env,
-  );
+  const profile = resolveProfileWithEnv({ db: { password: '${env:ZEUS_DB_PASSWORD}' } }, env);
   assert.equal(profile.db.password, 's3cr3t-db-pass');
 });
 
 test('profile resolution decrypts an encrypted value placed directly in a profile', () => {
   const token = encryptSecret('direct-value', { keyMaterial: KEY });
   const env = { ZEUS_SECRET_KEY: KEY };
-  const profile = resolveProfileWithEnv(
-    { db: { password: token } },
-    env,
-  );
+  const profile = resolveProfileWithEnv({ db: { password: token } }, env);
   assert.equal(profile.db.password, 'direct-value');
 });
 
 test('profile resolution leaves plain env-sourced values untouched', () => {
   const env = { ZEUS_DB_USER: 'APPUSER' };
-  const profile = resolveProfileWithEnv(
-    { db: { user: '${env:ZEUS_DB_USER}' } },
-    env,
-  );
+  const profile = resolveProfileWithEnv({ db: { user: '${env:ZEUS_DB_USER}' } }, env);
   assert.equal(profile.db.user, 'APPUSER');
 });
 
@@ -129,7 +123,7 @@ test('profile resolution throws a clear error when the key is missing for an enc
   const env = { ZEUS_DB_PASSWORD: token };
   assert.throws(
     () => resolveProfileWithEnv({ db: { password: '${env:ZEUS_DB_PASSWORD}' } }, env),
-    /Schluesselmaterial|Entschluesselung/,
+    /Schluesselmaterial|Entschluesselung/
   );
 });
 
@@ -137,7 +131,10 @@ const { detectPlaintextSecrets } = require('../src/security/plaintextSecretDetec
 
 test('detectPlaintextSecrets finds plaintext in .env files', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
-  fs.writeFileSync(path.join(tempRoot, '.env.local'), 'ZEUS_DB_PASSWORD=supersecret123\nOTHER=foo\nZEUS_FETCH_PASSWORD=enc:v1:xxx');
+  fs.writeFileSync(
+    path.join(tempRoot, '.env.local'),
+    'ZEUS_DB_PASSWORD=supersecret123\nOTHER=foo\nZEUS_FETCH_PASSWORD=enc:v1:xxx'
+  );
   const findings = detectPlaintextSecrets({ cwd: tempRoot, env: {}, checkProfiles: false });
   assert.ok(findings.some(f => f.key === 'ZEUS_DB_PASSWORD' && f.source === 'file'));
   assert.equal(findings.filter(f => f.source === 'file').length, 1);
@@ -147,25 +144,35 @@ test('detectPlaintextSecrets finds plaintext in .env files', () => {
 test('detectPlaintextSecrets detects in profiles.json', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
   fs.mkdirSync(path.join(tempRoot, 'config'), { recursive: true });
-  fs.writeFileSync(path.join(tempRoot, 'config', 'profiles.json'), JSON.stringify({
-    default: { db: { password: 'plain-in-profile' } }
-  }));
+  fs.writeFileSync(
+    path.join(tempRoot, 'config', 'profiles.json'),
+    JSON.stringify({
+      default: { db: { password: 'plain-in-profile' } },
+    })
+  );
   const findings = detectPlaintextSecrets({ cwd: tempRoot, checkProfiles: true });
   assert.ok(findings.some(f => f.source === 'profile'));
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
 test('detectPlaintextSecrets scans current env', () => {
-  const findings = detectPlaintextSecrets({ cwd: '/tmp', env: { ZEUS_DB_PASSWORD: 'from-env-plain' }, checkProfiles: false });
+  const findings = detectPlaintextSecrets({
+    cwd: '/tmp',
+    env: { ZEUS_DB_PASSWORD: 'from-env-plain' },
+    checkProfiles: false,
+  });
   assert.ok(findings.some(f => f.key === 'ZEUS_DB_PASSWORD' && f.source === 'env'));
 });
 
 test('detectPlaintextSecrets ignores ${env:...} placeholders in profiles (no false-positive)', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
   fs.mkdirSync(path.join(tempRoot, 'config', 'local-only'), { recursive: true });
-  fs.writeFileSync(path.join(tempRoot, 'config', 'local-only', 'profiles.json'), JSON.stringify({
-    default: { db: { password: '${env:ZEUS_DB_PASSWORD}' } }
-  }));
+  fs.writeFileSync(
+    path.join(tempRoot, 'config', 'local-only', 'profiles.json'),
+    JSON.stringify({
+      default: { db: { password: '${env:ZEUS_DB_PASSWORD}' } },
+    })
+  );
   const findings = detectPlaintextSecrets({ cwd: tempRoot, checkProfiles: true });
   const profileFindings = findings.filter(f => f.source === 'profile');
   assert.equal(profileFindings.length, 0, 'env placeholder must not be reported as plaintext');
@@ -175,22 +182,34 @@ test('detectPlaintextSecrets ignores ${env:...} placeholders in profiles (no fal
 test('detectPlaintextSecrets ignores general ${...} placeholders and only flags real plaintext', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
   fs.mkdirSync(path.join(tempRoot, 'config'), { recursive: true });
-  fs.writeFileSync(path.join(tempRoot, 'config', 'profiles.json'), JSON.stringify({
-    p1: { db: { password: '${env:FOO}', user: 'realuser' } },
-    p2: { secret: 'THIS_IS_PLAINTEXT_SECRET' }
-  }));
+  fs.writeFileSync(
+    path.join(tempRoot, 'config', 'profiles.json'),
+    JSON.stringify({
+      p1: { db: { password: '${env:FOO}', user: 'realuser' } },
+      p2: { secret: 'THIS_IS_PLAINTEXT_SECRET' },
+    })
+  );
   const findings = detectPlaintextSecrets({ cwd: tempRoot, checkProfiles: true });
   // Should only report the real plaintext one (under secret key)
   assert.ok(findings.some(f => f.source === 'profile' && f.key.includes('secret')));
-  assert.ok(!findings.some(f => String(f.key).includes('password')), 'password placeholder must be ignored');
+  assert.ok(
+    !findings.some(f => String(f.key).includes('password')),
+    'password placeholder must be ignored'
+  );
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });
 
 test('detectPlaintextSecrets discovers .env.*.local files (not just .env.local)', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
   fs.mkdirSync(path.join(tempRoot, 'config', 'local-only'), { recursive: true });
-  fs.writeFileSync(path.join(tempRoot, 'config', 'local-only', '.env.ders.local'), 'ZEUS_DB_PASSWORD=dersplain\n');
-  fs.writeFileSync(path.join(tempRoot, 'config', 'local-only', '.env.local'), 'ZEUS_FETCH_PASSWORD=baseplain\n');
+  fs.writeFileSync(
+    path.join(tempRoot, 'config', 'local-only', '.env.ders.local'),
+    'ZEUS_DB_PASSWORD=dersplain\n'
+  );
+  fs.writeFileSync(
+    path.join(tempRoot, 'config', 'local-only', '.env.local'),
+    'ZEUS_FETCH_PASSWORD=baseplain\n'
+  );
   const findings = detectPlaintextSecrets({ cwd: tempRoot, checkProfiles: false });
   const keys = findings.filter(f => f.source === 'file').map(f => f.key);
   assert.ok(keys.includes('ZEUS_DB_PASSWORD'), 'should discover .env.ders.local');

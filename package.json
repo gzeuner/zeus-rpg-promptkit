@@ -19,9 +19,10 @@
     "doctor": "node ./cli/zeus.js doctor",
     "build": "echo \"No build step required for this CLI project\"",
     "format": "prettier --write .",
-    "format:check": "prettier --check eslint.config.js jsconfig.json .prettierrc.json package.json CONTRIBUTING.md scripts/docs-check.js .github/workflows/ci.yml .github/workflows/release.yml --ignore-path .prettierignore",
+    "format:check": "prettier --check . --ignore-path .prettierignore",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "node -e '\nconst {execSync} = require(\"child_process\");\ntry {\n  execSync(\"tsc --noEmit -p jsconfig.json --skipLibCheck\", {stdio: \"pipe\"});\n  console.log(\"typecheck passed\");\n} catch (e) {\n  const out = (e.stdout || e.stderr || \"\").toString();\n  const our = out.split(\"\\n\").filter(l => /^(src|cli)\\//.test(l)).join(\"\\n\");\n  if (our) { console.error(our); process.exit(1); }\n  console.log(\"typecheck passed (vendored JSDoc only)\");\n}\n'",
+    "typecheck": "tsc --noEmit -p jsconfig.json --skipLibCheck --noResolve",
+    "typecheck:verify-scope": "node -e '\nconst fs=require(\"fs\"); const txt=fs.readFileSync(\"jsconfig.json\",\"utf8\").replace(/\\/\\*[\\s\\S]*?\\*\\//g,\"\").replace(/\\/\\/[^\\n]*/g,\"\"); const cfg=JSON.parse(txt); const files=cfg.files||[]; if(files.length<3){ console.error(\"ERROR: typecheck scope shrank below declared core\"); process.exit(1); } console.log(\"typecheck scope verified (\"+files.length+\" declared)\");'",
     "check:public-knowledge-claims": "node scripts/check-public-knowledge-claims.js",
     "test": "npm run test:ci && npm run test:corpus && npm run test:unit",
     "test:ci": "npm run test:contract && npm run test:smoke",
@@ -36,7 +37,8 @@
     "demo:run": "bash ./examples/demo-rpg-mini-system/scripts/run-demo.sh",
     "demo:prompt": "node ./examples/demo-rpg-mini-system/scripts/build-ai-session-prompt.mjs",
     "demo:safety-check": "node ./examples/demo-rpg-mini-system/scripts/safety-check.mjs",
-    "docs:check": "node scripts/docs-check.js"
+    "docs:check": "node scripts/docs-check.js",
+    "check:repo-portability": "node scripts/check-repo-portability.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",

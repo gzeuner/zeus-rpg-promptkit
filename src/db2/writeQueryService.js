@@ -53,10 +53,12 @@ function normalizeWriteBatchResult(parsed, statements) {
   return {
     rowsAffected: Number(parsed.rowsAffected),
     statementCount: 1,
-    results: [{
-      sql: statements[0] || '',
-      rowsAffected: Number(parsed.rowsAffected),
-    }],
+    results: [
+      {
+        sql: statements[0] || '',
+        rowsAffected: Number(parsed.rowsAffected),
+      },
+    ],
   };
 }
 

@@ -104,7 +104,10 @@ function resolveKeyFromWindowsSecureXml() {
   if (!fs.existsSync(xmlPath)) return null;
   try {
     const cmd = `powershell -NoProfile -Command "try { (Import-Clixml -Path '${xmlPath}').GetNetworkCredential().Password } catch { '' }"`;
-    const password = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    const password = execSync(cmd, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
     if (password) {
       return { material: password, source: 'windows-secure-xml (DPAPI-protected)' };
     }
@@ -126,7 +129,9 @@ function removeWindowsSecureXml() {
   if (!isWindows()) return;
   const xmlPath = getWindowsKeyXmlPath();
   if (fs.existsSync(xmlPath)) {
-    try { fs.unlinkSync(xmlPath); } catch (_) {}
+    try {
+      fs.unlinkSync(xmlPath);
+    } catch (_) {}
   }
 }
 
@@ -135,13 +140,14 @@ function deriveKeyBuffer(material) {
 }
 
 function resolveKeyBuffer({ env = process.env, cwd = process.cwd(), keyMaterial = null } = {}) {
-  const material = keyMaterial && String(keyMaterial).trim()
-    ? String(keyMaterial).trim()
-    : (resolveKeyMaterial({ env, cwd }) || {}).material;
+  const material =
+    keyMaterial && String(keyMaterial).trim()
+      ? String(keyMaterial).trim()
+      : (resolveKeyMaterial({ env, cwd }) || {}).material;
   if (!material) {
     throw new Error(
-      `Kein Schluesselmaterial gefunden. Setze ${KEY_ENV_VAR} oder lege `
-      + `${KEY_FILE_RELATIVE} an (z. B. via "zeus secret init-key").`,
+      `Kein Schluesselmaterial gefunden. Setze ${KEY_ENV_VAR} oder lege ` +
+        `${KEY_FILE_RELATIVE} an (z. B. via "zeus secret init-key").`
     );
   }
   return deriveKeyBuffer(material);
@@ -164,7 +170,9 @@ function encryptSecret(plaintext, options = {}) {
 // Entschluesselt ein `enc:v1:...`-Token -> Klartext. Wirft bei fehlendem/falschem Schluessel.
 function decryptSecret(token, options = {}) {
   if (!isEncryptedSecret(token)) {
-    throw new Error('decryptSecret: Wert ist kein verschluesseltes Zeus-Secret (erwartet "enc:v1:...").');
+    throw new Error(
+      'decryptSecret: Wert ist kein verschluesseltes Zeus-Secret (erwartet "enc:v1:...").'
+    );
   }
   const key = resolveKeyBuffer(options);
   let raw;
@@ -185,8 +193,8 @@ function decryptSecret(token, options = {}) {
     return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
   } catch (_error) {
     throw new Error(
-      'decryptSecret: Entschluesselung fehlgeschlagen. Falscher Schluessel '
-      + `(${KEY_ENV_VAR} / ${KEY_FILE_RELATIVE}) oder manipulierter Wert.`,
+      'decryptSecret: Entschluesselung fehlgeschlagen. Falscher Schluessel ' +
+        `(${KEY_ENV_VAR} / ${KEY_FILE_RELATIVE}) oder manipulierter Wert.`
     );
   }
 }

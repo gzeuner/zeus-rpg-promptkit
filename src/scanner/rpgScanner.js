@@ -57,7 +57,9 @@ const SQL_ALIAS_STOP_WORDS = new Set([
 ]);
 
 function normalizeWhitespace(text) {
-  return String(text || '').replace(/\s+/g, ' ').trim();
+  return String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function isCommentLine(rawLine) {
@@ -83,11 +85,16 @@ function isCommentLine(rawLine) {
 }
 
 function normalizeName(name) {
-  return String(name || '').trim().toUpperCase();
+  return String(name || '')
+    .trim()
+    .toUpperCase();
 }
 
 function normalizeTableName(rawName) {
-  const cleaned = String(rawName || '').trim().replace(/^"(.*)"$/, '$1').replace(/\//g, '.');
+  const cleaned = String(rawName || '')
+    .trim()
+    .replace(/^"(.*)"$/, '$1')
+    .replace(/\//g, '.');
   if (!cleaned) return '';
   const segments = cleaned.split('.').filter(Boolean);
   const table = segments.length > 0 ? segments[segments.length - 1] : cleaned;
@@ -107,8 +114,9 @@ function normalizeDefinitionName(rawName, fallbackName) {
 }
 
 function uniqueSortedStrings(values) {
-  return Array.from(new Set((values || []).map((value) => normalizeName(value)).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set((values || []).map(value => normalizeName(value)).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function addEntity(map, name, payload) {
@@ -125,7 +133,7 @@ function addEntity(map, name, payload) {
 
   const entity = map.get(normalized);
   const evidenceKey = JSON.stringify(payload.evidence);
-  const hasEvidence = entity.evidence.some((item) => JSON.stringify(item) === evidenceKey);
+  const hasEvidence = entity.evidence.some(item => JSON.stringify(item) === evidenceKey);
   if (!hasEvidence) {
     entity.evidence.push(payload.evidence);
   }
@@ -144,7 +152,7 @@ function addStructuredItem(map, key, payload) {
   const evidenceList = payload.evidence || [];
   for (const evidence of evidenceList) {
     const evidenceKey = JSON.stringify(evidence);
-    const exists = item.evidence.some((entry) => JSON.stringify(entry) === evidenceKey);
+    const exists = item.evidence.some(entry => JSON.stringify(entry) === evidenceKey);
     if (!exists) {
       item.evidence.push(evidence);
     }
@@ -177,7 +185,9 @@ function detectSqlType(sqlText) {
 }
 
 function isSchemaQualified(rawName) {
-  const cleaned = String(rawName || '').trim().replace(/^"(.*)"$/, '$1');
+  const cleaned = String(rawName || '')
+    .trim()
+    .replace(/^"(.*)"$/, '$1');
   // Qualified if it contains a dot (SCHEMA.TABLE) or slash (LIBRARY/FILE IBM i legacy)
   return cleaned.includes('.') || cleaned.includes('/');
 }
@@ -244,7 +254,7 @@ function extractSqlCursorActions(sqlText) {
   }
 
   return actions
-    .filter((entry) => entry.name)
+    .filter(entry => entry.name)
     .sort((a, b) => {
       if (a.name !== b.name) return a.name.localeCompare(b.name);
       return a.action.localeCompare(b.action);
@@ -265,7 +275,7 @@ function estimateSelectColumnCount(sqlText) {
   let inString = false;
   for (let i = 0; i < list.length; i++) {
     const ch = list[i];
-    if (ch === "'" && (i === 0 || list[i-1] !== "'")) {
+    if (ch === "'" && (i === 0 || list[i - 1] !== "'")) {
       inString = !inString;
     }
     if (inString) continue;
@@ -357,7 +367,7 @@ function splitSqlWhereFilters(whereClause) {
   return {
     filters: normalized
       .split(/\s+AND\s+/i)
-      .map((entry) => normalizeWhitespace(entry))
+      .map(entry => normalizeWhitespace(entry))
       .filter(Boolean),
     complex: false,
   };
@@ -393,14 +403,17 @@ function extractSqlRelationSemantics(sqlText, sqlType, dynamic) {
     uncertainty.push('LEGACY_JOIN_SYNTAX');
   }
 
-  const fromMatch = queryBody.match(/\bFROM\s+("[^"]+"|[A-Z0-9_#$@./]+)(?:\s+(?:AS\s+)?([A-Z][A-Z0-9_#$@]*))?/i);
+  const fromMatch = queryBody.match(
+    /\bFROM\s+("[^"]+"|[A-Z0-9_#$@./]+)(?:\s+(?:AS\s+)?([A-Z][A-Z0-9_#$@]*))?/i
+  );
   const driverTable = fromMatch ? normalizeTableName(fromMatch[1]) : '';
   if (!driverTable) {
     uncertainty.push('RELATIONSHIP_PARSE_PARTIAL');
   }
 
   const joins = [];
-  const joinRegex = /\b(?:(INNER|LEFT(?:\s+OUTER)?|RIGHT(?:\s+OUTER)?|FULL(?:\s+OUTER)?|CROSS)\s+)?JOIN\s+("[^"]+"|[A-Z0-9_#$@./]+)(?:\s+(?:AS\s+)?([A-Z][A-Z0-9_#$@]*))?(?:\s+ON\s+(.+?))?(?=\s+(?:(?:INNER|LEFT(?:\s+OUTER)?|RIGHT(?:\s+OUTER)?|FULL(?:\s+OUTER)?|CROSS)\s+)?JOIN\b|\s+\b(?:WHERE|GROUP|ORDER|HAVING|UNION|FETCH|FOR|OFFSET|LIMIT)\b|$)/gi;
+  const joinRegex =
+    /\b(?:(INNER|LEFT(?:\s+OUTER)?|RIGHT(?:\s+OUTER)?|FULL(?:\s+OUTER)?|CROSS)\s+)?JOIN\s+("[^"]+"|[A-Z0-9_#$@./]+)(?:\s+(?:AS\s+)?([A-Z][A-Z0-9_#$@]*))?(?:\s+ON\s+(.+?))?(?=\s+(?:(?:INNER|LEFT(?:\s+OUTER)?|RIGHT(?:\s+OUTER)?|FULL(?:\s+OUTER)?|CROSS)\s+)?JOIN\b|\s+\b(?:WHERE|GROUP|ORDER|HAVING|UNION|FETCH|FOR|OFFSET|LIMIT)\b|$)/gi;
   let joinMatch = joinRegex.exec(queryBody);
   while (joinMatch) {
     const joinType = normalizeSqlJoinType(joinMatch[1]);
@@ -422,7 +435,9 @@ function extractSqlRelationSemantics(sqlText, sqlType, dynamic) {
     joinMatch = joinRegex.exec(queryBody);
   }
 
-  const whereMatch = queryBody.match(/\bWHERE\s+(.+?)(?=\s+\b(?:GROUP|ORDER|HAVING|UNION|FETCH|FOR|OFFSET|LIMIT)\b|$)/i);
+  const whereMatch = queryBody.match(
+    /\bWHERE\s+(.+?)(?=\s+\b(?:GROUP|ORDER|HAVING|UNION|FETCH|FOR|OFFSET|LIMIT)\b|$)/i
+  );
   const filters = [];
   if (whereMatch) {
     const split = splitSqlWhereFilters(whereMatch[1]);
@@ -439,9 +454,16 @@ function extractSqlRelationSemantics(sqlText, sqlType, dynamic) {
 
   let confidence = null;
   if (driverTable) {
-    confidence = uncertainty.some((marker) => ['RELATIONSHIP_PARSE_PARTIAL'].includes(marker))
+    confidence = uncertainty.some(marker => ['RELATIONSHIP_PARSE_PARTIAL'].includes(marker))
       ? 'LOW'
-      : uncertainty.some((marker) => ['CTE_SQL', 'LEGACY_JOIN_SYNTAX', 'JOIN_CONDITION_PARTIAL', 'FILTER_COMPLEX_PREDICATE'].includes(marker))
+      : uncertainty.some(marker =>
+            [
+              'CTE_SQL',
+              'LEGACY_JOIN_SYNTAX',
+              'JOIN_CONDITION_PARTIAL',
+              'FILTER_COMPLEX_PREDICATE',
+            ].includes(marker)
+          )
         ? 'MEDIUM'
         : 'HIGH';
   } else if (joins.length > 0 || filters.length > 0) {
@@ -457,7 +479,15 @@ function extractSqlRelationSemantics(sqlText, sqlType, dynamic) {
   };
 }
 
-function buildSqlUncertainty({ sqlType, intent, tables, cursors, dynamic, unresolved, hasUnqualifiedTables }) {
+function buildSqlUncertainty({
+  sqlType,
+  intent,
+  tables,
+  cursors,
+  dynamic,
+  unresolved,
+  hasUnqualifiedTables,
+}) {
   const markers = [];
   if (dynamic) {
     markers.push('DYNAMIC_SQL');
@@ -465,7 +495,11 @@ function buildSqlUncertainty({ sqlType, intent, tables, cursors, dynamic, unreso
   if (unresolved) {
     markers.push('UNRESOLVED_SQL');
   }
-  if ((intent === 'READ' || intent === 'WRITE') && tables.length === 0 && (cursors || []).length === 0) {
+  if (
+    (intent === 'READ' || intent === 'WRITE') &&
+    tables.length === 0 &&
+    (cursors || []).length === 0
+  ) {
     markers.push('UNRESOLVED_TABLES');
   }
   if (hasUnqualifiedTables) {
@@ -477,12 +511,7 @@ function buildSqlUncertainty({ sqlType, intent, tables, cursors, dynamic, unreso
   return Array.from(new Set(markers)).sort((a, b) => a.localeCompare(b));
 }
 
-function createSqlStatement({
-  filePath,
-  startLine,
-  endLine,
-  sqlText,
-}) {
+function createSqlStatement({ filePath, startLine, endLine, sqlText }) {
   const normalizedText = normalizeWhitespace(sqlText);
   const type = detectSqlType(normalizedText);
   const { tables, hasUnqualifiedTables } = extractSqlTables(normalizedText);
@@ -492,11 +521,13 @@ function createSqlStatement({
   const intent = determineSqlIntent(type, normalizedText);
   const readsData = intent === 'READ';
   const writesData = intent === 'WRITE';
-  const unresolved = dynamic || ((readsData || writesData) && tables.length === 0 && cursors.length === 0);
+  const unresolved =
+    dynamic || ((readsData || writesData) && tables.length === 0 && cursors.length === 0);
   const relationSemantics = extractSqlRelationSemantics(normalizedText, type, dynamic);
-  const selectColumnCount = (['SELECT', 'DECLARE_CURSOR'].includes(type) && !dynamic)
-    ? estimateSelectColumnCount(normalizedText)
-    : null;
+  const selectColumnCount =
+    ['SELECT', 'DECLARE_CURSOR'].includes(type) && !dynamic
+      ? estimateSelectColumnCount(normalizedText)
+      : null;
   const uncertainty = uniqueSortedStrings([
     ...buildSqlUncertainty({
       sqlType: type,
@@ -564,12 +595,14 @@ function createDefinition({
     exported: Boolean(exported),
     imported: Boolean(imported),
     externalName: externalName ? normalizeName(externalName) : null,
-    evidence: [{
-      file: filePath,
-      startLine,
-      endLine,
-      text: normalizeWhitespace(text),
-    }],
+    evidence: [
+      {
+        file: filePath,
+        startLine,
+        endLine,
+        text: normalizeWhitespace(text),
+      },
+    ],
   };
   if (kind === 'PROCEDURE') {
     def.paramCount = Number(paramCount) || 0;
@@ -600,11 +633,13 @@ function createProcedureCall({
     targetKind: normalizeName(targetKind),
     targetProgram: targetProgram ? normalizeName(targetProgram) : null,
     ownerFile: filePath,
-    evidence: [{
-      file: filePath,
-      line: lineNo,
-      text: normalizeWhitespace(text),
-    }],
+    evidence: [
+      {
+        file: filePath,
+        line: lineNo,
+        text: normalizeWhitespace(text),
+      },
+    ],
   };
 }
 
@@ -625,11 +660,13 @@ function createNativeFileDeclaration({
     kind: normalizeName(kind || 'FILE') || 'FILE',
     declaredAccess: uniqueSortedStrings(declaredAccess),
     keyed: Boolean(keyed),
-    evidence: [{
-      file: filePath,
-      line: lineNo,
-      text: normalizeWhitespace(text),
-    }],
+    evidence: [
+      {
+        file: filePath,
+        line: lineNo,
+        text: normalizeWhitespace(text),
+      },
+    ],
   };
 }
 
@@ -662,11 +699,13 @@ function createNativeFileAccess({
     ownerName: normalizeName(ownerName),
     ownerKind: normalizeName(ownerKind),
     ownerFile: filePath,
-    evidence: [{
-      file: filePath,
-      line: lineNo,
-      text: normalizeWhitespace(text),
-    }],
+    evidence: [
+      {
+        file: filePath,
+        line: lineNo,
+        text: normalizeWhitespace(text),
+      },
+    ],
   };
 }
 
@@ -689,58 +728,54 @@ function createModule({
     bindingDirectories: uniqueSortedStrings(bindingDirectories),
     servicePrograms: uniqueSortedStrings(servicePrograms),
     importedProcedures: uniqueSortedStrings(importedProcedures),
-    evidence: [{
-      file: filePath,
-      line: lineNo,
-      text: normalizeWhitespace(text),
-    }],
+    evidence: [
+      {
+        file: filePath,
+        line: lineNo,
+        text: normalizeWhitespace(text),
+      },
+    ],
   };
 }
 
-function createBindingDirectory({
-  filePath,
-  name,
-  lineNo,
-  text,
-}) {
+function createBindingDirectory({ filePath, name, lineNo, text }) {
   return {
     name: normalizeName(name),
     sourceFile: filePath,
-    evidence: [{
-      file: filePath,
-      line: lineNo,
-      text: normalizeWhitespace(text),
-    }],
+    evidence: [
+      {
+        file: filePath,
+        line: lineNo,
+        text: normalizeWhitespace(text),
+      },
+    ],
   };
 }
 
-function createServiceProgram({
-  filePath,
-  name,
-  lineNo,
-  sourceKind = 'HINT',
-  exports = [],
-  text,
-}) {
+function createServiceProgram({ filePath, name, lineNo, sourceKind = 'HINT', exports = [], text }) {
   return {
     name: normalizeName(name),
     sourceFile: filePath || null,
     sourceKind: normalizeName(sourceKind || 'HINT') || 'HINT',
     exports: (exports || [])
-      .map((entry) => ({
+      .map(entry => ({
         symbol: normalizeName(entry && entry.symbol),
-        signatureLevel: normalizeName(entry && entry.signatureLevel ? entry.signatureLevel : 'CURRENT') || 'CURRENT',
+        signatureLevel:
+          normalizeName(entry && entry.signatureLevel ? entry.signatureLevel : 'CURRENT') ||
+          'CURRENT',
       }))
-      .filter((entry) => entry.symbol)
+      .filter(entry => entry.symbol)
       .sort((a, b) => {
         if (a.symbol !== b.symbol) return a.symbol.localeCompare(b.symbol);
         return a.signatureLevel.localeCompare(b.signatureLevel);
       }),
-    evidence: [{
-      file: filePath || '',
-      line: lineNo,
-      text: normalizeWhitespace(text),
-    }],
+    evidence: [
+      {
+        file: filePath || '',
+        line: lineNo,
+        text: normalizeWhitespace(text),
+      },
+    ],
   };
 }
 
@@ -773,7 +808,9 @@ function isBinderSourceFile(filePath, lines) {
   if (BINDER_SOURCE_EXTENSIONS.has(ext)) {
     return true;
   }
-  return (lines || []).some((line) => /\bSTRPGMEXP\b|\bENDPGMEXP\b|\bEXPORT\s+SYMBOL\b/i.test(String(line || '')));
+  return (lines || []).some(line =>
+    /\bSTRPGMEXP\b|\bENDPGMEXP\b|\bEXPORT\s+SYMBOL\b/i.test(String(line || ''))
+  );
 }
 
 function isRpgLikeSourceFile(filePath) {
@@ -786,15 +823,17 @@ function extractKeywordValues(text, keyword) {
   if (!match) return [];
 
   const raw = match[1] || '';
-  const quoted = Array.from(raw.matchAll(/['"]([^'"]+)['"]/g)).map((entry) => entry[1]);
+  const quoted = Array.from(raw.matchAll(/['"]([^'"]+)['"]/g)).map(entry => entry[1]);
   if (quoted.length > 0) {
     return uniqueSortedStrings(quoted);
   }
 
-  return uniqueSortedStrings(raw
-    .split(/[:\s,]+/)
-    .map((value) => value.replace(/^\*/, ''))
-    .filter(Boolean));
+  return uniqueSortedStrings(
+    raw
+      .split(/[:\s,]+/)
+      .map(value => value.replace(/^\*/, ''))
+      .filter(Boolean)
+  );
 }
 
 function collectControlOptionBlocks(lines) {
@@ -873,16 +912,19 @@ function collectBinderSourceSemantics(filePath, lines) {
     }
   }
 
-  const servicePrograms = exports.length > 0 || isBinderSourceFile(filePath, lines)
-    ? [createServiceProgram({
-      filePath,
-      name: serviceProgramName,
-      lineNo: firstLine || 1,
-      sourceKind: 'BINDER_SOURCE',
-      exports,
-      text: `Binder source for ${serviceProgramName}`,
-    })]
-    : [];
+  const servicePrograms =
+    exports.length > 0 || isBinderSourceFile(filePath, lines)
+      ? [
+          createServiceProgram({
+            filePath,
+            name: serviceProgramName,
+            lineNo: firstLine || 1,
+            sourceKind: 'BINDER_SOURCE',
+            exports,
+            text: `Binder source for ${serviceProgramName}`,
+          }),
+        ]
+      : [];
 
   return {
     modules: [],
@@ -917,52 +959,70 @@ function collectModuleBindingSemantics(filePath, lines, ownerProgram, prototypes
     }
 
     for (const bindingDirectory of extractKeywordValues(block.text, 'BNDDIR')) {
-      bindingDirectoryMap.set(bindingDirectory, createBindingDirectory({
-        filePath,
-        name: bindingDirectory,
-        lineNo: block.lineNo,
-        text: block.text,
-      }));
+      bindingDirectoryMap.set(
+        bindingDirectory,
+        createBindingDirectory({
+          filePath,
+          name: bindingDirectory,
+          lineNo: block.lineNo,
+          text: block.text,
+        })
+      );
     }
 
     for (const serviceProgram of extractKeywordValues(block.text, 'BNDSRVPGM')) {
-      serviceProgramMap.set(serviceProgram, createServiceProgram({
-        filePath,
-        name: serviceProgram,
-        lineNo: block.lineNo,
-        sourceKind: 'HINT',
-        exports: [],
-        text: block.text,
-      }));
+      serviceProgramMap.set(
+        serviceProgram,
+        createServiceProgram({
+          filePath,
+          name: serviceProgram,
+          lineNo: block.lineNo,
+          sourceKind: 'HINT',
+          exports: [],
+          text: block.text,
+        })
+      );
     }
   }
 
-  const importedProcedures = uniqueSortedStrings((prototypes || [])
-    .filter((entry) => entry.imported)
-    .map((entry) => entry.name));
-  const bindingDirectories = Array.from(bindingDirectoryMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-  const servicePrograms = Array.from(serviceProgramMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-  const modules = [createModule({
-    filePath,
-    ownerProgram,
-    name: ownerProgram,
-    lineNo: moduleLineNo,
-    kind: noMain ? 'NOMAIN_MODULE' : 'PROGRAM_MODULE',
-    bindingDirectories: bindingDirectories.map((entry) => entry.name),
-    servicePrograms: servicePrograms.map((entry) => entry.name),
-    importedProcedures,
-    text: moduleText,
-  })];
-
-  const diagnostics = [];
-  if (importedProcedures.length > 0 && bindingDirectories.length === 0 && servicePrograms.length === 0) {
-    diagnostics.push(createBindingDiagnostic({
-      code: 'UNRESOLVED_BINDING_IMPORTS',
-      message: `Imported procedures lack explicit binding evidence in ${ownerProgram}.`,
+  const importedProcedures = uniqueSortedStrings(
+    (prototypes || []).filter(entry => entry.imported).map(entry => entry.name)
+  );
+  const bindingDirectories = Array.from(bindingDirectoryMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+  const servicePrograms = Array.from(serviceProgramMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+  const modules = [
+    createModule({
       filePath,
       ownerProgram,
-      moduleName: ownerProgram,
-    }));
+      name: ownerProgram,
+      lineNo: moduleLineNo,
+      kind: noMain ? 'NOMAIN_MODULE' : 'PROGRAM_MODULE',
+      bindingDirectories: bindingDirectories.map(entry => entry.name),
+      servicePrograms: servicePrograms.map(entry => entry.name),
+      importedProcedures,
+      text: moduleText,
+    }),
+  ];
+
+  const diagnostics = [];
+  if (
+    importedProcedures.length > 0 &&
+    bindingDirectories.length === 0 &&
+    servicePrograms.length === 0
+  ) {
+    diagnostics.push(
+      createBindingDiagnostic({
+        code: 'UNRESOLVED_BINDING_IMPORTS',
+        message: `Imported procedures lack explicit binding evidence in ${ownerProgram}.`,
+        filePath,
+        ownerProgram,
+        moduleName: ownerProgram,
+      })
+    );
   }
 
   return {
@@ -1058,7 +1118,7 @@ function collectDefinitions(filePath, lines) {
     addStructuredItem(
       proceduresMap,
       `${definition.ownerProgram}|${definition.sourceFile}|${definition.kind}|${definition.name}|${definition.startLine}`,
-      definition,
+      definition
     );
     currentProcedure = null;
   }
@@ -1081,7 +1141,7 @@ function collectDefinitions(filePath, lines) {
     addStructuredItem(
       prototypesMap,
       `${definition.ownerProgram}|${definition.sourceFile}|${definition.kind}|${definition.name}|${definition.startLine}`,
-      definition,
+      definition
     );
     currentPrototype = null;
   }
@@ -1101,7 +1161,7 @@ function collectDefinitions(filePath, lines) {
     addStructuredItem(
       proceduresMap,
       `${definition.ownerProgram}|${definition.sourceFile}|${definition.kind}|${definition.name}|${definition.startLine}`,
-      definition,
+      definition
     );
     currentSubroutine = null;
   }
@@ -1131,17 +1191,27 @@ function collectDefinitions(filePath, lines) {
         if (/\bend-pi\b/i.test(piDetail)) {
           // single line pi
           const retMatch = piDetail.match(/\b(end-pi|)\s*([A-Z][A-Z0-9_]*|\*)\s*$/i);
-          if (retMatch && retMatch[2] && retMatch[2] !== 'END-PI') currentProcedure.returnType = normalizeName(retMatch[2]);
+          if (retMatch && retMatch[2] && retMatch[2] !== 'END-PI')
+            currentProcedure.returnType = normalizeName(retMatch[2]);
         }
         // count simple parms on this line if any
-        const parmMatches = (trimmed.match(/\b[A-Z0-9_#$@]+\s+(like|char|zoned|packed|int|uns|date|time|timestamp|varchar|ind|pointer|object)\b/gi) || []).length;
+        const parmMatches = (
+          trimmed.match(
+            /\b[A-Z0-9_#$@]+\s+(like|char|zoned|packed|int|uns|date|time|timestamp|varchar|ind|pointer|object)\b/gi
+          ) || []
+        ).length;
         if (parmMatches) currentProcedure.paramCount = parmMatches;
       } else if (currentProcedure.hasPi) {
         if (/\bend-pi\b/i.test(trimmed)) {
           // end of pi, param count may have been set from dcl-parm but rough count ok
         } else {
           // rough param detection on dcl-parm or inline
-          if (/^\s*dcl-parm\s+/i.test(trimmed) || /^\s*[A-Z0-9_#$@]+\s+(like|char|zoned|packed|int|uns|date|time|varchar|ind)\b/i.test(trimmed)) {
+          if (
+            /^\s*dcl-parm\s+/i.test(trimmed) ||
+            /^\s*[A-Z0-9_#$@]+\s+(like|char|zoned|packed|int|uns|date|time|varchar|ind)\b/i.test(
+              trimmed
+            )
+          ) {
             currentProcedure.paramCount = (currentProcedure.paramCount || 0) + 1;
           }
           const retCandidate = trimmed.match(/^\s*([A-Z][A-Z0-9_]*|\*)\s*;\s*$/i);
@@ -1163,7 +1233,9 @@ function collectDefinitions(filePath, lines) {
     const dclPrMatch = trimmed.match(/^dcl-pr\s+([A-Z0-9_#$@*]+)\b(.*)$/i);
     if (dclPrMatch) {
       const detail = dclPrMatch[2] || '';
-      const externalMatch = detail.match(/\bext(?:proc|pgm)\s*\(\s*['"]?([A-Z0-9_#$@]+)['"]?\s*\)/i);
+      const externalMatch = detail.match(
+        /\bext(?:proc|pgm)\s*\(\s*['"]?([A-Z0-9_#$@]+)['"]?\s*\)/i
+      );
       currentPrototype = {
         name: normalizeDefinitionName(dclPrMatch[1], ownerProgram),
         startLine: lineNo,
@@ -1181,7 +1253,9 @@ function collectDefinitions(filePath, lines) {
 
     const fixedPrototype = parseFixedPrototype(rawLine);
     if (fixedPrototype) {
-      const externalMatch = String(fixedPrototype.detail || '').match(/\bEXT(?:PROC|PGM)\s*\(\s*['"]?([A-Z0-9_#$@]+)['"]?\s*\)/i);
+      const externalMatch = String(fixedPrototype.detail || '').match(
+        /\bEXT(?:PROC|PGM)\s*\(\s*['"]?([A-Z0-9_#$@]+)['"]?\s*\)/i
+      );
       const definition = createDefinition({
         filePath,
         ownerProgram,
@@ -1197,7 +1271,7 @@ function collectDefinitions(filePath, lines) {
       addStructuredItem(
         prototypesMap,
         `${definition.ownerProgram}|${definition.sourceFile}|${definition.kind}|${definition.name}|${definition.startLine}`,
-        definition,
+        definition
       );
       continue;
     }
@@ -1254,9 +1328,9 @@ function collectDefinitions(filePath, lines) {
     if (a.startLine !== b.startLine) return a.startLine - b.startLine;
     return a.name.localeCompare(b.name);
   });
-  const localProcedureNames = new Set(procedures.map((entry) => entry.name));
+  const localProcedureNames = new Set(procedures.map(entry => entry.name));
   const prototypes = Array.from(prototypesMap.values())
-    .map((prototype) => ({
+    .map(prototype => ({
       ...prototype,
       imported: prototype.imported || !localProcedureNames.has(prototype.name),
     }))
@@ -1283,7 +1357,6 @@ function collectBifUsages(filePath, lines) {
     if (isCommentLine(rawLine)) continue;
     let match;
     const regex = /%([A-Z][A-Z0-9_]*)\s*\(/gi;
-    // eslint-disable-next-line no-cond-assign
     while ((match = regex.exec(rawLine)) !== null) {
       const bif = normalizeName(match[1]);
       if (!bif) continue;
@@ -1309,7 +1382,55 @@ function normalizeIndicator(ind) {
     return '*IN' + num;
   }
   // Only accept well-known RPG indicator suffixes
-  const known = ['LR', 'RT', 'OF', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'U1', 'U2', 'U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'U9', 'KA', 'KB', 'KC', 'KD', 'KE', 'KF', 'KG', 'KH', 'KI', 'KJ', 'KK', 'KL', 'KM', 'KN', 'KO', 'KP', 'KQ', 'KR', 'KS', 'KT', 'KU', 'KV', 'KW', 'KX', 'KY', 'KZ'];
+  const known = [
+    'LR',
+    'RT',
+    'OF',
+    'L1',
+    'L2',
+    'L3',
+    'L4',
+    'L5',
+    'L6',
+    'L7',
+    'L8',
+    'L9',
+    'U1',
+    'U2',
+    'U3',
+    'U4',
+    'U5',
+    'U6',
+    'U7',
+    'U8',
+    'U9',
+    'KA',
+    'KB',
+    'KC',
+    'KD',
+    'KE',
+    'KF',
+    'KG',
+    'KH',
+    'KI',
+    'KJ',
+    'KK',
+    'KL',
+    'KM',
+    'KN',
+    'KO',
+    'KP',
+    'KQ',
+    'KR',
+    'KS',
+    'KT',
+    'KU',
+    'KV',
+    'KW',
+    'KX',
+    'KY',
+    'KZ',
+  ];
   if (known.includes(raw)) {
     return '*IN' + raw;
   }
@@ -1323,13 +1444,13 @@ function collectIndicatorUsages(filePath, lines) {
   const usages = [];
   const seen = new Set();
 
-  const indicatorRegex = /\*IN((\d{1,2})|([A-Z]{2,3}))\b(?!\w)|\*IN\s*\(\s*(\d{1,2}|[A-Z]{2,3})\s*\)/gi;
+  const indicatorRegex =
+    /\*IN((\d{1,2})|([A-Z]{2,3}))\b(?!\w)|\*IN\s*\(\s*(\d{1,2}|[A-Z]{2,3})\s*\)/gi;
 
   for (let i = 0; i < lines.length; i += 1) {
     const rawLine = lines[i];
     if (isCommentLine(rawLine)) continue;
     let match;
-    // eslint-disable-next-line no-cond-assign
     while ((match = indicatorRegex.exec(rawLine)) !== null) {
       let ind = match[1] || match[4] || match[2] || match[3];
       const normalized = normalizeIndicator(ind);
@@ -1339,9 +1460,10 @@ function collectIndicatorUsages(filePath, lines) {
       seen.add(key);
       // Heuristic write detection: left side of = or SETON/SETOFF or MOVE *IN
       const upper = rawLine.toUpperCase();
-      const isWrite = /(?:^|[^A-Z0-9_])\*IN(?:\d{2}|[A-Z]{1,3}|\s*\()\s*=/i.test(upper) ||
-                      /\bSETON\b|\bSETOFF\b/i.test(upper) ||
-                      /\bMOVE\b.*\*IN/i.test(upper);
+      const isWrite =
+        /(?:^|[^A-Z0-9_])\*IN(?:\d{2}|[A-Z]{1,3}|\s*\()\s*=/i.test(upper) ||
+        /\bSETON\b|\bSETOFF\b/i.test(upper) ||
+        /\bMOVE\b.*\*IN/i.test(upper);
       usages.push({
         name: normalized,
         kind: isWrite ? 'WRITE' : 'READ',
@@ -1393,8 +1515,9 @@ function collectDataDeclarations(filePath, lines) {
     if (dclDsMatch) {
       if (currentDS) finalizeDS(i);
       const detail = (dclDsMatch[2] || '').toLowerCase();
-      const likeMatch = detail.match(/\blikeds\s*\(\s*([A-Z0-9_#$@.]+)\s*\)/i) ||
-                        detail.match(/\bliker ec\s*\(\s*([A-Z0-9_#$@.]+)\s*\)/i);
+      const likeMatch =
+        detail.match(/\blikeds\s*\(\s*([A-Z0-9_#$@.]+)\s*\)/i) ||
+        detail.match(/\bliker ec\s*\(\s*([A-Z0-9_#$@.]+)\s*\)/i);
       const qualified = /\bqualified\b/i.test(detail);
       const dimMatch = detail.match(/\bdim\s*\(\s*(\d+)\s*\)/i);
       const extMatch = detail.match(/\bext(name|fld)\s*\(\s*['"]?([^'")]+)['"]?\s*\)/i);
@@ -1423,7 +1546,10 @@ function collectDataDeclarations(filePath, lines) {
       }
       // Capture simple subfield names (dcl-subf or bare name + type-ish)
       const subMatch = trimmed.match(/^(?:dcl-subf\s+)?([A-Z0-9_#$@]+)\b/i);
-      if (subMatch && !/^(dcl-ds|end-ds|dcl-proc|dcl-pi|dcl-pr|if|else|for|dcl-f)\b/i.test(subMatch[1])) {
+      if (
+        subMatch &&
+        !/^(dcl-ds|end-ds|dcl-proc|dcl-pi|dcl-pr|if|else|for|dcl-f)\b/i.test(subMatch[1])
+      ) {
         const sfName = normalizeName(subMatch[1]);
         if (sfName && !currentDS.subfields.includes(sfName)) {
           currentDS.subfields.push(sfName);
@@ -1556,7 +1682,8 @@ function collectNativeFileDeclarations(filePath, lines) {
 
     const tokenMatch = rawLine.match(/^\s*F([A-Z0-9_#$@]+)/i);
     const fIndex = rawLine.search(/F/i);
-    const fixedColName = fIndex >= 0 ? rawLine.slice(fIndex + 1, fIndex + 11).replace(/\s+/g, '') : '';
+    const fixedColName =
+      fIndex >= 0 ? rawLine.slice(fIndex + 1, fIndex + 11).replace(/\s+/g, '') : '';
     const tableName = ((tokenMatch ? tokenMatch[1] : '') || fixedColName).trim();
     if (!tableName) {
       continue;
@@ -1579,7 +1706,9 @@ function collectNativeFileDeclarations(filePath, lines) {
 }
 
 function findCurrentOwner(lineNo, ownerProgram, procedures) {
-  const active = (procedures || []).find((procedure) => lineNo >= procedure.startLine && lineNo <= procedure.endLine);
+  const active = (procedures || []).find(
+    procedure => lineNo >= procedure.startLine && lineNo <= procedure.endLine
+  );
   if (active) {
     return {
       ownerProgram,
@@ -1594,7 +1723,12 @@ function findCurrentOwner(lineNo, ownerProgram, procedures) {
   };
 }
 
-function classifyProcedureCall(targetName, localProcedures, prototypes, forceInternalSubroutine = false) {
+function classifyProcedureCall(
+  targetName,
+  localProcedures,
+  prototypes,
+  forceInternalSubroutine = false
+) {
   const normalized = normalizeName(targetName);
   if (!normalized) {
     return {
@@ -1606,7 +1740,9 @@ function classifyProcedureCall(targetName, localProcedures, prototypes, forceInt
   }
 
   if (forceInternalSubroutine) {
-    const subroutine = (localProcedures || []).find((entry) => entry.kind === 'SUBROUTINE' && entry.name === normalized);
+    const subroutine = (localProcedures || []).find(
+      entry => entry.kind === 'SUBROUTINE' && entry.name === normalized
+    );
     if (subroutine) {
       return {
         resolution: 'INTERNAL',
@@ -1623,7 +1759,7 @@ function classifyProcedureCall(targetName, localProcedures, prototypes, forceInt
     };
   }
 
-  const localProcedure = (localProcedures || []).find((entry) => entry.name === normalized);
+  const localProcedure = (localProcedures || []).find(entry => entry.name === normalized);
   if (localProcedure) {
     return {
       resolution: 'INTERNAL',
@@ -1633,7 +1769,7 @@ function classifyProcedureCall(targetName, localProcedures, prototypes, forceInt
     };
   }
 
-  const prototype = (prototypes || []).find((entry) => entry.name === normalized);
+  const prototype = (prototypes || []).find(entry => entry.name === normalized);
   if (prototype) {
     return {
       resolution: 'EXTERNAL',
@@ -1726,7 +1862,9 @@ function parseFreeFormNativeIo(trimmed) {
     return null;
   }
 
-  const opcodeMatch = trimmed.match(/^(CHAIN|SETLL|SETGT|READPE|READP|READE|READ|WRITE|UPDATE|DELETE|EXFMT)\b(?:\s*\([^)]*\))?\s+(.+)$/i);
+  const opcodeMatch = trimmed.match(
+    /^(CHAIN|SETLL|SETGT|READPE|READP|READE|READ|WRITE|UPDATE|DELETE|EXFMT)\b(?:\s*\([^)]*\))?\s+(.+)$/i
+  );
   if (!opcodeMatch) {
     return null;
   }
@@ -1748,7 +1886,9 @@ function parseFreeFormNativeIo(trimmed) {
 }
 
 function parseFixedFormNativeIo(rawLine) {
-  const match = rawLine.match(/^\s*C\b.*?\b(CHAIN|SETLL|SETGT|READPE|READP|READE|READ|WRITE|UPDATE|DELETE|EXFMT)\b\s+([A-Z0-9_#$@*]+)/i);
+  const match = rawLine.match(
+    /^\s*C\b.*?\b(CHAIN|SETLL|SETGT|READPE|READP|READE|READ|WRITE|UPDATE|DELETE|EXFMT)\b\s+([A-Z0-9_#$@*]+)/i
+  );
   if (!match) {
     return null;
   }
@@ -1770,7 +1910,7 @@ function resolveNativeFileTarget(targetName, opcode, nativeFiles) {
     return null;
   }
 
-  const direct = (nativeFiles || []).find((entry) => entry.name === normalizedTarget);
+  const direct = (nativeFiles || []).find(entry => entry.name === normalizedTarget);
   if (direct) {
     return {
       fileName: direct.name,
@@ -1781,7 +1921,7 @@ function resolveNativeFileTarget(targetName, opcode, nativeFiles) {
   }
 
   if (normalizeName(opcode) === 'EXFMT') {
-    const workstationFiles = (nativeFiles || []).filter((entry) => entry.kind === 'WORKSTN');
+    const workstationFiles = (nativeFiles || []).filter(entry => entry.kind === 'WORKSTN');
     if (workstationFiles.length === 1) {
       return {
         fileName: workstationFiles[0].name,
@@ -1793,7 +1933,7 @@ function resolveNativeFileTarget(targetName, opcode, nativeFiles) {
   }
 
   if (normalizeName(opcode) === 'WRITE') {
-    const printerFiles = (nativeFiles || []).filter((entry) => entry.kind === 'PRINTER');
+    const printerFiles = (nativeFiles || []).filter(entry => entry.kind === 'PRINTER');
     if (printerFiles.length === 1) {
       return {
         fileName: printerFiles[0].name,
@@ -1803,7 +1943,7 @@ function resolveNativeFileTarget(targetName, opcode, nativeFiles) {
       };
     }
 
-    const workstationFiles = (nativeFiles || []).filter((entry) => entry.kind === 'WORKSTN');
+    const workstationFiles = (nativeFiles || []).filter(entry => entry.kind === 'WORKSTN');
     if (workstationFiles.length === 1) {
       return {
         fileName: workstationFiles[0].name,
@@ -1867,7 +2007,7 @@ function scanContent(filePath, content) {
   let execStartLine = 0;
   let execBuffer = [];
 
-  const finalizeExecSql = (endLine) => {
+  const finalizeExecSql = endLine => {
     if (execBuffer.length === 0) return;
 
     const statement = createSqlStatement({
@@ -1890,7 +2030,7 @@ function scanContent(filePath, content) {
     execStartLine = 0;
   };
 
-  const addProcedureCallEntry = (call) => {
+  const addProcedureCallEntry = call => {
     addStructuredItem(
       procedureCallsMap,
       [
@@ -1902,13 +2042,16 @@ function scanContent(filePath, content) {
         call.resolution,
         call.targetKind,
         call.targetProgram || '',
-        (call.evidence && call.evidence[0] && (call.evidence[0].line || call.evidence[0].startLine)) || 0,
+        (call.evidence &&
+          call.evidence[0] &&
+          (call.evidence[0].line || call.evidence[0].startLine)) ||
+          0,
       ].join('|'),
-      call,
+      call
     );
   };
 
-  const addNativeFileAccessEntry = (access) => {
+  const addNativeFileAccessEntry = access => {
     addStructuredItem(
       nativeFileAccessesMap,
       [
@@ -1922,7 +2065,7 @@ function scanContent(filePath, content) {
         access.recordFormat || '',
         (access.evidence && access.evidence[0] && access.evidence[0].line) || 0,
       ].join('|'),
-      access,
+      access
     );
   };
 
@@ -1956,7 +2099,8 @@ function scanContent(filePath, content) {
       if (!trimmedUpper.startsWith('FROM ')) {
         const tokenMatch = rawLine.match(/^\s*F([A-Z0-9_#$@]+)/i);
         const fIndex = rawLine.search(/F/i);
-        const fixedColName = fIndex >= 0 ? rawLine.slice(fIndex + 1, fIndex + 11).replace(/\s+/g, '') : '';
+        const fixedColName =
+          fIndex >= 0 ? rawLine.slice(fIndex + 1, fIndex + 11).replace(/\s+/g, '') : '';
         const tableName = ((tokenMatch ? tokenMatch[1] : '') || fixedColName).trim();
         if (tableName) {
           const upperLine = rawLine.toUpperCase();
@@ -1972,7 +2116,8 @@ function scanContent(filePath, content) {
       }
     }
 
-    const copyMatch = rawLine.match(/^\s*\/(?:COPY|INCLUDE)\s+(.+)$/i) || rawLine.match(/^\s*COPY\s+(.+)$/i);
+    const copyMatch =
+      rawLine.match(/^\s*\/(?:COPY|INCLUDE)\s+(.+)$/i) || rawLine.match(/^\s*COPY\s+(.+)$/i);
     if (copyMatch) {
       const copyName = normalizeName(copyMatch[1].replace(/["']/g, '').trim());
       if (copyName) {
@@ -1984,25 +2129,31 @@ function scanContent(filePath, content) {
 
     const nativeIoMatch = parseFreeFormNativeIo(trimmed) || parseFixedFormNativeIo(rawLine);
     if (nativeIoMatch) {
-      const resolvedTarget = resolveNativeFileTarget(nativeIoMatch.target, nativeIoMatch.opcode, nativeFiles);
+      const resolvedTarget = resolveNativeFileTarget(
+        nativeIoMatch.target,
+        nativeIoMatch.opcode,
+        nativeFiles
+      );
       const opcodeAttributes = mapNativeOpcode(nativeIoMatch.opcode);
       if (resolvedTarget && opcodeAttributes) {
-        addNativeFileAccessEntry(createNativeFileAccess({
-          filePath,
-          ownerProgram: owner.ownerProgram,
-          ownerName: owner.ownerName,
-          ownerKind: owner.ownerKind,
-          lineNo,
-          text: trimmed,
-          fileName: resolvedTarget.fileName,
-          fileKind: resolvedTarget.fileKind,
-          opcode: nativeIoMatch.opcode,
-          accessKind: opcodeAttributes.accessKind,
-          recordFormat: resolvedTarget.recordFormat,
-          keyed: opcodeAttributes.keyed || resolvedTarget.keyed,
-          interactive: opcodeAttributes.interactive || resolvedTarget.fileKind === 'WORKSTN',
-          mutating: opcodeAttributes.mutating,
-        }));
+        addNativeFileAccessEntry(
+          createNativeFileAccess({
+            filePath,
+            ownerProgram: owner.ownerProgram,
+            ownerName: owner.ownerName,
+            ownerKind: owner.ownerKind,
+            lineNo,
+            text: trimmed,
+            fileName: resolvedTarget.fileName,
+            fileKind: resolvedTarget.fileKind,
+            opcode: nativeIoMatch.opcode,
+            accessKind: opcodeAttributes.accessKind,
+            recordFormat: resolvedTarget.recordFormat,
+            keyed: opcodeAttributes.keyed || resolvedTarget.keyed,
+            interactive: opcodeAttributes.interactive || resolvedTarget.fileKind === 'WORKSTN',
+            mutating: opcodeAttributes.mutating,
+          })
+        );
       }
     }
 
@@ -2034,7 +2185,29 @@ function scanContent(filePath, content) {
       const match = rawLine.match(regex);
       if (match) {
         const classification = classifyProcedureCall(match[1], procedures, prototypes);
-        addProcedureCallEntry(createProcedureCall({
+        addProcedureCallEntry(
+          createProcedureCall({
+            filePath,
+            ownerProgram: owner.ownerProgram,
+            ownerName: owner.ownerName,
+            ownerKind: owner.ownerKind,
+            lineNo,
+            text: trimmed,
+            name: classification.name,
+            resolution: classification.resolution,
+            targetKind: classification.targetKind,
+            targetProgram: classification.targetProgram,
+          })
+        );
+      }
+    }
+
+    const exsrMatch =
+      trimmed.match(/^exsr\s+([A-Z0-9_#$@*]+)\b/i) || rawLine.match(/\bEXSR\s+([A-Z0-9_#$@*]+)\b/i);
+    if (exsrMatch) {
+      const classification = classifyProcedureCall(exsrMatch[1], procedures, prototypes, true);
+      addProcedureCallEntry(
+        createProcedureCall({
           filePath,
           ownerProgram: owner.ownerProgram,
           ownerName: owner.ownerName,
@@ -2045,43 +2218,28 @@ function scanContent(filePath, content) {
           resolution: classification.resolution,
           targetKind: classification.targetKind,
           targetProgram: classification.targetProgram,
-        }));
-      }
-    }
-
-    const exsrMatch = trimmed.match(/^exsr\s+([A-Z0-9_#$@*]+)\b/i) || rawLine.match(/\bEXSR\s+([A-Z0-9_#$@*]+)\b/i);
-    if (exsrMatch) {
-      const classification = classifyProcedureCall(exsrMatch[1], procedures, prototypes, true);
-      addProcedureCallEntry(createProcedureCall({
-        filePath,
-        ownerProgram: owner.ownerProgram,
-        ownerName: owner.ownerName,
-        ownerKind: owner.ownerKind,
-        lineNo,
-        text: trimmed,
-        name: classification.name,
-        resolution: classification.resolution,
-        targetKind: classification.targetKind,
-        targetProgram: classification.targetProgram,
-      }));
+        })
+      );
     }
 
     const dynamicProcedurePatterns = [
       /\bCALLP\s*\((?!\s*['"][A-Z0-9_#$@]+['"]\s*\))/i,
       /\bCALLPRC\s*\((?!\s*['"][A-Z0-9_#$@]+['"]\s*\))(?!\s*[A-Z0-9_#$@]+\s*\))/i,
     ];
-    if (dynamicProcedurePatterns.some((regex) => regex.test(rawLine))) {
-      addProcedureCallEntry(createProcedureCall({
-        filePath,
-        ownerProgram: owner.ownerProgram,
-        ownerName: owner.ownerName,
-        ownerKind: owner.ownerKind,
-        lineNo,
-        text: trimmed,
-        name: '<DYNAMIC>',
-        resolution: 'DYNAMIC',
-        targetKind: 'DYNAMIC',
-      }));
+    if (dynamicProcedurePatterns.some(regex => regex.test(rawLine))) {
+      addProcedureCallEntry(
+        createProcedureCall({
+          filePath,
+          ownerProgram: owner.ownerProgram,
+          ownerName: owner.ownerName,
+          ownerKind: owner.ownerKind,
+          lineNo,
+          text: trimmed,
+          name: '<DYNAMIC>',
+          resolution: 'DYNAMIC',
+          targetKind: 'DYNAMIC',
+        })
+      );
     }
 
     const execSqlMatch = rawLine.match(/\bEXEC\s+SQL\b/i);
@@ -2182,7 +2340,10 @@ function scanContent(filePath, content) {
       if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
       if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
       if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
-      return ((a.evidence && a.evidence[0] && a.evidence[0].line) || 0) - ((b.evidence && b.evidence[0] && b.evidence[0].line) || 0);
+      return (
+        ((a.evidence && a.evidence[0] && a.evidence[0].line) || 0) -
+        ((b.evidence && b.evidence[0] && b.evidence[0].line) || 0)
+      );
     }),
     bifUsages,
     indicatorUsages,
@@ -2199,9 +2360,12 @@ function scanContent(filePath, content) {
 }
 
 function scanRpgFile(filePath, options = {}) {
-  const content = options.content !== undefined ? String(options.content) : fs.readFileSync(filePath, 'utf8');
+  const content =
+    options.content !== undefined ? String(options.content) : fs.readFileSync(filePath, 'utf8');
   const result = scanContent(filePath, content);
-  result.sourceFile.sourceType = normalizeSourceType(options.sourceType || classifySourceFile(filePath));
+  result.sourceFile.sourceType = normalizeSourceType(
+    options.sourceType || classifySourceFile(filePath)
+  );
   return result;
 }
 
@@ -2251,7 +2415,7 @@ function mergeEntities(targetMap, entities, withKind) {
 
     for (const evidence of entity.evidence || []) {
       const evidenceKey = JSON.stringify(evidence);
-      const exists = target.evidence.some((item) => JSON.stringify(item) === evidenceKey);
+      const exists = target.evidence.some(item => JSON.stringify(item) === evidenceKey);
       if (!exists) {
         target.evidence.push(evidence);
       }
@@ -2277,7 +2441,7 @@ function mergeStructuredItems(scanResults, key, identityBuilder, merger) {
       }
       for (const evidence of item.evidence || []) {
         const evidenceKey = JSON.stringify(evidence);
-        const exists = target.evidence.some((entry) => JSON.stringify(entry) === evidenceKey);
+        const exists = target.evidence.some(entry => JSON.stringify(entry) === evidenceKey);
         if (!exists) {
           target.evidence.push(evidence);
         }
@@ -2299,8 +2463,10 @@ function mergeSqlStatements(scanResults) {
           text: sql.text,
           tables: Array.from(new Set(sql.tables || [])).sort(),
           hostVariables: Array.from(new Set(sql.hostVariables || [])).sort(),
-          cursors: Array.from(new Set((sql.cursors || []).map((entry) => `${entry.name}:${entry.action}`)))
-            .map((value) => {
+          cursors: Array.from(
+            new Set((sql.cursors || []).map(entry => `${entry.name}:${entry.action}`))
+          )
+            .map(value => {
               const [name, action] = value.split(':');
               return { name, action };
             })
@@ -2313,18 +2479,21 @@ function mergeSqlStatements(scanResults) {
           dynamic: Boolean(sql.dynamic),
           unresolved: Boolean(sql.unresolved),
           driverTable: sql.driverTable || null,
-          joins: Array.isArray(sql.joins) ? sql.joins.map((entry) => ({ ...entry })) : [],
-          filters: Array.isArray(sql.filters) ? sql.filters.map((entry) => ({ ...entry })) : [],
+          joins: Array.isArray(sql.joins) ? sql.joins.map(entry => ({ ...entry })) : [],
+          filters: Array.isArray(sql.filters) ? sql.filters.map(entry => ({ ...entry })) : [],
           confidence: sql.confidence || null,
           uncertainty: Array.from(new Set(sql.uncertainty || [])).sort(),
-          selectColumnCount: typeof sql.selectColumnCount === 'number' ? sql.selectColumnCount : null,
+          selectColumnCount:
+            typeof sql.selectColumnCount === 'number' ? sql.selectColumnCount : null,
           evidence: [],
         });
       }
 
       const item = map.get(key);
       item.tables = Array.from(new Set([...(item.tables || []), ...(sql.tables || [])])).sort();
-      item.hostVariables = Array.from(new Set([...(item.hostVariables || []), ...(sql.hostVariables || [])])).sort();
+      item.hostVariables = Array.from(
+        new Set([...(item.hostVariables || []), ...(sql.hostVariables || [])])
+      ).sort();
       item.readsData = item.readsData || Boolean(sql.readsData);
       item.writesData = item.writesData || Boolean(sql.writesData);
       item.dynamic = item.dynamic || Boolean(sql.dynamic);
@@ -2333,12 +2502,12 @@ function mergeSqlStatements(scanResults) {
       if (typeof item.selectColumnCount !== 'number' && typeof sql.selectColumnCount === 'number') {
         item.selectColumnCount = sql.selectColumnCount;
       }
-      const joinMap = new Map((item.joins || []).map((entry) => [JSON.stringify(entry), entry]));
+      const joinMap = new Map((item.joins || []).map(entry => [JSON.stringify(entry), entry]));
       for (const join of sql.joins || []) {
         joinMap.set(JSON.stringify(join), { ...join });
       }
       item.joins = Array.from(joinMap.values());
-      const filterMap = new Map((item.filters || []).map((entry) => [JSON.stringify(entry), entry]));
+      const filterMap = new Map((item.filters || []).map(entry => [JSON.stringify(entry), entry]));
       for (const filter of sql.filters || []) {
         filterMap.set(JSON.stringify(filter), { ...filter });
       }
@@ -2353,13 +2522,15 @@ function mergeSqlStatements(scanResults) {
       if ((confidenceRank[nextConfidence] || 0) > (confidenceRank[currentConfidence] || 0)) {
         item.confidence = sql.confidence || null;
       }
-      item.uncertainty = Array.from(new Set([...(item.uncertainty || []), ...(sql.uncertainty || [])])).sort();
-      const cursorSet = new Set((item.cursors || []).map((entry) => `${entry.name}:${entry.action}`));
+      item.uncertainty = Array.from(
+        new Set([...(item.uncertainty || []), ...(sql.uncertainty || [])])
+      ).sort();
+      const cursorSet = new Set((item.cursors || []).map(entry => `${entry.name}:${entry.action}`));
       for (const cursor of sql.cursors || []) {
         cursorSet.add(`${cursor.name}:${cursor.action}`);
       }
       item.cursors = Array.from(cursorSet)
-        .map((value) => {
+        .map(value => {
           const [name, action] = value.split(':');
           return { name, action };
         })
@@ -2370,7 +2541,7 @@ function mergeSqlStatements(scanResults) {
 
       for (const evidence of sql.evidence || []) {
         const evidenceKey = JSON.stringify(evidence);
-        const exists = item.evidence.some((entry) => JSON.stringify(entry) === evidenceKey);
+        const exists = item.evidence.some(entry => JSON.stringify(entry) === evidenceKey);
         if (!exists) {
           item.evidence.push(evidence);
         }
@@ -2387,29 +2558,39 @@ function scanSourceFiles(filePaths, options = {}) {
 
   for (const filePath of filePaths || []) {
     try {
-      const sourceMetadata = options.sourceMetadataByPath instanceof Map
-        ? (options.sourceMetadataByPath.get(path.resolve(String(filePath || ''))) || null)
-        : null;
-      const scanFn = (resolvedPath) => scanStructuredSourceFile(resolvedPath, {
-        content: sourceMetadata && typeof sourceMetadata.normalizedText === 'string'
-          ? sourceMetadata.normalizedText
-          : undefined,
-        sourceType: sourceMetadata && sourceMetadata.sourceType
-          ? sourceMetadata.sourceType
-          : undefined,
-      });
-      const result = scanCache && typeof scanCache.getOrScan === 'function'
-        ? scanCache.getOrScan(filePath, scanFn)
-        : scanFn(filePath);
+      const sourceMetadata =
+        options.sourceMetadataByPath instanceof Map
+          ? options.sourceMetadataByPath.get(path.resolve(String(filePath || ''))) || null
+          : null;
+      const scanFn = resolvedPath =>
+        scanStructuredSourceFile(resolvedPath, {
+          content:
+            sourceMetadata && typeof sourceMetadata.normalizedText === 'string'
+              ? sourceMetadata.normalizedText
+              : undefined,
+          sourceType:
+            sourceMetadata && sourceMetadata.sourceType ? sourceMetadata.sourceType : undefined,
+        });
+      const result =
+        scanCache && typeof scanCache.getOrScan === 'function'
+          ? scanCache.getOrScan(filePath, scanFn)
+          : scanFn(filePath);
       if (sourceMetadata) {
         result.sourceFile = {
           ...result.sourceFile,
-          path: result.sourceFile && result.sourceFile.path ? result.sourceFile.path : sourceMetadata.path,
+          path:
+            result.sourceFile && result.sourceFile.path
+              ? result.sourceFile.path
+              : sourceMetadata.path,
           sizeBytes: Number(sourceMetadata.sizeBytes) || result.sourceFile.sizeBytes || 0,
-          lines: typeof sourceMetadata.normalizedText === 'string'
-            ? sourceMetadata.normalizedText.split('\n').length
-            : result.sourceFile.lines,
-          sourceType: sourceMetadata.sourceType || result.sourceFile.sourceType || classifySourceFile(filePath),
+          lines:
+            typeof sourceMetadata.normalizedText === 'string'
+              ? sourceMetadata.normalizedText.split('\n').length
+              : result.sourceFile.lines,
+          sourceType:
+            sourceMetadata.sourceType ||
+            result.sourceFile.sourceType ||
+            classifySourceFile(filePath),
           detectedEncoding: sourceMetadata.detectedEncoding || null,
           normalizationStatus: sourceMetadata.normalizationStatus || 'ok',
           newlineStyle: sourceMetadata.newlineStyle || 'UNKNOWN',
@@ -2430,23 +2611,34 @@ function scanSourceFiles(filePaths, options = {}) {
   const tablesMap = new Map();
   const callsMap = new Map();
   const copyMembersMap = new Map();
-  mergeEntities(tablesMap, scanResults.flatMap((item) => item.tables || []), 'FILE');
-  mergeEntities(callsMap, scanResults.flatMap((item) => item.calls || []), 'PROGRAM');
-  mergeEntities(copyMembersMap, scanResults.flatMap((item) => item.copyMembers || []));
-  const procedures = mergeStructuredItems(
-    scanResults,
-    'procedures',
-    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
+  mergeEntities(
+    tablesMap,
+    scanResults.flatMap(item => item.tables || []),
+    'FILE'
+  );
+  mergeEntities(
+    callsMap,
+    scanResults.flatMap(item => item.calls || []),
+    'PROGRAM'
+  );
+  mergeEntities(
+    copyMembersMap,
+    scanResults.flatMap(item => item.copyMembers || [])
+  );
+  const procedures = mergeStructuredItems(scanResults, 'procedures', item =>
+    [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join(
+      '|'
+    )
   ).sort((a, b) => {
     if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
     if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
     if (a.startLine !== b.startLine) return a.startLine - b.startLine;
     return a.name.localeCompare(b.name);
   });
-  const prototypes = mergeStructuredItems(
-    scanResults,
-    'prototypes',
-    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
+  const prototypes = mergeStructuredItems(scanResults, 'prototypes', item =>
+    [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join(
+      '|'
+    )
   ).sort((a, b) => {
     if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
     if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
@@ -2456,13 +2648,22 @@ function scanSourceFiles(filePaths, options = {}) {
   const modules = mergeStructuredItems(
     scanResults,
     'modules',
-    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name].join('|'),
+    item => [item.ownerProgram, item.sourceFile, item.kind, item.name].join('|'),
     (target, item) => {
       target.kind = target.kind || item.kind;
-      target.bindingDirectories = uniqueSortedStrings([...(target.bindingDirectories || []), ...(item.bindingDirectories || [])]);
-      target.servicePrograms = uniqueSortedStrings([...(target.servicePrograms || []), ...(item.servicePrograms || [])]);
-      target.importedProcedures = uniqueSortedStrings([...(target.importedProcedures || []), ...(item.importedProcedures || [])]);
-    },
+      target.bindingDirectories = uniqueSortedStrings([
+        ...(target.bindingDirectories || []),
+        ...(item.bindingDirectories || []),
+      ]);
+      target.servicePrograms = uniqueSortedStrings([
+        ...(target.servicePrograms || []),
+        ...(item.servicePrograms || []),
+      ]);
+      target.importedProcedures = uniqueSortedStrings([
+        ...(target.importedProcedures || []),
+        ...(item.importedProcedures || []),
+      ]);
+    }
   ).sort((a, b) => {
     if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
     if (a.sourceFile !== b.sourceFile) return a.sourceFile.localeCompare(b.sourceFile);
@@ -2471,21 +2672,28 @@ function scanSourceFiles(filePaths, options = {}) {
   const bindingDirectories = mergeStructuredItems(
     scanResults,
     'bindingDirectories',
-    (item) => item.name,
+    item => item.name
   ).sort((a, b) => a.name.localeCompare(b.name));
   const servicePrograms = mergeStructuredItems(
     scanResults,
     'servicePrograms',
-    (item) => item.name,
+    item => item.name,
     (target, item) => {
-      target.sourceKind = target.sourceKind === 'BINDER_SOURCE' ? target.sourceKind : (item.sourceKind || target.sourceKind || 'HINT');
+      target.sourceKind =
+        target.sourceKind === 'BINDER_SOURCE'
+          ? target.sourceKind
+          : item.sourceKind || target.sourceKind || 'HINT';
       target.sourceFile = target.sourceFile || item.sourceFile || null;
-      const exportSet = new Set((target.exports || []).map((entry) => `${entry.symbol}:${entry.signatureLevel || 'CURRENT'}`));
+      const exportSet = new Set(
+        (target.exports || []).map(entry => `${entry.symbol}:${entry.signatureLevel || 'CURRENT'}`)
+      );
       for (const entry of item.exports || []) {
-        exportSet.add(`${normalizeName(entry.symbol)}:${normalizeName(entry.signatureLevel || 'CURRENT') || 'CURRENT'}`);
+        exportSet.add(
+          `${normalizeName(entry.symbol)}:${normalizeName(entry.signatureLevel || 'CURRENT') || 'CURRENT'}`
+        );
       }
       target.exports = Array.from(exportSet)
-        .map((value) => {
+        .map(value => {
           const [symbol, signatureLevel] = value.split(':');
           return { symbol, signatureLevel };
         })
@@ -2493,28 +2701,36 @@ function scanSourceFiles(filePaths, options = {}) {
           if (a.symbol !== b.symbol) return a.symbol.localeCompare(b.symbol);
           return a.signatureLevel.localeCompare(b.signatureLevel);
         });
-    },
+    }
   ).sort((a, b) => a.name.localeCompare(b.name));
-  const diagnostics = mergeStructuredItems(
-    scanResults,
-    'diagnostics',
-    (item) => [item.code, item.details && item.details.file, item.details && item.details.ownerProgram, item.details && item.details.symbol, item.details && item.details.serviceProgram].join('|'),
+  const diagnostics = mergeStructuredItems(scanResults, 'diagnostics', item =>
+    [
+      item.code,
+      item.details && item.details.file,
+      item.details && item.details.ownerProgram,
+      item.details && item.details.symbol,
+      item.details && item.details.serviceProgram,
+    ].join('|')
   ).sort((a, b) => {
     if (a.code !== b.code) return a.code.localeCompare(b.code);
     return String(a.message || '').localeCompare(String(b.message || ''));
   });
 
-  const exportedProcedures = new Set((procedures || []).filter((entry) => entry.exported).map((entry) => entry.name));
+  const exportedProcedures = new Set(
+    (procedures || []).filter(entry => entry.exported).map(entry => entry.name)
+  );
   for (const serviceProgram of servicePrograms) {
     for (const exportedSymbol of serviceProgram.exports || []) {
       if (!exportedProcedures.has(exportedSymbol.symbol)) {
-        diagnostics.push(createBindingDiagnostic({
-          code: 'UNRESOLVED_BINDER_EXPORT',
-          message: `Binder export symbol ${exportedSymbol.symbol} could not be matched to a local exported procedure.`,
-          filePath: serviceProgram.sourceFile,
-          symbol: exportedSymbol.symbol,
-          serviceProgram: serviceProgram.name,
-        }));
+        diagnostics.push(
+          createBindingDiagnostic({
+            code: 'UNRESOLVED_BINDER_EXPORT',
+            message: `Binder export symbol ${exportedSymbol.symbol} could not be matched to a local exported procedure.`,
+            filePath: serviceProgram.sourceFile,
+            symbol: exportedSymbol.symbol,
+            serviceProgram: serviceProgram.name,
+          })
+        );
       }
     }
   }
@@ -2526,45 +2742,48 @@ function scanSourceFiles(filePaths, options = {}) {
     notes.push(diagnostic.message);
   }
 
-  const commands = mergeStructuredItems(
-    scanResults,
-    'commands',
-    (item) => [
+  const commands = mergeStructuredItems(scanResults, 'commands', item =>
+    [
       item.command || item.name,
       item.text || '',
       item.evidence && item.evidence[0] && item.evidence[0].file,
       item.evidence && item.evidence[0] && item.evidence[0].line,
-    ].join('|'),
+    ].join('|')
   ).sort((a, b) => {
     if (String(a.command || a.name) !== String(b.command || b.name)) {
       return String(a.command || a.name).localeCompare(String(b.command || b.name));
     }
     return String(a.text || '').localeCompare(String(b.text || ''));
   });
-  const objectUsages = mergeStructuredItems(
-    scanResults,
-    'objectUsages',
-    (item) => [
+  const objectUsages = mergeStructuredItems(scanResults, 'objectUsages', item =>
+    [
       item.objectType,
       item.name,
       item.command,
       item.evidence && item.evidence[0] && item.evidence[0].file,
       item.evidence && item.evidence[0] && item.evidence[0].line,
-    ].join('|'),
+    ].join('|')
   ).sort((a, b) => {
-    if (String(a.objectType || '') !== String(b.objectType || '')) return String(a.objectType || '').localeCompare(String(b.objectType || ''));
+    if (String(a.objectType || '') !== String(b.objectType || ''))
+      return String(a.objectType || '').localeCompare(String(b.objectType || ''));
     return String(a.name || '').localeCompare(String(b.name || ''));
   });
   const ddsFiles = mergeStructuredItems(
     scanResults,
     'ddsFiles',
-    (item) => item.name,
+    item => item.name,
     (target, item) => {
       target.kind = target.kind || item.kind || 'DISK';
       target.sourceType = target.sourceType || item.sourceType || 'DDS';
-      target.recordFormats = uniqueSortedStrings([...(target.recordFormats || []), ...(item.recordFormats || [])]);
-      target.referencedFiles = uniqueSortedStrings([...(target.referencedFiles || []), ...(item.referencedFiles || [])]);
-    },
+      target.recordFormats = uniqueSortedStrings([
+        ...(target.recordFormats || []),
+        ...(item.recordFormats || []),
+      ]);
+      target.referencedFiles = uniqueSortedStrings([
+        ...(target.referencedFiles || []),
+        ...(item.referencedFiles || []),
+      ]);
+    }
   ).sort((a, b) => a.name.localeCompare(b.name));
   const sourceTypeSummary = summarizeSourceTypes(sourceFiles);
 
@@ -2576,10 +2795,8 @@ function scanSourceFiles(filePaths, options = {}) {
     sqlStatements: mergeSqlStatements(scanResults),
     procedures,
     prototypes,
-    procedureCalls: mergeStructuredItems(
-      scanResults,
-      'procedureCalls',
-      (item) => [
+    procedureCalls: mergeStructuredItems(scanResults, 'procedureCalls', item =>
+      [
         item.ownerProgram,
         item.ownerFile,
         item.ownerName,
@@ -2588,8 +2805,11 @@ function scanSourceFiles(filePaths, options = {}) {
         item.resolution,
         item.targetKind,
         item.targetProgram || '',
-        (item.evidence && item.evidence[0] && (item.evidence[0].line || item.evidence[0].startLine)) || 0,
-      ].join('|'),
+        (item.evidence &&
+          item.evidence[0] &&
+          (item.evidence[0].line || item.evidence[0].startLine)) ||
+          0,
+      ].join('|')
     ).sort((a, b) => {
       if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
       if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
@@ -2599,17 +2819,19 @@ function scanSourceFiles(filePaths, options = {}) {
     nativeFiles: mergeStructuredItems(
       scanResults,
       'nativeFiles',
-      (item) => item.name,
+      item => item.name,
       (target, item) => {
-        target.kind = target.kind === 'FILE' && item.kind ? item.kind : (target.kind || item.kind || 'FILE');
+        target.kind =
+          target.kind === 'FILE' && item.kind ? item.kind : target.kind || item.kind || 'FILE';
         target.keyed = Boolean(target.keyed || item.keyed);
-        target.declaredAccess = uniqueSortedStrings([...(target.declaredAccess || []), ...(item.declaredAccess || [])]);
-      },
+        target.declaredAccess = uniqueSortedStrings([
+          ...(target.declaredAccess || []),
+          ...(item.declaredAccess || []),
+        ]);
+      }
     ).sort((a, b) => a.name.localeCompare(b.name)),
-    nativeFileAccesses: mergeStructuredItems(
-      scanResults,
-      'nativeFileAccesses',
-      (item) => [
+    nativeFileAccesses: mergeStructuredItems(scanResults, 'nativeFileAccesses', item =>
+      [
         item.fileName,
         item.ownerProgram,
         item.ownerFile,
@@ -2619,38 +2841,44 @@ function scanSourceFiles(filePaths, options = {}) {
         item.accessKind,
         item.recordFormat || '',
         (item.evidence && item.evidence[0] && item.evidence[0].line) || 0,
-      ].join('|'),
+      ].join('|')
     ).sort((a, b) => {
       if (a.fileName !== b.fileName) return a.fileName.localeCompare(b.fileName);
       if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
       if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
       if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
-      return ((a.evidence && a.evidence[0] && a.evidence[0].line) || 0) - ((b.evidence && b.evidence[0] && b.evidence[0].line) || 0);
+      return (
+        ((a.evidence && a.evidence[0] && a.evidence[0].line) || 0) -
+        ((b.evidence && b.evidence[0] && b.evidence[0].line) || 0)
+      );
     }),
-    bifUsages: mergeStructuredItems(
-      scanResults,
-      'bifUsages',
-      (item) => [item.ownerProgram, item.name, (item.evidence && item.evidence[0] && item.evidence[0].line) || 0].join('|'),
+    bifUsages: mergeStructuredItems(scanResults, 'bifUsages', item =>
+      [
+        item.ownerProgram,
+        item.name,
+        (item.evidence && item.evidence[0] && item.evidence[0].line) || 0,
+      ].join('|')
     ).sort((a, b) => a.name.localeCompare(b.name) || a.ownerProgram.localeCompare(b.ownerProgram)),
-    indicatorUsages: mergeStructuredItems(
-      scanResults,
-      'indicatorUsages',
-      (item) => [item.ownerProgram, item.name, item.kind, (item.evidence && item.evidence[0] && item.evidence[0].line) || 0].join('|'),
+    indicatorUsages: mergeStructuredItems(scanResults, 'indicatorUsages', item =>
+      [
+        item.ownerProgram,
+        item.name,
+        item.kind,
+        (item.evidence && item.evidence[0] && item.evidence[0].line) || 0,
+      ].join('|')
     ).sort((a, b) => a.name.localeCompare(b.name) || a.ownerProgram.localeCompare(b.ownerProgram)),
-    dataStructures: mergeStructuredItems(
-      scanResults,
-      'dataStructures',
-      (item) => [item.ownerProgram, item.name, item.startLine].join('|'),
+    dataStructures: mergeStructuredItems(scanResults, 'dataStructures', item =>
+      [item.ownerProgram, item.name, item.startLine].join('|')
     ).sort((a, b) => a.name.localeCompare(b.name)),
-    standaloneFields: mergeStructuredItems(
-      scanResults,
-      'standaloneFields',
-      (item) => [item.ownerProgram, item.name, (item.evidence && item.evidence[0] && item.evidence[0].line) || 0].join('|'),
+    standaloneFields: mergeStructuredItems(scanResults, 'standaloneFields', item =>
+      [
+        item.ownerProgram,
+        item.name,
+        (item.evidence && item.evidence[0] && item.evidence[0].line) || 0,
+      ].join('|')
     ).sort((a, b) => a.name.localeCompare(b.name)),
-    constants: mergeStructuredItems(
-      scanResults,
-      'constants',
-      (item) => [item.ownerProgram, item.name].join('|'),
+    constants: mergeStructuredItems(scanResults, 'constants', item =>
+      [item.ownerProgram, item.name].join('|')
     ).sort((a, b) => a.name.localeCompare(b.name)),
     modules,
     bindingDirectories,

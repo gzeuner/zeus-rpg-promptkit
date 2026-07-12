@@ -3,16 +3,19 @@ const assert = require('node:assert/strict');
 
 const { renderPrompt, validatePromptApplicability } = require('../src/prompt/promptBuilder');
 const { listPromptContracts, getPromptContract } = require('../src/prompt/promptRegistry');
-const { evaluatePromptFixture, loadPromptEvaluationFixture } = require('../src/prompt/promptEvaluationHarness');
+const {
+  evaluatePromptFixture,
+  loadPromptEvaluationFixture,
+} = require('../src/prompt/promptEvaluationHarness');
 const { resolveSanitizedFixturePath } = require('./helpers/fixtureCorpus');
 
 const fixturePath = resolveSanitizedFixturePath('prompt', 'workflow-ai-knowledge.json');
 
 test('prompt registry exposes contract metadata for supported templates', () => {
   const contracts = listPromptContracts();
-  assert.ok(contracts.some((entry) => entry.name === 'documentation'));
-  assert.ok(contracts.some((entry) => entry.name === 'defect-analysis'));
-  assert.ok(contracts.some((entry) => entry.name === 'modernization'));
+  assert.ok(contracts.some(entry => entry.name === 'documentation'));
+  assert.ok(contracts.some(entry => entry.name === 'defect-analysis'));
+  assert.ok(contracts.some(entry => entry.name === 'modernization'));
   assert.equal(getPromptContract('documentation').version, 1);
   assert.equal(getPromptContract('modernization').workflow, 'modernization');
 });
@@ -32,8 +35,8 @@ test('prompt validation reports missing required inputs clearly', () => {
 
   const result = validatePromptApplicability('documentation', invalidProjection);
   assert.equal(result.applicable, false);
-  assert.ok(result.failures.some((entry) => /non-empty string/.test(entry)));
-  assert.ok(result.failures.some((entry) => /array/.test(entry)));
+  assert.ok(result.failures.some(entry => /non-empty string/.test(entry)));
+  assert.ok(result.failures.some(entry => /array/.test(entry)));
 });
 
 test('prompt validation remains compatible with legacy context inputs', () => {
@@ -50,10 +53,7 @@ test('renderPrompt enforces contract budget expectations', () => {
   const oversized = JSON.parse(JSON.stringify(fixture.input));
   oversized.workflows.documentation.summary = 'X'.repeat(30000);
 
-  assert.throws(
-    () => renderPrompt('documentation', oversized),
-    /Prompt contract budget exceeded/,
-  );
+  assert.throws(() => renderPrompt('documentation', oversized), /Prompt contract budget exceeded/);
 });
 
 test('renderPrompt honors token budget overrides from profile config', () => {
@@ -61,11 +61,13 @@ test('renderPrompt honors token budget overrides from profile config', () => {
   const oversized = JSON.parse(JSON.stringify(fixture.input));
   oversized.workflows.documentation.summary = 'X'.repeat(30000);
 
-  assert.doesNotThrow(() => renderPrompt('documentation', oversized, {
-    tokenBudgets: {
-      documentation: 8000,
-    },
-  }));
+  assert.doesNotThrow(() =>
+    renderPrompt('documentation', oversized, {
+      tokenBudgets: {
+        documentation: 8000,
+      },
+    })
+  );
 });
 
 test('fixture-driven prompt evaluation preserves completeness, evidence, and size', () => {

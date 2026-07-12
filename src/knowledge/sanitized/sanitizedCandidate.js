@@ -29,10 +29,12 @@ function createSanitizedCandidateEnvelope(input = {}) {
 }
 
 function isSanitizedCandidateEnvelope(value) {
-  return isPlainObject(value)
-    && value.layer === 'sanitized'
-    && typeof value.schemaVersion === 'string'
-    && value.sensitive === true;
+  return (
+    isPlainObject(value) &&
+    value.layer === 'sanitized' &&
+    typeof value.schemaVersion === 'string' &&
+    value.sensitive === true
+  );
 }
 
 module.exports = {

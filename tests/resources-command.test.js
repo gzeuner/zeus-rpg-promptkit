@@ -14,7 +14,7 @@ function createTempConfig(profiles) {
   fs.writeFileSync(
     path.join(configDir, 'profiles.example.json'),
     `${JSON.stringify(profiles, null, 2)}\n`,
-    'utf8',
+    'utf8'
   );
   return { tempRoot, configDir };
 }

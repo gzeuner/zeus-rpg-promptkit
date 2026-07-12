@@ -16,10 +16,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 const { renderAsciiTable } = require('../helpers/asciiTable');
-const {
-  resolveAnalyzeConfig,
-  resolveAnalyzeDbConfig,
-} = require('../../config/runtimeConfig');
+const { resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
 const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
 const {
@@ -34,8 +31,8 @@ function parseCsvArg(value) {
   }
   const values = Array.isArray(value) ? value : [value];
   return values
-    .flatMap((entry) => String(entry).split(','))
-    .map((entry) => entry.trim())
+    .flatMap(entry => String(entry).split(','))
+    .map(entry => entry.trim())
     .filter(Boolean);
 }
 
@@ -59,12 +56,19 @@ async function runDiscoverEnvironment(args) {
     process.exit(2);
   }
 
-  const role = String(args.role || 'metadata').trim().toLowerCase() === 'data' ? 'testData' : 'metadata';
+  const role =
+    String(args.role || 'metadata')
+      .trim()
+      .toLowerCase() === 'data'
+      ? 'testData'
+      : 'metadata';
   const dbConfig = resolveAnalyzeDbConfig(config, role);
   printDbRuntimeConflictWarnings(dbConfig);
   if (!isDbConfigured(dbConfig)) {
     console.error('DB2 connection configuration is incomplete for the selected profile.');
-    console.error('Discovery is read-only and requires DB2 catalog (QSYS2) access. Load the environment first.');
+    console.error(
+      'Discovery is read-only and requires DB2 catalog (QSYS2) access. Load the environment first.'
+    );
     process.exit(2);
   }
 
@@ -101,28 +105,36 @@ async function runDiscoverEnvironment(args) {
     console.log(`Environment discovery (read-only) for profile: ${output.profile}`);
     console.log(`Target: ${report.target.host || '(unknown host)'}`);
     console.log('');
-    console.log(`Schemas/libraries (${report.schemas.length}): ${report.schemas.join(', ') || '(none)'}`);
+    console.log(
+      `Schemas/libraries (${report.schemas.length}): ${report.schemas.join(', ') || '(none)'}`
+    );
     console.log('');
     if (report.sourceFiles.length > 0) {
       console.log('Source files:');
-      console.log(renderAsciiTable(
-        ['Library', 'Source file', 'Text'],
-        report.sourceFiles.map((entry) => [entry.schema, entry.name, entry.text || '']),
-      ));
+      console.log(
+        renderAsciiTable(
+          ['Library', 'Source file', 'Text'],
+          report.sourceFiles.map(entry => [entry.schema, entry.name, entry.text || ''])
+        )
+      );
     }
     if (report.tables.length > 0) {
       console.log(`Application tables (${report.tables.length}, showing up to 25):`);
-      console.log(renderAsciiTable(
-        ['Schema', 'Table', 'Type'],
-        report.tables.slice(0, 25).map((entry) => [entry.schema, entry.name, entry.type || '']),
-      ));
+      console.log(
+        renderAsciiTable(
+          ['Schema', 'Table', 'Type'],
+          report.tables.slice(0, 25).map(entry => [entry.schema, entry.name, entry.type || ''])
+        )
+      );
     }
     if (report.members.length > 0) {
       console.log(`Source members (${report.members.length}, showing up to 25):`);
-      console.log(renderAsciiTable(
-        ['Library', 'Source file', 'Member'],
-        report.members.slice(0, 25).map((entry) => [entry.schema, entry.sourceFile, entry.name]),
-      ));
+      console.log(
+        renderAsciiTable(
+          ['Library', 'Source file', 'Member'],
+          report.members.slice(0, 25).map(entry => [entry.schema, entry.sourceFile, entry.name])
+        )
+      );
     }
     for (const note of report.notes) {
       console.log(`Note: ${note}`);

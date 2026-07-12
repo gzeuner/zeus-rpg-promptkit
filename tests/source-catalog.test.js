@@ -26,8 +26,8 @@ test('buildSourceCatalog uses import-manifest identity and exposes ambiguous mem
   assert.equal(catalog.summary.ambiguousMemberCount, 1);
   assert.deepEqual(catalog.summary.ambiguousMembers, ['PROGRAM_010']);
   assert.deepEqual(
-    catalog.entries.map((entry) => entry.identity),
-    ['FIXLIB/QCLLESRC(PROGRAM_010)', 'FIXLIB/QRPGLESRC(PROGRAM_010)'],
+    catalog.entries.map(entry => entry.identity),
+    ['FIXLIB/QCLLESRC(PROGRAM_010)', 'FIXLIB/QRPGLESRC(PROGRAM_010)']
   );
 
   const resolved = resolveProgram('PROGRAM_010', catalog);
@@ -53,11 +53,18 @@ test('cross-program graph leaves ambiguous duplicate members unresolved with exp
     sourceFiles: [rootFile, dupRpg, dupCl],
   });
 
-  assert.ok(graph.nodes.some((node) => node.id === 'PROGRAM_020' && node.type === 'PROGRAM'));
-  assert.ok(graph.edges.some((edge) => edge.from === 'CALLERPGM' && edge.to === 'PROGRAM_020' && edge.type === 'CALLS_PROGRAM'));
+  assert.ok(graph.nodes.some(node => node.id === 'PROGRAM_020' && node.type === 'PROGRAM'));
+  assert.ok(
+    graph.edges.some(
+      edge =>
+        edge.from === 'CALLERPGM' && edge.to === 'PROGRAM_020' && edge.type === 'CALLS_PROGRAM'
+    )
+  );
   assert.deepEqual(graph.ambiguousPrograms, ['PROGRAM_020']);
   assert.deepEqual(graph.unresolvedPrograms, ['PROGRAM_020']);
-  assert.ok(graph.notes.some((note) => note.includes('Ambiguous local sources found for program PROGRAM_020')));
+  assert.ok(
+    graph.notes.some(note => note.includes('Ambiguous local sources found for program PROGRAM_020'))
+  );
   assert.equal(graph.sourceCatalog.ambiguousMemberCount, 1);
 
   fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -68,7 +75,11 @@ test('cross-program graph records explicit diagnostics when large-tree safety li
   const sourceRoot = path.join(tempRoot, 'src');
   fs.mkdirSync(sourceRoot, { recursive: true });
 
-  fs.writeFileSync(path.join(sourceRoot, 'ROOTPGM.rpgle'), '**FREE\nCALL SUBPGM001;\nCALL SUBPGM002;\nCALL SUBPGM003;\n', 'utf8');
+  fs.writeFileSync(
+    path.join(sourceRoot, 'ROOTPGM.rpgle'),
+    '**FREE\nCALL SUBPGM001;\nCALL SUBPGM002;\nCALL SUBPGM003;\n',
+    'utf8'
+  );
   fs.writeFileSync(path.join(sourceRoot, 'SUBPGM001.rpgle'), '**FREE\nCALL SUBPGM010;\n', 'utf8');
   fs.writeFileSync(path.join(sourceRoot, 'SUBPGM002.rpgle'), '**FREE\nCALL SUBPGM020;\n', 'utf8');
   fs.writeFileSync(path.join(sourceRoot, 'SUBPGM003.rpgle'), '**FREE\nCALL SUBPGM030;\n', 'utf8');
@@ -95,9 +106,11 @@ test('cross-program graph records explicit diagnostics when large-tree safety li
   assert.equal(graph.summary.truncated, true);
   assert.equal(graph.summary.limitsReached.maxProgramDepth, true);
   assert.equal(graph.summary.limitsReached.maxProgramCallsPerProgram, true);
-  assert.ok(graph.diagnostics.some((entry) => entry.code === 'CROSS_PROGRAM_MAX_DEPTH_REACHED'));
-  assert.ok(graph.diagnostics.some((entry) => entry.code === 'CROSS_PROGRAM_MAX_CALLS_PER_PROGRAM_REACHED'));
-  assert.ok(graph.notes.some((note) => note.includes('configured depth limit')));
+  assert.ok(graph.diagnostics.some(entry => entry.code === 'CROSS_PROGRAM_MAX_DEPTH_REACHED'));
+  assert.ok(
+    graph.diagnostics.some(entry => entry.code === 'CROSS_PROGRAM_MAX_CALLS_PER_PROGRAM_REACHED')
+  );
+  assert.ok(graph.notes.some(note => note.includes('configured depth limit')));
 
   fs.rmSync(tempRoot, { recursive: true, force: true });
 });

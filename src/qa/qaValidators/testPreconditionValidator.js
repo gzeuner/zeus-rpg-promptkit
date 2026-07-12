@@ -1,8 +1,8 @@
 /**
  * Test Precondition Validator
- * 
+ *
  * Detects inconsistencies between test preconditions and code behavior.
- * 
+ *
  * Example:
  *   Precondition: "ldmlan = 6000"
  *   Code Filter: "WHERE ldmlan <> 6000"
@@ -16,7 +16,7 @@ class TestPreconditionValidator {
 
   /**
    * Validate test preconditions
-   * 
+   *
    * @param {Object} canonicalAnalysis - Canonical analysis model
    * @param {Array} sourceFiles - Source files analyzed
    * @param {Object} context - Analysis context (may include test data)
@@ -33,7 +33,7 @@ class TestPreconditionValidator {
     if (context.testCaseData && Array.isArray(context.testCaseData)) {
       for (const testCase of context.testCaseData) {
         const result = this.validateTestCase(testCase, sqlFilters);
-        
+
         if (result.isInconsistent) {
           inconsistencies.push(result);
         }
@@ -53,13 +53,13 @@ class TestPreconditionValidator {
       },
       inconsistencies,
       warnings,
-      sqlFilters,  // ← For debugging
+      sqlFilters, // ← For debugging
     };
   }
 
   /**
    * Extract SQL filters from canonical analysis
-   * 
+   *
    * @param {Object} canonicalAnalysis - Canonical model
    * @returns {Array} Array of SQL filters found
    */
@@ -88,7 +88,7 @@ class TestPreconditionValidator {
 
   /**
    * Validate a single test case against SQL filters
-   * 
+   *
    * @param {Object} testCase - Test case data
    * @param {Array} sqlFilters - SQL filters from code
    * @returns {Object} Validation result for this test case
@@ -105,7 +105,7 @@ class TestPreconditionValidator {
     // Common pattern: ldmlan filters
     if (testCase.precondition.ldmlan !== undefined) {
       const codeExpects = this.extractFilterExpectation(sqlFilters, 'ldmlan');
-      
+
       if (codeExpects && !this.filterMatches(testCase.precondition.ldmlan, codeExpects)) {
         result.isInconsistent = true;
         result.inconsistencyDetails.push({
@@ -123,7 +123,7 @@ class TestPreconditionValidator {
 
   /**
    * Extract filter expectation from SQL filters
-   * 
+   *
    * @param {Array} sqlFilters - SQL filters
    * @param {String} fieldName - Field to search for
    * @returns {String|null} Filter expression or null
@@ -132,7 +132,7 @@ class TestPreconditionValidator {
     for (const filter of sqlFilters) {
       const regex = new RegExp(`${fieldName}\\s*([<>!=]+)\\s*([\\w\\d']+)`, 'i');
       const match = filter.whereClause.match(regex);
-      
+
       if (match) {
         return `${match[1].trim()} ${match[2].trim()}`;
       }
@@ -142,7 +142,7 @@ class TestPreconditionValidator {
 
   /**
    * Check if precondition value matches code filter
-   * 
+   *
    * @param {*} preconditionValue - Value from precondition
    * @param {String} codeFilterExpectation - Filter from code
    * @returns {Boolean} True if matches
@@ -166,7 +166,7 @@ class TestPreconditionValidator {
 
   /**
    * Extract number from filter expression
-   * 
+   *
    * @param {String} expression - Filter expression
    * @returns {Number|String} Extracted value
    */

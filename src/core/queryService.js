@@ -36,18 +36,16 @@ function normalizeLibraryList(value) {
   const entries = Array.isArray(value)
     ? value
     : String(value)
-      .split(/[\s,]+/)
-      .filter(Boolean);
+        .split(/[\s,]+/)
+        .filter(Boolean);
 
-  return Array.from(
-    new Set(
-      entries.map((entry) => validateSqlIdentifier(entry, '--liblist')),
-    ),
-  );
+  return Array.from(new Set(entries.map(entry => validateSqlIdentifier(entry, '--liblist'))));
 }
 
 function validateFilterPattern(value) {
-  const normalized = String(value || '').trim().toUpperCase();
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase();
   if (!normalized) {
     return '';
   }
@@ -94,7 +92,9 @@ function parseMaxRows(value) {
 }
 
 function normalizeOutput(value) {
-  const normalized = String(value || 'table').trim().toLowerCase();
+  const normalized = String(value || 'table')
+    .trim()
+    .toLowerCase();
   if (normalized === 'table' || normalized === 'csv' || normalized === 'json') {
     return normalized;
   }
@@ -113,7 +113,9 @@ ${sql}`;
 }
 
 function toRowMatrix(columns, rows) {
-  return (rows || []).map((row) => (columns || []).map((column) => (row && typeof row === 'object' ? row[column] : '')));
+  return (rows || []).map(row =>
+    (columns || []).map(column => (row && typeof row === 'object' ? row[column] : ''))
+  );
 }
 
 function requireDbConfig(config) {
@@ -148,7 +150,11 @@ function executeQueryTable(args, { cwd = process.cwd() } = {}) {
   const schema = schemaArg ? validateSqlIdentifier(schemaArg, '--schema') : null;
   const filter = args.filter ? validateFilterPattern(args.filter) : '';
   const discovered = !schema ? discoverSchema(dbConfig, table) : null;
-  const effectiveSchema = schema || (discovered && discovered.TABLE_SCHEMA ? String(discovered.TABLE_SCHEMA).trim().toUpperCase() : '');
+  const effectiveSchema =
+    schema ||
+    (discovered && discovered.TABLE_SCHEMA
+      ? String(discovered.TABLE_SCHEMA).trim().toUpperCase()
+      : '');
   const queries = buildQueryTableQueries({ schema: effectiveSchema, table, filter });
   const tableInfo = executeReadOnlyDb2QueryWithFallback({
     dbConfig,
@@ -269,7 +275,9 @@ function executeQuerySql(args, { cwd = process.cwd() } = {}) {
     config,
     sql: statements[0],
     statements: batchResult.statements,
-    statementCount: Number(batchResult.statementCount || batchResult.statements.length || statements.length),
+    statementCount: Number(
+      batchResult.statementCount || batchResult.statements.length || statements.length
+    ),
     batch: statements.length > 1,
     defaultSchema,
     libraryList,

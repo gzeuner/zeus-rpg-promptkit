@@ -11,12 +11,8 @@
           { "name": "ORDERS", "kind": "TABLE" },
           { "name": "CUSTOMER", "kind": "TABLE" }
         ],
-        "programCalls": [
-          { "name": "INVPGM", "kind": "PROGRAM" }
-        ],
-        "copyMembers": [
-          { "name": "QRPGLESRC,ORDCOPY" }
-        ],
+        "programCalls": [{ "name": "INVPGM", "kind": "PROGRAM" }],
+        "copyMembers": [{ "name": "QRPGLESRC,ORDCOPY" }],
         "sqlStatements": [
           {
             "id": "SQL:SELECT:1",
@@ -163,12 +159,8 @@
       },
       "errorAnalysis": {
         "summary": "Program ORDERPGM contains dynamic SQL, mutating native file updates, and rollback-driven error handling.",
-        "tables": [
-          { "name": "ORDERS", "kind": "TABLE" }
-        ],
-        "programCalls": [
-          { "name": "INVPGM", "kind": "PROGRAM" }
-        ],
+        "tables": [{ "name": "ORDERS", "kind": "TABLE" }],
+        "programCalls": [{ "name": "INVPGM", "kind": "PROGRAM" }],
         "copyMembers": [],
         "sqlStatements": [
           {
@@ -286,12 +278,8 @@
           { "name": "CUSTOMER", "kind": "TABLE" },
           { "name": "ORDERHDR", "kind": "TABLE" }
         ],
-        "programCalls": [
-          { "name": "VALIDATEP", "kind": "PROGRAM" }
-        ],
-        "copyMembers": [
-          { "name": "QCPYSRC,ORDCOPY" }
-        ],
+        "programCalls": [{ "name": "VALIDATEP", "kind": "PROGRAM" }],
+        "copyMembers": [{ "name": "QCPYSRC,ORDCOPY" }],
         "sqlStatements": [
           {
             "id": "SQL:SELECT:1",

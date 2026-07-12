@@ -14,10 +14,7 @@ test('validateDefaultSchema normalizes valid schema names', () => {
 });
 
 test('validateDefaultSchema rejects invalid schema names', () => {
-  assert.throws(
-    () => validateDefaultSchema('bad-schema'),
-    /--default-schema/,
-  );
+  assert.throws(() => validateDefaultSchema('bad-schema'), /--default-schema/);
 });
 
 test('normalizeLibraryList supports comma and whitespace separated input', () => {

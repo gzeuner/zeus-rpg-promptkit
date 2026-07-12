@@ -45,10 +45,14 @@ function validateCursorFetchMatch(cursorStatement, fetchStatement) {
   }
 
   const cursorCols = Number(cursorStatement.selectColumnCount || 0);
-  const fetchVars = Array.isArray(fetchStatement.hostVariables) ? fetchStatement.hostVariables.length : 0;
+  const fetchVars = Array.isArray(fetchStatement.hostVariables)
+    ? fetchStatement.hostVariables.length
+    : 0;
 
-  const cursorName = (cursorStatement.cursors && cursorStatement.cursors[0] && cursorStatement.cursors[0].name) ||
-                     (fetchStatement.cursors && fetchStatement.cursors[0] && fetchStatement.cursors[0].name) || 'UNKNOWN';
+  const cursorName =
+    (cursorStatement.cursors && cursorStatement.cursors[0] && cursorStatement.cursors[0].name) ||
+    (fetchStatement.cursors && fetchStatement.cursors[0] && fetchStatement.cursors[0].name) ||
+    'UNKNOWN';
 
   if (cursorCols > 0 && fetchVars > 0) {
     if (cursorCols !== fetchVars) {
@@ -112,14 +116,16 @@ function detectDynamicSqlMarkers(sqlBlock) {
 
   if (/\bPREPARE\b/.test(normalized)) markers.push('PREPARE');
   if (/\bEXECUTE\s+IMMEDIATE\b/.test(normalized)) markers.push('EXECUTE_IMMEDIATE');
-  if (/\bEXECUTE\b/.test(normalized) && !/\bEXECUTE\s+IMMEDIATE\b/.test(normalized)) markers.push('EXECUTE');
+  if (/\bEXECUTE\b/.test(normalized) && !/\bEXECUTE\s+IMMEDIATE\b/.test(normalized))
+    markers.push('EXECUTE');
 
   // Host var in FROM or CURSOR FOR position
   if (/\bFROM\s+:[A-Z]/.test(normalized) || /\bCURSOR\s+FOR\s+:[A-Z]/.test(normalized)) {
     markers.push('DYNAMIC_CURSOR_SOURCE');
   }
 
-  const isDynamic = markers.length > 0 || (normalized.includes('PREPARE') || normalized.includes('EXECUTE'));
+  const isDynamic =
+    markers.length > 0 || normalized.includes('PREPARE') || normalized.includes('EXECUTE');
 
   return { isDynamic, markers: Array.from(new Set(markers)) };
 }
@@ -191,7 +197,7 @@ function validateEmbeddedSql(sqlStatements = []) {
 
 function uniqueByCode(list) {
   const seen = new Set();
-  return list.filter((item) => {
+  return list.filter(item => {
     const key = (item.code || '') + '|' + (item.message || '');
     if (seen.has(key)) return false;
     seen.add(key);

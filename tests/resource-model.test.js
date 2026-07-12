@@ -22,7 +22,7 @@ function createTempProject(profiles) {
   fs.writeFileSync(
     path.join(tempRoot, 'config', 'profiles.example.json'),
     `${JSON.stringify(profiles, null, 2)}\n`,
-    'utf8',
+    'utf8'
   );
   return tempRoot;
 }
@@ -82,7 +82,12 @@ test('resolveResourceModel resolves explicit per-system resources across multipl
         prod: { host: 'prod.example.local', systemName: 'SYSPROD', displayName: 'Prod System' },
       },
       resources: {
-        sourceCode: { system: 'test', libraries: ['srclib'], sourceFiles: ['QRPGLESRC', 'QCLLESRC'], members: ['custsrv'] },
+        sourceCode: {
+          system: 'test',
+          libraries: ['srclib'],
+          sourceFiles: ['QRPGLESRC', 'QCLLESRC'],
+          members: ['custsrv'],
+        },
         objects: { system: 'test', libraries: ['objlib'], objectTypes: ['*PGM', '*SRVPGM'] },
         metadata: { system: 'prod', schemas: ['catalog'] },
         data: { system: 'prod', schemas: ['appdata'] },
@@ -144,7 +149,12 @@ test('resolveProfileResources facade returns sanitized model without secrets', (
   const tempRoot = createTempProject({
     secure: {
       systems: {
-        test: { host: 'test.example.local', user: 'SECRETUSER', password: 'SECRETPW', systemName: 'SYSTEST' },
+        test: {
+          host: 'test.example.local',
+          user: 'SECRETUSER',
+          password: 'SECRETPW',
+          systemName: 'SYSTEST',
+        },
       },
       resources: {
         sourceCode: { system: 'test', libraries: ['SRCLIB'], sourceFiles: ['QRPGLESRC'] },
@@ -170,27 +180,35 @@ test('resolveProfileResources requires a profile name', () => {
 test('validateProfiles rejects unsupported resource kinds', () => {
   assert.throws(
     () => validateProfiles({ sample: { resources: { bogus: {} } } }),
-    /not a supported resource kind/i,
+    /not a supported resource kind/i
   );
 });
 
 test('validateProfiles rejects unsupported fields for a resource kind', () => {
   assert.throws(
     () => validateProfiles({ sample: { resources: { metadata: { libraries: ['X'] } } } }),
-    /not supported for resource kind "metadata"/i,
+    /not supported for resource kind "metadata"/i
   );
 });
 
 test('validateProfiles accepts a well-formed resources block', () => {
-  assert.doesNotThrow(() => validateProfiles({
-    sample: {
-      resources: {
-        system: 'test',
-        sourceCode: { system: 'test', libraries: ['SRCLIB'], sourceFiles: ['QRPGLESRC'], members: ['PGM'], ifsPaths: ['/a'] },
-        objects: { libraries: ['OBJLIB'], objectTypes: ['*PGM'] },
-        metadata: { schemas: ['META'] },
-        data: { schemas: ['DATA'] },
+  assert.doesNotThrow(() =>
+    validateProfiles({
+      sample: {
+        resources: {
+          system: 'test',
+          sourceCode: {
+            system: 'test',
+            libraries: ['SRCLIB'],
+            sourceFiles: ['QRPGLESRC'],
+            members: ['PGM'],
+            ifsPaths: ['/a'],
+          },
+          objects: { libraries: ['OBJLIB'], objectTypes: ['*PGM'] },
+          metadata: { schemas: ['META'] },
+          data: { schemas: ['DATA'] },
+        },
       },
-    },
-  }));
+    })
+  );
 });

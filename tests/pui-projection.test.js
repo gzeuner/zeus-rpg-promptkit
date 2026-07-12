@@ -19,7 +19,7 @@ const assert = require('node:assert/strict');
 const { buildPuiProjection, traceFieldBinding } = require('../src/pui/puiProjection');
 const { buildHtmlLines } = require('../src/pui/puiDdsParser');
 
-const DDS_PREFIX_FIRST = '     A                                  1  2HTML(\'';
+const DDS_PREFIX_FIRST = "     A                                  1  2HTML('";
 
 // Synthetic PUI record formats (no customer data).
 const GRID_FORMAT_JSON = JSON.stringify({
@@ -33,17 +33,26 @@ const GRID_FORMAT_JSON = JSON.stringify({
       'column headings': 'Code,Text,Extra',
     },
     {
-      id: 'c1', grid: 'grid1', column: '1', 'field type': 'output field',
-      'field name': 'STATUSCODE', tooltip: 'I=Import Z=Category',
+      id: 'c1',
+      grid: 'grid1',
+      column: '1',
+      'field type': 'output field',
+      'field name': 'STATUSCODE',
+      tooltip: 'I=Import Z=Category',
     },
     {
-      id: 'c2', grid: 'grid1', column: '2', 'field type': 'output field',
+      id: 'c2',
+      grid: 'grid1',
+      column: '2',
+      'field type': 'output field',
       'field name': 'STATUSTEXT',
     },
     { id: 'c3', grid: 'grid1', column: '3', 'field type': 'button' },
     {
-      id: 'w1', 'field type': 'output field',
-      'field name': 'HEADERINFO', tooltip: 'Header',
+      id: 'w1',
+      'field type': 'output field',
+      'field name': 'HEADERINFO',
+      tooltip: 'Header',
     },
   ],
 });
@@ -52,11 +61,17 @@ const MISMATCH_FORMAT_JSON = JSON.stringify({
   'record format name': 'MISMATCH',
   items: [
     {
-      id: 'grid2', 'field type': 'grid', 'record format name': 'MISMATCH',
-      'number of columns': '2', 'column headings': 'OnlyOne',
+      id: 'grid2',
+      'field type': 'grid',
+      'record format name': 'MISMATCH',
+      'number of columns': '2',
+      'column headings': 'OnlyOne',
     },
     {
-      id: 'm1', grid: 'grid2', column: '1', 'field type': 'output field',
+      id: 'm1',
+      grid: 'grid2',
+      column: '1',
+      'field type': 'output field',
       'field name': 'FIELDA',
     },
   ],
@@ -82,15 +97,15 @@ test('buildPuiProjection decodes multiple record formats deterministically', () 
   assert.equal(projection.kind, 'zeus-pui-projection');
   assert.equal(projection.recordFormatCount, 2);
   assert.deepEqual(
-    projection.recordFormats.map((rf) => rf.recordFormat),
-    ['GRIDFMT', 'MISMATCH'],
+    projection.recordFormats.map(rf => rf.recordFormat),
+    ['GRIDFMT', 'MISMATCH']
   );
 });
 
 test('grid columns expose heading, field binding and tooltip', () => {
   const projection = buildPuiProjection(buildMember(), { file: 'DEMOFMT.dds' });
-  const gridFmt = projection.recordFormats.find((rf) => rf.recordFormat === 'GRIDFMT');
-  const grid = gridFmt.grids.find((g) => g.id === 'grid1');
+  const gridFmt = projection.recordFormats.find(rf => rf.recordFormat === 'GRIDFMT');
+  const grid = gridFmt.grids.find(g => g.id === 'grid1');
 
   assert.equal(grid.numberOfColumns, 3);
   assert.equal(grid.columns.length, 3);
@@ -113,20 +128,20 @@ test('grid columns expose heading, field binding and tooltip', () => {
 test('unbound columns and heading/column mismatches surface as signals', () => {
   const projection = buildPuiProjection(buildMember(), { file: 'DEMOFMT.dds' });
 
-  const unbound = projection.signals.find((s) => s.type === 'UNBOUND_COLUMN');
+  const unbound = projection.signals.find(s => s.type === 'UNBOUND_COLUMN');
   assert.ok(unbound, 'expected UNBOUND_COLUMN signal');
   assert.equal(unbound.recordFormat, 'GRIDFMT');
   assert.equal(unbound.column, 3);
 
-  const mismatch = projection.signals.find((s) => s.type === 'HEADING_COLUMN_MISMATCH');
+  const mismatch = projection.signals.find(s => s.type === 'HEADING_COLUMN_MISMATCH');
   assert.ok(mismatch, 'expected HEADING_COLUMN_MISMATCH signal');
   assert.equal(mismatch.recordFormat, 'MISMATCH');
 });
 
 test('standalone bound widgets are projected', () => {
   const projection = buildPuiProjection(buildMember(), { file: 'DEMOFMT.dds' });
-  const gridFmt = projection.recordFormats.find((rf) => rf.recordFormat === 'GRIDFMT');
-  const widget = gridFmt.widgets.find((w) => w.id === 'w1');
+  const gridFmt = projection.recordFormats.find(rf => rf.recordFormat === 'GRIDFMT');
+  const widget = gridFmt.widgets.find(w => w.id === 'w1');
 
   assert.ok(widget, 'expected widget w1');
   assert.equal(widget.boundField, 'HEADERINFO');
@@ -156,7 +171,7 @@ test('column-72 continuation lines are reassembled before decoding', () => {
   const projection = buildPuiProjection(member, { file: 'SPLIT.dds' });
 
   assert.equal(projection.recordFormatCount, 1);
-  const grid = projection.recordFormats[0].grids.find((g) => g.id === 'grid1');
+  const grid = projection.recordFormats[0].grids.find(g => g.id === 'grid1');
   assert.equal(grid.columns[0].boundField, 'STATUSCODE');
   assert.equal(grid.columns[0].tooltip, 'I=Import Z=Category');
 });
@@ -168,34 +183,46 @@ const VALUE_BINDING_JSON = JSON.stringify({
   'record format name': 'VALFMT',
   items: [
     {
-      id: 'grid3', 'field type': 'grid', 'record format name': 'VALFMT',
-      'number of columns': '2', 'column headings': 'Menge,Info',
+      id: 'grid3',
+      'field type': 'grid',
+      'record format name': 'VALFMT',
+      'number of columns': '2',
+      'column headings': 'Menge,Info',
     },
     {
-      id: 'v1', grid: 'grid3', column: '1', 'field type': 'output field',
-      value: { fieldName: 'S10PlanMng', dataLength: '7', dataType: 'zoned', designValue: '[S10PlanMng]' },
+      id: 'v1',
+      grid: 'grid3',
+      column: '1',
+      'field type': 'output field',
+      value: {
+        fieldName: 'S10PlanMng',
+        dataLength: '7',
+        dataType: 'zoned',
+        designValue: '[S10PlanMng]',
+      },
     },
     {
-      id: 'v2', grid: 'grid3', column: '2', 'field type': 'output field',
+      id: 'v2',
+      grid: 'grid3',
+      column: '2',
+      'field type': 'output field',
       value: 'STATIC TEXT',
     },
     {
-      id: 'vw1', 'field type': 'output field',
+      id: 'vw1',
+      'field type': 'output field',
       value: { fieldName: 'S10Header', dataLength: '20', dataType: 'char' },
     },
   ],
 });
 
 function buildValueBindingMember() {
-  return [
-    '     A          R VALFMT',
-    singleLineHtmlBlock(VALUE_BINDING_JSON),
-  ].join('\n');
+  return ['     A          R VALFMT', singleLineHtmlBlock(VALUE_BINDING_JSON)].join('\n');
 }
 
 test('object-valued "value" binds a grid column to its fieldName (real ProfoundUI)', () => {
   const projection = buildPuiProjection(buildValueBindingMember(), { file: 'VALFMT.dds' });
-  const grid = projection.recordFormats[0].grids.find((g) => g.id === 'grid3');
+  const grid = projection.recordFormats[0].grids.find(g => g.id === 'grid3');
 
   const col1 = grid.columns[0];
   assert.equal(col1.boundField, 'S10PLANMNG');
@@ -206,15 +233,13 @@ test('object-valued "value" binds a grid column to its fieldName (real ProfoundU
   assert.equal(col2.staticValue, 'STATIC TEXT');
 
   // A bound column via object-value must not raise a false UNBOUND_COLUMN signal.
-  const falseUnbound = projection.signals.find(
-    (s) => s.type === 'UNBOUND_COLUMN' && s.column === 1,
-  );
+  const falseUnbound = projection.signals.find(s => s.type === 'UNBOUND_COLUMN' && s.column === 1);
   assert.equal(falseUnbound, undefined);
 });
 
 test('object-valued "value" binds a standalone widget and is traceable', () => {
   const projection = buildPuiProjection(buildValueBindingMember(), { file: 'VALFMT.dds' });
-  const widget = projection.recordFormats[0].widgets.find((w) => w.id === 'vw1');
+  const widget = projection.recordFormats[0].widgets.find(w => w.id === 'vw1');
 
   assert.ok(widget, 'expected widget vw1');
   assert.equal(widget.boundField, 'S10HEADER');
@@ -232,31 +257,35 @@ const RESPONSE_BINDING_JSON = JSON.stringify({
   'record format name': 'RSPFMT',
   items: [
     {
-      id: 'grid4', 'field type': 'grid', 'record format name': 'RSPFMT',
-      'number of columns': '1', 'column headings': 'Status',
+      id: 'grid4',
+      'field type': 'grid',
+      'record format name': 'RSPFMT',
+      'number of columns': '1',
+      'column headings': 'Status',
     },
     {
-      id: 'r1', grid: 'grid4', column: '1', 'field type': 'image',
+      id: 'r1',
+      grid: 'grid4',
+      column: '1',
+      'field type': 'image',
       'image source': 'images/status.png',
       response: { fieldName: 'S10Flag', dataType: 'char', customTrue: 'Y', customFalse: 'N' },
     },
     {
-      id: 'rw1', 'field type': 'checkbox',
+      id: 'rw1',
+      'field type': 'checkbox',
       response: { fieldName: 'S10Sel', dataType: 'char', customTrue: '1', customFalse: '0' },
     },
   ],
 });
 
 function buildResponseBindingMember() {
-  return [
-    '     A          R RSPFMT',
-    singleLineHtmlBlock(RESPONSE_BINDING_JSON),
-  ].join('\n');
+  return ['     A          R RSPFMT', singleLineHtmlBlock(RESPONSE_BINDING_JSON)].join('\n');
 }
 
 test('object-valued "response" binds a grid image column (real ProfoundUI)', () => {
   const projection = buildPuiProjection(buildResponseBindingMember(), { file: 'RSPFMT.dds' });
-  const grid = projection.recordFormats[0].grids.find((g) => g.id === 'grid4');
+  const grid = projection.recordFormats[0].grids.find(g => g.id === 'grid4');
 
   const col1 = grid.columns[0];
   assert.equal(col1.boundField, 'S10FLAG');
@@ -264,14 +293,14 @@ test('object-valued "response" binds a grid image column (real ProfoundUI)', () 
 
   // A response-bound image column must not raise a false UNBOUND_COLUMN signal.
   const falseUnbound = projection.signals.find(
-    (s) => s.type === 'UNBOUND_COLUMN' && s.grid === 'grid4',
+    s => s.type === 'UNBOUND_COLUMN' && s.grid === 'grid4'
   );
   assert.equal(falseUnbound, undefined);
 });
 
 test('object-valued "response" binds a standalone widget and is traceable', () => {
   const projection = buildPuiProjection(buildResponseBindingMember(), { file: 'RSPFMT.dds' });
-  const widget = projection.recordFormats[0].widgets.find((w) => w.id === 'rw1');
+  const widget = projection.recordFormats[0].widgets.find(w => w.id === 'rw1');
 
   assert.ok(widget, 'expected widget rw1');
   assert.equal(widget.boundField, 'S10SEL');
@@ -280,4 +309,3 @@ test('object-valued "response" binds a standalone widget and is traceable', () =
   assert.equal(hits.length, 1);
   assert.equal(hits[0].location, 'grid-column');
 });
-

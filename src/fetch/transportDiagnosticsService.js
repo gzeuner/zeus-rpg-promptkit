@@ -1,7 +1,7 @@
 /**
  * Transport Diagnostics Service — Proof of Concept
  * Provides intelligent transport selection and diagnostics for fetch operations
- * 
+ *
  * Features:
  * 1. Network type detection (local vs. internet-facing)
  * 2. Transport strategy selection based on environment
@@ -22,19 +22,19 @@ const TRANSPORT_PROFILES = {
     speed: 'medium',
     requirements: ['SSH daemon on IBM i', 'Network connectivity'],
     issues: ['May timeout on slow networks', 'Requires SSH keys or passwords'],
-    bestFor: 'Internet-facing, security-critical, encrypted data transfer'
+    bestFor: 'Internet-facing, security-critical, encrypted data transfer',
   },
-  
+
   jt400: {
     name: 'JT400/JDBC',
-    encrypted: false,  // Can be encrypted with SSL
+    encrypted: false, // Can be encrypted with SSL
     reliable: true,
     speed: 'fast',
     requirements: ['Native IBM i network', 'JDBC driver (jt400.jar)', 'DB2 running'],
     issues: ['Slow over internet', 'Requires direct network connectivity'],
-    bestFor: 'Local network, fastest option, direct IBM i APIs'
+    bestFor: 'Local network, fastest option, direct IBM i APIs',
   },
-  
+
   ftp: {
     name: 'FTP',
     encrypted: false,
@@ -42,13 +42,13 @@ const TRANSPORT_PROFILES = {
     speed: 'slow',
     requirements: ['FTP daemon on IBM i'],
     issues: ['Unencrypted', 'Unreliable firewall traversal', 'Legacy protocol'],
-    bestFor: 'Last resort, legacy systems only'
-  }
+    bestFor: 'Last resort, legacy systems only',
+  },
 };
 
 /**
  * Detect network environment characteristics
- * 
+ *
  * @returns {Object} Network profile
  */
 function detectNetworkProfile() {
@@ -57,9 +57,9 @@ function detectNetworkProfile() {
     isEncryptionRequired: process.env.ZEUS_REQUIRE_ENCRYPTION !== 'false',
     hasDirectIbmiAccess: canReachIbmiDirectly(),
     bandwidth: estimateBandwidth(),
-    latency: estimateLatency()
+    latency: estimateLatency(),
   };
-  
+
   return profile;
 }
 
@@ -68,20 +68,22 @@ function detectNetworkProfile() {
  */
 function isLocalNetworkConnection() {
   const interfaces = os.networkInterfaces();
-  
+
   for (const name in interfaces) {
     for (const iface of interfaces[name]) {
       // Check for private network ranges
       if (iface.family === 'IPv4') {
-        if (iface.address.startsWith('192.168.') ||
-            iface.address.startsWith('10.') ||
-            iface.address.startsWith('172.')) {
+        if (
+          iface.address.startsWith('192.168.') ||
+          iface.address.startsWith('10.') ||
+          iface.address.startsWith('172.')
+        ) {
           return true;
         }
       }
     }
   }
-  
+
   return false;
 }
 
@@ -100,7 +102,7 @@ function canReachIbmiDirectly() {
 function estimateBandwidth() {
   // Would measure actual network bandwidth
   // For now, return placeholder
-  return 'unknown';  // 'high' | 'medium' | 'low'
+  return 'unknown'; // 'high' | 'medium' | 'low'
 }
 
 /**
@@ -109,12 +111,12 @@ function estimateBandwidth() {
 function estimateLatency() {
   // Would measure actual network latency
   // For now, return placeholder
-  return 'unknown';  // 'low' | 'medium' | 'high'
+  return 'unknown'; // 'low' | 'medium' | 'high'
 }
 
 /**
  * Select optimal transport strategy based on environment
- * 
+ *
  * @param {Object} options User-provided options
  * @param {Object} networkProfile Network characteristics
  * @returns {Array} Transports in priority order
@@ -124,10 +126,10 @@ function selectTransportStrategy(options, networkProfile) {
   if (options.transport && options.transport !== 'auto') {
     return [options.transport];
   }
-  
+
   // User preferences override automatic detection
   const strategies = [];
-  
+
   if (options.preferJt400 || options.networkType === 'local') {
     strategies.push('jt400', 'sftp', 'ftp');
   } else if (options.preferSftp || options.networkType === 'internet' || options.encrypted) {
@@ -148,13 +150,13 @@ function selectTransportStrategy(options, networkProfile) {
       strategies.push('sftp', 'jt400', 'ftp');
     }
   }
-  
+
   return strategies.filter(Boolean);
 }
 
 /**
  * Enhanced transport attempt with diagnostics
- * 
+ *
  * @param {Array} strategies Transport strategies to try
  * @param {Function} transportFn Function that tries a transport
  * @param {Object} options
@@ -162,63 +164,63 @@ function selectTransportStrategy(options, networkProfile) {
  */
 async function executeWithTransportDiagnostics(strategies, transportFn, options = {}) {
   const { verbose = false, timeout = 30000 } = options;
-  
+
   const results = [];
   let lastError = null;
-  
+
   for (const strategy of strategies) {
     const attemptStart = Date.now();
-    
+
     if (verbose) {
       console.log(`[transport] Attempting: ${strategy}`);
       console.log(`[transport]   Profile: ${getTransportProfile(strategy)}`);
     }
-    
+
     try {
       const result = await Promise.race([
         transportFn(strategy),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error(`Timeout (${timeout}ms)`)), timeout)
-        )
+        ),
       ]);
-      
+
       const elapsed = Date.now() - attemptStart;
-      
+
       if (verbose) {
         console.log(`[transport] ✅ ${strategy} succeeded (${elapsed}ms)`);
         if (result.downloadedCount) {
           console.log(`[transport]   Downloaded: ${result.downloadedCount} files`);
         }
       }
-      
+
       return {
         success: true,
         transport: strategy,
         result,
         elapsedMs: elapsed,
         attempts: results.length + 1,
-        diagnostics: results
+        diagnostics: results,
       };
     } catch (error) {
       const elapsed = Date.now() - attemptStart;
       lastError = error;
-      
+
       const attempt = {
         strategy,
         error: error.message,
         elapsedMs: elapsed,
-        timeout: elapsed >= timeout
+        timeout: elapsed >= timeout,
       };
-      
+
       results.push(attempt);
-      
+
       if (verbose) {
         console.log(`[transport] ❌ ${strategy} failed after ${elapsed}ms`);
         console.log(`[transport]   Error: ${error.message}`);
       }
     }
   }
-  
+
   // All transports failed
   return {
     success: false,
@@ -227,7 +229,7 @@ async function executeWithTransportDiagnostics(strategies, transportFn, options 
     attempts: results.length,
     diagnostics: results,
     lastError,
-    recommendations: generateTransportRecommendations(results, lastError)
+    recommendations: generateTransportRecommendations(results, lastError),
   };
 }
 
@@ -248,7 +250,7 @@ function formatTransportAttempt(attempt) {
 function getTransportProfile(transport) {
   const profile = TRANSPORT_PROFILES[transport];
   if (!profile) return 'unknown';
-  
+
   return `${profile.name} (${profile.reliable ? 'reliable' : 'unreliable'}, ${profile.speed} speed)`;
 }
 
@@ -257,7 +259,7 @@ function getTransportProfile(transport) {
  */
 function generateTransportRecommendations(attempts, lastError) {
   const recommendations = [];
-  
+
   // All timed out? Network likely down
   const allTimedOut = attempts.every(a => a.timeout);
   if (allTimedOut) {
@@ -269,7 +271,7 @@ function generateTransportRecommendations(attempts, lastError) {
       'Action: Check network connectivity, verify IBM i is running, check firewall rules'
     );
   }
-  
+
   // SFTP failed specifically
   const sftpAttempt = attempts.find(a => a.strategy === 'sftp');
   if (sftpAttempt && sftpAttempt.error.includes('permission')) {
@@ -281,7 +283,7 @@ function generateTransportRecommendations(attempts, lastError) {
       'Action: Verify SSH service, check credentials, check authorized_keys'
     );
   }
-  
+
   // JT400 failed specifically
   const jt400Attempt = attempts.find(a => a.strategy === 'jt400');
   if (jt400Attempt && jt400Attempt.error.includes('JDBC')) {
@@ -293,7 +295,7 @@ function generateTransportRecommendations(attempts, lastError) {
       'Action: Check DB2 service, verify jt400 library, check JDBC connection string'
     );
   }
-  
+
   if (recommendations.length === 0) {
     recommendations.push(
       'All transports failed. Common troubleshooting steps:',
@@ -304,7 +306,7 @@ function generateTransportRecommendations(attempts, lastError) {
       '   5. Review ~/.ssh/config for SSH configuration issues'
     );
   }
-  
+
   return recommendations;
 }
 
@@ -314,18 +316,18 @@ function generateTransportRecommendations(attempts, lastError) {
  */
 async function runTransportDiagnostics(options = {}) {
   const { verbose = true } = options;
-  
+
   const report = {
     timestamp: new Date().toISOString(),
     networkProfile: detectNetworkProfile(),
     strategyRecommendation: null,
     transportStatus: {},
     issues: [],
-    recommendations: []
+    recommendations: [],
   };
-  
+
   const networkProfile = report.networkProfile;
-  
+
   // Report network characteristics
   if (verbose) {
     console.log('\n=== Transport Diagnostics ===\n');
@@ -334,15 +336,15 @@ async function runTransportDiagnostics(options = {}) {
     console.log(`  Encryption Required: ${networkProfile.isEncryptionRequired}`);
     console.log(`  Direct IBM i Access: ${networkProfile.hasDirectIbmiAccess}`);
   }
-  
+
   // Recommend strategy
   const strategies = selectTransportStrategy(options, networkProfile);
   report.strategyRecommendation = strategies;
-  
+
   if (verbose) {
     console.log(`\nRecommended Transport Order: ${strategies.join(' → ')}`);
   }
-  
+
   // Report on each transport
   for (const transport of Object.keys(TRANSPORT_PROFILES)) {
     const profile = TRANSPORT_PROFILES[transport];
@@ -351,11 +353,11 @@ async function runTransportDiagnostics(options = {}) {
       recommended: strategies.includes(transport),
       encrypted: profile.encrypted,
       reliable: profile.reliable,
-      speed: profile.speed
+      speed: profile.speed,
     };
-    
+
     report.transportStatus[transport] = status;
-    
+
     if (verbose && strategies.includes(transport)) {
       const index = strategies.indexOf(transport) + 1;
       console.log(`\n[${index}] ${profile.name}`);
@@ -364,19 +366,20 @@ async function runTransportDiagnostics(options = {}) {
       console.log(`    Reliable: ${profile.reliable}`);
     }
   }
-  
+
   // Add recommendations if encryption required but not available
   if (networkProfile.isEncryptionRequired) {
-    const nonEncrypted = Object.keys(TRANSPORT_PROFILES)
-      .filter(t => !TRANSPORT_PROFILES[t].encrypted);
-    
+    const nonEncrypted = Object.keys(TRANSPORT_PROFILES).filter(
+      t => !TRANSPORT_PROFILES[t].encrypted
+    );
+
     if (nonEncrypted.length > 0) {
       report.recommendations.push(
         `⚠️  Encryption is required but ${nonEncrypted.join(', ')} are not encrypted. Skipping.`
       );
     }
   }
-  
+
   return report;
 }
 
@@ -387,5 +390,5 @@ module.exports = {
   formatTransportAttempt,
   generateTransportRecommendations,
   runTransportDiagnostics,
-  TRANSPORT_PROFILES
+  TRANSPORT_PROFILES,
 };

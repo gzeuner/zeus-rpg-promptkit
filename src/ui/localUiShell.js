@@ -511,9 +511,11 @@ input[type="search"]{
     <div class="stack">
       <div class="brand">
         <div class="brand-logo-wrap" aria-hidden="true">
-          ${brandLogoDataUri
-            ? `<img class="brand-logo" src="${brandLogoDataUri}" alt="tiny-tool.de logo">`
-            : '<div class="brand-logo-fallback">tiny-tool.de</div>'}
+          ${
+            brandLogoDataUri
+              ? `<img class="brand-logo" src="${brandLogoDataUri}" alt="tiny-tool.de logo">`
+              : '<div class="brand-logo-fallback">tiny-tool.de</div>'
+          }
         </div>
         <div class="brand-copy">
           <h1>Zeus RPG PromptKit</h1>

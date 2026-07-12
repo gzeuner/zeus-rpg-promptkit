@@ -43,10 +43,12 @@ function asBulletList(values, transform) {
   if (!values || values.length === 0) {
     return '- None detected';
   }
-  return values.map((raw) => {
-    const value = transform ? transform(raw) : raw;
-    return `- ${String(value)}`;
-  }).join('\n');
+  return values
+    .map(raw => {
+      const value = transform ? transform(raw) : raw;
+      return `- ${String(value)}`;
+    })
+    .join('\n');
 }
 
 function truncateForDense(items, denseLevel, label = 'items') {
@@ -122,14 +124,19 @@ function formatItemForDense(item, denseLevel, type = 'generic') {
       return `${base} ${tables}${loc}`.trim();
     }
     // full still shows abbreviated text
-    const shortText = String(item.text || '').replace(/\s+/g, ' ').slice(0, 80);
+    const shortText = String(item.text || '')
+      .replace(/\s+/g, ' ')
+      .slice(0, 80);
     return `${base} ${shortText}${tables ? ' [' + tables + ']' : ''}${loc}`;
   }
 
   if (type === 'call' || type === 'programCall') {
     const name = item.name || item;
     const kind = item.kind ? `(${item.kind})` : '';
-    const res = item.resolutionSource && item.resolutionSource !== 'SOURCE' ? ` ${item.resolutionSource}` : '';
+    const res =
+      item.resolutionSource && item.resolutionSource !== 'SOURCE'
+        ? ` ${item.resolutionSource}`
+        : '';
     return `${name}${kind}${res}`;
   }
 
@@ -153,19 +160,28 @@ function renderTemplate(template, data) {
 }
 
 function extractSections(context) {
-  const tables = sortByName((context.dependencies && context.dependencies.tables) || context.tables || []);
-  const programCalls = sortByName((context.dependencies && context.dependencies.programCalls) || context.calls || []);
-  const copyMembers = sortByName((context.dependencies && context.dependencies.copyMembers) || context.copyMembers || []);
-  const nativeFiles = truncateForDense(sortByName((context.nativeFileUsage && context.nativeFileUsage.files) || context.nativeFiles || []), denseLevel, 'native');
-  const sqlStatements = [...(((context.sql && context.sql.statements) || context.sqlStatements || []) || [])]
-    .sort((a, b) => {
-      const at = String((a && a.type) || '').toUpperCase();
-      const bt = String((b && b.type) || '').toUpperCase();
-      if (at !== bt) return at.localeCompare(bt);
-      const aText = String((a && (a.text || a.snippet)) || '');
-      const bText = String((b && (b.text || b.snippet)) || '');
-      return aText.localeCompare(bText);
-    });
+  const tables = sortByName(
+    (context.dependencies && context.dependencies.tables) || context.tables || []
+  );
+  const programCalls = sortByName(
+    (context.dependencies && context.dependencies.programCalls) || context.calls || []
+  );
+  const copyMembers = sortByName(
+    (context.dependencies && context.dependencies.copyMembers) || context.copyMembers || []
+  );
+  const nativeFiles = sortByName(
+    (context.nativeFileUsage && context.nativeFileUsage.files) || context.nativeFiles || []
+  );
+  const sqlStatements = [
+    ...((context.sql && context.sql.statements) || context.sqlStatements || [] || []),
+  ].sort((a, b) => {
+    const at = String((a && a.type) || '').toUpperCase();
+    const bt = String((b && b.type) || '').toUpperCase();
+    if (at !== bt) return at.localeCompare(bt);
+    const aText = String((a && (a.text || a.snippet)) || '');
+    const bText = String((b && (b.text || b.snippet)) || '');
+    return aText.localeCompare(bText);
+  });
 
   return {
     tables,
@@ -178,17 +194,16 @@ function extractSections(context) {
 
 function formatSqlStatements(sqlStatements) {
   const isDense = !!(sqlStatements && sqlStatements._truncated);
-  return asBulletList(sqlStatements, (item) => {
+  return asBulletList(sqlStatements, item => {
     const text = (item && (item.text || item.snippet)) || '';
     if (item && item.type && text) {
       const flags = [];
       if (item.intent && item.intent !== 'OTHER') flags.push(item.intent);
       if (item.dynamic) flags.push('DYNAMIC');
       if (item.unresolved) flags.push('UNRESOLVED');
-      const tables = Array.isArray(item.tables) && item.tables.length > 0
-        ? ` ${item.tables.join(',')}`
-        : '';
-      const loc = (item.file || item.startLine) ? ` @${item.file || ''}:${item.startLine || ''}` : '';
+      const tables =
+        Array.isArray(item.tables) && item.tables.length > 0 ? ` ${item.tables.join(',')}` : '';
+      const loc = item.file || item.startLine ? ` @${item.file || ''}:${item.startLine || ''}` : '';
 
       let displayText = text;
       if (isDense) {
@@ -202,14 +217,18 @@ function formatSqlStatements(sqlStatements) {
 }
 
 function formatEvidenceHighlights(workflow) {
-  return workflow && Array.isArray(workflow.evidenceHighlights) && workflow.evidenceHighlights.length > 0
-    ? workflow.evidenceHighlights.map((entry) => {
-      const location = entry.file ? `${entry.file}:${entry.startLine || 1}` : '';
-      const snippet = entry.snippet ? ` ${entry.snippet.replace(/\s+/g, ' ').trim()}` : '';
-      const rank = Number(entry.rank) || 0;
-      const score = Number(entry.score) || 0;
-      return `#${rank || '?'} ${entry.label || 'Evidence'} @ ${location}${score ? ` [score ${score}]` : ''}${snippet}`;
-    }).join('\n')
+  return workflow &&
+    Array.isArray(workflow.evidenceHighlights) &&
+    workflow.evidenceHighlights.length > 0
+    ? workflow.evidenceHighlights
+        .map(entry => {
+          const location = entry.file ? `${entry.file}:${entry.startLine || 1}` : '';
+          const snippet = entry.snippet ? ` ${entry.snippet.replace(/\s+/g, ' ').trim()}` : '';
+          const rank = Number(entry.rank) || 0;
+          const score = Number(entry.score) || 0;
+          return `#${rank || '?'} ${entry.label || 'Evidence'} @ ${location}${score ? ` [score ${score}]` : ''}${snippet}`;
+        })
+        .join('\n')
     : 'No source snippet available.';
 }
 
@@ -222,7 +241,9 @@ function formatEvidencePackSummary(workflow) {
     ['conditionals', 'Conditionals'],
     ['errorPaths', 'Error Paths'],
   ];
-  return labels.map(([key, label]) => `${label}: ${Array.isArray(packs[key]) ? packs[key].length : 0}`).join(', ');
+  return labels
+    .map(([key, label]) => `${label}: ${Array.isArray(packs[key]) ? packs[key].length : 0}`)
+    .join(', ');
 }
 
 function formatBudgetHint(contract, estimatedTokens) {
@@ -233,7 +254,9 @@ function formatBudgetHint(contract, estimatedTokens) {
 }
 
 function resolveTokenBudgetKey(templateName) {
-  const normalized = String(templateName || '').trim().toLowerCase();
+  const normalized = String(templateName || '')
+    .trim()
+    .toLowerCase();
   if (normalized === 'error-analysis') {
     return 'errorAnalysis';
   }
@@ -252,7 +275,8 @@ function applyTokenBudgetOverride(contract, tokenBudgets) {
       ...contract,
       budget: {
         ...(contract.budget || {}),
-        maxTokens: Number(contract && contract.budget && contract.budget.maxTokens) || DEFAULT_TOKEN_BUDGET,
+        maxTokens:
+          Number(contract && contract.budget && contract.budget.maxTokens) || DEFAULT_TOKEN_BUDGET,
       },
     };
   }
@@ -269,8 +293,10 @@ function applyTokenBudgetOverride(contract, tokenBudgets) {
 function formatDb2Hint(db2Metadata, workflow) {
   const workflowTables = workflow && Array.isArray(workflow.db2Tables) ? workflow.db2Tables : [];
   if (workflowTables.length > 0) {
-    const unresolvedCount = workflowTables.filter((entry) => entry.matchStatus === 'unresolved').length;
-    const ambiguousCount = workflowTables.filter((entry) => entry.matchStatus === 'ambiguous').length;
+    const unresolvedCount = workflowTables.filter(
+      entry => entry.matchStatus === 'unresolved'
+    ).length;
+    const ambiguousCount = workflowTables.filter(entry => entry.matchStatus === 'ambiguous').length;
     return `DB2 schema context is available for ${workflowTables.length} workflow-relevant table${workflowTables.length === 1 ? '' : 's'}${unresolvedCount > 0 ? `; unresolved matches: ${unresolvedCount}` : ''}${ambiguousCount > 0 ? `; ambiguous matches: ${ambiguousCount}` : ''}.`;
   }
 
@@ -282,22 +308,28 @@ function formatDb2Hint(db2Metadata, workflow) {
 }
 
 function formatIfsPaths(ifsPaths) {
-  return asBulletList((ifsPaths || []).slice(0, 10), (entry) => `${entry.path} (${entry.family || 'IFS'})`);
+  return asBulletList(
+    (ifsPaths || []).slice(0, 10),
+    entry => `${entry.path} (${entry.family || 'IFS'})`
+  );
 }
 
 function formatSearchResults(searchFindings) {
-  return asBulletList((searchFindings || []).slice(0, 10), (entry) => `[${entry.term}] ${entry.sourcePath}:${entry.line} ${entry.context}`);
+  return asBulletList(
+    (searchFindings || []).slice(0, 10),
+    entry => `[${entry.term}] ${entry.sourcePath}:${entry.line} ${entry.context}`
+  );
 }
 
 function formatDiagnosticFindings(diagnosticPacks) {
-  return asBulletList((diagnosticPacks || []).slice(0, 8), (entry) => {
+  return asBulletList((diagnosticPacks || []).slice(0, 8), entry => {
     const summary = entry.summary || {};
     return `${entry.name}: ${summary.succeededStepCount || 0} succeeded, ${summary.failedStepCount || 0} failed, ${summary.skippedStepCount || 0} skipped`;
   });
 }
 
 function formatProgramCalls(programCalls) {
-  return asBulletList(programCalls, (item) => {
+  return asBulletList(programCalls, item => {
     const flags = [];
     if (item.kind) flags.push(item.kind);
     if (item.resolutionSource && item.resolutionSource !== 'SOURCE') {
@@ -362,7 +394,7 @@ function validatePromptApplicability(templateName, input) {
   }
 
   const failures = (contract.requiredInputs || [])
-    .map((requirement) => validateRequirement(input, requirement))
+    .map(requirement => validateRequirement(input, requirement))
     .filter(Boolean);
 
   return {
@@ -379,25 +411,27 @@ function buildTemplateData(context, sourceSnippet, contract, denseLevel = null) 
   const copyMembers = truncateForDense(sections.copyMembers, denseLevel, 'copymembers');
   const sqlStatements = truncateForDense(sections.sqlStatements, denseLevel, 'sql');
   const nativeFiles = truncateForDense(sections.nativeFiles || [], denseLevel, 'native');
-  const summary = context.summary && context.summary.text
-    ? context.summary.text
-    : `Program ${context.program || ''} has ${tables.length} tables, ${programCalls.length} program calls, ${copyMembers.length} copy members, and ${sqlStatements.length} SQL statements.`;
+  const summary =
+    context.summary && context.summary.text
+      ? context.summary.text
+      : `Program ${context.program || ''} has ${tables.length} tables, ${programCalls.length} program calls, ${copyMembers.length} copy members, and ${sqlStatements.length} SQL statements.`;
   const graph = context.graph || {};
   const testData = context.testData || {};
   const dependencyGraphSummary = `Nodes: ${graph.nodeCount || 0}, Edges: ${graph.edgeCount || 0}`;
-  const testDataHint = testData.status === 'exported'
-    ? `Representative sample rows are available in ${testData.file || 'test-data.json'} and ${testData.markdownFile || 'test-data.md'} for ${testData.tableCount || 0} tables.`
-    : 'Representative sample rows are not available in this analysis run.';
+  const testDataHint =
+    testData.status === 'exported'
+      ? `Representative sample rows are available in ${testData.file || 'test-data.json'} and ${testData.markdownFile || 'test-data.md'} for ${testData.tableCount || 0} tables.`
+      : 'Representative sample rows are not available in this analysis run.';
   const promptEstimate = estimateTokens(summary);
   const db2Hint = formatDb2Hint(context.db2Metadata || {}, null);
 
   return {
     program: context.program || '',
     summary: [summary, db2Hint].filter(Boolean).join(' '),
-    tables: asBulletList(tables, (item) => formatItemForDense(item, denseLevel, 'table')),
+    tables: asBulletList(tables, item => formatItemForDense(item, denseLevel, 'table')),
     programCalls: formatProgramCalls(programCalls),
-    copyMembers: asBulletList(copyMembers, (item) => formatItemForDense(item, denseLevel, 'generic')),
-    nativeFiles: asBulletList(nativeFiles, (item) => formatItemForDense(item, denseLevel, 'native')),
+    copyMembers: asBulletList(copyMembers, item => formatItemForDense(item, denseLevel, 'generic')),
+    nativeFiles: asBulletList(nativeFiles, item => formatItemForDense(item, denseLevel, 'native')),
     sqlStatements: formatSqlStatements(sqlStatements),
     dependencyGraphSummary,
     testDataHint,
@@ -407,8 +441,12 @@ function buildTemplateData(context, sourceSnippet, contract, denseLevel = null) 
     evidencePackSummary: 'No evidence packs available.',
     contractBudget: formatBudgetHint(contract, promptEstimate),
     ifsPaths: formatIfsPaths((context.ifsPaths && context.ifsPaths.paths) || []),
-    searchResults: formatSearchResults((context.searchResults && context.searchResults.matches) || []),
-    diagnosticFindings: formatDiagnosticFindings((context.diagnosticPacks && context.diagnosticPacks.packs) || []),
+    searchResults: formatSearchResults(
+      (context.searchResults && context.searchResults.matches) || []
+    ),
+    diagnosticFindings: formatDiagnosticFindings(
+      (context.diagnosticPacks && context.diagnosticPacks.packs) || []
+    ),
   };
 }
 
@@ -422,17 +460,22 @@ function buildTemplateDataFromProjection(aiProjection, contract, denseLevel = nu
   const graph = workflow && workflow.dependencyGraphSummary ? workflow.dependencyGraphSummary : {};
   const testData = workflow && workflow.testData ? workflow.testData : {};
   const dependencyGraphSummary = `Nodes: ${graph.nodeCount || 0}, Edges: ${graph.edgeCount || 0}`;
-  const testDataHint = testData.status === 'exported'
-    ? `Representative sample rows are available in ${testData.file || 'test-data.json'} and ${testData.markdownFile || 'test-data.md'} for ${testData.tableCount || 0} tables.`
-    : 'Representative sample rows are not available in this analysis run.';
+  const testDataHint =
+    testData.status === 'exported'
+      ? `Representative sample rows are available in ${testData.file || 'test-data.json'} and ${testData.markdownFile || 'test-data.md'} for ${testData.tableCount || 0} tables.`
+      : 'Representative sample rows are not available in this analysis run.';
   const evidenceHighlights = formatEvidenceHighlights(workflow);
   const summaryParts = [
     workflow && workflow.summary ? workflow.summary : '',
     formatDb2Hint(null, workflow),
-    workflow && Array.isArray(workflow.programCalls) && workflow.programCalls.some((entry) => entry.resolutionSource === 'CATALOG')
+    workflow &&
+    Array.isArray(workflow.programCalls) &&
+    workflow.programCalls.some(entry => entry.resolutionSource === 'CATALOG')
       ? `Some external program calls are catalog-resolved rather than source-resolved.`
       : '',
-    workflow && Array.isArray(workflow.procedureCalls) && workflow.procedureCalls.some((entry) => entry.resolutionSource === 'CATALOG')
+    workflow &&
+    Array.isArray(workflow.procedureCalls) &&
+    workflow.procedureCalls.some(entry => entry.resolutionSource === 'CATALOG')
       ? `Some external procedure references are catalog-resolved rather than source-resolved.`
       : '',
     workflow && Array.isArray(workflow.riskMarkers) && workflow.riskMarkers.length > 0
@@ -450,14 +493,18 @@ function buildTemplateDataFromProjection(aiProjection, contract, denseLevel = nu
   const sqlForDense = truncateForDense(rawSql, denseLevel, 'sql');
   const callsForDense = truncateForDense(rawCalls, denseLevel, 'calls');
 
-  const tableFormatter = (item) => formatItemForDense(item, denseLevel, 'table');
-  const callFormatter = (item) => formatItemForDense(item, denseLevel, 'call');
-  const nativeFormatter = (item) => {
+  const tableFormatter = item => formatItemForDense(item, denseLevel, 'table');
+  const callFormatter = item => formatItemForDense(item, denseLevel, 'call');
+  const nativeFormatter = item => {
     const flags = [];
     if (item.mutating) flags.push('MUTATING');
     if (item.interactive) flags.push('INTERACTIVE');
     if (item.keyed) flags.push('KEYED');
-    return formatItemForDense({ name: item.name || item, kind: flags.length ? flags.join(',') : null }, denseLevel, 'native');
+    return formatItemForDense(
+      { name: item.name || item, kind: flags.length ? flags.join(',') : null },
+      denseLevel,
+      'native'
+    );
   };
 
   return {
@@ -465,8 +512,10 @@ function buildTemplateDataFromProjection(aiProjection, contract, denseLevel = nu
     summary: summaryParts.join(' '),
     tables: asBulletList(tablesForDense, tableFormatter),
     programCalls: formatProgramCalls(callsForDense),
-    copyMembers: asBulletList((workflow && workflow.copyMembers) || [], (item) => formatItemForDense(item, denseLevel, 'generic')),
-    nativeFiles: asBulletList((workflow && workflow.nativeFiles) || [], (item) => {
+    copyMembers: asBulletList((workflow && workflow.copyMembers) || [], item =>
+      formatItemForDense(item, denseLevel, 'generic')
+    ),
+    nativeFiles: asBulletList((workflow && workflow.nativeFiles) || [], item => {
       if (!denseLevel) {
         const flags = [];
         if (item.mutating) flags.push('MUTATING');
@@ -494,7 +543,9 @@ function renderPrompt(templateName, contextOrProjection, options = {}) {
   const contract = applyTokenBudgetOverride(getPromptContract(templateName), options.tokenBudgets);
   const applicability = validatePromptApplicability(templateName, contextOrProjection);
   if (!applicability.applicable) {
-    throw new Error(`Prompt contract validation failed for ${templateName}: ${applicability.failures.join(' ')}`);
+    throw new Error(
+      `Prompt contract validation failed for ${templateName}: ${applicability.failures.join(' ')}`
+    );
   }
 
   const template = loadTemplate(contract.templateFile || templateName);
@@ -502,19 +553,26 @@ function renderPrompt(templateName, contextOrProjection, options = {}) {
     ? buildTemplateDataFromProjection(contextOrProjection, contract, options.denseLevel)
     : buildTemplateData(contextOrProjection, options.sourceSnippet, contract, options.denseLevel);
   const resolved = renderTemplate(template, data);
-  const generatedAt = contextOrProjection.generatedAt || contextOrProjection.scannedAt || new Date().toISOString();
+  const generatedAt =
+    contextOrProjection.generatedAt || contextOrProjection.scannedAt || new Date().toISOString();
   let denseNote = '';
   if (options.denseLevel) {
     const lvl = options.denseLevel;
     if (lvl === 'lite') denseNote = '\nStyle: Prefer concise sentences. Reduce filler.';
-    else if (lvl === 'ultra') denseNote = '\nStyle: Ultra-dense technical. Bullets/fragments. One fact per line. Exact tokens only.';
-    else denseNote = '\nStyle: Use dense technical form. Short sentences and bullets. Keep all names, code, evidence, line refs exact. No filler.';
+    else if (lvl === 'ultra')
+      denseNote =
+        '\nStyle: Ultra-dense technical. Bullets/fragments. One fact per line. Exact tokens only.';
+    else
+      denseNote =
+        '\nStyle: Use dense technical form. Short sentences and bullets. Keep all names, code, evidence, line refs exact. No filler.';
   }
   const content = `Generated by: zeus-rpg-promptkit\nProgram: ${contextOrProjection.program || ''}\nGenerated at: ${generatedAt}\nPrompt Contract: ${contract.name}@${contract.version}${denseNote}\n\n${resolved}`;
   const estimatedTokens = estimateTokens(content);
 
   if (contract.budget && contract.budget.maxTokens && estimatedTokens > contract.budget.maxTokens) {
-    throw new Error(`Prompt contract budget exceeded for ${templateName}: estimated ${estimatedTokens} tokens exceeds max ${contract.budget.maxTokens}.`);
+    throw new Error(
+      `Prompt contract budget exceeded for ${templateName}: estimated ${estimatedTokens} tokens exceeds max ${contract.budget.maxTokens}.`
+    );
   }
 
   return {
@@ -533,7 +591,7 @@ function buildPrompt(templateName, contextOrProjection, outputPath, options = {}
     // Budget or other prompt render issues are non-fatal for core analyze (see #6/#8)
     const msg = `Prompt generation for ${templateName} skipped: ${err.message}`;
     console.warn(`[WARN] ${msg}`);
-    const note = `Generated by: zeus-rpg-promptkit\nProgram: ${contextOrProjection && contextOrProjection.program || ''}\n\n[PROMPT RENDER SKIPPED]\n${msg}\n\nCore analysis artifacts (canonical-analysis.json, context.json, reports, graphs) were produced successfully.\nSee analysis-diagnostics.json or re-run with adjusted --token-budget / --dense / --optimize-context.`;
+    const note = `Generated by: zeus-rpg-promptkit\nProgram: ${(contextOrProjection && contextOrProjection.program) || ''}\n\n[PROMPT RENDER SKIPPED]\n${msg}\n\nCore analysis artifacts (canonical-analysis.json, context.json, reports, graphs) were produced successfully.\nSee analysis-diagnostics.json or re-run with adjusted --token-budget / --dense / --optimize-context.`;
     try {
       fs.writeFileSync(outputPath, note, 'utf8');
     } catch (_) {}
@@ -556,7 +614,10 @@ function buildPrompts({
 
   for (const templateName of selected) {
     const contract = getPromptContract(templateName);
-    const outputPath = path.join(outputDir, contract.outputFileName || `ai_prompt_${templateName.replace(/-/g, '_')}.md`);
+    const outputPath = path.join(
+      outputDir,
+      contract.outputFileName || `ai_prompt_${templateName.replace(/-/g, '_')}.md`
+    );
     outputs[templateName] = buildPrompt(templateName, input, outputPath, {
       sourceSnippet,
       tokenBudgets,
@@ -569,7 +630,7 @@ function buildPrompts({
 
 function resolvePromptTemplates(templates) {
   if (Array.isArray(templates)) {
-    return templates.map((entry) => String(entry || '').trim()).filter(Boolean);
+    return templates.map(entry => String(entry || '').trim()).filter(Boolean);
   }
   return [...DEFAULT_PROMPT_TEMPLATES];
 }

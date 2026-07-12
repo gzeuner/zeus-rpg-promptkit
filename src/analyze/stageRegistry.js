@@ -25,9 +25,7 @@ function normalizeAnchorList(value) {
   }
 
   const items = Array.isArray(value) ? value : [value];
-  return Array.from(new Set(items
-    .map((entry) => normalizeOptionalString(entry))
-    .filter(Boolean)));
+  return Array.from(new Set(items.map(entry => normalizeOptionalString(entry)).filter(Boolean)));
 }
 
 function normalizeStageDefinition(definition, options = {}) {
@@ -65,7 +63,7 @@ function normalizeStageDefinition(definition, options = {}) {
     afterRun: typeof definition.afterRun === 'function' ? definition.afterRun : null,
     onError: typeof definition.onError === 'function' ? definition.onError : null,
     registrationOrder: Number(options.registrationOrder),
-    identification: componentId,  // for pluggable component style
+    identification: componentId, // for pluggable component style
   };
 }
 
@@ -104,8 +102,8 @@ function buildResolvedOrder(stageDefinitions) {
     byId.set(stage.id, stage);
   }
 
-  const incoming = new Map(stages.map((stage) => [stage.id, new Set()]));
-  const outgoing = new Map(stages.map((stage) => [stage.id, new Set()]));
+  const incoming = new Map(stages.map(stage => [stage.id, new Set()]));
+  const outgoing = new Map(stages.map(stage => [stage.id, new Set()]));
 
   const addEdge = (fromId, toId, relation) => {
     if (!byId.has(fromId)) {
@@ -132,7 +130,7 @@ function buildResolvedOrder(stageDefinitions) {
   }
 
   const ready = stages
-    .filter((stage) => incoming.get(stage.id).size === 0)
+    .filter(stage => incoming.get(stage.id).size === 0)
     .sort((left, right) => left.registrationOrder - right.registrationOrder);
   const resolved = [];
 
@@ -140,8 +138,9 @@ function buildResolvedOrder(stageDefinitions) {
     const current = ready.shift();
     resolved.push(current);
 
-    const nextIds = Array.from(outgoing.get(current.id))
-      .sort((leftId, rightId) => byId.get(leftId).registrationOrder - byId.get(rightId).registrationOrder);
+    const nextIds = Array.from(outgoing.get(current.id)).sort(
+      (leftId, rightId) => byId.get(leftId).registrationOrder - byId.get(rightId).registrationOrder
+    );
 
     for (const nextId of nextIds) {
       const dependencies = incoming.get(nextId);
@@ -155,8 +154,8 @@ function buildResolvedOrder(stageDefinitions) {
 
   if (resolved.length !== stages.length) {
     const unresolved = stages
-      .filter((stage) => !resolved.some((entry) => entry.id === stage.id))
-      .map((stage) => stage.id);
+      .filter(stage => !resolved.some(entry => entry.id === stage.id))
+      .map(stage => stage.id);
     throw new Error(`Analyze stage ordering contains a cycle: ${unresolved.join(', ')}`);
   }
 
@@ -185,9 +184,12 @@ function createAnalyzeStageRegistry() {
 
     use(plugin) {
       const pluginName = normalizeOptionalString(plugin && plugin.name) || 'anonymous-plugin';
-      const register = typeof plugin === 'function'
-        ? plugin
-        : (plugin && typeof plugin.register === 'function' ? plugin.register.bind(plugin) : null);
+      const register =
+        typeof plugin === 'function'
+          ? plugin
+          : plugin && typeof plugin.register === 'function'
+            ? plugin.register.bind(plugin)
+            : null;
 
       if (!register) {
         throw new Error(`Invalid analyze plugin ${pluginName}: missing register function`);
@@ -211,7 +213,7 @@ function createAnalyzeStageRegistry() {
     },
 
     listStages() {
-      return sortByRegistrationOrder(stageDefinitions).map((stage) => ({
+      return sortByRegistrationOrder(stageDefinitions).map(stage => ({
         id: stage.id,
         title: stage.title,
         description: stage.description,
@@ -237,7 +239,7 @@ function createAnalyzeStageRegistry() {
     },
 
     resolveStages() {
-      return buildResolvedOrder(stageDefinitions).map((stage) => ({
+      return buildResolvedOrder(stageDefinitions).map(stage => ({
         ...stage,
         before: [...stage.before],
         after: [...stage.after],
@@ -245,7 +247,7 @@ function createAnalyzeStageRegistry() {
     },
 
     resolveLifecycleHooks() {
-      return lifecycleHooks.map((entry) => ({
+      return lifecycleHooks.map(entry => ({
         ...entry,
       }));
     },

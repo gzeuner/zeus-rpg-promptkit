@@ -32,44 +32,50 @@ test('analyze honors inherited profile limits and test-data governance policy in
 
   fs.cpSync(fixtureRoot, sourceRoot, { recursive: true });
   fs.mkdirSync(configRoot, { recursive: true });
-  fs.writeFileSync(path.join(configRoot, 'profiles.example.json'), `${JSON.stringify({
-    analysisLimits: {
-      maxProgramDepth: 8,
-      maxPrograms: 80,
-    },
-    base: {
-      sourceRoot: './src',
-      outputRoot: './output',
-      testData: {
-        allowTables: ['ORDERS', 'CUSTOMER'],
-        denyTables: ['INVOICE'],
-        maskColumns: ['EMAIL'],
+  fs.writeFileSync(
+    path.join(configRoot, 'profiles.example.json'),
+    `${JSON.stringify(
+      {
+        analysisLimits: {
+          maxProgramDepth: 8,
+          maxPrograms: 80,
+        },
+        base: {
+          sourceRoot: './src',
+          outputRoot: './output',
+          testData: {
+            allowTables: ['ORDERS', 'CUSTOMER'],
+            denyTables: ['INVOICE'],
+            maskColumns: ['EMAIL'],
+          },
+        },
+        governed: {
+          extends: 'base',
+          analysisLimits: {
+            maxProgramDepth: 2,
+          },
+          testData: {
+            maskRules: [
+              {
+                table: 'CUSTOMER',
+                columns: ['PHONE'],
+                value: 'MASKED_PHONE',
+              },
+            ],
+          },
+        },
       },
-    },
-    governed: {
-      extends: 'base',
-      analysisLimits: {
-        maxProgramDepth: 2,
-      },
-      testData: {
-        maskRules: [{
-          table: 'CUSTOMER',
-          columns: ['PHONE'],
-          value: 'MASKED_PHONE',
-        }],
-      },
-    },
-  }, null, 2)}\n`, 'utf8');
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
 
   try {
-    runCli([
-      'analyze',
-      '--profile',
-      'governed',
-      '--program',
-      'ORDERPGM',
-      '--skip-test-data',
-    ], tempRoot);
+    runCli(
+      ['analyze', '--profile', 'governed', '--program', 'ORDERPGM', '--skip-test-data'],
+      tempRoot
+    );
 
     const programOutputDir = path.join(outputRoot, 'ORDERPGM');
     const context = readJson(path.join(programOutputDir, 'context.json'));
@@ -78,11 +84,17 @@ test('analyze honors inherited profile limits and test-data governance policy in
 
     assert.equal(analyzeManifest.inputs.options.analysisLimits.maxProgramDepth, 2);
     assert.equal(analyzeManifest.inputs.options.analysisLimits.maxPrograms, 80);
-    assert.deepEqual(analyzeManifest.inputs.options.testDataPolicy.allowTables, ['ORDERS', 'CUSTOMER']);
+    assert.deepEqual(analyzeManifest.inputs.options.testDataPolicy.allowTables, [
+      'ORDERS',
+      'CUSTOMER',
+    ]);
     assert.deepEqual(analyzeManifest.inputs.options.testDataPolicy.denyTables, ['INVOICE']);
     assert.equal(analyzeManifest.inputs.options.testDataPolicy.maskRules[0].value, 'MASKED_PHONE');
 
-    assert.deepEqual(context.testData.policy.allowTables.map((entry) => entry.table), ['CUSTOMER', 'ORDERS']);
+    assert.deepEqual(
+      context.testData.policy.allowTables.map(entry => entry.table),
+      ['CUSTOMER', 'ORDERS']
+    );
     assert.equal(context.testData.policySummary.allowlistCount, 2);
     assert.equal(context.testData.policySummary.denylistCount, 1);
     assert.equal(context.testData.policySummary.maskRuleCount, 1);

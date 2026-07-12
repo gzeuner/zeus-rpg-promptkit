@@ -28,11 +28,7 @@ const {
   readTemplate,
   updateTemplate,
 } = require('./promptWorkbenchTemplateStore');
-const {
-  listAnalysisRuns,
-  readAnalysisRun,
-  readArtifactContent,
-} = require('./localUiDataApi');
+const { listAnalysisRuns, readAnalysisRun, readArtifactContent } = require('./localUiDataApi');
 
 const CONTEXT_PROMPT_PATTERN = /(^|\/)ai_prompt_.*\.md$/i;
 
@@ -52,7 +48,8 @@ const PROMPT_WORKBENCH_CONTRACT = Object.freeze({
     preview: Object.freeze({
       path: '/api/prompt-builder/preview',
       method: 'POST',
-      request: '{ useCaseId: string, moduleIds?: string[], fields?: object, additionalRequirements?: string }',
+      request:
+        '{ useCaseId: string, moduleIds?: string[], fields?: object, additionalRequirements?: string }',
       response: '{ preview: PromptPreview }',
     }),
     templatesList: Object.freeze({
@@ -63,7 +60,8 @@ const PROMPT_WORKBENCH_CONTRACT = Object.freeze({
     templatesCreate: Object.freeze({
       path: '/api/prompt-builder/templates',
       method: 'POST',
-      request: '{ name: string, useCaseId: string, moduleIds: string[], description?: string, fields?: object, additionalRequirements?: string, tags?: string[] }',
+      request:
+        '{ name: string, useCaseId: string, moduleIds: string[], description?: string, fields?: object, additionalRequirements?: string, tags?: string[] }',
       response: '{ template: PromptTemplate }',
     }),
     templatesRead: Object.freeze({
@@ -74,7 +72,8 @@ const PROMPT_WORKBENCH_CONTRACT = Object.freeze({
     templatesUpdate: Object.freeze({
       path: '/api/prompt-builder/templates/:templateId',
       method: 'PUT',
-      request: '{ name: string, useCaseId: string, moduleIds: string[], description?: string, fields?: object, additionalRequirements?: string, tags?: string[] }',
+      request:
+        '{ name: string, useCaseId: string, moduleIds: string[], description?: string, fields?: object, additionalRequirements?: string, tags?: string[] }',
       response: '{ template: PromptTemplate }',
     }),
     templatesDelete: Object.freeze({
@@ -118,7 +117,10 @@ function validatePreviewInput(value) {
     throw new Error('Prompt preview payload moduleIds must be an array when provided.');
   }
 
-  if (input.fields !== undefined && (typeof input.fields !== 'object' || Array.isArray(input.fields) || input.fields === null)) {
+  if (
+    input.fields !== undefined &&
+    (typeof input.fields !== 'object' || Array.isArray(input.fields) || input.fields === null)
+  ) {
     throw new Error('Prompt preview payload fields must be an object when provided.');
   }
 
@@ -166,13 +168,14 @@ function normalizePromptArtifact(artifact, fallbackProgram) {
 
 function listPromptArtifactsFromRunDetail(runDetail) {
   const views = runDetail && runDetail.views ? runDetail.views : {};
-  const artifacts = views.prompts && Array.isArray(views.prompts.artifacts)
-    ? views.prompts.artifacts
-    : [];
+  const artifacts =
+    views.prompts && Array.isArray(views.prompts.artifacts) ? views.prompts.artifacts : [];
 
   return artifacts
-    .filter((entry) => isPromptArtifactPath(entry.path))
-    .map((entry) => normalizePromptArtifact(entry, runDetail && runDetail.summary && runDetail.summary.program));
+    .filter(entry => isPromptArtifactPath(entry.path))
+    .map(entry =>
+      normalizePromptArtifact(entry, runDetail && runDetail.summary && runDetail.summary.program)
+    );
 }
 
 function validateImportPayload(value) {
@@ -196,7 +199,9 @@ function validateImportPayload(value) {
 
 function createPromptWorkbenchService(options = {}) {
   const templateStorePath = normalizeTemplateStorePath(options.templateStorePath, options.cwd);
-  const resolvedOutputRoot = path.resolve(options.outputRoot || options.sourceOutputRoot || 'output');
+  const resolvedOutputRoot = path.resolve(
+    options.outputRoot || options.sourceOutputRoot || 'output'
+  );
 
   return {
     getContract() {
@@ -264,7 +269,7 @@ function createPromptWorkbenchService(options = {}) {
 
     listContextSources() {
       const runs = listAnalysisRuns(resolvedOutputRoot);
-      const contextSources = runs.map((run) => {
+      const contextSources = runs.map(run => {
         let promptArtifacts = [];
         try {
           const runDetail = readAnalysisRun(resolvedOutputRoot, run.program);
@@ -303,7 +308,11 @@ function createPromptWorkbenchService(options = {}) {
 
     importContextPrompt(payload) {
       const validated = validateImportPayload(payload);
-      const artifact = readArtifactContent(resolvedOutputRoot, validated.program, validated.artifactPath);
+      const artifact = readArtifactContent(
+        resolvedOutputRoot,
+        validated.program,
+        validated.artifactPath
+      );
       return {
         seed: {
           program: validated.program,

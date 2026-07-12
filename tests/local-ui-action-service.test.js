@@ -64,7 +64,7 @@ test('unknown action is rejected', async () => {
   });
   await assert.rejects(
     () => service.executeAction('fetch', { profile: 'dev' }),
-    (error) => error instanceof UiActionError && error.statusCode === 404,
+    error => error instanceof UiActionError && error.statusCode === 404
   );
 });
 
@@ -129,7 +129,7 @@ test('discovery-preview action derives source scope locally from resolved fetch 
   assert.equal(result.result.candidates[0].value, 'APPLIB');
   assert.equal(result.result.resolvedScope.outputRoot, './rpg_sources');
   assert.ok(Array.isArray(result.result.notes));
-  assert.ok(result.notes.some((entry) => /resolved runtime configuration/i.test(entry)));
+  assert.ok(result.notes.some(entry => /resolved runtime configuration/i.test(entry)));
 });
 
 test('discovery-preview derives DB2 metadata scope locally from resolved analyze and workflow config', async () => {
@@ -163,9 +163,7 @@ test('discovery-preview derives DB2 metadata scope locally from resolved analyze
       },
     }),
     workflowConfigResolver: () => ({
-      tables: [
-        { schema: 'APP', table: 'ORDERS', filter: 'ORDER%' },
-      ],
+      tables: [{ schema: 'APP', table: 'ORDERS', filter: 'ORDER%' }],
     }),
   });
   const result = await service.executeAction('discovery-preview', {
@@ -178,9 +176,21 @@ test('discovery-preview derives DB2 metadata scope locally from resolved analyze
   assert.equal(result.result.implemented, true);
   assert.equal(result.result.readOnly, true);
   assert.equal(result.result.previewKind, 'config-derived-local-preview');
-  assert.ok(result.result.candidates.some((entry) => entry.value === 'METALIB' && entry.kind === 'metadata-schema'));
-  assert.ok(result.result.candidates.some((entry) => entry.value === 'TESTLIB' && entry.kind === 'test-data-schema'));
-  assert.ok(result.result.candidates.some((entry) => entry.value === 'APP.ORDERS' && entry.kind === 'workflow-table'));
+  assert.ok(
+    result.result.candidates.some(
+      entry => entry.value === 'METALIB' && entry.kind === 'metadata-schema'
+    )
+  );
+  assert.ok(
+    result.result.candidates.some(
+      entry => entry.value === 'TESTLIB' && entry.kind === 'test-data-schema'
+    )
+  );
+  assert.ok(
+    result.result.candidates.some(
+      entry => entry.value === 'APP.ORDERS' && entry.kind === 'workflow-table'
+    )
+  );
   assert.equal(result.result.resolvedScope.testDataRowLimit, 25);
   assert.ok(Array.isArray(result.result.notes));
 });
@@ -208,77 +218,92 @@ test('discovery-preview derives object scope locally from resolved fetch and wor
   assert.equal(result.result.implemented, true);
   assert.equal(result.result.readOnly, true);
   assert.equal(result.result.previewKind, 'config-derived-local-preview');
-  assert.ok(result.result.candidates.some((entry) => entry.value === 'APPLIB' && entry.kind === 'object-library'));
-  assert.ok(result.result.candidates.some((entry) => entry.value === 'CUSTSRV' && entry.kind === 'workflow-member'));
+  assert.ok(
+    result.result.candidates.some(
+      entry => entry.value === 'APPLIB' && entry.kind === 'object-library'
+    )
+  );
+  assert.ok(
+    result.result.candidates.some(
+      entry => entry.value === 'CUSTSRV' && entry.kind === 'workflow-member'
+    )
+  );
   assert.equal(result.result.resolvedScope.fetchMemberCount, 1);
   assert.equal(result.result.resolvedScope.workflowMemberCount, 2);
 });
 
 test('unknown payload keys are rejected', () => {
   assert.throws(
-    () => normalizeDoctorPayload({
-      profile: 'dev',
-      showResolved: false,
-      cmd: 'rm -rf /',
-    }),
-    /unsupported key/i,
+    () =>
+      normalizeDoctorPayload({
+        profile: 'dev',
+        showResolved: false,
+        cmd: 'rm -rf /',
+      }),
+    /unsupported key/i
   );
 });
 
 test('AI session prompt payload rejects unknown keys, unsafe goal text, and invalid doctor summary details', () => {
   assert.throws(
-    () => normalizeAiSessionPromptPayload({
-      profile: 'dev',
-      goal: 'Review ORDERPGM.',
-      command: 'rm -rf /',
-    }),
-    /unsupported key/i,
+    () =>
+      normalizeAiSessionPromptPayload({
+        profile: 'dev',
+        goal: 'Review ORDERPGM.',
+        command: 'rm -rf /',
+      }),
+    /unsupported key/i
   );
 
   assert.throws(
-    () => normalizeAiSessionPromptPayload({
-      profile: 'dev',
-      goal: 'jdbc:as400://user:secret@internal-host.example;password=secret',
-    }),
-    /contain secrets/i,
+    () =>
+      normalizeAiSessionPromptPayload({
+        profile: 'dev',
+        goal: 'jdbc:as400://user:secret@internal-host.example;password=secret',
+      }),
+    /contain secrets/i
   );
 
   assert.throws(
-    () => normalizeAiSessionPromptPayload({
-      profile: 'dev',
-      goal: 'Review ORDERPGM.',
-      doctorSummary: {
-        status: 'ready',
-        checks: [{ name: 'Java' }],
-      },
-    }),
-    /unsupported doctorSummary key/i,
+    () =>
+      normalizeAiSessionPromptPayload({
+        profile: 'dev',
+        goal: 'Review ORDERPGM.',
+        doctorSummary: {
+          status: 'ready',
+          checks: [{ name: 'Java' }],
+        },
+      }),
+    /unsupported doctorSummary key/i
   );
 });
 
 test('AI session prompt payload rejects empty, overly long, and control-character goals', () => {
   assert.throws(
-    () => normalizeAiSessionPromptPayload({
-      profile: 'dev',
-      goal: '',
-    }),
-    /goal is required/i,
+    () =>
+      normalizeAiSessionPromptPayload({
+        profile: 'dev',
+        goal: '',
+      }),
+    /goal is required/i
   );
 
   assert.throws(
-    () => normalizeAiSessionPromptPayload({
-      profile: 'dev',
-      goal: 'A'.repeat(4001),
-    }),
-    /goal exceeds 4000 characters/i,
+    () =>
+      normalizeAiSessionPromptPayload({
+        profile: 'dev',
+        goal: 'A'.repeat(4001),
+      }),
+    /goal exceeds 4000 characters/i
   );
 
   assert.throws(
-    () => normalizeAiSessionPromptPayload({
-      profile: 'dev',
-      goal: 'Review ORDERPGM.\u0007',
-    }),
-    /unsupported control characters/i,
+    () =>
+      normalizeAiSessionPromptPayload({
+        profile: 'dev',
+        goal: 'Review ORDERPGM.\u0007',
+      }),
+    /unsupported control characters/i
   );
 });
 
@@ -298,12 +323,13 @@ test('AI session prompt payload accepts multiline goals and optional environment
 
 test('AI session prompt payload rejects unsafe environment names', () => {
   assert.throws(
-    () => normalizeAiSessionPromptPayload({
-      profile: 'dev',
-      environment: '../private',
-      goal: 'Review ORDERPGM.',
-    }),
-    /environment/i,
+    () =>
+      normalizeAiSessionPromptPayload({
+        profile: 'dev',
+        environment: '../private',
+        goal: 'Review ORDERPGM.',
+      }),
+    /environment/i
   );
 });
 
@@ -320,38 +346,43 @@ test('unsafe profile names are rejected', () => {
     assert.throws(
       () => validateProfileName(candidate),
       /invalid payload/i,
-      `expected profile "${candidate}" to be rejected`,
+      `expected profile "${candidate}" to be rejected`
     );
   }
 });
 
 test('discovery preview payload rejects unknown keys and unknown actions', () => {
   assert.throws(
-    () => normalizeDiscoveryPreviewPayload({
-      profile: 'dev',
-      actionId: 'discover-source-libraries',
-      command: 'scan everything',
-    }),
-    /unsupported key/i,
+    () =>
+      normalizeDiscoveryPreviewPayload({
+        profile: 'dev',
+        actionId: 'discover-source-libraries',
+        command: 'scan everything',
+      }),
+    /unsupported key/i
   );
 
   assert.throws(
-    () => normalizeDiscoveryPreviewPayload({
-      profile: 'dev',
-      actionId: 'discover-everything',
-    }),
-    /unknown discovery action/i,
+    () =>
+      normalizeDiscoveryPreviewPayload({
+        profile: 'dev',
+        actionId: 'discover-everything',
+      }),
+    /unknown discovery action/i
   );
 });
 
 test('buildDiscoveryConfigContext keeps only safe source-scope details', () => {
-  const context = buildDiscoveryConfigContext({
-    sourceLibrary: 'applib',
-    files: ['qrpglesrc', 'qclsrc'],
-    members: ['orderpgm'],
-    out: '/workspace/project/rpg_sources',
-    sourceLibEnvOverride: { envValue: 'ALT', profileValue: 'APP' },
-  }, '/workspace/project');
+  const context = buildDiscoveryConfigContext(
+    {
+      sourceLibrary: 'applib',
+      files: ['qrpglesrc', 'qclsrc'],
+      members: ['orderpgm'],
+      out: '/workspace/project/rpg_sources',
+      sourceLibEnvOverride: { envValue: 'ALT', profileValue: 'APP' },
+    },
+    '/workspace/project'
+  );
 
   assert.deepEqual(context, {
     sourceLibrary: 'APPLIB',
@@ -364,47 +395,46 @@ test('buildDiscoveryConfigContext keeps only safe source-scope details', () => {
 });
 
 test('buildDb2DiscoveryConfigContext keeps only safe DB2 scope hints', () => {
-  const context = buildDb2DiscoveryConfigContext({
-    db: {
-      defaultSchema: 'BASELIB',
-    },
-    dbRoles: {
-      metadata: {
-        defaultSchema: 'METALIB',
+  const context = buildDb2DiscoveryConfigContext(
+    {
+      db: {
+        defaultSchema: 'BASELIB',
+      },
+      dbRoles: {
+        metadata: {
+          defaultSchema: 'METALIB',
+        },
+        testData: {
+          defaultSchema: 'TESTLIB',
+        },
+      },
+      connections: {
+        metadata: {
+          profileKey: 'dbRoles.metadata',
+        },
+        testData: {
+          profileKey: 'dbRoles.testData',
+        },
       },
       testData: {
-        defaultSchema: 'TESTLIB',
+        limit: 50,
+        allowTables: ['app.customers'],
+        denyTables: ['app.auditlog'],
+        maskColumns: ['email'],
+        maskRules: [{ table: 'APP.CUSTOMERS', column: 'PHONE', value: 'MASKED' }],
       },
     },
-    connections: {
-      metadata: {
-        profileKey: 'dbRoles.metadata',
-      },
-      testData: {
-        profileKey: 'dbRoles.testData',
-      },
-    },
-    testData: {
-      limit: 50,
-      allowTables: ['app.customers'],
-      denyTables: ['app.auditlog'],
-      maskColumns: ['email'],
-      maskRules: [{ table: 'APP.CUSTOMERS', column: 'PHONE', value: 'MASKED' }],
-    },
-  }, {
-    tables: [
-      { schema: 'app', table: 'orders', filter: 'order%' },
-    ],
-  });
+    {
+      tables: [{ schema: 'app', table: 'orders', filter: 'order%' }],
+    }
+  );
 
   assert.deepEqual(context, {
     metadataSchema: 'METALIB',
     testDataSchema: 'TESTLIB',
     metadataRoleProfileKey: 'dbRoles.metadata',
     testDataRoleProfileKey: 'dbRoles.testData',
-    workflowTables: [
-      { schema: 'APP', table: 'ORDERS', filter: 'ORDER%' },
-    ],
+    workflowTables: [{ schema: 'APP', table: 'ORDERS', filter: 'ORDER%' }],
     testDataLimit: 50,
     allowTables: ['APP.CUSTOMERS'],
     denyTables: ['APP.AUDITLOG'],
@@ -414,13 +444,17 @@ test('buildDb2DiscoveryConfigContext keeps only safe DB2 scope hints', () => {
 });
 
 test('buildObjectDiscoveryConfigContext keeps only safe object-scope hints', () => {
-  const context = buildObjectDiscoveryConfigContext({
-    sourceLibrary: 'applib',
-    files: ['qrpglesrc', 'qsrvsrc'],
-    members: ['orderpgm'],
-  }, {
-    members: ['custsrv', ' orderpgm '],
-  }, ['fetch scope unresolved elsewhere']);
+  const context = buildObjectDiscoveryConfigContext(
+    {
+      sourceLibrary: 'applib',
+      files: ['qrpglesrc', 'qsrvsrc'],
+      members: ['orderpgm'],
+    },
+    {
+      members: ['custsrv', ' orderpgm '],
+    },
+    ['fetch scope unresolved elsewhere']
+  );
 
   assert.deepEqual(context, {
     objectLibrary: 'APPLIB',
@@ -438,9 +472,7 @@ test('showResolved=true is accepted without exposing resolved values', async () 
   const service = createLocalUiActionService({
     doctorExecutor: () => ({
       hasCriticalFailure: false,
-      checks: [
-        { name: 'Config/Profile', status: 'PASS', details: 'Loaded profile "dev".' },
-      ],
+      checks: [{ name: 'Config/Profile', status: 'PASS', details: 'Loaded profile "dev".' }],
     }),
   });
   const result = await service.executeAction('doctor', {
@@ -450,7 +482,7 @@ test('showResolved=true is accepted without exposing resolved values', async () 
 
   assert.equal(result.input.showResolved, true);
   assert.ok(Array.isArray(result.notes));
-  assert.ok(result.notes.some((entry) => /intentionally not exposed/i.test(entry)));
+  assert.ok(result.notes.some(entry => /intentionally not exposed/i.test(entry)));
   assert.equal(Object.prototype.hasOwnProperty.call(result, 'resolvedValues'), false);
 });
 
@@ -493,7 +525,7 @@ test('analyze-existing-workspace action accepts valid payload, applies safe defa
       sourceRoot: './workspace',
       outputRoot: './output',
     }),
-    analyzeExecutor: (args) => {
+    analyzeExecutor: args => {
       receivedArgs = args;
       return {
         program: 'ORDERPGM',
@@ -509,10 +541,7 @@ test('analyze-existing-workspace action accepts valid payload, applies safe defa
             generatedArtifactCount: 4,
             sourceFileCount: 2,
           },
-          artifacts: [
-            { path: 'report.md' },
-            { path: 'context.json' },
-          ],
+          artifacts: [{ path: 'report.md' }, { path: 'context.json' }],
         },
       };
     },
@@ -539,17 +568,18 @@ test('analyze-existing-workspace action accepts valid payload, applies safe defa
   assert.equal(result.output.manifestPath, 'ORDERPGM/analyze-run-manifest.json');
   assert.equal(result.output.reportArtifactPath, 'ORDERPGM/report.md');
   assert.match(result.output.reportUrl, /^\/runs\/ORDERPGM\/artifacts\/raw\?path=report\.md$/);
-  assert.ok(result.notes.some((entry) => /does not fetch remote sources/i.test(entry)));
+  assert.ok(result.notes.some(entry => /does not fetch remote sources/i.test(entry)));
 });
 
 test('analyze-existing-workspace rejects unknown payload keys and raw command strings', () => {
   assert.throws(
-    () => normalizeAnalyzeExistingWorkspacePayload({
-      profile: 'dev',
-      program: 'ORDERPGM',
-      command: 'rm -rf /',
-    }),
-    /unsupported key/i,
+    () =>
+      normalizeAnalyzeExistingWorkspacePayload({
+        profile: 'dev',
+        program: 'ORDERPGM',
+        command: 'rm -rf /',
+      }),
+    /unsupported key/i
   );
 });
 
@@ -569,33 +599,41 @@ test('analyze-existing-workspace rejects unsafe profile, program, and member nam
     }),
   });
 
-  for (const profile of ['../development', 'development test', 'development;rm -rf', '"development"']) {
+  for (const profile of [
+    '../development',
+    'development test',
+    'development;rm -rf',
+    '"development"',
+  ]) {
     await assert.rejects(
-      () => service.executeAction('analyze-existing-workspace', {
-        profile,
-        program: 'ORDERPGM',
-      }),
-      /invalid payload/i,
+      () =>
+        service.executeAction('analyze-existing-workspace', {
+          profile,
+          program: 'ORDERPGM',
+        }),
+      /invalid payload/i
     );
   }
 
   for (const program of ['../ORDERPGM', 'ORDER PGM', 'ORDERPGM;rm -rf', '"ORDERPGM"']) {
     await assert.rejects(
-      () => service.executeAction('analyze-existing-workspace', {
-        profile: 'dev',
-        program,
-      }),
-      /invalid payload/i,
+      () =>
+        service.executeAction('analyze-existing-workspace', {
+          profile: 'dev',
+          program,
+        }),
+      /invalid payload/i
     );
   }
 
   for (const member of ['../ORDERPGM', 'ORDER PGM', 'ORDERPGM;rm -rf', '"ORDERPGM"']) {
     await assert.rejects(
-      () => service.executeAction('analyze-existing-workspace', {
-        profile: 'dev',
-        member,
-      }),
-      /invalid payload/i,
+      () =>
+        service.executeAction('analyze-existing-workspace', {
+          profile: 'dev',
+          member,
+        }),
+      /invalid payload/i
     );
   }
 });
@@ -608,7 +646,9 @@ test('analyze-existing-workspace returns structured failed status for expected a
       outputRoot: './output',
     }),
     analyzeExecutor: () => {
-      const error = new Error('Source directory not found: /private/source/root. Provide a valid --source path.');
+      const error = new Error(
+        'Source directory not found: /private/source/root. Provide a valid --source path.'
+      );
       error.code = 'SOURCE_ROOT_MISSING';
       throw error;
     },

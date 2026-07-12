@@ -6,7 +6,7 @@ const projectRoot = require('path').resolve(__dirname, '..');
 
 test('tool catalog model includes docs generator command with S0 safety', () => {
   const model = buildCatalogModel({ repoRoot: projectRoot });
-  const row = model.commandRows.find((entry) => entry.command === 'docs:generate-catalog');
+  const row = model.commandRows.find(entry => entry.command === 'docs:generate-catalog');
   assert.ok(row, 'docs:generate-catalog row should exist');
   assert.equal(row.safety, 'S0');
   assert.match(row.purpose, /Regenerate docs\/tool-catalog\.md/i);
