@@ -22,14 +22,26 @@ const { createJsonOutput } = require('../helpers/jsonOutput');
 async function runSearchSource(args) {
   let execution;
   try {
-    execution = await executeSearchSource(args, {
-      onWarning: (message) => {
-        console.warn(`Warning: ${message}`);
-      },
-    });
-  } catch (error) {
-    console.error(error.message);
-    process.exit(2);
+    // Route through capability (package 08)
+    const { capabilities } = require('../../api/zeusApi');
+    const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.search-source', { cwd: process.cwd(), env: process.env, args }, args) : null;
+    if (res && res.ok && res.result) {
+      execution = res.result;
+    }
+  } catch (e) {
+    // fallthrough
+  }
+  if (!execution) {
+    try {
+      execution = await executeSearchSource(args, {
+        onWarning: (message) => {
+          console.warn(`Warning: ${message}`);
+        },
+      });
+    } catch (error) {
+      console.error(error.message);
+      process.exit(2);
+    }
   }
 
   if (execution.noSourceFiles) {

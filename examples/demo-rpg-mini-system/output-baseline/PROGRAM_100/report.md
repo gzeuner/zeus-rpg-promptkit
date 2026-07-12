@@ -78,7 +78,7 @@ No diagnostic packs were selected for this run.
 - Source Scan Misses: 5
 - Source Scan Invalidations: 0
 - Source Scan Writes: 5
-- DB2 Metadata Cache: disabled
+- DB2 Metadata Cache: skipped
 - Test Data Cache: disabled
 - Source Scan Cache Dir: OUTPUT_ROOT/.zeus-cache/source-scans
 - Artifact Cache Manifest: analysis-cache.json
@@ -160,7 +160,7 @@ No diagnostic packs were selected for this run.
 - [UPDATE/WRITE] exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001; tables: TABLE_100 host vars: ID_001
 
 ## DB2 Metadata
-DB2 metadata export was skipped because no DB2 connection configuration was available.
+DB2 metadata export was skipped because skipped by --reproducible or --skip-db2-metadata.
 
 ## Test Data Extract
 Test data extraction was skipped because no DB2 connection configuration was available.
@@ -188,7 +188,7 @@ See files:
 - dependency-graph.md
 
 ## Cross Program Dependency Graph
-A recursive program dependency graph was generated for PROGRAM_100.
+See program-call-tree.* for recursive call details.
 
 - Programs discovered: 3
 - Ambiguous program calls: 0
@@ -212,16 +212,9 @@ See:
 ## Interactive Architecture Viewer
 An interactive architecture visualization has been generated.
 
-Open:
-- architecture.html
-
-in your browser to explore program dependencies visually.
-
-## Architecture
-- See architecture-report.md for a full architecture overview.
+Open architecture.html in browser.
 
 ## Next Steps
-- Validate detected dependencies with the application design and naming standards.
-- Use canonical-analysis.json as the semantic source and context.json or optimized-context.json as prompt-ready projections.
-- Enrich with DB metadata, search results, sample test data, and explicit local known facts when available to improve reasoning.
-- Create a portable bundle with `zeus bundle --program PROGRAM_100`.
+- Validate dependencies.
+- Use canonical-analysis.json + ai-knowledge.json as primary context.
+- Bundle with `zeus bundle` for sharing.

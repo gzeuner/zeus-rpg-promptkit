@@ -1439,14 +1439,10 @@
         "cacheDir": "OUTPUT_ROOT/.zeus-cache/source-scans"
       },
       "db2Metadata": {
-        "status": "disabled",
+        "status": "skipped",
         "hits": 0,
         "misses": 0,
-        "cacheKey": null,
-        "payloadFile": null,
-        "markdownFile": null,
-        "manifestFile": "analysis-cache.json",
-        "reason": "no DB2 connection configuration was available"
+        "reason": "flag"
       },
       "testData": {
         "status": "disabled",
@@ -1462,21 +1458,7 @@
     },
     "db2Metadata": {
       "status": "skipped",
-      "file": "db2-metadata.json",
-      "markdownFile": "db2-metadata.md",
-      "tableCount": 0,
-      "requestedTableCount": 0,
-      "resolvedTableCount": 0,
-      "unresolvedTableCount": 0,
-      "ambiguousTableCount": 0,
-      "triggerCount": 0,
-      "derivedObjectCount": 0,
-      "externalObjectCount": 0,
-      "catalogResolvedProgramCount": 0,
-      "catalogResolvedProcedureCount": 0,
-      "fallbackLookupCount": 0,
-      "reason": "no DB2 connection configuration was available",
-      "cacheStatus": "disabled"
+      "reason": "skipped by --reproducible or --skip-db2-metadata"
     },
     "testData": {
       "status": "skipped",
@@ -1534,7 +1516,7 @@
     }
   },
   "notes": [
-    "DB2 metadata export was skipped because no DB2 connection configuration was available.",
+    "DB2 metadata export skipped (reproducible mode or --skip-db2-metadata).",
     "Skipped file SOURCE_ROOT/QDDSSRC/FILE_200.lf: object is not iterable (cannot read property Symbol(Symbol.iterator))",
     "Test data extraction was skipped because no DB2 connection configuration was available."
   ]
