@@ -113,6 +113,51 @@ function unregisterMcpTool(name) {
   dynamicMcpTools.delete(name);
 }
 
+// Package 09: MCP surface generated from capability registry (authoritative for shared tools)
+// Map MCP tool names (for compat) to capability ids. Execution for these now delegates to registry.
+// Investigation sub-actions kept on legacy path for response shape compat (session actions).
+const MCP_TOOL_TO_CAPABILITY = Object.freeze({
+  // Selected direct mappings for pkg 09 demonstration (execution delegates to registry).
+  // Others (doctor, profiles, field-search, workflow, bundle, resources, discover) keep legacy
+  // MCP handlers for guards, cursor, exact result shapes in tests, and mcp-specific logic.
+  'zeus.analyze': 'analysis.analyze',
+  'zeus.assess-risk': 'investigation.assess-risk',
+  'zeus.generate-test': 'investigation.generate-test',
+  'zeus.generate-checklist': 'investigation.generate-checklist',
+  'zeus.qa': 'investigation.qa',
+  'zeus.search-source': 'investigation.search-source',
+});
+
+// Generate MCP tool descriptors from registered capabilities (for eligible ones).
+// Schemas for backward compat are provided by the base listMcpTools for now;
+// this provides the authoritative list of capability-backed tools and can be used
+// by catalog/docs in future.
+function getMcpToolsFromCapabilities() {
+  try {
+    const api = require('../api/zeusApi');
+    const reg = api.capabilities || (api.zeus && api.zeus.capabilities);
+    if (!reg || typeof reg.list !== 'function') return [];
+    const caps = reg.list({ availableIn: 'mcp' }) || [];
+    return caps
+      .filter((c) => c && c.id && (c.availability && c.availability.mcp !== false))
+      .map((c) => {
+        // Map to conventional zeus. tool name for compat where possible
+        const short = c.id.split('.').pop();
+        const name = 'zeus.' + (c.aliases && c.aliases[0] ? c.aliases[0] : short);
+        return {
+          name,
+          description: c.description || c.title || c.id,
+          inputSchema: (c.inputContract && typeof c.inputContract === 'object')
+            ? c.inputContract
+            : { type: 'object', additionalProperties: true, description: 'See capability docs' },
+          _capabilityId: c.id,
+        };
+      });
+  } catch (e) {
+    return [];
+  }
+}
+
 const SUPPORTED_INSPECT_OBJECT_TYPES = ['*PGM', '*SRVPGM', '*MODULE', '*FILE', '*CMD', '*DTAARA', '*JOBQ', '*OUTQ'];
 const DEFAULT_MCP_PAYLOAD_ITEMS = 100;
 const MAX_MCP_PAYLOAD_ITEMS = 1000;
@@ -5452,6 +5497,29 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     });
   }
 
+  // Package 09: delegate capability-backed tools to the registry (authoritative handler)
+  const capId = MCP_TOOL_TO_CAPABILITY[name];
+  if (capId) {
+    try {
+      const api = require('../api/zeusApi');
+      const reg = api.capabilities || (api.zeus && api.zeus.capabilities);
+      if (reg && typeof reg.execute === 'function') {
+        const res = await reg.execute(capId, context || {}, args || {});
+        if (res && res.ok) {
+          return normalizeMcpResult(name, res.result || { ok: true, via: capId });
+        }
+        if (res && res.error) {
+          const err = new Error(res.error.message || 'capability execution failed');
+          err.code = res.error.code || 'TOOL_EXECUTION_ERROR';
+          throw err;
+        }
+      }
+    } catch (e) {
+      // fall through to legacy handler for now (compat during migration)
+      if (process.env.ZEUS_MCP_STRICT_CAP) throw e;
+    }
+  }
+
   if (name === 'zeus.health') {
     return normalizeMcpResult('zeus.health', {
       ok: true,
@@ -7524,6 +7592,8 @@ module.exports = {
   readPackageVersion,
   registerMcpTool,
   unregisterMcpTool,
+  getMcpToolsFromCapabilities,
+  MCP_TOOL_TO_CAPABILITY,
   __private: {
     buildHistoryLogFallbackQuery,
     buildHistoryLogFallbackSeverityClause,
@@ -7539,7 +7609,7 @@ module.exports = {
   },
 };
 
-// Support dynamic tools by wrapping listMcpTools
+// Support dynamic tools (original) + capability generation available via getMcpToolsFromCapabilities (pkg 09)
 const _origList = listMcpTools;
 listMcpTools = function() {
   const base = _origList() || [];
