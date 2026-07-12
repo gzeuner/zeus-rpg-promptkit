@@ -39,6 +39,20 @@ const { renderAsciiTable } = require('../helpers/asciiTable');
 const { searchFileXrefViaSql } = require('../../investigation/fieldXrefService');
 
 async function runXref(args) {
+  // Route through capability (package 08) - guard _cap to prevent recursion when cap delegates
+  if (!args || !args._cap) {
+    try {
+      const { capabilities } = require('../../api/zeusApi');
+      const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.xref', { cwd: process.cwd(), env: process.env, args }, args) : null;
+      if (res && res.ok) {
+        return res.result;
+      }
+    } catch (e) {
+      // fallthrough
+    }
+  }
+  if (args && args._cap) { delete args._cap; }
+
   const program = args.program ? String(args.program).trim().toUpperCase() : null;
   const table = args.table ? String(args.table).trim().toUpperCase() : null;
   const field = args.field ? String(args.field).trim().toUpperCase() : null;

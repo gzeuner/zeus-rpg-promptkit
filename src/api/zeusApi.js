@@ -445,8 +445,7 @@ try {
       },
     });
 
-    // field-search uses fieldXrefService
-    const { searchFileXrefViaSql, searchLocalSources } = require('../investigation/fieldXrefService');
+    // field-search uses fieldXrefService; delegate via run with guard for unified path
     capabilityRegistry.register({
       id: 'investigation.field-search',
       version: 1,
@@ -460,9 +459,10 @@ try {
       availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
       docs: { examples: ['zeus field-search --profile dev --field MYFIELD --mode all'], notes: [] },
       execute: async (context, input) => {
-        const args = { ...(context && context.args ? context.args : {}), ...input };
-        // simplified; full in command
-        return { message: 'field-search via capability', args };
+        const args = { ...(context && context.args ? context.args : {}), ...input, _cap: true };
+        const { runFieldSearch } = require('../cli/commands/fieldSearchCommand');
+        const r = await runFieldSearch(args);
+        return r || { executed: true, via: 'investigation.field-search' };
       },
     });
 
@@ -481,9 +481,8 @@ try {
       availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
       docs: { examples: ['zeus trace --value 123 --start-table ORDERS'], notes: [] },
       execute: (context, input) => {
-        const args = { ...(context && context.args ? context.args : {}), ...input };
-        // note: runTrace may print; for cap return structured wrapper
-        return runTrace(args); // assume it can be called
+        const args = { ...(context && context.args ? context.args : {}), ...input, _cap: true };
+        return runTrace(args);
       },
     });
 
@@ -501,7 +500,7 @@ try {
       availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
       docs: { examples: ['zeus xref --program MYPROG'], notes: [] },
       execute: (context, input) => {
-        const args = { ...(context && context.args ? context.args : {}), ...input };
+        const args = { ...(context && context.args ? context.args : {}), ...input, _cap: true };
         return runXref(args);
       },
     });
@@ -521,7 +520,7 @@ try {
       availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
       docs: { examples: ['zeus investigate --program MYPROG --goal "understand orders" --search "customer"'], notes: [] },
       execute: (context, input) => {
-        const args = { ...(context && context.args ? context.args : {}), ...input };
+        const args = { ...(context && context.args ? context.args : {}), ...input, _cap: true };
         return runInvestigate(args);
       },
     });
@@ -538,7 +537,7 @@ try {
 async function runWorkflow(profile, preset, options = {}) {
   const { runtime = {}, ...args } = options;
   // Route through capability (package 07)
-  const cap = capabilities && capabilities.resolve ? capabilities.resolve('analysis.workflow') : null;
+  const cap = capabilityRegistry && capabilityRegistry.resolve ? capabilityRegistry.resolve('analysis.workflow') : null;
   if (cap && typeof cap.execute === 'function') {
     const ctx = { ...runtime, args: { profile, preset, ...args } };
     const res = await cap.execute(ctx, { profile, preset, ...args });
@@ -574,7 +573,7 @@ function analyze(profile, options = {}) {
   }
   try {
     // Route through capability (package 07)
-    const cap = capabilities && capabilities.resolve ? capabilities.resolve('analysis.analyze') : null;
+    const cap = capabilityRegistry && capabilityRegistry.resolve ? capabilityRegistry.resolve('analysis.analyze') : null;
     if (cap && typeof cap.execute === 'function') {
       const ctx = { ...runtime, args: { profile, ...args } };
       const res = cap.execute(ctx, { profile, ...args });

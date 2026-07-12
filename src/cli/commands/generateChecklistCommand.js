@@ -18,6 +18,19 @@ const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
 const { generateDeploymentChecklist, estimateDeploymentTimeline, identifyRiskAreas } = require('../../report/deploymentChecklistBuilder');
 
 async function runGenerateChecklist(args) {
+  // Route through capability (package 08) - additive; cap uses checklist builder directly
+  try {
+    const { capabilities } = require('../../api/zeusApi');
+    const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.generate-checklist', { cwd: process.cwd(), env: process.env, args }, args) : null;
+    if (res && res.ok && res.result) {
+      const out = (typeof res.result === 'string') ? res.result : JSON.stringify(res.result, null, 2);
+      console.log(out);
+      return;
+    }
+  } catch (e) {
+    // fallthrough
+  }
+
   const verbose = Boolean(args.verbose);
 
   // Validate arguments

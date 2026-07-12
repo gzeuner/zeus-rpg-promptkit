@@ -214,6 +214,20 @@ function printXrefMatches(result) {
  *   --verbose               Show context lines
  */
 async function runFieldSearch(args) {
+  // Route through capability (package 08) - _cap guard prevents recursion on delegate from cap registration
+  if (!args || !args._cap) {
+    try {
+      const { capabilities } = require('../../api/zeusApi');
+      const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.field-search', { cwd: process.cwd(), env: process.env, args }, args) : null;
+      if (res && res.ok) {
+        return res.result;
+      }
+    } catch (e) {
+      // fallthrough to local impl
+    }
+  }
+  if (args && args._cap) { delete args._cap; }
+
   const field = args.field ? String(args.field).toUpperCase().trim() : null;
   if (!field) {
     console.error('--field <name> ist erforderlich');
