@@ -131,7 +131,6 @@ module.exports = [
       'src/qa/**',
       'src/ui/**',
       'scripts/**',
-      'tests/**',
       'vscode-extension/**',
     ],
     rules: {
@@ -145,6 +144,21 @@ module.exports = [
     rules: {
       // dynamic requires in registration blocks; identifiers resolved at runtime
       // no-undef kept error globally, this documents why some may appear dynamic
+    },
+  },
+
+  // Corrective integrity code and MCP coverage must not inherit the legacy unused-variable waiver.
+  {
+    files: [
+      'scripts/test-inventory.js',
+      'scripts/test-inventory.config.js',
+      'scripts/check-typecheck-scope.js',
+      'scripts/run-tests.js',
+      'tests/test-inventory.test.js',
+      'tests/typecheck-scope.test.js',
+    ],
+    rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
 

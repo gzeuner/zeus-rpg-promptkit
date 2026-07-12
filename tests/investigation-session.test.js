@@ -60,7 +60,7 @@ function createTempAnalysisDir() {
 function cleanup(dir) {
   try {
     fs.rmSync(dir, { recursive: true, force: true });
-  } catch (_) {}
+  } catch {}
 }
 
 test('createOrLoadSession creates a new session with defaults', () => {

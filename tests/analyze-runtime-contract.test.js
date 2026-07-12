@@ -115,7 +115,7 @@ test('analyze without denseLevel produces normal (non-dense) report output', () 
       logVerbose() {},
     });
 
-    const written = runAnalyzeArtifactAdapter({ ...coreResult, outputRoot, outputProgramDir });
+    runAnalyzeArtifactAdapter({ ...coreResult, outputRoot, outputProgramDir });
     const report = fs.readFileSync(path.join(outputProgramDir, 'report.md'), 'utf8');
     assert.ok(
       report.startsWith('# Zeus RPG Analysis Report'),

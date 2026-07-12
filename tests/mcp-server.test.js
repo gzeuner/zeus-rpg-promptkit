@@ -6,12 +6,7 @@ const path = require('path');
 const { PassThrough } = require('node:stream');
 
 const { createMcpServer, DEFAULT_MCP_SAFE_TOOL_NAMES } = require('../src/mcp/mcpServer');
-const {
-  listMcpTools,
-  __private,
-  getMcpToolsFromCapabilities,
-  MCP_TOOL_TO_CAPABILITY,
-} = require('../src/mcp/mcpTools');
+const { listMcpTools, __private, MCP_TOOL_TO_CAPABILITY } = require('../src/mcp/mcpTools');
 const { MCP_AUDIT_SCHEMA_VERSION } = require('../src/mcp/mcpAuditLog');
 const { encodeJsonRpcMessage, parseIncomingMessages } = require('../src/mcp/stdioTransport');
 
@@ -407,7 +402,7 @@ test('mcp redaction preserves public tool and service identifiers when env conta
     listResponse.result.tools.some(tool => tool.name === 'zeus.health'),
     true
   );
-  // assert.equal(callResponse.result.structuredContent.service, 'zeus-rpg-promptkit'); // relaxed
+  assert.equal(callResponse.result.structuredContent.service, 'zeus-rpg-promptkit');
 });
 
 test('normalizeJoblogToolError rewrites missing JOBLOG_INFO failures into actionable guidance', () => {
@@ -5389,7 +5384,6 @@ test('mcp list and capability registry have parity for shared tools (pkg 09)', (
 });
 
 test('mcp tool execution for capability-backed uses registry (no separate handler)', async () => {
-  const { listMcpTools } = require('../src/mcp/mcpTools');
   const server = createTestServer({ cwd: process.cwd() });
   // Use a read-only safe tool that maps to cap
   const resp = await server.handleRequest({

@@ -28,11 +28,14 @@ jobs:
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run typecheck:verify-scope
+      - run: npm run test:discovery
       - run: npm run check:repo-portability
       - run: npm run check:public-knowledge-claims
       - run: npm run test:quality
+      - run: npm run test:benchmark
+      - run: npm run package:smoke
       - run: npm run docs:check
+      - run: npm run demo:safety-check
 
   test-linux-20:
     name: Test Node 20 (linux)
@@ -45,6 +48,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run test:discovery
       - run: npm test
 
   test-linux-lts:
@@ -58,6 +62,7 @@ jobs:
           node-version: lts/*
           cache: npm
       - run: npm ci
+      - run: npm run test:discovery
       - run: npm test
 
   test-windows-20:
@@ -71,6 +76,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run test:discovery
       - run: npm test
 
   package-smoke:

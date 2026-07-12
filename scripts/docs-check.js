@@ -139,7 +139,9 @@ try {
   // Run catalog generator (validates examples against current metadata) — optional
   console.log('=== Catalog generation ===');
   try {
-    sh('node cli/zeus.js docs:generate-catalog --output /tmp/zeus-docs-catalog.md');
+    sh(
+      `node cli/zeus.js docs:generate-catalog --output ${path.join(TMP, 'tool-catalog.md')} --json-output ${path.join(TMP, 'tool-catalog.json')}`
+    );
   } catch (e) {
     console.log('optional: catalog gen (', e.message, ')');
   }

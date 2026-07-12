@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { createSchemaRegistry, SchemaValidationError } = require('../src/core/contracts');
+const { createSchemaRegistry } = require('../src/core/contracts');
 
 const { CONTRACT_IDS, INITIAL_SCHEMAS } = require('../src/core/contracts/schemas');
 
