@@ -1,28 +1,32 @@
 name: Sync Issues from V2_ROADMAP
 
+# Disabled on push/PR per package 10 (CI Quality and Release Gates):
+# The public repository no longer contains internal V2_ROADMAP.md or the
+# supporting script. This workflow is kept for manual/internal use only
+# and must not fail default CI.
 on:
   workflow_dispatch:
     inputs:
       roadmap_mode:
-        description: "auto, create, or sync-linked"
+        description: 'auto, create, or sync-linked'
         required: false
-        default: "auto"
+        default: 'auto'
       allow_duplicates:
-        description: "Allow creating a new epic even if an epic with same title already exists"
+        description: 'Allow creating a new epic even if an epic with same title already exists'
         required: false
-        default: "false"
+        default: 'false'
       update_existing:
-        description: "Update GitHub issues to match the roadmap format in use"
+        description: 'Update GitHub issues to match the roadmap format in use'
         required: false
-        default: "false"
+        default: 'false'
       dry_run:
-        description: "Dry run (no API writes); useful for parsing and drift checks"
+        description: 'Dry run (no API writes); useful for parsing and drift checks'
         required: false
-        default: "false"
+        default: 'false'
       roadmap_path:
-        description: "Roadmap file path"
+        description: 'Roadmap file path'
         required: false
-        default: "V2_ROADMAP.md"
+        default: 'V2_ROADMAP.md'
 
 permissions:
   issues: write
@@ -40,7 +44,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Sync issues from roadmap
         env:

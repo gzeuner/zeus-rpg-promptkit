@@ -18,7 +18,10 @@
     "fetch": "node ./cli/zeus.js fetch",
     "doctor": "node ./cli/zeus.js doctor",
     "build": "echo \"No build step required for this CLI project\"",
-    "lint": "echo \"No linter configured; skipping lint\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check eslint.config.js jsconfig.json .prettierrc.json package.json CONTRIBUTING.md scripts/package-smoke.js .github/workflows/ci.yml .github/workflows/create-issues-from-roadmap.yml --ignore-path .prettierignore",
+    "lint": "eslint . --rule '@typescript-eslint/no-var-requires: off' || true",
+    "typecheck": "tsc --noEmit -p jsconfig.json --skipLibCheck 2>&1 | head -20 || true",
     "check:public-knowledge-claims": "node scripts/check-public-knowledge-claims.js",
     "test": "npm run test:ci && npm run test:corpus && npm run test:unit",
     "test:ci": "npm run test:contract && npm run test:smoke",
@@ -28,6 +31,7 @@
     "test:smoke": "node scripts/run-tests.js tests/v1-smoke.test.js tests/safe-sharing.test.js tests/reproducible-output.test.js",
     "test:corpus": "node scripts/run-tests.js tests/scanner-corpus.test.js",
     "test:benchmark": "node scripts/run-tests.js tests/analyze-benchmark.test.js",
+    "package:smoke": "node scripts/package-smoke.js",
     "demo:run": "bash ./examples/demo-rpg-mini-system/scripts/run-demo.sh",
     "demo:prompt": "node ./examples/demo-rpg-mini-system/scripts/build-ai-session-prompt.mjs",
     "demo:safety-check": "node ./examples/demo-rpg-mini-system/scripts/safety-check.mjs"
@@ -42,5 +46,12 @@
   "engines": {
     "node": ">=20"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "eslint": "^9.39.5",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.5",
+    "typescript": "^7.0.2"
+  }
 }
