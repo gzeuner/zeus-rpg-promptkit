@@ -44,14 +44,16 @@ try {
 
   // bin + api (best effort)
   const bin = path.join(inst, 'node_modules', '.bin', 'zeus');
-  try { 
-    const h = sh(bin + ' --help 2>&1 || true'); 
-    console.log('help len:', (h||'').length); 
-  } catch(e){ console.log('bin present'); }
-  try { 
-    const a = sh('node -e "console.log(!!require(\'zeus-rpg-promptkit/api\'))" 2>&1 || true', inst); 
-    console.log('api:', a); 
-  } catch(e){}
+  try {
+    const h = sh(bin + ' --help 2>&1 || true');
+    console.log('help len:', (h || '').length);
+  } catch (e) {
+    console.log('bin present');
+  }
+  try {
+    const a = sh('node -e "console.log(!!require(\'zeus-rpg-promptkit/api\'))" 2>&1 || true', inst);
+    console.log('api:', a);
+  } catch (e) {}
 
   console.log('PACKAGE SMOKE PASSED');
 } catch (e) {
