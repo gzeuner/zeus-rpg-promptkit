@@ -1,6 +1,6 @@
 {
   "name": "zeus-rpg-promptkit",
-  "version": "0.2.0-beta.1",
+  "version": "0.2.0-beta.2",
   "description": "Evidence and Investigation Platform for IBM i — turn source, metadata and runtime evidence into reproducible, review-ready artifacts with humans in control.",
   "main": "cli/zeus.js",
   "exports": {
@@ -40,7 +40,9 @@
     "demo:prompt": "node ./examples/demo-rpg-mini-system/scripts/build-ai-session-prompt.mjs",
     "demo:safety-check": "node ./examples/demo-rpg-mini-system/scripts/safety-check.mjs",
     "docs:check": "node scripts/docs-check.js",
-    "check:repo-portability": "node scripts/check-repo-portability.js"
+    "check:repo-portability": "node scripts/check-repo-portability.js",
+    "release:preflight": "node scripts/release-preflight.js",
+    "sbom:validate": "node scripts/validate-sbom.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",

@@ -5,6 +5,45 @@ All notable changes to Zeus RPG PromptKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-beta.2] - 2026-07-12
+
+Hardened beta with complete MCP test coverage, deterministic recursive test discovery, and Node-24-based CI actions.
+
+### Fixed
+
+- restored the full MCP server test suite;
+- fixed MCP capability dispatch for checklist, QA and risk-assessment adapters;
+- restored structured MCP payload and validation contracts;
+- removed the MCP test exclusion;
+- removed Windows-invalid tracked generated cache paths;
+- repaired incomplete quality-hardening behavior.
+
+### Added
+
+- deterministic recursive test discovery;
+- test-category integrity checking;
+- omission and duplicate-classification failure gates;
+- governed temporary test-exception validation;
+- complete file-level test summaries;
+- explicit core typecheck scope guard;
+- repository portability checks.
+
+### Changed
+
+- hardened formatting, lint and typecheck commands;
+- made failure propagation explicit;
+- extended CI validation across Linux Node 20, Linux current LTS and Windows;
+- made generated documentation checks leave tracked catalog files clean;
+- updated GitHub Actions to supported Node-24-based implementations;
+- hardened release consistency and artifact verification.
+
+### Known Limitations (Beta)
+
+- type checking currently covers the declared core contract subset, not the complete JavaScript repository;
+- some legacy `no-unused-vars` exceptions remain outside the hardened paths;
+- selected remote IBM i and Db2 behavior still requires environment-specific validation;
+- experimental surfaces remain experimental as documented.
+
 ## [0.2.0-beta.1] - 2026-07-12
 
 This is the first governed prerelease after completing the implementation pack (packages 01–13).
