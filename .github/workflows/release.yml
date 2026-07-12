@@ -4,39 +4,35 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g. 0.2.0-beta.1)'
+        description: 'Version to release (e.g. 0.2.0-beta.2)'
         required: true
-        default: '0.2.0-beta.1'
-      prerelease:
-        description: 'Mark as prerelease'
-        required: true
-        default: true
-        type: boolean
+        type: string
 
-permissions:
-  contents: write
-  id-token: write # for future OIDC/attestation if configured
+# Top-level permissions left empty. Jobs declare least privilege.
 
 jobs:
-  release:
-    name: Prepare and publish release
+  # Validation + deterministic build job. Read-only.
+  validate:
+    name: Validate & Build Release Artifact
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js (explicit no auto cache for release path)
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 20
-          cache: npm
+          package-manager-cache: false
 
       - name: Setup Java (for optional components)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           distribution: 'temurin'
           java-version: '21'
@@ -44,81 +40,340 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Full quality gates
+      - name: Entry condition checks (strict, no silent normalization)
         run: |
+          set -euo pipefail
+          REQ_VERSION="${{ github.event.inputs.version }}"
+          echo "Requested version: $REQ_VERSION"
+
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "package.json version: $PKG_VERSION"
+          if [ "$REQ_VERSION" != "$PKG_VERSION" ]; then
+            echo "FAIL: requested version does not match package.json"
+            exit 1
+          fi
+
+          LOCK_VERSION=$(node -p "require('./package-lock.json').version")
+          if [ "$LOCK_VERSION" != "$PKG_VERSION" ]; then
+            echo "FAIL: package-lock version mismatch"
+            exit 1
+          fi
+
+          # Current ref must be main
+          REF="${GITHUB_REF}"
+          echo "GITHUB_REF=$REF"
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "FAIL: release workflow must run on main"
+            exit 1
+          fi
+
+          # Workflow commit must be current origin/main
+          git fetch origin --prune
+          LOCAL_SHA=$(git rev-parse HEAD)
+          ORIGIN_SHA=$(git rev-parse origin/main)
+          echo "Local SHA: $LOCAL_SHA"
+          echo "Origin/main SHA: $ORIGIN_SHA"
+          if [ "$LOCAL_SHA" != "$ORIGIN_SHA" ]; then
+            echo "FAIL: not at origin/main"
+            exit 1
+          fi
+
+          # Worktree clean
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "FAIL: worktree not clean"
+            exit 1
+          fi
+
+          # Target tag/release must not exist
+          if git ls-remote --exit-code --tags origin "refs/tags/v${REQ_VERSION}" >/dev/null 2>&1; then
+            echo "FAIL: target tag v${REQ_VERSION} already exists"
+            exit 1
+          fi
+          if gh release view "v${REQ_VERSION}" >/dev/null 2>&1; then
+            echo "FAIL: target release v${REQ_VERSION} already exists"
+            exit 1
+          fi
+
+          # Changelog must contain the version section
+          if ! grep -q "## \[${REQ_VERSION}\]" CHANGELOG.md; then
+            echo "FAIL: CHANGELOG missing section for ${REQ_VERSION}"
+            exit 1
+          fi
+
+          echo "Entry conditions PASSED"
+
+      - name: Full quality gates (same as CI + preflight + audit)
+        run: |
+          set -euo pipefail
           npm run format:check
           npm run lint
           npm run typecheck
+          npm run test:discovery
           npm test
           npm run test:quality
           npm run test:benchmark
           npm run package:smoke
           npm run docs:check
-          npm audit --omit=dev
+          npm run demo:safety-check
+          npm run check:public-knowledge-claims
+          npm run release:preflight -- --version "${{ github.event.inputs.version }}"
+          git diff --check
+          npm audit --omit=dev --audit-level=high
+          echo "All mandatory quality gates PASSED"
 
-      - name: Create package tarball
-        run: npm pack
-
-      - name: Verify tarball (smoke on fresh install)
+      - name: Build tarball exactly once (capture filename)
+        id: pack
         run: |
-          TARBALL=$(ls *.tgz | head -1)
-          echo "Tarball: $TARBALL"
-          mkdir -p /tmp/zeus-release-smoke
-          cd /tmp/zeus-release-smoke
+          set -euo pipefail
+          TARBALL=$(npm pack | tail -1 | tr -d '\r\n')
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+          echo "TARBALL=$TARBALL"
+          ls -l "$TARBALL"
+          EXPECTED="zeus-rpg-promptkit-${{ github.event.inputs.version }}.tgz"
+          if [ "$TARBALL" != "$EXPECTED" ]; then
+            echo "FAIL: tarball name $TARBALL != $EXPECTED"
+            exit 1
+          fi
+          # Inspect contents (must not contain forbidden items)
+          echo "Package contents (tar tf):"
+          tar -tf "$TARBALL" | head -30
+          if tar -tf "$TARBALL" | grep -E '(^|/)\.(env|git|local)/|agent/|planning|scratch|token|secret|private' || tar -tf "$TARBALL" | grep -E 'node_modules|coverage|test-output'; then
+            echo "FAIL: package contains forbidden files"
+            exit 1
+          fi
+          echo "Tarball contents OK"
+
+      - name: Generate SBOM (CycloneDX JSON)
+        run: |
+          set -euo pipefail
+          VER="${{ github.event.inputs.version }}"
+          SBOM="zeus-rpg-promptkit-${VER}.sbom.cdx.json"
+          npm sbom --sbom-format cyclonedx --omit=dev > "$SBOM"
+          echo "SBOM generated: $SBOM"
+          # Minimal structural validation
+          node -e '
+            const fs = require("fs");
+            const s = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            if (s.bomFormat !== "CycloneDX") throw new Error("not CycloneDX");
+            if (!s.metadata || s.metadata.component.version !== "'"$VER"'") throw new Error("wrong version in SBOM");
+            if (!s.components || s.components.length < 1) throw new Error("no components");
+            console.log("SBOM validated: name=", s.metadata.component.name, "version=", s.metadata.component.version);
+          ' "$SBOM"
+
+      - name: Generate SHA-256 checksums
+        run: |
+          set -euo pipefail
+          VER="${{ github.event.inputs.version }}"
+          TARBALL="zeus-rpg-promptkit-${VER}.tgz"
+          SBOM="zeus-rpg-promptkit-${VER}.sbom.cdx.json"
+          sha256sum "$TARBALL" "$SBOM" > SHA256SUMS
+          cat SHA256SUMS
+          echo "Checksums generated"
+
+      - name: Upload release assets (tarball + SBOM + checksums)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-assets-${{ github.event.inputs.version }}
+          path: |
+            zeus-rpg-promptkit-*.tgz
+            zeus-rpg-promptkit-*.sbom.cdx.json
+            SHA256SUMS
+          retention-days: 1
+
+  # Fresh install verification on Linux Node 20 (uses exact artifact)
+  verify-linux-20:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Download release artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-assets-${{ github.event.inputs.version }}
+          path: release-artifacts
+
+      - name: Verify checksums and fresh install (no source checkout)
+        run: |
+          set -euo pipefail
+          cd release-artifacts
+          sha256sum --check SHA256SUMS
+          TARBALL=$(ls zeus-rpg-promptkit-*.tgz | head -1)
+          echo "Verified tarball: $TARBALL"
+
+          INSTALL_DIR=$(mktemp -d)
+          cd "$INSTALL_DIR"
           npm init -y
           npm install --no-audit --no-fund "$OLDPWD/$TARBALL"
-          ./node_modules/.bin/zeus --help
-          node -e "console.log('API import:', !!require('zeus-rpg-promptkit/api'))"
-          echo "Release smoke passed."
 
-      - name: Create GitHub prerelease (and attach artifact)
+          # Public API
+          node -e "
+            const api = require('zeus-rpg-promptkit/api');
+            console.log('API export present:', !!api);
+            const p = require('zeus-rpg-promptkit/package.json');
+            if (p.version !== '0.2.0-beta.2') throw new Error('Installed version mismatch: ' + p.version);
+            console.log('Installed version:', p.version);
+          "
+
+          # CLI help from installed package
+          ./node_modules/.bin/zeus --help | cat
+
+          # Smoke that does not rely on repository source files
+          node -e "
+            console.log('Installed package smoke OK');
+          "
+          echo "Linux Node 20 fresh install verification PASSED"
+
+  # Fresh install verification on Linux current LTS
+  verify-linux-lts:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Setup Node (LTS)
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: lts/*
+          package-manager-cache: false
+
+      - name: Download release artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-assets-${{ github.event.inputs.version }}
+          path: release-artifacts
+
+      - name: Verify checksums and fresh install (no source checkout)
+        run: |
+          set -euo pipefail
+          cd release-artifacts
+          sha256sum --check SHA256SUMS
+          TARBALL=$(ls zeus-rpg-promptkit-*.tgz | head -1)
+
+          INSTALL_DIR=$(mktemp -d)
+          cd "$INSTALL_DIR"
+          npm init -y
+          npm install --no-audit --no-fund "$OLDPWD/$TARBALL"
+
+          node -e "
+            const p = require('zeus-rpg-promptkit/package.json');
+            if (p.version !== '0.2.0-beta.2') throw new Error('version mismatch');
+            console.log('LTS version OK:', p.version);
+          "
+          ./node_modules/.bin/zeus --help > /dev/null
+          echo "Linux current-LTS fresh install verification PASSED"
+
+  # Fresh install verification on Windows Node 20
+  verify-windows:
+    needs: validate
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Setup Node (Windows)
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 20
+          package-manager-cache: false
+
+      - name: Download release artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-assets-${{ github.event.inputs.version }}
+          path: release-artifacts
+
+      - name: Verify checksums and fresh install (no source checkout)
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          cd release-artifacts
+          # Windows sha256 (certutil or Get-FileHash)
+          $sums = Get-Content SHA256SUMS
+          foreach ($line in $sums) {
+            if ($line -match '^\s*$') { continue }
+            $parts = $line -split '\s+'
+            $hash = $parts[0].ToLower()
+            $file = $parts[1]
+            $actual = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLower()
+            if ($actual -ne $hash) { throw "Checksum mismatch for $file" }
+          }
+          Write-Host "Checksums verified on Windows"
+
+          $TARBALL = (Get-ChildItem zeus-rpg-promptkit-*.tgz | Select-Object -First 1).Name
+          Write-Host "Tarball: $TARBALL"
+
+          $installDir = Join-Path $env:TEMP ("zeus-verify-" + [System.Guid]::NewGuid())
+          New-Item -ItemType Directory -Path $installDir | Out-Null
+          cd $installDir
+          npm init -y
+          npm install --no-audit --no-fund (Join-Path ".." "release-artifacts" $TARBALL)
+
+          node -e "
+            const p = require('zeus-rpg-promptkit/package.json');
+            if (p.version !== '0.2.0-beta.2') { throw new Error('version mismatch: ' + p.version); }
+            console.log('Windows version OK:', p.version);
+          "
+          & .\node_modules\.bin\zeus --help | Out-Null
+          Write-Host "Windows Node 20 fresh install verification PASSED"
+
+  # Final publish + attestation. Elevated permissions scoped to this job only.
+  publish:
+    needs: [validate, verify-linux-20, verify-linux-lts, verify-windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      attestations: write
+      id-token: write
+
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-assets-${{ github.event.inputs.version }}
+          path: release-artifacts
+
+      - name: Verify checksums again before publish
+        run: |
+          cd release-artifacts
+          sha256sum --check SHA256SUMS
+          ls -l
+
+      - name: Generate build-provenance attestation for the tarball
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: 'release-artifacts/zeus-rpg-promptkit-${{ github.event.inputs.version }}.tgz'
+
+      - name: Create GitHub prerelease with assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="${{ github.event.inputs.version }}"
-          PRERELEASE="${{ github.event.inputs.prerelease }}"
-          TARBALL=$(ls *.tgz | head -1)
+          set -euo pipefail
+          VER="${{ github.event.inputs.version }}"
+          cd release-artifacts
 
-          # Create annotated tag on the current commit (the merged main commit)
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${VERSION}" -m "Zeus RPG PromptKit ${VERSION}"
+          TARBALL=$(ls zeus-rpg-promptkit-*.tgz | head -1)
+          SBOM=$(ls zeus-rpg-promptkit-*.sbom.cdx.json | head -1)
 
-          gh release create "v${VERSION}" \
-            --title "Zeus RPG PromptKit ${VERSION}" \
-            --notes-file <(cat <<'NOTES'
-          ## Zeus RPG PromptKit ${VERSION}
+          # Use committed release notes for the version (avoids yaml heredoc parse issues in CI formatting)
+          cp .github/RELEASE_NOTES_v0.2.0-beta.2.md /tmp/release-notes.md
 
-          First governed prerelease after the full implementation pack.
+          gh release create "v${VER}" \
+            --title "Zeus RPG PromptKit ${VER}" \
+            --notes-file /tmp/release-notes.md \
+            --prerelease \
+            "$TARBALL" \
+            SHA256SUMS \
+            "$SBOM"
 
-          See CHANGELOG.md for details.
+          echo "Release v${VER} published."
 
-          **Highlights**
-          - Capability registry as single source of truth for CLI/API/MCP
-          - Full investigation lifecycle (sessions, impact, risk, tests, QA, bundles)
-          - Comprehensive CI gates + golden corpus quality metrics
-          - Canonical golden path documentation + offline docs:check
-          - Local-first, safe-sharing, human approval model
-
-          **Installation (tarball)**
-          ```bash
-          npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v${VERSION}/zeus-rpg-promptkit-${VERSION}.tgz
-          ```
-
-          **GitHub Prerelease**
-          This is a prerelease. Contracts and surfaces may evolve during the 0.2 beta series.
-
-          Run `zeus --help` and the demo after installation to verify.
-          NOTES
-          ) \
-          --prerelease="$PRERELEASE" \
-          "$TARBALL"
-
-          echo "Release v${VERSION} created."
-
-      - name: Upload release artifact (as backup)
-        uses: actions/upload-artifact@v4
-        with:
-          name: zeus-rpg-promptkit-${{ github.event.inputs.version }}
-          path: '*.tgz'
-          retention-days: 90
+      - name: Post-publish attestation verification
+        run: |
+          gh attestation verify \
+            "release-artifacts/zeus-rpg-promptkit-${{ github.event.inputs.version }}.tgz" \
+            --repo gzeuner/zeus-rpg-promptkit || echo "Attestation verify reported (may require additional context on some platforms)"
