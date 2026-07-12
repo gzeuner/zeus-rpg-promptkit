@@ -22,7 +22,7 @@ function getExecutedQuery(args) {
       const content = fs.readFileSync(filePath, 'utf8');
       const parts = content.split(SQL_STATEMENT_DELIMITER);
       return (parts[0] || '').trim();
-    } catch (err) {
+    } catch {
       return '';
     }
   }

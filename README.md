@@ -1109,6 +1109,19 @@ Optionally generate JSON as well:
 node cli/zeus.js docs:generate-catalog --json-output docs/tool-catalog.json
 ```
 
+### Test and typecheck integrity
+
+`npm run test:discovery` recursively inventories maintained `tests/**/*.test.js` and
+`tests/**/*.spec.js` files. Every file must have exactly one primary category (`unit`,
+`contract`, `smoke`, `corpus`, `quality`, or `benchmark`); omissions, duplicates, missing
+references, and invalid or expired exceptions fail the check. Temporary exceptions require a
+repository issue, concrete reason, owner, introduction date, and finite expiry. The MCP server
+suite is part of the required unit category and cannot be excluded.
+
+`npm run typecheck:core` checks the declared contract subset in `jsconfig.json`, currently the
+capability registry, MCP policy, public API, and shared declarations. It is not a project-wide
+type-safety claim; the scope guard prevents these declared files from silently disappearing.
+
 ## 🏗️ Architecture overview
 
 | Area                                                    | Responsibility                                          |

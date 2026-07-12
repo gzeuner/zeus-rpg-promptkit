@@ -32,13 +32,6 @@ function runGoldenCorpusEvaluator() {
   const { runScannerCorpus } = require('../src/scanner/scannerCorpusRunner');
   const runResult = runScannerCorpus(corpusPath);
 
-  const totalEntities = cases.reduce((sum, c) => {
-    const exp = c.expected || {};
-    return (
-      sum + Object.keys(exp).reduce((s, k) => s + (Array.isArray(exp[k]) ? exp[k].length : 0), 0)
-    );
-  }, 0);
-
   const matched = runResult.results.filter(r => r.passed).length;
   const precision = matched / Math.max(1, cases.length); // proxy using pass rate per case
   const recall = precision; // for current exact corpus, baseline 1.0

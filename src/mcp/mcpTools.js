@@ -129,10 +129,7 @@ const MCP_TOOL_TO_CAPABILITY = Object.freeze({
   // Others (doctor, profiles, field-search, workflow, bundle, resources, discover) keep legacy
   // MCP handlers for guards, cursor, exact result shapes in tests, and mcp-specific logic.
   'zeus.analyze': 'analysis.analyze',
-  'zeus.assess-risk': 'investigation.assess-risk',
   'zeus.generate-test': 'investigation.generate-test',
-  'zeus.generate-checklist': 'investigation.generate-checklist',
-  'zeus.qa': 'investigation.qa',
   'zeus.search-source': 'investigation.search-source',
 });
 
