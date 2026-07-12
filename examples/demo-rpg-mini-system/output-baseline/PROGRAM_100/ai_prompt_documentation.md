@@ -25,8 +25,8 @@ Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy membe
 - None detected
 
 ## SQL Statements
-- [UPDATE/WRITE] exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001; tables: TABLE_100
-- [SELECT/READ] exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only; tables: TABLE_100
+- [UPDATE/WRITE] exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001; TABLE_100
+- [SELECT/READ] exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only; TABLE_100
 
 ## Dependency Graph
 Nodes: 10, Edges: 10

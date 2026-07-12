@@ -49,10 +49,18 @@ async function runAssessRisk(args) {
       console.log(`[verbose] Analysis path: ${analysisPath}`);
     }
 
-    // Run risk assessment
-    const assessment = assessCanonicalModel(canonicalAnalysis, {
-      verbose,
-    });
+    // Route through capability (package 08)
+    let assessment;
+    try {
+      const { capabilities } = require('../../api/zeusApi');
+      const res = capabilities && typeof capabilities.execute === 'function' ? capabilities.execute('investigation.assess-risk', { cwd, env: process.env, args }, args) : null;
+      if (res && res.ok && res.result) {
+        assessment = res.result;
+      }
+    } catch (e) {}
+    if (!assessment) {
+      assessment = assessCanonicalModel(canonicalAnalysis, { verbose });
+    }
 
     // Generate markdown report
     const markdown = formatAssessmentMarkdown(assessment);

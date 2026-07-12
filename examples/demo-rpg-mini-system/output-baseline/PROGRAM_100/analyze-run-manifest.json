@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "contract": "zeus.run-manifest@1",
   "tool": {
     "name": "zeus-rpg-promptkit",
     "command": "analyze"
@@ -19,6 +20,7 @@
     "outputRoot": "OUTPUT_ROOT",
     "options": {
       "optimizeContextEnabled": true,
+      "denseLevel": null,
       "safeSharingEnabled": false,
       "emitDiagnosticsEnabled": false,
       "skipTestData": false,
@@ -90,9 +92,7 @@
         "promptTemplates": [
           "documentation"
         ],
-        "workflowKeys": [
-          "documentation"
-        ],
+        "workflowKeys": "[REDACTED]",
         "primaryArtifacts": [
           "analysis-index.json",
           "ai-knowledge.json",
@@ -105,11 +105,7 @@
             "Technical writers",
             "Maintainers assembling onboarding or system orientation notes"
           ],
-          "keyQuestionsAnswered": [
-            "What does the program do at a high level?",
-            "Which tables, calls, and source-backed evidence matter most for onboarding?",
-            "Which generated artifacts are most useful for documentation handoff?"
-          ],
+          "keyQuestionsAnswered": "[REDACTED]",
           "expectedDecisions": [
             "Decide whether the generated documentation is sufficient for onboarding or needs deeper analysis.",
             "Choose the next artifact or subsystem to document in more detail."
@@ -201,6 +197,218 @@
     },
     "importManifest": null
   },
+  "artifacts": [
+    {
+      "path": "ai_prompt_documentation.md",
+      "kind": "markdown",
+      "sizeBytes": 2354,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "30fc574c7fe17783086579f09c06b827ed9e4e4695112989eabc9b6c5ae5188e"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "30fc574c7fe17783086579f09c06b827ed9e4e4695112989eabc9b6c5ae5188e",
+      "exists": true
+    },
+    {
+      "path": "ai-knowledge.json",
+      "kind": "json",
+      "sizeBytes": 72080,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "5c0ade83e3233855bc9d622b028fa53570300117884a242e25af4729cd8fa78b"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "5c0ade83e3233855bc9d622b028fa53570300117884a242e25af4729cd8fa78b",
+      "exists": true
+    },
+    {
+      "path": "analysis-index.json",
+      "kind": "json",
+      "sizeBytes": 58064,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "0705c78e701f3bba7bc6edd1b7c57c5f24d7f8160df17096f01626490cd1cace"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "0705c78e701f3bba7bc6edd1b7c57c5f24d7f8160df17096f01626490cd1cace",
+      "exists": true
+    },
+    {
+      "path": "architecture-report.md",
+      "kind": "markdown",
+      "sizeBytes": 2648,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "39a25d1b0671bd170b1606d0f320f94d172af99f4fdf689221b0b1aa064b65d7"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "39a25d1b0671bd170b1606d0f320f94d172af99f4fdf689221b0b1aa064b65d7",
+      "exists": true
+    },
+    {
+      "path": "architecture.html",
+      "kind": "html",
+      "sizeBytes": 653292,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "de24e7faac5aca867e4d6e557c77d699db7086178ae9074fe67dd6696f928d38"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "de24e7faac5aca867e4d6e557c77d699db7086178ae9074fe67dd6696f928d38",
+      "exists": true
+    },
+    {
+      "path": "canonical-analysis.json",
+      "kind": "json",
+      "sizeBytes": 39603,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "6d987d1bd9032efe743499bc660356f72604c88abec1b5a6d4015092a718de9a"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "6d987d1bd9032efe743499bc660356f72604c88abec1b5a6d4015092a718de9a",
+      "exists": true
+    },
+    {
+      "path": "context.json",
+      "kind": "json",
+      "sizeBytes": 19316,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "7f8266b99857ceb43204de915715b2d99340154dedde88eed06504fac34bde6c"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "7f8266b99857ceb43204de915715b2d99340154dedde88eed06504fac34bde6c",
+      "exists": true
+    },
+    {
+      "path": "dependency-graph.json",
+      "kind": "json",
+      "sizeBytes": 2203,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "79ad9bbec542e31fd36d703ce17b351ec48fac55b7709ac66ff8e6dda8478c20"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "79ad9bbec542e31fd36d703ce17b351ec48fac55b7709ac66ff8e6dda8478c20",
+      "exists": true
+    },
+    {
+      "path": "dependency-graph.md",
+      "kind": "markdown",
+      "sizeBytes": 999,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "7ce4d6b1f0f700bada8174be12d2feb4a1b8af7843e3dca45030551c9b86a512"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "7ce4d6b1f0f700bada8174be12d2feb4a1b8af7843e3dca45030551c9b86a512",
+      "exists": true
+    },
+    {
+      "path": "dependency-graph.mmd",
+      "kind": "mermaid",
+      "sizeBytes": 775,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "f9b02d9f6f5eafc2464d18d89c98eaa02596b23672bf8a0c8dac2da1c8b3fadb"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "f9b02d9f6f5eafc2464d18d89c98eaa02596b23672bf8a0c8dac2da1c8b3fadb",
+      "exists": true
+    },
+    {
+      "path": "optimized-context.json",
+      "kind": "json",
+      "sizeBytes": 62404,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "cbe5ddfc2f0566ae67a98129bff9bad9f3a04c7a7f89cfb160d198f84d295d8a"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "cbe5ddfc2f0566ae67a98129bff9bad9f3a04c7a7f89cfb160d198f84d295d8a",
+      "exists": true
+    },
+    {
+      "path": "program-call-tree.json",
+      "kind": "json",
+      "sizeBytes": 2180,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "a3376ddc48d37ec6cf7f947f8fe3a330c6ec011bb3441bd4609ad7614b338a31"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "a3376ddc48d37ec6cf7f947f8fe3a330c6ec011bb3441bd4609ad7614b338a31",
+      "exists": true
+    },
+    {
+      "path": "program-call-tree.md",
+      "kind": "markdown",
+      "sizeBytes": 631,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "620d833ed36a2f8667c7eb7af96209d05831a108e4c3b9d8d0d62e7031a27b84"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "620d833ed36a2f8667c7eb7af96209d05831a108e4c3b9d8d0d62e7031a27b84",
+      "exists": true
+    },
+    {
+      "path": "program-call-tree.mmd",
+      "kind": "mermaid",
+      "sizeBytes": 462,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "4371c90bc0d1af0dfb47a928d28b2c86f9858be08c78149390ee6d5f98540af7"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "4371c90bc0d1af0dfb47a928d28b2c86f9858be08c78149390ee6d5f98540af7",
+      "exists": true
+    },
+    {
+      "path": "report.md",
+      "kind": "markdown",
+      "sizeBytes": 5266,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "a6fc8499d4b67cf41eee044298456356585e9fd8c1eec8975394e0f25b42c4b5"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "a6fc8499d4b67cf41eee044298456356585e9fd8c1eec8975394e0f25b42c4b5",
+      "exists": true
+    }
+  ],
   "summary": {
     "stageCount": 9,
     "completedStageCount": 9,
@@ -225,14 +433,10 @@
       "cacheDir": "OUTPUT_ROOT/.zeus-cache/source-scans"
     },
     "db2Metadata": {
-      "status": "disabled",
+      "status": "skipped",
       "hits": 0,
       "misses": 0,
-      "cacheKey": null,
-      "payloadFile": null,
-      "markdownFile": null,
-      "manifestFile": "analysis-cache.json",
-      "reason": "no DB2 connection configuration was available"
+      "reason": "flag"
     },
     "testData": {
       "status": "disabled",
@@ -249,7 +453,7 @@
   "diagnostics": [
     {
       "severity": "warning",
-      "message": "DB2 metadata export was skipped because no DB2 connection configuration was available.",
+      "message": "DB2 metadata export skipped (reproducible mode or --skip-db2-metadata).",
       "code": "DB2_EXPORT_SKIPPED"
     },
     {
@@ -519,37 +723,17 @@
       },
       "metadata": {
         "status": "skipped",
-        "file": "db2-metadata.json",
-        "markdownFile": "db2-metadata.md",
-        "tableCount": 0,
-        "requestedTableCount": 0,
-        "resolvedTableCount": 0,
-        "unresolvedTableCount": 0,
-        "ambiguousTableCount": 0,
-        "triggerCount": 0,
-        "derivedObjectCount": 0,
-        "externalObjectCount": 0,
-        "catalogResolvedProgramCount": 0,
-        "catalogResolvedProcedureCount": 0,
-        "fallbackLookupCount": 0,
-        "reason": "no DB2 connection configuration was available",
-        "cacheStatus": "disabled",
+        "reason": "skipped by --reproducible or --skip-db2-metadata",
         "connectionRole": "metadata",
         "cache": {
-          "status": "disabled",
-          "hits": 0,
-          "misses": 0,
-          "cacheKey": null,
-          "payloadFile": null,
-          "markdownFile": null,
-          "manifestFile": "analysis-cache.json",
-          "reason": "no DB2 connection configuration was available"
+          "status": "skipped",
+          "reason": "flag"
         }
       },
       "diagnostics": [
         {
           "severity": "warning",
-          "message": "DB2 metadata export was skipped because no DB2 connection configuration was available.",
+          "message": "DB2 metadata export skipped (reproducible mode or --skip-db2-metadata).",
           "code": "DB2_EXPORT_SKIPPED"
         }
       ]
@@ -711,117 +895,10 @@
       "diagnostics": []
     }
   ],
-  "artifacts": [
-    {
-      "path": "ai_prompt_documentation.md",
-      "kind": "markdown",
-      "exists": true,
-      "sizeBytes": 2370,
-      "sha256": "40aebd8e6b1426bc882fd56160dcc97a5efeeab891616d83a00975e564d8ac12"
-    },
-    {
-      "path": "ai-knowledge.json",
-      "kind": "json",
-      "exists": true,
-      "sizeBytes": 72080,
-      "sha256": "5c0ade83e3233855bc9d622b028fa53570300117884a242e25af4729cd8fa78b"
-    },
-    {
-      "path": "analysis-index.json",
-      "kind": "json",
-      "exists": true,
-      "sizeBytes": 58064,
-      "sha256": "0705c78e701f3bba7bc6edd1b7c57c5f24d7f8160df17096f01626490cd1cace"
-    },
-    {
-      "path": "architecture-report.md",
-      "kind": "markdown",
-      "exists": true,
-      "sizeBytes": 2648,
-      "sha256": "39a25d1b0671bd170b1606d0f320f94d172af99f4fdf689221b0b1aa064b65d7"
-    },
-    {
-      "path": "architecture.html",
-      "kind": "html",
-      "exists": true,
-      "sizeBytes": 653292,
-      "sha256": "de24e7faac5aca867e4d6e557c77d699db7086178ae9074fe67dd6696f928d38"
-    },
-    {
-      "path": "canonical-analysis.json",
-      "kind": "json",
-      "exists": true,
-      "sizeBytes": 40251,
-      "sha256": "c85094f30fff106f724cab8955d77b75dc037e3c81935615629e0ac4fb5a1f72"
-    },
-    {
-      "path": "context.json",
-      "kind": "json",
-      "exists": true,
-      "sizeBytes": 19928,
-      "sha256": "3af07d8f4ca8c1d2ba3ebef75ebb41e92b535d1ea9f447efe43a18321d8d1d33"
-    },
-    {
-      "path": "dependency-graph.json",
-      "kind": "json",
-      "exists": true,
-      "sizeBytes": 2203,
-      "sha256": "79ad9bbec542e31fd36d703ce17b351ec48fac55b7709ac66ff8e6dda8478c20"
-    },
-    {
-      "path": "dependency-graph.md",
-      "kind": "markdown",
-      "exists": true,
-      "sizeBytes": 999,
-      "sha256": "7ce4d6b1f0f700bada8174be12d2feb4a1b8af7843e3dca45030551c9b86a512"
-    },
-    {
-      "path": "dependency-graph.mmd",
-      "kind": "mermaid",
-      "exists": true,
-      "sizeBytes": 775,
-      "sha256": "f9b02d9f6f5eafc2464d18d89c98eaa02596b23672bf8a0c8dac2da1c8b3fadb"
-    },
-    {
-      "path": "optimized-context.json",
-      "kind": "json",
-      "exists": true,
-      "sizeBytes": 63016,
-      "sha256": "420363f2dcc979d18734fbef8c4e3a9edf72bd0f4ee4efc37b67cd5eeb7ba4c3"
-    },
-    {
-      "path": "program-call-tree.json",
-      "kind": "json",
-      "exists": true,
-      "sizeBytes": 2180,
-      "sha256": "a3376ddc48d37ec6cf7f947f8fe3a330c6ec011bb3441bd4609ad7614b338a31"
-    },
-    {
-      "path": "program-call-tree.md",
-      "kind": "markdown",
-      "exists": true,
-      "sizeBytes": 631,
-      "sha256": "620d833ed36a2f8667c7eb7af96209d05831a108e4c3b9d8d0d62e7031a27b84"
-    },
-    {
-      "path": "program-call-tree.mmd",
-      "kind": "mermaid",
-      "exists": true,
-      "sizeBytes": 462,
-      "sha256": "4371c90bc0d1af0dfb47a928d28b2c86f9858be08c78149390ee6d5f98540af7"
-    },
-    {
-      "path": "report.md",
-      "kind": "markdown",
-      "exists": true,
-      "sizeBytes": 5680,
-      "sha256": "ab75dcaa19114c539fd13f64c39af73f0f3f1c137470f8efe3c3fd9fc02cfcb0"
-    }
-  ],
   "reproducibility": {
     "enabled": true,
     "stableTimestamp": "2000-01-01T00:00:00.000Z",
-    "contentFingerprint": "b5c1722509d69d5496c78a91660e2f3ff9359bc52bd815334c666595e493064e",
+    "contentFingerprint": "88e17756e1c807baa5736b0374d8fcb01d8f44fc3c82ffae63fa0012a07e9c6d",
     "runtimeMetadataSuppressed": true,
     "comparisonSuppressed": true
   },

@@ -19,10 +19,22 @@ function runImpact(args) {
   const verbose = Boolean(args.verbose);
   let execution;
   try {
-    execution = executeImpact(args);
-  } catch (error) {
-    console.error(error.message);
-    process.exit(2);
+    // Route through capability (package 08)
+    const { capabilities } = require('../../api/zeusApi');
+    const res = capabilities && typeof capabilities.execute === 'function' ? capabilities.execute('investigation.impact', { cwd: process.cwd(), env: process.env, args }, args) : null;
+    if (res && res.ok && res.result) {
+      execution = res.result;
+    }
+  } catch (e) {
+    // fallthrough
+  }
+  if (!execution) {
+    try {
+      execution = executeImpact(args);
+    } catch (error) {
+      console.error(error.message);
+      process.exit(2);
+    }
   }
 
   const { result, graphPath, program, outputProgramDir, target } = execution;
