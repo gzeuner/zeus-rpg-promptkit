@@ -8,6 +8,17 @@ Last Updated: 2026-06-19
 
 Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 
+## The Product Golden Path (Canonical Journey)
+
+The primary user journey is documented in [`quickstart/5-minutes.md`](quickstart/5-minutes.md):
+Question → Analyze → Investigate (search/trace/xref) → Impact/Risk → Generate (tests/checklist/QA) → Bundle (safe & reproducible) → Verify → (optional MCP) → Human review.
+
+See the lifecycle diagram and "What Zeus is / is not" there.
+
+**What Zeus is:** Evidence & investigation platform. Produces reproducible, reviewable artifacts. Humans decide. Local control.
+
+**What Zeus is not:** Autonomous generator, correctness guarantee, production mutator, hosted service.
+
 ## Start Sequence (CLI/MCP-First)
 
 1. Lade die Umgebung explizit in der Shell (`config/load-env.sh` oder `config/load-env.ps1`).
@@ -18,31 +29,31 @@ Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
 
 ## Documentation Domains
 
-| Domain | Purpose | Primary Entry | Typical Audience |
-|---|---|---|---|
-| `ai/` | KI-Verträge, Session-Patterns, Validierung | [`ai/session-prompt.md`](ai/session-prompt.md) | AI Agents, Prompt Engineers |
-| `cli/` | Referenz und praxisnahe Kommando-Beispiele | [`cli/reference.md`](cli/reference.md) | Entwickler:innen, Operatoren |
-| `quickstart/` | Schneller produktiver Einstieg inkl. **How-To: Credentials verschlüsseln/entschlüsseln** | [`quickstart/5-minutes.md`](quickstart/5-minutes.md), [`quickstart/secrets-and-overrides.md`](quickstart/secrets-and-overrides.md) (Secret Vault), [`quickstart/onboarding-new-ibm-i.md`](quickstart/onboarding-new-ibm-i.md) | Neue Teammitglieder, System-Onboarding |
-| `architecture/` | Architecture baseline, ADRs, runtime config, dependency rules, capability model, and safety trust zones | [`architecture/index.md`](architecture/index.md) | Maintainer, Tooling Engineers, Architects |
-| `mcp/` | Lokaler MCP-Betrieb, Policy-Grenzen und Troubleshooting | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Operatoren, AI-Integratoren |
-| `workflows/` | Geführte Analyse- und Agenten-Workflows | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Analysten, Architekten |
-| `safety/` | Safety-Guidance, Governance, Sharing | [`safety/best-practice-guide.md`](safety/best-practice-guide.md) | Reviewer, Security, Leads |
-| `viewer/` | Optionaler lokaler Artefakt-Viewer und experimentelle UI-Shell | [`viewer/local-ui-shell.md`](viewer/local-ui-shell.md) | Tooling Engineers |
-| `sql/` | Reproduzierbare SQL-Discovery-Skripte fuer IBM i/DB2 | [`sql/index.md`](sql/index.md) | Analysts, DB2 Engineers |
+| Domain          | Purpose                                                                                                 | Primary Entry                                                                                                                                                                                                                            | Typical Audience                          |
+| --------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `ai/`           | KI-Verträge, Session-Patterns, Validierung                                                              | [`ai/session-prompt.md`](ai/session-prompt.md)                                                                                                                                                                                           | AI Agents, Prompt Engineers               |
+| `cli/`          | Referenz und praxisnahe Kommando-Beispiele                                                              | [`cli/reference.md`](cli/reference.md)                                                                                                                                                                                                   | Entwickler:innen, Operatoren              |
+| `quickstart/`   | **Canonical Evidence Investigation Golden Path** + credential how-to + onboarding                       | [`quickstart/5-minutes.md`](quickstart/5-minutes.md) (the product golden path), [`quickstart/secrets-and-overrides.md`](quickstart/secrets-and-overrides.md), [`quickstart/onboarding-new-ibm-i.md`](quickstart/onboarding-new-ibm-i.md) | Alle Rollen – start here                  |
+| `architecture/` | Architecture baseline, ADRs, runtime config, dependency rules, capability model, and safety trust zones | [`architecture/index.md`](architecture/index.md)                                                                                                                                                                                         | Maintainer, Tooling Engineers, Architects |
+| `mcp/`          | Lokaler MCP-Betrieb, Policy-Grenzen und Troubleshooting                                                 | [`mcp/operator-guide.md`](mcp/operator-guide.md)                                                                                                                                                                                         | Operatoren, AI-Integratoren               |
+| `workflows/`    | Geführte Analyse- und Agenten-Workflows                                                                 | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md)                                                                                                                                                           | Analysten, Architekten                    |
+| `safety/`       | Safety-Guidance, Governance, Sharing                                                                    | [`safety/best-practice-guide.md`](safety/best-practice-guide.md)                                                                                                                                                                         | Reviewer, Security, Leads                 |
+| `viewer/`       | Optionaler lokaler Artefakt-Viewer und experimentelle UI-Shell                                          | [`viewer/local-ui-shell.md`](viewer/local-ui-shell.md)                                                                                                                                                                                   | Tooling Engineers                         |
+| `sql/`          | Reproduzierbare SQL-Discovery-Skripte fuer IBM i/DB2                                                    | [`sql/index.md`](sql/index.md)                                                                                                                                                                                                           | Analysts, DB2 Engineers                   |
 
 ## Quick Links For AI Assistants
 
-| Need | Go To | Why |
-|---|---|---|
-| Authoritative command behavior | [`tool-catalog.md`](tool-catalog.md) | Single source of truth für Commands, Safety und Beispiele |
-| Session bootstrap | [`ai/session-prompt.md`](ai/session-prompt.md) | Standardisierte Arbeitsweise mit Safety-Gates |
-| MCP operator setup | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Start-/Policy-/Audit-Referenz fuer lokalen MCP-Betrieb |
-| Prompt schema and constraints | [`ai/prompt-contracts.md`](ai/prompt-contracts.md) | Verhindert inkonsistente Prompt-Ausgaben |
-| Workflow options | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Zeigt Opt-in Vertiefungsfeatures |
-| Architecture decisions & baseline | [`architecture/index.md`](architecture/index.md) | ADRs for kernel, dependencies, contracts, registry, and safety zones |
-| Safe sharing guidance | [`safety/safe-sharing.md`](safety/safe-sharing.md) | Reduktions-/Sanitization-Regeln für externe Nutzung |
-| CLI examples | [`cli/examples.md`](cli/examples.md) | Schnell nutzbare, reproduzierbare Befehlsmuster |
-| DB2 discovery SQL | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql) | Standardisierte Discovery-Queries fuer System- und Ticketkontext |
+| Need                              | Go To                                                                          | Why                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| Authoritative command behavior    | [`tool-catalog.md`](tool-catalog.md)                                           | Single source of truth für Commands, Safety und Beispiele            |
+| Session bootstrap                 | [`ai/session-prompt.md`](ai/session-prompt.md)                                 | Standardisierte Arbeitsweise mit Safety-Gates                        |
+| MCP operator setup                | [`mcp/operator-guide.md`](mcp/operator-guide.md)                               | Start-/Policy-/Audit-Referenz fuer lokalen MCP-Betrieb               |
+| Prompt schema and constraints     | [`ai/prompt-contracts.md`](ai/prompt-contracts.md)                             | Verhindert inkonsistente Prompt-Ausgaben                             |
+| Workflow options                  | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Zeigt Opt-in Vertiefungsfeatures                                     |
+| Architecture decisions & baseline | [`architecture/index.md`](architecture/index.md)                               | ADRs for kernel, dependencies, contracts, registry, and safety zones |
+| Safe sharing guidance             | [`safety/safe-sharing.md`](safety/safe-sharing.md)                             | Reduktions-/Sanitization-Regeln für externe Nutzung                  |
+| CLI examples                      | [`cli/examples.md`](cli/examples.md)                                           | Schnell nutzbare, reproduzierbare Befehlsmuster                      |
+| DB2 discovery SQL                 | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql) | Standardisierte Discovery-Queries fuer System- und Ticketkontext     |
 
 ## Visual Map
 

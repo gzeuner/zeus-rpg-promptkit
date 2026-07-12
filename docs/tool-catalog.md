@@ -1,7 +1,7 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-07-12 12:51:58
+Last generated: 2026-07-12 13:32:58
 -->
 
 ---

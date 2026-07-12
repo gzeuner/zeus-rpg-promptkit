@@ -31,7 +31,7 @@
 
 ## 🧭 Was ist Zeus RPG PromptKit?
 
-**Zeus RPG PromptKit** sammelt, normalisiert und analysiert RPG-, CL- und DDS-Quellen aus IBM-i-/AS/400-Landschaften. Es ergänzt die Source-Analyse bei Bedarf um Db2-Metadaten und erzeugt daraus nachvollziehbare Artefakte für Entwicklung, Architektur, QA, Modernisierung und KI-gestützte Workflows.
+**Zeus RPG PromptKit** ist die Evidence and Investigation Platform für IBM i. Sie verwandelt Quellcode, Metadaten und Laufzeit-Evidenz in reproduzierbare, review-bereite Artefakte – mit Menschen in der Kontrolle.
 
 Zeus ist bewusst **kein autonomer Business-Code-Generator**. Das Projekt bildet eine **Evidence Preparation Layer** zwischen gewachsener IBM-i-Logik und den Menschen oder KI-Assistenten, die diese Logik verstehen, prüfen und verändern sollen.
 
@@ -642,7 +642,7 @@ JTOpen / IBM Toolbox for Java kann für IBM-i-/Db2-nahe Funktionen erforderlich 
 
 ## 🧭 What is Zeus RPG PromptKit?
 
-**Zeus RPG PromptKit** collects, normalizes, and analyzes RPG, CL, and DDS sources from IBM i / AS/400 environments. It can enrich source analysis with Db2 metadata and turn the result into reviewable artifacts for developers, architects, QA teams, modernization projects, and AI-assisted workflows.
+**Zeus RPG PromptKit** is the Evidence and Investigation Platform for IBM i. It turns source, metadata and runtime evidence into reproducible, review-ready artifacts — with humans firmly in control.
 
 Zeus is deliberately **not an autonomous business-code generator**. It acts as an **Evidence Preparation Layer** between long-lived IBM i logic and the humans or AI assistants that need to understand, review, and change that logic.
 
