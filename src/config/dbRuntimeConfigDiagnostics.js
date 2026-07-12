@@ -61,20 +61,19 @@ function createRuntimeConfigMetadata(scope, prefix) {
 }
 
 function cloneRuntimeConfigMetadata(metadata, scope, prefix) {
-  const base = metadata && typeof metadata === 'object'
-    ? metadata
-    : createRuntimeConfigMetadata(scope, prefix);
+  const base =
+    metadata && typeof metadata === 'object'
+      ? metadata
+      : createRuntimeConfigMetadata(scope, prefix);
 
   return {
     kind: 'db-runtime-config',
     scope: base.scope || scope,
     prefix: base.prefix || prefix,
     fields: Object.fromEntries(
-      Object.entries(base.fields || {}).map(([key, value]) => [key, value ? { ...value } : value]),
+      Object.entries(base.fields || {}).map(([key, value]) => [key, value ? { ...value } : value])
     ),
-    warnings: Array.isArray(base.warnings)
-      ? base.warnings.map((warning) => ({ ...warning }))
-      : [],
+    warnings: Array.isArray(base.warnings) ? base.warnings.map(warning => ({ ...warning })) : [],
   };
 }
 
@@ -175,17 +174,18 @@ function applyEnvOverridesWithMetadata(resolvedConfig, metadata, env, prefix) {
     }
 
     const previous = metadata.fields[spec.id] || null;
-    const delegatedByProfile = previous
-      && previous.origin === 'profile-env-placeholder'
-      && previous.placeholderEnvKey === override.envKey;
+    const delegatedByProfile =
+      previous &&
+      previous.origin === 'profile-env-placeholder' &&
+      previous.placeholderEnvKey === override.envKey;
 
     resolvedConfig[spec.writeKey || spec.keys[0]] = override.value;
 
     if (
-      previous
-      && previous.origin === 'profile'
-      && spec.warnOnConflict
-      && valuesConflict(previous.value, override.value)
+      previous &&
+      previous.origin === 'profile' &&
+      spec.warnOnConflict &&
+      valuesConflict(previous.value, override.value)
     ) {
       metadata.warnings.push({
         kind: 'env-profile-conflict',
@@ -219,9 +219,10 @@ function buildResolvedDbConfig({
   scope = 'db',
   mergeConfigLayers = null,
 } = {}) {
-  const merged = typeof mergeConfigLayers === 'function'
-    ? mergeConfigLayers(baseConfig || {}, profileConfig || undefined)
-    : { ...(baseConfig || {}), ...(profileConfig || {}) };
+  const merged =
+    typeof mergeConfigLayers === 'function'
+      ? mergeConfigLayers(baseConfig || {}, profileConfig || undefined)
+      : { ...(baseConfig || {}), ...(profileConfig || {}) };
   const metadata = cloneRuntimeConfigMetadata(baseMetadata, scope, prefix);
 
   applyProfileFieldOrigins(metadata, rawProfileConfig, profileConfig, scope);

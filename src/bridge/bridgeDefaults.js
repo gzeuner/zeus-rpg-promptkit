@@ -12,7 +12,14 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const BRIDGE_MODES = Object.freeze(['plan-only', 'plan-stage-apply', 'plan-stage-apply-compile']);
-const BRIDGE_SUBCOMMANDS = Object.freeze(['plan', 'stage', 'apply', 'compile-plan', 'compile-run', 'report']);
+const BRIDGE_SUBCOMMANDS = Object.freeze([
+  'plan',
+  'stage',
+  'apply',
+  'compile-plan',
+  'compile-run',
+  'report',
+]);
 const KNOWN_COMPILE_TEMPLATE_IDS = Object.freeze([
   'crtbndrpg',
   'crtrpgmod',

@@ -20,14 +20,12 @@ const {
   removeSqlStatementsFile,
   stripSqlComments,
 } = require('./sqlBatch');
-const {
-  executeWithAdaptiveRetry,
-  normalizeSqlState,
-} = require('./adaptiveQueryService');
+const { executeWithAdaptiveRetry, normalizeSqlState } = require('./adaptiveQueryService');
 const { ensureDb2ConnectionGuard } = require('../security/connectionGuards');
 
 const SQL_IDENTIFIER_PATTERN = /^[A-Z][A-Z0-9_#$@]*$/;
-const FORBIDDEN_SQL_PATTERN = /\b(INSERT|UPDATE|DELETE|MERGE|ALTER|DROP|CREATE|TRUNCATE|CALL|GRANT|REVOKE)\b/i;
+const FORBIDDEN_SQL_PATTERN =
+  /\b(INSERT|UPDATE|DELETE|MERGE|ALTER|DROP|CREATE|TRUNCATE|CALL|GRANT|REVOKE)\b/i;
 
 function validateReadOnlySql(query) {
   const normalized = stripSqlComments(String(query || '').trim());
@@ -68,12 +66,14 @@ function normalizeReadOnlyBatchResult(result, statements) {
   }
   return {
     statementCount: 1,
-    statements: [{
-      sql: result.sql || statements[0] || '',
-      columns: Array.isArray(result.columns) ? result.columns : [],
-      rows: Array.isArray(result.rows) ? result.rows : [],
-      rowCount: Number(result.rowCount || (result.rows || []).length || 0),
-    }],
+    statements: [
+      {
+        sql: result.sql || statements[0] || '',
+        columns: Array.isArray(result.columns) ? result.columns : [],
+        rows: Array.isArray(result.rows) ? result.rows : [],
+        rowCount: Number(result.rowCount || (result.rows || []).length || 0),
+      },
+    ],
   };
 }
 
@@ -90,7 +90,9 @@ function extractSqlState(error) {
 }
 
 function validateSqlIdentifier(value, label) {
-  const normalized = String(value || '').trim().toUpperCase();
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase();
   if (!normalized) {
     throw new Error(`Missing required option: ${label}`);
   }
@@ -133,7 +135,9 @@ function executeReadOnlyDb2QueriesRaw({ dbConfig, queries, maxRows = 50, runtime
   // not as a CLI argument. The sentinel marks the position; Java resolves it back.
   let result;
   try {
-    result = runJavaHelperFn('Db2DiagnosticQueryRunner', args, { password: String(dbConfig.password) });
+    result = runJavaHelperFn('Db2DiagnosticQueryRunner', args, {
+      password: String(dbConfig.password),
+    });
   } finally {
     removeSqlStatementsFile(statementFile);
   }
@@ -170,15 +174,16 @@ function runReadOnlyDb2Queries({ dbConfig, queries, maxRows = 50, runtime = {} }
     ensureDb2ConnectionGuard({
       dbConfig,
       scopeLabel: runtime.scopeLabel || 'DB2 read-only connection',
-      probe: ({ query: probeQuery, maxRows: probeMaxRows }) => executeReadOnlyDb2QueryRaw({
-        dbConfig,
-        query: probeQuery,
-        maxRows: probeMaxRows,
-        runtime: {
-          ...runtime,
-          skipConnectionGuard: true,
-        },
-      }),
+      probe: ({ query: probeQuery, maxRows: probeMaxRows }) =>
+        executeReadOnlyDb2QueryRaw({
+          dbConfig,
+          query: probeQuery,
+          maxRows: probeMaxRows,
+          runtime: {
+            ...runtime,
+            skipConnectionGuard: true,
+          },
+        }),
     });
   }
 
@@ -195,12 +200,13 @@ function executeReadOnlyDb2QueryWithFallback({
   degradedMode = 'throw',
 }) {
   const attemptOrder = [{ name: 'primary', query, maxRows }];
-  const queryExecutor = (sql, attemptMaxRows = maxRows) => runReadOnlyDb2Query({
-    dbConfig,
-    query: sql,
-    maxRows: attemptMaxRows,
-    runtime,
-  });
+  const queryExecutor = (sql, attemptMaxRows = maxRows) =>
+    runReadOnlyDb2Query({
+      dbConfig,
+      query: sql,
+      maxRows: attemptMaxRows,
+      runtime,
+    });
 
   const buildFallbackAttempts = ({ error, sqlState }) => {
     const normalizedSqlState = normalizeSqlState(sqlState || extractSqlState(error));
@@ -219,7 +225,7 @@ function executeReadOnlyDb2QueryWithFallback({
     });
     const fallbacks = Array.isArray(fallback) ? fallback : [fallback];
     return fallbacks
-      .filter((entry) => entry && typeof entry.query === 'string')
+      .filter(entry => entry && typeof entry.query === 'string')
       .map((entry, index) => ({
         name: entry.name || `fallback-${normalizedSqlState || 'unknown'}-${index + 1}`,
         query: entry.query,
@@ -239,7 +245,7 @@ function executeReadOnlyDb2QueryWithFallback({
             attempts.push(...fallbackAttempts);
           }
         },
-      },
+      }
     );
     if (!result || result.success !== true) {
       if (result && result.degradedMode && degradedMode !== 'throw') {
@@ -273,7 +279,9 @@ function executeReadOnlyDb2QueryWithFallback({
         rows: [],
         rowCount: 0,
         degradedMode: true,
-        recommendations: ['Metadata query skipped because the current user has no QSYS2 authority.'],
+        recommendations: [
+          'Metadata query skipped because the current user has no QSYS2 authority.',
+        ],
         meta: {
           degradedMode: true,
           attemptCount: 1,

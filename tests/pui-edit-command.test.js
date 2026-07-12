@@ -69,15 +69,23 @@ test('pui-edit apply updates JSON via synthetic change set', async () => {
   try {
     writeSyntheticDisplay(filePath);
 
-    fs.writeFileSync(changeSetPath, JSON.stringify({
-      description: 'Hide an item',
-      operations: [
+    fs.writeFileSync(
+      changeSetPath,
+      JSON.stringify(
         {
-          type: 'hide-item',
-          where: { id: 'fieldA' },
+          description: 'Hide an item',
+          operations: [
+            {
+              type: 'hide-item',
+              where: { id: 'fieldA' },
+            },
+          ],
         },
-      ],
-    }, null, 2), 'utf8');
+        null,
+        2
+      ),
+      'utf8'
+    );
 
     await run({
       file: filePath,
@@ -87,7 +95,7 @@ test('pui-edit apply updates JSON via synthetic change set', async () => {
     });
 
     const json = readDisplayJson(filePath);
-    const field = json.items.find((item) => item.id === 'fieldA');
+    const field = json.items.find(item => item.id === 'fieldA');
 
     assert.equal(field.visibility, 'hidden');
     assert.ok(fs.existsSync(`${filePath}.bak`));
@@ -121,8 +129,8 @@ test('pui-edit grid-add-column appends a column on synthetic display data', asyn
     });
 
     const json = readDisplayJson(filePath);
-    const grid = json.items.find((item) => item.id === 'gridMain');
-    const insertedField = json.items.find((item) => item.id === 'fieldAmount');
+    const grid = json.items.find(item => item.id === 'gridMain');
+    const insertedField = json.items.find(item => item.id === 'fieldAmount');
 
     assert.equal(grid['number of columns'], '2');
     assert.match(grid['column headings'], /Amount/);
@@ -153,9 +161,7 @@ test('pui-edit inserts DDS lines into requested --sfl-record', async () => {
       'field-length': '10',
       'field-width': '90px',
       'sfl-record': 'SFLALT',
-      'sfl-field': [
-        'FIELD_STATUS     10A  O  3  1',
-      ],
+      'sfl-field': ['FIELD_STATUS     10A  O  3  1'],
       'no-auto-adjust': true,
       confirm: true,
     });
@@ -236,19 +242,27 @@ test('pui-edit import-json migrates legacy dddl payload and applies it', async (
     before.screen = before.screen || {};
     before.screen.overlay = true;
 
-    fs.writeFileSync(inPath, JSON.stringify({
-      kind: 'zeus-pui-dddl-v0',
-      version: 0,
-      source: {
-        file: 'DISPLAY_SAMPLE.MBR',
-        path: filePath,
-      },
-      ddsJsonGroup: {
-        segmentCount: 1,
-        compactSourceLength: 100,
-      },
-      json: before,
-    }, null, 2), 'utf8');
+    fs.writeFileSync(
+      inPath,
+      JSON.stringify(
+        {
+          kind: 'zeus-pui-dddl-v0',
+          version: 0,
+          source: {
+            file: 'DISPLAY_SAMPLE.MBR',
+            path: filePath,
+          },
+          ddsJsonGroup: {
+            segmentCount: 1,
+            compactSourceLength: 100,
+          },
+          json: before,
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
 
     await run({
       file: filePath,
@@ -279,7 +293,10 @@ test('pui-edit validate-json accepts plain PUI JSON without --file', async () =>
       in: inPath,
     });
 
-    assert.equal(logs.some((line) => line.includes('Valid plain PUI JSON object')), true);
+    assert.equal(
+      logs.some(line => line.includes('Valid plain PUI JSON object')),
+      true
+    );
   } finally {
     console.log = originalLog;
     fs.rmSync(tempDir, { recursive: true, force: true });
@@ -293,21 +310,29 @@ test('pui-edit validate-json accepts legacy dddl and reports migrations', async 
   const originalLog = console.log;
 
   try {
-    fs.writeFileSync(inPath, JSON.stringify({
-      kind: 'zeus-pui-dddl-v0',
-      version: 0,
-      source: {
-        file: 'DISPLAY_SAMPLE.MBR',
-        path: '/tmp/DISPLAY_SAMPLE.MBR',
-      },
-      ddsJsonGroup: {
-        segmentCount: 1,
-        compactSourceLength: 42,
-      },
-      json: {
-        items: [],
-      },
-    }, null, 2), 'utf8');
+    fs.writeFileSync(
+      inPath,
+      JSON.stringify(
+        {
+          kind: 'zeus-pui-dddl-v0',
+          version: 0,
+          source: {
+            file: 'DISPLAY_SAMPLE.MBR',
+            path: '/tmp/DISPLAY_SAMPLE.MBR',
+          },
+          ddsJsonGroup: {
+            segmentCount: 1,
+            compactSourceLength: 42,
+          },
+          json: {
+            items: [],
+          },
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
     console.log = (...args) => logs.push(args.join(' '));
 
     await run({
@@ -315,8 +340,14 @@ test('pui-edit validate-json accepts legacy dddl and reports migrations', async 
       in: inPath,
     });
 
-    assert.equal(logs.some((line) => line.includes('Valid DDDL')), true);
-    assert.equal(logs.some((line) => line.includes('Applied migrations:') && !line.endsWith('none')), true);
+    assert.equal(
+      logs.some(line => line.includes('Valid DDDL')),
+      true
+    );
+    assert.equal(
+      logs.some(line => line.includes('Applied migrations:') && !line.endsWith('none')),
+      true
+    );
   } finally {
     console.log = originalLog;
     fs.rmSync(tempDir, { recursive: true, force: true });

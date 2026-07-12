@@ -80,7 +80,11 @@
         },
         "zeus.defaultDenseLevel": {
           "type": "string",
-          "enum": ["lite", "full", "ultra"],
+          "enum": [
+            "lite",
+            "full",
+            "ultra"
+          ],
           "default": "full",
           "description": "Default dense output level for editor context (cleaner for AI)."
         },
@@ -109,7 +113,6 @@
     "@types/vscode": "^1.80.0",
     "typescript": "^5.0.0"
   },
-
   "repository": {
     "type": "git",
     "url": "https://github.com/gzeuner/zeus-rpg-promptkit"

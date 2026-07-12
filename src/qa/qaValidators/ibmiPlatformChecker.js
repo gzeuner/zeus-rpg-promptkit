@@ -1,8 +1,8 @@
 /**
  * IBM i Platform Checker
- * 
+ *
  * Validates code against IBM i platform best practices and common gotchas.
- * 
+ *
  * Checks:
  * - CCSID compliance (UTF-8 = 1208)
  * - Schema vs Library syntax
@@ -18,7 +18,7 @@ class IBMiPlatformChecker {
 
   /**
    * Check IBM i platform compliance
-   * 
+   *
    * @param {Object} canonicalAnalysis - Canonical analysis
    * @param {Array} sourceFiles - Source files
    * @param {Object} context - Context
@@ -47,14 +47,15 @@ class IBMiPlatformChecker {
       timestamp: new Date().toISOString(),
       platform: 'IBM i',
       findingsCount: findings.length,
-      status: findings.filter(f => f.severity === 'ERROR').length > 0 ? 'ISSUES_FOUND' : 'COMPLIANT',
+      status:
+        findings.filter(f => f.severity === 'ERROR').length > 0 ? 'ISSUES_FOUND' : 'COMPLIANT',
       findings,
     };
   }
 
   /**
    * Check for duplicate member names
-   * 
+   *
    * @param {Array} sourceFiles - Source files
    * @returns {Array} Findings
    */
@@ -64,7 +65,7 @@ class IBMiPlatformChecker {
 
     for (const file of sourceFiles) {
       const memberKey = file.memberName.toUpperCase();
-      
+
       if (memberMap[memberKey]) {
         findings.push({
           type: 'DUPLICATE_MEMBER_NAME',
@@ -83,7 +84,7 @@ class IBMiPlatformChecker {
 
   /**
    * Check for schema vs library syntax
-   * 
+   *
    * @param {Object} canonicalAnalysis - Analysis
    * @returns {Array} Findings
    */
@@ -117,7 +118,7 @@ class IBMiPlatformChecker {
 
   /**
    * Check for ROW_COUNT usage
-   * 
+   *
    * @param {Object} canonicalAnalysis - Analysis
    * @returns {Array} Findings
    */
@@ -129,7 +130,10 @@ class IBMiPlatformChecker {
     }
 
     for (const sql of canonicalAnalysis.entities.sqlStatements) {
-      if (sql.whereClause && (sql.whereClause.includes('ROW_COUNT') || sql.whereClause.includes('NUMBER_ROWS'))) {
+      if (
+        sql.whereClause &&
+        (sql.whereClause.includes('ROW_COUNT') || sql.whereClause.includes('NUMBER_ROWS'))
+      ) {
         findings.push({
           type: 'ROW_COUNT_USAGE',
           severity: 'WARNING',
@@ -145,7 +149,7 @@ class IBMiPlatformChecker {
 
   /**
    * Check for commitment control considerations
-   * 
+   *
    * @param {Object} canonicalAnalysis - Analysis
    * @returns {Array} Findings
    */
@@ -172,7 +176,7 @@ class IBMiPlatformChecker {
 
   /**
    * Check CCSID compliance
-   * 
+   *
    * @param {Array} sourceFiles - Source files
    * @param {Object} context - Context
    * @returns {Array} Findings

@@ -12,7 +12,9 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 function normalizeName(name) {
-  return String(name || '').trim().toUpperCase();
+  return String(name || '')
+    .trim()
+    .toUpperCase();
 }
 
 function mergeEntityList(scanResults, key, includeKindDefault) {
@@ -42,7 +44,7 @@ function mergeEntityList(scanResults, key, includeKindDefault) {
       const evidenceList = item.evidence || [];
       for (const evidence of evidenceList) {
         const serialized = JSON.stringify(evidence);
-        const exists = target.evidence.some((entry) => JSON.stringify(entry) === serialized);
+        const exists = target.evidence.some(entry => JSON.stringify(entry) === serialized);
         if (!exists) {
           target.evidence.push(evidence);
         }
@@ -63,19 +65,21 @@ function mergeSqlStatements(scanResults) {
         map.set(key, {
           type: sql.type || 'OTHER',
           text: sql.text || '',
-          tables: Array.from(new Set((sql.tables || []).map((name) => normalizeName(name)))).sort(),
+          tables: Array.from(new Set((sql.tables || []).map(name => normalizeName(name)))).sort(),
           evidence: [],
         });
       }
 
       const target = map.get(key);
-      target.tables = Array.from(new Set([...(target.tables || []), ...((sql.tables || []).map((name) => normalizeName(name)))]))
+      target.tables = Array.from(
+        new Set([...(target.tables || []), ...(sql.tables || []).map(name => normalizeName(name))])
+      )
         .filter(Boolean)
         .sort();
 
       for (const evidence of sql.evidence || []) {
         const serialized = JSON.stringify(evidence);
-        const exists = target.evidence.some((entry) => JSON.stringify(entry) === serialized);
+        const exists = target.evidence.some(entry => JSON.stringify(entry) === serialized);
         if (!exists) {
           target.evidence.push(evidence);
         }
@@ -106,7 +110,7 @@ function aggregateDependencies(scanResults) {
     copyMembers: mergeEntityList(scanResults, 'copyMembers'),
     sqlStatements: mergeSqlStatements(scanResults),
     nativeFiles: mergeEntityList(scanResults, 'nativeFiles', 'FILE'),
-    nativeFileAccesses: (scanResults || []).flatMap((result) => result.nativeFileAccesses || []),
+    nativeFileAccesses: (scanResults || []).flatMap(result => result.nativeFileAccesses || []),
     notes,
   };
 }

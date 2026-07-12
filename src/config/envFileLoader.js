@@ -81,19 +81,13 @@ function resolveEnvSearchDirs({ cwd = process.cwd(), configDir } = {}) {
     const nearest = findNearestConfigDir(cwd);
     baseConfigDir = nearest || path.resolve(cwd, 'config');
   }
-  const dirs = [
-    path.join(baseConfigDir, 'local-only'),
-    baseConfigDir,
-    cwd,
-  ];
+  const dirs = [path.join(baseConfigDir, 'local-only'), baseConfigDir, cwd];
   // De-duplicate while preserving order (cwd may equal configDir in odd setups).
   return dirs.filter((dir, index) => dirs.indexOf(dir) === index);
 }
 
 function resolveEnvFileNames(environment) {
-  const normalized = environment && String(environment).trim()
-    ? String(environment).trim()
-    : null;
+  const normalized = environment && String(environment).trim() ? String(environment).trim() : null;
   const names = [{ name: '.env.local', role: 'base' }];
   if (normalized && normalized !== 'default') {
     names.push({ name: `.env.${normalized}.local`, role: 'environment' });
@@ -181,9 +175,10 @@ function autoLoadEnvFiles({
 
   return {
     loaded: applied.length > 0,
-    environment: environment && String(environment).trim() && String(environment).trim() !== 'default'
-      ? String(environment).trim()
-      : null,
+    environment:
+      environment && String(environment).trim() && String(environment).trim() !== 'default'
+        ? String(environment).trim()
+        : null,
     searchDirs,
     files: fileSummaries,
     applied,

@@ -1,20 +1,20 @@
-name: "Enabler / Tech"
-description: "Technical enabler / refactor / internal capability"
-title: "Tech: <short title>"
-labels: ["tech-debt"]
+name: 'Enabler / Tech'
+description: 'Technical enabler / refactor / internal capability'
+title: 'Tech: <short title>'
+labels: ['tech-debt']
 body:
   - type: input
     id: partof
     attributes:
       label: Part of (Epic issue number)
-      placeholder: "#<epic>"
+      placeholder: '#<epic>'
     validations:
       required: false
   - type: textarea
     id: context
     attributes:
       label: Context
-      placeholder: "Why is this needed? Which features depend on it?"
+      placeholder: 'Why is this needed? Which features depend on it?'
     validations:
       required: true
   - type: textarea
@@ -41,6 +41,6 @@ body:
     id: risks
     attributes:
       label: Risks / migration notes
-      placeholder: "Backward compatibility, rollout steps"
+      placeholder: 'Backward compatibility, rollout steps'
     validations:
       required: false

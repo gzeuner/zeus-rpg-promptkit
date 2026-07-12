@@ -29,7 +29,9 @@ const {
 } = require('./canonicalAnalysisModel');
 
 function sortByName(items) {
-  return [...(items || [])].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  return [...(items || [])].sort((a, b) =>
+    String(a.name || '').localeCompare(String(b.name || ''))
+  );
 }
 
 function projectDependencies(canonicalAnalysis) {
@@ -37,34 +39,40 @@ function projectDependencies(canonicalAnalysis) {
   const relations = canonicalAnalysis.relations || [];
   const calledProgramNames = new Set(
     relations
-      .filter((entry) => entry.type === 'CALLS_PROGRAM')
-      .map((entry) => String(entry.to || '').replace(/^PROGRAM:/, ''))
-      .filter(Boolean),
+      .filter(entry => entry.type === 'CALLS_PROGRAM')
+      .map(entry => String(entry.to || '').replace(/^PROGRAM:/, ''))
+      .filter(Boolean)
   );
 
   return {
-    tables: sortByName((entities.tables || []).map((entry) => ({
-      name: entry.name,
-      kind: entry.kind || 'TABLE',
-      evidenceCount: Number(entry.evidenceCount) || 0,
-    }))),
-    programCalls: sortByName((entities.programs || [])
-      .filter((entry) => calledProgramNames.has(String(entry.name || '')))
-      .map((entry) => ({
+    tables: sortByName(
+      (entities.tables || []).map(entry => ({
         name: entry.name,
-        kind: entry.kind || 'PROGRAM',
+        kind: entry.kind || 'TABLE',
         evidenceCount: Number(entry.evidenceCount) || 0,
-        resolutionSource: entry.resolutionSource || 'UNRESOLVED',
-        catalogObjectType: entry.catalogObjectType || null,
-        catalogLibrary: entry.catalogLibrary || null,
-        catalogSchema: entry.catalogSchema || null,
-        catalogSystemName: entry.catalogSystemName || null,
-        catalogSqlName: entry.catalogSqlName || null,
-      }))),
-    copyMembers: sortByName((entities.copyMembers || []).map((entry) => ({
-      name: entry.name,
-      evidenceCount: Number(entry.evidenceCount) || 0,
-    }))),
+      }))
+    ),
+    programCalls: sortByName(
+      (entities.programs || [])
+        .filter(entry => calledProgramNames.has(String(entry.name || '')))
+        .map(entry => ({
+          name: entry.name,
+          kind: entry.kind || 'PROGRAM',
+          evidenceCount: Number(entry.evidenceCount) || 0,
+          resolutionSource: entry.resolutionSource || 'UNRESOLVED',
+          catalogObjectType: entry.catalogObjectType || null,
+          catalogLibrary: entry.catalogLibrary || null,
+          catalogSchema: entry.catalogSchema || null,
+          catalogSystemName: entry.catalogSystemName || null,
+          catalogSqlName: entry.catalogSqlName || null,
+        }))
+    ),
+    copyMembers: sortByName(
+      (entities.copyMembers || []).map(entry => ({
+        name: entry.name,
+        evidenceCount: Number(entry.evidenceCount) || 0,
+      }))
+    ),
   };
 }
 
@@ -72,51 +80,67 @@ function projectProcedureAnalysis(canonicalAnalysis) {
   const entities = canonicalAnalysis.entities || {};
   const relations = canonicalAnalysis.relations || [];
   const procedureTargetById = new Map([
-    ...(entities.prototypes || []).map((entry) => [entry.id, entry]),
-    ...(entities.procedureReferences || []).map((entry) => [entry.id, entry]),
-    ...(entities.procedures || []).map((entry) => [entry.id, entry]),
+    ...(entities.prototypes || []).map(entry => [entry.id, entry]),
+    ...(entities.procedureReferences || []).map(entry => [entry.id, entry]),
+    ...(entities.procedures || []).map(entry => [entry.id, entry]),
   ]);
-  const procedures = sortByName((entities.procedures || []).map((entry) => ({
-    name: entry.name,
-    kind: entry.kind,
-    ownerProgram: entry.ownerProgram,
-    sourceFile: entry.sourceFile,
-    startLine: entry.startLine,
-    endLine: entry.endLine,
-    sourceForm: entry.sourceForm,
-    exported: Boolean(entry.exported),
-    evidenceCount: Number(entry.evidenceCount) || 0,
-  })));
-  const prototypes = sortByName((entities.prototypes || []).map((entry) => ({
-    name: entry.name,
-    ownerProgram: entry.ownerProgram,
-    sourceFile: entry.sourceFile,
-    startLine: entry.startLine,
-    endLine: entry.endLine,
-    sourceForm: entry.sourceForm,
-    imported: Boolean(entry.imported),
-    externalName: entry.externalName || null,
-    evidenceCount: Number(entry.evidenceCount) || 0,
-  })));
+  const procedures = sortByName(
+    (entities.procedures || []).map(entry => ({
+      name: entry.name,
+      kind: entry.kind,
+      ownerProgram: entry.ownerProgram,
+      sourceFile: entry.sourceFile,
+      startLine: entry.startLine,
+      endLine: entry.endLine,
+      sourceForm: entry.sourceForm,
+      exported: Boolean(entry.exported),
+      evidenceCount: Number(entry.evidenceCount) || 0,
+    }))
+  );
+  const prototypes = sortByName(
+    (entities.prototypes || []).map(entry => ({
+      name: entry.name,
+      ownerProgram: entry.ownerProgram,
+      sourceFile: entry.sourceFile,
+      startLine: entry.startLine,
+      endLine: entry.endLine,
+      sourceForm: entry.sourceForm,
+      imported: Boolean(entry.imported),
+      externalName: entry.externalName || null,
+      evidenceCount: Number(entry.evidenceCount) || 0,
+    }))
+  );
   const calls = relations
-    .filter((entry) => entry.type === 'CALLS_PROCEDURE')
-    .map((entry) => {
+    .filter(entry => entry.type === 'CALLS_PROCEDURE')
+    .map(entry => {
       const from = String(entry.from || '');
       const to = String(entry.to || '');
       const caller = from.split(':').slice(-1)[0] || from;
       const targetEntity = procedureTargetById.get(to);
       return {
         caller,
-        target: String(entry.attributes && entry.attributes.targetName ? entry.attributes.targetName : (to.split(':').slice(-1)[0] || to)),
-        resolution: entry.attributes && entry.attributes.resolution ? entry.attributes.resolution : 'UNKNOWN',
-        targetKind: entry.attributes && entry.attributes.targetKind ? entry.attributes.targetKind : '',
+        target: String(
+          entry.attributes && entry.attributes.targetName
+            ? entry.attributes.targetName
+            : to.split(':').slice(-1)[0] || to
+        ),
+        resolution:
+          entry.attributes && entry.attributes.resolution ? entry.attributes.resolution : 'UNKNOWN',
+        targetKind:
+          entry.attributes && entry.attributes.targetKind ? entry.attributes.targetKind : '',
         evidenceCount: Array.isArray(entry.evidence) ? entry.evidence.length : 0,
-        resolutionSource: targetEntity && targetEntity.resolutionSource ? targetEntity.resolutionSource : 'SOURCE',
-        catalogObjectType: targetEntity && targetEntity.catalogObjectType ? targetEntity.catalogObjectType : null,
-        catalogLibrary: targetEntity && targetEntity.catalogLibrary ? targetEntity.catalogLibrary : null,
-        catalogSchema: targetEntity && targetEntity.catalogSchema ? targetEntity.catalogSchema : null,
-        catalogSystemName: targetEntity && targetEntity.catalogSystemName ? targetEntity.catalogSystemName : null,
-        catalogSqlName: targetEntity && targetEntity.catalogSqlName ? targetEntity.catalogSqlName : null,
+        resolutionSource:
+          targetEntity && targetEntity.resolutionSource ? targetEntity.resolutionSource : 'SOURCE',
+        catalogObjectType:
+          targetEntity && targetEntity.catalogObjectType ? targetEntity.catalogObjectType : null,
+        catalogLibrary:
+          targetEntity && targetEntity.catalogLibrary ? targetEntity.catalogLibrary : null,
+        catalogSchema:
+          targetEntity && targetEntity.catalogSchema ? targetEntity.catalogSchema : null,
+        catalogSystemName:
+          targetEntity && targetEntity.catalogSystemName ? targetEntity.catalogSystemName : null,
+        catalogSqlName:
+          targetEntity && targetEntity.catalogSqlName ? targetEntity.catalogSqlName : null,
       };
     })
     .sort((a, b) => {
@@ -130,11 +154,11 @@ function projectProcedureAnalysis(canonicalAnalysis) {
       procedureCount: procedures.length,
       prototypeCount: prototypes.length,
       procedureCallCount: calls.length,
-      internalCallCount: calls.filter((entry) => entry.resolution === 'INTERNAL').length,
-      externalCallCount: calls.filter((entry) => entry.resolution === 'EXTERNAL').length,
-      dynamicCallCount: calls.filter((entry) => entry.resolution === 'DYNAMIC').length,
-      unresolvedCallCount: calls.filter((entry) => entry.resolution === 'UNRESOLVED').length,
-      catalogResolvedCallCount: calls.filter((entry) => entry.resolutionSource === 'CATALOG').length,
+      internalCallCount: calls.filter(entry => entry.resolution === 'INTERNAL').length,
+      externalCallCount: calls.filter(entry => entry.resolution === 'EXTERNAL').length,
+      dynamicCallCount: calls.filter(entry => entry.resolution === 'DYNAMIC').length,
+      unresolvedCallCount: calls.filter(entry => entry.resolution === 'UNRESOLVED').length,
+      catalogResolvedCallCount: calls.filter(entry => entry.resolutionSource === 'CATALOG').length,
     },
     procedures,
     prototypes,
@@ -143,14 +167,19 @@ function projectProcedureAnalysis(canonicalAnalysis) {
 }
 
 function projectSql(canonicalAnalysis) {
-  const sqlStatements = (canonicalAnalysis.entities && canonicalAnalysis.entities.sqlStatements) || [];
-  const sqlVal = (canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.sql && canonicalAnalysis.enrichments.sql.validation) ||
-                 (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.sqlValidation) ||
-                 (canonicalAnalysis.sql && canonicalAnalysis.sql.validation) || {};
+  const sqlStatements =
+    (canonicalAnalysis.entities && canonicalAnalysis.entities.sqlStatements) || [];
+  const sqlVal =
+    (canonicalAnalysis.enrichments &&
+      canonicalAnalysis.enrichments.sql &&
+      canonicalAnalysis.enrichments.sql.validation) ||
+    (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.sqlValidation) ||
+    (canonicalAnalysis.sql && canonicalAnalysis.sql.validation) ||
+    {};
   const sqlAnalysis = summarizeSqlStatements(sqlStatements, sqlVal);
   return {
     summary: sqlAnalysis.summary,
-    statements: sqlStatements.map((statement) => ({
+    statements: sqlStatements.map(statement => ({
       type: statement.type,
       intent: statement.intent || 'OTHER',
       text: statement.text,
@@ -172,7 +201,10 @@ function projectSql(canonicalAnalysis) {
     tableNames: sqlAnalysis.tableNames,
     hostVariables: sqlAnalysis.hostVariables,
     cursors: sqlAnalysis.cursors,
-    validation: (canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.sql && canonicalAnalysis.enrichments.sql.validation) || sqlAnalysis.validation || { errors: [], warnings: [] },
+    validation: (canonicalAnalysis.enrichments &&
+      canonicalAnalysis.enrichments.sql &&
+      canonicalAnalysis.enrichments.sql.validation) ||
+      sqlAnalysis.validation || { errors: [], warnings: [] },
   };
 }
 
@@ -189,101 +221,127 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
     program: canonicalAnalysis.rootProgram,
     scannedAt: canonicalAnalysis.generatedAt,
     sourceRoot: canonicalAnalysis.sourceRoot,
-    sourceFiles: (canonicalAnalysis.sourceFiles || []).map((entry) => ({
+    sourceFiles: (canonicalAnalysis.sourceFiles || []).map(entry => ({
       path: entry.path,
       sizeBytes: Number(entry.sizeBytes) || 0,
       lines: Number(entry.lines) || 0,
       sourceType: entry.sourceType || '',
       normalization: entry.normalization || null,
     })),
-    summary: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.summary
-      ? canonicalAnalysis.enrichments.summary
-      : {
-        sourceFileCount: 0,
-        tableCount: 0,
-        programCallCount: 0,
-        copyMemberCount: 0,
-        sqlStatementCount: 0,
-        text: '',
-      },
+    summary:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.summary
+        ? canonicalAnalysis.enrichments.summary
+        : {
+            sourceFileCount: 0,
+            tableCount: 0,
+            programCallCount: 0,
+            copyMemberCount: 0,
+            sqlStatementCount: 0,
+            text: '',
+          },
     dependencies: projectDependencies(canonicalAnalysis),
     procedureAnalysis: projectProcedureAnalysis(canonicalAnalysis),
     bindingAnalysis: projectBindingAnalysis(canonicalAnalysis),
-    nativeFileUsage: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.nativeFileUsage
-      ? canonicalAnalysis.enrichments.nativeFileUsage
-      : defaultNativeFileUsage(),
+    nativeFileUsage:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.nativeFileUsage
+        ? canonicalAnalysis.enrichments.nativeFileUsage
+        : defaultNativeFileUsage(),
     sql: projectSql(canonicalAnalysis) || defaultSqlAnalysis(),
     rpgConstructs: {
-      languageFeatures: canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.languageFeatures
-        ? canonicalAnalysis.rpgConstructs.languageFeatures
-        : { bifCount: 0, indicatorCount: 0, dataStructureCount: 0, standaloneFieldCount: 0, uniqueBifs: [], uniqueIndicators: [] },
+      languageFeatures:
+        canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.languageFeatures
+          ? canonicalAnalysis.rpgConstructs.languageFeatures
+          : {
+              bifCount: 0,
+              indicatorCount: 0,
+              dataStructureCount: 0,
+              standaloneFieldCount: 0,
+              uniqueBifs: [],
+              uniqueIndicators: [],
+            },
       bifUsages: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.bifs) || [],
-      indicatorUsages: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.indicators) || [],
-      dataStructures: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.dataStructures) || [],
-      standaloneFields: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.standaloneFields) || [],
-      constants: (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.constants) || [],
+      indicatorUsages:
+        (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.indicators) || [],
+      dataStructures:
+        (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.dataStructures) || [],
+      standaloneFields:
+        (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.standaloneFields) || [],
+      constants:
+        (canonicalAnalysis.rpgConstructs && canonicalAnalysis.rpgConstructs.constants) || [],
     },
-    graph: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.graph
-      ? canonicalAnalysis.enrichments.graph
-      : defaultGraphSummary(),
-    crossProgramGraph: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.crossProgramGraph
-      ? canonicalAnalysis.enrichments.crossProgramGraph
-      : defaultCrossProgramSummary(),
-    sourceNormalization: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.sourceNormalization
-      ? canonicalAnalysis.enrichments.sourceNormalization
-      : {
-        fileCount: 0,
-        convertedEncodingCount: 0,
-        normalizedFileCount: 0,
-        bomRemovedCount: 0,
-        normalizedLineEndingCount: 0,
-        invalidFileCount: 0,
-        warningCount: 0,
-      },
-    sourceTypeAnalysis: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.sourceTypeAnalysis
-      ? canonicalAnalysis.enrichments.sourceTypeAnalysis
-      : {
-        summary: { byType: {}, byFamily: {} },
-        commands: [],
-        objectUsages: [],
-        ddsFiles: [],
-      },
-    ifsPaths: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.ifsPaths
-      ? canonicalAnalysis.enrichments.ifsPaths
-      : defaultIfsPathReport(),
-    searchResults: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.searchResults
-      ? canonicalAnalysis.enrichments.searchResults
-      : defaultSearchResults(),
-    diagnosticPacks: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.diagnosticPacks
-      ? canonicalAnalysis.enrichments.diagnosticPacks
-      : defaultDiagnosticPackReport(),
-    puiPatterns: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.puiPatterns
-      ? canonicalAnalysis.enrichments.puiPatterns
-      : defaultPuiPatterns(),
-    knownFacts: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.knownFacts
-      ? canonicalAnalysis.enrichments.knownFacts
-      : defaultKnownFacts(),
-    analysisCache: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.analysisCache
-      ? canonicalAnalysis.enrichments.analysisCache
-      : defaultAnalysisCache(),
+    graph:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.graph
+        ? canonicalAnalysis.enrichments.graph
+        : defaultGraphSummary(),
+    crossProgramGraph:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.crossProgramGraph
+        ? canonicalAnalysis.enrichments.crossProgramGraph
+        : defaultCrossProgramSummary(),
+    sourceNormalization:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.sourceNormalization
+        ? canonicalAnalysis.enrichments.sourceNormalization
+        : {
+            fileCount: 0,
+            convertedEncodingCount: 0,
+            normalizedFileCount: 0,
+            bomRemovedCount: 0,
+            normalizedLineEndingCount: 0,
+            invalidFileCount: 0,
+            warningCount: 0,
+          },
+    sourceTypeAnalysis:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.sourceTypeAnalysis
+        ? canonicalAnalysis.enrichments.sourceTypeAnalysis
+        : {
+            summary: { byType: {}, byFamily: {} },
+            commands: [],
+            objectUsages: [],
+            ddsFiles: [],
+          },
+    ifsPaths:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.ifsPaths
+        ? canonicalAnalysis.enrichments.ifsPaths
+        : defaultIfsPathReport(),
+    searchResults:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.searchResults
+        ? canonicalAnalysis.enrichments.searchResults
+        : defaultSearchResults(),
+    diagnosticPacks:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.diagnosticPacks
+        ? canonicalAnalysis.enrichments.diagnosticPacks
+        : defaultDiagnosticPackReport(),
+    puiPatterns:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.puiPatterns
+        ? canonicalAnalysis.enrichments.puiPatterns
+        : defaultPuiPatterns(),
+    knownFacts:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.knownFacts
+        ? canonicalAnalysis.enrichments.knownFacts
+        : defaultKnownFacts(),
+    analysisCache:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.analysisCache
+        ? canonicalAnalysis.enrichments.analysisCache
+        : defaultAnalysisCache(),
     db2Metadata: canonicalAnalysis.enrichments ? canonicalAnalysis.enrichments.db2Metadata : null,
     testData: canonicalAnalysis.enrichments ? canonicalAnalysis.enrichments.testData : null,
-    aiContext: canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.aiContext
-      ? canonicalAnalysis.enrichments.aiContext
-      : {
-        programPurposeHint: '',
-        primaryTables: [],
-        primaryCalls: [],
-        riskHints: [],
-      },
+    aiContext:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.aiContext
+        ? canonicalAnalysis.enrichments.aiContext
+        : {
+            programPurposeHint: '',
+            primaryTables: [],
+            primaryCalls: [],
+            riskHints: [],
+          },
     notes: canonicalAnalysis.notes || [],
   };
 }
 
 function buildContext(input) {
-  const canonicalAnalysis = input && input.canonicalAnalysis
-    ? input.canonicalAnalysis
-    : buildCanonicalAnalysisModel(input || {});
+  const canonicalAnalysis =
+    input && input.canonicalAnalysis
+      ? input.canonicalAnalysis
+      : buildCanonicalAnalysisModel(input || {});
   return projectContextFromCanonicalAnalysis(canonicalAnalysis);
 }
 

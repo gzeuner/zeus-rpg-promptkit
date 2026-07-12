@@ -19,10 +19,7 @@ const {
   resolveProfile,
   resolveFetchConfig,
 } = require('../config/runtimeConfig');
-const {
-  copyFetchedSourcesToWorkspace,
-  parseMembersCsv,
-} = require('../workspace/workCopyService');
+const { copyFetchedSourcesToWorkspace, parseMembersCsv } = require('../workspace/workCopyService');
 
 function executeCopyToWorkspace(args, options = {}) {
   const cwd = options.cwd || process.cwd();
@@ -39,7 +36,9 @@ function executeCopyToWorkspace(args, options = {}) {
   const workCopyConfig = readWorkCopyConfig(profile, env);
   const sourceRoot = path.resolve(cwd, options.sourceRoot || fetchConfig.out);
   const targetRoot = path.resolve(cwd, options.targetRoot || workCopyConfig.root);
-  const workCopyMode = String(options.workCopyMode || workCopyConfig.extension).trim().toLowerCase();
+  const workCopyMode = String(options.workCopyMode || workCopyConfig.extension)
+    .trim()
+    .toLowerCase();
 
   if (!fs.existsSync(sourceRoot)) {
     const error = new Error(`Fetch output directory not found: ${sourceRoot}`);

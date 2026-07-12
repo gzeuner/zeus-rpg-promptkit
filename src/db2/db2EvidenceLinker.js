@@ -16,7 +16,9 @@ function asArray(value) {
 }
 
 function normalizeIdentifier(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function parseQualifiedIdentifier(value) {
@@ -57,16 +59,23 @@ function parseQualifiedIdentifier(value) {
 }
 
 function uniqueSortedStrings(values) {
-  return Array.from(new Set(asArray(values).map((value) => String(value || '').trim()).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      asArray(values)
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function sortEvidence(evidenceList) {
   return asArray(evidenceList)
-    .filter((entry) => entry && typeof entry === 'object' && entry.file)
-    .map((entry) => ({
+    .filter(entry => entry && typeof entry === 'object' && entry.file)
+    .map(entry => ({
       file: String(entry.file || ''),
-      ...(Number.isFinite(Number(entry.startLine || entry.line)) ? { startLine: Number(entry.startLine || entry.line) } : {}),
+      ...(Number.isFinite(Number(entry.startLine || entry.line))
+        ? { startLine: Number(entry.startLine || entry.line) }
+        : {}),
       ...(Number.isFinite(Number(entry.endLine || entry.line || entry.startLine))
         ? { endLine: Number(entry.endLine || entry.line || entry.startLine) }
         : {}),
@@ -110,7 +119,7 @@ function buildNativeFileSummary(contextFile, nativeFileEntity) {
     keyed: Boolean(contextFile.keyed),
     mutating: Boolean(contextFile.access && contextFile.access.mutating),
     interactive: Boolean(contextFile.access && contextFile.access.interactive),
-    recordFormats: asArray(contextFile.recordFormats).map((entry) => entry.name),
+    recordFormats: asArray(contextFile.recordFormats).map(entry => entry.name),
     evidence: dedupeEvidence(nativeFileEntity && nativeFileEntity.evidence),
   };
 }
@@ -136,13 +145,15 @@ function normalizeCatalogTable(table) {
     systemName,
     objectType: objectType || 'TABLE',
     lookupStrategy,
-    aliases: uniqueSortedStrings([
-      sqlName,
-      systemName,
-      schema && sqlName ? `${schema}.${sqlName}` : '',
-      systemSchema && systemName ? `${systemSchema}/${systemName}` : '',
-      table && table.requestedName ? normalizeIdentifier(table.requestedName) : '',
-    ].filter(Boolean)),
+    aliases: uniqueSortedStrings(
+      [
+        sqlName,
+        systemName,
+        schema && sqlName ? `${schema}.${sqlName}` : '',
+        systemSchema && systemName ? `${systemSchema}/${systemName}` : '',
+        table && table.requestedName ? normalizeIdentifier(table.requestedName) : '',
+      ].filter(Boolean)
+    ),
   };
 }
 
@@ -156,13 +167,18 @@ function isRequestedTableMatch(requested, table) {
   if (normalizedRequested.schema && normalizedRequested.schema !== normalizedTable.schema) {
     return false;
   }
-  if (normalizedRequested.systemSchema && normalizedRequested.systemSchema !== normalizedTable.systemSchema) {
+  if (
+    normalizedRequested.systemSchema &&
+    normalizedRequested.systemSchema !== normalizedTable.systemSchema
+  ) {
     return false;
   }
 
-  return normalizedTable.aliases.includes(normalizedRequested.qualified)
-    || normalizedTable.aliases.includes(normalizedRequested.name)
-    || normalizedTable.aliases.includes(normalizedRequested.systemName);
+  return (
+    normalizedTable.aliases.includes(normalizedRequested.qualified) ||
+    normalizedTable.aliases.includes(normalizedRequested.name) ||
+    normalizedTable.aliases.includes(normalizedRequested.systemName)
+  );
 }
 
 function resolveTableMatchType(requested, table) {
@@ -172,16 +188,29 @@ function resolveTableMatchType(requested, table) {
     return '';
   }
 
-  if (normalizedRequested.schema && normalizedTable.schema && normalizedRequested.schema === normalizedTable.schema && normalizedRequested.name === normalizedTable.table) {
+  if (
+    normalizedRequested.schema &&
+    normalizedTable.schema &&
+    normalizedRequested.schema === normalizedTable.schema &&
+    normalizedRequested.name === normalizedTable.table
+  ) {
     return 'SQL_QUALIFIED_NAME';
   }
-  if (normalizedRequested.systemSchema && normalizedTable.systemSchema && normalizedRequested.systemSchema === normalizedTable.systemSchema && normalizedRequested.systemName === normalizedTable.systemName) {
+  if (
+    normalizedRequested.systemSchema &&
+    normalizedTable.systemSchema &&
+    normalizedRequested.systemSchema === normalizedTable.systemSchema &&
+    normalizedRequested.systemName === normalizedTable.systemName
+  ) {
     return 'SYSTEM_QUALIFIED_NAME';
   }
   if (normalizedRequested.name && normalizedRequested.name === normalizedTable.table) {
     return 'SQL_NAME';
   }
-  if (normalizedRequested.systemName && normalizedRequested.systemName === normalizedTable.systemName) {
+  if (
+    normalizedRequested.systemName &&
+    normalizedRequested.systemName === normalizedTable.systemName
+  ) {
     return 'SYSTEM_NAME';
   }
   return 'ALIAS';
@@ -218,42 +247,63 @@ function buildDb2SourceLinkage({ requestedTables, exportedTables, canonicalAnaly
   const normalizedRequestedTables = uniqueSortedStrings(requestedTables);
   const exported = asArray(exportedTables).map(normalizeCatalogTable);
   const lookupIndex = buildDb2TableLookupIndex(exported);
-  const tableEntitiesByName = new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.tables)
-    .map((entry) => [normalizeIdentifier(entry && entry.name), entry]));
-  const sqlStatements = asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.sqlStatements);
-  const nativeFileEntitiesByName = new Map(asArray(canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.nativeFiles)
-    .map((entry) => [normalizeIdentifier(entry && entry.name), entry]));
-  const contextNativeFilesByName = new Map(asArray(context && context.nativeFileUsage && context.nativeFileUsage.files)
-    .map((entry) => [normalizeIdentifier(entry && entry.name), entry]));
+  const tableEntitiesByName = new Map(
+    asArray(
+      canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.tables
+    ).map(entry => [normalizeIdentifier(entry && entry.name), entry])
+  );
+  const sqlStatements = asArray(
+    canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.sqlStatements
+  );
+  const nativeFileEntitiesByName = new Map(
+    asArray(
+      canonicalAnalysis && canonicalAnalysis.entities && canonicalAnalysis.entities.nativeFiles
+    ).map(entry => [normalizeIdentifier(entry && entry.name), entry])
+  );
+  const contextNativeFilesByName = new Map(
+    asArray(context && context.nativeFileUsage && context.nativeFileUsage.files).map(entry => [
+      normalizeIdentifier(entry && entry.name),
+      entry,
+    ])
+  );
 
-  const tableLinks = normalizedRequestedTables.map((requestedName) => {
-    const aliasMatches = lookupIndex.aliasIndex.get(parseQualifiedIdentifier(requestedName).qualified) || [];
-    const fallbackMatches = aliasMatches.length > 0
-      ? aliasMatches
-      : exported.filter((entry) => isRequestedTableMatch(requestedName, entry));
-    const matches = Array.from(new Map(fallbackMatches
-      .map((entry) => [
-        [
-          normalizeIdentifier(entry.schema),
-          normalizeIdentifier(entry.table),
-          normalizeIdentifier(entry.systemSchema),
-          normalizeIdentifier(entry.systemName),
-        ].join('|'),
-        {
-          schema: normalizeIdentifier(entry.schema),
-          table: normalizeIdentifier(entry.table),
-          systemSchema: normalizeIdentifier(entry.systemSchema),
-          systemName: normalizeIdentifier(entry.systemName),
-          objectType: normalizeIdentifier(entry.objectType || 'TABLE') || 'TABLE',
-          lookupStrategy: normalizeCatalogLookupStrategy(entry.lookupStrategy),
-          matchType: resolveTableMatchType(requestedName, entry),
-        },
-      ]))
-      .values());
-    const matchStatus = matches.length === 0 ? 'unresolved' : matches.length === 1 ? 'resolved' : 'ambiguous';
+  const tableLinks = normalizedRequestedTables.map(requestedName => {
+    const aliasMatches =
+      lookupIndex.aliasIndex.get(parseQualifiedIdentifier(requestedName).qualified) || [];
+    const fallbackMatches =
+      aliasMatches.length > 0
+        ? aliasMatches
+        : exported.filter(entry => isRequestedTableMatch(requestedName, entry));
+    const matches = Array.from(
+      new Map(
+        fallbackMatches.map(entry => [
+          [
+            normalizeIdentifier(entry.schema),
+            normalizeIdentifier(entry.table),
+            normalizeIdentifier(entry.systemSchema),
+            normalizeIdentifier(entry.systemName),
+          ].join('|'),
+          {
+            schema: normalizeIdentifier(entry.schema),
+            table: normalizeIdentifier(entry.table),
+            systemSchema: normalizeIdentifier(entry.systemSchema),
+            systemName: normalizeIdentifier(entry.systemName),
+            objectType: normalizeIdentifier(entry.objectType || 'TABLE') || 'TABLE',
+            lookupStrategy: normalizeCatalogLookupStrategy(entry.lookupStrategy),
+            matchType: resolveTableMatchType(requestedName, entry),
+          },
+        ])
+      ).values()
+    );
+    const matchStatus =
+      matches.length === 0 ? 'unresolved' : matches.length === 1 ? 'resolved' : 'ambiguous';
     const tableEntity = tableEntitiesByName.get(requestedName);
     const sqlReferences = sqlStatements
-      .filter((statement) => asArray(statement.tables).some((tableName) => normalizeIdentifier(tableName) === requestedName))
+      .filter(statement =>
+        asArray(statement.tables).some(
+          tableName => normalizeIdentifier(tableName) === requestedName
+        )
+      )
       .map(buildSqlReferenceSummary)
       .sort((a, b) => {
         if (a.type !== b.type) return a.type.localeCompare(b.type);
@@ -261,11 +311,13 @@ function buildDb2SourceLinkage({ requestedTables, exportedTables, canonicalAnaly
       });
     const contextNativeFile = contextNativeFilesByName.get(requestedName);
     const nativeFileEntity = nativeFileEntitiesByName.get(requestedName);
-    const nativeFiles = contextNativeFile ? [buildNativeFileSummary(contextNativeFile, nativeFileEntity)] : [];
+    const nativeFiles = contextNativeFile
+      ? [buildNativeFileSummary(contextNativeFile, nativeFileEntity)]
+      : [];
     const sourceEvidence = dedupeEvidence([
       ...(tableEntity && tableEntity.evidence ? tableEntity.evidence : []),
-      ...sqlReferences.flatMap((entry) => entry.evidence),
-      ...nativeFiles.flatMap((entry) => entry.evidence),
+      ...sqlReferences.flatMap(entry => entry.evidence),
+      ...nativeFiles.flatMap(entry => entry.evidence),
     ]);
 
     const diagnostics = [];
@@ -279,7 +331,9 @@ function buildDb2SourceLinkage({ requestedTables, exportedTables, canonicalAnaly
         },
       });
     }
-    const fallbackMatchesByStrategy = matches.filter((entry) => entry.lookupStrategy !== 'IBM_I_CATALOG');
+    const fallbackMatchesByStrategy = matches.filter(
+      entry => entry.lookupStrategy !== 'IBM_I_CATALOG'
+    );
     for (const match of fallbackMatchesByStrategy) {
       diagnostics.push({
         severity: 'info',
@@ -300,7 +354,7 @@ function buildDb2SourceLinkage({ requestedTables, exportedTables, canonicalAnaly
         message: `DB2 metadata resolved source table ${requestedName} to multiple schemas.`,
         details: {
           requestedTable: requestedName,
-          matchedSchemas: matches.map((entry) => entry.schema || entry.systemSchema),
+          matchedSchemas: matches.map(entry => entry.schema || entry.systemSchema),
         },
       });
     }
@@ -308,7 +362,7 @@ function buildDb2SourceLinkage({ requestedTables, exportedTables, canonicalAnaly
     return {
       requestedName,
       matchStatus,
-      matches: matches.map((entry) => ({
+      matches: matches.map(entry => ({
         schema: entry.schema,
         table: entry.table,
         systemSchema: entry.systemSchema,
@@ -337,14 +391,16 @@ function buildDb2SourceLinkage({ requestedTables, exportedTables, canonicalAnaly
   return {
     tableLinks,
     tableLinkByExactKey: linkByExactKey,
-    unresolvedTables: tableLinks.filter((entry) => entry.matchStatus === 'unresolved').map((entry) => entry.requestedName),
+    unresolvedTables: tableLinks
+      .filter(entry => entry.matchStatus === 'unresolved')
+      .map(entry => entry.requestedName),
     ambiguousTables: tableLinks
-      .filter((entry) => entry.matchStatus === 'ambiguous')
-      .map((entry) => ({
+      .filter(entry => entry.matchStatus === 'ambiguous')
+      .map(entry => ({
         requestedName: entry.requestedName,
-        matchedSchemas: entry.matches.map((match) => match.schema || match.systemSchema),
+        matchedSchemas: entry.matches.map(match => match.schema || match.systemSchema),
       })),
-    diagnostics: tableLinks.flatMap((entry) => entry.diagnostics),
+    diagnostics: tableLinks.flatMap(entry => entry.diagnostics),
   };
 }
 
@@ -355,7 +411,8 @@ function buildCompactDb2TableLink(link, table) {
     requestedName: link.requestedName,
     matchStatus: link.matchStatus,
     matchedBy: primaryMatch.matchType || null,
-    lookupStrategy: primaryMatch.lookupStrategy || normalizeCatalogLookupStrategy(normalizedTable.lookupStrategy),
+    lookupStrategy:
+      primaryMatch.lookupStrategy || normalizeCatalogLookupStrategy(normalizedTable.lookupStrategy),
     displayName: normalizedTable.table || normalizedTable.systemName,
     schema: normalizedTable.schema,
     table: normalizedTable.table,
@@ -363,7 +420,9 @@ function buildCompactDb2TableLink(link, table) {
     systemName: normalizedTable.systemName,
     objectType: normalizedTable.objectType,
     textDescription: String(normalizedTable.textDescription || '').trim() || null,
-    estimatedRowCount: Number.isFinite(Number(normalizedTable.estimatedRowCount)) ? Number(normalizedTable.estimatedRowCount) : null,
+    estimatedRowCount: Number.isFinite(Number(normalizedTable.estimatedRowCount))
+      ? Number(normalizedTable.estimatedRowCount)
+      : null,
     columnCount: asArray(normalizedTable.columns).length,
     foreignKeyCount: asArray(normalizedTable.foreignKeys).length,
     triggerCount: asArray(normalizedTable.triggers).length,
@@ -388,7 +447,7 @@ function buildCompactTestDataLink(link, table) {
     systemSchema: normalizedTable.systemSchema,
     systemName: normalizedTable.systemName,
     rowCount: Number(table && table.rowCount) || 0,
-    status: String(table && table.status || ''),
+    status: String((table && table.status) || ''),
     sourceEvidenceCount: asArray(link.sourceEvidence).length,
     sqlReferenceCount: asArray(link.sqlReferences).length,
     nativeFileCount: asArray(link.nativeFiles).length,

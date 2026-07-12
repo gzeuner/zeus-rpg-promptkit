@@ -31,19 +31,25 @@ function loadBaseArtifacts(analysisDir) {
   const canonicalPath = path.join(analysisDir, 'canonical-analysis.json');
   let canonical = null;
   if (fs.existsSync(canonicalPath)) {
-    try { canonical = JSON.parse(fs.readFileSync(canonicalPath, 'utf8')); } catch (_) {}
+    try {
+      canonical = JSON.parse(fs.readFileSync(canonicalPath, 'utf8'));
+    } catch (_) {}
   }
 
   const contextPath = path.join(analysisDir, 'context.json');
   let context = null;
   if (fs.existsSync(contextPath)) {
-    try { context = JSON.parse(fs.readFileSync(contextPath, 'utf8')); } catch (_) {}
+    try {
+      context = JSON.parse(fs.readFileSync(contextPath, 'utf8'));
+    } catch (_) {}
   }
 
   const searchPath = path.join(analysisDir, 'search-results.json');
   let searchResults = null;
   if (fs.existsSync(searchPath)) {
-    try { searchResults = JSON.parse(fs.readFileSync(searchPath, 'utf8')); } catch (_) {}
+    try {
+      searchResults = JSON.parse(fs.readFileSync(searchPath, 'utf8'));
+    } catch (_) {}
   }
 
   return { canonical, context, searchResults };
@@ -53,7 +59,11 @@ function loadBaseArtifacts(analysisDir) {
  * Focus the investigation on specific areas.
  */
 function focus({ analysisDir, sessionId = null, goal = '', focus: focusPatch = {} }) {
-  const { session, sessionDir, sessionPath } = createOrLoadSession({ outputProgramDir: analysisDir, sessionId, goal });
+  const { session, sessionDir, sessionPath } = createOrLoadSession({
+    outputProgramDir: analysisDir,
+    sessionId,
+    goal,
+  });
 
   const updated = applyFocus({ session, sessionPath }, focusPatch);
 
@@ -68,12 +78,17 @@ function focus({ analysisDir, sessionId = null, goal = '', focus: focusPatch = {
  * Perform a scoped full-text search within the current focus.
  */
 function search({ analysisDir, sessionId = null, terms = [], goal = '' }) {
-  const { session, sessionDir, sessionPath } = createOrLoadSession({ outputProgramDir: analysisDir, sessionId, goal });
+  const { session, sessionDir, sessionPath } = createOrLoadSession({
+    outputProgramDir: analysisDir,
+    sessionId,
+    goal,
+  });
 
   const focus = getFocusedContext(session);
   const base = loadBaseArtifacts(analysisDir);
 
-  const effectiveTerms = Array.isArray(terms) && terms.length > 0 ? terms : (focus.searchScopes || []);
+  const effectiveTerms =
+    Array.isArray(terms) && terms.length > 0 ? terms : focus.searchScopes || [];
 
   if (effectiveTerms.length === 0) {
     return {
@@ -94,23 +109,31 @@ function search({ analysisDir, sessionId = null, terms = [], goal = '' }) {
   if (base.searchResults && base.searchResults.kind === 'full-text-search-results') {
     // Better: filter existing search results by the effective terms if possible
     const existingMatches = (base.searchResults.matches || []).filter(m =>
-      effectiveTerms.some(t => (m.term || '').toLowerCase().includes(t.toLowerCase()) || (m.line || '').toLowerCase().includes(t.toLowerCase()))
+      effectiveTerms.some(
+        t =>
+          (m.term || '').toLowerCase().includes(t.toLowerCase()) ||
+          (m.line || '').toLowerCase().includes(t.toLowerCase())
+      )
     );
     results = {
       ...base.searchResults,
       terms: effectiveTerms,
       matches: existingMatches.slice(0, 100),
       summary: {
-        ... (base.searchResults.summary || {}),
+        ...(base.searchResults.summary || {}),
         matchCount: existingMatches.length,
-        filtered: true
-      }
+        filtered: true,
+      },
     };
   } else {
-    results = runFullTextSearch(sourceTextByRelativePath, {}, {
-      terms: effectiveTerms,
-      maxResults: 100,
-    });
+    results = runFullTextSearch(
+      sourceTextByRelativePath,
+      {},
+      {
+        terms: effectiveTerms,
+        maxResults: 100,
+      }
+    );
   }
 
   recordSearch({ session, sessionPath }, results);

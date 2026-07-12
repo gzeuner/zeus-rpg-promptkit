@@ -16,15 +16,17 @@ function escapeCsvValue(value) {
 }
 
 function renderCsv(columns, rows) {
-  const header = (columns || []).map((column) => String(column || '')).join(';');
-  const lines = (rows || []).map((row) => (columns || [])
-    .map((column, index) => {
-      if (Array.isArray(row)) {
-        return escapeCsvValue(row[index]);
-      }
-      return escapeCsvValue(row && typeof row === 'object' ? row[column] : '');
-    })
-    .join(';'));
+  const header = (columns || []).map(column => String(column || '')).join(';');
+  const lines = (rows || []).map(row =>
+    (columns || [])
+      .map((column, index) => {
+        if (Array.isArray(row)) {
+          return escapeCsvValue(row[index]);
+        }
+        return escapeCsvValue(row && typeof row === 'object' ? row[column] : '');
+      })
+      .join(';')
+  );
   return `${[header, ...lines].join('\n')}\n`;
 }
 

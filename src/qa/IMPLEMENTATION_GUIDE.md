@@ -75,10 +75,10 @@ module.exports = {
       validatorName: 'MyValidator',
       timestamp: new Date().toISOString(),
       status: 'COMPLETED',
-      result: { /* findings */ },
+      result: {/* findings */},
       // or errors: [ { message, code } ]
     };
-  }
+  },
 };
 ```
 
@@ -106,6 +106,7 @@ function loadQAStages(config = {}) {
 ```
 
 **To add a new validator:**
+
 1. Create `qaValidators/<name>.js` with `validate()` method
 2. Add entry to `QA_STAGE_REGISTRY` in `qaStageRegistry.js`
 3. Add `loadQAStages()` to load it
@@ -148,14 +149,15 @@ node cli/zeus.js qa --input ./output/MYPGM --strict STRICT --format json
 ```javascript
 // qaIntegration.js
 const qaConfig = {
-  qaMode: true,           // Enable QA
-  qaStrict: 'LENIENT',    // LENIENT or STRICT
+  qaMode: true, // Enable QA
+  qaStrict: 'LENIENT', // LENIENT or STRICT
 };
 
 const qaResults = await runQAPipeline(context, { qa: qaConfig });
 ```
 
 **Config sources** (priority order):
+
 1. Command-line args (`--qa-mode`, `--qa-strict`)
 2. Profile config (`profiles.json` - qa section)
 3. Environment variables (`ZEUS_QA_MODE`, etc.)
@@ -181,7 +183,7 @@ describe('QA Stage Registry', () => {
 ```javascript
 async validate(canonicalAnalysis, sourceFiles, context) {
   const findings = [];
-  
+
   if (!canonicalAnalysis.entities) {
     return { status: 'NO_DATA', findings: [] };
   }
@@ -218,9 +220,9 @@ async validate(canonicalAnalysis, sourceFiles, context) {
 
   const oldData = extractData(context.oldCanonicalAnalysis);
   const newData = extractData(canonicalAnalysis);
-  
+
   const changes = compareData(oldData, newData);
-  
+
   return {
     validatorName: 'ComparisonValidator',
     changes,

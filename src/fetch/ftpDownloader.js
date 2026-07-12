@@ -15,14 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const ftp = require('basic-ftp');
 
-async function downloadDirectoryViaFtp({
-  host,
-  user,
-  password,
-  remoteDir,
-  localDir,
-  verbose,
-}) {
+async function downloadDirectoryViaFtp({ host, user, password, remoteDir, localDir, verbose }) {
   const client = new ftp.Client(30000);
   client.ftp.verbose = false;
   let downloadedCount = 0;
@@ -34,9 +27,10 @@ async function downloadDirectoryViaFtp({
     for (const entry of list) {
       const remoteChild = path.posix.join(remotePath, entry.name);
       const localChild = path.join(localPath, entry.name);
-      const isDirectory = entry.isDirectory === true
-        || entry.type === 2
-        || String(entry.permissions || '').startsWith('d');
+      const isDirectory =
+        entry.isDirectory === true ||
+        entry.type === 2 ||
+        String(entry.permissions || '').startsWith('d');
 
       if (isDirectory) {
         await walk(remoteChild, localChild);

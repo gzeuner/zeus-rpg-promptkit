@@ -47,12 +47,13 @@ async function runQuerySql(args) {
     // --watch: Query wiederholen bis Ctrl+C
     const watchArgs = { ...args, watch: undefined };
     console.log(`[watch] Starte Watch-Modus (alle ${watchSec}s). Ctrl+C zum Beenden.`);
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       process.stdout.write('\x1B[2J\x1B[0f'); // clear screen
       await runSingleQuery(watchArgs);
-      process.stdout.write(`\n[watch] ${new Date().toLocaleTimeString()} | naechste Aktualisierung in ${watchSec}s\n`);
-      await new Promise((resolve) => setTimeout(resolve, watchSec * 1000));
+      process.stdout.write(
+        `\n[watch] ${new Date().toLocaleTimeString()} | naechste Aktualisierung in ${watchSec}s\n`
+      );
+      await new Promise(resolve => setTimeout(resolve, watchSec * 1000));
     }
   } else {
     await runSingleQuery(args);
@@ -79,7 +80,7 @@ async function runBatchFromFile(args) {
 }
 
 function rowsToObjects(columns, matrix) {
-  return matrix.map((row) =>
+  return matrix.map(row =>
     Object.fromEntries(columns.map((col, i) => [col, Array.isArray(row) ? row[i] : row[col]]))
   );
 }
@@ -89,17 +90,19 @@ function renderQueryExecution(execution, output) {
     const statements = execution.statements || [];
     if (output === 'json') {
       const json = createJsonOutput({ output: 'json' });
-      json.print(statements.map((entry, index) => {
-        const columns = Array.isArray(entry.columns) ? entry.columns : [];
-        const matrix = toRowMatrix(columns, entry.rows || []);
-        return {
-          index: index + 1,
-          sql: entry.sql,
-          rowCount: Number(entry.rowCount || matrix.length || 0),
-          columns,
-          rows: rowsToObjects(columns, matrix),
-        };
-      }));
+      json.print(
+        statements.map((entry, index) => {
+          const columns = Array.isArray(entry.columns) ? entry.columns : [];
+          const matrix = toRowMatrix(columns, entry.rows || []);
+          return {
+            index: index + 1,
+            sql: entry.sql,
+            rowCount: Number(entry.rowCount || matrix.length || 0),
+            columns,
+            rows: rowsToObjects(columns, matrix),
+          };
+        })
+      );
       return;
     }
 
@@ -231,11 +234,13 @@ async function runSingleQuery(args) {
         }
       } else {
         if (execution.batch) {
-          content = (execution.statements || []).map((entry, index) => {
-            const columns = Array.isArray(entry.columns) ? entry.columns : [];
-            const matrix = toRowMatrix(columns, entry.rows || []);
-            return `# statement ${index + 1}: ${entry.sql}\n${renderCsv(columns, matrix)}`;
-          }).join('\n');
+          content = (execution.statements || [])
+            .map((entry, index) => {
+              const columns = Array.isArray(entry.columns) ? entry.columns : [];
+              const matrix = toRowMatrix(columns, entry.rows || []);
+              return `# statement ${index + 1}: ${entry.sql}\n${renderCsv(columns, matrix)}`;
+            })
+            .join('\n');
         } else {
           content = renderCsv(execution.columns, execution.matrix);
         }
@@ -244,7 +249,10 @@ async function runSingleQuery(args) {
       fs.writeFileSync(savePath, content, 'utf8');
       if (output !== 'csv') {
         const rowCount = execution.batch
-          ? (execution.statements || []).reduce((sum, entry) => sum + Number(entry.rowCount || (entry.rows || []).length || 0), 0)
+          ? (execution.statements || []).reduce(
+              (sum, entry) => sum + Number(entry.rowCount || (entry.rows || []).length || 0),
+              0
+            )
           : execution.matrix.length;
         console.log(`Gespeichert: ${savePath} (${rowCount} Zeile(n))`);
       }
@@ -267,8 +275,12 @@ async function runSingleQuery(args) {
  * query only one JVM/connection per statement (no repeated probe).
  */
 async function runInteractiveRepl(initialArgs) {
-  console.log('Entering query-sql REPL. Type SQL (or .exit / .help). Profile and other options from initial call are reused.');
-  console.log('First query will perform connection probe; subsequent queries within this session use cached guard.');
+  console.log(
+    'Entering query-sql REPL. Type SQL (or .exit / .help). Profile and other options from initial call are reused.'
+  );
+  console.log(
+    'First query will perform connection probe; subsequent queries within this session use cached guard.'
+  );
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -278,7 +290,7 @@ async function runInteractiveRepl(initialArgs) {
 
   rl.prompt();
 
-  rl.on('line', async (line) => {
+  rl.on('line', async line => {
     const trimmed = line.trim();
     if (!trimmed) {
       rl.prompt();

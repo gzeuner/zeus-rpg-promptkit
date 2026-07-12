@@ -9,6 +9,7 @@ Last Updated: 2026-06-20
 Use only when working from Zeus-generated artifacts (canonical-analysis, rpgConstructs, reports). Never guess semantics.
 
 ## Key Evidence to Trust
+
 - `rpgConstructs.languageFeatures`: counts + lists of %BIFs and *INxx indicators extracted from source.
 - Procedures: name, exported, paramCount, hasPi, returnType, sourceForm.
 - nativeFileAccesses + nativeFiles: real I/O opcodes used (CHAIN/READ/WRITE etc).
@@ -16,6 +17,7 @@ Use only when working from Zeus-generated artifacts (canonical-analysis, rpgCons
 - procedureCalls with resolution (INTERNAL/EXTERNAL/DYNAMIC/UNRESOLVED).
 
 ## Safe Patterns (Modern ILE Free Form)
+
 - Replace global *INxx state machines with local qualified data structures or named booleans / indicators DS.
 - *INLR = *ON belongs at end of main linear main; avoid in subprocedures unless cycle semantics required.
 - Prefer `dcl-proc ... export;` + `dcl-pi ... end-pi;` with explicit types over implicit *ENTRY PLIST.
@@ -24,6 +26,7 @@ Use only when working from Zeus-generated artifacts (canonical-analysis, rpgCons
 - For native I/O + SQL mix: keep clear ownership; document when a file is still keyed native vs external described SQL.
 
 ## BIFs – Common and Preferred
+
 - %TRIM, %TRIML, %TRIMR over manual substring for strings.
 - %DATE, %TIME, %TIMESTAMP, %DEC, %CHAR with format for conversions.
 - %SCAN / %CHECK / %CHECKR for search.
@@ -32,17 +35,20 @@ Use only when working from Zeus-generated artifacts (canonical-analysis, rpgCons
 - %ERROR, %FOUND, %EOF, %STATUS after I/O or opcodes – always check after CHAIN/READ/WRITE etc.
 
 ## Indicators – Modernization
+
 - *IN01-*IN99: treat as booleans in DS.
 - *INLR, *INOF, *INRT: special last record / overflow / return.
 - Avoid *IN as control flow for new code; map to IF conditions early.
 
 ## Procedure / Call Rules
+
 - Internal calls: resolved to local dcl-proc.
 - External calls via prototype with extproc/extpgm.
 - Dynamic calls: high risk – surface in riskMarkers.
 - When suggesting new procedure: provide dcl-pr + dcl-pi snippet + matching dcl-proc body using same naming.
 
 ## Common Legacy Risks (Call Out)
+
 - Cycle programming assumptions (*INLR flow).
 - Unqualified table refs (use resolved evidence + DB2 catalog).
 - Fixed format column math in C specs.
@@ -50,6 +56,7 @@ Use only when working from Zeus-generated artifacts (canonical-analysis, rpgCons
 - Missing error handling after every native I/O or EXEC SQL.
 
 ## Agent Rules When Proposing RPG Changes
+
 1. Quote exact source evidence line + file from artifacts.
 2. Show minimal diff or before/after snippet.
 3. State impact on callers, files, indicators, SQL.

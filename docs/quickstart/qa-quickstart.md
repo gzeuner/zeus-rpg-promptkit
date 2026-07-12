@@ -32,6 +32,7 @@ node cli/zeus.js qa --input ./output/MYPGM --format markdown
 ### 2. View Output
 
 The QA report shows:
+
 - Summary of issues found
 - Detailed findings per validator
 - Recommendations for fixes
@@ -70,16 +71,19 @@ src/cli/commands/
 ## Important Design Properties
 
 ### ✅ Non-Breaking
+
 - All QA features are **opt-in and disabled by default**
 - Existing workflows are **completely unaffected**
 - No changes to core analysis pipeline
 
 ### ✅ Error Isolated
+
 - QA failures do **NOT crash the main pipeline**
 - Can run in LENIENT (warnings don't fail) or STRICT (everything fails) mode
 - Perfect for both development and CI/CD
 
 ### ✅ Modular
+
 - Each validator is independent
 - Enable/disable individually
 - Easy to add new validators
@@ -91,10 +95,11 @@ src/cli/commands/
 ```json
 {
   "qa": {
-    "qaMode": false,              // Opt-in (default: disabled)
-    "qaStrict": "LENIENT",        // LENIENT or STRICT
-    "reportFormat": "markdown",   // markdown, jira, or json
-    "disabledValidators": [       // All validators start disabled
+    "qaMode": false, // Opt-in (default: disabled)
+    "qaStrict": "LENIENT", // LENIENT or STRICT
+    "reportFormat": "markdown", // markdown, jira, or json
+    "disabledValidators": [
+      // All validators start disabled
       "qa-test-precondition-validation",
       "qa-regression-risk-analyzer",
       "qa-sql-consistency-validator",
@@ -110,9 +115,7 @@ To enable QA:
 {
   "qa": {
     "qaMode": true,
-    "enabledValidators": [
-      "qa-test-precondition-validation"
-    ]
+    "enabledValidators": ["qa-test-precondition-validation"]
   }
 }
 ```
@@ -122,6 +125,7 @@ To enable QA:
 Original Problem: Test precondition said `ldmlan = 6000` but code had `ldmlan <> 6000`
 
 **QA Output:**
+
 ```
 ERROR: TestPreconditionValidator
 ├── Field: ldmlan
@@ -150,6 +154,7 @@ npm test -- tests/qa-stage-registry.test.js
 ## Files Added
 
 **Core Implementation (11 files):**
+
 - `src/qa/qaStageRegistry.js`
 - `src/qa/qaStageRunner.js`
 - `src/qa/qaIntegration.js`
@@ -162,15 +167,18 @@ npm test -- tests/qa-stage-registry.test.js
 - `src/report/qaReportGenerator.js`
 
 **Tests (3 files):**
+
 - `tests/qa-stage-registry.test.js`
 - `tests/qa-stage-runner.test.js`
 - `tests/qa-report-generator.test.js`
 
 **Documentation:**
+
 - `docs/quickstart/qa-quickstart.md` (this file)
 - `src/qa/IMPLEMENTATION_GUIDE.md` (implementation details)
 
 **Modified (2 files):**
+
 - `cli/zeus.js` - Added QA command routing
 - `config/profiles.example.json` - Added QA config section
 
@@ -185,6 +193,7 @@ npm test -- tests/qa-stage-registry.test.js
 ## Support
 
 For issues or questions, refer to:
+
 - Test examples: `tests/qa-*.test.js`
 - CLI usage: `node cli/zeus.js qa --help`
 - Implementation: `src/qa/IMPLEMENTATION_GUIDE.md`

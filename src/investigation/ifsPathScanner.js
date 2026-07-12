@@ -13,14 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 
 const IFS_PATH_REPORT_SCHEMA_VERSION = 1;
-const PATH_PATTERN = /(^|[^A-Z0-9_])((?:\/[A-Z0-9._$#@%+-]+)+)/ig;
+const PATH_PATTERN = /(^|[^A-Z0-9_])((?:\/[A-Z0-9._$#@%+-]+)+)/gi;
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
 function normalizePath(value) {
-  return String(value || '').trim().replace(/\\/g, '/');
+  return String(value || '')
+    .trim()
+    .replace(/\\/g, '/');
 }
 
 function classifyPathFamily(pathValue) {
@@ -97,9 +99,10 @@ function scanIfsPaths(sourceTextByRelativePath, options = {}) {
   }
 
   const findings = [];
-  const entries = sourceTextByRelativePath instanceof Map
-    ? Array.from(sourceTextByRelativePath.entries()).sort((a, b) => a[0].localeCompare(b[0]))
-    : [];
+  const entries =
+    sourceTextByRelativePath instanceof Map
+      ? Array.from(sourceTextByRelativePath.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+      : [];
 
   for (const [relativePath, content] of entries) {
     findings.push(...collectFilePaths(relativePath, content));
@@ -116,14 +119,14 @@ function scanIfsPaths(sourceTextByRelativePath, options = {}) {
     }
     const target = grouped.get(finding.path);
     const evidenceKey = JSON.stringify(finding.evidence);
-    const exists = target.evidence.some((entry) => JSON.stringify(entry) === evidenceKey);
+    const exists = target.evidence.some(entry => JSON.stringify(entry) === evidenceKey);
     if (!exists) {
       target.evidence.push(finding.evidence);
     }
   }
 
   const paths = Array.from(grouped.values())
-    .map((entry) => ({
+    .map(entry => ({
       path: entry.path,
       family: entry.family,
       evidence: [...entry.evidence].sort((a, b) => {
@@ -143,7 +146,8 @@ function scanIfsPaths(sourceTextByRelativePath, options = {}) {
     summary: {
       uniquePathCount: paths.length,
       evidenceCount: paths.reduce((sum, entry) => sum + entry.evidence.length, 0),
-      fileCount: new Set(paths.flatMap((entry) => entry.evidence.map((evidence) => evidence.file))).size,
+      fileCount: new Set(paths.flatMap(entry => entry.evidence.map(evidence => evidence.file)))
+        .size,
       familyCounts: summarizeFamilies(paths),
     },
     paths,
@@ -152,12 +156,7 @@ function scanIfsPaths(sourceTextByRelativePath, options = {}) {
 }
 
 function renderIfsPathMarkdown(report) {
-  const lines = [
-    '# IFS Path Usage',
-    '',
-    `Enabled: ${report && report.enabled ? 'yes' : 'no'}`,
-    '',
-  ];
+  const lines = ['# IFS Path Usage', '', `Enabled: ${report && report.enabled ? 'yes' : 'no'}`, ''];
 
   if (!report || !report.enabled) {
     lines.push('IFS path scanning was not enabled for this run.');

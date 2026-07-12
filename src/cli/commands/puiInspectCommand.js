@@ -53,16 +53,20 @@ function printProjectionSummary(projection) {
       console.log(`  Grid ${grid.id}  (${grid.numberOfColumns} Spalten)`);
       for (const column of grid.columns) {
         const heading = column.heading != null ? column.heading : '';
-        const binding = column.boundField || (column.staticValue ? `="${column.staticValue}"` : '(ungebunden)');
+        const binding =
+          column.boundField || (column.staticValue ? `="${column.staticValue}"` : '(ungebunden)');
         const tooltip = column.tooltip ? `  Tooltip: "${column.tooltip}"` : '';
-        console.log(`    Sp ${String(column.column).padStart(2, ' ')} | ${heading.padEnd(20, ' ')} | ${binding}${tooltip}`);
+        console.log(
+          `    Sp ${String(column.column).padStart(2, ' ')} | ${heading.padEnd(20, ' ')} | ${binding}${tooltip}`
+        );
       }
     }
 
     if (rf.widgets.length > 0) {
       console.log('  Gebundene Widgets:');
       for (const widget of rf.widgets) {
-        const binding = widget.boundField || (widget.staticValue ? `="${widget.staticValue}"` : '(ungebunden)');
+        const binding =
+          widget.boundField || (widget.staticValue ? `="${widget.staticValue}"` : '(ungebunden)');
         const tooltip = widget.tooltip ? `  Tooltip: "${widget.tooltip}"` : '';
         console.log(`    ${(widget.id || '(anonym)').padEnd(24, ' ')} | ${binding}${tooltip}`);
       }
@@ -102,7 +106,9 @@ async function run(args) {
     process.exit(2);
   }
 
-  const projection = buildPuiProjection(content, { file: path.relative(process.cwd(), resolved) || fileArg });
+  const projection = buildPuiProjection(content, {
+    file: path.relative(process.cwd(), resolved) || fileArg,
+  });
 
   if (args.trace) {
     const hits = traceFieldBinding(projection, String(args.trace));
@@ -110,13 +116,17 @@ async function run(args) {
       const json = createJsonOutput(args);
       json.print({ field: String(args.trace).toUpperCase(), hits });
     } else if (hits.length === 0) {
-      console.log(`Feld "${String(args.trace).toUpperCase()}" ist in keiner Grid-Spalte oder Widget-Bindung gefunden.`);
+      console.log(
+        `Feld "${String(args.trace).toUpperCase()}" ist in keiner Grid-Spalte oder Widget-Bindung gefunden.`
+      );
     } else {
       console.log(`Feld "${String(args.trace).toUpperCase()}" gebunden an:`);
       for (const hit of hits) {
         if (hit.location === 'grid-column') {
           const tooltip = hit.tooltip ? `  Tooltip: "${hit.tooltip}"` : '';
-          console.log(`  ${hit.recordFormat} / Grid ${hit.grid} / Spalte ${hit.column}${hit.heading ? ` ("${hit.heading}")` : ''}${tooltip}`);
+          console.log(
+            `  ${hit.recordFormat} / Grid ${hit.grid} / Spalte ${hit.column}${hit.heading ? ` ("${hit.heading}")` : ''}${tooltip}`
+          );
         } else {
           console.log(`  ${hit.recordFormat} / Widget ${hit.widget}`);
         }

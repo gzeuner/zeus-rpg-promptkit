@@ -67,7 +67,8 @@ test('sanitizeValue masks sensitive keys recursively', () => {
 });
 
 test('maskSecretsInText redacts common inline secret patterns', () => {
-  const input = 'jdbc:as400://demo:superpass@host;naming=system;user=ME;password=superpass token=abc authorization Bearer qwerty key=xyz';
+  const input =
+    'jdbc:as400://demo:superpass@host;naming=system;user=ME;password=superpass token=abc authorization Bearer qwerty key=xyz';
   const output = maskSecretsInText(input);
 
   assert.match(output, /\[REDACTED\]/);
@@ -79,7 +80,8 @@ test('maskSecretsInText redacts common inline secret patterns', () => {
 });
 
 test('maskSecretsInText redacts credential fields and jdbc query credentials', () => {
-  const input = 'jdbc:db2://host/db?user=alice&password=secret123 credentials=top-secret username=alice';
+  const input =
+    'jdbc:db2://host/db?user=alice&password=secret123 credentials=top-secret username=alice';
   const output = maskSecretsInText(input);
 
   assert.match(output, /\[REDACTED\]/);
@@ -90,9 +92,7 @@ test('maskSecretsInText redacts credential fields and jdbc query credentials', (
 
 test('maskSecretsInText preserves JSON parseability while redacting inline tokens', () => {
   const input = JSON.stringify({
-    rows: [
-      { NOTE: 'token=abc123', PASSWORD: 'top-secret' },
-    ],
+    rows: [{ NOTE: 'token=abc123', PASSWORD: 'top-secret' }],
   });
   const output = maskSecretsInText(input);
 
@@ -191,7 +191,11 @@ test('collectSensitiveTermsFromEnv includes configured system/library/user value
 });
 
 test('maskSensitiveTermsInText redacts configured names in plain text', () => {
-  const output = maskSensitiveTermsInText('System DERSMT1 library WPT owner MYUSER', ['DERSMT1', 'WPT', 'MYUSER']);
+  const output = maskSensitiveTermsInText('System DERSMT1 library WPT owner MYUSER', [
+    'DERSMT1',
+    'WPT',
+    'MYUSER',
+  ]);
   assert.doesNotMatch(output, /\bDERSMT1\b/);
   assert.doesNotMatch(output, /\bWPT\b/);
   assert.doesNotMatch(output, /\bMYUSER\b/);
@@ -199,7 +203,10 @@ test('maskSensitiveTermsInText redacts configured names in plain text', () => {
 });
 
 test('maskSensitiveTermsInText preserves lowercase identifiers when sensitive term case differs', () => {
-  const output = maskSensitiveTermsInText('tool zeus.health path /home/zeus/dev project zeus-rpg-promptkit', ['ZEUS']);
+  const output = maskSensitiveTermsInText(
+    'tool zeus.health path /home/zeus/dev project zeus-rpg-promptkit',
+    ['ZEUS']
+  );
   assert.match(output, /zeus\.health/);
   assert.match(output, /\/home\/zeus\/dev/);
   assert.match(output, /zeus-rpg-promptkit/);
@@ -207,12 +214,15 @@ test('maskSensitiveTermsInText preserves lowercase identifiers when sensitive te
 });
 
 test('sanitizeValue applies sensitive term masking recursively', () => {
-  const sanitized = sanitizeValue({
-    system: 'DERSMT1',
-    nested: {
-      text: 'Library WPT, Owner MYUSER',
+  const sanitized = sanitizeValue(
+    {
+      system: 'DERSMT1',
+      nested: {
+        text: 'Library WPT, Owner MYUSER',
+      },
     },
-  }, { sensitiveTerms: ['DERSMT1', 'WPT', 'MYUSER'] });
+    { sensitiveTerms: ['DERSMT1', 'WPT', 'MYUSER'] }
+  );
 
   assert.equal(sanitized.system, REDACTED_VALUE);
   assert.doesNotMatch(sanitized.nested.text, /\bWPT\b/);

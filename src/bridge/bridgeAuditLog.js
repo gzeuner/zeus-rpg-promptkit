@@ -15,10 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const { sanitizeValue } = require('../security/secretMasking');
 
-function appendBridgeAuditEvent({
-  outputRoot,
-  event,
-}) {
+function appendBridgeAuditEvent({ outputRoot, event }) {
   const auditDir = path.join(outputRoot, 'audit');
   fs.mkdirSync(auditDir, { recursive: true });
   const auditPath = path.join(auditDir, 'bridge-audit.jsonl');

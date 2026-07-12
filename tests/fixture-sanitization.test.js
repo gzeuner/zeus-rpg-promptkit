@@ -54,7 +54,11 @@ test('sanitized fixture corpus rejects copied case-specific names and common con
     }
     const content = fs.readFileSync(filePath, 'utf8');
     for (const pattern of forbiddenPatterns) {
-      assert.doesNotMatch(content, pattern, `sanitization violation in ${path.relative(sanitizedCorpusRoot, filePath)} for pattern ${pattern}`);
+      assert.doesNotMatch(
+        content,
+        pattern,
+        `sanitization violation in ${path.relative(sanitizedCorpusRoot, filePath)} for pattern ${pattern}`
+      );
     }
   }
 });

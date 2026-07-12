@@ -51,7 +51,7 @@ function resolveDurationMs(reproducibility, actualDurationMs) {
 
 function sortKeysDeep(value) {
   if (Array.isArray(value)) {
-    return value.map((entry) => sortKeysDeep(entry));
+    return value.map(entry => sortKeysDeep(entry));
   }
   if (!value || typeof value !== 'object') {
     return value;
@@ -79,12 +79,24 @@ function buildReproducibilityMetadata(reproducibility, contentFingerprint, extra
   };
 }
 
-function buildReproduciblePathReplacements({ cwd, sourceRoot, outputRoot, outputProgramDir, program }) {
-  const normalizedProgram = String(program || '').trim().toUpperCase() || 'PROGRAM';
+function buildReproduciblePathReplacements({
+  cwd,
+  sourceRoot,
+  outputRoot,
+  outputProgramDir,
+  program,
+}) {
+  const normalizedProgram =
+    String(program || '')
+      .trim()
+      .toUpperCase() || 'PROGRAM';
   const replacements = new Map();
 
   if (outputProgramDir) {
-    replacements.set(String(outputProgramDir), `${REPRODUCIBLE_PATHS.outputRoot}/${normalizedProgram}`);
+    replacements.set(
+      String(outputProgramDir),
+      `${REPRODUCIBLE_PATHS.outputRoot}/${normalizedProgram}`
+    );
   }
   if (outputRoot) {
     replacements.set(String(outputRoot), REPRODUCIBLE_PATHS.outputRoot);
@@ -101,8 +113,9 @@ function buildReproduciblePathReplacements({ cwd, sourceRoot, outputRoot, output
 
 function replaceStringWithReplacements(value, replacements) {
   let result = String(value || '');
-  const entries = Array.from(replacements.entries())
-    .sort((a, b) => b[0].length - a[0].length || a[0].localeCompare(b[0]));
+  const entries = Array.from(replacements.entries()).sort(
+    (a, b) => b[0].length - a[0].length || a[0].localeCompare(b[0])
+  );
 
   for (const [rawValue, replacement] of entries) {
     if (!rawValue) continue;
@@ -114,7 +127,7 @@ function replaceStringWithReplacements(value, replacements) {
 
 function replaceExactStringsDeep(value, replacements) {
   if (Array.isArray(value)) {
-    return value.map((entry) => replaceExactStringsDeep(entry, replacements));
+    return value.map(entry => replaceExactStringsDeep(entry, replacements));
   }
   if (!value || typeof value !== 'object') {
     if (typeof value === 'string') {

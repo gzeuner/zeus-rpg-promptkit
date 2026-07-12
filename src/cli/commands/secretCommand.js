@@ -27,7 +27,11 @@ const {
   storeKeyInWindowsSecureXml,
   resolveKeyFromWindowsSecureXml,
 } = require('../../security/secretVault');
-const { detectPlaintextSecrets, SECRET_KEYS, isPlaceholder } = require('../../security/plaintextSecretDetector');
+const {
+  detectPlaintextSecrets,
+  SECRET_KEYS,
+  isPlaceholder,
+} = require('../../security/plaintextSecretDetector');
 
 // Liest den gesamten stdin-Inhalt (fuer Passwort-Eingabe ohne Shell-History).
 function readStdinSync() {
@@ -50,8 +54,8 @@ function resolvePlaintext(args) {
     }
   }
   throw new Error(
-    'Kein Klartext angegeben. Uebergib --value "<geheim>" oder leite den Wert per stdin ein '
-    + '(z. B. `type secret.txt | zeus secret encrypt`).',
+    'Kein Klartext angegeben. Uebergib --value "<geheim>" oder leite den Wert per stdin ein ' +
+      '(z. B. `type secret.txt | zeus secret encrypt`).'
   );
 }
 
@@ -64,7 +68,9 @@ function printKeyStatus(cwd = process.cwd()) {
     }
   } else {
     console.log('Kein Schlüsselmaterial gefunden.');
-    console.log(`  -> Setze ${KEY_ENV_VAR} oder erzeuge eine Schlüsseldatei mit: zeus secret init-key`);
+    console.log(
+      `  -> Setze ${KEY_ENV_VAR} oder erzeuge eine Schlüsseldatei mit: zeus secret init-key`
+    );
     if (isWindows()) {
       console.log('     Tipp: "zeus secret init-key --windows" für DPAPI-geschützten Speicher');
     }
@@ -75,7 +81,7 @@ function printKeyStatus(cwd = process.cwd()) {
   if (hygiene.length > 0) {
     console.log('');
     console.log('  [WARN] Secrets-Hygiene: Klartext-Credentials erkannt!');
-    hygiene.slice(0, 5).forEach((f) => {
+    hygiene.slice(0, 5).forEach(f => {
       console.log(`    - ${f.key}  (in ${f.file}, source: ${f.source})`);
     });
     if (hygiene.length > 5) {
@@ -92,26 +98,42 @@ function printKeyStatus(cwd = process.cwd()) {
 }
 
 async function runSecret(args) {
-  const sub = Array.isArray(args._) && args._.length > 0
-    ? String(args._[0]).trim().toLowerCase()
-    : '';
+  const sub =
+    Array.isArray(args._) && args._.length > 0 ? String(args._[0]).trim().toLowerCase() : '';
 
   if (!sub || sub === 'help') {
     console.log('Usage:');
-    console.log('  zeus secret init-key [--force] [--windows]  # Erzeugt Schlüssel (auf Windows optional --windows für DPAPI/Credential-Manager-like Storage)');
-    console.log('  zeus secret status                          # Zeigt, ob/woher Schluesselmaterial geladen wird + Hygiene-Check');
-    console.log('  zeus secret encrypt [--value <text>]        # Verschluesselt einen Wert -> enc:v1:...  (ohne --value: stdin) + Hygiene-Warnung');
-    console.log('  zeus secret decrypt --value <enc:v1:..>     # Entschluesselt einen Wert (nur zum Pruefen)');
-    console.log('  zeus secret check [--warn-only]              # Prüft auf Klartext-Credentials (exit 1 bei Problemen; --warn-only => exit 0, für CI warn-only)');
-    console.log('  zeus secret migrate [--dry-run] [--no-backup]  # Migriert gefundene Klartext-Secrets zu enc:v1:... (für .env Dateien); --no-backup unterdrückt Klartext-Backup');
+    console.log(
+      '  zeus secret init-key [--force] [--windows]  # Erzeugt Schlüssel (auf Windows optional --windows für DPAPI/Credential-Manager-like Storage)'
+    );
+    console.log(
+      '  zeus secret status                          # Zeigt, ob/woher Schluesselmaterial geladen wird + Hygiene-Check'
+    );
+    console.log(
+      '  zeus secret encrypt [--value <text>]        # Verschluesselt einen Wert -> enc:v1:...  (ohne --value: stdin) + Hygiene-Warnung'
+    );
+    console.log(
+      '  zeus secret decrypt --value <enc:v1:..>     # Entschluesselt einen Wert (nur zum Pruefen)'
+    );
+    console.log(
+      '  zeus secret check [--warn-only]              # Prüft auf Klartext-Credentials (exit 1 bei Problemen; --warn-only => exit 0, für CI warn-only)'
+    );
+    console.log(
+      '  zeus secret migrate [--dry-run] [--no-backup]  # Migriert gefundene Klartext-Secrets zu enc:v1:... (für .env Dateien); --no-backup unterdrückt Klartext-Backup'
+    );
     console.log('');
-    console.log(`Schluessel-Quelle: ${KEY_ENV_VAR} (Vorrang) | Windows DPAPI (--windows) | Datei ${KEY_FILE_RELATIVE}.`);
-    console.log('Ablage in Profil/.env:  ZEUS_DB_PASSWORD=enc:v1:...   (wird zur Laufzeit transparent entschluesselt)');
+    console.log(
+      `Schluessel-Quelle: ${KEY_ENV_VAR} (Vorrang) | Windows DPAPI (--windows) | Datei ${KEY_FILE_RELATIVE}.`
+    );
+    console.log(
+      'Ablage in Profil/.env:  ZEUS_DB_PASSWORD=enc:v1:...   (wird zur Laufzeit transparent entschluesselt)'
+    );
     return;
   }
 
   if (sub === 'init-key') {
-    const useWindows = isWindows() && (args.windows === true || String(args.windows || '').toLowerCase() === 'true');
+    const useWindows =
+      isWindows() && (args.windows === true || String(args.windows || '').toLowerCase() === 'true');
     const force = args.force === true || String(args.force || '').toLowerCase() === 'true';
 
     const keyString = generateKeyString();
@@ -119,9 +141,13 @@ async function runSecret(args) {
     if (useWindows) {
       try {
         const xmlPath = storeKeyInWindowsSecureXml(keyString);
-        console.log(`Schlüssel in Windows Secure Storage (DPAPI-geschützt) gespeichert: ${xmlPath}`);
+        console.log(
+          `Schlüssel in Windows Secure Storage (DPAPI-geschützt) gespeichert: ${xmlPath}`
+        );
         console.log('  -> Optional: "zeus secret status" zeigt "windows-secure-xml"');
-        console.log('  -> Verschlüssle jetzt Passwörter mit: zeus secret encrypt --value "<passwort>"');
+        console.log(
+          '  -> Verschlüssle jetzt Passwörter mit: zeus secret encrypt --value "<passwort>"'
+        );
         return;
       } catch (e) {
         console.warn('Windows Secure Storage fehlgeschlagen, falle auf Datei zurück:', e.message);
@@ -131,13 +157,19 @@ async function runSecret(args) {
     const target = getKeyFilePath(process.cwd());
     if (fs.existsSync(target) && !force) {
       console.log(`Schluesseldatei existiert bereits: ${target}`);
-      console.log('  -> Mit --force ueberschreiben (ACHTUNG: bestehende verschluesselte Werte werden dann unlesbar).');
+      console.log(
+        '  -> Mit --force ueberschreiben (ACHTUNG: bestehende verschluesselte Werte werden dann unlesbar).'
+      );
       return;
     }
     const written = writeKeyFile(keyString, { cwd: process.cwd() });
     console.log(`Schluesseldatei erstellt: ${written}`);
-    console.log('  -> Diese Datei ist geheim, liegt in config/local-only/ (gitignoriert) und darf NICHT geteilt werden.');
-    console.log('  -> Verschluessle jetzt Passwoerter mit: zeus secret encrypt --value "<passwort>"');
+    console.log(
+      '  -> Diese Datei ist geheim, liegt in config/local-only/ (gitignoriert) und darf NICHT geteilt werden.'
+    );
+    console.log(
+      '  -> Verschluessle jetzt Passwoerter mit: zeus secret encrypt --value "<passwort>"'
+    );
     return;
   }
 
@@ -163,14 +195,20 @@ async function runSecret(args) {
   if (sub === 'encrypt') {
     if (!hasKeyMaterial()) {
       throw new Error(
-        `Kein Schluessel vorhanden. Erzeuge zuerst einen mit "zeus secret init-key" oder setze ${KEY_ENV_VAR}.`,
+        `Kein Schluessel vorhanden. Erzeuge zuerst einen mit "zeus secret init-key" oder setze ${KEY_ENV_VAR}.`
       );
     }
 
     // Secrets-Hygiene integration: warn before encrypting if plaintext still present
-    const hygiene = detectPlaintextSecrets({ cwd: process.cwd(), checkProfiles: true, env: process.env });
+    const hygiene = detectPlaintextSecrets({
+      cwd: process.cwd(),
+      checkProfiles: true,
+      env: process.env,
+    });
     if (hygiene.length > 0) {
-      console.warn(`[WARN] Secrets-Hygiene: ${hygiene.length} Klartext-Credential(s) noch in .env oder Profilen gefunden.`);
+      console.warn(
+        `[WARN] Secrets-Hygiene: ${hygiene.length} Klartext-Credential(s) noch in .env oder Profilen gefunden.`
+      );
       console.warn('  Bitte alle migrieren, bevor du weitere Werte verschlüsselst.');
     }
 
@@ -181,9 +219,12 @@ async function runSecret(args) {
   }
 
   if (sub === 'decrypt') {
-    const token = typeof args.value === 'string' && args.value.length > 0
-      ? args.value
-      : (process.stdin.isTTY ? '' : readStdinSync());
+    const token =
+      typeof args.value === 'string' && args.value.length > 0
+        ? args.value
+        : process.stdin.isTTY
+          ? ''
+          : readStdinSync();
     if (!token) {
       throw new Error('Kein Wert angegeben. Uebergib --value "enc:v1:..." oder per stdin.');
     }
@@ -192,10 +233,14 @@ async function runSecret(args) {
   }
 
   if (sub === 'check') {
-    const hygiene = detectPlaintextSecrets({ cwd: process.cwd(), checkProfiles: true, env: process.env });
+    const hygiene = detectPlaintextSecrets({
+      cwd: process.cwd(),
+      checkProfiles: true,
+      env: process.env,
+    });
     if (hygiene.length > 0) {
       console.log('[FAIL] Secrets-Hygiene: Klartext-Credentials gefunden!');
-      hygiene.forEach((f) => console.log(`  - ${f.key} in ${f.file} (source: ${f.source})`));
+      hygiene.forEach(f => console.log(`  - ${f.key} in ${f.file} (source: ${f.source})`));
       const warnOnly = args['warn-only'] || args.warnonly === true;
       if (!warnOnly) {
         process.exit(1);
@@ -210,7 +255,11 @@ async function runSecret(args) {
   if (sub === 'migrate') {
     const dryRun = args['dry-run'] || args.dry === true;
     const noBackup = args['no-backup'] || args.nobackup === true || args.backup === false;
-    const hygiene = detectPlaintextSecrets({ cwd: process.cwd(), checkProfiles: true, env: process.env });
+    const hygiene = detectPlaintextSecrets({
+      cwd: process.cwd(),
+      checkProfiles: true,
+      env: process.env,
+    });
     if (hygiene.length === 0) {
       console.log('Keine Klartext-Credentials gefunden. Nichts zu migrieren.');
       return;
@@ -221,10 +270,12 @@ async function runSecret(args) {
     }
 
     console.log(`Gefundene Klartext-Credentials zum Migrieren (${hygiene.length}):`);
-    hygiene.forEach((f) => console.log(`  - ${f.key} in ${f.file}`));
+    hygiene.forEach(f => console.log(`  - ${f.key} in ${f.file}`));
 
     // Focus on .env files for auto-migration (profiles should use env placeholders)
-    const envFindings = hygiene.filter(f => f.source === 'file' && (f.file.includes('.env') || f.file.includes('env')));
+    const envFindings = hygiene.filter(
+      f => f.source === 'file' && (f.file.includes('.env') || f.file.includes('env'))
+    );
     if (envFindings.length === 0) {
       console.log('Keine .env-Dateien mit Klartext gefunden (Profile-Checks sind Hinweise).');
       return;
@@ -232,16 +283,22 @@ async function runSecret(args) {
 
     if (dryRun) {
       console.log('\nDry-run: Keine Änderungen vorgenommen.');
-      console.log('Führe ohne --dry-run aus, um zu migrieren (Backups werden mit --no-backup unterdrückt).');
+      console.log(
+        'Führe ohne --dry-run aus, um zu migrieren (Backups werden mit --no-backup unterdrückt).'
+      );
       return;
     }
 
     console.log('\nMigriere...');
     const migratedFiles = new Set();
     // Collect unique .env file paths from findings
-    const uniqueEnvFiles = [...new Set(envFindings.map(f => {
-      return path.isAbsolute(f.file) ? f.file : path.resolve(process.cwd(), f.file);
-    }))];
+    const uniqueEnvFiles = [
+      ...new Set(
+        envFindings.map(f => {
+          return path.isAbsolute(f.file) ? f.file : path.resolve(process.cwd(), f.file);
+        })
+      ),
+    ];
 
     for (const fullPath of uniqueEnvFiles) {
       if (!fs.existsSync(fullPath)) continue;
@@ -252,7 +309,9 @@ async function runSecret(args) {
         if (!noBackup) {
           backup = fullPath + '.bak.' + Date.now();
           fs.copyFileSync(fullPath, backup);
-          try { fs.chmodSync(backup, 0o600); } catch (_) {}
+          try {
+            fs.chmodSync(backup, 0o600);
+          } catch (_) {}
         }
 
         let content = fs.readFileSync(fullPath, 'utf8');
@@ -266,8 +325,16 @@ async function runSecret(args) {
           const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
           if (match) {
             const key = match[1];
-            let value = match[2].trim().replace(/\s+#.*$/, '').trim();
-            if (SECRET_KEYS.test(key) && value && !value.startsWith('enc:v1:') && !isPlaceholder(value)) {
+            let value = match[2]
+              .trim()
+              .replace(/\s+#.*$/, '')
+              .trim();
+            if (
+              SECRET_KEYS.test(key) &&
+              value &&
+              !value.startsWith('enc:v1:') &&
+              !isPlaceholder(value)
+            ) {
               const encrypted = encryptSecret(value);
               // Preserve original indentation and comment if any
               const prefix = line.match(/^(\s*)/)[1];
@@ -284,7 +351,9 @@ async function runSecret(args) {
           if (backup) {
             console.log(`  Migriert: ${fullPath}`);
             console.log(`    Backup: ${backup}`);
-            console.log('    >>> ACHTUNG: Backup enthält KLARTEXT-Passwörter! Nach Verifikation löschen:');
+            console.log(
+              '    >>> ACHTUNG: Backup enthält KLARTEXT-Passwörter! Nach Verifikation löschen:'
+            );
             console.log(`        rm "${backup}"   (oder del auf Windows)`);
           } else {
             console.log(`  Migriert: ${fullPath} (ohne Backup)`);
@@ -297,7 +366,9 @@ async function runSecret(args) {
 
     if (migratedFiles.size > 0) {
       console.log(`\nFertig. ${migratedFiles.size} Datei(en) migriert.`);
-      console.log('>>> WICHTIG: Prüfen und .bak-Dateien mit Klartext SOFORT löschen (nicht committen).');
+      console.log(
+        '>>> WICHTIG: Prüfen und .bak-Dateien mit Klartext SOFORT löschen (nicht committen).'
+      );
       console.log('    Verwendung von --no-backup bei zukünftigen Migrationen vermeidet Backups.');
     } else {
       console.log('Keine automatische Migration durchgeführt (manuelle Überprüfung empfohlen).');
@@ -305,7 +376,9 @@ async function runSecret(args) {
     return;
   }
 
-  throw new Error(`Unbekanntes Unterkommando "secret ${sub}". Erlaubt: init-key | status | encrypt | decrypt | check | migrate.`);
+  throw new Error(
+    `Unbekanntes Unterkommando "secret ${sub}". Erlaubt: init-key | status | encrypt | decrypt | check | migrate.`
+  );
 }
 
 module.exports = {

@@ -40,7 +40,7 @@ test('validatePuiDddlV1 rejects unknown keys in strict mode', () => {
   };
   const result = validatePuiDddlV1(payload, { strict: true });
   assert.equal(result.valid, false);
-  assert.ok(result.errors.some((entry) => entry.includes('unknown key')));
+  assert.ok(result.errors.some(entry => entry.includes('unknown key')));
 });
 
 test('parsePuiDddlPayload migrates legacy v0 payload with json field', () => {

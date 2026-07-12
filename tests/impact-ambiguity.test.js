@@ -30,26 +30,24 @@ test('analyze and impact keep duplicate-member ambiguity explicit instead of sil
   copySanitizedFixtureTree(path.join('source', 'catalog-cross-program-root'), sourceRoot);
 
   try {
-    runCli([
-      'analyze',
-      '--source',
-      sourceRoot,
-      '--program',
-      'CALLERPGM',
-      '--out',
-      outputRoot,
-      '--skip-test-data',
-    ], projectRoot);
+    runCli(
+      [
+        'analyze',
+        '--source',
+        sourceRoot,
+        '--program',
+        'CALLERPGM',
+        '--out',
+        outputRoot,
+        '--skip-test-data',
+      ],
+      projectRoot
+    );
 
-    runCli([
-      'impact',
-      '--program',
-      'CALLERPGM',
-      '--target',
-      'PROGRAM_020',
-      '--out',
-      outputRoot,
-    ], projectRoot);
+    runCli(
+      ['impact', '--program', 'CALLERPGM', '--target', 'PROGRAM_020', '--out', outputRoot],
+      projectRoot
+    );
 
     const programOutputDir = path.join(outputRoot, 'CALLERPGM');
     const report = fs.readFileSync(path.join(programOutputDir, 'report.md'), 'utf8');

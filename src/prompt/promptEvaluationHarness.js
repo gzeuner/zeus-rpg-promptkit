@@ -25,7 +25,7 @@ function evaluatePromptFixture(fixturePath) {
   const input = fixture.input || {};
   const evaluations = Array.isArray(fixture.evaluations) ? fixture.evaluations : [];
 
-  return evaluations.map((evaluation) => {
+  return evaluations.map(evaluation => {
     const templateName = evaluation.template;
     const applicability = validatePromptApplicability(templateName, input);
     if (!applicability.applicable) {

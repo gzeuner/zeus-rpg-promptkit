@@ -41,11 +41,12 @@ function readInternalRuntimeConfigModuleNames(repoRoot) {
     return [];
   }
 
-  return fs.readdirSync(configDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && /^runtimeConfig.+\.js$/i.test(entry.name))
-    .map((entry) => entry.name)
-    .filter((name) => name.toLowerCase() !== 'runtimeconfig.js')
-    .map((name) => name.slice(0, -3))
+  return fs
+    .readdirSync(configDir, { withFileTypes: true })
+    .filter(entry => entry.isFile() && /^runtimeConfig.+\.js$/i.test(entry.name))
+    .map(entry => entry.name)
+    .filter(name => name.toLowerCase() !== 'runtimeconfig.js')
+    .map(name => name.slice(0, -3))
     .sort((a, b) => a.localeCompare(b));
 }
 
@@ -69,7 +70,7 @@ function collectImportSpecifiers(sourceText) {
 
 function collectForbiddenRuntimeConfigImports(relativePath, sourceText, internalModuleNames) {
   const violations = [];
-  const internalModuleNameSet = new Set(internalModuleNames.map((name) => name.toLowerCase()));
+  const internalModuleNameSet = new Set(internalModuleNames.map(name => name.toLowerCase()));
   if (internalModuleNameSet.size === 0) {
     return violations;
   }
@@ -129,7 +130,7 @@ test('runtime-config boundary: no direct imports of internal runtime-config modu
   const internalModuleNames = readInternalRuntimeConfigModuleNames(repoRoot);
   assert.ok(
     internalModuleNames.length > 0,
-    'Expected at least one internal runtime-config module under src/config for boundary protection.',
+    'Expected at least one internal runtime-config module under src/config for boundary protection.'
   );
 
   for (const root of rootsToScan) {
@@ -142,17 +143,19 @@ test('runtime-config boundary: no direct imports of internal runtime-config modu
       }
 
       const sourceText = fs.readFileSync(filePath, 'utf8');
-      violations.push(...collectForbiddenRuntimeConfigImports(relativePath, sourceText, internalModuleNames));
+      violations.push(
+        ...collectForbiddenRuntimeConfigImports(relativePath, sourceText, internalModuleNames)
+      );
     }
   }
 
   const formattedViolations = violations
-    .map((entry) => `${entry.relativePath}:${entry.line} imports "${entry.specifier}"`)
+    .map(entry => `${entry.relativePath}:${entry.line} imports "${entry.specifier}"`)
     .join('\n');
   assert.equal(
     violations.length,
     0,
-    `Found forbidden direct imports of internal runtime-config modules:\n${formattedViolations}`,
+    `Found forbidden direct imports of internal runtime-config modules:\n${formattedViolations}`
   );
 });
 
@@ -161,8 +164,8 @@ test('runtime-config layering: internal runtime-config modules must not import r
   const configDir = path.join(repoRoot, 'src', 'config');
   const violations = [];
   const files = listJavaScriptFiles(configDir)
-    .filter((filePath) => /^runtimeConfig.+\.js$/i.test(path.basename(filePath)))
-    .filter((filePath) => path.basename(filePath).toLowerCase() !== 'runtimeconfig.js');
+    .filter(filePath => /^runtimeConfig.+\.js$/i.test(path.basename(filePath)))
+    .filter(filePath => path.basename(filePath).toLowerCase() !== 'runtimeconfig.js');
 
   for (const filePath of files) {
     const relativePath = path.relative(repoRoot, filePath).replace(/\\/g, '/');
@@ -182,11 +185,11 @@ test('runtime-config layering: internal runtime-config modules must not import r
   }
 
   const formattedViolations = violations
-    .map((entry) => `${entry.relativePath}:${entry.line} imports "${entry.specifier}"`)
+    .map(entry => `${entry.relativePath}:${entry.line} imports "${entry.specifier}"`)
     .join('\n');
   assert.equal(
     violations.length,
     0,
-    `Found layering violations: internal runtime-config modules must not import runtimeConfig facade:\n${formattedViolations}`,
+    `Found layering violations: internal runtime-config modules must not import runtimeConfig facade:\n${formattedViolations}`
   );
 });

@@ -14,7 +14,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 
-const { readAnalyzeRunManifest, ANALYZE_RUN_MANIFEST_FILE } = require('../analyze/analyzeRunManifest');
+const {
+  readAnalyzeRunManifest,
+  ANALYZE_RUN_MANIFEST_FILE,
+} = require('../analyze/analyzeRunManifest');
 const { SAFE_SHARING_DIR } = require('../sharing/safeSharingArtifactBuilder');
 
 const BUNDLE_MANIFEST_FILE = 'bundle-manifest.json';
@@ -42,7 +45,9 @@ function readJsonIfExists(filePath) {
 }
 
 function normalizeRelativePath(relativePath) {
-  return String(relativePath || '').split(path.sep).join('/');
+  return String(relativePath || '')
+    .split(path.sep)
+    .join('/');
 }
 
 function toDisplayTitle(filePath) {
@@ -51,12 +56,13 @@ function toDisplayTitle(filePath) {
     .replace(/^ai_prompt_/, '')
     .replace(/\.md$/i, '')
     .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (match) => match.toUpperCase());
+    .replace(/\b\w/g, match => match.toUpperCase());
 }
 
 function uniqueSorted(values) {
-  return Array.from(new Set((Array.isArray(values) ? values : []).filter(Boolean)))
-    .sort((left, right) => left.localeCompare(right));
+  return Array.from(new Set((Array.isArray(values) ? values : []).filter(Boolean))).sort(
+    (left, right) => left.localeCompare(right)
+  );
 }
 
 function readArtifactEntries(programOutputDir) {
@@ -83,7 +89,7 @@ function readArtifactEntries(programOutputDir) {
   }
 
   return entries
-    .map((entry) => {
+    .map(entry => {
       const stats = fs.statSync(entry.absolutePath);
       const normalizedPath = normalizeRelativePath(entry.path);
       return {
@@ -96,23 +102,33 @@ function readArtifactEntries(programOutputDir) {
     .sort((left, right) => left.path.localeCompare(right.path));
 }
 
-function buildRunSummary(program, programOutputDir, analyzeManifest, bundleManifest, workflowManifest) {
+function buildRunSummary(
+  program,
+  programOutputDir,
+  analyzeManifest,
+  bundleManifest,
+  workflowManifest
+) {
   const run = analyzeManifest && analyzeManifest.run ? analyzeManifest.run : {};
-  const options = analyzeManifest && analyzeManifest.inputs && analyzeManifest.inputs.options
-    ? analyzeManifest.inputs.options
-    : {};
+  const options =
+    analyzeManifest && analyzeManifest.inputs && analyzeManifest.inputs.options
+      ? analyzeManifest.inputs.options
+      : {};
   const artifacts = readArtifactEntries(programOutputDir);
 
   return {
     program,
     status: run.status || null,
     completedAt: run.completedAt || null,
-    sourceRoot: analyzeManifest && analyzeManifest.inputs ? analyzeManifest.inputs.sourceRoot || null : null,
+    sourceRoot:
+      analyzeManifest && analyzeManifest.inputs ? analyzeManifest.inputs.sourceRoot || null : null,
     workflowMode: options.guidedMode ? options.guidedMode.name || null : null,
     workflowPreset: options.workflowPreset ? options.workflowPreset.name || null : null,
     reproducible: Boolean(options.reproducibleEnabled),
     artifactCount: artifacts.length,
-    safeSharingEnabled: artifacts.some((artifact) => artifact.path.startsWith(`${SAFE_SHARING_DIR}/`)),
+    safeSharingEnabled: artifacts.some(artifact =>
+      artifact.path.startsWith(`${SAFE_SHARING_DIR}/`)
+    ),
     bundleAvailable: Boolean(bundleManifest),
     workflowRunAvailable: Boolean(workflowManifest),
   };
@@ -124,13 +140,16 @@ function listAnalysisRuns(outputRoot) {
     return [];
   }
 
-  return fs.readdirSync(resolvedRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => {
+  return fs
+    .readdirSync(resolvedRoot, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => {
       const programOutputDir = path.join(resolvedRoot, entry.name);
       const analyzeManifest = readAnalyzeRunManifest(programOutputDir);
       const bundleManifest = readJsonIfExists(path.join(programOutputDir, BUNDLE_MANIFEST_FILE));
-      const workflowManifest = readJsonIfExists(path.join(programOutputDir, WORKFLOW_MANIFEST_FILE));
+      const workflowManifest = readJsonIfExists(
+        path.join(programOutputDir, WORKFLOW_MANIFEST_FILE)
+      );
       if (!analyzeManifest && !bundleManifest && !workflowManifest) {
         return null;
       }
@@ -140,7 +159,7 @@ function listAnalysisRuns(outputRoot) {
         programOutputDir,
         analyzeManifest,
         bundleManifest,
-        workflowManifest,
+        workflowManifest
       );
     })
     .filter(Boolean)
@@ -169,8 +188,8 @@ function resolveProgramOutputDir(outputRoot, program) {
 
 function collectPromptArtifacts(artifacts) {
   return (Array.isArray(artifacts) ? artifacts : [])
-    .filter((artifact) => PROMPT_FILE_PATTERN.test(artifact.path))
-    .map((artifact) => ({
+    .filter(artifact => PROMPT_FILE_PATTERN.test(artifact.path))
+    .map(artifact => ({
       path: artifact.path,
       title: artifact.title,
       workflowHint: artifact.title,
@@ -198,12 +217,12 @@ function buildRelatedArtifactPaths(node, availablePaths) {
     if (availablePaths.has('test-data.md')) result.push('test-data.md');
   }
 
-  return uniqueSorted(result.filter((entry) => availablePaths.has(entry)));
+  return uniqueSorted(result.filter(entry => availablePaths.has(entry)));
 }
 
 function buildGraphView(programOutputDir, context, artifacts) {
   const graph = readJsonIfExists(path.join(programOutputDir, GRAPH_FILE));
-  const availablePaths = new Set((artifacts || []).map((artifact) => artifact.path));
+  const availablePaths = new Set((artifacts || []).map(artifact => artifact.path));
   const promptArtifacts = collectPromptArtifacts(artifacts);
 
   if (!graph) {
@@ -224,10 +243,15 @@ function buildGraphView(programOutputDir, context, artifacts) {
 
   const edges = Array.isArray(graph.edges) ? graph.edges : [];
   const nodes = Array.isArray(graph.nodes) ? graph.nodes : [];
-  const adjacency = new Map(nodes.map((node) => [node.id, {
-    incoming: [],
-    outgoing: [],
-  }]));
+  const adjacency = new Map(
+    nodes.map(node => [
+      node.id,
+      {
+        incoming: [],
+        outgoing: [],
+      },
+    ])
+  );
 
   for (const edge of edges) {
     if (adjacency.has(edge.from)) {
@@ -238,37 +262,48 @@ function buildGraphView(programOutputDir, context, artifacts) {
     }
   }
 
-  const graphNodes = nodes.map((node) => {
-    const links = adjacency.get(node.id) || { incoming: [], outgoing: [] };
-    const connected = uniqueSorted([...links.incoming, ...links.outgoing]);
-    const connectedTables = connected.filter((entry) => nodes.some((candidate) => candidate.id === entry && candidate.type === 'TABLE'));
-    const connectedPrograms = connected.filter((entry) => nodes.some((candidate) => candidate.id === entry && candidate.type === 'PROGRAM'));
+  const graphNodes = nodes
+    .map(node => {
+      const links = adjacency.get(node.id) || { incoming: [], outgoing: [] };
+      const connected = uniqueSorted([...links.incoming, ...links.outgoing]);
+      const connectedTables = connected.filter(entry =>
+        nodes.some(candidate => candidate.id === entry && candidate.type === 'TABLE')
+      );
+      const connectedPrograms = connected.filter(entry =>
+        nodes.some(candidate => candidate.id === entry && candidate.type === 'PROGRAM')
+      );
 
-    return {
-      id: node.id,
-      type: node.type,
-      connectedNodeIds: connected,
-      connectedTableIds: connectedTables,
-      connectedProgramIds: connectedPrograms,
-      incomingCount: links.incoming.length,
-      outgoingCount: links.outgoing.length,
-      relatedArtifactPaths: buildRelatedArtifactPaths(node, availablePaths),
-      relatedPromptPaths: node.type === 'PROGRAM'
-        ? promptArtifacts.map((artifact) => artifact.path)
-        : promptArtifacts
-          .filter((artifact) => /documentation|error analysis|modernization|architecture review/i.test(artifact.title))
-          .map((artifact) => artifact.path),
-      impactTarget: node.id,
-    };
-  }).sort((left, right) => left.id.localeCompare(right.id));
+      return {
+        id: node.id,
+        type: node.type,
+        connectedNodeIds: connected,
+        connectedTableIds: connectedTables,
+        connectedProgramIds: connectedPrograms,
+        incomingCount: links.incoming.length,
+        outgoingCount: links.outgoing.length,
+        relatedArtifactPaths: buildRelatedArtifactPaths(node, availablePaths),
+        relatedPromptPaths:
+          node.type === 'PROGRAM'
+            ? promptArtifacts.map(artifact => artifact.path)
+            : promptArtifacts
+                .filter(artifact =>
+                  /documentation|error analysis|modernization|architecture review/i.test(
+                    artifact.title
+                  )
+                )
+                .map(artifact => artifact.path),
+        impactTarget: node.id,
+      };
+    })
+    .sort((left, right) => left.id.localeCompare(right.id));
 
   return {
     available: true,
     summary: {
       nodeCount: graphNodes.length,
       edgeCount: edges.length,
-      programCount: graphNodes.filter((node) => node.type === 'PROGRAM').length,
-      tableCount: graphNodes.filter((node) => node.type === 'TABLE').length,
+      programCount: graphNodes.filter(node => node.type === 'PROGRAM').length,
+      tableCount: graphNodes.filter(node => node.type === 'TABLE').length,
     },
     rootProgram: graph.rootProgram || (context ? context.program : null),
     viewerArtifact: availablePaths.has('architecture.html') ? 'architecture.html' : null,
@@ -281,13 +316,17 @@ function buildDb2View(programOutputDir, promptArtifacts, artifacts) {
   const db2Metadata = readJsonIfExists(path.join(programOutputDir, DB2_METADATA_FILE));
   const testData = readJsonIfExists(path.join(programOutputDir, TEST_DATA_FILE));
   const tableMap = new Map();
-  const availablePaths = new Set((Array.isArray(artifacts) ? artifacts : []).map((artifact) => artifact.path));
+  const availablePaths = new Set(
+    (Array.isArray(artifacts) ? artifacts : []).map(artifact => artifact.path)
+  );
 
   function existingDb2ArtifactPaths(paths) {
-    return uniqueSorted((Array.isArray(paths) ? paths : []).filter((entry) => availablePaths.has(entry)));
+    return uniqueSorted(
+      (Array.isArray(paths) ? paths : []).filter(entry => availablePaths.has(entry))
+    );
   }
 
-  for (const table of (db2Metadata && Array.isArray(db2Metadata.tables) ? db2Metadata.tables : [])) {
+  for (const table of db2Metadata && Array.isArray(db2Metadata.tables) ? db2Metadata.tables : []) {
     const id = `${table.schema || ''}|${table.table || table.systemName || ''}`;
     tableMap.set(id, {
       id,
@@ -295,18 +334,19 @@ function buildDb2View(programOutputDir, promptArtifacts, artifacts) {
       schema: table.schema || '',
       table: table.table || table.systemName || '',
       matchStatus: table.sourceLink ? table.sourceLink.matchStatus || 'resolved' : 'resolved',
-      sourceEvidenceCount: table.sourceLink && Array.isArray(table.sourceLink.sourceEvidence)
-        ? table.sourceLink.sourceEvidence.length
-        : 0,
+      sourceEvidenceCount:
+        table.sourceLink && Array.isArray(table.sourceLink.sourceEvidence)
+          ? table.sourceLink.sourceEvidence.length
+          : 0,
       sampleRowCount: 0,
       maskedColumnCount: 0,
       policyEligibility: null,
-      relatedPromptPaths: promptArtifacts.map((artifact) => artifact.path),
+      relatedPromptPaths: promptArtifacts.map(artifact => artifact.path),
       relatedArtifactPaths: existingDb2ArtifactPaths(['db2-metadata.json', 'db2-metadata.md']),
     });
   }
 
-  for (const table of (testData && Array.isArray(testData.tables) ? testData.tables : [])) {
+  for (const table of testData && Array.isArray(testData.tables) ? testData.tables : []) {
     const id = `${table.schema || ''}|${table.table || table.systemName || ''}`;
     const current = tableMap.get(id) || {
       id,
@@ -314,20 +354,24 @@ function buildDb2View(programOutputDir, promptArtifacts, artifacts) {
       schema: table.schema || '',
       table: table.table || table.systemName || '',
       matchStatus: table.sourceLink ? table.sourceLink.matchStatus || 'resolved' : 'resolved',
-      sourceEvidenceCount: table.sourceLink && Array.isArray(table.sourceLink.sourceEvidence)
-        ? table.sourceLink.sourceEvidence.length
-        : 0,
+      sourceEvidenceCount:
+        table.sourceLink && Array.isArray(table.sourceLink.sourceEvidence)
+          ? table.sourceLink.sourceEvidence.length
+          : 0,
       sampleRowCount: 0,
       maskedColumnCount: 0,
       policyEligibility: null,
-      relatedPromptPaths: promptArtifacts.map((artifact) => artifact.path),
+      relatedPromptPaths: promptArtifacts.map(artifact => artifact.path),
       relatedArtifactPaths: [],
     };
     current.sampleRowCount = Array.isArray(table.rows) ? table.rows.length : 0;
-    current.maskedColumnCount = table.policyDecision && Array.isArray(table.policyDecision.maskedColumns)
-      ? table.policyDecision.maskedColumns.length
-      : 0;
-    current.policyEligibility = table.policyDecision ? table.policyDecision.eligibility || null : null;
+    current.maskedColumnCount =
+      table.policyDecision && Array.isArray(table.policyDecision.maskedColumns)
+        ? table.policyDecision.maskedColumns.length
+        : 0;
+    current.policyEligibility = table.policyDecision
+      ? table.policyDecision.eligibility || null
+      : null;
     current.relatedArtifactPaths = existingDb2ArtifactPaths([
       ...current.relatedArtifactPaths,
       'test-data.json',
@@ -341,8 +385,9 @@ function buildDb2View(programOutputDir, promptArtifacts, artifacts) {
     testDataAvailable: Boolean(testData),
     metadataSummary: db2Metadata && db2Metadata.summary ? db2Metadata.summary : null,
     testDataSummary: testData && testData.summary ? testData.summary : null,
-    tables: Array.from(tableMap.values())
-      .sort((left, right) => left.qualifiedName.localeCompare(right.qualifiedName)),
+    tables: Array.from(tableMap.values()).sort((left, right) =>
+      left.qualifiedName.localeCompare(right.qualifiedName)
+    ),
   };
 }
 
@@ -387,7 +432,13 @@ function readAnalysisRun(outputRoot, program) {
   const context = readJsonIfExists(path.join(programOutputDir, CONTEXT_FILE));
 
   return {
-    summary: buildRunSummary(program, programOutputDir, analyzeManifest, bundleManifest, workflowManifest),
+    summary: buildRunSummary(
+      program,
+      programOutputDir,
+      analyzeManifest,
+      bundleManifest,
+      workflowManifest
+    ),
     analyzeManifest,
     bundleManifest,
     workflowManifest,

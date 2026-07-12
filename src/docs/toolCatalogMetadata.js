@@ -22,8 +22,10 @@ const COMMAND_METADATA = Object.freeze({
   secret: Object.freeze({
     safety: 'S0',
     scope: 'Local',
-    purpose: 'Manage encrypted credentials (Secret Vault). Create key (init-key [--windows] for DPAPI on Windows), encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. Supports migrate, check (with --warn-only), status.',
-    example: 'node cli/zeus.js secret init-key --windows && node cli/zeus.js secret encrypt --value "myDbPass"',
+    purpose:
+      'Manage encrypted credentials (Secret Vault). Create key (init-key [--windows] for DPAPI on Windows), encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. Supports migrate, check (with --warn-only), status.',
+    example:
+      'node cli/zeus.js secret init-key --windows && node cli/zeus.js secret encrypt --value "myDbPass"',
   }),
   profiles: Object.freeze({
     safety: 'S0',
@@ -40,13 +42,15 @@ const COMMAND_METADATA = Object.freeze({
   'discover-environment': Object.freeze({
     safety: 'S0',
     scope: 'Local',
-    purpose: 'Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.',
+    purpose:
+      'Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.',
     example: 'node cli/zeus.js discover-environment --profile dev --json',
   }),
   fetch: Object.freeze({
     safety: 'S2',
     scope: 'IBM i read',
-    purpose: 'Fetch source members/IFS content into the local workspace. Supports --system <name> to select a named profile system at operator request without changing the loaded profile.',
+    purpose:
+      'Fetch source members/IFS content into the local workspace. Supports --system <name> to select a named profile system at operator request without changing the loaded profile.',
     example: 'node cli/zeus.js fetch --profile combined-fetch-and-query --system dev',
   }),
   'fetch-member': Object.freeze({
@@ -58,38 +62,48 @@ const COMMAND_METADATA = Object.freeze({
   analyze: Object.freeze({
     safety: 'S1',
     scope: 'Local',
-    purpose: 'Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context, --dense [lite|full|ultra] (rank-aware token reduction + compaction), --prompt-max-tokens, --skip-db2-metadata, --reproducible for large programs and CI stability.',
-    example: 'node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000',
+    purpose:
+      'Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context, --dense [lite|full|ultra] (rank-aware token reduction + compaction), --prompt-max-tokens, --skip-db2-metadata, --reproducible for large programs and CI stability.',
+    example:
+      'node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000',
   }),
   workflow: Object.freeze({
     safety: 'S1',
     scope: 'Local',
-    purpose: 'Run preset-guided analyze and bundle flow. Supports --dense (forwarded to analyze steps).',
-    example: 'node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output --dense ultra',
+    purpose:
+      'Run preset-guided analyze and bundle flow. Supports --dense (forwarded to analyze steps).',
+    example:
+      'node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output --dense ultra',
   }),
   'workflow run': Object.freeze({
     safety: 'S1',
     scope: 'Local',
-    purpose: 'Run workflow definitions from profile/runtime configuration. --dense [lite|full|ultra] is supported and forwarded to inner analyze steps (rank-aware token reduction & compaction).',
-    example: 'node cli/zeus.js workflow run --profile default --preset onboarding --out ./output --dense full',
+    purpose:
+      'Run workflow definitions from profile/runtime configuration. --dense [lite|full|ultra] is supported and forwarded to inner analyze steps (rank-aware token reduction & compaction).',
+    example:
+      'node cli/zeus.js workflow run --profile default --preset onboarding --out ./output --dense full',
   }),
   investigate: Object.freeze({
     safety: 'S0',
     scope: 'Local',
-    purpose: 'Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state. Designed for interactive use and MCP agents.',
-    example: 'node cli/zeus.js investigate --program ORDERPGM --profile dev --goal "Focus on error paths" --focus "error paths" --search "dynamic sql" --generate-prompt',
+    purpose:
+      'Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state. Designed for interactive use and MCP agents.',
+    example:
+      'node cli/zeus.js investigate --program ORDERPGM --profile dev --goal "Focus on error paths" --focus "error paths" --search "dynamic sql" --generate-prompt',
   }),
   bundle: Object.freeze({
     safety: 'S1',
     scope: 'Local',
     purpose: 'Package analysis artifacts for sharing and review.',
-    example: 'node cli/zeus.js bundle --program ORDERPGM --source-output-root ./output --include-md --include-json',
+    example:
+      'node cli/zeus.js bundle --program ORDERPGM --source-output-root ./output --include-md --include-json',
   }),
   impact: Object.freeze({
     safety: 'S1',
     scope: 'Local',
     purpose: 'Build reverse-impact analysis by target or field.',
-    example: 'node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output',
+    example:
+      'node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output',
   }),
   'assess-risk': Object.freeze({
     safety: 'S1',
@@ -107,25 +121,30 @@ const COMMAND_METADATA = Object.freeze({
     safety: 'S1',
     scope: 'Local',
     purpose: 'Generate deployment and change checklist artifacts.',
-    example: 'node cli/zeus.js generate-checklist --program ORDERPGM --type BOTH --impact HIGH --out ./output',
+    example:
+      'node cli/zeus.js generate-checklist --program ORDERPGM --type BOTH --impact HIGH --out ./output',
   }),
   'query-table': Object.freeze({
     safety: 'S2',
     scope: 'DB2 read',
     purpose: 'Query DB2 table metadata. Supports --json for machine readable output.',
-    example: 'node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA --json',
+    example:
+      'node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA --json',
   }),
   'resolve-object': Object.freeze({
     safety: 'S2',
     scope: 'DB2 read',
     purpose: 'Resolve SQL/system object names and optionally verify required columns.',
-    example: 'node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS',
+    example:
+      'node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS',
   }),
   'query-sql': Object.freeze({
     safety: 'S2',
     scope: 'DB2 read',
-    purpose: 'Run one or more read-only SQL statements (SELECT/WITH). Semicolon-separated --sql and --file batches execute through one DB2 runner call.',
-    example: 'node cli/zeus.js query-sql --profile default --sql "SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY; SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1"',
+    purpose:
+      'Run one or more read-only SQL statements (SELECT/WITH). Semicolon-separated --sql and --file batches execute through one DB2 runner call.',
+    example:
+      'node cli/zeus.js query-sql --profile default --sql "SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY; SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1"',
   }),
   joblog: Object.freeze({
     safety: 'S2',
@@ -137,13 +156,15 @@ const COMMAND_METADATA = Object.freeze({
     safety: 'S0/S2',
     scope: 'Local + IBM i read',
     purpose: 'Find field/table usage in local sources and or remote members.',
-    example: 'node cli/zeus.js field-search --profile default --field FIELD_ALPHA --table APP_TABLE --source ./rpg_sources --mode all',
+    example:
+      'node cli/zeus.js field-search --profile default --field FIELD_ALPHA --table APP_TABLE --source ./rpg_sources --mode all',
   }),
   'search-source': Object.freeze({
     safety: 'S0',
     scope: 'Local',
     purpose: 'Search the local source tree by term, member, or table.',
-    example: 'node cli/zeus.js search-source --source-root ./rpg_sources --search-term "CHAIN(" --max-results 50',
+    example:
+      'node cli/zeus.js search-source --source-root ./rpg_sources --search-term "CHAIN(" --max-results 50',
   }),
   'copy-to-workspace': Object.freeze({
     safety: 'S1',
@@ -172,13 +193,16 @@ const COMMAND_METADATA = Object.freeze({
   'validate-rpg-sql': Object.freeze({
     safety: 'S1',
     scope: 'Local',
-    purpose: 'Validate embedded SQL in RPG sources for cursor/fetch mismatches, dynamic SQL patterns and host variable issues. Uses scanner + sqlRpgValidator.',
-    example: 'node cli/zeus.js validate-rpg-sql --source ./rpg_sources --program ORDERPGM --format markdown --out ./output',
+    purpose:
+      'Validate embedded SQL in RPG sources for cursor/fetch mismatches, dynamic SQL patterns and host variable issues. Uses scanner + sqlRpgValidator.',
+    example:
+      'node cli/zeus.js validate-rpg-sql --source ./rpg_sources --program ORDERPGM --format markdown --out ./output',
   }),
   onboarding: Object.freeze({
     safety: 'S0',
     scope: 'Local',
-    purpose: 'Interactive zeus-onboarding-wizard. Guides through profile setup, doctor checks, source/object discovery, first fetch and analyze for a new IBM i system.',
+    purpose:
+      'Interactive zeus-onboarding-wizard. Guides through profile setup, doctor checks, source/object discovery, first fetch and analyze for a new IBM i system.',
     example: 'node cli/zeus.js onboarding',
   }),
   wizard: Object.freeze({
@@ -191,49 +215,58 @@ const COMMAND_METADATA = Object.freeze({
     safety: 'S2',
     scope: 'IBM i read',
     purpose: 'Read object metadata and journaling details.',
-    example: 'node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_00 --type *FILE --journal',
+    example:
+      'node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_00 --type *FILE --journal',
   }),
   'test-run': Object.freeze({
     safety: 'S2/S1',
     scope: 'DB2 read + local',
     purpose: 'Capture before and after test snapshots plus rollback SQL text.',
-    example: 'node cli/zeus.js test-run start --profile default --program ORDERPGM --table APPLIB.APP_TABLE_00 --key ID=1',
+    example:
+      'node cli/zeus.js test-run start --profile default --program ORDERPGM --table APPLIB.APP_TABLE_00 --key ID=1',
   }),
   'write-sql': Object.freeze({
     safety: 'S3',
     scope: 'DB2 write',
-    purpose: 'Execute one or more guarded DML statements with confirmation, backup, and safety preflight options.',
-    example: 'node cli/zeus.js write-sql --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS=\'X\'" --confirm --backup',
+    purpose:
+      'Execute one or more guarded DML statements with confirmation, backup, and safety preflight options.',
+    example:
+      'node cli/zeus.js write-sql --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS=\'X\'" --confirm --backup',
   }),
   upsert: Object.freeze({
     safety: 'S3',
     scope: 'DB2 write',
     purpose: 'DML wrapper for INSERT/UPDATE/DELETE/MERGE with guardrails.',
-    example: 'node cli/zeus.js upsert --profile default --sql "UPDATE APPDATA.APP_TABLE_00 SET STATUS=\'X\' WHERE ID=1"',
+    example:
+      'node cli/zeus.js upsert --profile default --sql "UPDATE APPDATA.APP_TABLE_00 SET STATUS=\'X\' WHERE ID=1"',
   }),
   'upsert-sql': Object.freeze({
     safety: 'S3',
     scope: 'DB2 write',
     purpose: 'Backward-compatible alias for the upsert flow.',
-    example: 'node cli/zeus.js upsert-sql --profile default --sql "INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)"',
+    example:
+      'node cli/zeus.js upsert-sql --profile default --sql "INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)"',
   }),
   insert: Object.freeze({
     safety: 'S3',
     scope: 'DB2 write',
     purpose: 'Strict insert-only DML command.',
-    example: 'node cli/zeus.js insert --profile default --sql "INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)"',
+    example:
+      'node cli/zeus.js insert --profile default --sql "INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)"',
   }),
   update: Object.freeze({
     safety: 'S3',
     scope: 'DB2 write',
     purpose: 'Strict update-only DML command.',
-    example: 'node cli/zeus.js update --profile default --sql "UPDATE APPDATA.APP_TABLE_00 SET STATUS=\'Y\' WHERE ID=1"',
+    example:
+      'node cli/zeus.js update --profile default --sql "UPDATE APPDATA.APP_TABLE_00 SET STATUS=\'Y\' WHERE ID=1"',
   }),
   delete: Object.freeze({
     safety: 'S3',
     scope: 'DB2 write',
     purpose: 'Strict delete-only DML command with the shared write-safety guardrails.',
-    example: 'node cli/zeus.js delete --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS=\'X\'" --confirm --backup',
+    example:
+      'node cli/zeus.js delete --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS=\'X\'" --confirm --backup',
   }),
   analyses: Object.freeze({
     safety: 'S1',
@@ -251,25 +284,30 @@ const COMMAND_METADATA = Object.freeze({
     safety: 'S1',
     scope: 'Local',
     purpose: 'Apply structured UI edit operations to local display artifacts.',
-    example: 'node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json',
+    example:
+      'node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json',
   }),
   'docs:generate-catalog': Object.freeze({
     safety: 'S0',
     scope: 'Local read-only',
-    purpose: 'Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.',
+    purpose:
+      'Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.',
     example: 'node cli/zeus.js docs:generate-catalog',
   }),
   help: Object.freeze({
     safety: 'S0',
     scope: 'Local',
-    purpose: 'Structured help for any command or overview of MCP-safe capabilities for AI agents. Returns purpose, safety, examples and agent guidance.',
+    purpose:
+      'Structured help for any command or overview of MCP-safe capabilities for AI agents. Returns purpose, safety, examples and agent guidance.',
     example: 'node cli/zeus.js help --command analyze  (or via MCP zeus.help)',
   }),
   mcp: Object.freeze({
     safety: 'S0',
     scope: 'Local read-mostly',
-    purpose: 'Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.',
-    example: 'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run',
+    purpose:
+      'Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.',
+    example:
+      'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run',
   }),
 });
 
@@ -314,11 +352,31 @@ const COMMAND_ORDER = Object.freeze([
 ]);
 
 const SAFETY_LEVELS = Object.freeze([
-  Object.freeze({ level: 'S0', meaning: 'Local read-only', typicalAction: 'Read local files, inspect generated artifacts.' }),
-  Object.freeze({ level: 'S1', meaning: 'Local write', typicalAction: 'Create or update local artifacts in the workspace only.' }),
-  Object.freeze({ level: 'S2', meaning: 'Remote read-only', typicalAction: 'Read from IBM i/DB2 without mutations.' }),
-  Object.freeze({ level: 'S3', meaning: 'Controlled write', typicalAction: 'Data mutation with explicit user approval only.' }),
-  Object.freeze({ level: 'S4', meaning: 'High-risk / operator-gated', typicalAction: 'Bridge/apply/compile style operations; never implicit.' }),
+  Object.freeze({
+    level: 'S0',
+    meaning: 'Local read-only',
+    typicalAction: 'Read local files, inspect generated artifacts.',
+  }),
+  Object.freeze({
+    level: 'S1',
+    meaning: 'Local write',
+    typicalAction: 'Create or update local artifacts in the workspace only.',
+  }),
+  Object.freeze({
+    level: 'S2',
+    meaning: 'Remote read-only',
+    typicalAction: 'Read from IBM i/DB2 without mutations.',
+  }),
+  Object.freeze({
+    level: 'S3',
+    meaning: 'Controlled write',
+    typicalAction: 'Data mutation with explicit user approval only.',
+  }),
+  Object.freeze({
+    level: 'S4',
+    meaning: 'High-risk / operator-gated',
+    typicalAction: 'Bridge/apply/compile style operations; never implicit.',
+  }),
 ]);
 
 const MANDATORY_AI_RULES = Object.freeze([

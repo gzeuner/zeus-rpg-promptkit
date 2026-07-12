@@ -2,10 +2,7 @@
 
 const { renderAsciiTable } = require('../helpers/asciiTable');
 const { createJsonOutput } = require('../helpers/jsonOutput');
-const {
-  resolveAnalyzeConfig,
-  resolveAnalyzeDbConfig,
-} = require('../../config/runtimeConfig');
+const { resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
 const { resolveObjectsByName } = require('../../db2/tableNameResolutionService');
 const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
@@ -15,9 +12,7 @@ function normalizeRequireColumns(value) {
     return [];
   }
   const values = Array.isArray(value) ? value : [value];
-  return values
-    .map((entry) => String(entry || '').trim())
-    .filter(Boolean);
+  return values.map(entry => String(entry || '').trim()).filter(Boolean);
 }
 
 function buildResolveObjectDiagnosticLines(result) {
@@ -93,9 +88,9 @@ async function runResolveObject(args) {
     console.log(`Schema filter: ${String(args.schema).trim().toUpperCase()}`);
   }
   if (requireColumns.length > 0) {
-    console.log(`Required columns: ${requireColumns.map((entry) => entry.toUpperCase()).join(', ')}`);
+    console.log(`Required columns: ${requireColumns.map(entry => entry.toUpperCase()).join(', ')}`);
   }
-  buildResolveObjectDiagnosticLines(result).forEach((line) => console.log(line));
+  buildResolveObjectDiagnosticLines(result).forEach(line => console.log(line));
   console.log('');
 
   if (!result.found) {
@@ -114,23 +109,20 @@ async function runResolveObject(args) {
     headers.push('Row Count');
   }
 
-  const matrix = result.objects.map((entry) => {
-    const columnStatus = entry.requiredColumns.length === 0
-      ? 'n/a'
-      : (entry.allRequiredColumnsPresent
-        ? 'OK'
-        : `Missing: ${entry.missingRequiredColumns.join(', ')}`);
+  const matrix = result.objects.map(entry => {
+    const columnStatus =
+      entry.requiredColumns.length === 0
+        ? 'n/a'
+        : entry.allRequiredColumnsPresent
+          ? 'OK'
+          : `Missing: ${entry.missingRequiredColumns.join(', ')}`;
 
-    const row = [
-      entry.schema,
-      entry.sqlName,
-      entry.systemName,
-      entry.type || '',
-      columnStatus,
-    ];
+    const row = [entry.schema, entry.sqlName, entry.systemName, entry.type || '', columnStatus];
 
     if (includeRowCount) {
-      row.push(entry.rowCountError ? `Unavailable: ${entry.rowCountError}` : String(entry.rowCount));
+      row.push(
+        entry.rowCountError ? `Unavailable: ${entry.rowCountError}` : String(entry.rowCount)
+      );
     }
 
     return row;

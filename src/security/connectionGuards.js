@@ -1,9 +1,6 @@
 'use strict';
 
-const {
-  collectSensitiveTermsFromEnv,
-  maskSecretsInText,
-} = require('./secretMasking');
+const { collectSensitiveTermsFromEnv, maskSecretsInText } = require('./secretMasking');
 
 const DB2_PROBE_SQL = 'SELECT 1 AS HEALTHCHECK FROM SYSIBM.SYSDUMMY1';
 const FETCH_PROBE_COMMAND = 'CHKOBJ OBJ(QSYS/QSYS) OBJTYPE(*LIB)';
@@ -11,30 +8,36 @@ const FETCH_PROBE_COMMAND = 'CHKOBJ OBJ(QSYS/QSYS) OBJTYPE(*LIB)';
 const dbGuardState = new Map();
 const fetchGuardState = new Map();
 
-const AUTH_OR_CONNECTION_ERROR_PATTERN = /SQL30082|SQLSTATE\s*[=:]?\s*(08001|08004|08S01)|CPF22E2|CPF2204|CPF2203|invalid password|authentication|authorization|not authorized|signon|user profile|disabled|connection refused|timed out|timeout|unknown host|unknownhost|communication link failure|socket|ssl/i;
+const AUTH_OR_CONNECTION_ERROR_PATTERN =
+  /SQL30082|SQLSTATE\s*[=:]?\s*(08001|08004|08S01)|CPF22E2|CPF2204|CPF2203|invalid password|authentication|authorization|not authorized|signon|user profile|disabled|connection refused|timed out|timeout|unknown host|unknownhost|communication link failure|socket|ssl/i;
 
 function normalizeKeyPart(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function buildDbGuardKey(dbConfig = {}) {
   return [
     normalizeKeyPart(dbConfig.url || dbConfig.host),
     normalizeKeyPart(dbConfig.user),
-    normalizeKeyPart(dbConfig.defaultSchema || dbConfig.defaultLibrary || dbConfig.schema || dbConfig.library),
+    normalizeKeyPart(
+      dbConfig.defaultSchema || dbConfig.defaultLibrary || dbConfig.schema || dbConfig.library
+    ),
   ].join('|');
 }
 
 function buildFetchGuardKey(fetchConfig = {}) {
-  return [
-    normalizeKeyPart(fetchConfig.host),
-    normalizeKeyPart(fetchConfig.user),
-  ].join('|');
+  return [normalizeKeyPart(fetchConfig.host), normalizeKeyPart(fetchConfig.user)].join('|');
 }
 
 function sanitizeProbeError(error, env = process.env) {
-  const rawMessage = String(error && error.message ? error.message : error || '').trim() || 'Unknown remote error.';
-  const masked = maskSecretsInText(maskSecretsInText(rawMessage), collectSensitiveTermsFromEnv(env));
+  const rawMessage =
+    String(error && error.message ? error.message : error || '').trim() || 'Unknown remote error.';
+  const masked = maskSecretsInText(
+    maskSecretsInText(rawMessage),
+    collectSensitiveTermsFromEnv(env)
+  );
   return masked || 'Unknown remote error.';
 }
 
@@ -49,7 +52,9 @@ function buildProbeFailureMessage(scopeLabel, cause, { repeated = false } = {}) 
 }
 
 function shouldCacheFailure(error) {
-  return AUTH_OR_CONNECTION_ERROR_PATTERN.test(String(error && error.message ? error.message : error || ''));
+  return AUTH_OR_CONNECTION_ERROR_PATTERN.test(
+    String(error && error.message ? error.message : error || '')
+  );
 }
 
 function ensureCachedGuardState(stateMap, cacheKey, scopeLabel) {

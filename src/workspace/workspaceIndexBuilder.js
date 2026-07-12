@@ -50,7 +50,9 @@ function scanSourceDir(sourceDir) {
   for (const filePath of walkFiles(sourceDir)) {
     const relative = path.relative(sourceDir, filePath);
     const segments = relative.split(path.sep).filter(Boolean);
-    const sourceFile = String(segments[0] || '').trim().toUpperCase();
+    const sourceFile = String(segments[0] || '')
+      .trim()
+      .toUpperCase();
     if (!sourceFile) {
       continue;
     }
@@ -99,7 +101,7 @@ function buildWorkspaceIndex(workspacePath, workspaceEntry = {}) {
     system: String(workspaceEntry.system || '').trim() || '',
     library: String(workspaceEntry.library || '').trim() || '',
     generatedAt: new Date().toISOString(),
-    programs: runs.map((run) => ({
+    programs: runs.map(run => ({
       name: run.program,
       outputDir: normalizePathForJson(path.join(outputDir, run.program)),
       analyzedAt: run.completedAt,

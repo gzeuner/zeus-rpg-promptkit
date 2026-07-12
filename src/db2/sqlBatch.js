@@ -86,10 +86,10 @@ function splitSqlStatements(sqlText) {
 
 function normalizeSqlStatements({ sql, statements }) {
   if (Array.isArray(statements)) {
-    return statements.map((entry) => String(entry || '').trim()).filter(Boolean);
+    return statements.map(entry => String(entry || '').trim()).filter(Boolean);
   }
   if (Array.isArray(sql)) {
-    return sql.map((entry) => String(entry || '').trim()).filter(Boolean);
+    return sql.map(entry => String(entry || '').trim()).filter(Boolean);
   }
   return splitSqlStatements(String(sql || '').trim());
 }
@@ -98,13 +98,18 @@ function shouldUseSqlStatementFile(statements, runtime = {}) {
   if (runtime.forceSqlStatementFile) {
     return true;
   }
-  return statements.length !== 1 || statements.some((entry) => entry.length > SQL_FILE_THRESHOLD || /[\r\n]/.test(entry));
+  return (
+    statements.length !== 1 ||
+    statements.some(entry => entry.length > SQL_FILE_THRESHOLD || /[\r\n]/.test(entry))
+  );
 }
 
 function writeSqlStatementsFile(statements) {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-sql-statements-'));
   const filePath = path.join(tempDir, 'statements.sqlbatch');
-  const content = statements.map((statement) => statement.trim()).join(`\n${SQL_STATEMENT_DELIMITER}\n`);
+  const content = statements
+    .map(statement => statement.trim())
+    .join(`\n${SQL_STATEMENT_DELIMITER}\n`);
   fs.writeFileSync(filePath, `${content}\n`, 'utf8');
   return {
     tempDir,
@@ -119,7 +124,14 @@ function removeSqlStatementsFile(fileRef) {
   fs.rmSync(fileRef.tempDir, { recursive: true, force: true });
 }
 
-function buildSqlRunnerArgs({ jdbcUrl, user, passwordSentinel, statements, trailingArgs = [], runtime = {} }) {
+function buildSqlRunnerArgs({
+  jdbcUrl,
+  user,
+  passwordSentinel,
+  statements,
+  trailingArgs = [],
+  runtime = {},
+}) {
   const args = [jdbcUrl, String(user), passwordSentinel];
   let statementFile = null;
   if (shouldUseSqlStatementFile(statements, runtime)) {

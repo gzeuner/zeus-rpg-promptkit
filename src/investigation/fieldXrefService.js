@@ -14,7 +14,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 'use strict';
 
-const { ensureJavaSourcesCompiled, runJavaClass, SECRET_ENV_SENTINEL } = require('../java/javaRuntime');
+const {
+  ensureJavaSourcesCompiled,
+  runJavaClass,
+  SECRET_ENV_SENTINEL,
+} = require('../java/javaRuntime');
 
 /**
  * SQL context patterns for Stufe 1: detect field+table relationship in source lines.
@@ -72,14 +76,14 @@ function extractTableContextFromLine(line) {
  * @returns {Object} search result
  */
 function searchLocalSources(sourceTextByRelativePath, options = {}) {
-  const field = String(options.field || '').trim().toUpperCase();
+  const field = String(options.field || '')
+    .trim()
+    .toUpperCase();
   const table = options.table ? String(options.table).trim().toUpperCase() : null;
-  const maxResults = Number.isInteger(options.maxResults) && options.maxResults > 0
-    ? options.maxResults
-    : 300;
-  const contextLines = Number.isInteger(options.contextLines) && options.contextLines >= 0
-    ? options.contextLines
-    : 2;
+  const maxResults =
+    Number.isInteger(options.maxResults) && options.maxResults > 0 ? options.maxResults : 300;
+  const contextLines =
+    Number.isInteger(options.contextLines) && options.contextLines >= 0 ? options.contextLines : 2;
 
   if (!field) {
     throw new Error('field option is required');
@@ -113,15 +117,15 @@ function searchLocalSources(sourceTextByRelativePath, options = {}) {
 
       // Try to detect table context: look at match line and surrounding lines for SQL keywords
       const windowText = [
-        ...contextBefore.map((l) => l.text),
+        ...contextBefore.map(l => l.text),
         line,
-        ...contextAfter.map((l) => l.text),
+        ...contextAfter.map(l => l.text),
       ].join(' ');
       const tableContexts = extractTableContextFromLine(windowText);
 
       // If table filter given, only include if the table appears in context
       if (table) {
-        const hasTable = tableContexts.some((tc) => tc.table === table);
+        const hasTable = tableContexts.some(tc => tc.table === table);
         if (!hasTable) continue;
       }
 
@@ -165,7 +169,18 @@ function searchLocalSources(sourceTextByRelativePath, options = {}) {
  * @returns {Object} parsed result from IbmiSourceSearcher JSON output
  */
 function searchRemoteSources(options = {}) {
-  const { host, user, password, sourceLib, sourceFile, field, table, maxResults = 500, progressFile, threads } = options;
+  const {
+    host,
+    user,
+    password,
+    sourceLib,
+    sourceFile,
+    field,
+    table,
+    maxResults = 500,
+    progressFile,
+    threads,
+  } = options;
 
   if (!host || !user || !password) {
     throw new Error('host, user, password are required for remote search');
@@ -183,7 +198,13 @@ function searchRemoteSources(options = {}) {
   const searchTerm = table ? `${field}|${table}` : field;
 
   const javaArgs = [
-    host, user, SECRET_ENV_SENTINEL, sourceLib, sourceFile, searchTerm, String(maxResults),
+    host,
+    user,
+    SECRET_ENV_SENTINEL,
+    sourceLib,
+    sourceFile,
+    searchTerm,
+    String(maxResults),
   ];
   // argv[7] = progressFile (optional), argv[8] = threads (optional)
   javaArgs.push(progressFile ? String(progressFile) : '');
@@ -195,7 +216,9 @@ function searchRemoteSources(options = {}) {
 
   const stdout = (result.stdout || '').trim();
   if (!stdout) {
-    throw new Error(`IbmiSourceSearcher returned no output. stderr: ${(result.stderr || '').trim()}`);
+    throw new Error(
+      `IbmiSourceSearcher returned no output. stderr: ${(result.stderr || '').trim()}`
+    );
   }
 
   let parsed;
@@ -224,10 +247,10 @@ function searchRemoteSources(options = {}) {
       if (termUpper === upperTable) memberHasTable.add(m.member);
     }
     // Keep only members that reference both
-    const relevantMembers = new Set([...memberHasField].filter((m) => memberHasTable.has(m)));
+    const relevantMembers = new Set([...memberHasField].filter(m => memberHasTable.has(m)));
     // Return only field matches from relevant members (not the table matches)
     filteredMatches = filteredMatches.filter(
-      (m) => m.term.toUpperCase() === upperField && relevantMembers.has(m.member)
+      m => m.term.toUpperCase() === upperField && relevantMembers.has(m.member)
     );
   }
 

@@ -23,22 +23,23 @@ const { normalizeRelativePath } = require('../source/sourceIntegrity');
 const CANONICAL_ANALYSIS_SCHEMA_VERSION = 1;
 
 function normalizeName(name) {
-  return String(name || '').trim().toUpperCase();
+  return String(name || '')
+    .trim()
+    .toUpperCase();
 }
 
 function uniqueSortedStrings(values) {
-  return Array.from(new Set((values || []).map((value) => String(value || '').trim()).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set((values || []).map(value => String(value || '').trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function normalizeEvidenceList(evidenceList, sourceRoot) {
   return (evidenceList || [])
-    .map((entry) => {
+    .map(entry => {
       if (!entry || typeof entry !== 'object') return null;
       const filePath = entry.file || entry.path || '';
-      const normalizedFile = filePath
-        ? normalizeRelativePath(sourceRoot, filePath)
-        : filePath;
+      const normalizedFile = filePath ? normalizeRelativePath(sourceRoot, filePath) : filePath;
       return {
         ...entry,
         file: normalizedFile || filePath,
@@ -75,7 +76,7 @@ function dedupeByName(items, sourceRoot, withKind) {
     }
     for (const evidence of normalizeEvidenceList(item && item.evidence, sourceRoot)) {
       const marker = JSON.stringify(evidence);
-      const exists = target.evidence.some((entry) => JSON.stringify(entry) === marker);
+      const exists = target.evidence.some(entry => JSON.stringify(entry) === marker);
       if (!exists) {
         target.evidence.push(evidence);
       }
@@ -83,7 +84,7 @@ function dedupeByName(items, sourceRoot, withKind) {
   }
 
   return Array.from(map.values())
-    .map((entry) => ({
+    .map(entry => ({
       name: entry.name,
       kind: entry.kind,
       evidenceCount: entry.evidence.length,
@@ -115,7 +116,9 @@ function normalizeSqlJoins(joins) {
       alias: normalizeName(join.alias) || null,
       joinType: normalizeName(join.joinType || 'INNER') || 'INNER',
       condition: String(join.condition || '').trim() || null,
-      hostVariables: uniqueSortedStrings((join.hostVariables || []).map((name) => normalizeName(name)).filter(Boolean)),
+      hostVariables: uniqueSortedStrings(
+        (join.hostVariables || []).map(name => normalizeName(name)).filter(Boolean)
+      ),
     };
     const marker = JSON.stringify(entry);
     if (seen.has(marker)) continue;
@@ -136,7 +139,9 @@ function normalizeSqlFilters(filters) {
     if (!text) continue;
     const entry = {
       text,
-      hostVariables: uniqueSortedStrings((filter.hostVariables || []).map((name) => normalizeName(name)).filter(Boolean)),
+      hostVariables: uniqueSortedStrings(
+        (filter.hostVariables || []).map(name => normalizeName(name)).filter(Boolean)
+      ),
     };
     const marker = JSON.stringify(entry);
     if (seen.has(marker)) continue;
@@ -148,34 +153,38 @@ function normalizeSqlFilters(filters) {
 }
 
 function sortSqlStatements(statements, sourceRoot) {
-  const normalized = (statements || []).map((statement) => {
+  const normalized = (statements || []).map(statement => {
     const evidence = normalizeEvidenceList(statement.evidence || [], sourceRoot);
     const type = normalizeName(statement.type || 'OTHER') || 'OTHER';
     const intent = normalizeName(statement.intent || inferSqlIntent(type)) || 'OTHER';
-    const readsData = typeof statement.readsData === 'boolean'
-      ? statement.readsData
-      : intent === 'READ';
-    const writesData = typeof statement.writesData === 'boolean'
-      ? statement.writesData
-      : intent === 'WRITE';
+    const readsData =
+      typeof statement.readsData === 'boolean' ? statement.readsData : intent === 'READ';
+    const writesData =
+      typeof statement.writesData === 'boolean' ? statement.writesData : intent === 'WRITE';
     return {
       type,
       intent,
       text: String(statement.text || '').trim(),
-      tables: uniqueSortedStrings((statement.tables || []).map((name) => normalizeName(name)).filter(Boolean)),
-      hostVariables: uniqueSortedStrings((statement.hostVariables || []).map((name) => normalizeName(name)).filter(Boolean)),
-      cursors: Array.from(new Map((statement.cursors || [])
-        .map((cursor) => {
-          const name = normalizeName(cursor && cursor.name);
-          const action = normalizeName(cursor && cursor.action);
-          return [`${name}:${action}`, { name, action }];
-        })
-        .filter((entry) => entry[1].name && entry[1].action))
-        .values())
-        .sort((a, b) => {
-          if (a.name !== b.name) return a.name.localeCompare(b.name);
-          return a.action.localeCompare(b.action);
-        }),
+      tables: uniqueSortedStrings(
+        (statement.tables || []).map(name => normalizeName(name)).filter(Boolean)
+      ),
+      hostVariables: uniqueSortedStrings(
+        (statement.hostVariables || []).map(name => normalizeName(name)).filter(Boolean)
+      ),
+      cursors: Array.from(
+        new Map(
+          (statement.cursors || [])
+            .map(cursor => {
+              const name = normalizeName(cursor && cursor.name);
+              const action = normalizeName(cursor && cursor.action);
+              return [`${name}:${action}`, { name, action }];
+            })
+            .filter(entry => entry[1].name && entry[1].action)
+        ).values()
+      ).sort((a, b) => {
+        if (a.name !== b.name) return a.name.localeCompare(b.name);
+        return a.action.localeCompare(b.action);
+      }),
       driverTable: normalizeName(statement.driverTable) || null,
       joins: normalizeSqlJoins(statement.joins),
       filters: normalizeSqlFilters(statement.filters),
@@ -184,7 +193,9 @@ function sortSqlStatements(statements, sourceRoot) {
       writesData: Boolean(writesData),
       dynamic: Boolean(statement.dynamic),
       unresolved: Boolean(statement.unresolved),
-      uncertainty: uniqueSortedStrings((statement.uncertainty || []).map((name) => normalizeName(name)).filter(Boolean)),
+      uncertainty: uniqueSortedStrings(
+        (statement.uncertainty || []).map(name => normalizeName(name)).filter(Boolean)
+      ),
       evidence,
     };
   });
@@ -209,7 +220,7 @@ function sortSqlStatements(statements, sourceRoot) {
 }
 
 function mergeSqlTablesIntoDependencies(tables, sqlTableNames) {
-  const existing = new Set(tables.map((table) => table.name));
+  const existing = new Set(tables.map(table => table.name));
   const merged = [...tables];
   for (const tableName of sqlTableNames) {
     if (!existing.has(tableName)) {
@@ -294,8 +305,12 @@ function defaultSqlAnalysis() {
 
 function summarizeSqlStatements(sqlStatements, sqlValidation = {}) {
   const statements = sqlStatements || [];
-  const tableNames = uniqueSortedStrings(statements.flatMap((statement) => statement.tables || []).map((name) => normalizeName(name)));
-  const hostVariables = uniqueSortedStrings(statements.flatMap((statement) => statement.hostVariables || []).map((name) => normalizeName(name)));
+  const tableNames = uniqueSortedStrings(
+    statements.flatMap(statement => statement.tables || []).map(name => normalizeName(name))
+  );
+  const hostVariables = uniqueSortedStrings(
+    statements.flatMap(statement => statement.hostVariables || []).map(name => normalizeName(name))
+  );
 
   const cursorMap = new Map();
   for (const statement of statements) {
@@ -323,11 +338,12 @@ function summarizeSqlStatements(sqlStatements, sqlValidation = {}) {
   return {
     summary: {
       statementCount: statements.length,
-      readStatementCount: statements.filter((statement) => statement.readsData).length,
-      writeStatementCount: statements.filter((statement) => statement.writesData).length,
-      dynamicStatementCount: statements.filter((statement) => statement.dynamic).length,
-      unresolvedStatementCount: statements.filter((statement) => statement.unresolved).length,
-      cursorStatementCount: statements.filter((statement) => (statement.cursors || []).length > 0).length,
+      readStatementCount: statements.filter(statement => statement.readsData).length,
+      writeStatementCount: statements.filter(statement => statement.writesData).length,
+      dynamicStatementCount: statements.filter(statement => statement.dynamic).length,
+      unresolvedStatementCount: statements.filter(statement => statement.unresolved).length,
+      cursorStatementCount: statements.filter(statement => (statement.cursors || []).length > 0)
+        .length,
       hostVariableCount: hostVariables.length,
       cursorCount: cursors.length,
       validationErrorCount: valErrors.length,
@@ -348,10 +364,10 @@ function buildRiskHints(dependencies, sql, procedureCalls, nativeFileUsage) {
   if ((sql.statements || []).length > 0) {
     hints.push('Embedded SQL detected');
   }
-  if ((sql.statements || []).some((statement) => statement.dynamic)) {
+  if ((sql.statements || []).some(statement => statement.dynamic)) {
     hints.push('Dynamic SQL detected');
   }
-  if ((sql.statements || []).some((statement) => statement.unresolved)) {
+  if ((sql.statements || []).some(statement => statement.unresolved)) {
     hints.push('Unresolved SQL dependencies detected');
   }
   if (sql.validation && Array.isArray(sql.validation.errors) && sql.validation.errors.length > 0) {
@@ -360,25 +376,34 @@ function buildRiskHints(dependencies, sql, procedureCalls, nativeFileUsage) {
   if ((dependencies.programCalls || []).length > 0) {
     hints.push('External program calls detected');
   }
-  if ((procedureCalls || []).some((call) => call.resolution === 'DYNAMIC')) {
+  if ((procedureCalls || []).some(call => call.resolution === 'DYNAMIC')) {
     hints.push('Dynamic procedure call detected');
   }
-  if ((procedureCalls || []).some((call) => call.resolution === 'UNRESOLVED')) {
+  if ((procedureCalls || []).some(call => call.resolution === 'UNRESOLVED')) {
     hints.push('Unresolved procedure call detected');
   }
   if ((dependencies.copyMembers || []).length >= 5) {
     hints.push('Many copy members included');
   }
-  if (((dependencies.tables || []).length + (dependencies.programCalls || []).length) >= 10) {
+  if ((dependencies.tables || []).length + (dependencies.programCalls || []).length >= 10) {
     hints.push('Many external dependencies');
   }
   if (nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.mutatingFileCount > 0) {
     hints.push('Mutating native file I/O detected');
   }
-  if (nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.interactiveFileCount > 0) {
+  if (
+    nativeFileUsage &&
+    nativeFileUsage.summary &&
+    nativeFileUsage.summary.interactiveFileCount > 0
+  ) {
     hints.push('Interactive workstation I/O detected');
   }
-  if (dependencies && dependencies.bindingAnalysis && dependencies.bindingAnalysis.summary && dependencies.bindingAnalysis.summary.unresolvedModuleCount > 0) {
+  if (
+    dependencies &&
+    dependencies.bindingAnalysis &&
+    dependencies.bindingAnalysis.summary &&
+    dependencies.bindingAnalysis.summary.unresolvedModuleCount > 0
+  ) {
     hints.push('Unresolved bind-time dependencies detected');
   }
   return hints;
@@ -392,7 +417,9 @@ function createManifestIndex(importManifest) {
 
   for (const entry of importManifest.files) {
     const origin = getImportManifestEntryOrigin(entry);
-    const localPath = String(origin.localPath || '').trim().replace(/\\/g, '/');
+    const localPath = String(origin.localPath || '')
+      .trim()
+      .replace(/\\/g, '/');
     if (localPath) {
       map.set(localPath, entry);
     }
@@ -404,47 +431,59 @@ function createManifestIndex(importManifest) {
 function normalizeSourceFiles(sourceFiles, sourceRoot, importManifest) {
   const manifestIndex = createManifestIndex(importManifest);
   return (sourceFiles || [])
-    .map((entry) => {
+    .map(entry => {
       const absolutePath = entry && entry.path ? entry.path : String(entry || '');
-      const relPath = absolutePath
-        ? normalizeRelativePath(sourceRoot, absolutePath)
-        : absolutePath;
+      const relPath = absolutePath ? normalizeRelativePath(sourceRoot, absolutePath) : absolutePath;
       const manifestEntry = manifestIndex.get(relPath) || null;
       const manifestOrigin = manifestEntry ? getImportManifestEntryOrigin(manifestEntry) : null;
-      const manifestExport = manifestEntry ? getImportManifestEntryExport(manifestEntry, importManifest) : null;
-      const manifestValidation = manifestEntry ? getImportManifestEntryValidation(manifestEntry) : null;
+      const manifestExport = manifestEntry
+        ? getImportManifestEntryExport(manifestEntry, importManifest)
+        : null;
+      const manifestValidation = manifestEntry
+        ? getImportManifestEntryValidation(manifestEntry)
+        : null;
 
       return {
         id: `FILE:${relPath}`,
         path: relPath || absolutePath,
         sizeBytes: Number(entry && entry.sizeBytes ? entry.sizeBytes : 0),
         lines: Number(entry && entry.lines ? entry.lines : 0),
-        sourceType: normalizeName(entry && entry.sourceType ? entry.sourceType : (manifestOrigin && manifestOrigin.sourceType ? manifestOrigin.sourceType : '')),
+        sourceType: normalizeName(
+          entry && entry.sourceType
+            ? entry.sourceType
+            : manifestOrigin && manifestOrigin.sourceType
+              ? manifestOrigin.sourceType
+              : ''
+        ),
         normalization: {
           detectedEncoding: entry && entry.detectedEncoding ? String(entry.detectedEncoding) : null,
           newlineStyle: entry && entry.newlineStyle ? String(entry.newlineStyle) : null,
-          normalizedNewlineStyle: entry && entry.normalizedNewlineStyle ? String(entry.normalizedNewlineStyle) : null,
+          normalizedNewlineStyle:
+            entry && entry.normalizedNewlineStyle ? String(entry.normalizedNewlineStyle) : null,
           status: entry && entry.normalizationStatus ? String(entry.normalizationStatus) : null,
         },
         provenance: {
           origin: manifestEntry ? 'imported' : 'local',
-          import: manifestEntry ? {
-            sourceLib: normalizeName(manifestOrigin.sourceLib),
-            sourceFile: normalizeName(manifestOrigin.sourceFile),
-            member: normalizeName(manifestOrigin.member),
-            memberPath: manifestOrigin.memberPath || '',
-            remotePath: manifestOrigin.remotePath || '',
-            localPath: manifestOrigin.localPath || relPath || absolutePath,
-            sourceType: normalizeName(manifestOrigin.sourceType),
-            sha256: manifestValidation.sha256 || null,
-            transportRequested: manifestExport.transportRequested || null,
-            transportUsed: manifestExport.transportUsed || null,
-            fetchedAt: importManifest && importManifest.fetchedAt ? importManifest.fetchedAt : null,
-            encodingPolicy: manifestExport.encodingPolicy || null,
-            normalizationPolicy: manifestExport.normalizationPolicy || null,
-            exportStatus: manifestExport.status || null,
-            validationStatus: manifestValidation.status || null,
-          } : null,
+          import: manifestEntry
+            ? {
+                sourceLib: normalizeName(manifestOrigin.sourceLib),
+                sourceFile: normalizeName(manifestOrigin.sourceFile),
+                member: normalizeName(manifestOrigin.member),
+                memberPath: manifestOrigin.memberPath || '',
+                remotePath: manifestOrigin.remotePath || '',
+                localPath: manifestOrigin.localPath || relPath || absolutePath,
+                sourceType: normalizeName(manifestOrigin.sourceType),
+                sha256: manifestValidation.sha256 || null,
+                transportRequested: manifestExport.transportRequested || null,
+                transportUsed: manifestExport.transportUsed || null,
+                fetchedAt:
+                  importManifest && importManifest.fetchedAt ? importManifest.fetchedAt : null,
+                encodingPolicy: manifestExport.encodingPolicy || null,
+                normalizationPolicy: manifestExport.normalizationPolicy || null,
+                exportStatus: manifestExport.status || null,
+                validationStatus: manifestValidation.status || null,
+              }
+            : null,
         },
       };
     })
@@ -467,7 +506,7 @@ function normalizeStructuredItems(items, sourceRoot, mapper, identityBuilder) {
     const target = map.get(key);
     for (const evidence of normalized.evidence || []) {
       const serialized = JSON.stringify(evidence);
-      const exists = target.evidence.some((entry) => JSON.stringify(entry) === serialized);
+      const exists = target.evidence.some(entry => JSON.stringify(entry) === serialized);
       if (!exists) {
         target.evidence.push(evidence);
       }
@@ -477,15 +516,19 @@ function normalizeStructuredItems(items, sourceRoot, mapper, identityBuilder) {
 }
 
 function createEntityId(type, name) {
-  return `${String(type || '').trim().toUpperCase()}:${String(name || '').trim()}`;
+  return `${String(type || '')
+    .trim()
+    .toUpperCase()}:${String(name || '').trim()}`;
 }
 
 function createRelationId(type, from, to) {
-  return `${String(type || '').trim().toUpperCase()}:${String(from || '')}->${String(to || '')}`;
+  return `${String(type || '')
+    .trim()
+    .toUpperCase()}:${String(from || '')}->${String(to || '')}`;
 }
 
 function normalizeProgramCalls(calls, sourceRoot) {
-  return dedupeByName(calls, sourceRoot, 'PROGRAM').map((call) => ({
+  return dedupeByName(calls, sourceRoot, 'PROGRAM').map(call => ({
     ...call,
     kind: call.kind || 'PROGRAM',
     id: createEntityId('PROGRAM', call.name),
@@ -509,11 +552,17 @@ function normalizeProcedures(procedures, sourceRoot) {
       externalName: item.externalName ? normalizeName(item.externalName) : null,
       evidence: normalizeEvidenceList(item.evidence || [], rootDir),
     }),
-    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
+    item =>
+      [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join(
+        '|'
+      )
   )
-    .map((item) => ({
+    .map(item => ({
       ...item,
-      id: createEntityId(item.kind === 'SUBROUTINE' ? 'SUBROUTINE' : 'PROCEDURE', `${item.ownerProgram}:${item.sourceFile}:${item.name}`),
+      id: createEntityId(
+        item.kind === 'SUBROUTINE' ? 'SUBROUTINE' : 'PROCEDURE',
+        `${item.ownerProgram}:${item.sourceFile}:${item.name}`
+      ),
       evidenceCount: item.evidence.length,
     }))
     .sort((a, b) => {
@@ -541,9 +590,12 @@ function normalizePrototypes(prototypes, sourceRoot) {
       externalName: item.externalName ? normalizeName(item.externalName) : null,
       evidence: normalizeEvidenceList(item.evidence || [], rootDir),
     }),
-    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join('|'),
+    item =>
+      [item.ownerProgram, item.sourceFile, item.kind, item.name, item.startLine, item.endLine].join(
+        '|'
+      )
   )
-    .map((item) => ({
+    .map(item => ({
       ...item,
       id: createEntityId('PROTOTYPE', `${item.ownerProgram}:${item.sourceFile}:${item.name}`),
       evidenceCount: item.evidence.length,
@@ -571,18 +623,19 @@ function normalizeProcedureCalls(procedureCalls, sourceRoot) {
       targetProgram: item.targetProgram ? normalizeName(item.targetProgram) : null,
       evidence: normalizeEvidenceList(item.evidence || [], rootDir),
     }),
-    (item) => [
-      item.ownerProgram,
-      item.ownerFile,
-      item.ownerName,
-      item.ownerKind,
-      item.name,
-      item.resolution,
-      item.targetKind,
-      item.targetProgram || '',
-    ].join('|'),
+    item =>
+      [
+        item.ownerProgram,
+        item.ownerFile,
+        item.ownerName,
+        item.ownerKind,
+        item.name,
+        item.resolution,
+        item.targetKind,
+        item.targetProgram || '',
+      ].join('|')
   )
-    .map((item) => ({
+    .map(item => ({
       ...item,
       evidenceCount: item.evidence.length,
     }))
@@ -620,11 +673,14 @@ function normalizeNativeFiles(nativeFiles, sourceRoot) {
     const target = map.get(name);
     target.kind = chooseMoreSpecificNativeFileKind(target.kind, normalized.kind);
     target.keyed = Boolean(target.keyed || normalized.keyed);
-    target.declaredAccess = uniqueSortedStrings([...(target.declaredAccess || []), ...(normalized.declaredAccess || [])]);
+    target.declaredAccess = uniqueSortedStrings([
+      ...(target.declaredAccess || []),
+      ...(normalized.declaredAccess || []),
+    ]);
 
     for (const evidence of normalized.evidence || []) {
       const serialized = JSON.stringify(evidence);
-      const exists = target.evidence.some((entry) => JSON.stringify(entry) === serialized);
+      const exists = target.evidence.some(entry => JSON.stringify(entry) === serialized);
       if (!exists) {
         target.evidence.push(evidence);
       }
@@ -632,7 +688,7 @@ function normalizeNativeFiles(nativeFiles, sourceRoot) {
   }
 
   return Array.from(map.values())
-    .map((item) => ({
+    .map(item => ({
       ...item,
       id: createEntityId('NATIVE_FILE', item.name),
       evidenceCount: item.evidence.length,
@@ -659,19 +715,23 @@ function normalizeNativeFileAccesses(nativeFileAccesses, sourceRoot) {
       ownerFile: normalizeRelativePath(rootDir, item.ownerFile || ''),
       evidence: normalizeEvidenceList(item.evidence || [], rootDir),
     }),
-    (item) => [
-      item.fileName,
-      item.ownerProgram,
-      item.ownerFile,
-      item.ownerName,
-      item.ownerKind,
-      item.opcode,
-      item.accessKind,
-      item.recordFormat || '',
-      ((item.evidence && item.evidence[0] && (item.evidence[0].line || item.evidence[0].startLine)) || 0),
-    ].join('|'),
+    item =>
+      [
+        item.fileName,
+        item.ownerProgram,
+        item.ownerFile,
+        item.ownerName,
+        item.ownerKind,
+        item.opcode,
+        item.accessKind,
+        item.recordFormat || '',
+        (item.evidence &&
+          item.evidence[0] &&
+          (item.evidence[0].line || item.evidence[0].startLine)) ||
+          0,
+      ].join('|')
   )
-    .map((item) => ({
+    .map(item => ({
       ...item,
       evidenceCount: item.evidence.length,
     }))
@@ -680,14 +740,16 @@ function normalizeNativeFileAccesses(nativeFileAccesses, sourceRoot) {
       if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
       if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
       if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
-      return (((a.evidence && a.evidence[0] && (a.evidence[0].line || a.evidence[0].startLine)) || 0)
-        - ((b.evidence && b.evidence[0] && (b.evidence[0].line || b.evidence[0].startLine)) || 0));
+      return (
+        ((a.evidence && a.evidence[0] && (a.evidence[0].line || a.evidence[0].startLine)) || 0) -
+        ((b.evidence && b.evidence[0] && (b.evidence[0].line || b.evidence[0].startLine)) || 0)
+      );
     });
 }
 
 function normalizeBindingDirectories(bindingDirectories, sourceRoot) {
   return dedupeByName(bindingDirectories, sourceRoot, 'BINDING_DIRECTORY')
-    .map((item) => ({
+    .map(item => ({
       ...item,
       kind: 'BINDING_DIRECTORY',
       id: createEntityId('BINDING_DIRECTORY', item.name),
@@ -709,9 +771,9 @@ function normalizeModules(modules, sourceRoot) {
       importedProcedures: uniqueSortedStrings(item.importedProcedures || []),
       evidence: normalizeEvidenceList(item.evidence || [], rootDir),
     }),
-    (item) => [item.ownerProgram, item.sourceFile, item.kind, item.name].join('|'),
+    item => [item.ownerProgram, item.sourceFile, item.kind, item.name].join('|')
   )
-    .map((item) => ({
+    .map(item => ({
       ...item,
       id: createEntityId('MODULE', `${item.ownerProgram}:${item.sourceFile}:${item.name}`),
       evidenceCount: item.evidence.length,
@@ -735,18 +797,22 @@ function normalizeServicePrograms(servicePrograms, sourceRoot) {
       name,
       sourceFile: item.sourceFile ? normalizeRelativePath(sourceRoot, item.sourceFile) : null,
       sourceKind: normalizeName(item.sourceKind || 'HINT') || 'HINT',
-      exports: Array.from(new Map((item.exports || [])
-        .map((entry) => {
-          const symbol = normalizeName(entry && entry.symbol);
-          const signatureLevel = normalizeName(entry && entry.signatureLevel ? entry.signatureLevel : 'CURRENT') || 'CURRENT';
-          return [`${symbol}:${signatureLevel}`, { symbol, signatureLevel }];
-        })
-        .filter((entry) => entry[1].symbol))
-        .values())
-        .sort((a, b) => {
-          if (a.symbol !== b.symbol) return a.symbol.localeCompare(b.symbol);
-          return a.signatureLevel.localeCompare(b.signatureLevel);
-        }),
+      exports: Array.from(
+        new Map(
+          (item.exports || [])
+            .map(entry => {
+              const symbol = normalizeName(entry && entry.symbol);
+              const signatureLevel =
+                normalizeName(entry && entry.signatureLevel ? entry.signatureLevel : 'CURRENT') ||
+                'CURRENT';
+              return [`${symbol}:${signatureLevel}`, { symbol, signatureLevel }];
+            })
+            .filter(entry => entry[1].symbol)
+        ).values()
+      ).sort((a, b) => {
+        if (a.symbol !== b.symbol) return a.symbol.localeCompare(b.symbol);
+        return a.signatureLevel.localeCompare(b.signatureLevel);
+      }),
       evidence: normalizeEvidenceList(item.evidence || [], sourceRoot),
     };
 
@@ -765,7 +831,9 @@ function normalizeServicePrograms(servicePrograms, sourceRoot) {
       target.sourceKind = 'BINDER_SOURCE';
     }
 
-    const exportSet = new Map((target.exports || []).map((entry) => [`${entry.symbol}:${entry.signatureLevel}`, entry]));
+    const exportSet = new Map(
+      (target.exports || []).map(entry => [`${entry.symbol}:${entry.signatureLevel}`, entry])
+    );
     for (const entry of normalized.exports || []) {
       exportSet.set(`${entry.symbol}:${entry.signatureLevel}`, entry);
     }
@@ -776,7 +844,7 @@ function normalizeServicePrograms(servicePrograms, sourceRoot) {
 
     for (const evidence of normalized.evidence || []) {
       const serialized = JSON.stringify(evidence);
-      const exists = target.evidence.some((entry) => JSON.stringify(entry) === serialized);
+      const exists = target.evidence.some(entry => JSON.stringify(entry) === serialized);
       if (!exists) {
         target.evidence.push(evidence);
       }
@@ -784,7 +852,7 @@ function normalizeServicePrograms(servicePrograms, sourceRoot) {
   }
 
   return Array.from(map.values())
-    .map((item) => ({
+    .map(item => ({
       ...item,
       id: createEntityId('SERVICE_PROGRAM', item.name),
       evidenceCount: item.evidence.length,
@@ -808,7 +876,9 @@ function summarizeNativeFileUsage(nativeFiles, nativeFileAccesses) {
         delete: false,
         position: false,
         display: nativeFile.kind === 'WORKSTN',
-        mutating: (nativeFile.declaredAccess || []).some((entry) => ['WRITE', 'UPDATE'].includes(entry)),
+        mutating: (nativeFile.declaredAccess || []).some(entry =>
+          ['WRITE', 'UPDATE'].includes(entry)
+        ),
         interactive: nativeFile.kind === 'WORKSTN',
       },
       owners: [],
@@ -856,7 +926,7 @@ function summarizeNativeFileUsage(nativeFiles, nativeFileAccesses) {
     if (access.interactive) file.access.interactive = true;
 
     const ownerKey = `${access.ownerKind}:${access.ownerName}`;
-    const ownerExists = file.owners.some((entry) => `${entry.kind}:${entry.name}` === ownerKey);
+    const ownerExists = file.owners.some(entry => `${entry.kind}:${entry.name}` === ownerKey);
     if (!ownerExists) {
       file.owners.push({
         name: access.ownerName,
@@ -869,7 +939,7 @@ function summarizeNativeFileUsage(nativeFiles, nativeFileAccesses) {
     }
 
     if (access.recordFormat) {
-      let recordFormat = file.recordFormats.find((entry) => entry.name === access.recordFormat);
+      let recordFormat = file.recordFormats.find(entry => entry.name === access.recordFormat);
       if (!recordFormat) {
         recordFormat = {
           name: access.recordFormat,
@@ -877,13 +947,16 @@ function summarizeNativeFileUsage(nativeFiles, nativeFileAccesses) {
         };
         file.recordFormats.push(recordFormat);
       }
-      recordFormat.operations = uniqueSortedStrings([...(recordFormat.operations || []), access.opcode]);
+      recordFormat.operations = uniqueSortedStrings([
+        ...(recordFormat.operations || []),
+        access.opcode,
+      ]);
       file.recordFormats.sort((a, b) => a.name.localeCompare(b.name));
     }
   }
 
   const fileList = Array.from(files.values())
-    .map((file) => ({
+    .map(file => ({
       ...file,
       declaredAccess: uniqueSortedStrings(file.declaredAccess || []),
       recordFormats: (file.recordFormats || []).sort((a, b) => a.name.localeCompare(b.name)),
@@ -893,21 +966,25 @@ function summarizeNativeFileUsage(nativeFiles, nativeFileAccesses) {
   return {
     summary: {
       fileCount: fileList.length,
-      readOnlyFileCount: fileList.filter((file) => file.access.read && !file.access.mutating && !file.access.interactive).length,
-      mutatingFileCount: fileList.filter((file) => file.access.mutating).length,
-      interactiveFileCount: fileList.filter((file) => file.access.interactive).length,
-      workstationFileCount: fileList.filter((file) => file.kind === 'WORKSTN').length,
-      printerFileCount: fileList.filter((file) => file.kind === 'PRINTER').length,
-      keyedFileCount: fileList.filter((file) => file.keyed || file.access.position).length,
-      recordFormatCount: fileList.reduce((sum, file) => sum + ((file.recordFormats || []).length), 0),
+      readOnlyFileCount: fileList.filter(
+        file => file.access.read && !file.access.mutating && !file.access.interactive
+      ).length,
+      mutatingFileCount: fileList.filter(file => file.access.mutating).length,
+      interactiveFileCount: fileList.filter(file => file.access.interactive).length,
+      workstationFileCount: fileList.filter(file => file.kind === 'WORKSTN').length,
+      printerFileCount: fileList.filter(file => file.kind === 'PRINTER').length,
+      keyedFileCount: fileList.filter(file => file.keyed || file.access.position).length,
+      recordFormatCount: fileList.reduce((sum, file) => sum + (file.recordFormats || []).length, 0),
     },
     files: fileList,
   };
 }
 
 function summarizeBindingAnalysis(modules, servicePrograms, bindingDirectories, procedures) {
-  const exportedProcedureNames = new Set((procedures || []).filter((entry) => entry.exported).map((entry) => entry.name));
-  const moduleList = (modules || []).map((module) => ({
+  const exportedProcedureNames = new Set(
+    (procedures || []).filter(entry => entry.exported).map(entry => entry.name)
+  );
+  const moduleList = (modules || []).map(module => ({
     name: module.name,
     kind: module.kind,
     ownerProgram: module.ownerProgram,
@@ -915,34 +992,45 @@ function summarizeBindingAnalysis(modules, servicePrograms, bindingDirectories, 
     bindingDirectories: uniqueSortedStrings(module.bindingDirectories || []),
     servicePrograms: uniqueSortedStrings(module.servicePrograms || []),
     importedProcedures: uniqueSortedStrings(module.importedProcedures || []),
-    unresolvedBindings: Boolean((module.importedProcedures || []).length > 0
-      && (module.bindingDirectories || []).length === 0
-      && (module.servicePrograms || []).length === 0),
+    unresolvedBindings: Boolean(
+      (module.importedProcedures || []).length > 0 &&
+      (module.bindingDirectories || []).length === 0 &&
+      (module.servicePrograms || []).length === 0
+    ),
   }));
-  const serviceProgramList = (servicePrograms || []).map((serviceProgram) => ({
+  const serviceProgramList = (servicePrograms || []).map(serviceProgram => ({
     name: serviceProgram.name,
     sourceFile: serviceProgram.sourceFile || null,
     sourceKind: serviceProgram.sourceKind || 'HINT',
-    exports: (serviceProgram.exports || []).map((entry) => ({
+    exports: (serviceProgram.exports || []).map(entry => ({
       symbol: entry.symbol,
       signatureLevel: entry.signatureLevel || 'CURRENT',
       resolved: exportedProcedureNames.has(entry.symbol),
     })),
   }));
-  const bindingDirectoryList = (bindingDirectories || []).map((entry) => ({
-    name: entry.name,
-  })).sort((a, b) => a.name.localeCompare(b.name));
+  const bindingDirectoryList = (bindingDirectories || [])
+    .map(entry => ({
+      name: entry.name,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return {
     summary: {
       moduleCount: moduleList.length,
-      noMainModuleCount: moduleList.filter((module) => module.kind === 'NOMAIN_MODULE').length,
+      noMainModuleCount: moduleList.filter(module => module.kind === 'NOMAIN_MODULE').length,
       serviceProgramCount: serviceProgramList.length,
-      binderSourceCount: serviceProgramList.filter((serviceProgram) => serviceProgram.sourceKind === 'BINDER_SOURCE').length,
+      binderSourceCount: serviceProgramList.filter(
+        serviceProgram => serviceProgram.sourceKind === 'BINDER_SOURCE'
+      ).length,
       bindingDirectoryCount: bindingDirectoryList.length,
-      boundModuleCount: moduleList.filter((module) => module.bindingDirectories.length > 0 || module.servicePrograms.length > 0).length,
-      unresolvedModuleCount: moduleList.filter((module) => module.unresolvedBindings).length,
-      exportCount: serviceProgramList.reduce((sum, serviceProgram) => sum + (serviceProgram.exports || []).length, 0),
+      boundModuleCount: moduleList.filter(
+        module => module.bindingDirectories.length > 0 || module.servicePrograms.length > 0
+      ).length,
+      unresolvedModuleCount: moduleList.filter(module => module.unresolvedBindings).length,
+      exportCount: serviceProgramList.reduce(
+        (sum, serviceProgram) => sum + (serviceProgram.exports || []).length,
+        0
+      ),
     },
     modules: moduleList.sort((a, b) => a.name.localeCompare(b.name)),
     servicePrograms: serviceProgramList.sort((a, b) => a.name.localeCompare(b.name)),
@@ -958,23 +1046,38 @@ function buildSqlEntities(sqlStatements) {
 }
 
 function buildProgramEntities(rootProgram, sourceFiles, programCalls, procedures, prototypes) {
-  const sourcePrograms = new Set((sourceFiles || []).map((entry) => normalizeName(path.basename(entry.path, path.extname(entry.path)))));
+  const sourcePrograms = new Set(
+    (sourceFiles || []).map(entry =>
+      normalizeName(path.basename(entry.path, path.extname(entry.path)))
+    )
+  );
   const ownerPrograms = new Set([
-    ...(procedures || []).map((entry) => entry.ownerProgram),
-    ...(prototypes || []).map((entry) => entry.ownerProgram),
+    ...(procedures || []).map(entry => entry.ownerProgram),
+    ...(prototypes || []).map(entry => entry.ownerProgram),
   ]);
-  const calledPrograms = new Set((programCalls || []).map((entry) => entry.name));
-  const programNames = uniqueSortedStrings([rootProgram, ...sourcePrograms, ...ownerPrograms, ...calledPrograms]);
+  const calledPrograms = new Set((programCalls || []).map(entry => entry.name));
+  const programNames = uniqueSortedStrings([
+    rootProgram,
+    ...sourcePrograms,
+    ...ownerPrograms,
+    ...calledPrograms,
+  ]);
 
-  return programNames.map((programName) => ({
+  return programNames.map(programName => ({
     id: createEntityId('PROGRAM', programName),
     name: programName,
-    role: programName === normalizeName(rootProgram)
-      ? 'ROOT'
-      : sourcePrograms.has(programName) || ownerPrograms.has(programName) ? 'SCANNED' : 'CALLED',
-    resolutionSource: programName === normalizeName(rootProgram) || sourcePrograms.has(programName) || ownerPrograms.has(programName)
-      ? 'SOURCE'
-      : 'UNRESOLVED',
+    role:
+      programName === normalizeName(rootProgram)
+        ? 'ROOT'
+        : sourcePrograms.has(programName) || ownerPrograms.has(programName)
+          ? 'SCANNED'
+          : 'CALLED',
+    resolutionSource:
+      programName === normalizeName(rootProgram) ||
+      sourcePrograms.has(programName) ||
+      ownerPrograms.has(programName)
+        ? 'SOURCE'
+        : 'UNRESOLVED',
   }));
 }
 
@@ -999,7 +1102,10 @@ function buildProcedureReferenceEntities(procedureCalls) {
 
     if (!map.has(key)) {
       map.set(key, {
-        id: createEntityId('PROCEDURE_REF', `${call.ownerProgram}:${call.ownerName}:${String(sequence).padStart(4, '0')}`),
+        id: createEntityId(
+          'PROCEDURE_REF',
+          `${call.ownerProgram}:${call.ownerName}:${String(sequence).padStart(4, '0')}`
+        ),
         name: call.name,
         resolution: call.resolution,
         targetKind: call.targetKind,
@@ -1016,14 +1122,20 @@ function buildProcedureReferenceEntities(procedureCalls) {
 }
 
 function findProcedureEntity(procedures, ownerProgram, name, expectedKind = null) {
-  return (procedures || []).find((entry) => entry.ownerProgram === ownerProgram
-    && entry.name === normalizeName(name)
-    && (!expectedKind || entry.kind === normalizeName(expectedKind)));
+  return (procedures || []).find(
+    entry =>
+      entry.ownerProgram === ownerProgram &&
+      entry.name === normalizeName(name) &&
+      (!expectedKind || entry.kind === normalizeName(expectedKind))
+  );
 }
 
 function findPrototypeEntity(prototypes, ownerProgram, name) {
-  return (prototypes || []).find((entry) => entry.ownerProgram === ownerProgram && entry.name === normalizeName(name))
-    || (prototypes || []).find((entry) => entry.name === normalizeName(name));
+  return (
+    (prototypes || []).find(
+      entry => entry.ownerProgram === ownerProgram && entry.name === normalizeName(name)
+    ) || (prototypes || []).find(entry => entry.name === normalizeName(name))
+  );
 }
 
 function resolveCallSourceEntityId(call, procedures) {
@@ -1036,38 +1148,57 @@ function resolveCallSourceEntityId(call, procedures) {
 
 function resolveCallTargetEntityId(call, procedures, prototypes, procedureReferences) {
   if (call.resolution === 'INTERNAL') {
-    const local = findProcedureEntity(procedures, call.targetProgram || call.ownerProgram, call.name, call.targetKind);
+    const local = findProcedureEntity(
+      procedures,
+      call.targetProgram || call.ownerProgram,
+      call.name,
+      call.targetKind
+    );
     return local ? local.id : null;
   }
   if (call.resolution === 'EXTERNAL') {
-    const prototype = findPrototypeEntity(prototypes, call.targetProgram || call.ownerProgram, call.name);
+    const prototype = findPrototypeEntity(
+      prototypes,
+      call.targetProgram || call.ownerProgram,
+      call.name
+    );
     return prototype ? prototype.id : null;
   }
-  const reference = (procedureReferences || []).find((entry) => {
+  const reference = (procedureReferences || []).find(entry => {
     const evidence = entry.evidence && entry.evidence[0] ? entry.evidence[0] : {};
     const callEvidence = call.evidence && call.evidence[0] ? call.evidence[0] : {};
-    return entry.ownerProgram === call.ownerProgram
-      && entry.ownerName === call.ownerName
-      && entry.name === call.name
-      && entry.resolution === call.resolution
-      && String(evidence.file || '') === String(callEvidence.file || '')
-      && Number(evidence.line || evidence.startLine || 0) === Number(callEvidence.line || callEvidence.startLine || 0);
+    return (
+      entry.ownerProgram === call.ownerProgram &&
+      entry.ownerName === call.ownerName &&
+      entry.name === call.name &&
+      entry.resolution === call.resolution &&
+      String(evidence.file || '') === String(callEvidence.file || '') &&
+      Number(evidence.line || evidence.startLine || 0) ===
+        Number(callEvidence.line || callEvidence.startLine || 0)
+    );
   });
   return reference ? reference.id : null;
 }
 
 function findPrototypeForModule(moduleEntity, symbolName, prototypes) {
   const normalizedSymbol = normalizeName(symbolName);
-  return (prototypes || []).find((entry) => entry.ownerProgram === moduleEntity.ownerProgram
-    && entry.sourceFile === moduleEntity.sourceFile
-    && entry.name === normalizedSymbol)
-    || (prototypes || []).find((entry) => entry.ownerProgram === moduleEntity.ownerProgram && entry.name === normalizedSymbol)
-    || (prototypes || []).find((entry) => entry.name === normalizedSymbol);
+  return (
+    (prototypes || []).find(
+      entry =>
+        entry.ownerProgram === moduleEntity.ownerProgram &&
+        entry.sourceFile === moduleEntity.sourceFile &&
+        entry.name === normalizedSymbol
+    ) ||
+    (prototypes || []).find(
+      entry => entry.ownerProgram === moduleEntity.ownerProgram && entry.name === normalizedSymbol
+    ) ||
+    (prototypes || []).find(entry => entry.name === normalizedSymbol)
+  );
 }
 
 function findExportedProcedure(symbolName, procedures) {
   const normalizedSymbol = normalizeName(symbolName);
-  return (procedures || []).find((entry) => entry.name === normalizedSymbol && entry.exported);
+  return (procedures || []).find(entry => entry.name === normalizedSymbol && entry.exported);
 }
 
 function buildRelations(
@@ -1086,7 +1217,7 @@ function buildRelations(
   nativeFileUsage,
   modules,
   servicePrograms,
-  bindingDirectories,
+  bindingDirectories
 ) {
   const relations = [];
   const rootProgramId = createEntityId('PROGRAM', rootProgram);
@@ -1112,9 +1243,10 @@ function buildRelations(
   }
 
   for (const nativeFile of nativeFiles || []) {
-    const usageEntry = nativeFileUsage && Array.isArray(nativeFileUsage.files)
-      ? nativeFileUsage.files.find((entry) => entry.name === nativeFile.name)
-      : null;
+    const usageEntry =
+      nativeFileUsage && Array.isArray(nativeFileUsage.files)
+        ? nativeFileUsage.files.find(entry => entry.name === nativeFile.name)
+        : null;
     relations.push({
       id: createRelationId('USES_NATIVE_FILE', rootProgramId, nativeFile.id),
       type: 'USES_NATIVE_FILE',
@@ -1146,7 +1278,11 @@ function buildRelations(
 
   for (const copyMember of copyMembers || []) {
     relations.push({
-      id: createRelationId('INCLUDES_COPY', rootProgramId, createEntityId('COPY_MEMBER', copyMember.name)),
+      id: createRelationId(
+        'INCLUDES_COPY',
+        rootProgramId,
+        createEntityId('COPY_MEMBER', copyMember.name)
+      ),
       type: 'INCLUDES_COPY',
       from: rootProgramId,
       to: createEntityId('COPY_MEMBER', copyMember.name),
@@ -1156,7 +1292,11 @@ function buildRelations(
 
   for (const procedure of procedures || []) {
     relations.push({
-      id: createRelationId('OWNS_PROCEDURE', createEntityId('PROGRAM', procedure.ownerProgram), procedure.id),
+      id: createRelationId(
+        'OWNS_PROCEDURE',
+        createEntityId('PROGRAM', procedure.ownerProgram),
+        procedure.id
+      ),
       type: 'OWNS_PROCEDURE',
       from: createEntityId('PROGRAM', procedure.ownerProgram),
       to: procedure.id,
@@ -1169,7 +1309,11 @@ function buildRelations(
 
   for (const prototype of prototypes || []) {
     relations.push({
-      id: createRelationId('DECLARES_PROTOTYPE', createEntityId('PROGRAM', prototype.ownerProgram), prototype.id),
+      id: createRelationId(
+        'DECLARES_PROTOTYPE',
+        createEntityId('PROGRAM', prototype.ownerProgram),
+        prototype.id
+      ),
       type: 'DECLARES_PROTOTYPE',
       from: createEntityId('PROGRAM', prototype.ownerProgram),
       to: prototype.id,
@@ -1183,7 +1327,11 @@ function buildRelations(
 
   for (const moduleEntity of modules || []) {
     relations.push({
-      id: createRelationId('HAS_MODULE', createEntityId('PROGRAM', moduleEntity.ownerProgram), moduleEntity.id),
+      id: createRelationId(
+        'HAS_MODULE',
+        createEntityId('PROGRAM', moduleEntity.ownerProgram),
+        moduleEntity.id
+      ),
       type: 'HAS_MODULE',
       from: createEntityId('PROGRAM', moduleEntity.ownerProgram),
       to: moduleEntity.id,
@@ -1196,7 +1344,11 @@ function buildRelations(
 
     for (const bindingDirectory of moduleEntity.bindingDirectories || []) {
       relations.push({
-        id: createRelationId('USES_BINDING_DIRECTORY', moduleEntity.id, createEntityId('BINDING_DIRECTORY', bindingDirectory)),
+        id: createRelationId(
+          'USES_BINDING_DIRECTORY',
+          moduleEntity.id,
+          createEntityId('BINDING_DIRECTORY', bindingDirectory)
+        ),
         type: 'USES_BINDING_DIRECTORY',
         from: moduleEntity.id,
         to: createEntityId('BINDING_DIRECTORY', bindingDirectory),
@@ -1206,7 +1358,11 @@ function buildRelations(
 
     for (const serviceProgramName of moduleEntity.servicePrograms || []) {
       relations.push({
-        id: createRelationId('BINDS_SERVICE_PROGRAM', moduleEntity.id, createEntityId('SERVICE_PROGRAM', serviceProgramName)),
+        id: createRelationId(
+          'BINDS_SERVICE_PROGRAM',
+          moduleEntity.id,
+          createEntityId('SERVICE_PROGRAM', serviceProgramName)
+        ),
         type: 'BINDS_SERVICE_PROGRAM',
         from: moduleEntity.id,
         to: createEntityId('SERVICE_PROGRAM', serviceProgramName),
@@ -1248,7 +1404,7 @@ function buildRelations(
     }
   }
 
-  sqlStatements.forEach((statement) => {
+  sqlStatements.forEach(statement => {
     const statementId = statement.id;
     relations.push({
       id: createRelationId('EXECUTES_SQL', rootProgramId, statementId),
@@ -1268,14 +1424,18 @@ function buildRelations(
         filterCount: Array.isArray(statement.filters) ? statement.filters.length : 0,
         confidence: statement.confidence || null,
         hostVariables: statement.hostVariables || [],
-        cursorNames: (statement.cursors || []).map((cursor) => cursor.name),
+        cursorNames: (statement.cursors || []).map(cursor => cursor.name),
         uncertainty: statement.uncertainty || [],
       },
     });
 
     for (const tableName of statement.tables || []) {
       relations.push({
-        id: createRelationId('SQL_REFERENCES_TABLE', statementId, createEntityId('TABLE', tableName)),
+        id: createRelationId(
+          'SQL_REFERENCES_TABLE',
+          statementId,
+          createEntityId('TABLE', tableName)
+        ),
         type: 'SQL_REFERENCES_TABLE',
         from: statementId,
         to: createEntityId('TABLE', tableName),
@@ -1373,17 +1533,34 @@ function buildRelations(
   return relations.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, sqlAnalysis, procedures, prototypes, procedureCalls, nativeFileUsage, bindingAnalysis, rpgLanguageFeatures = {}) {
+function buildSummary(
+  rootProgram,
+  sourceFiles,
+  dependencies,
+  sqlStatements,
+  sqlAnalysis,
+  procedures,
+  prototypes,
+  procedureCalls,
+  nativeFileUsage,
+  bindingAnalysis,
+  rpgLanguageFeatures = {}
+) {
   const summary = {
     sourceFileCount: sourceFiles.length,
     tableCount: (dependencies.tables || []).length,
     programCallCount: (dependencies.programCalls || []).length,
     copyMemberCount: (dependencies.copyMembers || []).length,
     sqlStatementCount: sqlStatements.length,
-    readSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.readStatementCount) || 0,
-    writeSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.writeStatementCount) || 0,
-    dynamicSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.dynamicStatementCount) || 0,
-    unresolvedSqlStatementCount: Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.unresolvedStatementCount) || 0,
+    readSqlStatementCount:
+      Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.readStatementCount) || 0,
+    writeSqlStatementCount:
+      Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.writeStatementCount) || 0,
+    dynamicSqlStatementCount:
+      Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.dynamicStatementCount) || 0,
+    unresolvedSqlStatementCount:
+      Number(sqlAnalysis && sqlAnalysis.summary && sqlAnalysis.summary.unresolvedStatementCount) ||
+      0,
     procedureCount: (procedures || []).length,
     prototypeCount: (prototypes || []).length,
     procedureCallCount: (procedureCalls || []).length,
@@ -1391,18 +1568,47 @@ function buildSummary(rootProgram, sourceFiles, dependencies, sqlStatements, sql
     indicatorCount: (rpgLanguageFeatures && rpgLanguageFeatures.indicatorCount) || 0,
     dataStructureCount: (rpgLanguageFeatures && rpgLanguageFeatures.dataStructureCount) || 0,
     standaloneFieldCount: (rpgLanguageFeatures && rpgLanguageFeatures.standaloneFieldCount) || 0,
-    internalProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'INTERNAL').length,
-    externalProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'EXTERNAL').length,
-    dynamicProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'DYNAMIC').length,
-    unresolvedProcedureCallCount: (procedureCalls || []).filter((entry) => entry.resolution === 'UNRESOLVED').length,
-    nativeFileCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.fileCount) || 0,
-    mutatingNativeFileCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.mutatingFileCount) || 0,
-    interactiveNativeFileCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.interactiveFileCount) || 0,
-    recordFormatCount: Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.recordFormatCount) || 0,
-    moduleCount: Number(bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.moduleCount) || 0,
-    serviceProgramCount: Number(bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.serviceProgramCount) || 0,
-    bindingDirectoryCount: Number(bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.bindingDirectoryCount) || 0,
-    unresolvedBindingCount: Number(bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.unresolvedModuleCount) || 0,
+    internalProcedureCallCount: (procedureCalls || []).filter(
+      entry => entry.resolution === 'INTERNAL'
+    ).length,
+    externalProcedureCallCount: (procedureCalls || []).filter(
+      entry => entry.resolution === 'EXTERNAL'
+    ).length,
+    dynamicProcedureCallCount: (procedureCalls || []).filter(
+      entry => entry.resolution === 'DYNAMIC'
+    ).length,
+    unresolvedProcedureCallCount: (procedureCalls || []).filter(
+      entry => entry.resolution === 'UNRESOLVED'
+    ).length,
+    nativeFileCount:
+      Number(nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.fileCount) || 0,
+    mutatingNativeFileCount:
+      Number(
+        nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.mutatingFileCount
+      ) || 0,
+    interactiveNativeFileCount:
+      Number(
+        nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.interactiveFileCount
+      ) || 0,
+    recordFormatCount:
+      Number(
+        nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.recordFormatCount
+      ) || 0,
+    moduleCount:
+      Number(bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.moduleCount) ||
+      0,
+    serviceProgramCount:
+      Number(
+        bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.serviceProgramCount
+      ) || 0,
+    bindingDirectoryCount:
+      Number(
+        bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.bindingDirectoryCount
+      ) || 0,
+    unresolvedBindingCount:
+      Number(
+        bindingAnalysis && bindingAnalysis.summary && bindingAnalysis.summary.unresolvedModuleCount
+      ) || 0,
   };
   summary.text = `Program ${normalizeName(rootProgram)} references ${summary.tableCount} tables, calls ${summary.programCallCount} programs, includes ${summary.copyMemberCount} copy members, contains ${summary.sqlStatementCount} SQL statements (${summary.readSqlStatementCount} read, ${summary.writeSqlStatementCount} write, ${summary.dynamicSqlStatementCount} dynamic), exposes ${summary.procedureCount} procedures with ${summary.procedureCallCount} procedure call sites, uses ${summary.nativeFileCount} native files (${summary.mutatingNativeFileCount} mutating, ${summary.interactiveNativeFileCount} interactive), and models ${summary.moduleCount} modules, ${summary.serviceProgramCount} service programs, and ${summary.bindingDirectoryCount} binding directories (${summary.unresolvedBindingCount} unresolved bindings).`;
   return summary;
@@ -1616,51 +1822,97 @@ function buildCanonicalAnalysisModel({
 }) {
   const normalizedProgram = normalizeName(program);
   const normalizedSourceRoot = path.resolve(process.cwd(), sourceRoot || '.');
-  const normalizedSourceFiles = normalizeSourceFiles(sourceFiles || [], normalizedSourceRoot, importManifest);
+  const normalizedSourceFiles = normalizeSourceFiles(
+    sourceFiles || [],
+    normalizedSourceRoot,
+    importManifest
+  );
 
-  const tables = dedupeByName(dependencies && dependencies.tables, normalizedSourceRoot, 'TABLE').map((table) => ({
+  const tables = dedupeByName(
+    dependencies && dependencies.tables,
+    normalizedSourceRoot,
+    'TABLE'
+  ).map(table => ({
     ...table,
     kind: table.kind || 'TABLE',
     id: createEntityId('TABLE', table.name),
   }));
-  const programCalls = normalizeProgramCalls(dependencies && dependencies.calls, normalizedSourceRoot);
-  const copyMembers = dedupeByName(dependencies && dependencies.copyMembers, normalizedSourceRoot).map((copyMember) => ({
+  const programCalls = normalizeProgramCalls(
+    dependencies && dependencies.calls,
+    normalizedSourceRoot
+  );
+  const copyMembers = dedupeByName(
+    dependencies && dependencies.copyMembers,
+    normalizedSourceRoot
+  ).map(copyMember => ({
     ...copyMember,
     kind: 'COPY_MEMBER',
     id: createEntityId('COPY_MEMBER', copyMember.name),
   }));
-  const sqlStatements = buildSqlEntities(sortSqlStatements(dependencies && dependencies.sqlStatements, normalizedSourceRoot));
-  const procedures = normalizeProcedures(dependencies && dependencies.procedures, normalizedSourceRoot);
-  const prototypes = normalizePrototypes(dependencies && dependencies.prototypes, normalizedSourceRoot);
-  const procedureCalls = normalizeProcedureCalls(dependencies && dependencies.procedureCalls, normalizedSourceRoot);
-  const nativeFiles = normalizeNativeFiles(dependencies && dependencies.nativeFiles, normalizedSourceRoot);
-  const nativeFileAccesses = normalizeNativeFileAccesses(dependencies && dependencies.nativeFileAccesses, normalizedSourceRoot);
+  const sqlStatements = buildSqlEntities(
+    sortSqlStatements(dependencies && dependencies.sqlStatements, normalizedSourceRoot)
+  );
+  const procedures = normalizeProcedures(
+    dependencies && dependencies.procedures,
+    normalizedSourceRoot
+  );
+  const prototypes = normalizePrototypes(
+    dependencies && dependencies.prototypes,
+    normalizedSourceRoot
+  );
+  const procedureCalls = normalizeProcedureCalls(
+    dependencies && dependencies.procedureCalls,
+    normalizedSourceRoot
+  );
+  const nativeFiles = normalizeNativeFiles(
+    dependencies && dependencies.nativeFiles,
+    normalizedSourceRoot
+  );
+  const nativeFileAccesses = normalizeNativeFileAccesses(
+    dependencies && dependencies.nativeFileAccesses,
+    normalizedSourceRoot
+  );
   const bifUsages = (dependencies && dependencies.bifUsages) || [];
   const indicatorUsages = (dependencies && dependencies.indicatorUsages) || [];
   const dataStructures = (dependencies && dependencies.dataStructures) || [];
   const standaloneFields = (dependencies && dependencies.standaloneFields) || [];
   const constants = (dependencies && dependencies.constants) || [];
-  const sqlValidation = (dependencies && dependencies.sqlValidation) || { validationErrors: [], validationWarnings: [] };
+  const sqlValidation = (dependencies && dependencies.sqlValidation) || {
+    validationErrors: [],
+    validationWarnings: [],
+  };
   const modules = normalizeModules(dependencies && dependencies.modules, normalizedSourceRoot);
-  const bindingDirectories = normalizeBindingDirectories(dependencies && dependencies.bindingDirectories, normalizedSourceRoot);
-  const servicePrograms = normalizeServicePrograms(dependencies && dependencies.servicePrograms, normalizedSourceRoot);
+  const bindingDirectories = normalizeBindingDirectories(
+    dependencies && dependencies.bindingDirectories,
+    normalizedSourceRoot
+  );
+  const servicePrograms = normalizeServicePrograms(
+    dependencies && dependencies.servicePrograms,
+    normalizedSourceRoot
+  );
   const nativeFileUsage = summarizeNativeFileUsage(nativeFiles, nativeFileAccesses);
   const sqlAnalysis = summarizeSqlStatements(sqlStatements, sqlValidation);
-  const bindingAnalysis = summarizeBindingAnalysis(modules, servicePrograms, bindingDirectories, procedures);
+  const bindingAnalysis = summarizeBindingAnalysis(
+    modules,
+    servicePrograms,
+    bindingDirectories,
+    procedures
+  );
   const rpgLanguageFeatures = {
     bifCount: (bifUsages || []).length,
     indicatorCount: (indicatorUsages || []).length,
     dataStructureCount: (dataStructures || []).length,
     standaloneFieldCount: (standaloneFields || []).length,
     constantCount: (constants || []).length,
-    uniqueBifs: uniqueSortedStrings((bifUsages || []).map((b) => b.name)),
-    uniqueIndicators: uniqueSortedStrings((indicatorUsages || []).map((i) => i.name)),
+    uniqueBifs: uniqueSortedStrings((bifUsages || []).map(b => b.name)),
+    uniqueIndicators: uniqueSortedStrings((indicatorUsages || []).map(i => i.name)),
   };
-  const mergedTables = mergeSqlTablesIntoDependencies(tables, sqlAnalysis.tableNames)
-    .map((table) => ({
+  const mergedTables = mergeSqlTablesIntoDependencies(tables, sqlAnalysis.tableNames).map(
+    table => ({
       ...table,
       id: createEntityId('TABLE', table.name),
-    }));
+    })
+  );
   const procedureReferences = buildProcedureReferenceEntities(procedureCalls);
   const importManifestSummary = summarizeImportManifest(importManifest);
 
@@ -1686,25 +1938,33 @@ function buildCanonicalAnalysisModel({
     rootProgram: normalizedProgram,
     sourceRoot: normalizedSourceRoot,
     provenance: {
-      importManifest: importManifestSummary ? {
-        file: importManifestSummary.manifestFile,
-        schemaVersion: importManifestSummary.schemaVersion,
-        fetchedAt: importManifestSummary.fetchedAt,
-        transportRequested: importManifestSummary.transportRequested,
-        transportUsed: importManifestSummary.transportUsed,
-        streamFileCcsid: importManifestSummary.streamFileCcsid,
-        encodingPolicy: importManifestSummary.encodingPolicy,
-        normalizationPolicy: importManifestSummary.normalizationPolicy,
-        fileCount: importManifestSummary.fileCount,
-        exportedFileCount: importManifestSummary.exportedFileCount,
-        failedFileCount: importManifestSummary.failedFileCount,
-        invalidFileCount: importManifestSummary.invalidFileCount,
-        traceableFileCount: importManifestSummary.traceableFileCount,
-      } : null,
+      importManifest: importManifestSummary
+        ? {
+            file: importManifestSummary.manifestFile,
+            schemaVersion: importManifestSummary.schemaVersion,
+            fetchedAt: importManifestSummary.fetchedAt,
+            transportRequested: importManifestSummary.transportRequested,
+            transportUsed: importManifestSummary.transportUsed,
+            streamFileCcsid: importManifestSummary.streamFileCcsid,
+            encodingPolicy: importManifestSummary.encodingPolicy,
+            normalizationPolicy: importManifestSummary.normalizationPolicy,
+            fileCount: importManifestSummary.fileCount,
+            exportedFileCount: importManifestSummary.exportedFileCount,
+            failedFileCount: importManifestSummary.failedFileCount,
+            invalidFileCount: importManifestSummary.invalidFileCount,
+            traceableFileCount: importManifestSummary.traceableFileCount,
+          }
+        : null,
     },
     sourceFiles: normalizedSourceFiles,
     entities: {
-      programs: buildProgramEntities(normalizedProgram, normalizedSourceFiles, programCalls, procedures, prototypes),
+      programs: buildProgramEntities(
+        normalizedProgram,
+        normalizedSourceFiles,
+        programCalls,
+        procedures,
+        prototypes
+      ),
       tables: mergedTables,
       db2Triggers: [],
       nativeFiles,
@@ -1742,16 +2002,28 @@ function buildCanonicalAnalysisModel({
       nativeFileUsage,
       modules,
       servicePrograms,
-      bindingDirectories,
+      bindingDirectories
     ),
     enrichments: {
-      summary: buildSummary(normalizedProgram, normalizedSourceFiles, dependencyBlock, sqlStatements, sqlAnalysis, procedures, prototypes, procedureCalls, nativeFileUsage, bindingAnalysis, rpgLanguageFeatures),
+      summary: buildSummary(
+        normalizedProgram,
+        normalizedSourceFiles,
+        dependencyBlock,
+        sqlStatements,
+        sqlAnalysis,
+        procedures,
+        prototypes,
+        procedureCalls,
+        nativeFileUsage,
+        bindingAnalysis,
+        rpgLanguageFeatures
+      ),
       rpgLanguageFeatures,
       sql: sqlBlock,
       aiContext: {
         programPurposeHint: '',
-        primaryTables: dependencyBlock.tables.slice(0, 10).map((entry) => entry.name),
-        primaryCalls: dependencyBlock.programCalls.slice(0, 10).map((entry) => entry.name),
+        primaryTables: dependencyBlock.tables.slice(0, 10).map(entry => entry.name),
+        primaryCalls: dependencyBlock.programCalls.slice(0, 10).map(entry => entry.name),
         riskHints: buildRiskHints(dependencyBlock, sqlBlock, procedureCalls, nativeFileUsage),
       },
       bindingAnalysis,
@@ -1770,7 +2042,7 @@ function buildCanonicalAnalysisModel({
       db2Metadata: null,
       testData: null,
     },
-    notes: uniqueSortedStrings((notes || []).map((note) => String(note))),
+    notes: uniqueSortedStrings((notes || []).map(note => String(note))),
   };
 
   assertCanonicalAnalysisModel(model);
@@ -1778,8 +2050,10 @@ function buildCanonicalAnalysisModel({
 }
 
 function mergeObject(baseValue, patchValue) {
-  const base = baseValue && typeof baseValue === 'object' && !Array.isArray(baseValue) ? baseValue : {};
-  const patch = patchValue && typeof patchValue === 'object' && !Array.isArray(patchValue) ? patchValue : {};
+  const base =
+    baseValue && typeof baseValue === 'object' && !Array.isArray(baseValue) ? baseValue : {};
+  const patch =
+    patchValue && typeof patchValue === 'object' && !Array.isArray(patchValue) ? patchValue : {};
   return {
     ...base,
     ...patch,
@@ -1801,9 +2075,12 @@ function mergeEntityCollections(baseEntities, updates) {
     }
 
     const merged = new Map(
-      (Array.isArray(baseEntities && baseEntities[collectionName]) ? baseEntities[collectionName] : [])
-        .filter((entry) => entry && entry.id)
-        .map((entry) => [entry.id, entry]),
+      (Array.isArray(baseEntities && baseEntities[collectionName])
+        ? baseEntities[collectionName]
+        : []
+      )
+        .filter(entry => entry && entry.id)
+        .map(entry => [entry.id, entry])
     );
 
     for (const entry of patchCollection) {
@@ -1811,7 +2088,9 @@ function mergeEntityCollections(baseEntities, updates) {
       merged.set(entry.id, entry);
     }
 
-    next[collectionName] = Array.from(merged.values()).sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+    next[collectionName] = Array.from(merged.values()).sort((a, b) =>
+      String(a.id || '').localeCompare(String(b.id || ''))
+    );
   }
 
   return next;
@@ -1824,8 +2103,8 @@ function mergeRelations(baseRelations, patchRelations) {
 
   const merged = new Map(
     (Array.isArray(baseRelations) ? baseRelations : [])
-      .filter((entry) => entry && entry.id)
-      .map((entry) => [entry.id, entry]),
+      .filter(entry => entry && entry.id)
+      .map(entry => [entry.id, entry])
   );
 
   for (const relation of patchRelations) {
@@ -1833,7 +2112,9 @@ function mergeRelations(baseRelations, patchRelations) {
     merged.set(relation.id, relation);
   }
 
-  return Array.from(merged.values()).sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+  return Array.from(merged.values()).sort((a, b) =>
+    String(a.id || '').localeCompare(String(b.id || ''))
+  );
 }
 
 function enrichCanonicalAnalysisModel(model, updates = {}) {
@@ -1848,26 +2129,82 @@ function enrichCanonicalAnalysisModel(model, updates = {}) {
       : model.relations,
     enrichments: {
       ...model.enrichments,
-      ...(updates.summary ? { summary: mergeObject(model.enrichments.summary, updates.summary) } : {}),
-      ...(updates.aiContext ? { aiContext: mergeObject(model.enrichments.aiContext, updates.aiContext) } : {}),
-      ...(updates.bindingAnalysis ? { bindingAnalysis: mergeObject(model.enrichments.bindingAnalysis, updates.bindingAnalysis) } : {}),
-      ...(updates.nativeFileUsage ? { nativeFileUsage: mergeObject(model.enrichments.nativeFileUsage, updates.nativeFileUsage) } : {}),
+      ...(updates.summary
+        ? { summary: mergeObject(model.enrichments.summary, updates.summary) }
+        : {}),
+      ...(updates.aiContext
+        ? { aiContext: mergeObject(model.enrichments.aiContext, updates.aiContext) }
+        : {}),
+      ...(updates.bindingAnalysis
+        ? {
+            bindingAnalysis: mergeObject(
+              model.enrichments.bindingAnalysis,
+              updates.bindingAnalysis
+            ),
+          }
+        : {}),
+      ...(updates.nativeFileUsage
+        ? {
+            nativeFileUsage: mergeObject(
+              model.enrichments.nativeFileUsage,
+              updates.nativeFileUsage
+            ),
+          }
+        : {}),
       ...(updates.graph ? { graph: mergeObject(model.enrichments.graph, updates.graph) } : {}),
-      ...(updates.crossProgramGraph ? { crossProgramGraph: mergeObject(model.enrichments.crossProgramGraph, updates.crossProgramGraph) } : {}),
-      ...(updates.sourceNormalization ? { sourceNormalization: mergeObject(model.enrichments.sourceNormalization, updates.sourceNormalization) } : {}),
-      ...(updates.sourceTypeAnalysis ? { sourceTypeAnalysis: mergeObject(model.enrichments.sourceTypeAnalysis, updates.sourceTypeAnalysis) } : {}),
+      ...(updates.crossProgramGraph
+        ? {
+            crossProgramGraph: mergeObject(
+              model.enrichments.crossProgramGraph,
+              updates.crossProgramGraph
+            ),
+          }
+        : {}),
+      ...(updates.sourceNormalization
+        ? {
+            sourceNormalization: mergeObject(
+              model.enrichments.sourceNormalization,
+              updates.sourceNormalization
+            ),
+          }
+        : {}),
+      ...(updates.sourceTypeAnalysis
+        ? {
+            sourceTypeAnalysis: mergeObject(
+              model.enrichments.sourceTypeAnalysis,
+              updates.sourceTypeAnalysis
+            ),
+          }
+        : {}),
       ...(updates.sourceCatalog !== undefined ? { sourceCatalog: updates.sourceCatalog } : {}),
-      ...(updates.ifsPaths !== undefined ? { ifsPaths: mergeObject(model.enrichments.ifsPaths, updates.ifsPaths) } : {}),
-      ...(updates.searchResults !== undefined ? { searchResults: mergeObject(model.enrichments.searchResults, updates.searchResults) } : {}),
-      ...(updates.diagnosticPacks !== undefined ? { diagnosticPacks: mergeObject(model.enrichments.diagnosticPacks, updates.diagnosticPacks) } : {}),
-      ...(updates.puiPatterns !== undefined ? { puiPatterns: mergeObject(model.enrichments.puiPatterns, updates.puiPatterns) } : {}),
-      ...(updates.knownFacts !== undefined ? { knownFacts: mergeObject(model.enrichments.knownFacts, updates.knownFacts) } : {}),
-      ...(updates.analysisCache !== undefined ? { analysisCache: mergeObject(model.enrichments.analysisCache, updates.analysisCache) } : {}),
+      ...(updates.ifsPaths !== undefined
+        ? { ifsPaths: mergeObject(model.enrichments.ifsPaths, updates.ifsPaths) }
+        : {}),
+      ...(updates.searchResults !== undefined
+        ? { searchResults: mergeObject(model.enrichments.searchResults, updates.searchResults) }
+        : {}),
+      ...(updates.diagnosticPacks !== undefined
+        ? {
+            diagnosticPacks: mergeObject(
+              model.enrichments.diagnosticPacks,
+              updates.diagnosticPacks
+            ),
+          }
+        : {}),
+      ...(updates.puiPatterns !== undefined
+        ? { puiPatterns: mergeObject(model.enrichments.puiPatterns, updates.puiPatterns) }
+        : {}),
+      ...(updates.knownFacts !== undefined
+        ? { knownFacts: mergeObject(model.enrichments.knownFacts, updates.knownFacts) }
+        : {}),
+      ...(updates.analysisCache !== undefined
+        ? { analysisCache: mergeObject(model.enrichments.analysisCache, updates.analysisCache) }
+        : {}),
       ...(updates.db2Metadata !== undefined ? { db2Metadata: updates.db2Metadata } : {}),
       ...(updates.testData !== undefined ? { testData: updates.testData } : {}),
     },
     notes: updates.notes
-      ? uniqueSortedStrings([...(model.notes || []), ...updates.notes.map((note) => String(note))])
+      ? uniqueSortedStrings([...(model.notes || []), ...updates.notes.map(note => String(note))])
       : model.notes,
   };
 
@@ -1913,9 +2250,10 @@ function validateCanonicalAnalysisModel(model) {
     errors.push('notes must be an array.');
   }
 
-  const entityCollections = model.entities && typeof model.entities === 'object'
-    ? Object.values(model.entities).filter(Array.isArray)
-    : [];
+  const entityCollections =
+    model.entities && typeof model.entities === 'object'
+      ? Object.values(model.entities).filter(Array.isArray)
+      : [];
   const entityIds = new Set();
   for (const collection of entityCollections) {
     for (const entity of collection) {
@@ -1970,7 +2308,10 @@ function validateCanonicalAnalysisModel(model) {
       if (!entityIds.has(String(relation.from || ''))) {
         errors.push(`Relation source does not reference a known entity: ${relation.from}`);
       }
-      if (!entityIds.has(String(relation.to || '')) && !String(relation.to || '').startsWith('FILE:')) {
+      if (
+        !entityIds.has(String(relation.to || '')) &&
+        !String(relation.to || '').startsWith('FILE:')
+      ) {
         errors.push(`Relation target does not reference a known entity: ${relation.to}`);
       }
       for (const evidence of relation.evidence || []) {

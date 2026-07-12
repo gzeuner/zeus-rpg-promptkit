@@ -1,5 +1,5 @@
 ---
-applyTo: "**"
+applyTo: '**'
 ---
 
 # Zeus RPG PromptKit — Developer Instructions
@@ -12,8 +12,11 @@ It covers patterns, APIs, fallbacks, and implementation rules for every subsyste
 ## 1. CLI Command Pattern
 
 Every CLI command lives in `src/cli/commands/<name>Command.js` and exports:
+
 ```js
-async function run(args, config) { /* ... */ }
+async function run(args, config) {
+  /* ... */
+}
 module.exports = { run };
 ```
 
@@ -24,6 +27,7 @@ module.exports = { run };
 - Doctor checks in `src/cli/commands/doctorCommand.js` for new env-vars
 
 ### Adding a new command (checklist)
+
 ```
 1. src/cli/commands/<name>Command.js   — create, export run(args, config)
 2. cli/zeus.js                         — register command + --help text
@@ -38,29 +42,33 @@ module.exports = { run };
 Scanner functions live in `src/scanner/rpgScanner.js`.
 
 **Entity model:**
+
 ```js
 addEntity(mapName, entityName, {
   name: 'NORMALIZED_NAME',
-  evidence: { file: relativeFilePath, startLine: n, endLine: n, text: rawLine }
+  evidence: { file: relativeFilePath, startLine: n, endLine: n, text: rawLine },
 });
 ```
 
 **Structured item model (e.g. SQL, procedures):**
+
 ```js
 addStructuredItem(mapName, uniqueKey, {
   type: 'PROCEDURE_CALL',
   name: 'PROC_NAME',
-  evidence: [{ file, startLine, endLine, text }]
+  evidence: [{ file, startLine, endLine, text }],
 });
 ```
 
 **Rules:**
+
 - All names must be normalized to UPPERCASE via `normalizeName()`
 - Evidence `file` must be relative to `sourceRoot` (use `path.relative(sourceRoot, absPath)`)
 - All output arrays must be sorted before returning
 - Add test fixture in `tests/fixtures/<name>.rpgle` and a case in `tests/scanner-corpus.test.js`
 
 **Key scanner areas to understand before editing:**
+
 - Lines 1–50: `NATIVE_IO_OPCODES` set, normalization helpers
 - `scanRpgFile()` — main entry point; routes to fixed/free-format detection
 - Fixed-format RPG: column-based parsing (col 7 = form type)
@@ -74,6 +82,7 @@ addStructuredItem(mapName, uniqueKey, {
 `buildCanonicalAnalysisModel(scanResults, options)` → `canonical-analysis.json`
 
 **Top-level shape:**
+
 ```json
 {
   "schemaVersion": 1,
@@ -118,6 +127,7 @@ addStructuredItem(mapName, uniqueKey, {
 ```
 
 When **adding a new workflow slice** (e.g. for a new workflow mode):
+
 1. Add budget in `DEFAULT_WORKFLOW_TOKEN_BUDGETS` in `contextOptimizer.js`
 2. Add WORKFLOW_KEYS entry in `contextOptimizer.js`
 3. Build the projection slice in `knowledgeProjection.js`
@@ -128,6 +138,7 @@ When **adding a new workflow slice** (e.g. for a new workflow mode):
 ## 5. Workflow Mode Pattern
 
 `src/workflow/workflowModeRegistry.js` — `WORKFLOW_MODE_REGISTRY` object:
+
 ```js
 myMode: Object.freeze({
   name: 'my-mode',
@@ -152,6 +163,7 @@ myMode: Object.freeze({
 ```
 
 `src/workflow/workflowPresetRegistry.js` — matching preset:
+
 ```js
 'my-preset': Object.freeze({
   name: 'my-preset',
@@ -170,6 +182,7 @@ myMode: Object.freeze({
 Templates live in `src/prompt/templates/<name>.md`. Variable slots use `{{variable}}`.
 
 Available variables (filled by `promptBuilder.js`):
+
 - `{{program}}` — root program name
 - `{{summary}}` — narrative summary
 - `{{tables}}` — formatted table list
@@ -187,6 +200,7 @@ Available variables (filled by `promptBuilder.js`):
 - `{{diagnosticFindings}}` — diagnostic pack output
 
 Register in `src/prompt/promptRegistry.js`:
+
 ```js
 'my-template': Object.freeze({
   name: 'my-template',
@@ -207,6 +221,7 @@ Register in `src/prompt/promptRegistry.js`:
 ## 7. DB2 Query Patterns
 
 **Always use `runReadOnlyDb2Query()` — never raw JDBC:**
+
 ```js
 const { runReadOnlyDb2Query } = require('../db2/readOnlyQueryService');
 const result = await runReadOnlyDb2Query({ dbConfig, query, maxRows: 200 });
@@ -214,6 +229,7 @@ const result = await runReadOnlyDb2Query({ dbConfig, query, maxRows: 200 });
 ```
 
 **Schema discovery (never hardcode schema):**
+
 ```js
 const query = `SELECT TABLE_SCHEMA FROM QSYS2.SYSTABLES
                WHERE TABLE_NAME = ${escapeSqlLiteral(tableName)}
@@ -221,6 +237,7 @@ const query = `SELECT TABLE_SCHEMA FROM QSYS2.SYSTABLES
 ```
 
 **QSYS2 UDTF syntax (do not treat table functions like tables):**
+
 ```sql
 SELECT OBJNAME, OBJLIB, OBJCREATED, CHANGE_TIMESTAMP, LAST_USED_TIMESTAMP, SOURCE_MEMBER, OBJSIZE
 FROM TABLE(QSYS2.OBJECT_STATISTICS('*ALLUSR', '*PGM', 'MYPGM')) AS X
@@ -233,6 +250,7 @@ If the object library is unknown, start with `*ALLUSR`. Never guess or invent a 
 **Never use:** `ROW_COUNT`, `NUMBER_ROWS` in `QSYS2.SYSTABLES` — not universally available on IBM i.
 
 **Error recovery by SQL state:**
+
 - `SQL0206` → column not found → retry with alias fallback
 - `SQL0204` → table not found → retry with schema discovery
 - `SQL0551` → no authority → try alternative schema
@@ -251,6 +269,7 @@ If the object library is unknown, start with `*ALLUSR`. Never guess or invent a 
 ## 9. IBM i RPG Scanner Knowledge
 
 ### Fixed-Format RPG Column Layout
+
 ```
 Col 1-5:   Sequence number (ignored)
 Col 6:     Form type indicator (H/F/D/I/C/O/P)
@@ -259,9 +278,11 @@ Col 8-80:  Spec content
 ```
 
 ### Free-Format RPG
+
 Triggered by `**FREE` on line 1 or `/FREE` in source. Column layout does not apply.
 
 ### Key RPG Patterns to Detect
+
 ```
 CALL '<program>'              → programCall (fixed-format CL-style)
 CALLP <proc>(<args>)          → procedure call (free-format)
@@ -275,6 +296,7 @@ C/EXEC SQL ... C/END-EXEC     → embedded SQL (fixed-format)
 ```
 
 ### ILE Binding
+
 ```
 BNDDIR('<binding-dir>')       → binding directory reference
 MODULE '<module>'             → module reference (in binder source)
@@ -282,8 +304,9 @@ EXPORT SYMBOL('<symbol>')     → exported symbol (in binder source)
 ```
 
 ### SQL Statement Classification
+
 - `SELECT / WITH` → READ intent
-- `INSERT / UPDATE / DELETE / MERGE` → WRITE intent  
+- `INSERT / UPDATE / DELETE / MERGE` → WRITE intent
 - `DECLARE CURSOR ... FOR SELECT` → READ via CURSOR
 - `PREPARE / EXECUTE` → DYNAMIC_SQL uncertainty marker
 - Tables with host variables (`:varname`) in FROM clause → DYNAMIC_SQL marker
@@ -292,18 +315,18 @@ EXPORT SYMBOL('<symbol>')     → exported symbol (in binder source)
 
 ## 10. IBM i Platform Gotchas
 
-| Problem | Rule |
-|---|---|
-| Schema vs library | Always use `SCHEMA.TABLE` SQL syntax, never `LIBRARY/FILE` |
-| ROW_COUNT missing | Never query ROW_COUNT or NUMBER_ROWS from QSYS2.SYSTABLES |
-| CCSID encoding | Local analysis contract = UTF-8 (CCSID 1208) only |
-| Duplicate members | Source file name + member name = identity, not just member name |
-| Service program source | Check BOUND_MODULE_INFO → fallback OBJECT_STATISTICS → fallback member convention |
-| QSYS2 UDTFs | Call `QSYS2.OBJECT_STATISTICS` and similar services via `FROM TABLE(...) AS X`, never `FROM QSYS2.OBJECT_STATISTICS` |
-| Unknown object library | If the library is unknown, search `*ALLUSR` first and never guess a library name |
-| Source file priority | QRPGLESRC → QSRVSRC → QCPYSRC → QCLLESRC → QCLSRC → QSQLSRC → QDDSSRC |
-| Column name aliases | Short IBM i names diverge from logical names — validate against SYSCOLUMNS first |
-| Commitment control | SQLSTATE 55019 = commitment control error — read-only queries use `WITH NC` hint |
+| Problem                | Rule                                                                                                                 |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Schema vs library      | Always use `SCHEMA.TABLE` SQL syntax, never `LIBRARY/FILE`                                                           |
+| ROW_COUNT missing      | Never query ROW_COUNT or NUMBER_ROWS from QSYS2.SYSTABLES                                                            |
+| CCSID encoding         | Local analysis contract = UTF-8 (CCSID 1208) only                                                                    |
+| Duplicate members      | Source file name + member name = identity, not just member name                                                      |
+| Service program source | Check BOUND_MODULE_INFO → fallback OBJECT_STATISTICS → fallback member convention                                    |
+| QSYS2 UDTFs            | Call `QSYS2.OBJECT_STATISTICS` and similar services via `FROM TABLE(...) AS X`, never `FROM QSYS2.OBJECT_STATISTICS` |
+| Unknown object library | If the library is unknown, search `*ALLUSR` first and never guess a library name                                     |
+| Source file priority   | QRPGLESRC → QSRVSRC → QCPYSRC → QCLLESRC → QCLSRC → QSQLSRC → QDDSSRC                                                |
+| Column name aliases    | Short IBM i names diverge from logical names — validate against SYSCOLUMNS first                                     |
+| Commitment control     | SQLSTATE 55019 = commitment control error — read-only queries use `WITH NC` hint                                     |
 
 ---
 
@@ -325,8 +348,10 @@ tests/
 ```
 
 **Adding a scanner test:**
+
 1. Add fixture: `tests/fixtures/<name>.<ext>`
 2. Add case in `tests/scanner-corpus.test.js`:
+
 ```js
 test('<description>', () => {
   const result = runCorpusCase({ file: 'fixtures/<name>.<ext>' });

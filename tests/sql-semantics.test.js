@@ -12,7 +12,9 @@ test('scanRpgFile extracts structured embedded SQL semantics for cursors, host v
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-sql-semantics-'));
   const sourceFile = path.join(tempRoot, 'ORDERPGM.sqlrpgle');
 
-  fs.writeFileSync(sourceFile, `**FREE
+  fs.writeFileSync(
+    sourceFile,
+    `**FREE
 dcl-s stmt varchar(500);
 dcl-s customerId packed(7);
 dcl-s orderId packed(7);
@@ -42,12 +44,17 @@ dcl-proc main;
   exec sql
     execute S1 using :orderId;
 end-proc;
-`, 'utf8');
+`,
+    'utf8'
+  );
 
   try {
     const result = scanRpgFile(sourceFile);
     assert.deepEqual(
-      result.sqlStatements.map((statement) => `${statement.type}:${statement.intent}:${statement.dynamic}:${statement.unresolved}:${statement.tables.join('/')}:${statement.hostVariables.join('/')}`),
+      result.sqlStatements.map(
+        statement =>
+          `${statement.type}:${statement.intent}:${statement.dynamic}:${statement.unresolved}:${statement.tables.join('/')}:${statement.hostVariables.join('/')}`
+      ),
       [
         'DECLARE_CURSOR:READ:false:false:ORDERS:CUSTOMERID',
         'OPEN_CURSOR:CURSOR:false:false::',
@@ -55,16 +62,10 @@ end-proc;
         'UPDATE:WRITE:false:false:ORDERS:ORDERID/STATUS',
         'PREPARE:OTHER:true:true::STMT',
         'EXECUTE:OTHER:true:true::ORDERID',
-      ],
+      ]
     );
-    assert.deepEqual(
-      result.sqlStatements[0].cursors,
-      [{ name: 'C1', action: 'DECLARE' }],
-    );
-    assert.deepEqual(
-      result.sqlStatements[2].cursors,
-      [{ name: 'C1', action: 'FETCH' }],
-    );
+    assert.deepEqual(result.sqlStatements[0].cursors, [{ name: 'C1', action: 'DECLARE' }]);
+    assert.deepEqual(result.sqlStatements[2].cursors, [{ name: 'C1', action: 'FETCH' }]);
     assert.deepEqual(result.sqlStatements[4].uncertainty, ['DYNAMIC_SQL', 'UNRESOLVED_SQL']);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -75,7 +76,9 @@ test('canonical analysis and context projection expose SQL intent, summary, and 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-sql-canonical-'));
   const sourceFile = path.join(tempRoot, 'ORDERPGM.sqlrpgle');
 
-  fs.writeFileSync(sourceFile, `**FREE
+  fs.writeFileSync(
+    sourceFile,
+    `**FREE
 dcl-s stmt varchar(500);
 dcl-s customerId packed(7);
 dcl-s orderId packed(7);
@@ -93,7 +96,9 @@ dcl-proc main;
   exec sql
     prepare S1 from :stmt;
 end-proc;
-`, 'utf8');
+`,
+    'utf8'
+  );
 
   try {
     const scanSummary = scanSourceFiles([sourceFile]);
@@ -125,8 +130,16 @@ end-proc;
     assert.deepEqual(context.sql.hostVariables, ['CUSTOMERID', 'ORDERID', 'STMT']);
     assert.deepEqual(context.sql.cursors, [{ name: 'C1', actions: ['DECLARE', 'FETCH'] }]);
     assert.ok(context.aiContext.riskHints.includes('Dynamic SQL detected'));
-    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'EXECUTES_SQL' && entry.attributes.dynamic === true));
-    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'EXECUTES_SQL' && entry.attributes.cursorNames.includes('C1')));
+    assert.ok(
+      canonicalAnalysis.relations.some(
+        entry => entry.type === 'EXECUTES_SQL' && entry.attributes.dynamic === true
+      )
+    );
+    assert.ok(
+      canonicalAnalysis.relations.some(
+        entry => entry.type === 'EXECUTES_SQL' && entry.attributes.cursorNames.includes('C1')
+      )
+    );
     assert.match(context.summary.text, /SQL statements \(2 read, 0 write, 1 dynamic\)/);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -137,7 +150,9 @@ test('static select statements expose driver table, joins, filters, and canonica
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-sql-joins-'));
   const sourceFile = path.join(tempRoot, 'ORDERPGM.sqlrpgle');
 
-  fs.writeFileSync(sourceFile, `**FREE
+  fs.writeFileSync(
+    sourceFile,
+    `**FREE
 dcl-s status char(10);
 dcl-s customerId packed(7);
 
@@ -150,7 +165,9 @@ dcl-proc main;
      where o.STATUS = :status
        and o.CUSTOMER_ID = :customerId;
 end-proc;
-`, 'utf8');
+`,
+    'utf8'
+  );
 
   try {
     const scanSummary = scanSourceFiles([sourceFile]);
@@ -158,13 +175,15 @@ end-proc;
 
     assert.equal(statement.driverTable, 'ORDERS');
     assert.equal(statement.confidence, 'HIGH');
-    assert.deepEqual(statement.joins, [{
-      table: 'CUSTOMERS',
-      alias: 'C',
-      joinType: 'INNER',
-      condition: 'o.CUSTOMER_ID = c.CUSTOMER_ID',
-      hostVariables: [],
-    }]);
+    assert.deepEqual(statement.joins, [
+      {
+        table: 'CUSTOMERS',
+        alias: 'C',
+        joinType: 'INNER',
+        condition: 'o.CUSTOMER_ID = c.CUSTOMER_ID',
+        hostVariables: [],
+      },
+    ]);
     assert.deepEqual(statement.filters, [
       { text: 'o.STATUS = :status', hostVariables: ['STATUS'] },
       { text: 'o.CUSTOMER_ID = :customerId;', hostVariables: ['CUSTOMERID'] },
@@ -196,11 +215,20 @@ end-proc;
     assert.equal(context.sql.statements[0].confidence, 'HIGH');
     assert.equal(context.sql.statements[0].joins[0].table, 'CUSTOMERS');
     assert.equal(context.sql.statements[0].filters.length, 2);
-    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'DRIVES' && entry.from === 'SQL:0001' && entry.to === 'TABLE:ORDERS'));
-    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'JOINS_VIA'
-      && entry.from === 'TABLE:ORDERS'
-      && entry.to === 'TABLE:CUSTOMERS'
-      && entry.attributes.joinType === 'INNER'));
+    assert.ok(
+      canonicalAnalysis.relations.some(
+        entry => entry.type === 'DRIVES' && entry.from === 'SQL:0001' && entry.to === 'TABLE:ORDERS'
+      )
+    );
+    assert.ok(
+      canonicalAnalysis.relations.some(
+        entry =>
+          entry.type === 'JOINS_VIA' &&
+          entry.from === 'TABLE:ORDERS' &&
+          entry.to === 'TABLE:CUSTOMERS' &&
+          entry.attributes.joinType === 'INNER'
+      )
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -210,7 +238,9 @@ test('declare cursor select statements keep static join semantics and driver rel
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-sql-cursor-joins-'));
   const sourceFile = path.join(tempRoot, 'ORDERPGM.sqlrpgle');
 
-  fs.writeFileSync(sourceFile, `**FREE
+  fs.writeFileSync(
+    sourceFile,
+    `**FREE
 dcl-s status char(10);
 
 dcl-proc main;
@@ -222,7 +252,9 @@ dcl-proc main;
           on o.CUSTOMER_ID = c.CUSTOMER_ID
        where o.STATUS = :status;
 end-proc;
-`, 'utf8');
+`,
+    'utf8'
+  );
 
   try {
     const scanSummary = scanSourceFiles([sourceFile]);
@@ -233,13 +265,15 @@ end-proc;
     assert.equal(statement.driverTable, 'ORDERS');
     assert.equal(statement.confidence, 'HIGH');
     assert.deepEqual(statement.cursors, [{ name: 'C1', action: 'DECLARE' }]);
-    assert.deepEqual(statement.joins, [{
-      table: 'CUSTOMERS',
-      alias: 'C',
-      joinType: 'LEFT',
-      condition: 'o.CUSTOMER_ID = c.CUSTOMER_ID',
-      hostVariables: [],
-    }]);
+    assert.deepEqual(statement.joins, [
+      {
+        table: 'CUSTOMERS',
+        alias: 'C',
+        joinType: 'LEFT',
+        condition: 'o.CUSTOMER_ID = c.CUSTOMER_ID',
+        hostVariables: [],
+      },
+    ]);
 
     const canonicalAnalysis = buildCanonicalAnalysisModel({
       program: 'ORDERPGM',
@@ -266,14 +300,21 @@ end-proc;
     assert.equal(context.sql.statements[0].type, 'DECLARE_CURSOR');
     assert.equal(context.sql.statements[0].driverTable, 'ORDERS');
     assert.equal(context.sql.statements[0].joins[0].joinType, 'LEFT');
-    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'DRIVES'
-      && entry.from === 'SQL:0001'
-      && entry.to === 'TABLE:ORDERS'));
-    assert.ok(canonicalAnalysis.relations.some((entry) => entry.type === 'JOINS_VIA'
-      && entry.from === 'TABLE:ORDERS'
-      && entry.to === 'TABLE:CUSTOMERS'
-      && entry.attributes.sqlStatementId === 'SQL:0001'
-      && entry.attributes.joinType === 'LEFT'));
+    assert.ok(
+      canonicalAnalysis.relations.some(
+        entry => entry.type === 'DRIVES' && entry.from === 'SQL:0001' && entry.to === 'TABLE:ORDERS'
+      )
+    );
+    assert.ok(
+      canonicalAnalysis.relations.some(
+        entry =>
+          entry.type === 'JOINS_VIA' &&
+          entry.from === 'TABLE:ORDERS' &&
+          entry.to === 'TABLE:CUSTOMERS' &&
+          entry.attributes.sqlStatementId === 'SQL:0001' &&
+          entry.attributes.joinType === 'LEFT'
+      )
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

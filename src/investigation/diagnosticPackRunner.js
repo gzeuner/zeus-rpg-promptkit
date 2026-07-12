@@ -25,23 +25,27 @@ const {
 const DIAGNOSTIC_PACK_REPORT_SCHEMA_VERSION = 1;
 const DIAGNOSTIC_PACK_MANIFEST_SCHEMA_VERSION = 1;
 const ALLOWED_COMMAND_PREFIXES = ['DSPOBJD', 'DSPFD', 'DSPPGMREF', 'DSPSRVPGM', 'DSPDBR'];
-const FORBIDDEN_SQL_PATTERN = /\b(INSERT|UPDATE|DELETE|MERGE|ALTER|DROP|CREATE|TRUNCATE|CALL|GRANT|REVOKE)\b/i;
+const FORBIDDEN_SQL_PATTERN =
+  /\b(INSERT|UPDATE|DELETE|MERGE|ALTER|DROP|CREATE|TRUNCATE|CALL|GRANT|REVOKE)\b/i;
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
 function normalizePackNames(value) {
-  return Array.from(new Set(asArray(value)
-    .map((entry) => String(entry || '').trim())
-    .filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      asArray(value)
+        .map(entry => String(entry || '').trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function parseDiagnosticParameterString(value) {
   return String(value || '')
     .split(',')
-    .map((entry) => entry.trim())
+    .map(entry => entry.trim())
     .filter(Boolean)
     .reduce((result, entry) => {
       const splitIndex = entry.indexOf('=');
@@ -67,7 +71,9 @@ function resolvePackParameters(pack, parameterValues) {
     const value = String(provided[parameter.name] || '').trim();
     resolved[parameter.name] = value;
     if (parameter.required && !value) {
-      errors.push(`Missing required diagnostic pack parameter "${parameter.name}" for ${pack.name}.`);
+      errors.push(
+        `Missing required diagnostic pack parameter "${parameter.name}" for ${pack.name}.`
+      );
     }
   }
 
@@ -85,7 +91,9 @@ function resolvePackParameters(pack, parameterValues) {
 }
 
 function applyTemplate(template, parameters) {
-  return String(template || '').replace(/\$\{([^}]+)\}/g, (_, key) => String(parameters[key] || '').trim());
+  return String(template || '').replace(/\$\{([^}]+)\}/g, (_, key) =>
+    String(parameters[key] || '').trim()
+  );
 }
 
 function validateReadOnlySql(query) {
@@ -102,7 +110,9 @@ function validateReadOnlySql(query) {
 }
 
 function validateReadOnlyCommand(command) {
-  const normalized = String(command || '').trim().toUpperCase();
+  const normalized = String(command || '')
+    .trim()
+    .toUpperCase();
   if (!normalized) {
     throw new Error('Diagnostic command step is empty.');
   }
@@ -128,25 +138,24 @@ function defaultExecutors() {
   return {
     sql: ({ dbConfig, query, maxRows }) => {
       const jdbcUrl = buildJdbcUrl(dbConfig, resolveDefaultSchema(dbConfig));
-      const result = runJavaHelper('Db2DiagnosticQueryRunner', [
-        jdbcUrl,
-        String(dbConfig.user),
-        SECRET_ENV_SENTINEL,
-        query,
-        String(maxRows || 50),
-      ], { password: String(dbConfig.password) });
+      const result = runJavaHelper(
+        'Db2DiagnosticQueryRunner',
+        [jdbcUrl, String(dbConfig.user), SECRET_ENV_SENTINEL, query, String(maxRows || 50)],
+        { password: String(dbConfig.password) }
+      );
       if (result.status !== 0) {
         throw new Error((result.stderr || '').trim() || 'Diagnostic SQL helper failed.');
       }
       return parseSqlStepResult(result.stdout);
     },
-    command: ({ ibmiConfig, command, verbose }) => runClCommand({
-      host: ibmiConfig.host,
-      user: ibmiConfig.user,
-      password: ibmiConfig.password,
-      command,
-      verbose,
-    }),
+    command: ({ ibmiConfig, command, verbose }) =>
+      runClCommand({
+        host: ibmiConfig.host,
+        user: ibmiConfig.user,
+        password: ibmiConfig.password,
+        command,
+        verbose,
+      }),
   };
 }
 
@@ -227,7 +236,7 @@ function buildPackReport(pack, parameterValues, stepResults) {
     title: pack.title,
     description: pack.description,
     parameters: parameterValues,
-    steps: stepResults.map((step) => ({
+    steps: stepResults.map(step => ({
       id: step.id,
       title: step.title,
       kind: step.kind,
@@ -240,9 +249,9 @@ function buildPackReport(pack, parameterValues, stepResults) {
     })),
     summary: {
       stepCount: stepResults.length,
-      succeededStepCount: stepResults.filter((step) => step.status === 'succeeded').length,
-      failedStepCount: stepResults.filter((step) => step.status === 'failed').length,
-      skippedStepCount: stepResults.filter((step) => step.status === 'skipped').length,
+      succeededStepCount: stepResults.filter(step => step.status === 'succeeded').length,
+      failedStepCount: stepResults.filter(step => step.status === 'failed').length,
+      skippedStepCount: stepResults.filter(step => step.status === 'skipped').length,
     },
   };
 }
@@ -254,14 +263,16 @@ function buildDiagnosticPackManifest(report, reproducibility) {
     kind: 'diagnostic-query-pack-manifest',
     generatedAt: resolveTimestamp(reproducibilitySettings),
     enabled: Boolean(report && report.enabled),
-    summary: report ? report.summary : {
-      packCount: 0,
-      succeededPackCount: 0,
-      failedPackCount: 0,
-      skippedPackCount: 0,
-      stepCount: 0,
-    },
-    packs: asArray(report && report.packs).map((pack) => ({
+    summary: report
+      ? report.summary
+      : {
+          packCount: 0,
+          succeededPackCount: 0,
+          failedPackCount: 0,
+          skippedPackCount: 0,
+          stepCount: 0,
+        },
+    packs: asArray(report && report.packs).map(pack => ({
       name: pack.name,
       title: pack.title,
       summary: pack.summary,
@@ -274,7 +285,7 @@ function buildDiagnosticPackManifest(report, reproducibility) {
       enabled: manifest.enabled,
       summary: manifest.summary,
       packs: manifest.packs,
-    }),
+    })
   );
   return manifest;
 }
@@ -311,11 +322,11 @@ function runDiagnosticPacks(options = {}) {
     ibmiConfig: options.ibmiConfig || null,
     dbConfigured: isDbConfigured(options.dbConfig),
     ibmiConfigured: Boolean(
-      options.ibmiConfig
-      && String(options.ibmiConfig.host || '').trim()
-      && String(options.ibmiConfig.user || '').trim()
-      && options.ibmiConfig.password !== undefined
-      && options.ibmiConfig.password !== null
+      options.ibmiConfig &&
+      String(options.ibmiConfig.host || '').trim() &&
+      String(options.ibmiConfig.user || '').trim() &&
+      options.ibmiConfig.password !== undefined &&
+      options.ibmiConfig.password !== null
     ),
     verbose: Boolean(options.verbose),
   };
@@ -390,9 +401,17 @@ function runDiagnosticPacks(options = {}) {
     packs,
     summary: {
       packCount: packs.length,
-      succeededPackCount: packs.filter((pack) => !pack.error && pack.summary.failedStepCount === 0 && pack.summary.skippedStepCount < pack.summary.stepCount).length,
-      failedPackCount: packs.filter((pack) => pack.error || pack.summary.failedStepCount > 0).length,
-      skippedPackCount: packs.filter((pack) => pack.summary.stepCount > 0 && pack.summary.skippedStepCount === pack.summary.stepCount).length,
+      succeededPackCount: packs.filter(
+        pack =>
+          !pack.error &&
+          pack.summary.failedStepCount === 0 &&
+          pack.summary.skippedStepCount < pack.summary.stepCount
+      ).length,
+      failedPackCount: packs.filter(pack => pack.error || pack.summary.failedStepCount > 0).length,
+      skippedPackCount: packs.filter(
+        pack =>
+          pack.summary.stepCount > 0 && pack.summary.skippedStepCount === pack.summary.stepCount
+      ).length,
       stepCount: packs.reduce((sum, pack) => sum + pack.summary.stepCount, 0),
     },
     notes,
@@ -406,10 +425,7 @@ function runDiagnosticPacks(options = {}) {
 }
 
 function renderDiagnosticPackMarkdown(report) {
-  const lines = [
-    '# Diagnostic Query Packs',
-    '',
-  ];
+  const lines = ['# Diagnostic Query Packs', ''];
 
   if (!report || !report.enabled) {
     lines.push('No diagnostic packs were selected for this run.');
@@ -431,7 +447,13 @@ function renderDiagnosticPackMarkdown(report) {
       lines.push('');
       continue;
     }
-    lines.push(`Parameters: ${Object.entries(pack.parameters || {}).map(([key, value]) => `${key}=${value}`).join(', ') || 'none'}`);
+    lines.push(
+      `Parameters: ${
+        Object.entries(pack.parameters || {})
+          .map(([key, value]) => `${key}=${value}`)
+          .join(', ') || 'none'
+      }`
+    );
     lines.push('');
     for (const step of asArray(pack.steps)) {
       lines.push(`### ${step.id}`);

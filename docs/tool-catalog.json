@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-12T11:34:08.517Z",
+  "generatedAt": "2026-07-12T12:50:21.815Z",
   "commandRows": [
     {
       "command": "doctor",
@@ -7,19 +7,11 @@
       "scope": "Local",
       "purpose": "Validate runtime, profiles, Java/runtime wiring, and env contracts.",
       "example": "node cli/zeus.js doctor --profile default --show-resolved",
-      "usage": [
-        "[--config <path>] doctor --profile <name> [--probe] [--show-resolved] [--strict]"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--probe",
-        "--show-resolved",
-        "--strict"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -28,17 +20,11 @@
       "scope": "Local",
       "purpose": "List profiles and show masked runtime defaults and resolved routing hints.",
       "example": "node cli/zeus.js profiles --profile default --show-env",
-      "usage": [
-        "[--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--show-env"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -47,37 +33,11 @@
       "scope": "IBM i read",
       "purpose": "Fetch source members/IFS content into the local workspace. Supports --system <name> to select a named profile system at operator request without changing the loaded profile.",
       "example": "node cli/zeus.js fetch --profile combined-fetch-and-query --system dev",
-      "usage": [
-        "[--config <path>] fetch --host <hostname> --port <n> --user <username> --password <password> --source-lib <objectLib> [--source-library <objectLib>] --ifs-dir <ifsPath> --out <localPath> [--files <sourceFiles>] [--source-files <sourceFiles>] [--members <list>] [--replace true|false] [--streamfile-ccsid <ccsid>] [--transport auto|sftp|jt400|ftp] [--network-type local|internet] [--prefer-transport sftp|jt400|ftp] [--diagnose-transport] [--transport-timeout-ms <n>] [--clean-remote] [--profile <name>] [--system <name>] [--verbose]"
-      ],
-      "options": [
-        "--config",
-        "--host",
-        "--port",
-        "--user",
-        "--password",
-        "--source-lib",
-        "--source-library",
-        "--ifs-dir",
-        "--out",
-        "--files",
-        "--source-files",
-        "--members",
-        "--replace",
-        "--streamfile-ccsid",
-        "--transport",
-        "--network-type",
-        "--prefer-transport",
-        "--diagnose-transport",
-        "--transport-timeout-ms",
-        "--clean-remote",
-        "--profile",
-        "--system",
-        "--verbose"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -86,21 +46,11 @@
       "scope": "IBM i read",
       "purpose": "Fetch one or more specific source members into a local output directory.",
       "example": "node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM",
-      "usage": [
-        "[--config <path>] fetch-member --profile <name> --lib <library> --member <name>[,<name>,...] [--file <QRPGLESRC>] [--out <dir>] [--verbose]  # Einzel- oder Mehrfach-Member-Download"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--lib",
-        "--member",
-        "--file",
-        "--out",
-        "--verbose"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -109,76 +59,11 @@
       "scope": "Local",
       "purpose": "Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context, --dense [lite|full|ultra] (rank-aware token reduction + compaction), --prompt-max-tokens, --skip-db2-metadata, --reproducible for large programs and CI stability.",
       "example": "node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000",
-      "usage": [
-        "[--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--source-root <path>] [--schema <name>] [--library <name>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--dense [lite|full|ultra]] [--prompt-max-tokens <n>] [--skip-db2-metadata] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]"
-      ],
-      "options": [
-        "--config",
-        "--source",
-        "--program",
-        "--member",
-        "--profile",
-        "--out",
-        "--source-root",
-        "--schema",
-        "--library",
-        "--extensions",
-        "--mode",
-        "--list-modes",
-        "--list-diagnostic-packs",
-        "--optimize-context",
-        "--dense",
-        "--prompt-max-tokens",
-        "--skip-db2-metadata",
-        "--scan-ifs-paths",
-        "--search-terms",
-        "--search-ignore",
-        "--search-max-results",
-        "--diagnostic-packs",
-        "--diagnostic-params",
-        "--host",
-        "--user",
-        "--password",
-        "--safe-sharing",
-        "--with-known-facts",
-        "--known-facts-profile",
-        "--known-facts-path",
-        "--emit-diagnostics",
-        "--reproducible",
-        "--test-data-limit",
-        "--skip-test-data",
-        "--verbose",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
-      }
-    },
-    {
-      "command": "investigate",
-      "safety": "S0",
-      "scope": "Local",
-      "purpose": "Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state. Designed for interactive use and MCP agents.",
-      "example": "node cli/zeus.js investigate --program ORDERPGM --profile dev --goal \"Focus on error paths\" --focus \"error paths\" --search \"dynamic sql\" --generate-prompt",
-      "usage": [
-        "[--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal \"<text>\"] [--list] [--focus \"<scope>\"] [--search \"<term>\"] [--generate-prompt]  # Investigation session (focus, search, prompt gen)",
-        "[--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal \"<text>\"] [--list]"
-      ],
-      "options": [
-        "--config",
-        "--program",
-        "--profile",
-        "--out",
-        "--goal",
-        "--list",
-        "--focus",
-        "--search",
-        "--generate-prompt"
-      ],
-      "source": {
-        "routeDetected": false,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -187,30 +72,11 @@
       "scope": "Local",
       "purpose": "Run preset-guided analyze and bundle flow. Supports --dense (forwarded to analyze steps).",
       "example": "node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output --dense ultra",
-      "usage": [
-        "[--config <path>] workflow --preset <name> --source <path> --program <name> [--profile <name>] [--out <path>] [--bundle-output <path>] [--extensions .rpgle,.rpg] [--list-presets] [--safe-sharing] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--dense [lite|full|ultra]] [--verbose] [--json]"
-      ],
-      "options": [
-        "--config",
-        "--preset",
-        "--source",
-        "--program",
-        "--profile",
-        "--out",
-        "--bundle-output",
-        "--extensions",
-        "--list-presets",
-        "--safe-sharing",
-        "--reproducible",
-        "--test-data-limit",
-        "--skip-test-data",
-        "--dense",
-        "--verbose",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -219,20 +85,11 @@
       "scope": "Local",
       "purpose": "Run workflow definitions from profile/runtime configuration. --dense [lite|full|ultra] is supported and forwarded to inner analyze steps (rank-aware token reduction & compaction).",
       "example": "node cli/zeus.js workflow run --profile default --preset onboarding --out ./output --dense full",
-      "usage": [
-        "[--config <path>] workflow run --profile <name> [--preset <name>] [--out <path>] [--continue-on-error] [--dense [lite|full|ultra]]"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--preset",
-        "--out",
-        "--continue-on-error",
-        "--dense"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": false,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -241,25 +98,11 @@
       "scope": "Local",
       "purpose": "Package analysis artifacts for sharing and review.",
       "example": "node cli/zeus.js bundle --program ORDERPGM --source-output-root ./output --include-md --include-json",
-      "usage": [
-        "[--config <path>] bundle --program <name> [--output <path>] [--source-output-root <path>] [--include-json] [--include-md] [--include-html] [--safe-sharing] [--reproducible] [--profile <name>] [--verbose]"
-      ],
-      "options": [
-        "--config",
-        "--program",
-        "--output",
-        "--source-output-root",
-        "--include-json",
-        "--include-md",
-        "--include-html",
-        "--safe-sharing",
-        "--reproducible",
-        "--profile",
-        "--verbose"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -268,25 +111,11 @@
       "scope": "Local",
       "purpose": "Build reverse-impact analysis by target or field.",
       "example": "node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output",
-      "usage": [
-        "[--config <path>] impact (--target <name> | --field <name>) [--program <name> | --member <name>] [--out <path>] [--profile <name>] [--source <path>] [--reproducible] [--verbose] [--json]"
-      ],
-      "options": [
-        "--config",
-        "--target",
-        "--field",
-        "--program",
-        "--member",
-        "--out",
-        "--profile",
-        "--source",
-        "--reproducible",
-        "--verbose",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -295,19 +124,11 @@
       "scope": "Local",
       "purpose": "Produce a risk-oriented summary for a program.",
       "example": "node cli/zeus.js assess-risk --program ORDERPGM --out ./output",
-      "usage": [
-        "[--config <path>] assess-risk --program <name> [--out <path>] [--verbose] [--json]"
-      ],
-      "options": [
-        "--config",
-        "--program",
-        "--out",
-        "--verbose",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -316,23 +137,11 @@
       "scope": "Local",
       "purpose": "Generate test plan or test template artifacts.",
       "example": "node cli/zeus.js generate-test --program ORDERPGM --format markdown --out ./output",
-      "usage": [
-        "[--config <path>] generate-test --program <name> [--format jest|markdown] [--critical] [--change] [--table <name>] [--column <name>] [--out <path>] [--verbose]"
-      ],
-      "options": [
-        "--config",
-        "--program",
-        "--format",
-        "--critical",
-        "--change",
-        "--table",
-        "--column",
-        "--out",
-        "--verbose"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -341,22 +150,11 @@
       "scope": "Local",
       "purpose": "Generate deployment and change checklist artifacts.",
       "example": "node cli/zeus.js generate-checklist --program ORDERPGM --type BOTH --impact HIGH --out ./output",
-      "usage": [
-        "[--config <path>] generate-checklist --program <name> [--type DDL_CHANGE|CODE_CHANGE|BOTH] [--affected <P1,P2,...>] [--table <name>] [--impact LOW|MEDIUM|HIGH] [--out <path>] [--verbose]"
-      ],
-      "options": [
-        "--config",
-        "--program",
-        "--type",
-        "--affected",
-        "--table",
-        "--impact",
-        "--out",
-        "--verbose"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -365,22 +163,11 @@
       "scope": "DB2 read",
       "purpose": "Query DB2 table metadata. Supports --json for machine readable output.",
       "example": "node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA --json",
-      "usage": [
-        "[--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--library <name>] [--filter <pattern>] [--save <datei.csv|datei.json>] [--json]"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--table",
-        "--schema",
-        "--library",
-        "--filter",
-        "--save",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -389,49 +176,11 @@
       "scope": "DB2 read",
       "purpose": "Resolve SQL/system object names and optionally verify required columns.",
       "example": "node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS",
-      "usage": [
-        "[--config <path>] resolve-object --profile <name> --table <name> [--schema <name>] [--require-column <COLUMN>] [--include-row-count] [--json]"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--table",
-        "--schema",
-        "--require-column",
-        "--include-row-count",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
-      }
-    },
-    {
-      "command": "query-sql",
-      "safety": "S2",
-      "scope": "DB2 read",
-      "purpose": "Run one or more read-only SQL statements (SELECT/WITH). Semicolon-separated --sql and --file batches execute through one DB2 runner call.",
-      "example": "node cli/zeus.js query-sql --profile default --sql \"SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY; SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1\"",
-      "usage": [
-        "[--config <path>] query-sql --profile <name> (--sql \"SELECT ...[; SELECT ...]\" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--save <datei.csv|datei.json>] [--watch <sek>] [--repl] [--json]"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--sql",
-        "--file",
-        "--default-schema",
-        "--liblist",
-        "--max-rows",
-        "--output",
-        "--save",
-        "--watch",
-        "--repl",
-        "--json"
-      ],
-      "source": {
-        "routeDetected": false,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -440,20 +189,11 @@
       "scope": "IBM i read",
       "purpose": "Inspect IBM i joblog messages.",
       "example": "node cli/zeus.js joblog --profile default --severity ERROR --max-messages 100",
-      "usage": [
-        "[--config <path>] joblog --profile <name> [--job <job-name>] [--severity WARNING|ERROR|INFO] [--max-messages <n>] [--json]"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--job",
-        "--severity",
-        "--max-messages",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -462,24 +202,11 @@
       "scope": "Local + IBM i read",
       "purpose": "Find field/table usage in local sources and or remote members.",
       "example": "node cli/zeus.js field-search --profile default --field FIELD_ALPHA --table APP_TABLE --source ./rpg_sources --mode all",
-      "usage": [
-        "[--config <path>] field-search --profile <name> --field <name> [--table <name>] [--source <path>] [--source-lib <lib>] [--source-file <file>] [--mode local|remote|xref|all] [--max-results <n>] [--verbose]"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--field",
-        "--table",
-        "--source",
-        "--source-lib",
-        "--source-file",
-        "--mode",
-        "--max-results",
-        "--verbose"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -488,22 +215,11 @@
       "scope": "Local",
       "purpose": "Search the local source tree by term, member, or table.",
       "example": "node cli/zeus.js search-source --source-root ./rpg_sources --search-term \"CHAIN(\" --max-results 50",
-      "usage": [
-        "[--config <path>] search-source --source-root <path> (--search-term <term> | --member <name> | --table <name>) [--file-pattern <glob>] [--case-sensitive] [--max-results <n>]"
-      ],
-      "options": [
-        "--config",
-        "--source-root",
-        "--search-term",
-        "--member",
-        "--table",
-        "--file-pattern",
-        "--case-sensitive",
-        "--max-results"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -512,18 +228,11 @@
       "scope": "Local",
       "purpose": "Copy fetched source members into the active workspace.",
       "example": "node cli/zeus.js copy-to-workspace --profile default --members ORDERPGM,INVOICEPGM",
-      "usage": [
-        "[--config <path>] copy-to-workspace --profile <name> [--members <M1,M2,...>] [--force]"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--members",
-        "--force"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -551,20 +260,11 @@
       "scope": "Local",
       "purpose": "Start the optional local artifact viewer and experimental UI shell.",
       "example": "node cli/zeus.js serve --source-output-root ./output --host 127.0.0.1 --port 4782",
-      "usage": [
-        "[--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]"
-      ],
-      "options": [
-        "--config",
-        "--source-output-root",
-        "--profile",
-        "--host",
-        "--port",
-        "--verbose"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -573,22 +273,11 @@
       "scope": "Local",
       "purpose": "Render QA validations/checks to jira, markdown, or json.",
       "example": "node cli/zeus.js qa --input ./output/ORDERPGM --format markdown --strict STRICT",
-      "usage": [
-        "[--config <path>] qa [--input <path>] [--format jira|markdown|json] [--strict LENIENT|STRICT] [--post-comment] [--jira-ticket <ticket>] [--verbose] [--json]"
-      ],
-      "options": [
-        "--config",
-        "--input",
-        "--format",
-        "--strict",
-        "--post-comment",
-        "--jira-ticket",
-        "--verbose",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -597,20 +286,11 @@
       "scope": "IBM i read",
       "purpose": "Read object metadata and journaling details.",
       "example": "node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_00 --type *FILE --journal",
-      "usage": [
-        "[--config <path>] inspect-object --profile <name> --lib <lib> --name <name> [--type *PGM|*FILE|*SRVPGM|*MODULE] [--journal]"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--lib",
-        "--name",
-        "--type",
-        "--journal"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -619,16 +299,11 @@
       "scope": "DB2 read + local",
       "purpose": "Capture before and after test snapshots plus rollback SQL text.",
       "example": "node cli/zeus.js test-run start --profile default --program ORDERPGM --table APPLIB.APP_TABLE_00 --key ID=1",
-      "usage": [
-        "[--config <path>] test-run <start|capture|show|rollback> --profile <name> [options]"
-      ],
-      "options": [
-        "--config",
-        "--profile"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -637,24 +312,11 @@
       "scope": "DB2 write",
       "purpose": "Execute one or more guarded DML statements with confirmation, backup, and safety preflight options.",
       "example": "node cli/zeus.js write-sql --profile default --sql \"DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'\" --confirm --backup",
-      "usage": [
-        "[--config <path>] write-sql --profile <name> (--sql \"INSERT/UPDATE/DELETE/MERGE ...[; ...]\" | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup] [--backup-schema <schema>]  # allgemeiner DML-Befehl"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--sql",
-        "--file",
-        "--confirm",
-        "--force",
-        "--dry-run",
-        "--backup",
-        "--require-backup",
-        "--backup-schema"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -689,18 +351,11 @@
       "scope": "DB2 write",
       "purpose": "Strict insert-only DML command.",
       "example": "node cli/zeus.js insert --profile default --sql \"INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)\"",
-      "usage": [
-        "[--config <path>] insert  --profile <name> (--sql \"INSERT ...\"              | --file <path>)"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--sql",
-        "--file"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -709,23 +364,11 @@
       "scope": "DB2 write",
       "purpose": "Strict update-only DML command.",
       "example": "node cli/zeus.js update --profile default --sql \"UPDATE APPDATA.APP_TABLE_00 SET STATUS='Y' WHERE ID=1\"",
-      "usage": [
-        "[--config <path>] update  --profile <name> (--sql \"UPDATE ...\"              | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup]"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--sql",
-        "--file",
-        "--confirm",
-        "--force",
-        "--dry-run",
-        "--backup",
-        "--require-backup"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -734,23 +377,11 @@
       "scope": "DB2 write",
       "purpose": "Strict delete-only DML command with the shared write-safety guardrails.",
       "example": "node cli/zeus.js delete --profile default --sql \"DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'\" --confirm --backup",
-      "usage": [
-        "[--config <path>] delete  --profile <name> (--sql \"DELETE ...\"              | --file <path>) [--confirm] [--force] [--dry-run] [--backup] [--require-backup]"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--sql",
-        "--file",
-        "--confirm",
-        "--force",
-        "--dry-run",
-        "--backup",
-        "--require-backup"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -759,15 +390,11 @@
       "scope": "Local",
       "purpose": "List, register, inspect, and open locally tracked analysis artifacts.",
       "example": "node cli/zeus.js analyses list --profile default",
-      "usage": [
-        "[--config <path>] analyses <list|register|index|open|show|unregister> [options]"
-      ],
-      "options": [
-        "--config"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -776,16 +403,11 @@
       "scope": "Operator-gated",
       "purpose": "Bridge planning/staging/apply/compile/report flow; never implicit.",
       "example": "node cli/zeus.js bridge plan --profile default --help",
-      "usage": [
-        "[--config <path>] bridge <plan|stage|apply|compile-plan|compile-run|report> --profile <name> [options]"
-      ],
-      "options": [
-        "--config",
-        "--profile"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -794,23 +416,11 @@
       "scope": "Local",
       "purpose": "Apply structured UI edit operations to local display artifacts.",
       "example": "node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json",
-      "usage": [
-        "pui-edit --file <path> --action <roundtrip-check|dump-json|validate-json|export-json|import-json|plan|apply|grid-add-column> [--changes-file <path>] [--out <path>] [--in <path>] [--format pretty|compact|dddl] [--confirm] [--sfl-record <name>] [--sfl-field \"<DDS line>\"]"
-      ],
-      "options": [
-        "--file",
-        "--action",
-        "--changes-file",
-        "--out",
-        "--in",
-        "--format",
-        "--confirm",
-        "--sfl-record",
-        "--sfl-field"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -819,20 +429,11 @@
       "scope": "Local read-only",
       "purpose": "Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.",
       "example": "node cli/zeus.js docs:generate-catalog",
-      "usage": [
-        "[--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]",
-        "[--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]"
-      ],
-      "options": [
-        "--config",
-        "--output",
-        "--format",
-        "--json-output",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -860,24 +461,11 @@
       "scope": "Local",
       "purpose": "Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.",
       "example": "node cli/zeus.js discover-environment --profile dev --json",
-      "usage": [
-        "[--config <path>] discover-environment --profile <name> [--libraries L1,L2] [--schemas S1,S2] [--include-members] [--no-tables] [--role metadata|data] [--system <name>] [--json] [--out <path>]  # Read-only Auto-Discovery von Bibliotheken/Source-Files/Members/Tabellen + Resource-Vorschlag"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--libraries",
-        "--schemas",
-        "--include-members",
-        "--no-tables",
-        "--role",
-        "--system",
-        "--json",
-        "--out"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -886,17 +474,11 @@
       "scope": "Local",
       "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
       "example": "node cli/zeus.js pui-inspect",
-      "usage": [
-        "pui-inspect --file <path> [--json] [--trace <fieldName>]  # LOKAL: Grid-Spalten -> Feldbindung -> Tooltip einer PUI-Display-Datei sichtbar machen"
-      ],
-      "options": [
-        "--file",
-        "--json",
-        "--trace"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -905,17 +487,11 @@
       "scope": "Local",
       "purpose": "Show resolved resource model (Source/Objects/Metadata/Data) per system.",
       "example": "node cli/zeus.js resources --profile dev --json",
-      "usage": [
-        "[--config <path>] resources --profile <name> [--json]  # Zeigt das aufgeloeste Resource-Modell (Source/Objects/Metadata/Data) pro System"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -924,19 +500,11 @@
       "scope": "Local",
       "purpose": "Manage encrypted credentials (Secret Vault). Create key (init-key [--windows] for DPAPI on Windows), encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. Supports migrate, check (with --warn-only), status.",
       "example": "node cli/zeus.js secret init-key --windows && node cli/zeus.js secret encrypt --value \"myDbPass\"",
-      "usage": [
-        "secret <init-key|status|encrypt|decrypt|check|migrate> [--value <text>] [--force] [--windows] [--dry-run] [--no-backup]"
-      ],
-      "options": [
-        "--value",
-        "--force",
-        "--windows",
-        "--dry-run",
-        "--no-backup"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -964,20 +532,11 @@
       "scope": "Local",
       "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
       "example": "node cli/zeus.js trace",
-      "usage": [
-        "trace --value <VAL> [--start-table <T>] [--start-program <P>] [--profile <name>] [--source <dir>] [--json]   # Value / data lineage"
-      ],
-      "options": [
-        "--value",
-        "--start-table",
-        "--start-program",
-        "--profile",
-        "--source",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     },
     {
@@ -986,18 +545,11 @@
       "scope": "Local",
       "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
       "example": "node cli/zeus.js xref",
-      "usage": [
-        "xref (--program <NAME> | --table <NAME>) [--profile <name>] [--json]   # Who-calls / who-uses (catalog + graph)"
-      ],
-      "options": [
-        "--program",
-        "--table",
-        "--profile",
-        "--json"
-      ],
+      "usage": [],
+      "options": [],
       "source": {
         "routeDetected": true,
-        "usageDetected": true
+        "usageDetected": false
       }
     }
   ],

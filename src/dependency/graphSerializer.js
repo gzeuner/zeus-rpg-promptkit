@@ -12,7 +12,9 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 function toMermaidId(value) {
-  const normalized = String(value || '').trim().replace(/[^A-Za-z0-9_]/g, '_');
+  const normalized = String(value || '')
+    .trim()
+    .replace(/[^A-Za-z0-9_]/g, '_');
   if (!normalized) return 'NODE';
   if (/^[0-9]/.test(normalized)) {
     return `N_${normalized}`;
@@ -80,14 +82,15 @@ function renderCrossProgramMarkdown(graph) {
   const unresolved = (graph && graph.unresolvedPrograms) || [];
   const unresolvedCount = Array.isArray(summary.unresolvedPrograms)
     ? summary.unresolvedPrograms.length
-    : (Number(summary.unresolvedPrograms) || unresolved.length || 0);
-  const unresolvedSection = unresolved.length > 0
-    ? `## Unresolved Programs
+    : Number(summary.unresolvedPrograms) || unresolved.length || 0;
+  const unresolvedSection =
+    unresolved.length > 0
+      ? `## Unresolved Programs
 
-${unresolved.map((name) => `- ${name}`).join('\n')}
+${unresolved.map(name => `- ${name}`).join('\n')}
 
 `
-    : '';
+      : '';
 
   return `# Cross-Program Dependency Graph
 

@@ -19,7 +19,7 @@ const CONTRACT_IDS = require('./contractIds');
  * Requires a numeric schemaVersion that matches the registered version.
  */
 function basicHeaderValidator(expectedVersion) {
-  return (value) => {
+  return value => {
     const errors = [];
     if (value == null || typeof value !== 'object') {
       errors.push({ path: '', message: 'expected an object' });
@@ -46,7 +46,7 @@ function basicHeaderValidator(expectedVersion) {
 
 const evidenceModelSchema = basicHeaderValidator(1);
 
-const runManifestSchema = (value) => {
+const runManifestSchema = value => {
   const errors = basicHeaderValidator(1)(value);
   if (value && typeof value === 'object') {
     if (!value.tool || typeof value.tool !== 'object') {
@@ -58,7 +58,10 @@ const runManifestSchema = (value) => {
     if (Array.isArray(value.artifacts)) {
       value.artifacts.forEach((a, i) => {
         if (a && typeof a.path === 'string' && (a.path.startsWith('/') || a.path.includes('..'))) {
-          errors.push({ path: `/artifacts/${i}/path`, message: 'artifact path must be relative and safe' });
+          errors.push({
+            path: `/artifacts/${i}/path`,
+            message: 'artifact path must be relative and safe',
+          });
         }
       });
     }
@@ -66,20 +69,23 @@ const runManifestSchema = (value) => {
   return errors;
 };
 
-const artifactReferenceSchema = (value) => {
+const artifactReferenceSchema = value => {
   const errors = basicHeaderValidator(1)(value);
   if (value && typeof value === 'object') {
     if (typeof value.path !== 'string' || !value.path) {
       errors.push({ path: '/path', message: 'path is required and must be a string' });
     }
     if (value.path && (value.path.startsWith('/') || value.path.includes('..'))) {
-      errors.push({ path: '/path', message: 'path must be relative and safe (no absolute or traversal)' });
+      errors.push({
+        path: '/path',
+        message: 'path must be relative and safe (no absolute or traversal)',
+      });
     }
   }
   return errors;
 };
 
-const investigationSessionSchema = (value) => {
+const investigationSessionSchema = value => {
   const errors = basicHeaderValidator(1)(value);
   if (!value || typeof value !== 'object') return errors;
 
@@ -105,7 +111,7 @@ const investigationSessionSchema = (value) => {
   return errors;
 };
 
-const safetyPolicySchema = (value) => {
+const safetyPolicySchema = value => {
   const errors = basicHeaderValidator(1)(value);
   if (value && typeof value === 'object' && value.level != null) {
     const level = String(value.level);

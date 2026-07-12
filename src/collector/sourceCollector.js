@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 
 function normalizeExtensions(extensions) {
-  return extensions.map((ext) => (ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`));
+  return extensions.map(ext => (ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`));
 }
 
 function collectSourceFiles(sourceRoot, extensions) {

@@ -52,7 +52,8 @@ const COMMAND_UI_METADATA = Object.freeze([
     title: 'Resources',
     summary: 'Show resolved resource model (Source/Objects/Metadata/Data) per system.',
     category: 'configure',
-    primaryUseCase: 'Inspect resolved configuration for source, objects, metadata, and data layers.',
+    primaryUseCase:
+      'Inspect resolved configuration for source, objects, metadata, and data layers.',
     requiredCapabilities: Object.freeze(['workspace']),
     commonOptions: Object.freeze(['--profile']),
     advancedOptions: Object.freeze(['--json', '--config']),
@@ -62,12 +63,20 @@ const COMMAND_UI_METADATA = Object.freeze([
   Object.freeze({
     name: 'discover-environment',
     title: 'Discover Environment',
-    summary: 'Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.',
+    summary:
+      'Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.',
     category: 'configure',
     primaryUseCase: 'Auto-discover system resources and suggest profile resources block.',
     requiredCapabilities: Object.freeze(['db2', 'fetch', 'workspace']),
     commonOptions: Object.freeze(['--profile']),
-    advancedOptions: Object.freeze(['--libraries', '--schemas', '--include-members', '--json', '--out', '--config']),
+    advancedOptions: Object.freeze([
+      '--libraries',
+      '--schemas',
+      '--include-members',
+      '--json',
+      '--out',
+      '--config',
+    ]),
     outputArtifacts: Object.freeze(['stdout or file with discovery']),
     recommendedNextCommands: Object.freeze(['profiles', 'doctor']),
   }),
@@ -79,7 +88,13 @@ const COMMAND_UI_METADATA = Object.freeze([
     primaryUseCase: 'Refresh source evidence before local analysis.',
     requiredCapabilities: Object.freeze(['fetch']),
     commonOptions: Object.freeze(['--profile', '--source-lib', '--out']),
-    advancedOptions: Object.freeze(['--transport', '--prefer-transport', '--diagnose-transport', '--members', '--config']),
+    advancedOptions: Object.freeze([
+      '--transport',
+      '--prefer-transport',
+      '--diagnose-transport',
+      '--members',
+      '--config',
+    ]),
     outputArtifacts: Object.freeze(['fetched source tree', 'fetch logs']),
     recommendedNextCommands: Object.freeze(['copy-to-workspace', 'analyze']),
   }),
@@ -127,7 +142,18 @@ const COMMAND_UI_METADATA = Object.freeze([
     primaryUseCase: 'Generate architecture/dependency findings and prompts.',
     requiredCapabilities: Object.freeze(['workspace']),
     commonOptions: Object.freeze(['--profile', '--source', '--program', '--out']),
-    advancedOptions: Object.freeze(['--mode', '--extensions', '--optimize-context', '--dense [lite|full|ultra]', '--test-data-limit', '--safe-sharing', '--with-known-facts', '--known-facts-profile', '--known-facts-path', '--config']),
+    advancedOptions: Object.freeze([
+      '--mode',
+      '--extensions',
+      '--optimize-context',
+      '--dense [lite|full|ultra]',
+      '--test-data-limit',
+      '--safe-sharing',
+      '--with-known-facts',
+      '--known-facts-profile',
+      '--known-facts-path',
+      '--config',
+    ]),
     outputArtifacts: Object.freeze([
       'report.md',
       'architecture-report.md',
@@ -157,7 +183,13 @@ const COMMAND_UI_METADATA = Object.freeze([
     primaryUseCase: 'Run repeatable workflow presets with progressive steps.',
     requiredCapabilities: Object.freeze(['workflow', 'workspace']),
     commonOptions: Object.freeze(['--profile']),
-    advancedOptions: Object.freeze(['--preset', '--out', '--continue-on-error', '--dense [lite|full|ultra]', '--config']),
+    advancedOptions: Object.freeze([
+      '--preset',
+      '--out',
+      '--continue-on-error',
+      '--dense [lite|full|ultra]',
+      '--config',
+    ]),
     outputArtifacts: Object.freeze(['workflow-run-manifest.json', 'analysis output artifacts']),
     recommendedNextCommands: Object.freeze(['serve', 'bundle']),
   }),
@@ -166,7 +198,8 @@ const COMMAND_UI_METADATA = Object.freeze([
     title: 'Investigation Session',
     summary: 'Start or continue a focused, stateful investigation on previous analysis results.',
     category: 'analyze',
-    primaryUseCase: 'Interactive, scoped deep-dives instead of full re-runs. Great for agents and humans.',
+    primaryUseCase:
+      'Interactive, scoped deep-dives instead of full re-runs. Great for agents and humans.',
     requiredCapabilities: Object.freeze(['workspace']),
     commonOptions: Object.freeze(['--program', '--profile']),
     advancedOptions: Object.freeze(['--out', '--goal', '--list', '--config']),
@@ -214,10 +247,16 @@ const COMMAND_UI_METADATA = Object.freeze([
     title: 'Resolve Object Names',
     summary: 'Resolve SQL and system table names across schemas with optional column checks.',
     category: 'query',
-    primaryUseCase: 'Find the exact IBM i table object before querying, validating joins, or writing SQL.',
+    primaryUseCase:
+      'Find the exact IBM i table object before querying, validating joins, or writing SQL.',
     requiredCapabilities: Object.freeze(['db2']),
     commonOptions: Object.freeze(['--profile', '--table']),
-    advancedOptions: Object.freeze(['--schema', '--require-column', '--include-row-count', '--config']),
+    advancedOptions: Object.freeze([
+      '--schema',
+      '--require-column',
+      '--include-row-count',
+      '--config',
+    ]),
     outputArtifacts: Object.freeze(['stdout resolution table']),
     recommendedNextCommands: Object.freeze(['query-table', 'query-sql', 'analyze']),
   }),
@@ -229,7 +268,15 @@ const COMMAND_UI_METADATA = Object.freeze([
     primaryUseCase: 'Validate assumptions against live DB2 metadata/data safely.',
     requiredCapabilities: Object.freeze(['db2']),
     commonOptions: Object.freeze(['--profile', '--sql']),
-    advancedOptions: Object.freeze(['--file', '--default-schema', '--liblist', '--max-rows', '--output', '--save', '--config']),
+    advancedOptions: Object.freeze([
+      '--file',
+      '--default-schema',
+      '--liblist',
+      '--max-rows',
+      '--output',
+      '--save',
+      '--config',
+    ]),
     outputArtifacts: Object.freeze(['stdout table/csv/json', 'optional saved output']),
     recommendedNextCommands: Object.freeze(['analyze', 'impact']),
   }),
@@ -253,7 +300,14 @@ const COMMAND_UI_METADATA = Object.freeze([
     primaryUseCase: 'Create review-ready and assistant-ready artifact bundles.',
     requiredCapabilities: Object.freeze(['workspace']),
     commonOptions: Object.freeze(['--program', '--profile']),
-    advancedOptions: Object.freeze(['--output', '--source-output-root', '--include-json', '--include-md', '--safe-sharing', '--config']),
+    advancedOptions: Object.freeze([
+      '--output',
+      '--source-output-root',
+      '--include-json',
+      '--include-md',
+      '--safe-sharing',
+      '--config',
+    ]),
     outputArtifacts: Object.freeze(['zip bundle', 'bundle-manifest.json']),
     recommendedNextCommands: Object.freeze(['serve']),
   }),
@@ -261,7 +315,7 @@ const COMMAND_UI_METADATA = Object.freeze([
 
 function validateCommandUiMetadata(entries = COMMAND_UI_METADATA, categories = COMMAND_CATEGORIES) {
   const errors = [];
-  const categoryIds = new Set(categories.map((entry) => entry.id));
+  const categoryIds = new Set(categories.map(entry => entry.id));
   const names = new Set();
 
   for (const entry of entries) {
@@ -295,11 +349,11 @@ function validateCommandUiMetadata(entries = COMMAND_UI_METADATA, categories = C
 }
 
 function listCommandUiMetadata({ category = null } = {}) {
-  return COMMAND_UI_METADATA.filter((entry) => (category ? entry.category === category : true));
+  return COMMAND_UI_METADATA.filter(entry => (category ? entry.category === category : true));
 }
 
 function getCommandUiMetadata(name) {
-  return COMMAND_UI_METADATA.find((entry) => entry.name === name) || null;
+  return COMMAND_UI_METADATA.find(entry => entry.name === name) || null;
 }
 
 const COMMAND_UI_METADATA_ERRORS = Object.freeze(validateCommandUiMetadata());

@@ -1,9 +1,9 @@
 /**
  * Regression Risk Analyzer
- * 
+ *
  * Analyzes code changes between versions to estimate regression risk.
  * Compares old and new versions of the same program.
- * 
+ *
  * Risk Levels:
  *   LOW: No changes to logic, only cosmetics
  *   MEDIUM: Changes to structure but logic preserved
@@ -17,7 +17,7 @@ class RegressionRiskAnalyzer {
 
   /**
    * Analyze regression risk
-   * 
+   *
    * @param {Object} canonicalAnalysis - Current analysis
    * @param {Array} sourceFiles - Current source files
    * @param {Object} context - Context with oldAnalysis if available
@@ -25,7 +25,7 @@ class RegressionRiskAnalyzer {
    */
   async analyze(canonicalAnalysis, sourceFiles, context = {}) {
     const riskFactors = [];
-    
+
     if (!context.oldCanonicalAnalysis) {
       return {
         analyzerName: 'RegressionRiskAnalyzer',
@@ -45,10 +45,7 @@ class RegressionRiskAnalyzer {
     riskFactors.push(...sqlRisks);
 
     // Compare filters
-    const filterRisks = this.analyzeFilterChanges(
-      context.oldCanonicalAnalysis,
-      canonicalAnalysis
-    );
+    const filterRisks = this.analyzeFilterChanges(context.oldCanonicalAnalysis, canonicalAnalysis);
     riskFactors.push(...filterRisks);
 
     // Compare relations (program calls, etc)
@@ -76,7 +73,7 @@ class RegressionRiskAnalyzer {
 
   /**
    * Analyze SQL statement changes
-   * 
+   *
    * @param {Array} oldStatements - Old SQL statements
    * @param {Array} newStatements - New SQL statements
    * @returns {Array} Risk factors
@@ -123,7 +120,7 @@ class RegressionRiskAnalyzer {
 
   /**
    * Analyze filter logic changes
-   * 
+   *
    * @param {Object} oldAnalysis - Old analysis
    * @param {Object} newAnalysis - New analysis
    * @returns {Array} Risk factors
@@ -133,7 +130,7 @@ class RegressionRiskAnalyzer {
 
     // Compare key filter patterns (ldmlan, SACHGINDEX, etc)
     const commonFilters = ['ldmlan', 'SACHGINDEX', 'VKST', 'faktur'];
-    
+
     for (const filter of commonFilters) {
       const oldFilter = this.extractFilterByName(oldAnalysis, filter);
       const newFilter = this.extractFilterByName(newAnalysis, filter);
@@ -156,7 +153,7 @@ class RegressionRiskAnalyzer {
 
   /**
    * Analyze relationship changes (calls, dependencies)
-   * 
+   *
    * @param {Array} oldRelations - Old relations
    * @param {Array} newRelations - New relations
    * @returns {Array} Risk factors
@@ -164,8 +161,12 @@ class RegressionRiskAnalyzer {
   analyzeRelationChanges(oldRelations = [], newRelations = []) {
     const risks = [];
 
-    const oldCallMap = new Map(oldRelations.filter(r => r.type === 'CALLS').map(r => [r.from + '->' + r.to, r]));
-    const newCallMap = new Map(newRelations.filter(r => r.type === 'CALLS').map(r => [r.from + '->' + r.to, r]));
+    const oldCallMap = new Map(
+      oldRelations.filter(r => r.type === 'CALLS').map(r => [r.from + '->' + r.to, r])
+    );
+    const newCallMap = new Map(
+      newRelations.filter(r => r.type === 'CALLS').map(r => [r.from + '->' + r.to, r])
+    );
 
     // Check for removed calls
     for (const [key] of oldCallMap) {
@@ -198,7 +199,7 @@ class RegressionRiskAnalyzer {
 
   /**
    * Calculate overall risk level
-   * 
+   *
    * @param {Array} riskFactors - All risk factors
    * @returns {String} Risk level: LOW, MEDIUM, HIGH
    */
@@ -214,7 +215,7 @@ class RegressionRiskAnalyzer {
 
   /**
    * Suggest which test cases might be affected
-   * 
+   *
    * @param {Array} riskFactors - Risk factors
    * @returns {Array} Suggested test cases
    */

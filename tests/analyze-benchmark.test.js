@@ -9,11 +9,12 @@ const { runAnalyzeCore } = require('../src/analyze/analyzePipeline');
 function buildFixtureTree(sourceRoot, fileCount) {
   for (let index = 0; index < fileCount; index += 1) {
     const name = index === 0 ? 'ROOTPGM' : `SUBPGM${String(index).padStart(3, '0')}`;
-    const calls = index < fileCount - 1 ? `CALL SUBPGM${String(index + 1).padStart(3, '0')};\n` : '';
+    const calls =
+      index < fileCount - 1 ? `CALL SUBPGM${String(index + 1).padStart(3, '0')};\n` : '';
     fs.writeFileSync(
       path.join(sourceRoot, `${name}.rpgle`),
       `**FREE\nDCL-F ORDERS DISK;\n${calls}EXEC SQL SELECT * FROM ORDERS INTO :RESULT;\n`,
-      'utf8',
+      'utf8'
     );
   }
 }
@@ -45,15 +46,18 @@ test('benchmark tier captures cache-backed repeat-analyze timings for larger tre
     };
     const first = runAnalyzeCore(runOptions);
     const second = runAnalyzeCore(runOptions);
-    const firstCollect = first.stageReports.find((stage) => stage.id === 'collect-scan');
-    const secondCollect = second.stageReports.find((stage) => stage.id === 'collect-scan');
+    const firstCollect = first.stageReports.find(stage => stage.id === 'collect-scan');
+    const secondCollect = second.stageReports.find(stage => stage.id === 'collect-scan');
 
     assert.ok(firstCollect);
     assert.ok(secondCollect);
     assert.equal(firstCollect.metadata.scanCache.misses, 24);
     assert.equal(secondCollect.metadata.scanCache.persistentHits, 24);
     assert.equal(secondCollect.metadata.scanCache.misses, 0);
-    assert.ok(secondCollect.durationMs <= firstCollect.durationMs || secondCollect.metadata.scanCache.persistentHits === 24);
+    assert.ok(
+      secondCollect.durationMs <= firstCollect.durationMs ||
+        secondCollect.metadata.scanCache.persistentHits === 24
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

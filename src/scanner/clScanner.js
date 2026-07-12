@@ -15,7 +15,9 @@ const fs = require('fs');
 const path = require('path');
 
 function normalizeName(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function normalizeObjectName(value) {
@@ -29,7 +31,9 @@ function normalizeObjectName(value) {
 
 function isCommentLine(rawLine) {
   const trimmed = String(rawLine || '').trim();
-  return !trimmed || trimmed.startsWith('/*') || trimmed.startsWith('*') || trimmed.startsWith('//');
+  return (
+    !trimmed || trimmed.startsWith('/*') || trimmed.startsWith('*') || trimmed.startsWith('//')
+  );
 }
 
 function commandFromLine(rawLine) {
@@ -66,7 +70,9 @@ function uniqueByName(items) {
     }
     const target = map.get(key);
     for (const evidence of item.evidence || []) {
-      const exists = target.evidence.some((entry) => JSON.stringify(entry) === JSON.stringify(evidence));
+      const exists = target.evidence.some(
+        entry => JSON.stringify(entry) === JSON.stringify(evidence)
+      );
       if (!exists) {
         target.evidence.push(evidence);
       }
@@ -77,7 +83,9 @@ function uniqueByName(items) {
 
 function scanClContent(filePath, content, sourceType = '') {
   const lines = String(content || '').split('\n');
-  const ownerProgram = normalizeName(path.basename(String(filePath || ''), path.extname(String(filePath || ''))));
+  const ownerProgram = normalizeName(
+    path.basename(String(filePath || ''), path.extname(String(filePath || '')))
+  );
   const commands = [];
   const objectUsages = [];
   const calls = [];
@@ -97,11 +105,13 @@ function scanClContent(filePath, content, sourceType = '') {
       continue;
     }
 
-    const evidence = [{
-      file: filePath,
-      line: lineNumber,
-      text: trimmed,
-    }];
+    const evidence = [
+      {
+        file: filePath,
+        line: lineNumber,
+        text: trimmed,
+      },
+    ];
 
     commands.push({
       name: command,
@@ -194,7 +204,8 @@ function scanClContent(filePath, content, sourceType = '') {
 }
 
 function scanClFile(filePath, options = {}) {
-  const content = options.content !== undefined ? String(options.content) : fs.readFileSync(filePath, 'utf8');
+  const content =
+    options.content !== undefined ? String(options.content) : fs.readFileSync(filePath, 'utf8');
   return scanClContent(filePath, content, options.sourceType || '');
 }
 

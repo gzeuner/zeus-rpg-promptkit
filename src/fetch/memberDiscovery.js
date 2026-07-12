@@ -26,7 +26,9 @@ const SOURCE_FILES_PRIORITY = Object.freeze([
 ]);
 
 async function discoverMember(fetchConfig, memberName, runtime = {}) {
-  const member = String(memberName || '').trim().toUpperCase();
+  const member = String(memberName || '')
+    .trim()
+    .toUpperCase();
   if (!member) {
     return null;
   }

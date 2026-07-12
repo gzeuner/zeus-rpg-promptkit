@@ -27,8 +27,8 @@ function generateTestScenarioName(program, changeContext = {}) {
 
 function generateJestTestTemplate(program, canonicalAnalysis, testContext = {}) {
   const { sqlStatements, tables, programCalls } = canonicalAnalysis.entities || {};
-  const writeOps = sqlStatements ? sqlStatements.filter((s) => s.intent === 'WRITE') : [];
-  const readOps = sqlStatements ? sqlStatements.filter((s) => s.intent === 'READ') : [];
+  const writeOps = sqlStatements ? sqlStatements.filter(s => s.intent === 'WRITE') : [];
+  const readOps = sqlStatements ? sqlStatements.filter(s => s.intent === 'READ') : [];
 
   let test = `/**\n`;
   test += ` * ${program} - Test Suite\n`;
@@ -81,8 +81,8 @@ function generateJestTestTemplate(program, canonicalAnalysis, testContext = {}) 
 
 function generateMarkdownTestPlan(program, canonicalAnalysis, options = {}) {
   const { sqlStatements, tables, relations } = canonicalAnalysis.entities || {};
-  const writeOps = sqlStatements ? sqlStatements.filter((s) => s.intent === 'WRITE') : [];
-  const readOps = sqlStatements ? sqlStatements.filter((s) => s.intent === 'READ') : [];
+  const writeOps = sqlStatements ? sqlStatements.filter(s => s.intent === 'WRITE') : [];
+  const readOps = sqlStatements ? sqlStatements.filter(s => s.intent === 'READ') : [];
   const { isCriticalPath } = options;
 
   let markdown = `# Test Plan: ${program}\n\n`;
@@ -106,7 +106,7 @@ function generateMarkdownTestPlan(program, canonicalAnalysis, options = {}) {
   // READ Tests
   if (readOps.length > 0) {
     markdown += `### 2. READ Operations (${readOps.length})\n`;
-    readOps.forEach((op) => {
+    readOps.forEach(op => {
       const tables = op.tables ? op.tables.join(', ') : '?';
       markdown += `- [ ] SELECT from ${tables} returns correct structure\n`;
       markdown += `- [ ] SELECT handles NULL values correctly\n`;
@@ -118,7 +118,7 @@ function generateMarkdownTestPlan(program, canonicalAnalysis, options = {}) {
   // WRITE Tests
   if (writeOps.length > 0) {
     markdown += `### 3. WRITE Operations (${writeOps.length})\n`;
-    writeOps.forEach((op) => {
+    writeOps.forEach(op => {
       const tables = op.tables ? op.tables.join(', ') : '?';
       const opType = op.type || 'UPDATE';
       markdown += `- [ ] ${opType} to ${tables} succeeds with valid data\n`;
@@ -175,7 +175,7 @@ function generateChangeTestScenario(program, changeContext = {}) {
 
   if (affectedPrograms && affectedPrograms.length > 0) {
     scenario += `## Affected Programs (${affectedPrograms.length})\n\n`;
-    affectedPrograms.forEach((prog) => {
+    affectedPrograms.forEach(prog => {
       scenario += `- ${prog.name}: ${prog.accessType} (${prog.accessCount} access points)\n`;
     });
     scenario += '\n';

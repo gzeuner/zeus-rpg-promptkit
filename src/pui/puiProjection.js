@@ -50,7 +50,7 @@ function splitCsv(value) {
   if (!str) {
     return [];
   }
-  return str.split(',').map((entry) => entry.trim());
+  return str.split(',').map(entry => entry.trim());
 }
 
 function isPlainObject(value) {
@@ -112,7 +112,8 @@ function groupLineRange(group) {
   const last = group.segments[group.segments.length - 1];
   const startLine = (first && Number.isInteger(first.lineIndex) ? first.lineIndex : 0) + 1;
   const lastIndex = last && Number.isInteger(last.lineIndex) ? last.lineIndex : 0;
-  const lastCount = last && Number.isInteger(last.lineCount) && last.lineCount > 0 ? last.lineCount : 1;
+  const lastCount =
+    last && Number.isInteger(last.lineCount) && last.lineCount > 0 ? last.lineCount : 1;
   const endLine = lastIndex + lastCount;
   return { startLine, endLine };
 }
@@ -153,9 +154,11 @@ function isGrid(item) {
 }
 
 function isColumnItem(item) {
-  return isPlainObject(item)
-    && nonEmptyString(item.grid) !== null
-    && nonEmptyString(item.column) !== null;
+  return (
+    isPlainObject(item) &&
+    nonEmptyString(item.grid) !== null &&
+    nonEmptyString(item.column) !== null
+  );
 }
 
 function boundFieldOf(item) {
@@ -203,9 +206,9 @@ function staticValueOf(item) {
 }
 
 function gridIdOf(grid) {
-  return nonEmptyString(grid && grid.id)
-    || nonEmptyString(grid && grid['record format name'])
-    || '';
+  return (
+    nonEmptyString(grid && grid.id) || nonEmptyString(grid && grid['record format name']) || ''
+  );
 }
 
 function makeEvidence(file, range, text) {
@@ -225,9 +228,12 @@ function projectGrid(grid, items, file, range) {
 
   const columns = [];
   for (let n = 1; n <= numberOfColumns; n += 1) {
-    const columnItems = items.filter((item) => isColumnItem(item)
-      && nonEmptyString(item.grid) === gridId
-      && (Number.parseInt(toStringValue(item.column) || '0', 10) === n));
+    const columnItems = items.filter(
+      item =>
+        isColumnItem(item) &&
+        nonEmptyString(item.grid) === gridId &&
+        Number.parseInt(toStringValue(item.column) || '0', 10) === n
+    );
 
     let boundField = null;
     let boundFieldType = null;
@@ -257,8 +263,8 @@ function projectGrid(grid, items, file, range) {
 
     columns.push({
       column: n,
-      heading: headings.length >= n ? (nonEmptyString(headings[n - 1]) || '') : null,
-      width: widths.length >= n ? (nonEmptyString(widths[n - 1]) || '') : null,
+      heading: headings.length >= n ? nonEmptyString(headings[n - 1]) || '' : null,
+      width: widths.length >= n ? nonEmptyString(widths[n - 1]) || '' : null,
       boundField,
       boundFieldType,
       tooltip,
@@ -308,9 +314,10 @@ function buildSignals(recordFormatName, grid) {
         recordFormat: recordFormatName,
         grid: grid.id,
         column: column.column,
-        detail: `grid "${grid.id}" column ${column.column}`
-          + (column.heading ? ` ("${column.heading}")` : '')
-          + ' has no field binding or static value',
+        detail:
+          `grid "${grid.id}" column ${column.column}` +
+          (column.heading ? ` ("${column.heading}")` : '') +
+          ' has no field binding or static value',
       });
     }
   }
@@ -329,11 +336,13 @@ function projectRecordFormat(group, file) {
       endLine: range.endLine,
       grids: [],
       widgets: [],
-      signals: [{
-        type: 'JSON_DECODE_FAILED',
-        recordFormat: '',
-        detail: `PUI JSON block at lines ${range.startLine}-${range.endLine} could not be decoded`,
-      }],
+      signals: [
+        {
+          type: 'JSON_DECODE_FAILED',
+          recordFormat: '',
+          detail: `PUI JSON block at lines ${range.startLine}-${range.endLine} could not be decoded`,
+        },
+      ],
     };
   }
 
@@ -342,13 +351,13 @@ function projectRecordFormat(group, file) {
 
   const grids = items
     .filter(isGrid)
-    .map((grid) => projectGrid(grid, items, file, range))
+    .map(grid => projectGrid(grid, items, file, range))
     .sort((a, b) => a.id.localeCompare(b.id));
 
   const widgets = items
-    .filter((item) => !isGrid(item) && !isColumnItem(item))
-    .filter((item) => boundFieldOf(item) !== null || tooltipOf(item) !== null)
-    .map((item) => projectWidget(item, file, range))
+    .filter(item => !isGrid(item) && !isColumnItem(item))
+    .filter(item => boundFieldOf(item) !== null || tooltipOf(item) !== null)
+    .map(item => projectWidget(item, file, range))
     .sort((a, b) => a.id.localeCompare(b.id));
 
   const signals = [];
@@ -386,7 +395,7 @@ function buildPuiProjection(content, options = {}) {
   const groups = collectJsonGroups(parsed);
 
   const recordFormats = groups
-    .map((group) => projectRecordFormat(group, file))
+    .map(group => projectRecordFormat(group, file))
     .sort((a, b) => {
       if (a.recordFormat === b.recordFormat) {
         return a.startLine - b.startLine;
@@ -394,9 +403,7 @@ function buildPuiProjection(content, options = {}) {
       return a.recordFormat.localeCompare(b.recordFormat);
     });
 
-  const signals = sortSignals(
-    recordFormats.reduce((acc, rf) => acc.concat(rf.signals), []),
-  );
+  const signals = sortSignals(recordFormats.reduce((acc, rf) => acc.concat(rf.signals), []));
 
   return {
     kind: PUI_PROJECTION_KIND,

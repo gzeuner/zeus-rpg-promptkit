@@ -58,7 +58,10 @@ function tryReadLineMessage(buffer) {
   if (lineEnd === -1) {
     return null;
   }
-  const raw = buffer.slice(0, lineEnd + 1).toString('utf8').trim();
+  const raw = buffer
+    .slice(0, lineEnd + 1)
+    .toString('utf8')
+    .trim();
   return {
     raw,
     nextOffset: lineEnd + 1,
@@ -66,15 +69,18 @@ function tryReadLineMessage(buffer) {
 }
 
 function parseIncomingMessages(chunkBuffer, initialBuffer = Buffer.alloc(0)) {
-  let pending = initialBuffer.length > 0
-    ? Buffer.concat([initialBuffer, chunkBuffer])
-    : chunkBuffer;
+  let pending =
+    initialBuffer.length > 0 ? Buffer.concat([initialBuffer, chunkBuffer]) : chunkBuffer;
   const messages = [];
 
   while (pending.length > 0) {
     let parsed = null;
 
-    const looksLikeHeader = pending.slice(0, 32).toString('utf8').toLowerCase().includes('content-length');
+    const looksLikeHeader = pending
+      .slice(0, 32)
+      .toString('utf8')
+      .toLowerCase()
+      .includes('content-length');
     if (looksLikeHeader) {
       parsed = tryReadHeaderFramedMessage(pending);
       if (parsed === null) {
@@ -102,7 +108,7 @@ function parseIncomingMessages(chunkBuffer, initialBuffer = Buffer.alloc(0)) {
 function createStdioTransport({ input = process.stdin, output = process.stdout, onMessage }) {
   let pending = Buffer.alloc(0);
 
-  const handleData = (chunk) => {
+  const handleData = chunk => {
     const chunkBuffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), 'utf8');
     const parsed = parseIncomingMessages(chunkBuffer, pending);
     pending = parsed.pending;
@@ -147,4 +153,3 @@ module.exports = {
   encodeJsonRpcMessage,
   parseIncomingMessages,
 };
-

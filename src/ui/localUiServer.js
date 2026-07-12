@@ -26,8 +26,16 @@ const { buildUiMetadataPayload } = require('./uiMetadataService');
 const { UiActionError, createLocalUiActionService } = require('./localUiActionService');
 const { ProfileWizardError, createProfileWizardService } = require('./profileWizardService');
 const { createPromptWorkbenchService } = require('./promptWorkbenchService');
-const { collectSensitiveTermsFromEnv, maskSensitiveTermsInText, sanitizeValue } = require('../security/secretMasking');
-const { listWorkspaces, readWorkspaceById, touchWorkspace } = require('../workspace/analysisRegistryService');
+const {
+  collectSensitiveTermsFromEnv,
+  maskSensitiveTermsInText,
+  sanitizeValue,
+} = require('../security/secretMasking');
+const {
+  listWorkspaces,
+  readWorkspaceById,
+  touchWorkspace,
+} = require('../workspace/analysisRegistryService');
 const { readWorkspaceIndex, WORKSPACE_INDEX_FILE } = require('../workspace/workspaceIndexBuilder');
 const { DEFAULT_UI_HOST, DEFAULT_UI_PORT } = require('./localUiDefaults');
 const MAX_JSON_BODY_BYTES = 512 * 1024;
@@ -73,7 +81,13 @@ function sendMethodNotAllowed(response, methods) {
   response.end(`${JSON.stringify({ error: 'Method not allowed' }, null, 2)}\n`);
 }
 
-function sendText(response, statusCode, content, contentType = 'text/plain; charset=utf-8', sensitiveTerms = []) {
+function sendText(
+  response,
+  statusCode,
+  content,
+  contentType = 'text/plain; charset=utf-8',
+  sensitiveTerms = []
+) {
   const sanitized = maskSensitiveTermsInText(content, sensitiveTerms);
   response.writeHead(statusCode, {
     'Content-Type': contentType,
@@ -86,19 +100,20 @@ function splitPathname(pathname) {
   return String(pathname || '')
     .split('/')
     .filter(Boolean)
-    .map((entry) => decodeURIComponent(entry));
+    .map(entry => decodeURIComponent(entry));
 }
 
 function readJsonBody(request, options = {}) {
-  const maxBytes = Number.isInteger(options.maxBytes) && options.maxBytes > 0
-    ? options.maxBytes
-    : MAX_JSON_BODY_BYTES;
+  const maxBytes =
+    Number.isInteger(options.maxBytes) && options.maxBytes > 0
+      ? options.maxBytes
+      : MAX_JSON_BODY_BYTES;
 
   return new Promise((resolve, reject) => {
     let bytes = 0;
     let body = '';
 
-    request.on('data', (chunk) => {
+    request.on('data', chunk => {
       bytes += chunk.length;
       if (bytes > maxBytes) {
         reject(new Error(`Request body exceeds ${maxBytes} bytes.`));
@@ -166,9 +181,14 @@ async function handleUiActionRequest({
       : /^invalid json body:|^request body exceeds/i.test(String(error && error.message))
         ? 400
         : 500;
-    sendJson(response, statusCode, {
-      error: statusCode === 500 ? 'Internal server error' : (error.message || 'Action failed'),
-    }, { sensitiveTerms });
+    sendJson(
+      response,
+      statusCode,
+      {
+        error: statusCode === 500 ? 'Internal server error' : error.message || 'Action failed',
+      },
+      { sensitiveTerms }
+    );
   }
   return true;
 }
@@ -219,7 +239,12 @@ async function handleProfileWizardRequest({
       return true;
     }
 
-    if (segments[0] === 'api' && segments[1] === 'profile-wizard' && segments[2] === 'profiles' && segments.length === 4) {
+    if (
+      segments[0] === 'api' &&
+      segments[1] === 'profile-wizard' &&
+      segments[2] === 'profiles' &&
+      segments.length === 4
+    ) {
       if (request.method === 'GET') {
         send(200, profileWizardService.readProfileDraft(segments[3]));
         return true;
@@ -232,13 +257,17 @@ async function handleProfileWizardRequest({
       return true;
     }
   } catch (error) {
-    const statusCode = error instanceof ProfileWizardError
-      ? error.statusCode
-      : /^invalid json body:|^request body exceeds/i.test(String(error && error.message))
-        ? 400
-        : 500;
+    const statusCode =
+      error instanceof ProfileWizardError
+        ? error.statusCode
+        : /^invalid json body:|^request body exceeds/i.test(String(error && error.message))
+          ? 400
+          : 500;
     send(statusCode, {
-      error: statusCode === 500 ? 'Internal server error' : (error.message || 'Profile wizard request failed'),
+      error:
+        statusCode === 500
+          ? 'Internal server error'
+          : error.message || 'Profile wizard request failed',
       ...(error instanceof ProfileWizardError && error.details && typeof error.details === 'object'
         ? error.details
         : {}),
@@ -315,7 +344,12 @@ async function handlePromptBuilderRequest({
     return true;
   }
 
-  if (segments[0] === 'api' && segments[1] === 'prompt-builder' && segments[2] === 'templates' && segments.length === 4) {
+  if (
+    segments[0] === 'api' &&
+    segments[1] === 'prompt-builder' &&
+    segments[2] === 'templates' &&
+    segments.length === 4
+  ) {
     const templateId = segments[3];
     if (request.method === 'GET') {
       send(200, promptWorkbenchService.readTemplate(templateId));
@@ -343,7 +377,13 @@ async function handlePromptBuilderRequest({
     return true;
   }
 
-  if (segments[0] === 'api' && segments[1] === 'prompt-builder' && segments[2] === 'context-sources' && segments[4] === 'prompts' && segments.length === 5) {
+  if (
+    segments[0] === 'api' &&
+    segments[1] === 'prompt-builder' &&
+    segments[2] === 'context-sources' &&
+    segments[4] === 'prompts' &&
+    segments.length === 5
+  ) {
     if (request.method !== 'GET') {
       sendMethodNotAllowed(response, ['GET']);
       return true;
@@ -425,10 +465,15 @@ async function handleAnalysesRequest({
       sendMethodNotAllowed(response, ['GET']);
       return true;
     }
-    sendJson(response, 200, {
-      registryPath: registryPath || null,
-      workspaces: listAnalyses(registryPath, outputRoot),
-    }, { sensitiveTerms });
+    sendJson(
+      response,
+      200,
+      {
+        registryPath: registryPath || null,
+        workspaces: listAnalyses(registryPath, outputRoot),
+      },
+      { sensitiveTerms }
+    );
     return true;
   }
 
@@ -446,12 +491,17 @@ async function handleAnalysesRequest({
       sendMethodNotAllowed(response, ['GET']);
       return true;
     }
-    sendJson(response, 200, {
-      workspace,
-      outputRoot: workspaceOutputRoot,
-      index: readWorkspaceIndex(workspace.path),
-      runs: listAnalysisRuns(workspaceOutputRoot),
-    }, { sensitiveTerms });
+    sendJson(
+      response,
+      200,
+      {
+        workspace,
+        outputRoot: workspaceOutputRoot,
+        index: readWorkspaceIndex(workspace.path),
+        runs: listAnalysisRuns(workspaceOutputRoot),
+      },
+      { sensitiveTerms }
+    );
     return true;
   }
 
@@ -462,7 +512,12 @@ async function handleAnalysesRequest({
     }
     const index = readWorkspaceIndex(workspace.path);
     if (!index) {
-      sendJson(response, 404, { error: `${WORKSPACE_INDEX_FILE} not found for workspace ${workspaceId}` }, { sensitiveTerms });
+      sendJson(
+        response,
+        404,
+        { error: `${WORKSPACE_INDEX_FILE} not found for workspace ${workspaceId}` },
+        { sensitiveTerms }
+      );
       return true;
     }
     sendJson(response, 200, index, { sensitiveTerms });
@@ -475,10 +530,15 @@ async function handleAnalysesRequest({
       return true;
     }
     const touched = registryPath ? touchWorkspace(registryPath, workspaceId) : workspace;
-    sendJson(response, 200, {
-      ok: true,
-      workspace: touched,
-    }, { sensitiveTerms });
+    sendJson(
+      response,
+      200,
+      {
+        ok: true,
+        workspace: touched,
+      },
+      { sensitiveTerms }
+    );
     return true;
   }
 
@@ -565,10 +625,15 @@ function createLocalUiRequestHandler({
       }
 
       if (pathname === '/api/health') {
-        sendJson(response, 200, {
-          ok: true,
-          outputRoot: resolvedOutputRoot,
-        }, { sensitiveTerms });
+        sendJson(
+          response,
+          200,
+          {
+            ok: true,
+            outputRoot: resolvedOutputRoot,
+          },
+          { sensitiveTerms }
+        );
         return;
       }
 
@@ -578,34 +643,64 @@ function createLocalUiRequestHandler({
       }
 
       if (pathname === '/api/runs') {
-        sendJson(response, 200, executeListRuns({
-          sourceOutputRoot: resolvedOutputRoot,
-        }).runs, { sensitiveTerms });
+        sendJson(
+          response,
+          200,
+          executeListRuns({
+            sourceOutputRoot: resolvedOutputRoot,
+          }).runs,
+          { sensitiveTerms }
+        );
         return;
       }
 
       if (segments[0] === 'api' && segments[1] === 'runs' && segments.length === 3) {
-        sendJson(response, 200, executeReadRun({
-          sourceOutputRoot: resolvedOutputRoot,
-          program: segments[2],
-        }).run, { sensitiveTerms });
+        sendJson(
+          response,
+          200,
+          executeReadRun({
+            sourceOutputRoot: resolvedOutputRoot,
+            program: segments[2],
+          }).run,
+          { sensitiveTerms }
+        );
         return;
       }
 
-      if (segments[0] === 'api' && segments[1] === 'runs' && segments[3] === 'views' && segments.length === 4) {
-        sendJson(response, 200, executeReadRunViews({
-          sourceOutputRoot: resolvedOutputRoot,
-          program: segments[2],
-        }).views, { sensitiveTerms });
+      if (
+        segments[0] === 'api' &&
+        segments[1] === 'runs' &&
+        segments[3] === 'views' &&
+        segments.length === 4
+      ) {
+        sendJson(
+          response,
+          200,
+          executeReadRunViews({
+            sourceOutputRoot: resolvedOutputRoot,
+            program: segments[2],
+          }).views,
+          { sensitiveTerms }
+        );
         return;
       }
 
-      if (segments[0] === 'api' && segments[1] === 'runs' && segments[3] === 'artifacts' && segments[4] === 'content') {
-        sendJson(response, 200, executeReadArtifact({
-          sourceOutputRoot: resolvedOutputRoot,
-          program: segments[2],
-          path: url.searchParams.get('path'),
-        }).artifact, { sensitiveTerms });
+      if (
+        segments[0] === 'api' &&
+        segments[1] === 'runs' &&
+        segments[3] === 'artifacts' &&
+        segments[4] === 'content'
+      ) {
+        sendJson(
+          response,
+          200,
+          executeReadArtifact({
+            sourceOutputRoot: resolvedOutputRoot,
+            program: segments[2],
+            path: url.searchParams.get('path'),
+          }).artifact,
+          { sensitiveTerms }
+        );
         return;
       }
 
@@ -621,9 +716,14 @@ function createLocalUiRequestHandler({
 
       sendJson(response, 404, { error: `Route not found: ${pathname}` }, { sensitiveTerms });
     } catch (error) {
-      sendJson(response, /not found/i.test(error.message) ? 404 : 400, {
-        error: error.message,
-      }, { sensitiveTerms });
+      sendJson(
+        response,
+        /not found/i.test(error.message) ? 404 : 400,
+        {
+          error: error.message,
+        },
+        { sensitiveTerms }
+      );
     }
   };
 }
@@ -646,28 +746,34 @@ async function startLocalUiServer({
     templateStorePath,
     outputRoot: resolvedOutputRoot,
   });
-  const uiActionService = actionService || createLocalUiActionService({
-    cwd: actionServiceOptions.cwd || process.cwd(),
-    env: actionServiceOptions.env || process.env,
-    doctorExecutor: actionServiceOptions.doctorExecutor,
-    analyzeExecutor: actionServiceOptions.analyzeExecutor,
-    analyzeConfigResolver: actionServiceOptions.analyzeConfigResolver,
-    fetchConfigResolver: actionServiceOptions.fetchConfigResolver,
-    workflowConfigResolver: actionServiceOptions.workflowConfigResolver,
-  });
-  const resolvedProfileWizardService = profileWizardService || createProfileWizardService({
-    cwd: actionServiceOptions.cwd || process.cwd(),
-    env: actionServiceOptions.env || process.env,
-  });
+  const uiActionService =
+    actionService ||
+    createLocalUiActionService({
+      cwd: actionServiceOptions.cwd || process.cwd(),
+      env: actionServiceOptions.env || process.env,
+      doctorExecutor: actionServiceOptions.doctorExecutor,
+      analyzeExecutor: actionServiceOptions.analyzeExecutor,
+      analyzeConfigResolver: actionServiceOptions.analyzeConfigResolver,
+      fetchConfigResolver: actionServiceOptions.fetchConfigResolver,
+      workflowConfigResolver: actionServiceOptions.workflowConfigResolver,
+    });
+  const resolvedProfileWizardService =
+    profileWizardService ||
+    createProfileWizardService({
+      cwd: actionServiceOptions.cwd || process.cwd(),
+      env: actionServiceOptions.env || process.env,
+    });
   const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(process.env, sensitiveTerms);
-  const server = http.createServer(createLocalUiRequestHandler({
-    outputRoot: resolvedOutputRoot,
-    promptWorkbenchService,
-    actionService: uiActionService,
-    profileWizardService: resolvedProfileWizardService,
-    registryPath: registryPath ? path.resolve(registryPath) : null,
-    sensitiveTerms: resolvedSensitiveTerms,
-  }));
+  const server = http.createServer(
+    createLocalUiRequestHandler({
+      outputRoot: resolvedOutputRoot,
+      promptWorkbenchService,
+      actionService: uiActionService,
+      profileWizardService: resolvedProfileWizardService,
+      registryPath: registryPath ? path.resolve(registryPath) : null,
+      sensitiveTerms: resolvedSensitiveTerms,
+    })
+  );
 
   await new Promise((resolve, reject) => {
     server.once('error', reject);

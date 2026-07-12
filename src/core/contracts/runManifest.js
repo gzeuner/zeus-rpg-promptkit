@@ -49,11 +49,11 @@ function buildRunManifestBase({
       cwd: run.cwd || null,
       outputDir: run.outputDir || run.outputProgramDir || null,
       reproducible: !!run.reproducible,
-      ... (run.failure ? { failure: run.failure } : {}),
+      ...(run.failure ? { failure: run.failure } : {}),
     },
     inputs: sanitizeInputs(inputs),
     artifacts: Array.isArray(artifacts)
-      ? artifacts.map((a) => (a && a.path ? buildArtifactReference(a) : a))
+      ? artifacts.map(a => (a && a.path ? buildArtifactReference(a) : a))
       : [],
     ...rest,
   };
@@ -68,7 +68,7 @@ function sanitizeInputs(inputs = {}) {
   function walk(obj) {
     if (!obj || typeof obj !== 'object') return;
     for (const k of Object.keys(obj)) {
-      if (redactKeys.some((rk) => k.toLowerCase().includes(rk))) {
+      if (redactKeys.some(rk => k.toLowerCase().includes(rk))) {
         obj[k] = '[REDACTED]';
       } else if (typeof obj[k] === 'object') {
         walk(obj[k]);

@@ -20,24 +20,33 @@ function pickSourceSnippet(sourceFiles, programName, options = {}) {
   }
 
   const resolvedRoot = options.sourceRoot ? path.resolve(options.sourceRoot) : null;
-  const normalizedSourceTextByRelativePath = options.normalizedSourceTextByRelativePath instanceof Map
-    ? options.normalizedSourceTextByRelativePath
-    : null;
-  const paths = sourceFiles.map((entry) => (typeof entry === 'string' ? entry : entry.path)).filter(Boolean);
+  const normalizedSourceTextByRelativePath =
+    options.normalizedSourceTextByRelativePath instanceof Map
+      ? options.normalizedSourceTextByRelativePath
+      : null;
+  const paths = sourceFiles
+    .map(entry => (typeof entry === 'string' ? entry : entry.path))
+    .filter(Boolean);
   if (paths.length === 0) {
     return 'No source files were found.';
   }
 
   const normalizedProgram = String(programName || '').toLowerCase();
-  const preferred = paths.find((file) => {
-    const base = path.basename(file).toLowerCase();
-    return base.startsWith(normalizedProgram);
-  }) || paths[0];
+  const preferred =
+    paths.find(file => {
+      const base = path.basename(file).toLowerCase();
+      return base.startsWith(normalizedProgram);
+    }) || paths[0];
 
-  const relativePath = resolvedRoot ? path.relative(resolvedRoot, preferred).replace(/\\/g, '/') : null;
-  const content = relativePath && normalizedSourceTextByRelativePath && normalizedSourceTextByRelativePath.has(relativePath)
-    ? normalizedSourceTextByRelativePath.get(relativePath)
-    : fs.readFileSync(preferred, 'utf8');
+  const relativePath = resolvedRoot
+    ? path.relative(resolvedRoot, preferred).replace(/\\/g, '/')
+    : null;
+  const content =
+    relativePath &&
+    normalizedSourceTextByRelativePath &&
+    normalizedSourceTextByRelativePath.has(relativePath)
+      ? normalizedSourceTextByRelativePath.get(relativePath)
+      : fs.readFileSync(preferred, 'utf8');
   return content.split(/\r?\n/).slice(0, 120).join('\n');
 }
 

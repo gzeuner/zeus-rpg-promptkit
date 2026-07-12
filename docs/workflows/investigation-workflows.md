@@ -123,6 +123,7 @@ zeus inspect-object --profile dev --lib APPLIB --name APP_TABLE_00 --type *FILE 
 ```
 
 Schluessel-Output-Felder:
+
 - `Journalized` — YES/NO, mit Hinweis auf SQLSTATE 55019 wenn NO
 - `Journal` — `APPDATA/APPPGMJRN (*AFTER)`
 - `Source Member`, `Source Timestamp` — welcher Source-Stand kompiliert wurde
@@ -156,6 +157,7 @@ zeus test-run show --manifest test-run-manifest.json
 ```
 
 Das `test-run-manifest.json` enthaelt:
+
 - `snapshots.<table>.before` / `.after` — Zeileninhalt vor/nach dem Test
 - `snapshots.<table>.diff.changedRows` — UPDATED / INSERTED / DELETED
 - `rollbackSql[]` — fertige SQL-Statements zum manuellen Zuruecksetzen

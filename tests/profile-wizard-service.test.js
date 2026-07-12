@@ -15,28 +15,36 @@ function createTempProject() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-profile-wizard-'));
   const configDir = path.join(tempRoot, 'config');
   fs.mkdirSync(configDir, { recursive: true });
-  fs.writeFileSync(path.join(configDir, 'profiles.example.json'), `${JSON.stringify({
-    'default-shared': {
-      outputRoot: '${env:ZEUS_OUTPUT_ROOT}',
-    },
-    dev: {
-      extends: 'default-shared',
-      sourceRoot: './workspace/source',
-      outputRoot: './workspace/output',
-      db: {
-        system: 'dev',
-      },
-      systems: {
+  fs.writeFileSync(
+    path.join(configDir, 'profiles.example.json'),
+    `${JSON.stringify(
+      {
+        'default-shared': {
+          outputRoot: '${env:ZEUS_OUTPUT_ROOT}',
+        },
         dev: {
-          displayName: 'Development IBM i',
-          host: 'internal-host.example',
-          user: '${env:ZEUS_DB_USER}',
-          password: '${env:ZEUS_DB_PASSWORD}',
-          defaultSchema: 'APPDEV',
+          extends: 'default-shared',
+          sourceRoot: './workspace/source',
+          outputRoot: './workspace/output',
+          db: {
+            system: 'dev',
+          },
+          systems: {
+            dev: {
+              displayName: 'Development IBM i',
+              host: 'internal-host.example',
+              user: '${env:ZEUS_DB_USER}',
+              password: '${env:ZEUS_DB_PASSWORD}',
+              defaultSchema: 'APPDEV',
+            },
+          },
         },
       },
-    },
-  }, null, 2)}\n`, 'utf8');
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
   return tempRoot;
 }
 
@@ -52,13 +60,13 @@ test('profile wizard state summarizes profiles and systems without exposing raw 
     assert.equal(state.schemaVersion, 1);
     assert.equal(state.mode, 'local-only-profile-wizard');
     assert.ok(Array.isArray(state.profiles));
-    assert.ok(state.profiles.some((entry) => entry.name === 'dev'));
-    const devProfile = state.profiles.find((entry) => entry.name === 'dev');
+    assert.ok(state.profiles.some(entry => entry.name === 'dev'));
+    const devProfile = state.profiles.find(entry => entry.name === 'dev');
     assert.equal(devProfile.sourceKind, 'shared');
     assert.equal(devProfile.deleteAllowed, false);
     assert.deepEqual(state.managedEnvironmentUsage.dependentProfiles, []);
     assert.ok(Array.isArray(state.systems));
-    const devSystem = state.systems.find((entry) => entry.key === 'dev');
+    const devSystem = state.systems.find(entry => entry.key === 'dev');
     assert.equal(devSystem.displayName, 'Development IBM i');
     assert.equal(devSystem.hostMode, 'configured');
     assert.equal(JSON.stringify(state).includes('internal-host.example'), false);
@@ -124,14 +132,22 @@ test('profile wizard preview validates and emits safe placeholder-based managed 
     assert.equal(preview.valid, true);
     assert.equal(preview.profilePreview.db.system, 'devgui');
     assert.equal(preview.profilePreview.fetch.system, 'devgui');
-    assert.equal(preview.managedEnvironmentProfilePreview.systems.devgui.host, '${env:ZEUS_DEV_HOST}');
-    assert.equal(preview.managedEnvironmentProfilePreview.systems.readonly.password, '${env:ZEUS_RO_PASSWORD}');
-    assert.ok(preview.safeCliPreview.commands.every((entry) => !/password|internal-host/i.test(entry)));
+    assert.equal(
+      preview.managedEnvironmentProfilePreview.systems.devgui.host,
+      '${env:ZEUS_DEV_HOST}'
+    );
+    assert.equal(
+      preview.managedEnvironmentProfilePreview.systems.readonly.password,
+      '${env:ZEUS_RO_PASSWORD}'
+    );
+    assert.ok(
+      preview.safeCliPreview.commands.every(entry => !/password|internal-host/i.test(entry))
+    );
     assert.ok(Array.isArray(preview.handoffCommands));
     assert.match(preview.handoffCommands[0].command, /zeus doctor --profile gui-dev/);
     assert.ok(Array.isArray(preview.diagnostics));
     assert.ok(Array.isArray(preview.stepValidation));
-    assert.equal(preview.stepValidation.find((entry) => entry.id === 'workspace').status, 'review');
+    assert.equal(preview.stepValidation.find(entry => entry.id === 'workspace').status, 'review');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -164,10 +180,13 @@ test('profile wizard preview returns field diagnostics for incomplete local-only
       managedEnvironments: [],
     });
 
-    assert.ok(preview.diagnostics.some((entry) => entry.fieldPath === 'analysesRegistryPath'));
-    assert.ok(preview.diagnostics.some((entry) => entry.fieldPath === 'fetch.sourceLibrary'));
-    assert.ok(preview.diagnostics.some((entry) => entry.fieldPath === 'fetch.files'));
-    assert.equal(preview.stepValidation.find((entry) => entry.id === 'fetch-scope').status, 'needs-scope');
+    assert.ok(preview.diagnostics.some(entry => entry.fieldPath === 'analysesRegistryPath'));
+    assert.ok(preview.diagnostics.some(entry => entry.fieldPath === 'fetch.sourceLibrary'));
+    assert.ok(preview.diagnostics.some(entry => entry.fieldPath === 'fetch.files'));
+    assert.equal(
+      preview.stepValidation.find(entry => entry.id === 'fetch-scope').status,
+      'needs-scope'
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -215,8 +234,8 @@ test('profile wizard preview warns when a local-only save would shadow shared pr
       ],
     });
 
-    assert.ok(preview.conflicts.some((entry) => entry.code === 'PROFILE_SHADOWS_SHARED'));
-    assert.ok(preview.conflicts.some((entry) => entry.code === 'MANAGED_ENVIRONMENT_SHADOWS_SHARED'));
+    assert.ok(preview.conflicts.some(entry => entry.code === 'PROFILE_SHADOWS_SHARED'));
+    assert.ok(preview.conflicts.some(entry => entry.code === 'MANAGED_ENVIRONMENT_SHADOWS_SHARED'));
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -271,7 +290,10 @@ test('profile wizard save writes only local-only overlay content', () => {
     assert.ok(saved['gui-local']);
     assert.ok(saved[MANAGED_ENVIRONMENT_PROFILE_KEY]);
     assert.equal(saved['gui-local'].fetch.system, 'devgui');
-    assert.equal(saved[MANAGED_ENVIRONMENT_PROFILE_KEY].systems.devgui.host, '${env:ZEUS_DEV_HOST}');
+    assert.equal(
+      saved[MANAGED_ENVIRONMENT_PROFILE_KEY].systems.devgui.host,
+      '${env:ZEUS_DEV_HOST}'
+    );
     assert.equal(Object.prototype.hasOwnProperty.call(saved, 'default-shared'), false);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -305,7 +327,7 @@ test('profile wizard can delete only local-only profiles and preserves shared pr
     });
 
     const stateAfterSave = service.getState();
-    const localProfile = stateAfterSave.profiles.find((entry) => entry.name === 'gui-local');
+    const localProfile = stateAfterSave.profiles.find(entry => entry.name === 'gui-local');
     assert.equal(localProfile.sourceKind, 'local-only');
     assert.equal(localProfile.deleteAllowed, true);
 
@@ -314,7 +336,10 @@ test('profile wizard can delete only local-only profiles and preserves shared pr
     const savedPath = path.join(tempRoot, 'config', 'local-only', 'profiles.json');
     const saved = JSON.parse(fs.readFileSync(savedPath, 'utf8'));
     assert.equal(Object.prototype.hasOwnProperty.call(saved, 'gui-local'), false);
-    assert.throws(() => service.deleteProfile('dev'), /only local-only profiles can be deleted here/i);
+    assert.throws(
+      () => service.deleteProfile('dev'),
+      /only local-only profiles can be deleted here/i
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -322,27 +347,31 @@ test('profile wizard can delete only local-only profiles and preserves shared pr
 
 test('normalize profile wizard draft rejects invalid env variable names', () => {
   assert.throws(
-    () => normalizeProfileWizardDraft({
-      profileName: 'gui',
-      managedEnvironments: [{
-        key: 'dev',
-        hostEnvVar: 'bad-var',
-      }],
-    }),
-    /invalid environment variable name/i,
+    () =>
+      normalizeProfileWizardDraft({
+        profileName: 'gui',
+        managedEnvironments: [
+          {
+            key: 'dev',
+            hostEnvVar: 'bad-var',
+          },
+        ],
+      }),
+    /invalid environment variable name/i
   );
 });
 
 test('normalize profile wizard draft rejects duplicate managed environment keys', () => {
   assert.throws(
-    () => normalizeProfileWizardDraft({
-      profileName: 'gui',
-      managedEnvironments: [
-        { key: 'dev', hostEnvVar: 'ZEUS_A', userEnvVar: 'ZEUS_B', passwordEnvVar: 'ZEUS_C' },
-        { key: 'dev', hostEnvVar: 'ZEUS_D', userEnvVar: 'ZEUS_E', passwordEnvVar: 'ZEUS_F' },
-      ],
-    }),
-    /duplicate managed environment key/i,
+    () =>
+      normalizeProfileWizardDraft({
+        profileName: 'gui',
+        managedEnvironments: [
+          { key: 'dev', hostEnvVar: 'ZEUS_A', userEnvVar: 'ZEUS_B', passwordEnvVar: 'ZEUS_C' },
+          { key: 'dev', hostEnvVar: 'ZEUS_D', userEnvVar: 'ZEUS_E', passwordEnvVar: 'ZEUS_F' },
+        ],
+      }),
+    /duplicate managed environment key/i
   );
 });
 

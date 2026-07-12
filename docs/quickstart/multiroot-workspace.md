@@ -7,6 +7,7 @@ Last Updated: 2026-06-19
 # Quickstart: Multi-Root Workspace fuer Ticket-basierte Analyse
 
 Dieses Quickstart beschreibt die sichere Einrichtung eines Multi-Root Workspaces:
+
 - **Ticket-Folder**: Deine Ticket-Inhalte (zeitlich begrenzt)
 - **Zeus-Repo**: Das `zeus-rpg-promptkit` (persistent)
 
@@ -22,6 +23,7 @@ cd c:\Tickets\TICKET-12345
 ## 2. Arbeitsstruktur festlegen
 
 Lege beide Ordner parallel bereit:
+
 - `c:\Tickets\TICKET-12345`
 - `c:\Tools\zeus-rpg-promptkit`
 
@@ -65,10 +67,12 @@ node cli/zeus.js serve --source-output-root ./output
 ## 8. Sicherheit
 
 Was committed werden darf:
+
 - Code
 - Vorlagen wie `.env.example` und `profiles.example.json`
 
 Was nie committed werden darf:
+
 - `.env.local`
 - `profiles.json`
 - Secrets
@@ -81,5 +85,6 @@ Was nie committed werden darf:
 4. Ergebnisse im AI-Workflow verwenden.
 
 Fragen? Siehe auch:
+
 - [`../safety/best-practice-guide.md`](../safety/best-practice-guide.md)
 - [`../workflows/investigation-workflows.md`](../workflows/investigation-workflows.md)

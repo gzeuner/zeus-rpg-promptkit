@@ -71,6 +71,7 @@ Execution handler is currently the command runner module + the registered functi
 ## Security Implications
 
 Safety level and side-effect declaration are first-class on capabilities. This enables:
+
 - Pre-flight checks (doctor)
 - Policy enforcement (MCP, bridge approval)
 - Safe-sharing and redaction decisions

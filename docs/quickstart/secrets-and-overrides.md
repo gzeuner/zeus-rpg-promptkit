@@ -94,15 +94,15 @@ Profilwerte lassen sich **jederzeit** durch CLI-Argumente übersteuern, ohne das
 
 ### fetch
 
-| Zweck | Flag |
-|---|---|
-| Objekt-/Quellbibliothek | `--source-lib <LIB>` (Alias `--source-library`) |
-| Quelldateien | `--source-files QRPGLESRC,QCPYSRC` (Alias `--files`) |
-| Member (Filter) | `--members M1,M2` (Alias `--member`) |
-| Zielverzeichnis | `--out <pfad>` |
-| IFS-Arbeitsverzeichnis | `--ifs-dir <pfad>` |
-| Host/User/Passwort | `--host` / `--user` / `--password` |
-| Benanntes System | `--system <name>` |
+| Zweck                   | Flag                                                 |
+| ----------------------- | ---------------------------------------------------- |
+| Objekt-/Quellbibliothek | `--source-lib <LIB>` (Alias `--source-library`)      |
+| Quelldateien            | `--source-files QRPGLESRC,QCPYSRC` (Alias `--files`) |
+| Member (Filter)         | `--members M1,M2` (Alias `--member`)                 |
+| Zielverzeichnis         | `--out <pfad>`                                       |
+| IFS-Arbeitsverzeichnis  | `--ifs-dir <pfad>`                                   |
+| Host/User/Passwort      | `--host` / `--user` / `--password`                   |
+| Benanntes System        | `--system <name>`                                    |
 
 ```powershell
 node cli/zeus.js fetch --profile dev --source-lib APPLIB --source-files QRPGLESRC,QCPYSRC --members ORDERPGM,CUSTSRV
@@ -115,12 +115,12 @@ weiterhin Vorrang, danach kommt der gewählte Systemblock, danach Env/Profile-Fa
 
 ### analyze
 
-| Zweck | Flag |
-|---|---|
-| Source-Verzeichnis | `--source <pfad>` (Alias `--source-root`) |
-| DB-Schema (Metadaten) | `--schema <NAME>` |
-| DB-Bibliothek (Metadaten) | `--library <NAME>` (Alias `--lib`) |
-| Dateiendungen | `--extensions .rpgle,.rpg` |
+| Zweck                     | Flag                                      |
+| ------------------------- | ----------------------------------------- |
+| Source-Verzeichnis        | `--source <pfad>` (Alias `--source-root`) |
+| DB-Schema (Metadaten)     | `--schema <NAME>`                         |
+| DB-Bibliothek (Metadaten) | `--library <NAME>` (Alias `--lib`)        |
+| Dateiendungen             | `--extensions .rpgle,.rpg`                |
 
 ```powershell
 node cli/zeus.js analyze --profile dev --source ./rpg_sources --member ORDERPGM --schema DATA_X --library APPLIB
@@ -128,11 +128,11 @@ node cli/zeus.js analyze --profile dev --source ./rpg_sources --member ORDERPGM 
 
 ### query-table / query-sql
 
-| Zweck | Flag |
-|---|---|
-| Schema (query-table) | `--schema <NAME>` |
+| Zweck                        | Flag                      |
+| ---------------------------- | ------------------------- |
+| Schema (query-table)         | `--schema <NAME>`         |
 | Bibliotheksliste (query-sql) | `--liblist LIB1 LIB2 ...` |
-| Default-Schema (query-sql) | `--default-schema <NAME>` |
+| Default-Schema (query-sql)   | `--default-schema <NAME>` |
 
 `query-sql` kann mehrere read-only Statements (`SELECT` / `WITH`) in einem Lauf ausführen:
 

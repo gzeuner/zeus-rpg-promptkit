@@ -30,41 +30,47 @@ test('analyze can emit IFS path, full-text search, and diagnostic pack artifacts
   fs.appendFileSync(
     path.join(sourceRoot, 'ORDERPGM.sqlrpgle'),
     "\n// Investigation fixtures\nDCL-S HomePath VARCHAR(256) INZ('/home/order/docs/order.json');\n",
-    'utf8',
+    'utf8'
   );
 
   try {
-    runCli([
-      'analyze',
-      '--source',
-      sourceRoot,
-      '--program',
-      'ORDERPGM',
-      '--out',
-      outputRoot,
-      '--scan-ifs-paths',
-      '--search-terms',
-      'INVPGM,/home/order',
-      '--diagnostic-packs',
-      'table-investigation',
-      '--diagnostic-params',
-      'table=ORDERS',
-    ], projectRoot);
+    runCli(
+      [
+        'analyze',
+        '--source',
+        sourceRoot,
+        '--program',
+        'ORDERPGM',
+        '--out',
+        outputRoot,
+        '--scan-ifs-paths',
+        '--search-terms',
+        'INVPGM,/home/order',
+        '--diagnostic-packs',
+        'table-investigation',
+        '--diagnostic-params',
+        'table=ORDERS',
+      ],
+      projectRoot
+    );
 
     const programOutputDir = path.join(outputRoot, 'ORDERPGM');
     assert.equal(fs.existsSync(path.join(programOutputDir, 'ifs-paths.json')), true);
     assert.equal(fs.existsSync(path.join(programOutputDir, 'search-results.json')), true);
     assert.equal(fs.existsSync(path.join(programOutputDir, 'diagnostic-query-packs.json')), true);
-    assert.equal(fs.existsSync(path.join(programOutputDir, 'diagnostic-query-pack-manifest.json')), true);
+    assert.equal(
+      fs.existsSync(path.join(programOutputDir, 'diagnostic-query-pack-manifest.json')),
+      true
+    );
 
     const ifsPaths = readJson(path.join(programOutputDir, 'ifs-paths.json'));
     assert.equal(ifsPaths.enabled, true);
-    assert.ok(ifsPaths.paths.some((entry) => entry.path === '/home/order/docs/order.json'));
+    assert.ok(ifsPaths.paths.some(entry => entry.path === '/home/order/docs/order.json'));
 
     const searchResults = readJson(path.join(programOutputDir, 'search-results.json'));
     assert.equal(searchResults.enabled, true);
-    assert.ok(searchResults.matches.some((entry) => entry.term === 'INVPGM'));
-    assert.ok(searchResults.matches.some((entry) => entry.term === '/home/order'));
+    assert.ok(searchResults.matches.some(entry => entry.term === 'INVPGM'));
+    assert.ok(searchResults.matches.some(entry => entry.term === '/home/order'));
 
     const diagnosticPacks = readJson(path.join(programOutputDir, 'diagnostic-query-packs.json'));
     assert.equal(diagnosticPacks.enabled, true);
@@ -80,7 +86,9 @@ test('analyze can emit IFS path, full-text search, and diagnostic pack artifacts
     const manifest = readJson(path.join(programOutputDir, 'analyze-run-manifest.json'));
     assert.equal(manifest.inputs.options.investigation.scanIfsPathsEnabled, true);
     assert.deepEqual(manifest.inputs.options.investigation.searchTerms, ['/home/order', 'INVPGM']);
-    assert.deepEqual(manifest.inputs.options.investigation.diagnosticPacks, ['table-investigation']);
+    assert.deepEqual(manifest.inputs.options.investigation.diagnosticPacks, [
+      'table-investigation',
+    ]);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

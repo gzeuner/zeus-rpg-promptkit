@@ -128,9 +128,10 @@ function detectEncoding(buffer, options = {}) {
 function normalizeTextContract(text, options = {}) {
   const originalText = String(text || '');
   const originalNewlineStyle = detectNewlineStyle(originalText);
-  const normalizedText = options.normalizeText === false
-    ? originalText
-    : originalText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const normalizedText =
+    options.normalizeText === false
+      ? originalText
+      : originalText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const normalizedNewlineStyle = detectNewlineStyle(normalizedText);
   const lineEndingsNormalized = normalizedText !== originalText;
 
@@ -144,10 +145,10 @@ function normalizeTextContract(text, options = {}) {
 
 function getManifestLocalPath(entry) {
   return String(
-    (entry && entry.origin && entry.origin.localPath)
-    || (entry && entry.localPath)
-    || '',
-  ).trim().replace(/\\/g, '/');
+    (entry && entry.origin && entry.origin.localPath) || (entry && entry.localPath) || ''
+  )
+    .trim()
+    .replace(/\\/g, '/');
 }
 
 function getManifestSha256(entry) {
@@ -168,7 +169,9 @@ function validateSourceFile(filePath, options = {}) {
   const strictUtf8Only = Boolean(options.strictUtf8Only);
 
   if (!fs.existsSync(absolutePath)) {
-    issues.push(buildIssue('warning', 'SOURCE_FILE_MISSING', `Source file is missing: ${relativePath}`));
+    issues.push(
+      buildIssue('warning', 'SOURCE_FILE_MISSING', `Source file is missing: ${relativePath}`)
+    );
     return {
       path: absolutePath,
       relativePath,
@@ -198,11 +201,13 @@ function validateSourceFile(filePath, options = {}) {
   const decoded = detectEncoding(buffer, { strictUtf8Only });
 
   if (!decoded) {
-    issues.push(buildIssue(
-      'warning',
-      'INVALID_UTF8',
-      `Invalid UTF-8 source encoding detected in ${relativePath}. Supported analyze conversions currently require UTF-8 or UTF-16 BOM markers.`,
-    ));
+    issues.push(
+      buildIssue(
+        'warning',
+        'INVALID_UTF8',
+        `Invalid UTF-8 source encoding detected in ${relativePath}. Supported analyze conversions currently require UTF-8 or UTF-16 BOM markers.`
+      )
+    );
     return {
       path: absolutePath,
       relativePath,
@@ -225,42 +230,68 @@ function validateSourceFile(filePath, options = {}) {
     };
   }
 
-  const normalized = normalizeTextContract(decoded.text, { normalizeText: options.normalizeText !== false });
+  const normalized = normalizeTextContract(decoded.text, {
+    normalizeText: options.normalizeText !== false,
+  });
   const normalizationActions = [];
 
   if (decoded.hadBom) {
     normalizationActions.push('STRIP_BOM');
-    issues.push(buildIssue('info', 'SOURCE_BOM_REMOVED', `Removed BOM from ${relativePath} before analysis.`));
+    issues.push(
+      buildIssue('info', 'SOURCE_BOM_REMOVED', `Removed BOM from ${relativePath} before analysis.`)
+    );
   }
 
   if (decoded.encodingConverted) {
     normalizationActions.push(`DECODE_${decoded.detectedEncoding}`);
-    issues.push(buildIssue('warning', 'SOURCE_ENCODING_CONVERTED', `Converted ${relativePath} from ${decoded.detectedEncoding} into the UTF-8 analysis contract.`));
+    issues.push(
+      buildIssue(
+        'warning',
+        'SOURCE_ENCODING_CONVERTED',
+        `Converted ${relativePath} from ${decoded.detectedEncoding} into the UTF-8 analysis contract.`
+      )
+    );
   }
 
   if (normalized.lineEndingsNormalized) {
     normalizationActions.push('NORMALIZE_LINE_ENDINGS');
     const severity = ['MIXED', 'CR'].includes(normalized.originalNewlineStyle) ? 'warning' : 'info';
-    issues.push(buildIssue(
-      severity,
-      'SOURCE_LINE_ENDINGS_NORMALIZED',
-      `Normalized ${relativePath} line endings from ${normalized.originalNewlineStyle} to ${normalized.normalizedNewlineStyle}.`,
-    ));
+    issues.push(
+      buildIssue(
+        severity,
+        'SOURCE_LINE_ENDINGS_NORMALIZED',
+        `Normalized ${relativePath} line endings from ${normalized.originalNewlineStyle} to ${normalized.normalizedNewlineStyle}.`
+      )
+    );
   } else if (normalized.originalNewlineStyle === 'MIXED') {
-    issues.push(buildIssue('warning', 'MIXED_NEWLINES', `Mixed newline styles detected in ${relativePath}`));
+    issues.push(
+      buildIssue('warning', 'MIXED_NEWLINES', `Mixed newline styles detected in ${relativePath}`)
+    );
   } else if (normalized.originalNewlineStyle === 'CR') {
-    issues.push(buildIssue('warning', 'LEGACY_CR_NEWLINES', `Legacy CR-only newlines detected in ${relativePath}`));
+    issues.push(
+      buildIssue(
+        'warning',
+        'LEGACY_CR_NEWLINES',
+        `Legacy CR-only newlines detected in ${relativePath}`
+      )
+    );
   }
 
   let importChecksumMatch = null;
   if (options.expectedSha256) {
     importChecksumMatch = options.expectedSha256 === sha256;
     if (!importChecksumMatch) {
-      issues.push(buildIssue('warning', 'SOURCE_CHANGED_SINCE_IMPORT', `Source file changed since import manifest was written: ${relativePath}`));
+      issues.push(
+        buildIssue(
+          'warning',
+          'SOURCE_CHANGED_SINCE_IMPORT',
+          `Source file changed since import manifest was written: ${relativePath}`
+        )
+      );
     }
   }
 
-  const warningCount = issues.filter((issue) => issue.severity === 'warning').length;
+  const warningCount = issues.filter(issue => issue.severity === 'warning').length;
   let normalizationStatus = 'ok';
   if (decoded.encodingConverted) {
     normalizationStatus = 'converted';
@@ -292,9 +323,10 @@ function validateSourceFile(filePath, options = {}) {
 
 function validateSourceFiles(filePaths, options = {}) {
   const manifestEntries = new Map();
-  const importManifest = options.importManifest && Array.isArray(options.importManifest.files)
-    ? options.importManifest
-    : null;
+  const importManifest =
+    options.importManifest && Array.isArray(options.importManifest.files)
+      ? options.importManifest
+      : null;
 
   if (importManifest) {
     for (const entry of importManifest.files) {
@@ -304,24 +336,32 @@ function validateSourceFiles(filePaths, options = {}) {
     }
   }
 
-  const results = (filePaths || []).map((filePath) => {
+  const results = (filePaths || []).map(filePath => {
     const relativePath = normalizeRelativePath(options.rootDir, filePath);
     const manifestEntry = manifestEntries.get(relativePath) || null;
     return validateSourceFile(filePath, {
       rootDir: options.rootDir,
-      sourceType: options.sourceTypeByPath && options.sourceTypeByPath.get
-        ? options.sourceTypeByPath.get(path.resolve(filePath))
-        : null,
+      sourceType:
+        options.sourceTypeByPath && options.sourceTypeByPath.get
+          ? options.sourceTypeByPath.get(path.resolve(filePath))
+          : null,
       expectedSha256: manifestEntry ? getManifestSha256(manifestEntry) : null,
       strictUtf8Only: Boolean(options.strictUtf8Only),
       normalizeText: options.normalizeText !== false,
     });
   });
 
-  const validFiles = results.filter((result) => result.status !== 'invalid').map((result) => result.path);
-  const invalidFiles = results.filter((result) => result.status === 'invalid').map((result) => result.path);
-  const warningCount = results.reduce((sum, result) => sum + result.issues.filter((issue) => issue.severity === 'warning').length, 0);
-  const invalidCount = results.filter((result) => result.status === 'invalid').length;
+  const validFiles = results
+    .filter(result => result.status !== 'invalid')
+    .map(result => result.path);
+  const invalidFiles = results
+    .filter(result => result.status === 'invalid')
+    .map(result => result.path);
+  const warningCount = results.reduce(
+    (sum, result) => sum + result.issues.filter(issue => issue.severity === 'warning').length,
+    0
+  );
+  const invalidCount = results.filter(result => result.status === 'invalid').length;
 
   return {
     importManifestFound: Boolean(importManifest),
@@ -333,10 +373,15 @@ function validateSourceFiles(filePaths, options = {}) {
     invalidCount,
     normalizationSummary: {
       fileCount: results.length,
-      convertedEncodingCount: results.filter((result) => result.normalizationStatus === 'converted').length,
-      normalizedFileCount: results.filter((result) => ['normalized', 'converted'].includes(result.normalizationStatus)).length,
-      bomRemovedCount: results.filter((result) => result.hadBom).length,
-      normalizedLineEndingCount: results.filter((result) => result.normalizationActions.includes('NORMALIZE_LINE_ENDINGS')).length,
+      convertedEncodingCount: results.filter(result => result.normalizationStatus === 'converted')
+        .length,
+      normalizedFileCount: results.filter(result =>
+        ['normalized', 'converted'].includes(result.normalizationStatus)
+      ).length,
+      bomRemovedCount: results.filter(result => result.hadBom).length,
+      normalizedLineEndingCount: results.filter(result =>
+        result.normalizationActions.includes('NORMALIZE_LINE_ENDINGS')
+      ).length,
       invalidFileCount: invalidCount,
       warningCount,
     },

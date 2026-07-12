@@ -32,12 +32,36 @@ const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLi
 const MANAGED_ENVIRONMENT_PROFILE_KEY = '_gui-environments';
 const MANAGED_ENVIRONMENT_PROFILE_COMMENT = 'GUI-managed local-only environment catalog.';
 const PROFILE_WIZARD_STEP_DEFINITIONS = Object.freeze([
-  Object.freeze({ id: 'identity', description: 'Set the profile name, comment, and base profile extensions.', statusWhenMissing: 'needs-profile-input' }),
-  Object.freeze({ id: 'workspace', description: 'Review source, output, and analysis registry paths.', statusWhenMissing: 'needs-profile-input' }),
-  Object.freeze({ id: 'environment-routing', description: 'Bind DB and fetch roles to known system keys.', statusWhenMissing: 'needs-scope' }),
-  Object.freeze({ id: 'fetch-scope', description: 'Define source library, IFS directory, file, member, and transport scope.', statusWhenMissing: 'needs-scope' }),
-  Object.freeze({ id: 'managed-environments', description: 'Create local-only managed environment placeholders.', statusWhenMissing: 'needs-profile-input' }),
-  Object.freeze({ id: 'preview-save', description: 'Validate and save the local-only overlay.', statusWhenMissing: 'preview-ready' }),
+  Object.freeze({
+    id: 'identity',
+    description: 'Set the profile name, comment, and base profile extensions.',
+    statusWhenMissing: 'needs-profile-input',
+  }),
+  Object.freeze({
+    id: 'workspace',
+    description: 'Review source, output, and analysis registry paths.',
+    statusWhenMissing: 'needs-profile-input',
+  }),
+  Object.freeze({
+    id: 'environment-routing',
+    description: 'Bind DB and fetch roles to known system keys.',
+    statusWhenMissing: 'needs-scope',
+  }),
+  Object.freeze({
+    id: 'fetch-scope',
+    description: 'Define source library, IFS directory, file, member, and transport scope.',
+    statusWhenMissing: 'needs-scope',
+  }),
+  Object.freeze({
+    id: 'managed-environments',
+    description: 'Create local-only managed environment placeholders.',
+    statusWhenMissing: 'needs-profile-input',
+  }),
+  Object.freeze({
+    id: 'preview-save',
+    description: 'Validate and save the local-only overlay.',
+    statusWhenMissing: 'preview-ready',
+  }),
 ]);
 
 class ProfileWizardError extends Error {
@@ -61,7 +85,9 @@ function mergeConfigLayers(baseValue, overrideValue) {
   if (overrideValue === undefined) {
     if (Array.isArray(baseValue)) return [...baseValue];
     if (isPlainObject(baseValue)) {
-      return Object.fromEntries(Object.entries(baseValue).map(([key, value]) => [key, mergeConfigLayers(value, undefined)]));
+      return Object.fromEntries(
+        Object.entries(baseValue).map(([key, value]) => [key, mergeConfigLayers(value, undefined)])
+      );
     }
     return baseValue;
   }
@@ -80,7 +106,12 @@ function mergeConfigLayers(baseValue, overrideValue) {
   }
 
   if (isPlainObject(overrideValue)) {
-    return Object.fromEntries(Object.entries(overrideValue).map(([key, value]) => [key, mergeConfigLayers(undefined, value)]));
+    return Object.fromEntries(
+      Object.entries(overrideValue).map(([key, value]) => [
+        key,
+        mergeConfigLayers(undefined, value),
+      ])
+    );
   }
 
   return overrideValue;
@@ -106,26 +137,34 @@ function sanitizeWorkspacePathForUi(value, cwd) {
 }
 
 function uniqueTrimmedStrings(values, { uppercase = false } = {}) {
-  return Array.from(new Set((Array.isArray(values) ? values : [])
-    .map((entry) => String(entry || '').trim())
-    .filter(Boolean)
-    .map((entry) => (uppercase ? entry.toUpperCase() : entry))));
+  return Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map(entry => String(entry || '').trim())
+        .filter(Boolean)
+        .map(entry => (uppercase ? entry.toUpperCase() : entry))
+    )
+  );
 }
 
 function normalizeEnvReference(varName) {
-  const trimmed = String(varName || '').trim().toUpperCase();
+  const trimmed = String(varName || '')
+    .trim()
+    .toUpperCase();
   if (!trimmed) {
     return '';
   }
   if (!ENV_VAR_NAME_PATTERN.test(trimmed)) {
     throw new ProfileWizardError(`Invalid environment variable name: ${varName}`, 400, {
-      diagnostics: [{
-        code: 'INVALID_ENV_VAR_NAME',
-        severity: 'error',
-        stepId: 'managed-environments',
-        fieldPath: 'managedEnvironments',
-        message: `Invalid environment variable name: ${varName}`,
-      }],
+      diagnostics: [
+        {
+          code: 'INVALID_ENV_VAR_NAME',
+          severity: 'error',
+          stepId: 'managed-environments',
+          fieldPath: 'managedEnvironments',
+          message: `Invalid environment variable name: ${varName}`,
+        },
+      ],
     });
   }
   return trimmed;
@@ -135,24 +174,28 @@ function normalizeProfileName(value, fieldName = 'profileName') {
   const trimmed = String(value || '').trim();
   if (!trimmed) {
     throw new ProfileWizardError(`${fieldName} is required`, 400, {
-      diagnostics: [{
-        code: 'REQUIRED_FIELD',
-        severity: 'error',
-        stepId: fieldName === 'profileName' ? 'identity' : 'environment-routing',
-        fieldPath: fieldName,
-        message: `${fieldName} is required`,
-      }],
+      diagnostics: [
+        {
+          code: 'REQUIRED_FIELD',
+          severity: 'error',
+          stepId: fieldName === 'profileName' ? 'identity' : 'environment-routing',
+          fieldPath: fieldName,
+          message: `${fieldName} is required`,
+        },
+      ],
     });
   }
   if (trimmed.includes('..') || !PROFILE_NAME_PATTERN.test(trimmed)) {
     throw new ProfileWizardError(`${fieldName} contains unsupported characters`, 400, {
-      diagnostics: [{
-        code: 'UNSUPPORTED_CHARACTERS',
-        severity: 'error',
-        stepId: fieldName === 'profileName' ? 'identity' : 'environment-routing',
-        fieldPath: fieldName,
-        message: `${fieldName} contains unsupported characters`,
-      }],
+      diagnostics: [
+        {
+          code: 'UNSUPPORTED_CHARACTERS',
+          severity: 'error',
+          stepId: fieldName === 'profileName' ? 'identity' : 'environment-routing',
+          fieldPath: fieldName,
+          message: `${fieldName} contains unsupported characters`,
+        },
+      ],
     });
   }
   return trimmed;
@@ -174,10 +217,13 @@ function normalizeBoolean(value) {
 }
 
 function normalizeCsvList(value, { uppercase = false } = {}) {
-  return uniqueTrimmedStrings(String(value || '')
-    .split(',')
-    .map((entry) => entry.trim())
-    .filter(Boolean), { uppercase });
+  return uniqueTrimmedStrings(
+    String(value || '')
+      .split(',')
+      .map(entry => entry.trim())
+      .filter(Boolean),
+    { uppercase }
+  );
 }
 
 function extractComment(value) {
@@ -202,14 +248,22 @@ function summarizeSystemDefinition(systemKey, definition = {}, sourceProfile) {
     systemName: String(definition.systemName || '').trim() || '',
     aliasCount: aliases.length,
     aliases,
-    hostMode: hostEnvRef ? 'env-reference' : (hostValue ? 'configured' : 'missing'),
+    hostMode: hostEnvRef ? 'env-reference' : hostValue ? 'configured' : 'missing',
     hostEnvVar: hostEnvRef ? hostEnvRef[1] : '',
-    userMode: userEnvRef ? 'env-reference' : (userValue ? 'configured' : 'missing'),
+    userMode: userEnvRef ? 'env-reference' : userValue ? 'configured' : 'missing',
     userEnvVar: userEnvRef ? userEnvRef[1] : '',
-    passwordMode: passwordEnvRef ? 'env-reference' : (passwordValue ? 'env-reference-required' : 'missing'),
+    passwordMode: passwordEnvRef
+      ? 'env-reference'
+      : passwordValue
+        ? 'env-reference-required'
+        : 'missing',
     passwordEnvVar: passwordEnvRef ? passwordEnvRef[1] : '',
-    defaultLibrary: String(definition.defaultLibrary || '').trim().toUpperCase(),
-    defaultSchema: String(definition.defaultSchema || '').trim().toUpperCase(),
+    defaultLibrary: String(definition.defaultLibrary || '')
+      .trim()
+      .toUpperCase(),
+    defaultSchema: String(definition.defaultSchema || '')
+      .trim()
+      .toUpperCase(),
   };
 }
 
@@ -233,13 +287,22 @@ function summarizeProfileEntry(profileName, profile = {}) {
     hasFetch: Boolean(fetch),
     hasWorkflow: Boolean(workflow),
     hasDb: Boolean(db),
-    fetchSourceLibrary: String(fetch && (fetch.sourceLibrary || fetch.sourceLib) || '').trim().toUpperCase(),
-    fetchSourceFileCount: uniqueTrimmedStrings(fetch && (fetch.sourceFiles || fetch.files), { uppercase: true }).length,
-    workflowMemberCount: uniqueTrimmedStrings(workflow && workflow.members, { uppercase: true }).length,
-    dbSystemKey: String(db && db.system || '').trim(),
-    metadataSystemKey: String(dbRoles && dbRoles.metadata && dbRoles.metadata.system || '').trim(),
-    testDataSystemKey: String(dbRoles && dbRoles.testData && dbRoles.testData.system || '').trim(),
-    fetchSystemKey: String(fetch && fetch.system || '').trim(),
+    fetchSourceLibrary: String((fetch && (fetch.sourceLibrary || fetch.sourceLib)) || '')
+      .trim()
+      .toUpperCase(),
+    fetchSourceFileCount: uniqueTrimmedStrings(fetch && (fetch.sourceFiles || fetch.files), {
+      uppercase: true,
+    }).length,
+    workflowMemberCount: uniqueTrimmedStrings(workflow && workflow.members, { uppercase: true })
+      .length,
+    dbSystemKey: String((db && db.system) || '').trim(),
+    metadataSystemKey: String(
+      (dbRoles && dbRoles.metadata && dbRoles.metadata.system) || ''
+    ).trim(),
+    testDataSystemKey: String(
+      (dbRoles && dbRoles.testData && dbRoles.testData.system) || ''
+    ).trim(),
+    fetchSystemKey: String((fetch && fetch.system) || '').trim(),
   };
 }
 
@@ -300,25 +363,33 @@ function normalizeManagedEnvironmentDraft(entry, index) {
   const key = normalizeOptionalProfileName(entry.key, `managedEnvironments[${index}].key`);
   if (!key) {
     throw new ProfileWizardError(`managedEnvironments[${index}].key is required`, 400, {
-      diagnostics: [{
-        code: 'REQUIRED_FIELD',
-        severity: 'error',
-        stepId: 'managed-environments',
-        fieldPath: `managedEnvironments[${index}].key`,
-        message: `managedEnvironments[${index}].key is required`,
-      }],
+      diagnostics: [
+        {
+          code: 'REQUIRED_FIELD',
+          severity: 'error',
+          stepId: 'managed-environments',
+          fieldPath: `managedEnvironments[${index}].key`,
+          message: `managedEnvironments[${index}].key is required`,
+        },
+      ],
     });
   }
   if (!SYSTEM_KEY_PATTERN.test(key)) {
-    throw new ProfileWizardError(`managedEnvironments[${index}].key contains unsupported characters`, 400, {
-      diagnostics: [{
-        code: 'UNSUPPORTED_CHARACTERS',
-        severity: 'error',
-        stepId: 'managed-environments',
-        fieldPath: `managedEnvironments[${index}].key`,
-        message: `managedEnvironments[${index}].key contains unsupported characters`,
-      }],
-    });
+    throw new ProfileWizardError(
+      `managedEnvironments[${index}].key contains unsupported characters`,
+      400,
+      {
+        diagnostics: [
+          {
+            code: 'UNSUPPORTED_CHARACTERS',
+            severity: 'error',
+            stepId: 'managed-environments',
+            fieldPath: `managedEnvironments[${index}].key`,
+            message: `managedEnvironments[${index}].key contains unsupported characters`,
+          },
+        ],
+      }
+    );
   }
 
   return {
@@ -329,8 +400,12 @@ function normalizeManagedEnvironmentDraft(entry, index) {
     hostEnvVar: normalizeEnvReference(entry.hostEnvVar),
     userEnvVar: normalizeEnvReference(entry.userEnvVar),
     passwordEnvVar: normalizeEnvReference(entry.passwordEnvVar),
-    defaultLibrary: String(entry.defaultLibrary || '').trim().toUpperCase(),
-    defaultSchema: String(entry.defaultSchema || '').trim().toUpperCase(),
+    defaultLibrary: String(entry.defaultLibrary || '')
+      .trim()
+      .toUpperCase(),
+    defaultSchema: String(entry.defaultSchema || '')
+      .trim()
+      .toUpperCase(),
   };
 }
 
@@ -343,22 +418,27 @@ function normalizeProfileWizardDraft(payload) {
   const extendsList = Array.isArray(payload.extends)
     ? uniqueTrimmedStrings(payload.extends)
     : normalizeCsvList(payload.extends);
-  const environmentBindings = isPlainObject(payload.environmentBindings) ? payload.environmentBindings : {};
+  const environmentBindings = isPlainObject(payload.environmentBindings)
+    ? payload.environmentBindings
+    : {};
   const fetch = isPlainObject(payload.fetch) ? payload.fetch : {};
 
-  const managedEnvironments = (Array.isArray(payload.managedEnvironments) ? payload.managedEnvironments : [])
-    .map((entry, index) => normalizeManagedEnvironmentDraft(entry, index));
+  const managedEnvironments = (
+    Array.isArray(payload.managedEnvironments) ? payload.managedEnvironments : []
+  ).map((entry, index) => normalizeManagedEnvironmentDraft(entry, index));
   const managedEnvironmentKeys = new Set();
   for (const entry of managedEnvironments) {
     if (managedEnvironmentKeys.has(entry.key)) {
       throw new ProfileWizardError(`Duplicate managed environment key: ${entry.key}`, 400, {
-        diagnostics: [{
-          code: 'DUPLICATE_MANAGED_ENVIRONMENT_KEY',
-          severity: 'error',
-          stepId: 'managed-environments',
-          fieldPath: 'managedEnvironments',
-          message: `Duplicate managed environment key: ${entry.key}`,
-        }],
+        diagnostics: [
+          {
+            code: 'DUPLICATE_MANAGED_ENVIRONMENT_KEY',
+            severity: 'error',
+            stepId: 'managed-environments',
+            fieldPath: 'managedEnvironments',
+            message: `Duplicate managed environment key: ${entry.key}`,
+          },
+        ],
       });
     }
     managedEnvironmentKeys.add(entry.key);
@@ -373,19 +453,39 @@ function normalizeProfileWizardDraft(payload) {
     analysesRegistryPath: String(payload.analysesRegistryPath || '').trim(),
     productionSystem: normalizeBoolean(payload.productionSystem),
     environmentBindings: {
-      defaultDbSystem: normalizeOptionalProfileName(environmentBindings.defaultDbSystem, 'environmentBindings.defaultDbSystem'),
-      metadataSystem: normalizeOptionalProfileName(environmentBindings.metadataSystem, 'environmentBindings.metadataSystem'),
-      testDataSystem: normalizeOptionalProfileName(environmentBindings.testDataSystem, 'environmentBindings.testDataSystem'),
-      fetchSystem: normalizeOptionalProfileName(environmentBindings.fetchSystem, 'environmentBindings.fetchSystem'),
+      defaultDbSystem: normalizeOptionalProfileName(
+        environmentBindings.defaultDbSystem,
+        'environmentBindings.defaultDbSystem'
+      ),
+      metadataSystem: normalizeOptionalProfileName(
+        environmentBindings.metadataSystem,
+        'environmentBindings.metadataSystem'
+      ),
+      testDataSystem: normalizeOptionalProfileName(
+        environmentBindings.testDataSystem,
+        'environmentBindings.testDataSystem'
+      ),
+      fetchSystem: normalizeOptionalProfileName(
+        environmentBindings.fetchSystem,
+        'environmentBindings.fetchSystem'
+      ),
     },
     fetch: {
       enabled: fetch.enabled === undefined ? true : normalizeBoolean(fetch.enabled),
-      sourceLibrary: String(fetch.sourceLibrary || '').trim().toUpperCase(),
+      sourceLibrary: String(fetch.sourceLibrary || '')
+        .trim()
+        .toUpperCase(),
       ifsDir: String(fetch.ifsDir || '').trim(),
       out: String(fetch.out || '').trim(),
-      files: Array.isArray(fetch.files) ? uniqueTrimmedStrings(fetch.files, { uppercase: true }) : normalizeCsvList(fetch.files, { uppercase: true }),
-      members: Array.isArray(fetch.members) ? uniqueTrimmedStrings(fetch.members, { uppercase: true }) : normalizeCsvList(fetch.members, { uppercase: true }),
-      transport: String(fetch.transport || '').trim().toLowerCase(),
+      files: Array.isArray(fetch.files)
+        ? uniqueTrimmedStrings(fetch.files, { uppercase: true })
+        : normalizeCsvList(fetch.files, { uppercase: true }),
+      members: Array.isArray(fetch.members)
+        ? uniqueTrimmedStrings(fetch.members, { uppercase: true })
+        : normalizeCsvList(fetch.members, { uppercase: true }),
+      transport: String(fetch.transport || '')
+        .trim()
+        .toLowerCase(),
     },
     managedEnvironments,
   };
@@ -440,7 +540,13 @@ function buildProfileFromDraft(draft) {
     profile.dbRoles = dbRoles;
   }
 
-  if (draft.fetch.enabled || draft.environmentBindings.fetchSystem || draft.fetch.sourceLibrary || draft.fetch.files.length > 0 || draft.fetch.members.length > 0) {
+  if (
+    draft.fetch.enabled ||
+    draft.environmentBindings.fetchSystem ||
+    draft.fetch.sourceLibrary ||
+    draft.fetch.files.length > 0 ||
+    draft.fetch.members.length > 0
+  ) {
     const fetch = {};
     if (draft.environmentBindings.fetchSystem) {
       fetch.system = draft.environmentBindings.fetchSystem;
@@ -475,8 +581,15 @@ function mergePreviewProfiles(baseProfiles, draft) {
   if (managedEnvironmentProfile) {
     nextProfiles[MANAGED_ENVIRONMENT_PROFILE_KEY] = managedEnvironmentProfile;
   }
-  if (draft.extends.includes(MANAGED_ENVIRONMENT_PROFILE_KEY) && !managedEnvironmentProfile && !nextProfiles[MANAGED_ENVIRONMENT_PROFILE_KEY]) {
-    throw new ProfileWizardError('The draft extends the GUI-managed environment catalog, but no managed environments are defined yet.', 400);
+  if (
+    draft.extends.includes(MANAGED_ENVIRONMENT_PROFILE_KEY) &&
+    !managedEnvironmentProfile &&
+    !nextProfiles[MANAGED_ENVIRONMENT_PROFILE_KEY]
+  ) {
+    throw new ProfileWizardError(
+      'The draft extends the GUI-managed environment catalog, but no managed environments are defined yet.',
+      400
+    );
   }
   nextProfiles[draft.profileName] = buildProfileFromDraft(draft);
   return nextProfiles;
@@ -487,24 +600,28 @@ function extractManagedEnvironmentDraft(profilesRoot) {
     ? profilesRoot[MANAGED_ENVIRONMENT_PROFILE_KEY]
     : null;
   const systems = isPlainObject(entry && entry.systems) ? entry.systems : {};
-  return Object.entries(systems).map(([key, definition]) => {
-    const summary = summarizeSystemDefinition(key, definition, MANAGED_ENVIRONMENT_PROFILE_KEY);
-    return {
-      key,
-      displayName: summary.displayName === key ? '' : summary.displayName,
-      systemName: summary.systemName,
-      aliases: summary.aliases.join(', '),
-      hostEnvVar: summary.hostEnvVar,
-      userEnvVar: summary.userEnvVar,
-      passwordEnvVar: summary.passwordEnvVar,
-      defaultLibrary: summary.defaultLibrary,
-      defaultSchema: summary.defaultSchema,
-    };
-  }).sort((left, right) => left.key.localeCompare(right.key));
+  return Object.entries(systems)
+    .map(([key, definition]) => {
+      const summary = summarizeSystemDefinition(key, definition, MANAGED_ENVIRONMENT_PROFILE_KEY);
+      return {
+        key,
+        displayName: summary.displayName === key ? '' : summary.displayName,
+        systemName: summary.systemName,
+        aliases: summary.aliases.join(', '),
+        hostEnvVar: summary.hostEnvVar,
+        userEnvVar: summary.userEnvVar,
+        passwordEnvVar: summary.passwordEnvVar,
+        defaultLibrary: summary.defaultLibrary,
+        defaultSchema: summary.defaultSchema,
+      };
+    })
+    .sort((left, right) => left.key.localeCompare(right.key));
 }
 
 function buildDraftFromProfile(profileName, profilesRoot) {
-  const entry = isPlainObject(profilesRoot && profilesRoot[profileName]) ? profilesRoot[profileName] : {};
+  const entry = isPlainObject(profilesRoot && profilesRoot[profileName])
+    ? profilesRoot[profileName]
+    : {};
   const fetch = isPlainObject(entry.fetch) ? entry.fetch : {};
   const db = isPlainObject(entry.db) ? entry.db : {};
   const dbRoles = isPlainObject(entry.dbRoles) ? entry.dbRoles : {};
@@ -521,18 +638,22 @@ function buildDraftFromProfile(profileName, profilesRoot) {
     productionSystem: Boolean(entry.productionSystem),
     environmentBindings: {
       defaultDbSystem: String(db.system || '').trim(),
-      metadataSystem: String(dbRoles.metadata && dbRoles.metadata.system || '').trim(),
-      testDataSystem: String(dbRoles.testData && dbRoles.testData.system || '').trim(),
+      metadataSystem: String((dbRoles.metadata && dbRoles.metadata.system) || '').trim(),
+      testDataSystem: String((dbRoles.testData && dbRoles.testData.system) || '').trim(),
       fetchSystem: String(fetch.system || '').trim(),
     },
     fetch: {
       enabled: Boolean(fetch && Object.keys(fetch).length > 0),
-      sourceLibrary: String(fetch.sourceLibrary || fetch.sourceLib || '').trim().toUpperCase(),
+      sourceLibrary: String(fetch.sourceLibrary || fetch.sourceLib || '')
+        .trim()
+        .toUpperCase(),
       ifsDir: String(fetch.ifsDir || '').trim(),
       out: String(fetch.out || '').trim(),
       files: uniqueTrimmedStrings(fetch.sourceFiles || fetch.files, { uppercase: true }),
       members: uniqueTrimmedStrings(fetch.members, { uppercase: true }),
-      transport: String(fetch.transport || '').trim().toLowerCase(),
+      transport: String(fetch.transport || '')
+        .trim()
+        .toLowerCase(),
     },
     managedEnvironments: extractManagedEnvironmentDraft(profilesRoot),
   };
@@ -586,24 +707,19 @@ function summarizeProfilesForWizard(mergedProfiles, localOnlyProfiles) {
 
 function listManagedEnvironmentDependents(profilesRoot = {}, { excludeProfileName = '' } = {}) {
   return Object.entries(profilesRoot)
-    .filter(([profileName, entry]) => (
-      profileName !== MANAGED_ENVIRONMENT_PROFILE_KEY
-      && profileName !== excludeProfileName
-      && !GLOBAL_PROFILE_KEYS.has(profileName)
-      && isPlainObject(entry)
-      && summarizeProfileEntry(profileName, entry).usesManagedEnvironmentSet
-    ))
+    .filter(
+      ([profileName, entry]) =>
+        profileName !== MANAGED_ENVIRONMENT_PROFILE_KEY &&
+        profileName !== excludeProfileName &&
+        !GLOBAL_PROFILE_KEYS.has(profileName) &&
+        isPlainObject(entry) &&
+        summarizeProfileEntry(profileName, entry).usesManagedEnvironmentSet
+    )
     .map(([profileName]) => profileName)
     .sort((left, right) => left.localeCompare(right));
 }
 
-function createDraftDiagnostic({
-  code,
-  severity = 'warn',
-  stepId,
-  fieldPath,
-  message,
-}) {
+function createDraftDiagnostic({ code, severity = 'warn', stepId, fieldPath, message }) {
   return {
     code,
     severity,
@@ -613,13 +729,10 @@ function createDraftDiagnostic({
   };
 }
 
-function buildDraftDiagnostics({
-  draft,
-  mergedProfiles,
-}) {
+function buildDraftDiagnostics({ draft, mergedProfiles }) {
   const diagnostics = [];
-  const knownSystems = new Set(summarizeAllSystems(mergedProfiles).map((entry) => entry.key));
-  const add = (entry) => diagnostics.push(createDraftDiagnostic(entry));
+  const knownSystems = new Set(summarizeAllSystems(mergedProfiles).map(entry => entry.key));
+  const add = entry => diagnostics.push(createDraftDiagnostic(entry));
 
   if (!draft.sourceRoot) {
     add({
@@ -645,7 +758,8 @@ function buildDraftDiagnostics({
       severity: 'warn',
       stepId: 'workspace',
       fieldPath: 'analysesRegistryPath',
-      message: 'Analyses Registry is recommended so Analyze Workspace can reuse a consistent local registry file.',
+      message:
+        'Analyses Registry is recommended so Analyze Workspace can reuse a consistent local registry file.',
     });
   }
 
@@ -655,7 +769,9 @@ function buildDraftDiagnostics({
     ['environmentBindings.testDataSystem', draft.environmentBindings.testDataSystem],
     ['environmentBindings.fetchSystem', draft.environmentBindings.fetchSystem],
   ];
-  const selectedBindingCount = bindingEntries.filter(([, value]) => String(value || '').trim()).length;
+  const selectedBindingCount = bindingEntries.filter(([, value]) =>
+    String(value || '').trim()
+  ).length;
   if (selectedBindingCount === 0) {
     add({
       code: 'NO_ENVIRONMENT_BINDINGS',
@@ -694,18 +810,23 @@ function buildDraftDiagnostics({
         severity: 'warn',
         stepId: 'fetch-scope',
         fieldPath: 'fetch.files',
-        message: 'No Source Files or Members are selected yet. Review whether an unbounded fetch scope is intended.',
+        message:
+          'No Source Files or Members are selected yet. Review whether an unbounded fetch scope is intended.',
       });
     }
   }
 
-  if (draft.extends.includes(MANAGED_ENVIRONMENT_PROFILE_KEY) && draft.managedEnvironments.length === 0) {
+  if (
+    draft.extends.includes(MANAGED_ENVIRONMENT_PROFILE_KEY) &&
+    draft.managedEnvironments.length === 0
+  ) {
     add({
       code: 'MANAGED_ENVIRONMENTS_REQUIRED',
       severity: 'error',
       stepId: 'managed-environments',
       fieldPath: 'managedEnvironments',
-      message: 'This draft extends _gui-environments but currently defines no managed environments.',
+      message:
+        'This draft extends _gui-environments but currently defines no managed environments.',
     });
   }
   for (const [index, entry] of draft.managedEnvironments.entries()) {
@@ -742,41 +863,51 @@ function buildDraftDiagnostics({
 }
 
 function buildStepValidation(stepDefinitions, diagnostics, previewValid) {
-  return stepDefinitions.map((step) => {
-    const stepDiagnostics = diagnostics.filter((entry) => entry.stepId === step.id);
-    const blockingDiagnostics = stepDiagnostics.filter((entry) => entry.severity === 'error');
+  return stepDefinitions.map(step => {
+    const stepDiagnostics = diagnostics.filter(entry => entry.stepId === step.id);
+    const blockingDiagnostics = stepDiagnostics.filter(entry => entry.severity === 'error');
     const top = blockingDiagnostics[0] || stepDiagnostics[0] || null;
     if (step.id === 'preview-save') {
       return {
         id: step.id,
-        status: blockingDiagnostics.length > 0
-          ? 'needs-profile-input'
-          : (previewValid ? 'save-ready' : 'preview-ready'),
+        status:
+          blockingDiagnostics.length > 0
+            ? 'needs-profile-input'
+            : previewValid
+              ? 'save-ready'
+              : 'preview-ready',
         diagnosticCount: stepDiagnostics.length,
-        message: blockingDiagnostics.length > 0
-          ? 'Resolve blocking draft diagnostics before saving.'
-          : (previewValid ? 'Preview validated successfully.' : 'Run Preview Draft to refresh backend validation.'),
+        message:
+          blockingDiagnostics.length > 0
+            ? 'Resolve blocking draft diagnostics before saving.'
+            : previewValid
+              ? 'Preview validated successfully.'
+              : 'Run Preview Draft to refresh backend validation.',
       };
     }
     return {
       id: step.id,
-      status: blockingDiagnostics.length > 0
-        ? (step.statusWhenMissing || 'needs-profile-input')
-        : (stepDiagnostics.length > 0 ? 'review' : 'ready'),
+      status:
+        blockingDiagnostics.length > 0
+          ? step.statusWhenMissing || 'needs-profile-input'
+          : stepDiagnostics.length > 0
+            ? 'review'
+            : 'ready',
       diagnosticCount: stepDiagnostics.length,
       message: top ? top.message : step.description,
     };
   });
 }
 
-function buildDraftConflicts({
-  draft,
-  mergedProfiles,
-  localOnlyProfiles,
-}) {
+function buildDraftConflicts({ draft, mergedProfiles, localOnlyProfiles }) {
   const conflicts = [];
-  const existingProfile = isPlainObject(mergedProfiles[draft.profileName]) ? mergedProfiles[draft.profileName] : null;
-  const savedInLocalOnly = Object.prototype.hasOwnProperty.call(localOnlyProfiles, draft.profileName);
+  const existingProfile = isPlainObject(mergedProfiles[draft.profileName])
+    ? mergedProfiles[draft.profileName]
+    : null;
+  const savedInLocalOnly = Object.prototype.hasOwnProperty.call(
+    localOnlyProfiles,
+    draft.profileName
+  );
   if (existingProfile && !savedInLocalOnly) {
     conflicts.push({
       code: 'PROFILE_SHADOWS_SHARED',
@@ -785,9 +916,8 @@ function buildDraftConflicts({
     });
   }
 
-  const externalSystems = summarizeAllSystems(mergedProfiles)
-    .filter((entry) => !entry.managedByGui);
-  const externalSystemMap = new Map(externalSystems.map((entry) => [entry.key, entry]));
+  const externalSystems = summarizeAllSystems(mergedProfiles).filter(entry => !entry.managedByGui);
+  const externalSystemMap = new Map(externalSystems.map(entry => [entry.key, entry]));
   for (const entry of draft.managedEnvironments) {
     const collision = externalSystemMap.get(entry.key);
     if (collision) {
@@ -809,11 +939,15 @@ function buildDraftConflicts({
       message: `Updating the GUI-managed environment catalog can affect these profiles too: ${dependentProfiles.join(', ')}.`,
     });
   }
-  if (draft.managedEnvironments.length === 0 && Object.prototype.hasOwnProperty.call(localOnlyProfiles, MANAGED_ENVIRONMENT_PROFILE_KEY)) {
+  if (
+    draft.managedEnvironments.length === 0 &&
+    Object.prototype.hasOwnProperty.call(localOnlyProfiles, MANAGED_ENVIRONMENT_PROFILE_KEY)
+  ) {
     conflicts.push({
       code: 'MANAGED_ENVIRONMENT_CATALOG_UNCHANGED',
       severity: 'info',
-      message: 'This draft does not include managed environment edits. The existing local-only GUI environment catalog will be kept unchanged.',
+      message:
+        'This draft does not include managed environment edits. The existing local-only GUI environment catalog will be kept unchanged.',
     });
   }
 
@@ -896,14 +1030,25 @@ function createProfileWizardService({
       draft,
       mergedProfiles,
     });
-    const allDiagnostics = [...diagnostics, ...conflicts.map((entry) => ({
-      code: entry.code,
-      severity: entry.severity,
-      stepId: entry.code.startsWith('MANAGED_ENVIRONMENT') ? 'managed-environments' : 'preview-save',
-      fieldPath: entry.code.startsWith('MANAGED_ENVIRONMENT') ? 'managedEnvironments' : 'profileName',
-      message: entry.message,
-    }))];
-    const stepValidation = buildStepValidation(PROFILE_WIZARD_STEP_DEFINITIONS, allDiagnostics, true);
+    const allDiagnostics = [
+      ...diagnostics,
+      ...conflicts.map(entry => ({
+        code: entry.code,
+        severity: entry.severity,
+        stepId: entry.code.startsWith('MANAGED_ENVIRONMENT')
+          ? 'managed-environments'
+          : 'preview-save',
+        fieldPath: entry.code.startsWith('MANAGED_ENVIRONMENT')
+          ? 'managedEnvironments'
+          : 'profileName',
+        message: entry.message,
+      })),
+    ];
+    const stepValidation = buildStepValidation(
+      PROFILE_WIZARD_STEP_DEFINITIONS,
+      allDiagnostics,
+      true
+    );
 
     return {
       schemaVersion: 1,
@@ -948,7 +1093,11 @@ function createProfileWizardService({
     validateProfiles(mergeConfigLayers(loadMergedProfilesOrThrow(), nextLocalOnlyProfiles));
 
     fsModule.mkdirSync(path.dirname(storage.localOnlyPath), { recursive: true });
-    fsModule.writeFileSync(storage.localOnlyPath, `${JSON.stringify(nextLocalOnlyProfiles, null, 2)}\n`, 'utf8');
+    fsModule.writeFileSync(
+      storage.localOnlyPath,
+      `${JSON.stringify(nextLocalOnlyProfiles, null, 2)}\n`,
+      'utf8'
+    );
 
     return {
       schemaVersion: 1,
@@ -966,7 +1115,10 @@ function createProfileWizardService({
     if (!isPlainObject(mergedProfiles[normalizedName])) {
       throw new ProfileWizardError(`Unknown profile: ${normalizedName}`, 404);
     }
-    const savedInLocalOnly = Object.prototype.hasOwnProperty.call(localOnlyProfiles, normalizedName);
+    const savedInLocalOnly = Object.prototype.hasOwnProperty.call(
+      localOnlyProfiles,
+      normalizedName
+    );
     return {
       schemaVersion: 1,
       profileName: normalizedName,
@@ -979,19 +1131,29 @@ function createProfileWizardService({
   function deleteProfile(profileName) {
     const normalizedName = normalizeProfileName(profileName, 'profileName');
     if (normalizedName === MANAGED_ENVIRONMENT_PROFILE_KEY) {
-      throw new ProfileWizardError('The GUI-managed environment catalog cannot be deleted through the profile delete route.', 400);
+      throw new ProfileWizardError(
+        'The GUI-managed environment catalog cannot be deleted through the profile delete route.',
+        400
+      );
     }
 
     const { storage, localOnlyProfiles } = loadLocalOnlyProfiles();
     if (!Object.prototype.hasOwnProperty.call(localOnlyProfiles, normalizedName)) {
-      throw new ProfileWizardError(`Only local-only profiles can be deleted here: ${normalizedName}`, 404);
+      throw new ProfileWizardError(
+        `Only local-only profiles can be deleted here: ${normalizedName}`,
+        404
+      );
     }
 
     const nextLocalOnlyProfiles = mergeConfigLayers(localOnlyProfiles, {});
     delete nextLocalOnlyProfiles[normalizedName];
 
     fsModule.mkdirSync(path.dirname(storage.localOnlyPath), { recursive: true });
-    fsModule.writeFileSync(storage.localOnlyPath, `${JSON.stringify(nextLocalOnlyProfiles, null, 2)}\n`, 'utf8');
+    fsModule.writeFileSync(
+      storage.localOnlyPath,
+      `${JSON.stringify(nextLocalOnlyProfiles, null, 2)}\n`,
+      'utf8'
+    );
 
     return {
       schemaVersion: 1,

@@ -35,13 +35,7 @@ async function runQueryTable(args) {
     process.exit(2);
   }
 
-  const {
-    table,
-    schema: effectiveSchema,
-    requestedSchema,
-    tableInfo,
-    columns,
-  } = execution;
+  const { table, schema: effectiveSchema, requestedSchema, tableInfo, columns } = execution;
 
   console.log(`Table lookup: ${effectiveSchema ? `${effectiveSchema}.${table}` : table}`);
   if (!requestedSchema && effectiveSchema) {
@@ -53,10 +47,12 @@ async function runQueryTable(args) {
     console.log('No matching table metadata found in QSYS2.SYSTABLES.');
   } else {
     console.log('Table Info');
-    console.log(renderAsciiTable(
-      ['TABLE_SCHEMA', 'TABLE_NAME'],
-      tableInfo.rows.map((row) => [row.TABLE_SCHEMA, row.TABLE_NAME]),
-    ));
+    console.log(
+      renderAsciiTable(
+        ['TABLE_SCHEMA', 'TABLE_NAME'],
+        tableInfo.rows.map(row => [row.TABLE_SCHEMA, row.TABLE_NAME])
+      )
+    );
   }
 
   if ((columns.rows || []).length === 0) {
@@ -65,8 +61,16 @@ async function runQueryTable(args) {
   }
 
   console.log('Columns');
-  const COLUMN_HEADERS = ['TABLE_SCHEMA', 'TABLE_NAME', 'COLUMN_NAME', 'DATA_TYPE', 'LENGTH', 'NUMERIC_SCALE', 'IS_NULLABLE'];
-  const columnRows = columns.rows.map((row) => [
+  const COLUMN_HEADERS = [
+    'TABLE_SCHEMA',
+    'TABLE_NAME',
+    'COLUMN_NAME',
+    'DATA_TYPE',
+    'LENGTH',
+    'NUMERIC_SCALE',
+    'IS_NULLABLE',
+  ];
+  const columnRows = columns.rows.map(row => [
     row.TABLE_SCHEMA,
     row.TABLE_NAME,
     row.COLUMN_NAME,
@@ -94,7 +98,9 @@ async function runQueryTable(args) {
     const ext = path.extname(savePath).toLowerCase();
     let content;
     if (ext === '.json') {
-      const rows = columnRows.map((row) => Object.fromEntries(COLUMN_HEADERS.map((h, i) => [h, row[i]])));
+      const rows = columnRows.map(row =>
+        Object.fromEntries(COLUMN_HEADERS.map((h, i) => [h, row[i]]))
+      );
       const j = createJsonOutput({ output: 'json' });
       content = j.stringify(rows) || JSON.stringify(rows, null, 2) + '\n';
     } else {
@@ -105,11 +111,7 @@ async function runQueryTable(args) {
     console.log(`Gespeichert: ${savePath} (${columnRows.length} Spalte(n))`);
   }
 
-  console.log(renderAsciiTable(
-    COLUMN_HEADERS,
-    columnRows,
-    { maxCellWidth: 40 },
-  ));
+  console.log(renderAsciiTable(COLUMN_HEADERS, columnRows, { maxCellWidth: 40 }));
 }
 
 module.exports = {

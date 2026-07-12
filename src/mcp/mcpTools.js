@@ -40,7 +40,11 @@ const {
   generateDeploymentChecklist,
   identifyRiskAreas,
 } = require('../report/deploymentChecklistBuilder');
-const { buildLineComparison, readLines, resolveDiffPaths } = require('../diff/workspaceDiffService');
+const {
+  buildLineComparison,
+  readLines,
+  resolveDiffPaths,
+} = require('../diff/workspaceDiffService');
 const { loadTestRunManifest } = require('../investigation/testRunTracker');
 const {
   getImportManifestEntryExport,
@@ -78,7 +82,11 @@ const {
   suggestResourcesConfig,
 } = require('../config/environmentDiscoveryService');
 const { isDbConfigured } = require('../db2/db2Config');
-const { escapeSqlLiteral, runReadOnlyDb2Query, validateSqlIdentifier } = require('../db2/readOnlyQueryService');
+const {
+  escapeSqlLiteral,
+  runReadOnlyDb2Query,
+  validateSqlIdentifier,
+} = require('../db2/readOnlyQueryService');
 const { resolveObjectsByName } = require('../db2/tableNameResolutionService');
 const { runWriteDb2Query } = require('../db2/writeQueryService');
 const { executeQuerySql, executeQueryTable } = require('../core/queryService');
@@ -139,17 +147,18 @@ function getMcpToolsFromCapabilities() {
     if (!reg || typeof reg.list !== 'function') return [];
     const caps = reg.list({ availableIn: 'mcp' }) || [];
     return caps
-      .filter((c) => c && c.id && (c.availability && c.availability.mcp !== false))
-      .map((c) => {
+      .filter(c => c && c.id && c.availability && c.availability.mcp !== false)
+      .map(c => {
         // Map to conventional zeus. tool name for compat where possible
         const short = c.id.split('.').pop();
         const name = 'zeus.' + (c.aliases && c.aliases[0] ? c.aliases[0] : short);
         return {
           name,
           description: c.description || c.title || c.id,
-          inputSchema: (c.inputContract && typeof c.inputContract === 'object')
-            ? c.inputContract
-            : { type: 'object', additionalProperties: true, description: 'See capability docs' },
+          inputSchema:
+            c.inputContract && typeof c.inputContract === 'object'
+              ? c.inputContract
+              : { type: 'object', additionalProperties: true, description: 'See capability docs' },
           _capabilityId: c.id,
         };
       });
@@ -158,7 +167,16 @@ function getMcpToolsFromCapabilities() {
   }
 }
 
-const SUPPORTED_INSPECT_OBJECT_TYPES = ['*PGM', '*SRVPGM', '*MODULE', '*FILE', '*CMD', '*DTAARA', '*JOBQ', '*OUTQ'];
+const SUPPORTED_INSPECT_OBJECT_TYPES = [
+  '*PGM',
+  '*SRVPGM',
+  '*MODULE',
+  '*FILE',
+  '*CMD',
+  '*DTAARA',
+  '*JOBQ',
+  '*OUTQ',
+];
 const DEFAULT_MCP_PAYLOAD_ITEMS = 100;
 const MAX_MCP_PAYLOAD_ITEMS = 1000;
 const MCP_CURSOR_VERSION = 1;
@@ -173,9 +191,7 @@ function isPathWithinBase(targetPath, basePath) {
   if (resolvedTarget === resolvedBase) {
     return true;
   }
-  const baseWithSep = resolvedBase.endsWith(path.sep)
-    ? resolvedBase
-    : `${resolvedBase}${path.sep}`;
+  const baseWithSep = resolvedBase.endsWith(path.sep) ? resolvedBase : `${resolvedBase}${path.sep}`;
   return resolvedTarget.startsWith(baseWithSep);
 }
 
@@ -207,13 +223,7 @@ function resolvePathForBoundary(targetPath) {
   }
 }
 
-function assertPathWithinCwd({
-  toolName,
-  optionName,
-  rawValue,
-  resolvedPath,
-  cwd,
-}) {
+function assertPathWithinCwd({ toolName, optionName, rawValue, resolvedPath, cwd }) {
   const input = typeof rawValue === 'string' ? rawValue.trim() : '';
   if (!input) {
     return;
@@ -222,7 +232,7 @@ function assertPathWithinCwd({
     return;
   }
   const error = new Error(
-    `Invalid arguments for ${toolName}: ${optionName} must resolve inside workspace root (${cwd}).`,
+    `Invalid arguments for ${toolName}: ${optionName} must resolve inside workspace root (${cwd}).`
   );
   error.code = 'TOOL_INVALID_ARGUMENTS';
   throw error;
@@ -276,19 +286,25 @@ function validateMcpToolArgs(toolName, args = {}, schema = {}) {
 
     if (typeof rawVal === 'string') {
       if (/[\x00-\x1F\x7F]/.test(rawVal)) {
-        const error = new Error(`Invalid arguments for ${toolName}: "${key}" contains control characters`);
+        const error = new Error(
+          `Invalid arguments for ${toolName}: "${key}" contains control characters`
+        );
         error.code = 'TOOL_INVALID_ARGUMENTS';
         throw error;
       }
       const maxLen = typeof prop.maxLength === 'number' ? prop.maxLength : 4096;
       if (rawVal.length > maxLen) {
-        const error = new Error(`Invalid arguments for ${toolName}: "${key}" exceeds maximum length`);
+        const error = new Error(
+          `Invalid arguments for ${toolName}: "${key}" exceeds maximum length`
+        );
         error.code = 'TOOL_INVALID_ARGUMENTS';
         throw error;
       }
       if ((key === 'profile' || /profile/i.test(key)) && rawVal.trim()) {
         if (!/^[a-zA-Z0-9._-]+$/.test(rawVal.trim())) {
-          const error = new Error(`Invalid arguments for ${toolName}: "${key}" must be a simple identifier`);
+          const error = new Error(
+            `Invalid arguments for ${toolName}: "${key}" must be a simple identifier`
+          );
           error.code = 'TOOL_INVALID_ARGUMENTS';
           throw error;
         }
@@ -319,13 +335,23 @@ function normalizeMcpResult(toolName, data = {}, extra = {}) {
     action: toolName,
     status: (data && data.status) || (data && data.ok === false ? 'error' : 'success'),
     summary: (data && data.summary) || '',
-    warnings: Array.isArray(data && data.warnings) ? data.warnings : (Array.isArray(extra.warnings) ? extra.warnings : []),
+    warnings: Array.isArray(data && data.warnings)
+      ? data.warnings
+      : Array.isArray(extra.warnings)
+        ? extra.warnings
+        : [],
     timestamp: (data && data.timestamp) || new Date().toISOString(),
   };
   if (extra.cliEquivalent || (data && data.cliEquivalent)) {
     base.cliEquivalent = extra.cliEquivalent || data.cliEquivalent;
   }
-  const arts = Array.isArray(extra.artifacts) ? extra.artifacts : (data && data.artifacts !== undefined ? data.artifacts : (Array.isArray(data && data.artifacts) ? data.artifacts : null));
+  const arts = Array.isArray(extra.artifacts)
+    ? extra.artifacts
+    : data && data.artifacts !== undefined
+      ? data.artifacts
+      : Array.isArray(data && data.artifacts)
+        ? data.artifacts
+        : null;
   if (arts !== null && arts !== undefined) {
     base.artifacts = arts;
   }
@@ -358,11 +384,14 @@ function createInvalidCursorError(toolName, detail) {
 }
 
 function encodeMcpCursor(toolName, offset) {
-  return Buffer.from(JSON.stringify({
-    v: MCP_CURSOR_VERSION,
-    t: toolName,
-    o: offset,
-  }), 'utf8').toString('base64url');
+  return Buffer.from(
+    JSON.stringify({
+      v: MCP_CURSOR_VERSION,
+      t: toolName,
+      o: offset,
+    }),
+    'utf8'
+  ).toString('base64url');
 }
 
 function decodeMcpCursor(toolName, cursor) {
@@ -375,7 +404,10 @@ function decodeMcpCursor(toolName, cursor) {
     };
   }
   if (/^\d+$/.test(rawCursor)) {
-    throw createInvalidCursorError(toolName, 'legacy numeric cursor input is no longer supported; provide an opaque cursor token.');
+    throw createInvalidCursorError(
+      toolName,
+      'legacy numeric cursor input is no longer supported; provide an opaque cursor token.'
+    );
   }
 
   let parsed;
@@ -409,7 +441,7 @@ function normalizeJoblogToolError(error) {
   const message = error && error.message ? String(error.message) : String(error);
   if (/JOBLOG_INFO|SQL0204/i.test(message)) {
     const wrapped = new Error(
-      'zeus.joblog requires QSYS2.JOBLOG_INFO on the target IBM i. This service is not available on the current system; use DSPJOBLOG in ACS or QSYS2.HISTORY_LOG_INFO as a fallback.',
+      'zeus.joblog requires QSYS2.JOBLOG_INFO on the target IBM i. This service is not available on the current system; use DSPJOBLOG in ACS or QSYS2.HISTORY_LOG_INFO as a fallback.'
     );
     wrapped.code = error && error.code ? error.code : undefined;
     return wrapped;
@@ -419,7 +451,7 @@ function normalizeJoblogToolError(error) {
 
 function normalizeMcpRuntimeToolError(toolName, error) {
   const wrapped = new Error(
-    `${toolName} failed to query backend service. Verify profile connectivity and required IBM i service availability.`,
+    `${toolName} failed to query backend service. Verify profile connectivity and required IBM i service availability.`
   );
   wrapped.code = 'TOOL_RUNTIME_FAILURE';
   wrapped.cause = error;
@@ -471,14 +503,15 @@ function buildHistoryLogFallbackQuery({ jobName, severity, maxMessages }) {
 function summarizeJoblogRows({ profile, jobName, severity, maxMessages, result, backend }) {
   const rows = Array.isArray(result && result.rows) ? result.rows : [];
   const columns = Array.isArray(result && result.columns) ? result.columns : [];
-  const messageIds = new Set(rows.map((row) => (row && row.MESSAGE_ID ? String(row.MESSAGE_ID) : '')).filter(Boolean));
-  const compatibilityNote = backend === 'HISTORY_LOG_INFO'
-    ? (
-      severity
+  const messageIds = new Set(
+    rows.map(row => (row && row.MESSAGE_ID ? String(row.MESSAGE_ID) : '')).filter(Boolean)
+  );
+  const compatibilityNote =
+    backend === 'HISTORY_LOG_INFO'
+      ? severity
         ? `Compatibility mode: results came from HISTORY_LOG_INFO, so the requested severity "${severity}" is best-effort and may not exactly match JOBLOG_INFO semantics.`
         : 'Compatibility mode: results came from HISTORY_LOG_INFO because JOBLOG_INFO is unavailable on this system.'
-    )
-    : null;
+      : null;
 
   return {
     profile,
@@ -497,8 +530,8 @@ function summarizeJoblogRows({ profile, jobName, severity, maxMessages, result, 
 
 function listCallableProfileNames(profiles) {
   return Object.keys(profiles)
-    .filter((name) => !['contextOptimizer', 'testData', 'analysisLimits', 'presets'].includes(name))
-    .filter((name) => !String(name).startsWith('_'))
+    .filter(name => !['contextOptimizer', 'testData', 'analysisLimits', 'presets'].includes(name))
+    .filter(name => !String(name).startsWith('_'))
     .sort((left, right) => left.localeCompare(right));
 }
 
@@ -507,13 +540,13 @@ function normalizeResolveObjectRequiredColumns(value) {
     return [];
   }
   const values = Array.isArray(value) ? value : [value];
-  return values
-    .map((entry) => String(entry || '').trim())
-    .filter(Boolean);
+  return values.map(entry => String(entry || '').trim()).filter(Boolean);
 }
 
 function resolveFetchMemberExtension(sourceFile) {
-  const upper = String(sourceFile || '').trim().toUpperCase();
+  const upper = String(sourceFile || '')
+    .trim()
+    .toUpperCase();
   if (upper === 'QRPGLESRC') return '.rpgle';
   if (upper === 'QCLLESRC' || upper === 'QCLSRC') return '.clle';
   if (upper === 'QDDSSRC') return '.dds';
@@ -523,7 +556,7 @@ function resolveFetchMemberExtension(sourceFile) {
   return '.rpgle';
 }
 
-function listMcpTools() {
+let listMcpTools = function listMcpTools() {
   return [
     {
       name: 'zeus.health',
@@ -581,7 +614,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.resources',
-      description: 'Returns the resolved, sanitized resource model for a profile, distinguishing the locations of source code, objects, DB metadata and DB data per system (read-only, no secrets).',
+      description:
+        'Returns the resolved, sanitized resource model for a profile, distinguishing the locations of source code, objects, DB metadata and DB data per system (read-only, no secrets).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -597,7 +631,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.discover-environment',
-      description: 'Runs READ-ONLY IBM i catalog discovery for a profile (libraries, source files, members, tables) and returns a report plus a suggested "resources" skeleton to create/expand/refine the environment. Never mutates IBM i state.',
+      description:
+        'Runs READ-ONLY IBM i catalog discovery for a profile (libraries, source files, members, tables) and returns a report plus a suggested "resources" skeleton to create/expand/refine the environment. Never mutates IBM i state.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -637,7 +672,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.onboarding',
-      description: 'Returns structured onboarding guidance, checklist, and starter commands for connecting to a new IBM i system (read-only).',
+      description:
+        'Returns structured onboarding guidance, checklist, and starter commands for connecting to a new IBM i system (read-only).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -652,7 +688,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.help',
-      description: 'Returns structured, agent-friendly help for a specific command or an overview of safe MCP capabilities, safety rules, and recommended AI sequences. S0 local introspection tool.',
+      description:
+        'Returns structured, agent-friendly help for a specific command or an overview of safe MCP capabilities, safety rules, and recommended AI sequences. S0 local introspection tool.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -660,7 +697,8 @@ function listMcpTools() {
           command: {
             type: 'string',
             minLength: 1,
-            description: 'Optional command name (e.g. "analyze", "doctor", "workflow", "bundle"). Omit for overview + recommended next steps for agents.',
+            description:
+              'Optional command name (e.g. "analyze", "doctor", "workflow", "bundle"). Omit for overview + recommended next steps for agents.',
           },
         },
       },
@@ -775,7 +813,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.field-search',
-      description: 'Searches local source files for field usage and optional table context (read-only local subset).',
+      description:
+        'Searches local source files for field usage and optional table context (read-only local subset).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -810,7 +849,8 @@ function listMcpTools() {
           cursor: {
             type: 'string',
             minLength: 1,
-            description: 'Optional pagination cursor returned by a previous zeus.field-search call.',
+            description:
+              'Optional pagination cursor returned by a previous zeus.field-search call.',
           },
           contextLines: {
             type: 'integer',
@@ -822,7 +862,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.diff',
-      description: 'Compares fetched source and workspace copy for a member and returns deterministic line diffs (read-only).',
+      description:
+        'Compares fetched source and workspace copy for a member and returns deterministic line diffs (read-only).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -849,7 +890,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.generate-test',
-      description: 'Generates deterministic test-scenario content from existing canonical-analysis artifacts (read-only planning output).',
+      description:
+        'Generates deterministic test-scenario content from existing canonical-analysis artifacts (read-only planning output).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -911,14 +953,16 @@ function listMcpTools() {
           affectedPrograms: {
             type: 'string',
             minLength: 1,
-            description: 'Optional comma-separated affected program names for change scenario mode.',
+            description:
+              'Optional comma-separated affected program names for change scenario mode.',
           },
         },
       },
     },
     {
       name: 'zeus.generate-checklist',
-      description: 'Generates deterministic deployment-checklist content from local analysis/risk artifacts (read-only planning output).',
+      description:
+        'Generates deterministic deployment-checklist content from local analysis/risk artifacts (read-only planning output).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -969,7 +1013,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.qa',
-      description: 'Runs QA validation against canonical analysis artifacts and returns deterministic report output (read-only).',
+      description:
+        'Runs QA validation against canonical analysis artifacts and returns deterministic report output (read-only).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -978,7 +1023,8 @@ function listMcpTools() {
           input: {
             type: 'string',
             minLength: 1,
-            description: 'Path to canonical-analysis.json or a directory containing canonical-analysis.json.',
+            description:
+              'Path to canonical-analysis.json or a directory containing canonical-analysis.json.',
           },
           format: {
             type: 'string',
@@ -995,7 +1041,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.validate-rpg-sql',
-      description: 'Validate embedded SQL in RPG (cursor/fetch column mismatches, dynamic SQL, host variables). Supports prior analyze output or direct source scan (read-only).',
+      description:
+        'Validate embedded SQL in RPG (cursor/fetch column mismatches, dynamic SQL, host variables). Supports prior analyze output or direct source scan (read-only).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1003,7 +1050,8 @@ function listMcpTools() {
           input: {
             type: 'string',
             minLength: 1,
-            description: 'Path to canonical-analysis.json / analyze output dir, or omit when using source.',
+            description:
+              'Path to canonical-analysis.json / analyze output dir, or omit when using source.',
           },
           source: {
             type: 'string',
@@ -1056,7 +1104,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.fetch',
-      description: 'Reads existing fetch import manifest metadata and deterministic file summaries (read-only).',
+      description:
+        'Reads existing fetch import manifest metadata and deterministic file summaries (read-only).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1086,14 +1135,16 @@ function listMcpTools() {
           cursor: {
             type: 'string',
             minLength: 1,
-            description: 'Optional pagination cursor returned by a previous zeus.fetch call (operation=files).',
+            description:
+              'Optional pagination cursor returned by a previous zeus.fetch call (operation=files).',
           },
         },
       },
     },
     {
       name: 'zeus.fetch-member',
-      description: 'Fetches one or more specific IBM i source members into a workspace-bounded local output directory.',
+      description:
+        'Fetches one or more specific IBM i source members into a workspace-bounded local output directory.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1127,14 +1178,16 @@ function listMcpTools() {
           out: {
             type: 'string',
             minLength: 1,
-            description: 'Optional local output directory override; must resolve inside the workspace root.',
+            description:
+              'Optional local output directory override; must resolve inside the workspace root.',
           },
         },
       },
     },
     {
       name: 'zeus.docs-generate-catalog',
-      description: 'Regenerates the local tool catalog markdown and JSON files inside the current workspace root.',
+      description:
+        'Regenerates the local tool catalog markdown and JSON files inside the current workspace root.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1142,7 +1195,8 @@ function listMcpTools() {
           format: {
             type: 'string',
             enum: ['markdown', 'json'],
-            description: 'Optional primary output mode; markdown keeps output semantics aligned with the CLI default.',
+            description:
+              'Optional primary output mode; markdown keeps output semantics aligned with the CLI default.',
           },
           output: {
             type: 'string',
@@ -1152,7 +1206,8 @@ function listMcpTools() {
           jsonOutput: {
             type: 'string',
             minLength: 1,
-            description: 'Optional JSON output path override; must resolve inside the workspace root.',
+            description:
+              'Optional JSON output path override; must resolve inside the workspace root.',
           },
           'json-output': {
             type: 'string',
@@ -1164,7 +1219,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.pui-edit',
-      description: 'Edits ProfoundUI Display File (DDS) members inside the workspace: read actions (dump-json, validate-json, roundtrip-check, plan) and confirmed write actions (export-json, import-json, apply, grid-add-column). All file paths must resolve inside the workspace root; mutating actions require confirm=true.',
+      description:
+        'Edits ProfoundUI Display File (DDS) members inside the workspace: read actions (dump-json, validate-json, roundtrip-check, plan) and confirmed write actions (export-json, import-json, apply, grid-add-column). All file paths must resolve inside the workspace root; mutating actions require confirm=true.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1172,18 +1228,29 @@ function listMcpTools() {
         properties: {
           action: {
             type: 'string',
-            enum: ['roundtrip-check', 'dump-json', 'validate-json', 'plan', 'export-json', 'import-json', 'apply', 'grid-add-column'],
+            enum: [
+              'roundtrip-check',
+              'dump-json',
+              'validate-json',
+              'plan',
+              'export-json',
+              'import-json',
+              'apply',
+              'grid-add-column',
+            ],
             description: 'pui-edit action to run.',
           },
           file: {
             type: 'string',
             minLength: 1,
-            description: 'Path to the DDS display member (required for all actions except validate-json). Must resolve inside the workspace root.',
+            description:
+              'Path to the DDS display member (required for all actions except validate-json). Must resolve inside the workspace root.',
           },
           in: {
             type: 'string',
             minLength: 1,
-            description: 'Input JSON/DDDL path for validate-json and import-json. Must resolve inside the workspace root.',
+            description:
+              'Input JSON/DDDL path for validate-json and import-json. Must resolve inside the workspace root.',
           },
           out: {
             type: 'string',
@@ -1198,11 +1265,13 @@ function listMcpTools() {
           'changes-file': {
             type: 'string',
             minLength: 1,
-            description: 'Declarative change-set path for plan and apply. Must resolve inside the workspace root.',
+            description:
+              'Declarative change-set path for plan and apply. Must resolve inside the workspace root.',
           },
           confirm: {
             type: 'boolean',
-            description: 'Required (true) for mutating actions import-json, apply and grid-add-column.',
+            description:
+              'Required (true) for mutating actions import-json, apply and grid-add-column.',
           },
           'grid-id': {
             type: 'string',
@@ -1265,7 +1334,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.pui-inspect',
-      description: 'LOCAL read-only projection of a ProfoundUI Display File (DDS) member: reassembles column-72 continuation lines, decodes the per-record-format JSON and projects grids -> columns -> field bindings + tooltips, standalone bound widgets and consistency signals. Optionally traces where a DDS field is bound. Reads a local workspace file only; never connects to IBM i and never writes. Decoded PUI JSON is customer content, so this tool is opt-in (not part of the default MCP-safe surface).',
+      description:
+        'LOCAL read-only projection of a ProfoundUI Display File (DDS) member: reassembles column-72 continuation lines, decodes the per-record-format JSON and projects grids -> columns -> field bindings + tooltips, standalone bound widgets and consistency signals. Optionally traces where a DDS field is bound. Reads a local workspace file only; never connects to IBM i and never writes. Decoded PUI JSON is customer content, so this tool is opt-in (not part of the default MCP-safe surface).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1274,19 +1344,22 @@ function listMcpTools() {
           file: {
             type: 'string',
             minLength: 1,
-            description: 'Path to the DDS/PUI display member. Must resolve inside the workspace root.',
+            description:
+              'Path to the DDS/PUI display member. Must resolve inside the workspace root.',
           },
           trace: {
             type: 'string',
             minLength: 1,
-            description: 'Optional DDS field name; returns where the field is bound (grid column or widget).',
+            description:
+              'Optional DDS field name; returns where the field is bound (grid column or widget).',
           },
         },
       },
     },
     {
       name: 'zeus.test-run',
-      description: 'Reads existing test-run manifest metadata and rollback SQL previews (read-only).',
+      description:
+        'Reads existing test-run manifest metadata and rollback SQL previews (read-only).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1313,7 +1386,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.copy-to-workspace',
-      description: 'Builds a deterministic copy plan from fetched sources to workspace targets (read-only preview).',
+      description:
+        'Builds a deterministic copy plan from fetched sources to workspace targets (read-only preview).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1352,14 +1426,16 @@ function listMcpTools() {
           cursor: {
             type: 'string',
             minLength: 1,
-            description: 'Optional pagination cursor returned by a previous zeus.copy-to-workspace call.',
+            description:
+              'Optional pagination cursor returned by a previous zeus.copy-to-workspace call.',
           },
         },
       },
     },
     {
       name: 'zeus.serve',
-      description: 'Returns deterministic local UI serve metadata (config/routes/run counts) without starting a server (read-only).',
+      description:
+        'Returns deterministic local UI serve metadata (config/routes/run counts) without starting a server (read-only).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1410,7 +1486,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.workflow',
-      description: 'Reads existing workflow run manifest or runs full preset workflow (with source+program+preset) for S1 local evidence generation.',
+      description:
+        'Reads existing workflow run manifest or runs full preset workflow (with source+program+preset) for S1 local evidence generation.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1439,7 +1516,8 @@ function listMcpTools() {
           preset: {
             type: 'string',
             minLength: 1,
-            description: 'Workflow preset name (e.g. architecture-review). When provided with source, runs full workflow.',
+            description:
+              'Workflow preset name (e.g. architecture-review). When provided with source, runs full workflow.',
           },
           source: {
             type: 'string',
@@ -1452,7 +1530,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.bundle',
-      description: 'Reads existing bundle manifests and returns deterministic bundle metadata (read-only).',
+      description:
+        'Reads existing bundle manifests and returns deterministic bundle metadata (read-only).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1493,7 +1572,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.analyze',
-      description: 'Reads existing analyze artifacts (when only program given) or runs full local analysis when source is provided. Bounded S1 local evidence generation.',
+      description:
+        'Reads existing analyze artifacts (when only program given) or runs full local analysis when source is provided. Bounded S1 local evidence generation.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1522,7 +1602,8 @@ function listMcpTools() {
           source: {
             type: 'string',
             minLength: 1,
-            description: 'Source root path. When provided, triggers full analysis execution (S1 local).',
+            description:
+              'Source root path. When provided, triggers full analysis execution (S1 local).',
           },
           'source-root': {
             type: 'string',
@@ -1563,7 +1644,8 @@ function listMcpTools() {
           program: {
             type: 'string',
             minLength: 1,
-            description: 'Optional analyzed program output directory name for graph disambiguation.',
+            description:
+              'Optional analyzed program output directory name for graph disambiguation.',
           },
           profile: {
             type: 'string',
@@ -1596,7 +1678,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.resolve-object',
-      description: 'Resolves SQL/system object names across schemas and optionally validates required columns (read-only).',
+      description:
+        'Resolves SQL/system object names across schemas and optionally validates required columns (read-only).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1673,7 +1756,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.query-sql',
-      description: 'Executes a strict read-only SQL query for a profile and returns structured rows.',
+      description:
+        'Executes a strict read-only SQL query for a profile and returns structured rows.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1709,7 +1793,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.write-sql',
-      description: 'Plans or applies guarded DML statements (INSERT/UPDATE/DELETE/MERGE) with explicit MCP write gates.',
+      description:
+        'Plans or applies guarded DML statements (INSERT/UPDATE/DELETE/MERGE) with explicit MCP write gates.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1718,7 +1803,8 @@ function listMcpTools() {
           operation: {
             type: 'string',
             enum: ['plan', 'apply'],
-            description: 'Use plan for non-mutating validation/preview; apply executes the statement when all write gates pass.',
+            description:
+              'Use plan for non-mutating validation/preview; apply executes the statement when all write gates pass.',
           },
           profile: {
             type: 'string',
@@ -1743,14 +1829,16 @@ function listMcpTools() {
           maxRowsAffected: {
             type: 'integer',
             minimum: 1,
-            description: 'Optional stricter row-safety cap for this call; cannot exceed configured profile policy.',
+            description:
+              'Optional stricter row-safety cap for this call; cannot exceed configured profile policy.',
           },
         },
       },
     },
     {
       name: 'zeus.bridge',
-      description: 'Runs guarded bridge preview operations (plan/report and dry-run stage/compile-run) without remote mutation.',
+      description:
+        'Runs guarded bridge preview operations (plan/report and dry-run stage/compile-run) without remote mutation.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1759,7 +1847,8 @@ function listMcpTools() {
           operation: {
             type: 'string',
             enum: ['plan', 'report', 'stage', 'compile-run'],
-            description: 'Bridge preview operation. Mutation/apply operations are intentionally blocked in MCP.',
+            description:
+              'Bridge preview operation. Mutation/apply operations are intentionally blocked in MCP.',
           },
           profile: {
             type: 'string',
@@ -1838,7 +1927,8 @@ function listMcpTools() {
           approvalFile: {
             type: 'string',
             minLength: 1,
-            description: 'Optional approval artifact path used by stage/compile-run preview checks.',
+            description:
+              'Optional approval artifact path used by stage/compile-run preview checks.',
           },
           template: {
             type: 'string',
@@ -1850,7 +1940,8 @@ function listMcpTools() {
     },
     {
       name: 'zeus.investigation.start',
-      description: 'Start or resume a focused investigation session on top of existing analyze artifacts (S0).',
+      description:
+        'Start or resume a focused investigation session on top of existing analyze artifacts (S0).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1952,7 +2043,8 @@ function listMcpTools() {
           cursor: {
             type: 'string',
             minLength: 1,
-            description: 'Optional pagination cursor returned by a previous zeus.search-source call.',
+            description:
+              'Optional pagination cursor returned by a previous zeus.search-source call.',
           },
           caseSensitive: {
             type: 'boolean',
@@ -1962,28 +2054,25 @@ function listMcpTools() {
       },
     },
   ];
-}
+};
 
 function executeReadOnlyImpact(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const target = args && typeof args.target === 'string'
-    ? args.target.trim()
-    : '';
+  const target = args && typeof args.target === 'string' ? args.target.trim() : '';
   if (!target) {
     const error = new Error('Invalid arguments for zeus.impact: target is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
-  const profile = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const program = args && typeof args.program === 'string'
-    ? args.program.trim()
-    : '';
-  const out = args && typeof args.out === 'string' && args.out.trim()
-    ? args.out.trim()
-    : (args && typeof args.output === 'string' && args.output.trim() ? args.output.trim() : '');
+  const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const program = args && typeof args.program === 'string' ? args.program.trim() : '';
+  const out =
+    args && typeof args.out === 'string' && args.out.trim()
+      ? args.out.trim()
+      : args && typeof args.output === 'string' && args.output.trim()
+        ? args.output.trim()
+        : '';
 
   const runnerArgs = {
     target,
@@ -2017,26 +2106,28 @@ function readJsonFile(filePath) {
 
 function executeReadOnlyAnalyze(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const program = args && typeof args.program === 'string'
-    ? args.program.trim()
-    : '';
+  const program = args && typeof args.program === 'string' ? args.program.trim() : '';
   if (!program) {
     const error = new Error('Invalid arguments for zeus.analyze: program is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
-  const profile = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const out = args && typeof args.out === 'string' && args.out.trim()
-    ? args.out.trim()
-    : (args && typeof args.output === 'string' && args.output.trim() ? args.output.trim() : '');
+  const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const out =
+    args && typeof args.out === 'string' && args.out.trim()
+      ? args.out.trim()
+      : args && typeof args.output === 'string' && args.output.trim()
+        ? args.output.trim()
+        : '';
 
-  const config = resolveAnalyzeConfig({
-    ...(profile ? { profile } : {}),
-    ...(out ? { out } : {}),
-  }, { cwd });
+  const config = resolveAnalyzeConfig(
+    {
+      ...(profile ? { profile } : {}),
+      ...(out ? { out } : {}),
+    },
+    { cwd }
+  );
   const outputRoot = path.resolve(cwd, config.outputRoot);
   const normalizedProgram = normalizeId(program);
   const outputProgramDir = path.join(outputRoot, normalizedProgram);
@@ -2046,24 +2137,19 @@ function executeReadOnlyAnalyze(args = {}, context = {}) {
 
   const manifest = readAnalyzeRunManifest(outputProgramDir);
   if (!manifest || typeof manifest !== 'object') {
-    throw new Error(`Analyze run manifest not found: ${path.join(outputProgramDir, 'analyze-run-manifest.json')}`);
+    throw new Error(
+      `Analyze run manifest not found: ${path.join(outputProgramDir, 'analyze-run-manifest.json')}`
+    );
   }
 
   const analysisIndexPath = path.join(outputProgramDir, 'analysis-index.json');
   const graphPath = path.join(outputProgramDir, 'program-call-tree.json');
-  const analysisIndex = fs.existsSync(analysisIndexPath)
-    ? readJsonFile(analysisIndexPath)
-    : null;
-  const graph = fs.existsSync(graphPath)
-    ? readJsonFile(graphPath)
-    : null;
+  const analysisIndex = fs.existsSync(analysisIndexPath) ? readJsonFile(analysisIndexPath) : null;
+  const graph = fs.existsSync(graphPath) ? readJsonFile(graphPath) : null;
   const artifacts = Array.isArray(manifest.artifacts) ? manifest.artifacts : [];
-  const summary = manifest.summary && typeof manifest.summary === 'object'
-    ? manifest.summary
-    : {};
-  const graphSummary = graph && graph.summary && typeof graph.summary === 'object'
-    ? graph.summary
-    : {};
+  const summary = manifest.summary && typeof manifest.summary === 'object' ? manifest.summary : {};
+  const graphSummary =
+    graph && graph.summary && typeof graph.summary === 'object' ? graph.summary : {};
 
   return {
     profile: profile || null,
@@ -2085,16 +2171,22 @@ function executeReadOnlyAnalyze(args = {}, context = {}) {
     artifacts: {
       count: artifacts.length,
       files: artifacts
-        .map((artifact) => String(artifact && artifact.path ? artifact.path : ''))
+        .map(artifact => String(artifact && artifact.path ? artifact.path : ''))
         .filter(Boolean)
         .sort((left, right) => left.localeCompare(right)),
     },
     analysisIndex: {
       available: Boolean(analysisIndex),
-      selectedMode: analysisIndex && analysisIndex.selectedMode ? String(analysisIndex.selectedMode) : null,
-      selectedPreset: analysisIndex && analysisIndex.selectedPreset ? String(analysisIndex.selectedPreset) : null,
-      taskCount: Array.isArray(analysisIndex && analysisIndex.tasks) ? analysisIndex.tasks.length : 0,
-      guidedModeCount: Array.isArray(analysisIndex && analysisIndex.guidedModes) ? analysisIndex.guidedModes.length : 0,
+      selectedMode:
+        analysisIndex && analysisIndex.selectedMode ? String(analysisIndex.selectedMode) : null,
+      selectedPreset:
+        analysisIndex && analysisIndex.selectedPreset ? String(analysisIndex.selectedPreset) : null,
+      taskCount: Array.isArray(analysisIndex && analysisIndex.tasks)
+        ? analysisIndex.tasks.length
+        : 0,
+      guidedModeCount: Array.isArray(analysisIndex && analysisIndex.guidedModes)
+        ? analysisIndex.guidedModes.length
+        : 0,
     },
     graph: {
       available: Boolean(graph),
@@ -2108,37 +2200,42 @@ function executeReadOnlyAnalyze(args = {}, context = {}) {
 
 function executeReadOnlyBundle(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const program = args && typeof args.program === 'string'
-    ? args.program.trim()
-    : '';
+  const program = args && typeof args.program === 'string' ? args.program.trim() : '';
   if (!program) {
     const error = new Error('Invalid arguments for zeus.bundle: program is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
-  const profile = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const sourceOutputRoot = args && typeof args.sourceOutputRoot === 'string' && args.sourceOutputRoot.trim()
-    ? args.sourceOutputRoot.trim()
-    : (args && typeof args['source-output-root'] === 'string' && args['source-output-root'].trim()
-      ? args['source-output-root'].trim()
-      : '');
-  const bundleOutputRoot = args && typeof args.output === 'string' && args.output.trim()
-    ? args.output.trim()
-    : (args && typeof args.out === 'string' && args.out.trim() ? args.out.trim() : '');
+  const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const sourceOutputRoot =
+    args && typeof args.sourceOutputRoot === 'string' && args.sourceOutputRoot.trim()
+      ? args.sourceOutputRoot.trim()
+      : args && typeof args['source-output-root'] === 'string' && args['source-output-root'].trim()
+        ? args['source-output-root'].trim()
+        : '';
+  const bundleOutputRoot =
+    args && typeof args.output === 'string' && args.output.trim()
+      ? args.output.trim()
+      : args && typeof args.out === 'string' && args.out.trim()
+        ? args.out.trim()
+        : '';
 
-  const config = resolveAnalyzeConfig({
-    ...(profile ? { profile } : {}),
-    ...(sourceOutputRoot ? { out: sourceOutputRoot } : {}),
-  }, { cwd });
+  const config = resolveAnalyzeConfig(
+    {
+      ...(profile ? { profile } : {}),
+      ...(sourceOutputRoot ? { out: sourceOutputRoot } : {}),
+    },
+    { cwd }
+  );
 
   const normalizedProgram = normalizeId(program);
   const resolvedSourceOutputRoot = path.resolve(cwd, config.outputRoot);
   const outputProgramDir = path.join(resolvedSourceOutputRoot, normalizedProgram);
   if (!fs.existsSync(outputProgramDir)) {
-    throw new Error(`Bundle source program output not found: ${outputProgramDir}. Run analyze first.`);
+    throw new Error(
+      `Bundle source program output not found: ${outputProgramDir}. Run analyze first.`
+    );
   }
 
   const bundleManifestPath = path.join(outputProgramDir, 'bundle-manifest.json');
@@ -2149,18 +2246,20 @@ function executeReadOnlyBundle(args = {}, context = {}) {
   const manifest = readJsonFile(bundleManifestPath);
   const files = Array.isArray(manifest && manifest.files) ? manifest.files : [];
   const artifacts = Array.isArray(manifest && manifest.artifacts) ? manifest.artifacts : [];
-  const summary = manifest && manifest.summary && typeof manifest.summary === 'object'
-    ? manifest.summary
-    : {};
-  const safeSharing = manifest && manifest.safeSharing && typeof manifest.safeSharing === 'object'
-    ? manifest.safeSharing
-    : {};
-  const analyzeRun = manifest && manifest.analyzeRun && typeof manifest.analyzeRun === 'object'
-    ? manifest.analyzeRun
-    : null;
-  const sourceProvenance = manifest && manifest.sourceProvenance && typeof manifest.sourceProvenance === 'object'
-    ? manifest.sourceProvenance
-    : null;
+  const summary =
+    manifest && manifest.summary && typeof manifest.summary === 'object' ? manifest.summary : {};
+  const safeSharing =
+    manifest && manifest.safeSharing && typeof manifest.safeSharing === 'object'
+      ? manifest.safeSharing
+      : {};
+  const analyzeRun =
+    manifest && manifest.analyzeRun && typeof manifest.analyzeRun === 'object'
+      ? manifest.analyzeRun
+      : null;
+  const sourceProvenance =
+    manifest && manifest.sourceProvenance && typeof manifest.sourceProvenance === 'object'
+      ? manifest.sourceProvenance
+      : null;
 
   const resolvedBundleOutputRoot = bundleOutputRoot
     ? path.resolve(cwd, bundleOutputRoot)
@@ -2186,18 +2285,21 @@ function executeReadOnlyBundle(args = {}, context = {}) {
       safeSharing: {
         enabled: Boolean(safeSharing.enabled),
         sourceDir: safeSharing.sourceDir ? String(safeSharing.sourceDir) : null,
-        redactionManifestFile: safeSharing.redactionManifestFile ? String(safeSharing.redactionManifestFile) : null,
+        redactionManifestFile: safeSharing.redactionManifestFile
+          ? String(safeSharing.redactionManifestFile)
+          : null,
       },
     },
     files: {
       count: files.length,
-      paths: files.map((entry) => String(entry)).sort((left, right) => left.localeCompare(right)),
+      paths: files.map(entry => String(entry)).sort((left, right) => left.localeCompare(right)),
     },
     artifacts: {
       count: artifacts.length,
-      totalSizeBytes: artifacts.reduce((sum, artifact) => (
-        sum + Number(artifact && artifact.sizeBytes ? artifact.sizeBytes : 0)
-      ), 0),
+      totalSizeBytes: artifacts.reduce(
+        (sum, artifact) => sum + Number(artifact && artifact.sizeBytes ? artifact.sizeBytes : 0),
+        0
+      ),
       kinds: artifacts.reduce((counts, artifact) => {
         const kind = artifact && artifact.kind ? String(artifact.kind) : 'unknown';
         counts[kind] = (counts[kind] || 0) + 1;
@@ -2212,12 +2314,28 @@ function executeReadOnlyBundle(args = {}, context = {}) {
     },
     sourceProvenance: {
       available: Boolean(sourceProvenance),
-      sourceLib: sourceProvenance && sourceProvenance.sourceLib ? String(sourceProvenance.sourceLib) : null,
-      transportUsed: sourceProvenance && sourceProvenance.transportUsed ? String(sourceProvenance.transportUsed) : null,
-      fileCount: Number(sourceProvenance && sourceProvenance.fileCount ? sourceProvenance.fileCount : 0),
-      exportedFileCount: Number(sourceProvenance && sourceProvenance.exportedFileCount ? sourceProvenance.exportedFileCount : 0),
-      failedFileCount: Number(sourceProvenance && sourceProvenance.failedFileCount ? sourceProvenance.failedFileCount : 0),
-      traceableFileCount: Number(sourceProvenance && sourceProvenance.traceableFileCount ? sourceProvenance.traceableFileCount : 0),
+      sourceLib:
+        sourceProvenance && sourceProvenance.sourceLib ? String(sourceProvenance.sourceLib) : null,
+      transportUsed:
+        sourceProvenance && sourceProvenance.transportUsed
+          ? String(sourceProvenance.transportUsed)
+          : null,
+      fileCount: Number(
+        sourceProvenance && sourceProvenance.fileCount ? sourceProvenance.fileCount : 0
+      ),
+      exportedFileCount: Number(
+        sourceProvenance && sourceProvenance.exportedFileCount
+          ? sourceProvenance.exportedFileCount
+          : 0
+      ),
+      failedFileCount: Number(
+        sourceProvenance && sourceProvenance.failedFileCount ? sourceProvenance.failedFileCount : 0
+      ),
+      traceableFileCount: Number(
+        sourceProvenance && sourceProvenance.traceableFileCount
+          ? sourceProvenance.traceableFileCount
+          : 0
+      ),
     },
     bundleOutputs: {
       root: resolvedBundleOutputRoot,
@@ -2231,55 +2349,62 @@ function executeReadOnlyBundle(args = {}, context = {}) {
 
 function executeReadOnlyWorkflow(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const program = args && typeof args.program === 'string'
-    ? args.program.trim()
-    : '';
+  const program = args && typeof args.program === 'string' ? args.program.trim() : '';
   if (!program) {
     const error = new Error('Invalid arguments for zeus.workflow: program is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
-  const profile = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const out = args && typeof args.out === 'string' && args.out.trim()
-    ? args.out.trim()
-    : (args && typeof args.output === 'string' && args.output.trim() ? args.output.trim() : '');
+  const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const out =
+    args && typeof args.out === 'string' && args.out.trim()
+      ? args.out.trim()
+      : args && typeof args.output === 'string' && args.output.trim()
+        ? args.output.trim()
+        : '';
 
-  const config = resolveAnalyzeConfig({
-    ...(profile ? { profile } : {}),
-    ...(out ? { out } : {}),
-  }, { cwd });
+  const config = resolveAnalyzeConfig(
+    {
+      ...(profile ? { profile } : {}),
+      ...(out ? { out } : {}),
+    },
+    { cwd }
+  );
 
   const normalizedProgram = normalizeId(program);
   const outputRoot = path.resolve(cwd, config.outputRoot);
   const outputProgramDir = path.join(outputRoot, normalizedProgram);
   if (!fs.existsSync(outputProgramDir)) {
-    throw new Error(`Workflow source program output not found: ${outputProgramDir}. Run analyze/workflow first.`);
+    throw new Error(
+      `Workflow source program output not found: ${outputProgramDir}. Run analyze/workflow first.`
+    );
   }
 
   const workflowManifestPath = path.join(outputProgramDir, WORKFLOW_RUN_MANIFEST_FILE);
   if (!fs.existsSync(workflowManifestPath)) {
-    throw new Error(`Workflow run manifest not found: ${workflowManifestPath}. Run workflow first.`);
+    throw new Error(
+      `Workflow run manifest not found: ${workflowManifestPath}. Run workflow first.`
+    );
   }
 
   const manifest = readJsonFile(workflowManifestPath);
-  const preset = manifest && manifest.preset && typeof manifest.preset === 'object'
-    ? manifest.preset
-    : null;
-  const reviewWorkflow = preset && preset.reviewWorkflow && typeof preset.reviewWorkflow === 'object'
-    ? preset.reviewWorkflow
-    : null;
-  const analyzeRun = manifest && manifest.analyzeRun && typeof manifest.analyzeRun === 'object'
-    ? manifest.analyzeRun
-    : null;
-  const bundle = manifest && manifest.bundle && typeof manifest.bundle === 'object'
-    ? manifest.bundle
-    : null;
-  const reproducibility = manifest && manifest.reproducibility && typeof manifest.reproducibility === 'object'
-    ? manifest.reproducibility
-    : null;
+  const preset =
+    manifest && manifest.preset && typeof manifest.preset === 'object' ? manifest.preset : null;
+  const reviewWorkflow =
+    preset && preset.reviewWorkflow && typeof preset.reviewWorkflow === 'object'
+      ? preset.reviewWorkflow
+      : null;
+  const analyzeRun =
+    manifest && manifest.analyzeRun && typeof manifest.analyzeRun === 'object'
+      ? manifest.analyzeRun
+      : null;
+  const bundle =
+    manifest && manifest.bundle && typeof manifest.bundle === 'object' ? manifest.bundle : null;
+  const reproducibility =
+    manifest && manifest.reproducibility && typeof manifest.reproducibility === 'object'
+      ? manifest.reproducibility
+      : null;
 
   return {
     profile: profile || null,
@@ -2292,14 +2417,22 @@ function executeReadOnlyWorkflow(args = {}, context = {}) {
       name: preset && preset.name ? String(preset.name) : null,
       title: preset && preset.title ? String(preset.title) : null,
       analyzeMode: preset && preset.analyzeMode ? String(preset.analyzeMode) : null,
-      promptTemplateCount: Array.isArray(preset && preset.promptTemplates) ? preset.promptTemplates.length : 0,
-      workflowKeyCount: Array.isArray(preset && preset.workflowKeys) ? preset.workflowKeys.length : 0,
-      bundleArtifactCount: Array.isArray(preset && preset.bundleArtifacts) ? preset.bundleArtifacts.length : 0,
+      promptTemplateCount: Array.isArray(preset && preset.promptTemplates)
+        ? preset.promptTemplates.length
+        : 0,
+      workflowKeyCount: Array.isArray(preset && preset.workflowKeys)
+        ? preset.workflowKeys.length
+        : 0,
+      bundleArtifactCount: Array.isArray(preset && preset.bundleArtifacts)
+        ? preset.bundleArtifacts.length
+        : 0,
       reviewWorkflow: {
         intendedAudienceCount: Array.isArray(reviewWorkflow && reviewWorkflow.intendedAudience)
           ? reviewWorkflow.intendedAudience.length
           : 0,
-        keyQuestionsAnsweredCount: Array.isArray(reviewWorkflow && reviewWorkflow.keyQuestionsAnswered)
+        keyQuestionsAnsweredCount: Array.isArray(
+          reviewWorkflow && reviewWorkflow.keyQuestionsAnswered
+        )
           ? reviewWorkflow.keyQuestionsAnswered.length
           : 0,
         expectedDecisionsCount: Array.isArray(reviewWorkflow && reviewWorkflow.expectedDecisions)
@@ -2311,11 +2444,17 @@ function executeReadOnlyWorkflow(args = {}, context = {}) {
       available: Boolean(analyzeRun),
       status: analyzeRun && analyzeRun.status ? String(analyzeRun.status) : null,
       completedAt: analyzeRun && analyzeRun.completedAt ? String(analyzeRun.completedAt) : null,
-      generatedArtifactCount: Number(analyzeRun && analyzeRun.generatedArtifactCount ? analyzeRun.generatedArtifactCount : 0),
+      generatedArtifactCount: Number(
+        analyzeRun && analyzeRun.generatedArtifactCount ? analyzeRun.generatedArtifactCount : 0
+      ),
       safeSharingEnabled: Boolean(analyzeRun && analyzeRun.safeSharingEnabled),
-      guidedModeName: analyzeRun && analyzeRun.guidedMode && typeof analyzeRun.guidedMode === 'object' && analyzeRun.guidedMode.name
-        ? String(analyzeRun.guidedMode.name)
-        : null,
+      guidedModeName:
+        analyzeRun &&
+        analyzeRun.guidedMode &&
+        typeof analyzeRun.guidedMode === 'object' &&
+        analyzeRun.guidedMode.name
+          ? String(analyzeRun.guidedMode.name)
+          : null,
     },
     bundle: {
       available: Boolean(bundle),
@@ -2326,18 +2465,17 @@ function executeReadOnlyWorkflow(args = {}, context = {}) {
     reproducibility: {
       available: Boolean(reproducibility),
       enabled: Boolean(reproducibility && reproducibility.enabled),
-      contentFingerprint: reproducibility && reproducibility.contentFingerprint
-        ? String(reproducibility.contentFingerprint)
-        : null,
+      contentFingerprint:
+        reproducibility && reproducibility.contentFingerprint
+          ? String(reproducibility.contentFingerprint)
+          : null,
     },
   };
 }
 
 async function executeReadOnlyJoblog(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const profile = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
+  const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
   if (!profile) {
     const error = new Error('Invalid arguments for zeus.joblog: profile is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -2348,14 +2486,14 @@ async function executeReadOnlyJoblog(args = {}, context = {}) {
   let maxMessages;
   try {
     severity = normalizeSeverity(args && args.severity !== undefined ? args.severity : null);
-    maxMessages = parseMaxMessages(args && args.maxMessages !== undefined ? args.maxMessages : undefined);
+    maxMessages = parseMaxMessages(
+      args && args.maxMessages !== undefined ? args.maxMessages : undefined
+    );
   } catch (error) {
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
-  const jobName = args && typeof args.job === 'string'
-    ? args.job.trim().toUpperCase()
-    : '';
+  const jobName = args && typeof args.job === 'string' ? args.job.trim().toUpperCase() : '';
 
   const config = resolveAnalyzeConfig({ profile }, { cwd });
   const dbConfig = resolveAnalyzeDbConfig(config, 'metadata');
@@ -2469,18 +2607,13 @@ function buildInspectObjectStatisticsQuery(lib, name, type, { journalOnly = fals
 
 async function executeReadOnlyInspectObject(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const profile = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const lib = args && typeof args.lib === 'string'
-    ? args.lib.trim().toUpperCase()
-    : '';
-  const name = args && typeof args.name === 'string'
-    ? args.name.trim().toUpperCase()
-    : '';
-  const type = args && typeof args.type === 'string' && args.type.trim()
-    ? args.type.trim().toUpperCase()
-    : '*PGM';
+  const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const lib = args && typeof args.lib === 'string' ? args.lib.trim().toUpperCase() : '';
+  const name = args && typeof args.name === 'string' ? args.name.trim().toUpperCase() : '';
+  const type =
+    args && typeof args.type === 'string' && args.type.trim()
+      ? args.type.trim().toUpperCase()
+      : '*PGM';
   const journalOnly = Boolean(args && args.journalOnly === true);
 
   if (!profile) {
@@ -2499,7 +2632,9 @@ async function executeReadOnlyInspectObject(args = {}, context = {}) {
     throw error;
   }
   if (!SUPPORTED_INSPECT_OBJECT_TYPES.includes(type)) {
-    const error = new Error(`Invalid arguments for zeus.inspect-object: type must be one of ${SUPPORTED_INSPECT_OBJECT_TYPES.join(', ')}.`);
+    const error = new Error(
+      `Invalid arguments for zeus.inspect-object: type must be one of ${SUPPORTED_INSPECT_OBJECT_TYPES.join(', ')}.`
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -2538,21 +2673,20 @@ async function executeReadOnlyInspectObject(args = {}, context = {}) {
 
 async function executeReadOnlyAssessRisk(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const program = args && typeof args.program === 'string'
-    ? args.program.trim().toUpperCase()
-    : '';
+  const program = args && typeof args.program === 'string' ? args.program.trim().toUpperCase() : '';
   if (!program) {
     const error = new Error('Invalid arguments for zeus.assess-risk: program is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
-  const profile = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const out = args && typeof args.out === 'string' && args.out.trim()
-    ? args.out.trim()
-    : (args && typeof args.output === 'string' && args.output.trim() ? args.output.trim() : '');
+  const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const out =
+    args && typeof args.out === 'string' && args.out.trim()
+      ? args.out.trim()
+      : args && typeof args.output === 'string' && args.output.trim()
+        ? args.output.trim()
+        : '';
   const maxAccessPoints = parseOptionalPositiveInteger(args && args.maxAccessPoints, {
     label: 'zeus.assess-risk maxAccessPoints',
     min: 1,
@@ -2562,33 +2696,44 @@ async function executeReadOnlyAssessRisk(args = {}, context = {}) {
     min: 1,
   });
 
-  const config = resolveAnalyzeConfig({
-    ...(profile ? { profile } : {}),
-    ...(out ? { out } : {}),
-  }, { cwd });
+  const config = resolveAnalyzeConfig(
+    {
+      ...(profile ? { profile } : {}),
+      ...(out ? { out } : {}),
+    },
+    { cwd }
+  );
   const outputRoot = path.resolve(cwd, config.outputRoot);
   const programDir = path.join(outputRoot, program);
   const analysisPath = path.join(programDir, 'canonical-analysis.json');
   if (!fs.existsSync(analysisPath)) {
-    throw new Error(`Canonical analysis not found for program "${program}" at ${analysisPath}. Run analyze first.`);
+    throw new Error(
+      `Canonical analysis not found for program "${program}" at ${analysisPath}. Run analyze first.`
+    );
   }
 
   const canonicalAnalysis = readJsonFile(analysisPath);
   const assessment = assessCanonicalModel(canonicalAnalysis, { verbose: false });
-  const rawAccessPoints = Array.isArray(assessment && assessment.accessPoints) ? assessment.accessPoints : [];
-  const rawCriticalPaths = Array.isArray(assessment && assessment.criticalPaths) ? assessment.criticalPaths : [];
+  const rawAccessPoints = Array.isArray(assessment && assessment.accessPoints)
+    ? assessment.accessPoints
+    : [];
+  const rawCriticalPaths = Array.isArray(assessment && assessment.criticalPaths)
+    ? assessment.criticalPaths
+    : [];
   const accessLimit = Number.isInteger(maxAccessPoints) ? maxAccessPoints : 50;
   const criticalLimit = Number.isInteger(maxCriticalPaths) ? maxCriticalPaths : 25;
   const accessPoints = rawAccessPoints.slice(0, accessLimit);
   const criticalPaths = rawCriticalPaths.slice(0, criticalLimit);
-  const riskMetrics = assessment && assessment.riskMetrics && typeof assessment.riskMetrics === 'object'
-    ? assessment.riskMetrics
-    : {};
-  const summary = assessment && assessment.summary && typeof assessment.summary === 'object'
-    ? assessment.summary
-    : {};
+  const riskMetrics =
+    assessment && assessment.riskMetrics && typeof assessment.riskMetrics === 'object'
+      ? assessment.riskMetrics
+      : {};
+  const summary =
+    assessment && assessment.summary && typeof assessment.summary === 'object'
+      ? assessment.summary
+      : {};
   const recommendations = Array.isArray(assessment && assessment.recommendations)
-    ? assessment.recommendations.map((entry) => String(entry))
+    ? assessment.recommendations.map(entry => String(entry))
     : [];
 
   return {
@@ -2605,25 +2750,26 @@ async function executeReadOnlyAssessRisk(args = {}, context = {}) {
       redCount: Number(riskMetrics.redCount || 0),
     },
     recommendations,
-    accessPoints: accessPoints.map((entry) => ({
+    accessPoints: accessPoints.map(entry => ({
       type: entry && entry.type ? String(entry.type) : '',
       subtype: entry && entry.subtype ? String(entry.subtype) : null,
       name: entry && entry.name ? String(entry.name) : null,
       intent: entry && entry.intent ? String(entry.intent) : null,
-      tables: Array.isArray(entry && entry.tables) ? entry.tables.map((table) => String(table)) : [],
-      assessment: entry && entry.assessment && typeof entry.assessment === 'object'
-        ? {
-          risk: entry.assessment.risk ? String(entry.assessment.risk) : 'UNKNOWN',
-          score: Number(entry.assessment.score || 0),
-          reason: entry.assessment.reason ? String(entry.assessment.reason) : null,
-        }
-        : { risk: 'UNKNOWN', score: 0, reason: null },
+      tables: Array.isArray(entry && entry.tables) ? entry.tables.map(table => String(table)) : [],
+      assessment:
+        entry && entry.assessment && typeof entry.assessment === 'object'
+          ? {
+              risk: entry.assessment.risk ? String(entry.assessment.risk) : 'UNKNOWN',
+              score: Number(entry.assessment.score || 0),
+              reason: entry.assessment.reason ? String(entry.assessment.reason) : null,
+            }
+          : { risk: 'UNKNOWN', score: 0, reason: null },
       evidenceCount: Array.isArray(entry && entry.evidence) ? entry.evidence.length : 0,
     })),
-    criticalPaths: criticalPaths.map((entry) => ({
+    criticalPaths: criticalPaths.map(entry => ({
       type: entry && entry.type ? String(entry.type) : '',
       reason: entry && entry.reason ? String(entry.reason) : null,
-      tables: Array.isArray(entry && entry.tables) ? entry.tables.map((table) => String(table)) : [],
+      tables: Array.isArray(entry && entry.tables) ? entry.tables.map(table => String(table)) : [],
       evidenceCount: Array.isArray(entry && entry.evidence) ? entry.evidence.length : 0,
     })),
     accessPointCount: rawAccessPoints.length,
@@ -2640,14 +2786,10 @@ function executeReadOnlyProfiles(args = {}, context = {}) {
   const env = context.env || process.env;
   const profiles = loadProfiles({ cwd, env, args });
   const metadata = getProfilesMetadata(profiles);
-  const profileFilter = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const selectedNames = profileFilter
-    ? [profileFilter]
-    : listCallableProfileNames(profiles);
+  const profileFilter = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const selectedNames = profileFilter ? [profileFilter] : listCallableProfileNames(profiles);
 
-  const summaries = selectedNames.map((name) => {
+  const summaries = selectedNames.map(name => {
     const resolved = resolveProfile(profiles, name, { env });
     const metadataDb = (resolved.dbRoles && resolved.dbRoles.metadata) || resolved.db || {};
     const testDataDb = (resolved.dbRoles && resolved.dbRoles.testData) || null;
@@ -2656,7 +2798,9 @@ function executeReadOnlyProfiles(args = {}, context = {}) {
       name,
       extends: Array.isArray(resolved.extends)
         ? [...resolved.extends]
-        : (resolved.extends ? [String(resolved.extends)] : []),
+        : resolved.extends
+          ? [String(resolved.extends)]
+          : [],
       productionSystem: Boolean(resolved.productionSystem),
       metadataDb: {
         target: describeConnectionTarget(metadataDb),
@@ -2665,18 +2809,18 @@ function executeReadOnlyProfiles(args = {}, context = {}) {
       },
       testDataDb: testDataDb
         ? {
-          target: describeConnectionTarget(testDataDb),
-          user: testDataDb.user ? String(testDataDb.user) : null,
-          passwordSet: Boolean(testDataDb.password),
-        }
+            target: describeConnectionTarget(testDataDb),
+            user: testDataDb.user ? String(testDataDb.user) : null,
+            passwordSet: Boolean(testDataDb.password),
+          }
         : null,
       fetch: fetch
         ? {
-          target: describeConnectionTarget(fetch),
-          sourceLib: fetch.sourceLib || fetch.sourceLibrary || null,
-          user: fetch.user ? String(fetch.user) : null,
-          passwordSet: Boolean(fetch.password),
-        }
+            target: describeConnectionTarget(fetch),
+            sourceLib: fetch.sourceLib || fetch.sourceLibrary || null,
+            user: fetch.user ? String(fetch.user) : null,
+            passwordSet: Boolean(fetch.password),
+          }
         : null,
     };
   });
@@ -2693,8 +2837,8 @@ function normalizeStringList(value) {
   if (value === undefined || value === null) return [];
   const list = Array.isArray(value) ? value : [value];
   return list
-    .flatMap((entry) => String(entry).split(','))
-    .map((entry) => entry.trim())
+    .flatMap(entry => String(entry).split(','))
+    .map(entry => entry.trim())
     .filter(Boolean);
 }
 
@@ -2703,13 +2847,20 @@ async function executeDiscoverEnvironment(args = {}, context = {}) {
   const env = context.env || process.env;
   const profileName = args && typeof args.profile === 'string' ? args.profile.trim() : '';
   if (!profileName) {
-    const error = new Error('Invalid arguments for zeus.discover-environment: profile is required.');
+    const error = new Error(
+      'Invalid arguments for zeus.discover-environment: profile is required.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
   const config = resolveAnalyzeConfig(args, { cwd, env });
-  const role = String(args.role || 'metadata').trim().toLowerCase() === 'data' ? 'testData' : 'metadata';
+  const role =
+    String(args.role || 'metadata')
+      .trim()
+      .toLowerCase() === 'data'
+      ? 'testData'
+      : 'metadata';
   const dbConfig = resolveAnalyzeDbConfig(config, role);
   if (!isDbConfigured(dbConfig)) {
     const error = new Error('DB2 connection configuration is incomplete for the selected profile.');
@@ -2727,9 +2878,8 @@ async function executeDiscoverEnvironment(args = {}, context = {}) {
     includeTables: args.includeTables === undefined ? true : Boolean(args.includeTables),
   };
 
-  const runQuery = typeof context.discoveryQueryRunner === 'function'
-    ? context.discoveryQueryRunner
-    : undefined;
+  const runQuery =
+    typeof context.discoveryQueryRunner === 'function' ? context.discoveryQueryRunner : undefined;
 
   const report = await discoverEnvironment({ dbConfig, scope, options, runQuery });
   const system = args.system ? String(args.system).trim() : '';
@@ -2741,12 +2891,8 @@ async function executeDiscoverEnvironment(args = {}, context = {}) {
 function executeReadOnlyResolveObject(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
   const env = context.env || process.env;
-  const profileName = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const rawName = args && typeof args.table === 'string'
-    ? args.table.trim()
-    : '';
+  const profileName = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const rawName = args && typeof args.table === 'string' ? args.table.trim() : '';
   if (!profileName) {
     const error = new Error('Invalid arguments for zeus.resolve-object: profile is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -2766,10 +2912,13 @@ function executeReadOnlyResolveObject(args = {}, context = {}) {
     throw error;
   }
 
-  const requireColumns = normalizeResolveObjectRequiredColumns(args.requireColumn || args['require-column']);
+  const requireColumns = normalizeResolveObjectRequiredColumns(
+    args.requireColumn || args['require-column']
+  );
   const includeRowCount = args && args.includeRowCount === true;
   const result = resolveObjectsByName(dbConfig, rawName, {
-    schema: args && typeof args.schema === 'string' && args.schema.trim() ? args.schema.trim() : null,
+    schema:
+      args && typeof args.schema === 'string' && args.schema.trim() ? args.schema.trim() : null,
     requireColumns,
     includeRowCount,
     runtime: {
@@ -2780,28 +2929,33 @@ function executeReadOnlyResolveObject(args = {}, context = {}) {
   return {
     profile: profileName,
     table: rawName.toUpperCase(),
-    schema: args && typeof args.schema === 'string' && args.schema.trim() ? args.schema.trim().toUpperCase() : null,
-    requireColumns: requireColumns.map((entry) => entry.toUpperCase()),
+    schema:
+      args && typeof args.schema === 'string' && args.schema.trim()
+        ? args.schema.trim().toUpperCase()
+        : null,
+    requireColumns: requireColumns.map(entry => entry.toUpperCase()),
     includeRowCount,
     found: Boolean(result.found),
     diagnostics: result.diagnostics || null,
     objectCount: Array.isArray(result.objects) ? result.objects.length : 0,
     objects: Array.isArray(result.objects)
-      ? result.objects.map((entry) => ({
-        schema: entry.schema,
-        sqlName: entry.sqlName,
-        systemName: entry.systemName,
-        type: entry.type || null,
-        requiredColumns: Array.isArray(entry.requiredColumns) ? entry.requiredColumns : [],
-        missingRequiredColumns: Array.isArray(entry.missingRequiredColumns) ? entry.missingRequiredColumns : [],
-        allRequiredColumnsPresent: Boolean(entry.allRequiredColumnsPresent),
-        ...(includeRowCount
-          ? {
-            rowCount: entry.rowCount,
-            rowCountError: entry.rowCountError || null,
-          }
-          : {}),
-      }))
+      ? result.objects.map(entry => ({
+          schema: entry.schema,
+          sqlName: entry.sqlName,
+          systemName: entry.systemName,
+          type: entry.type || null,
+          requiredColumns: Array.isArray(entry.requiredColumns) ? entry.requiredColumns : [],
+          missingRequiredColumns: Array.isArray(entry.missingRequiredColumns)
+            ? entry.missingRequiredColumns
+            : [],
+          allRequiredColumnsPresent: Boolean(entry.allRequiredColumnsPresent),
+          ...(includeRowCount
+            ? {
+                rowCount: entry.rowCount,
+                rowCountError: entry.rowCountError || null,
+              }
+            : {}),
+        }))
       : [],
   };
 }
@@ -2809,12 +2963,8 @@ function executeReadOnlyResolveObject(args = {}, context = {}) {
 function executeFetchMember(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
   const env = context.env || process.env;
-  const profileName = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const memberArg = args && typeof args.member === 'string'
-    ? args.member.trim()
-    : '';
+  const profileName = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const memberArg = args && typeof args.member === 'string' ? args.member.trim() : '';
   if (!profileName) {
     const error = new Error('Invalid arguments for zeus.fetch-member: profile is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -2828,23 +2978,22 @@ function executeFetchMember(args = {}, context = {}) {
 
   const members = memberArg
     .split(',')
-    .map((entry) => validateSqlIdentifier(entry, '--member'))
+    .map(entry => validateSqlIdentifier(entry, '--member'))
     .filter(Boolean);
   const sourceFile = validateSqlIdentifier(
     args && typeof args.file === 'string' && args.file.trim()
       ? args.file.trim()
       : DEFAULT_FETCH_MEMBER_SOURCE_FILE,
-    '--file',
+    '--file'
   );
 
   const fetchConfig = resolveFetchConfig(args, { cwd, env });
-  const sourceLibCandidate = args && typeof args.lib === 'string' && args.lib.trim()
-    ? args.lib.trim()
-    : (
-      args && typeof args.sourceLib === 'string' && args.sourceLib.trim()
+  const sourceLibCandidate =
+    args && typeof args.lib === 'string' && args.lib.trim()
+      ? args.lib.trim()
+      : args && typeof args.sourceLib === 'string' && args.sourceLib.trim()
         ? args.sourceLib.trim()
-        : (fetchConfig && (fetchConfig.sourceLib || fetchConfig.sourceLibrary))
-    );
+        : fetchConfig && (fetchConfig.sourceLib || fetchConfig.sourceLibrary);
   if (!sourceLibCandidate) {
     const error = new Error('Invalid arguments for zeus.fetch-member: lib is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -2855,7 +3004,9 @@ function executeFetchMember(args = {}, context = {}) {
   const user = fetchConfig.user;
   const password = fetchConfig.password;
   if (!host || !user || !password) {
-    const error = new Error('Fetch connection configuration is incomplete for the selected profile.');
+    const error = new Error(
+      'Fetch connection configuration is incomplete for the selected profile.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -2902,7 +3053,7 @@ function executeFetchMember(args = {}, context = {}) {
     if (!result.ok) {
       failures.push({
         member,
-        messages: Array.isArray(result.messages) ? result.messages.map((entry) => String(entry)) : [],
+        messages: Array.isArray(result.messages) ? result.messages.map(entry => String(entry)) : [],
         stderr: result.stderr ? String(result.stderr) : '',
       });
       continue;
@@ -2945,35 +3096,36 @@ function executeFetchMember(args = {}, context = {}) {
 
 function executeDocsGenerateCatalog(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const format = args && typeof args.format === 'string'
-    ? args.format.trim().toLowerCase()
-    : 'markdown';
+  const format =
+    args && typeof args.format === 'string' ? args.format.trim().toLowerCase() : 'markdown';
   if (format !== 'markdown' && format !== 'json') {
-    const error = new Error('Invalid arguments for zeus.docs-generate-catalog: format must be markdown or json.');
+    const error = new Error(
+      'Invalid arguments for zeus.docs-generate-catalog: format must be markdown or json.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
-  const outputArg = args && typeof args.output === 'string' && args.output.trim()
-    ? args.output.trim()
-    : '';
-  const jsonOutputArg = args && typeof args.jsonOutput === 'string' && args.jsonOutput.trim()
-    ? args.jsonOutput.trim()
-    : (args && typeof args['json-output'] === 'string' && args['json-output'].trim()
-      ? args['json-output'].trim()
-      : '');
+  const outputArg =
+    args && typeof args.output === 'string' && args.output.trim() ? args.output.trim() : '';
+  const jsonOutputArg =
+    args && typeof args.jsonOutput === 'string' && args.jsonOutput.trim()
+      ? args.jsonOutput.trim()
+      : args && typeof args['json-output'] === 'string' && args['json-output'].trim()
+        ? args['json-output'].trim()
+        : '';
 
-  const markdownOutputPath = format === 'markdown'
-    ? (outputArg || DEFAULT_TOOL_CATALOG_MARKDOWN_OUTPUT)
-    : DEFAULT_TOOL_CATALOG_MARKDOWN_OUTPUT;
-  const jsonOutputPath = format === 'json'
-    ? (outputArg || jsonOutputArg || DEFAULT_TOOL_CATALOG_JSON_OUTPUT)
-    : (jsonOutputArg || DEFAULT_TOOL_CATALOG_JSON_OUTPUT);
+  const markdownOutputPath =
+    format === 'markdown'
+      ? outputArg || DEFAULT_TOOL_CATALOG_MARKDOWN_OUTPUT
+      : DEFAULT_TOOL_CATALOG_MARKDOWN_OUTPUT;
+  const jsonOutputPath =
+    format === 'json'
+      ? outputArg || jsonOutputArg || DEFAULT_TOOL_CATALOG_JSON_OUTPUT
+      : jsonOutputArg || DEFAULT_TOOL_CATALOG_JSON_OUTPUT;
 
   const resolvedMarkdownPath = path.resolve(cwd, markdownOutputPath);
-  const resolvedJsonPath = jsonOutputPath
-    ? path.resolve(cwd, jsonOutputPath)
-    : null;
+  const resolvedJsonPath = jsonOutputPath ? path.resolve(cwd, jsonOutputPath) : null;
 
   assertPathWithinCwd({
     toolName: 'zeus.docs-generate-catalog',
@@ -3084,12 +3236,8 @@ function executePuiInspectMcp(args = {}, context = {}) {
 function executeReadOnlyDiff(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
   const env = context.env || process.env;
-  const profileName = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const member = args && typeof args.member === 'string'
-    ? args.member.trim()
-    : '';
+  const profileName = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const member = args && typeof args.member === 'string' ? args.member.trim() : '';
   if (!profileName) {
     const error = new Error('Invalid arguments for zeus.diff: profile is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -3138,9 +3286,11 @@ function executeReadOnlyDiff(args = {}, context = {}) {
   });
   const comparison = buildLineComparison(
     readLines(resolved.originalPath),
-    readLines(resolved.modifiedPath),
+    readLines(resolved.modifiedPath)
   );
-  const payloadLimit = Number.isInteger(maxPayloadLines) ? maxPayloadLines : DEFAULT_MCP_PAYLOAD_ITEMS;
+  const payloadLimit = Number.isInteger(maxPayloadLines)
+    ? maxPayloadLines
+    : DEFAULT_MCP_PAYLOAD_ITEMS;
   const payloadRows = comparison.rows.slice(0, payloadLimit);
 
   return {
@@ -3148,7 +3298,9 @@ function executeReadOnlyDiff(args = {}, context = {}) {
     member: resolved.member,
     fetchRoot,
     workspaceRoot,
-    workCopyMode: String(workCopyConfig.extension || '').trim().toLowerCase(),
+    workCopyMode: String(workCopyConfig.extension || '')
+      .trim()
+      .toLowerCase(),
     originalPath: resolved.originalPath,
     modifiedPath: resolved.modifiedPath,
     maxPayloadLines: payloadLimit,
@@ -3156,7 +3308,7 @@ function executeReadOnlyDiff(args = {}, context = {}) {
     payloadTruncated: comparison.rows.length > payloadRows.length,
     lineCount: comparison.rows.length,
     changedLineCount: Number(comparison.changedCount || 0),
-    rows: payloadRows.map((row) => ({
+    rows: payloadRows.map(row => ({
       line: Number(row && row.line ? row.line : 0),
       marker: row && row.marker ? String(row.marker) : ' ',
       original: row && row.original ? String(row.original) : '',
@@ -3188,26 +3340,25 @@ function parseCsvList(value) {
   }
   return value
     .split(',')
-    .map((entry) => String(entry || '').trim())
+    .map(entry => String(entry || '').trim())
     .filter(Boolean);
 }
 
 async function executeReadOnlyGenerateTest(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
   const env = context.env || process.env;
-  const program = args && typeof args.program === 'string'
-    ? args.program.trim().toUpperCase()
-    : '';
+  const program = args && typeof args.program === 'string' ? args.program.trim().toUpperCase() : '';
   if (!program) {
     const error = new Error('Invalid arguments for zeus.generate-test: program is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
-  const format = args && typeof args.format === 'string'
-    ? args.format.trim().toLowerCase()
-    : 'markdown';
+  const format =
+    args && typeof args.format === 'string' ? args.format.trim().toLowerCase() : 'markdown';
   if (format !== 'markdown' && format !== 'jest') {
-    const error = new Error('Invalid arguments for zeus.generate-test: format must be markdown or jest.');
+    const error = new Error(
+      'Invalid arguments for zeus.generate-test: format must be markdown or jest.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -3215,9 +3366,12 @@ async function executeReadOnlyGenerateTest(args = {}, context = {}) {
   const config = resolveAnalyzeConfig(args, { cwd, env });
   const outputRootInput = String(config && config.outputRoot ? config.outputRoot : 'output').trim();
   const outputRoot = path.resolve(cwd, outputRootInput || 'output');
-  const outArg = args && typeof args.out === 'string' && args.out.trim()
-    ? args.out.trim()
-    : (args && typeof args.output === 'string' && args.output.trim() ? args.output.trim() : '');
+  const outArg =
+    args && typeof args.out === 'string' && args.out.trim()
+      ? args.out.trim()
+      : args && typeof args.output === 'string' && args.output.trim()
+        ? args.output.trim()
+        : '';
   if (outArg) {
     assertPathWithinCwd({
       toolName: 'zeus.generate-test',
@@ -3231,7 +3385,9 @@ async function executeReadOnlyGenerateTest(args = {}, context = {}) {
   const programDir = path.join(outputRoot, program);
   const analysisPath = path.join(programDir, 'canonical-analysis.json');
   if (!fs.existsSync(analysisPath)) {
-    const error = new Error(`canonical-analysis.json not found at: ${analysisPath}. Run analyze first.`);
+    const error = new Error(
+      `canonical-analysis.json not found at: ${analysisPath}. Run analyze first.`
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -3258,15 +3414,25 @@ async function executeReadOnlyGenerateTest(args = {}, context = {}) {
 
   const includeChangeScenario = parseOptionalBooleanFlag(args && args.change, false);
   if (includeChangeScenario) {
-    const affectedPrograms = parseCsvList(args && args.affectedPrograms).map((entry) => ({
+    const affectedPrograms = parseCsvList(args && args.affectedPrograms).map(entry => ({
       name: entry,
       accessType: 'UNKNOWN',
     }));
     const changeScenario = generateChangeTestScenario(program, {
-      table: args && typeof args.table === 'string' && args.table.trim() ? args.table.trim() : 'UNKNOWN',
-      column: args && typeof args.column === 'string' && args.column.trim() ? args.column.trim() : 'UNKNOWN',
-      oldType: args && typeof args.oldType === 'string' && args.oldType.trim() ? args.oldType.trim() : undefined,
-      newType: args && typeof args.newType === 'string' && args.newType.trim() ? args.newType.trim() : undefined,
+      table:
+        args && typeof args.table === 'string' && args.table.trim() ? args.table.trim() : 'UNKNOWN',
+      column:
+        args && typeof args.column === 'string' && args.column.trim()
+          ? args.column.trim()
+          : 'UNKNOWN',
+      oldType:
+        args && typeof args.oldType === 'string' && args.oldType.trim()
+          ? args.oldType.trim()
+          : undefined,
+      newType:
+        args && typeof args.newType === 'string' && args.newType.trim()
+          ? args.newType.trim()
+          : undefined,
       affectedPrograms,
     });
     content = `${content}\n\n${changeScenario}`;
@@ -3288,20 +3454,19 @@ async function executeReadOnlyGenerateTest(args = {}, context = {}) {
 async function executeReadOnlyGenerateChecklist(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
   const env = context.env || process.env;
-  const program = args && typeof args.program === 'string'
-    ? args.program.trim().toUpperCase()
-    : '';
+  const program = args && typeof args.program === 'string' ? args.program.trim().toUpperCase() : '';
   if (!program) {
     const error = new Error('Invalid arguments for zeus.generate-checklist: program is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
-  const changeType = args && typeof args.type === 'string'
-    ? args.type.trim().toUpperCase()
-    : 'CODE_CHANGE';
+  const changeType =
+    args && typeof args.type === 'string' ? args.type.trim().toUpperCase() : 'CODE_CHANGE';
   if (!['DDL_CHANGE', 'CODE_CHANGE', 'BOTH'].includes(changeType)) {
-    const error = new Error('Invalid arguments for zeus.generate-checklist: type must be DDL_CHANGE, CODE_CHANGE, or BOTH.');
+    const error = new Error(
+      'Invalid arguments for zeus.generate-checklist: type must be DDL_CHANGE, CODE_CHANGE, or BOTH.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -3309,9 +3474,12 @@ async function executeReadOnlyGenerateChecklist(args = {}, context = {}) {
   const config = resolveAnalyzeConfig(args, { cwd, env });
   const outputRootInput = String(config && config.outputRoot ? config.outputRoot : 'output').trim();
   const outputRoot = path.resolve(cwd, outputRootInput || 'output');
-  const outArg = args && typeof args.out === 'string' && args.out.trim()
-    ? args.out.trim()
-    : (args && typeof args.output === 'string' && args.output.trim() ? args.output.trim() : '');
+  const outArg =
+    args && typeof args.out === 'string' && args.out.trim()
+      ? args.out.trim()
+      : args && typeof args.output === 'string' && args.output.trim()
+        ? args.output.trim()
+        : '';
   if (outArg) {
     assertPathWithinCwd({
       toolName: 'zeus.generate-checklist',
@@ -3348,19 +3516,23 @@ async function executeReadOnlyGenerateChecklist(args = {}, context = {}) {
   }
 
   const hasCriticalPath = Boolean(
-    riskAssessment
-    && riskAssessment.summary
-    && String(riskAssessment.summary.riskLevel || '').toUpperCase() === 'RED'
+    riskAssessment &&
+    riskAssessment.summary &&
+    String(riskAssessment.summary.riskLevel || '').toUpperCase() === 'RED'
   );
   const affectedPrograms = parseCsvList(args && args.affected);
   const affected = affectedPrograms.length > 0 ? affectedPrograms : [program];
-  const impact = args && typeof args.impact === 'string' && args.impact.trim()
-    ? args.impact.trim()
-    : (hasCriticalPath ? 'HIGH' : 'MEDIUM');
+  const impact =
+    args && typeof args.impact === 'string' && args.impact.trim()
+      ? args.impact.trim()
+      : hasCriticalPath
+        ? 'HIGH'
+        : 'MEDIUM';
 
   const checklist = generateDeploymentChecklist({
     program,
-    table: args && typeof args.table === 'string' && args.table.trim() ? args.table.trim() : undefined,
+    table:
+      args && typeof args.table === 'string' && args.table.trim() ? args.table.trim() : undefined,
     changeType,
     affectedPrograms: affected,
     hasCriticalPath,
@@ -3388,7 +3560,7 @@ async function executeReadOnlyGenerateChecklist(args = {}, context = {}) {
   }
   if (riskAreas.length > 0) {
     document += '\n## Identified Risk Areas\n\n';
-    riskAreas.forEach((risk) => {
+    riskAreas.forEach(risk => {
       const severity = risk && risk.severity ? String(risk.severity) : 'UNKNOWN';
       document += `- ${severity}: ${risk && risk.description ? String(risk.description) : ''}\n`;
       document += `  Mitigation: ${risk && risk.mitigation ? String(risk.mitigation) : ''}\n`;
@@ -3415,9 +3587,7 @@ async function executeReadOnlyGenerateChecklist(args = {}, context = {}) {
 
 async function executeReadOnlyQa(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const input = args && typeof args.input === 'string'
-    ? args.input.trim()
-    : '';
+  const input = args && typeof args.input === 'string' ? args.input.trim() : '';
   if (!input) {
     const error = new Error('Invalid arguments for zeus.qa: input is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -3450,23 +3620,27 @@ async function executeReadOnlyQa(args = {}, context = {}) {
     throw error;
   }
 
-  const qaResults = await runQAPipeline({
-    canonicalAnalysis: canonicalAnalysis || {},
-    sourceFiles: [],
-    config: {},
-  }, {
-    qa: {
-      qaMode: true,
-      qaStrict: strict,
+  const qaResults = await runQAPipeline(
+    {
+      canonicalAnalysis: canonicalAnalysis || {},
+      sourceFiles: [],
+      config: {},
     },
-  });
-
-  const report = qaResults && qaResults.status === 'SKIPPED'
-    ? {
-      status: 'SKIPPED',
-      message: qaResults.message || 'No QA report generated (QA mode not enabled)',
+    {
+      qa: {
+        qaMode: true,
+        qaStrict: strict,
+      },
     }
-    : generateQAReport(qaResults, { format });
+  );
+
+  const report =
+    qaResults && qaResults.status === 'SKIPPED'
+      ? {
+          status: 'SKIPPED',
+          message: qaResults.message || 'No QA report generated (QA mode not enabled)',
+        }
+      : generateQAReport(qaResults, { format });
 
   return {
     inputPath,
@@ -3476,19 +3650,17 @@ async function executeReadOnlyQa(args = {}, context = {}) {
     durationMs: Number(qaResults && qaResults.duration ? qaResults.duration : 0),
     stageCount: Number(qaResults && qaResults.stagesRun ? qaResults.stagesRun : 0),
     failureCount: Array.isArray(qaResults && qaResults.failures) ? qaResults.failures.length : 0,
-    report: report && typeof report === 'object' ? report : { format, content: String(report || '') },
+    report:
+      report && typeof report === 'object' ? report : { format, content: String(report || '') },
   };
 }
 
 function resolveAnalysesRegistryPath(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
   const env = context.env || process.env;
-  const profileName = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const registryPathArg = args && typeof args.registryPath === 'string'
-    ? args.registryPath.trim()
-    : '';
+  const profileName = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const registryPathArg =
+    args && typeof args.registryPath === 'string' ? args.registryPath.trim() : '';
 
   let profile = null;
   if (profileName) {
@@ -3518,9 +3690,8 @@ function resolveAnalysesRegistryPath(args = {}, context = {}) {
 }
 
 async function executeReadOnlyAnalyses(args = {}, context = {}) {
-  const operation = args && typeof args.operation === 'string'
-    ? args.operation.trim().toLowerCase()
-    : '';
+  const operation =
+    args && typeof args.operation === 'string' ? args.operation.trim().toLowerCase() : '';
   if (!operation) {
     const error = new Error('Invalid arguments for zeus.analyses: operation is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -3536,7 +3707,7 @@ async function executeReadOnlyAnalyses(args = {}, context = {}) {
 
   if (operation === 'list') {
     const workspaces = listWorkspaces(resolved.registryPath);
-    const entries = workspaces.map((workspace) => {
+    const entries = workspaces.map(workspace => {
       const index = readWorkspaceIndex(workspace.path);
       const programs = index && Array.isArray(index.programs) ? index.programs : [];
       return {
@@ -3548,7 +3719,7 @@ async function executeReadOnlyAnalyses(args = {}, context = {}) {
         system: String(workspace.system || ''),
         library: String(workspace.library || ''),
         profile: String(workspace.profile || ''),
-        tags: Array.isArray(workspace.tags) ? workspace.tags.map((tag) => String(tag)) : [],
+        tags: Array.isArray(workspace.tags) ? workspace.tags.map(tag => String(tag)) : [],
         registeredAt: workspace.registeredAt ? String(workspace.registeredAt) : null,
         lastAccessedAt: workspace.lastAccessedAt ? String(workspace.lastAccessedAt) : null,
         programCount: programs.length,
@@ -3563,11 +3734,11 @@ async function executeReadOnlyAnalyses(args = {}, context = {}) {
     };
   }
 
-  const workspaceId = args && typeof args.id === 'string'
-    ? args.id.trim()
-    : '';
+  const workspaceId = args && typeof args.id === 'string' ? args.id.trim() : '';
   if (!workspaceId) {
-    const error = new Error('Invalid arguments for zeus.analyses: id is required when operation=show.');
+    const error = new Error(
+      'Invalid arguments for zeus.analyses: id is required when operation=show.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -3579,9 +3750,10 @@ async function executeReadOnlyAnalyses(args = {}, context = {}) {
   }
   const index = readWorkspaceIndex(workspace.path);
   const programs = index && Array.isArray(index.programs) ? index.programs : [];
-  const sourceMembers = index && index.sourceMembers && typeof index.sourceMembers === 'object'
-    ? index.sourceMembers
-    : {};
+  const sourceMembers =
+    index && index.sourceMembers && typeof index.sourceMembers === 'object'
+      ? index.sourceMembers
+      : {};
   const reports = index && Array.isArray(index.reports) ? index.reports : [];
   return {
     operation: 'show',
@@ -3597,7 +3769,7 @@ async function executeReadOnlyAnalyses(args = {}, context = {}) {
       system: String(workspace.system || ''),
       library: String(workspace.library || ''),
       profile: String(workspace.profile || ''),
-      tags: Array.isArray(workspace.tags) ? workspace.tags.map((tag) => String(tag)) : [],
+      tags: Array.isArray(workspace.tags) ? workspace.tags.map(tag => String(tag)) : [],
       registeredAt: workspace.registeredAt ? String(workspace.registeredAt) : null,
       lastAccessedAt: workspace.lastAccessedAt ? String(workspace.lastAccessedAt) : null,
     },
@@ -3605,7 +3777,7 @@ async function executeReadOnlyAnalyses(args = {}, context = {}) {
       available: Boolean(index),
       generatedAt: index && index.generatedAt ? String(index.generatedAt) : null,
       programCount: programs.length,
-      programs: programs.map((program) => ({
+      programs: programs.map(program => ({
         name: program && program.name ? String(program.name) : '',
         outputDir: program && program.outputDir ? String(program.outputDir) : '',
         analyzedAt: program && program.analyzedAt ? String(program.analyzedAt) : null,
@@ -3614,7 +3786,7 @@ async function executeReadOnlyAnalyses(args = {}, context = {}) {
       })),
       sourceMembers,
       reportCount: reports.length,
-      reports: reports.map((report) => ({
+      reports: reports.map(report => ({
         path: report && report.path ? String(report.path) : '',
         title: report && report.title ? String(report.title) : '',
         generatedAt: report && report.generatedAt ? String(report.generatedAt) : null,
@@ -3626,12 +3798,8 @@ async function executeReadOnlyAnalyses(args = {}, context = {}) {
 function resolveFetchManifest(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
   const env = context.env || process.env;
-  const profile = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const out = args && typeof args.out === 'string'
-    ? args.out.trim()
-    : '';
+  const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const out = args && typeof args.out === 'string' ? args.out.trim() : '';
   const fetchArgs = {
     ...(profile ? { profile } : {}),
     ...(out ? { out } : {}),
@@ -3649,13 +3817,15 @@ function resolveFetchManifest(args = {}, context = {}) {
   const manifestResult = readImportManifest(fetchRoot);
   if (manifestResult && manifestResult.error) {
     const error = new Error(
-      `Failed to parse fetch import manifest JSON at ${manifestResult.manifestPath}: ${manifestResult.error.message}`,
+      `Failed to parse fetch import manifest JSON at ${manifestResult.manifestPath}: ${manifestResult.error.message}`
     );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
   if (!manifestResult || !manifestResult.manifest) {
-    const error = new Error(`Fetch import manifest not found: ${manifestResult.manifestPath}. Run fetch first.`);
+    const error = new Error(
+      `Fetch import manifest not found: ${manifestResult.manifestPath}. Run fetch first.`
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -3663,7 +3833,9 @@ function resolveFetchManifest(args = {}, context = {}) {
     manifestPath: manifestResult.manifestPath,
   });
   if (!summary) {
-    const error = new Error(`Invalid fetch import manifest payload at ${manifestResult.manifestPath}.`);
+    const error = new Error(
+      `Invalid fetch import manifest payload at ${manifestResult.manifestPath}.`
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -3678,16 +3850,17 @@ function resolveFetchManifest(args = {}, context = {}) {
 }
 
 async function executeReadOnlyFetch(args = {}, context = {}) {
-  const operation = args && typeof args.operation === 'string'
-    ? args.operation.trim().toLowerCase()
-    : '';
+  const operation =
+    args && typeof args.operation === 'string' ? args.operation.trim().toLowerCase() : '';
   if (!operation) {
     const error = new Error('Invalid arguments for zeus.fetch: operation is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
   if (operation !== 'summary' && operation !== 'files') {
-    const error = new Error('Invalid arguments for zeus.fetch: operation must be summary or files.');
+    const error = new Error(
+      'Invalid arguments for zeus.fetch: operation must be summary or files.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -3706,7 +3879,9 @@ async function executeReadOnlyFetch(args = {}, context = {}) {
       maxPayloadItems: DEFAULT_MCP_PAYLOAD_ITEMS,
       payloadResultCount: 0,
       payloadTruncated: false,
-      resultCount: Number(resolved.summary && resolved.summary.fileCount ? resolved.summary.fileCount : 0),
+      resultCount: Number(
+        resolved.summary && resolved.summary.fileCount ? resolved.summary.fileCount : 0
+      ),
       files: [],
     };
   }
@@ -3717,12 +3892,14 @@ async function executeReadOnlyFetch(args = {}, context = {}) {
     max: MAX_MCP_PAYLOAD_ITEMS,
   });
   const cursorState = decodeMcpCursor('zeus.fetch', args && args.cursor);
-  const payloadLimit = Number.isInteger(maxPayloadItems) ? maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS;
+  const payloadLimit = Number.isInteger(maxPayloadItems)
+    ? maxPayloadItems
+    : DEFAULT_MCP_PAYLOAD_ITEMS;
   const rawFiles = Array.isArray(resolved.manifest && resolved.manifest.files)
     ? resolved.manifest.files
     : [];
   const files = rawFiles
-    .map((entry) => {
+    .map(entry => {
       const origin = getImportManifestEntryOrigin(entry);
       const exportInfo = getImportManifestEntryExport(entry, resolved.manifest);
       const validation = getImportManifestEntryValidation(entry);
@@ -3736,7 +3913,9 @@ async function executeReadOnlyFetch(args = {}, context = {}) {
         localPath: origin.localPath ? String(origin.localPath) : '',
         export: {
           status: exportInfo.status ? String(exportInfo.status) : 'unknown',
-          transportRequested: exportInfo.transportRequested ? String(exportInfo.transportRequested) : null,
+          transportRequested: exportInfo.transportRequested
+            ? String(exportInfo.transportRequested)
+            : null,
           transportUsed: exportInfo.transportUsed ? String(exportInfo.transportUsed) : null,
           fallbackUsed: Boolean(exportInfo.fallbackUsed),
           streamFileCcsid: Number(exportInfo.streamFileCcsid) || null,
@@ -3769,9 +3948,7 @@ async function executeReadOnlyFetch(args = {}, context = {}) {
   }
   const payloadFiles = files.slice(offset, offset + payloadLimit);
   const nextOffset = offset + payloadFiles.length;
-  const nextCursor = nextOffset < files.length
-    ? encodeMcpCursor('zeus.fetch', nextOffset)
-    : null;
+  const nextCursor = nextOffset < files.length ? encodeMcpCursor('zeus.fetch', nextOffset) : null;
 
   return {
     operation: 'files',
@@ -3792,9 +3969,7 @@ async function executeReadOnlyFetch(args = {}, context = {}) {
 
 function resolveTestRunManifestPath(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const manifestArg = args && typeof args.manifest === 'string'
-    ? args.manifest.trim()
-    : '';
+  const manifestArg = args && typeof args.manifest === 'string' ? args.manifest.trim() : '';
   if (!manifestArg) {
     const error = new Error('Invalid arguments for zeus.test-run: manifest is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -3815,15 +3990,10 @@ function resolveTestRunManifestPath(args = {}, context = {}) {
 function buildTestRunSnapshotSummaryEntries(snapshots = {}) {
   return Object.entries(snapshots)
     .map(([tableKey, entry]) => {
-      const before = entry && entry.before && typeof entry.before === 'object'
-        ? entry.before
-        : null;
-      const after = entry && entry.after && typeof entry.after === 'object'
-        ? entry.after
-        : null;
-      const diff = entry && entry.diff && typeof entry.diff === 'object'
-        ? entry.diff
-        : null;
+      const before =
+        entry && entry.before && typeof entry.before === 'object' ? entry.before : null;
+      const after = entry && entry.after && typeof entry.after === 'object' ? entry.after : null;
+      const diff = entry && entry.diff && typeof entry.diff === 'object' ? entry.diff : null;
       const changedRows = Array.isArray(diff && diff.changedRows) ? diff.changedRows : [];
       return {
         table: String(tableKey || ''),
@@ -3839,16 +4009,17 @@ function buildTestRunSnapshotSummaryEntries(snapshots = {}) {
 }
 
 async function executeReadOnlyTestRun(args = {}, context = {}) {
-  const operation = args && typeof args.operation === 'string'
-    ? args.operation.trim().toLowerCase()
-    : '';
+  const operation =
+    args && typeof args.operation === 'string' ? args.operation.trim().toLowerCase() : '';
   if (!operation) {
     const error = new Error('Invalid arguments for zeus.test-run: operation is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
   if (operation !== 'show' && operation !== 'rollback') {
-    const error = new Error('Invalid arguments for zeus.test-run: operation must be show or rollback.');
+    const error = new Error(
+      'Invalid arguments for zeus.test-run: operation must be show or rollback.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -3858,16 +4029,19 @@ async function executeReadOnlyTestRun(args = {}, context = {}) {
   try {
     manifest = loadTestRunManifest(manifestPath);
   } catch (error) {
-    const wrapped = new Error(`Failed to read test-run manifest at ${manifestPath}: ${error.message}`);
+    const wrapped = new Error(
+      `Failed to read test-run manifest at ${manifestPath}: ${error.message}`
+    );
     wrapped.code = 'TOOL_INVALID_ARGUMENTS';
     throw wrapped;
   }
-  const snapshots = manifest && manifest.snapshots && typeof manifest.snapshots === 'object'
-    ? manifest.snapshots
-    : {};
+  const snapshots =
+    manifest && manifest.snapshots && typeof manifest.snapshots === 'object'
+      ? manifest.snapshots
+      : {};
   const snapshotSummaries = buildTestRunSnapshotSummaryEntries(snapshots);
   const rollbackSql = Array.isArray(manifest && manifest.rollbackSql)
-    ? manifest.rollbackSql.map((statement) => String(statement))
+    ? manifest.rollbackSql.map(statement => String(statement))
     : [];
 
   const base = {
@@ -3884,7 +4058,9 @@ async function executeReadOnlyTestRun(args = {}, context = {}) {
       capturedAt: manifest && manifest.capturedAt ? String(manifest.capturedAt) : null,
       tableCount: Array.isArray(manifest && manifest.tables) ? manifest.tables.length : 0,
       tables: Array.isArray(manifest && manifest.tables)
-        ? manifest.tables.map((table) => String(table)).sort((left, right) => left.localeCompare(right))
+        ? manifest.tables
+            .map(table => String(table))
+            .sort((left, right) => left.localeCompare(right))
         : [],
       snapshotCount: snapshotSummaries.length,
       rollbackStatementCount: rollbackSql.length,
@@ -3908,7 +4084,9 @@ async function executeReadOnlyTestRun(args = {}, context = {}) {
     min: 1,
     max: MAX_MCP_PAYLOAD_ITEMS,
   });
-  const payloadLimit = Number.isInteger(maxPayloadItems) ? maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS;
+  const payloadLimit = Number.isInteger(maxPayloadItems)
+    ? maxPayloadItems
+    : DEFAULT_MCP_PAYLOAD_ITEMS;
   const payloadStatements = rollbackSql.slice(0, payloadLimit);
   return {
     operation: 'rollback',
@@ -3921,25 +4099,24 @@ async function executeReadOnlyTestRun(args = {}, context = {}) {
 }
 
 async function executeReadOnlyCopyToWorkspace(args = {}, context = {}) {
-  const operation = args && typeof args.operation === 'string'
-    ? args.operation.trim().toLowerCase()
-    : '';
+  const operation =
+    args && typeof args.operation === 'string' ? args.operation.trim().toLowerCase() : '';
   if (!operation) {
     const error = new Error('Invalid arguments for zeus.copy-to-workspace: operation is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
   if (operation !== 'plan') {
-    const error = new Error('Invalid arguments for zeus.copy-to-workspace: operation must be plan.');
+    const error = new Error(
+      'Invalid arguments for zeus.copy-to-workspace: operation must be plan.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
   const cwd = context.cwd || process.cwd();
   const env = context.env || process.env;
-  const profileName = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
+  const profileName = args && typeof args.profile === 'string' ? args.profile.trim() : '';
   if (!profileName) {
     const error = new Error('Missing required option: --profile <name>');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -3974,16 +4151,19 @@ async function executeReadOnlyCopyToWorkspace(args = {}, context = {}) {
     throw error;
   }
 
-  const workCopyMode = String(workCopyConfig.extension || '').trim().toLowerCase();
+  const workCopyMode = String(workCopyConfig.extension || '')
+    .trim()
+    .toLowerCase();
   const force = Boolean(args && args.force === true);
   const requestedMembers = parseWorkCopyMembersCsv(args && args.members);
   const requestedMemberSet = new Set(requestedMembers);
   const discovered = discoverFetchedSources(sourceRoot);
-  const selectedEntries = requestedMemberSet.size > 0
-    ? discovered.filter((entry) => requestedMemberSet.has(String(entry.member || '').toUpperCase()))
-    : discovered;
+  const selectedEntries =
+    requestedMemberSet.size > 0
+      ? discovered.filter(entry => requestedMemberSet.has(String(entry.member || '').toUpperCase()))
+      : discovered;
 
-  const planEntries = selectedEntries.map((entry) => {
+  const planEntries = selectedEntries.map(entry => {
     const targetName = buildWorkCopyTargetName(entry, workCopyMode);
     const targetPath = path.join(targetRoot, targetName);
     const targetExists = fs.existsSync(targetPath);
@@ -4006,8 +4186,12 @@ async function executeReadOnlyCopyToWorkspace(args = {}, context = {}) {
   });
 
   if (requestedMemberSet.size > 0) {
-    const selectedMemberSet = new Set(selectedEntries.map((entry) => String(entry.member || '').toUpperCase()));
-    for (const requestedMember of Array.from(requestedMemberSet).sort((left, right) => left.localeCompare(right))) {
+    const selectedMemberSet = new Set(
+      selectedEntries.map(entry => String(entry.member || '').toUpperCase())
+    );
+    for (const requestedMember of Array.from(requestedMemberSet).sort((left, right) =>
+      left.localeCompare(right)
+    )) {
       if (selectedMemberSet.has(requestedMember)) {
         continue;
       }
@@ -4036,22 +4220,30 @@ async function executeReadOnlyCopyToWorkspace(args = {}, context = {}) {
     max: MAX_MCP_PAYLOAD_ITEMS,
   });
   const cursorState = decodeMcpCursor('zeus.copy-to-workspace', args && args.cursor);
-  const payloadLimit = Number.isInteger(maxPayloadItems) ? maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS;
+  const payloadLimit = Number.isInteger(maxPayloadItems)
+    ? maxPayloadItems
+    : DEFAULT_MCP_PAYLOAD_ITEMS;
   const offset = cursorState.offset;
   if (!Number.isFinite(offset) || offset < 0 || offset > sortedPlanEntries.length) {
-    throw createInvalidCursorError('zeus.copy-to-workspace', 'cursor is outside available result range.');
+    throw createInvalidCursorError(
+      'zeus.copy-to-workspace',
+      'cursor is outside available result range.'
+    );
   }
   const payloadEntries = sortedPlanEntries.slice(offset, offset + payloadLimit);
   const nextOffset = offset + payloadEntries.length;
-  const nextCursor = nextOffset < sortedPlanEntries.length
-    ? encodeMcpCursor('zeus.copy-to-workspace', nextOffset)
-    : null;
+  const nextCursor =
+    nextOffset < sortedPlanEntries.length
+      ? encodeMcpCursor('zeus.copy-to-workspace', nextOffset)
+      : null;
 
   const counts = {
-    copyCandidateCount: sortedPlanEntries.filter((entry) => entry.status === 'will copy' || entry.status === 'will overwrite').length,
-    overwriteCount: sortedPlanEntries.filter((entry) => entry.status === 'will overwrite').length,
-    existingCount: sortedPlanEntries.filter((entry) => entry.status === 'already exists').length,
-    skippedCount: sortedPlanEntries.filter((entry) => entry.status === 'skipped').length,
+    copyCandidateCount: sortedPlanEntries.filter(
+      entry => entry.status === 'will copy' || entry.status === 'will overwrite'
+    ).length,
+    overwriteCount: sortedPlanEntries.filter(entry => entry.status === 'will overwrite').length,
+    existingCount: sortedPlanEntries.filter(entry => entry.status === 'already exists').length,
+    skippedCount: sortedPlanEntries.filter(entry => entry.status === 'skipped').length,
   };
 
   return {
@@ -4084,7 +4276,9 @@ function normalizeServeHost(value) {
   if (normalized === '127.0.0.1' || normalized === '::1') {
     return normalized;
   }
-  const error = new Error('Invalid arguments for zeus.serve: host must be localhost, 127.0.0.1, or ::1.');
+  const error = new Error(
+    'Invalid arguments for zeus.serve: host must be localhost, 127.0.0.1, or ::1.'
+  );
   error.code = 'TOOL_INVALID_ARGUMENTS';
   throw error;
 }
@@ -4095,7 +4289,9 @@ function parseServePort(value) {
   }
   const parsed = Number.parseInt(String(value).trim(), 10);
   if (!Number.isInteger(parsed) || parsed < 0) {
-    const error = new Error('Invalid arguments for zeus.serve: port must be a non-negative integer.');
+    const error = new Error(
+      'Invalid arguments for zeus.serve: port must be a non-negative integer.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -4103,9 +4299,8 @@ function parseServePort(value) {
 }
 
 async function executeReadOnlyServe(args = {}, context = {}) {
-  const operation = args && typeof args.operation === 'string'
-    ? args.operation.trim().toLowerCase()
-    : '';
+  const operation =
+    args && typeof args.operation === 'string' ? args.operation.trim().toLowerCase() : '';
   if (!operation) {
     const error = new Error('Invalid arguments for zeus.serve: operation is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -4119,14 +4314,14 @@ async function executeReadOnlyServe(args = {}, context = {}) {
 
   const cwd = context.cwd || process.cwd();
   const env = context.env || process.env;
-  const profileName = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
+  const profileName = args && typeof args.profile === 'string' ? args.profile.trim() : '';
   const profiles = loadProfiles({ cwd, env, args });
   const profile = profileName ? resolveProfile(profiles, profileName, { env }) : null;
 
   const bundleConfig = resolveBundleConfig(args, { cwd, env });
-  const outputRootInput = String(bundleConfig && bundleConfig.sourceOutputRoot ? bundleConfig.sourceOutputRoot : 'output').trim();
+  const outputRootInput = String(
+    bundleConfig && bundleConfig.sourceOutputRoot ? bundleConfig.sourceOutputRoot : 'output'
+  ).trim();
   const outputRoot = path.resolve(cwd, outputRootInput || 'output');
   assertPathWithinCwd({
     toolName: 'zeus.serve',
@@ -4139,20 +4334,27 @@ async function executeReadOnlyServe(args = {}, context = {}) {
   const host = normalizeServeHost(args && args.host);
   const port = parseServePort(args && args.port);
   const hasRegistryConfig = Boolean(
-    (args && (args.registryPath || args['registry-path']))
-    || env.ZEUS_ANALYSES_REGISTRY
-    || (profile && profile.analysesRegistryPath),
+    (args && (args.registryPath || args['registry-path'])) ||
+    env.ZEUS_ANALYSES_REGISTRY ||
+    (profile && profile.analysesRegistryPath)
   );
   const registryPath = hasRegistryConfig
     ? resolveRegistryPath({
-      registryPath: args && (args.registryPath || args['registry-path']) ? (args.registryPath || args['registry-path']) : undefined,
-      profile,
-      env,
-      cwd,
-    })
+        registryPath:
+          args && (args.registryPath || args['registry-path'])
+            ? args.registryPath || args['registry-path']
+            : undefined,
+        profile,
+        env,
+        cwd,
+      })
     : null;
-  if (args && (typeof args.registryPath === 'string' || typeof args['registry-path'] === 'string')) {
-    const registryArg = typeof args.registryPath === 'string' ? args.registryPath : args['registry-path'];
+  if (
+    args &&
+    (typeof args.registryPath === 'string' || typeof args['registry-path'] === 'string')
+  ) {
+    const registryArg =
+      typeof args.registryPath === 'string' ? args.registryPath : args['registry-path'];
     assertPathWithinCwd({
       toolName: 'zeus.serve',
       optionName: '--registry-path',
@@ -4166,9 +4368,7 @@ async function executeReadOnlyServe(args = {}, context = {}) {
   const runs = outputRootExists ? listAnalysisRuns(outputRoot) : [];
   const workspaces = registryPath ? listWorkspaces(registryPath) : [];
   const latestRun = runs.length > 0 ? runs[0] : null;
-  const bindUrl = port > 0
-    ? `http://${host === '::1' ? '[::1]' : host}:${port}`
-    : null;
+  const bindUrl = port > 0 ? `http://${host === '::1' ? '[::1]' : host}:${port}` : null;
 
   return {
     operation: 'summary',
@@ -4185,12 +4385,12 @@ async function executeReadOnlyServe(args = {}, context = {}) {
     runCount: runs.length,
     latestRun: latestRun
       ? {
-        program: latestRun.program ? String(latestRun.program) : '',
-        status: latestRun.status ? String(latestRun.status) : null,
-        completedAt: latestRun.completedAt ? String(latestRun.completedAt) : null,
-        artifactCount: Number(latestRun.artifactCount || 0),
-        safeSharingEnabled: Boolean(latestRun.safeSharingEnabled),
-      }
+          program: latestRun.program ? String(latestRun.program) : '',
+          status: latestRun.status ? String(latestRun.status) : null,
+          completedAt: latestRun.completedAt ? String(latestRun.completedAt) : null,
+          artifactCount: Number(latestRun.artifactCount || 0),
+          safeSharingEnabled: Boolean(latestRun.safeSharingEnabled),
+        }
       : null,
     apiRoutes: [
       '/api/health',
@@ -4216,16 +4416,16 @@ async function executeReadOnlyServe(args = {}, context = {}) {
 }
 
 function parseBridgeOperation(operation) {
-  const normalized = typeof operation === 'string'
-    ? operation.trim().toLowerCase()
-    : '';
+  const normalized = typeof operation === 'string' ? operation.trim().toLowerCase() : '';
   if (!normalized) {
     const error = new Error('Invalid arguments for zeus.bridge: operation is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
   if (!['plan', 'report', 'stage', 'compile-run'].includes(normalized)) {
-    const error = new Error('Invalid arguments for zeus.bridge: operation must be plan, report, stage, or compile-run.');
+    const error = new Error(
+      'Invalid arguments for zeus.bridge: operation must be plan, report, stage, or compile-run.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -4245,7 +4445,7 @@ function assertBridgePreviewPolicy(operation, dryRun) {
       return;
     }
     const error = new Error(
-      `Tool is not allowed by MCP policy: zeus.bridge operation=${operation} requires dryRun=true.`,
+      `Tool is not allowed by MCP policy: zeus.bridge operation=${operation} requires dryRun=true.`
     );
     error.code = 'TOOL_NOT_ALLOWED';
     throw error;
@@ -4259,25 +4459,29 @@ function normalizeBridgeRunnerError(error) {
 
   const code = error && error.code ? String(error.code) : '';
   const message = String(error && error.message ? error.message : '');
-  if (code === 'BRIDGE_DISABLED' || code === 'TARGET_NOT_ALLOWLISTED' || code === 'BRIDGE_EXECUTION_NOT_IMPLEMENTED') {
-    const wrapped = new Error(message || 'Tool is not allowed by MCP policy: zeus.bridge refused by bridge policy.');
+  if (
+    code === 'BRIDGE_DISABLED' ||
+    code === 'TARGET_NOT_ALLOWLISTED' ||
+    code === 'BRIDGE_EXECUTION_NOT_IMPLEMENTED'
+  ) {
+    const wrapped = new Error(
+      message || 'Tool is not allowed by MCP policy: zeus.bridge refused by bridge policy.'
+    );
     wrapped.code = 'TOOL_NOT_ALLOWED';
     throw wrapped;
   }
 
-  if (
-    error && error.name === 'BridgeRefusalError'
-  ) {
+  if (error && error.name === 'BridgeRefusalError') {
     const wrapped = new Error(message || 'Bridge preview request was refused.');
     wrapped.code = 'TOOL_INVALID_ARGUMENTS';
     throw wrapped;
   }
 
   if (
-    /invalid arguments for zeus\.bridge/i.test(message)
-    || /missing required option: --/i.test(message)
-    || /unknown bridge subcommand/i.test(message)
-    || /profile ".+" not found/i.test(message)
+    /invalid arguments for zeus\.bridge/i.test(message) ||
+    /missing required option: --/i.test(message) ||
+    /unknown bridge subcommand/i.test(message) ||
+    /profile ".+" not found/i.test(message)
   ) {
     const wrapped = new Error(message || 'Invalid arguments for zeus.bridge.');
     wrapped.code = 'TOOL_INVALID_ARGUMENTS';
@@ -4289,12 +4493,8 @@ function normalizeBridgeRunnerError(error) {
 
 async function executeReadOnlyBridge(args = {}, context = {}) {
   const operation = parseBridgeOperation(args && args.operation);
-  const profile = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const program = args && typeof args.program === 'string'
-    ? args.program.trim()
-    : '';
+  const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const program = args && typeof args.program === 'string' ? args.program.trim() : '';
   if (!profile) {
     const error = new Error('Invalid arguments for zeus.bridge: profile is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -4308,7 +4508,9 @@ async function executeReadOnlyBridge(args = {}, context = {}) {
   if (operation === 'plan') {
     const source = args && typeof args.source === 'string' ? args.source.trim() : '';
     if (!source) {
-      const error = new Error('Invalid arguments for zeus.bridge: source is required for operation=plan.');
+      const error = new Error(
+        'Invalid arguments for zeus.bridge: source is required for operation=plan.'
+      );
       error.code = 'TOOL_INVALID_ARGUMENTS';
       throw error;
     }
@@ -4317,29 +4519,56 @@ async function executeReadOnlyBridge(args = {}, context = {}) {
   const dryRun = normalizeBridgeDryRunFlag(args);
   assertBridgePreviewPolicy(operation, dryRun);
 
-  const bridgeRunner = typeof context.bridgeRunner === 'function'
-    ? context.bridgeRunner
-    : executeBridgeCommand;
+  const bridgeRunner =
+    typeof context.bridgeRunner === 'function' ? context.bridgeRunner : executeBridgeCommand;
 
   const runnerArgs = {
     _: [operation],
     profile,
     program,
     ...(operation === 'stage' || operation === 'compile-run' ? { 'dry-run': true } : {}),
-    ...(args && typeof args.source === 'string' && args.source.trim() ? { source: args.source.trim() } : {}),
-    ...(args && typeof args.targetType === 'string' && args.targetType.trim() ? { 'target-type': args.targetType.trim() } : {}),
-    ...(args && typeof args.targetLib === 'string' && args.targetLib.trim() ? { 'target-lib': args.targetLib.trim() } : {}),
-    ...(args && typeof args.targetFile === 'string' && args.targetFile.trim() ? { 'target-file': args.targetFile.trim() } : {}),
-    ...(args && typeof args.targetMember === 'string' && args.targetMember.trim() ? { 'target-member': args.targetMember.trim() } : {}),
-    ...(args && typeof args.targetMemberType === 'string' && args.targetMemberType.trim() ? { 'target-member-type': args.targetMemberType.trim() } : {}),
-    ...(args && typeof args.targetIfs === 'string' && args.targetIfs.trim() ? { 'target-ifs': args.targetIfs.trim() } : {}),
-    ...(args && typeof args.beforeHash === 'string' && args.beforeHash.trim() ? { 'before-hash': args.beforeHash.trim() } : {}),
-    ...(args && typeof args.afterHash === 'string' && args.afterHash.trim() ? { 'after-hash': args.afterHash.trim() } : {}),
-    ...(args && typeof args.diffSummary === 'string' && args.diffSummary.trim() ? { 'diff-summary': args.diffSummary.trim() } : {}),
-    ...(args && typeof args.riskLevel === 'string' && args.riskLevel.trim() ? { 'risk-level': args.riskLevel.trim() } : {}),
-    ...(args && typeof args.actorMode === 'string' && args.actorMode.trim() ? { 'actor-mode': args.actorMode.trim() } : {}),
-    ...(args && typeof args.approvalFile === 'string' && args.approvalFile.trim() ? { 'approval-file': args.approvalFile.trim() } : {}),
-    ...(args && typeof args.template === 'string' && args.template.trim() ? { template: args.template.trim() } : {}),
+    ...(args && typeof args.source === 'string' && args.source.trim()
+      ? { source: args.source.trim() }
+      : {}),
+    ...(args && typeof args.targetType === 'string' && args.targetType.trim()
+      ? { 'target-type': args.targetType.trim() }
+      : {}),
+    ...(args && typeof args.targetLib === 'string' && args.targetLib.trim()
+      ? { 'target-lib': args.targetLib.trim() }
+      : {}),
+    ...(args && typeof args.targetFile === 'string' && args.targetFile.trim()
+      ? { 'target-file': args.targetFile.trim() }
+      : {}),
+    ...(args && typeof args.targetMember === 'string' && args.targetMember.trim()
+      ? { 'target-member': args.targetMember.trim() }
+      : {}),
+    ...(args && typeof args.targetMemberType === 'string' && args.targetMemberType.trim()
+      ? { 'target-member-type': args.targetMemberType.trim() }
+      : {}),
+    ...(args && typeof args.targetIfs === 'string' && args.targetIfs.trim()
+      ? { 'target-ifs': args.targetIfs.trim() }
+      : {}),
+    ...(args && typeof args.beforeHash === 'string' && args.beforeHash.trim()
+      ? { 'before-hash': args.beforeHash.trim() }
+      : {}),
+    ...(args && typeof args.afterHash === 'string' && args.afterHash.trim()
+      ? { 'after-hash': args.afterHash.trim() }
+      : {}),
+    ...(args && typeof args.diffSummary === 'string' && args.diffSummary.trim()
+      ? { 'diff-summary': args.diffSummary.trim() }
+      : {}),
+    ...(args && typeof args.riskLevel === 'string' && args.riskLevel.trim()
+      ? { 'risk-level': args.riskLevel.trim() }
+      : {}),
+    ...(args && typeof args.actorMode === 'string' && args.actorMode.trim()
+      ? { 'actor-mode': args.actorMode.trim() }
+      : {}),
+    ...(args && typeof args.approvalFile === 'string' && args.approvalFile.trim()
+      ? { 'approval-file': args.approvalFile.trim() }
+      : {}),
+    ...(args && typeof args.template === 'string' && args.template.trim()
+      ? { template: args.template.trim() }
+      : {}),
   };
 
   let execution;
@@ -4352,59 +4581,71 @@ async function executeReadOnlyBridge(args = {}, context = {}) {
     normalizeBridgeRunnerError(error);
   }
 
-  const approval = execution && execution.approval && typeof execution.approval === 'object'
-    ? execution.approval
-    : null;
+  const approval =
+    execution && execution.approval && typeof execution.approval === 'object'
+      ? execution.approval
+      : null;
   return {
     operation,
     profile,
     program: execution && execution.program ? String(execution.program) : program.toUpperCase(),
     dryRun: operation === 'stage' || operation === 'compile-run' ? true : null,
-    status: execution && execution.status ? String(execution.status) : (operation === 'report' ? 'reported' : 'planned'),
-    plan: execution && execution.plan && typeof execution.plan === 'object'
-      ? {
-        planId: execution.plan.planId ? String(execution.plan.planId) : null,
-        planHash: execution.plan.planHash ? String(execution.plan.planHash) : null,
-        riskLevel: execution.plan.riskLevel ? String(execution.plan.riskLevel) : null,
-        targetType: execution.plan.targetType ? String(execution.plan.targetType) : null,
-        remoteTarget: execution.plan.remoteTarget && typeof execution.plan.remoteTarget === 'object'
-          ? execution.plan.remoteTarget
-          : null,
-      }
-      : null,
-    compileTemplateId: execution && execution.compileTemplateId ? String(execution.compileTemplateId) : null,
+    status:
+      execution && execution.status
+        ? String(execution.status)
+        : operation === 'report'
+          ? 'reported'
+          : 'planned',
+    plan:
+      execution && execution.plan && typeof execution.plan === 'object'
+        ? {
+            planId: execution.plan.planId ? String(execution.plan.planId) : null,
+            planHash: execution.plan.planHash ? String(execution.plan.planHash) : null,
+            riskLevel: execution.plan.riskLevel ? String(execution.plan.riskLevel) : null,
+            targetType: execution.plan.targetType ? String(execution.plan.targetType) : null,
+            remoteTarget:
+              execution.plan.remoteTarget && typeof execution.plan.remoteTarget === 'object'
+                ? execution.plan.remoteTarget
+                : null,
+          }
+        : null,
+    compileTemplateId:
+      execution && execution.compileTemplateId ? String(execution.compileTemplateId) : null,
     reason: execution && execution.reason ? String(execution.reason) : null,
     approval: approval
       ? {
-        required: Boolean(approval.required),
-        status: approval.status ? String(approval.status) : null,
-        code: approval.code ? String(approval.code) : null,
-        message: approval.message ? String(approval.message) : null,
-        planPath: approval.planPath ? String(approval.planPath) : null,
-        approvalPath: approval.approvalPath ? String(approval.approvalPath) : null,
-        planId: approval.planId ? String(approval.planId) : null,
-        planHash: approval.planHash ? String(approval.planHash) : null,
-      }
+          required: Boolean(approval.required),
+          status: approval.status ? String(approval.status) : null,
+          code: approval.code ? String(approval.code) : null,
+          message: approval.message ? String(approval.message) : null,
+          planPath: approval.planPath ? String(approval.planPath) : null,
+          approvalPath: approval.approvalPath ? String(approval.approvalPath) : null,
+          planId: approval.planId ? String(approval.planId) : null,
+          planHash: approval.planHash ? String(approval.planHash) : null,
+        }
       : null,
-    artifacts: execution && execution.artifacts && typeof execution.artifacts === 'object'
-      ? {
-        jsonPath: execution.artifacts.jsonPath ? String(execution.artifacts.jsonPath) : null,
-        mdPath: execution.artifacts.mdPath ? String(execution.artifacts.mdPath) : null,
-      }
-      : null,
-    expectedArtifacts: execution && execution.expectedArtifacts && typeof execution.expectedArtifacts === 'object'
-      ? execution.expectedArtifacts
-      : null,
+    artifacts:
+      execution && execution.artifacts && typeof execution.artifacts === 'object'
+        ? {
+            jsonPath: execution.artifacts.jsonPath ? String(execution.artifacts.jsonPath) : null,
+            mdPath: execution.artifacts.mdPath ? String(execution.artifacts.mdPath) : null,
+          }
+        : null,
+    expectedArtifacts:
+      execution && execution.expectedArtifacts && typeof execution.expectedArtifacts === 'object'
+        ? execution.expectedArtifacts
+        : null,
     auditPath: execution && execution.auditPath ? String(execution.auditPath) : null,
   };
 }
 
 function parseWriteSqlMode(mode) {
-  const normalized = mode === undefined || mode === null
-    ? 'upsert'
-    : String(mode).trim().toLowerCase();
+  const normalized =
+    mode === undefined || mode === null ? 'upsert' : String(mode).trim().toLowerCase();
   if (!['upsert-sql', 'upsert', 'insert', 'update'].includes(normalized)) {
-    const error = new Error('Invalid arguments for zeus.write-sql: mode must be one of upsert-sql, upsert, insert, update.');
+    const error = new Error(
+      'Invalid arguments for zeus.write-sql: mode must be one of upsert-sql, upsert, insert, update.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -4412,16 +4653,16 @@ function parseWriteSqlMode(mode) {
 }
 
 function parseWriteOperation(operation) {
-  const normalized = typeof operation === 'string'
-    ? operation.trim().toLowerCase()
-    : '';
+  const normalized = typeof operation === 'string' ? operation.trim().toLowerCase() : '';
   if (!normalized) {
     const error = new Error('Invalid arguments for zeus.write-sql: operation is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
   if (normalized !== 'plan' && normalized !== 'apply') {
-    const error = new Error('Invalid arguments for zeus.write-sql: operation must be plan or apply.');
+    const error = new Error(
+      'Invalid arguments for zeus.write-sql: operation must be plan or apply.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -4429,7 +4670,9 @@ function parseWriteOperation(operation) {
 }
 
 function isTruthyEnvFlag(value) {
-  const normalized = String(value || '').trim().toLowerCase();
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase();
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 }
 
@@ -4467,7 +4710,9 @@ function parseOptionalMaxRowsAffectedArg(value) {
   }
   const parsed = Number.parseInt(String(value).trim(), 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    const error = new Error('Invalid arguments for zeus.write-sql: maxRowsAffected must be a positive integer.');
+    const error = new Error(
+      'Invalid arguments for zeus.write-sql: maxRowsAffected must be a positive integer.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -4475,11 +4720,16 @@ function parseOptionalMaxRowsAffectedArg(value) {
 }
 
 function hashSql(sql) {
-  return crypto.createHash('sha256').update(String(sql || ''), 'utf8').digest('hex');
+  return crypto
+    .createHash('sha256')
+    .update(String(sql || ''), 'utf8')
+    .digest('hex');
 }
 
 function detectSqlStatementType(sql) {
-  const match = String(sql || '').trim().match(/^([A-Za-z]+)/);
+  const match = String(sql || '')
+    .trim()
+    .match(/^([A-Za-z]+)/);
   return match ? String(match[1]).toUpperCase() : 'UNKNOWN';
 }
 
@@ -4489,9 +4739,9 @@ function normalizeSqlIdentifier(value) {
     return '';
   }
   if (
-    (input.startsWith('"') && input.endsWith('"'))
-    || (input.startsWith('`') && input.endsWith('`'))
-    || (input.startsWith('[') && input.endsWith(']'))
+    (input.startsWith('"') && input.endsWith('"')) ||
+    (input.startsWith('`') && input.endsWith('`')) ||
+    (input.startsWith('[') && input.endsWith(']'))
   ) {
     const inner = input.slice(1, -1);
     return inner.replace(/""/g, '"').toUpperCase();
@@ -4500,7 +4750,9 @@ function normalizeSqlIdentifier(value) {
 }
 
 function parseQualifiedTableIdentifier(rawIdentifier) {
-  const token = String(rawIdentifier || '').trim().replace(/[;,]+$/g, '');
+  const token = String(rawIdentifier || '')
+    .trim()
+    .replace(/[;,]+$/g, '');
   if (!token) {
     return null;
   }
@@ -4510,7 +4762,7 @@ function parseQualifiedTableIdentifier(rawIdentifier) {
   }
   const parts = compactToken
     .split('.')
-    .map((entry) => normalizeSqlIdentifier(entry))
+    .map(entry => normalizeSqlIdentifier(entry))
     .filter(Boolean);
   if (parts.length === 0) {
     return null;
@@ -4577,9 +4829,10 @@ function evaluateWriteTableAllowlist({ sql, allowTables }) {
   if (allowlistEnabled) {
     if (!target || !target.table) {
       tableAllowed = false;
-      blockReason = 'Unable to resolve target table from SQL while write-table allowlist is active.';
+      blockReason =
+        'Unable to resolve target table from SQL while write-table allowlist is active.';
     } else {
-      tableAllowed = normalizedAllowTables.some((entry) => {
+      tableAllowed = normalizedAllowTables.some(entry => {
         if (entry.table !== target.table) {
           return false;
         }
@@ -4604,7 +4857,7 @@ function evaluateWriteTableAllowlist({ sql, allowTables }) {
     targetSchema: target && target.schema ? target.schema : null,
     targetTable: target && target.table ? target.table : null,
     targetQualifiedName: target && target.qualifiedName ? target.qualifiedName : null,
-    allowTables: normalizedAllowTables.map((entry) => entry.qualifiedName),
+    allowTables: normalizedAllowTables.map(entry => entry.qualifiedName),
   };
 }
 
@@ -4617,14 +4870,14 @@ function tokenizeTopLevelSqlKeywords(sql) {
     const char = text[index];
     const next = text[index + 1] || '';
 
-    if (char === '\'' ) {
+    if (char === "'") {
       index += 1;
       while (index < text.length) {
-        if (text[index] === '\'' && text[index + 1] === '\'') {
+        if (text[index] === "'" && text[index + 1] === "'") {
           index += 2;
           continue;
         }
-        if (text[index] === '\'') {
+        if (text[index] === "'") {
           index += 1;
           break;
         }
@@ -4633,7 +4886,7 @@ function tokenizeTopLevelSqlKeywords(sql) {
       continue;
     }
 
-    if (char === '"' ) {
+    if (char === '"') {
       index += 1;
       while (index < text.length) {
         if (text[index] === '"' && text[index + 1] === '"') {
@@ -4707,14 +4960,14 @@ function extractTopLevelWhereClause(sql) {
     const char = text[index];
     const next = text[index + 1] || '';
 
-    if (char === '\'') {
+    if (char === "'") {
       index += 1;
       while (index < text.length) {
-        if (text[index] === '\'' && text[index + 1] === '\'') {
+        if (text[index] === "'" && text[index + 1] === "'") {
           index += 2;
           continue;
         }
-        if (text[index] === '\'') {
+        if (text[index] === "'") {
           index += 1;
           break;
         }
@@ -4800,13 +5053,15 @@ function isTrivialAlwaysTrueWhereClause(whereClause) {
   if (!compact) {
     return true;
   }
-  return compact === '1=1'
-    || compact === '0=0'
-    || compact === 'TRUE'
-    || compact === '1<>0'
-    || compact === '0<>1'
-    || compact === '1<=1'
-    || compact === '1>=1';
+  return (
+    compact === '1=1' ||
+    compact === '0=0' ||
+    compact === 'TRUE' ||
+    compact === '1<>0' ||
+    compact === '0<>1' ||
+    compact === '1<=1' ||
+    compact === '1>=1'
+  );
 }
 
 function stripSingleQuotedSqlLiterals(text) {
@@ -4815,30 +5070,32 @@ function stripSingleQuotedSqlLiterals(text) {
   let index = 0;
   while (index < input.length) {
     const char = input[index];
-    if (char !== '\'') {
+    if (char !== "'") {
       output += char;
       index += 1;
       continue;
     }
     index += 1;
     while (index < input.length) {
-      if (input[index] === '\'' && input[index + 1] === '\'') {
+      if (input[index] === "'" && input[index + 1] === "'") {
         index += 2;
         continue;
       }
-      if (input[index] === '\'') {
+      if (input[index] === "'") {
         index += 1;
         break;
       }
       index += 1;
     }
-    output += '\'\'';
+    output += "''";
   }
   return output;
 }
 
 function detectWeakWherePredicate(whereClause) {
-  const raw = String(whereClause || '').trim().replace(/[;]+$/g, '');
+  const raw = String(whereClause || '')
+    .trim()
+    .replace(/[;]+$/g, '');
   if (!raw) {
     return null;
   }
@@ -4861,25 +5118,32 @@ function detectWeakWherePredicate(whereClause) {
 }
 
 function resolveWriteRowSafetyPolicy({ config, requestedMaxRowsAffected, statementType }) {
-  const rowSafety = config
-    && config.testData
-    && config.testData.writeSafety
-    && typeof config.testData.writeSafety === 'object'
-    ? config.testData.writeSafety
-    : {};
-  const normalizedStatementType = String(statementType || '').trim().toUpperCase();
+  const rowSafety =
+    config &&
+    config.testData &&
+    config.testData.writeSafety &&
+    typeof config.testData.writeSafety === 'object'
+      ? config.testData.writeSafety
+      : {};
+  const normalizedStatementType = String(statementType || '')
+    .trim()
+    .toUpperCase();
   const enabled = parseConfigBoolean(rowSafety.enabled, true);
   const baseLimit = parsePositiveIntegerOrNull(rowSafety.maxRowsAffected);
-  const byStatement = rowSafety && typeof rowSafety.maxRowsByStatement === 'object'
-    ? rowSafety.maxRowsByStatement
-    : {};
-  const byStatementLimit = parsePositiveIntegerOrNull(byStatement[normalizedStatementType.toLowerCase()])
-    || parsePositiveIntegerOrNull(byStatement[normalizedStatementType]);
-  const defaultLimit = (normalizedStatementType === 'UPDATE' || normalizedStatementType === 'DELETE') ? 100 : null;
+  const byStatement =
+    rowSafety && typeof rowSafety.maxRowsByStatement === 'object'
+      ? rowSafety.maxRowsByStatement
+      : {};
+  const byStatementLimit =
+    parsePositiveIntegerOrNull(byStatement[normalizedStatementType.toLowerCase()]) ||
+    parsePositiveIntegerOrNull(byStatement[normalizedStatementType]);
+  const defaultLimit =
+    normalizedStatementType === 'UPDATE' || normalizedStatementType === 'DELETE' ? 100 : null;
   const configuredMaxRowsAffected = byStatementLimit || baseLimit || defaultLimit;
-  const effectiveMaxRowsAffected = requestedMaxRowsAffected && configuredMaxRowsAffected
-    ? Math.min(requestedMaxRowsAffected, configuredMaxRowsAffected)
-    : (requestedMaxRowsAffected || configuredMaxRowsAffected);
+  const effectiveMaxRowsAffected =
+    requestedMaxRowsAffected && configuredMaxRowsAffected
+      ? Math.min(requestedMaxRowsAffected, configuredMaxRowsAffected)
+      : requestedMaxRowsAffected || configuredMaxRowsAffected;
 
   return {
     enabled,
@@ -4887,10 +5151,10 @@ function resolveWriteRowSafetyPolicy({ config, requestedMaxRowsAffected, stateme
     requestedMaxRowsAffected,
     effectiveMaxRowsAffected: enabled ? effectiveMaxRowsAffected : null,
     clampApplied: Boolean(
-      enabled
-      && requestedMaxRowsAffected
-      && configuredMaxRowsAffected
-      && requestedMaxRowsAffected > configuredMaxRowsAffected
+      enabled &&
+      requestedMaxRowsAffected &&
+      configuredMaxRowsAffected &&
+      requestedMaxRowsAffected > configuredMaxRowsAffected
     ),
     blockWhenCountUnavailable: parseConfigBoolean(rowSafety.blockWhenCountUnavailable, true),
   };
@@ -4903,7 +5167,12 @@ function readCountValueFromQueryResult(result) {
   }
   const row = rows[0];
   if (row && typeof row === 'object' && !Array.isArray(row)) {
-    const direct = row.ROW_COUNT !== undefined ? row.ROW_COUNT : (row.row_count !== undefined ? row.row_count : row.count);
+    const direct =
+      row.ROW_COUNT !== undefined
+        ? row.ROW_COUNT
+        : row.row_count !== undefined
+          ? row.row_count
+          : row.count;
     if (direct !== undefined) {
       const parsed = Number(direct);
       return Number.isFinite(parsed) ? parsed : null;
@@ -4922,7 +5191,9 @@ function readCountValueFromQueryResult(result) {
 
 function buildRowSafetyPreflightCountQuery({ targetQualifiedName, whereClause }) {
   const target = String(targetQualifiedName || '').trim();
-  const predicate = String(whereClause || '').trim().replace(/[;]+$/g, '');
+  const predicate = String(whereClause || '')
+    .trim()
+    .replace(/[;]+$/g, '');
   if (!target || !predicate) {
     return null;
   }
@@ -4930,7 +5201,9 @@ function buildRowSafetyPreflightCountQuery({ targetQualifiedName, whereClause })
 }
 
 function evaluateWriteStatementGuard({ statementType, sql }) {
-  const normalizedType = String(statementType || '').trim().toUpperCase();
+  const normalizedType = String(statementType || '')
+    .trim()
+    .toUpperCase();
   const whereRequired = normalizedType === 'UPDATE' || normalizedType === 'DELETE';
   if (!whereRequired) {
     return {
@@ -4951,8 +5224,9 @@ function evaluateWriteStatementGuard({ statementType, sql }) {
   if (!wherePresent) {
     blockReason = `${normalizedType} statements require a top-level WHERE clause for MCP apply.`;
   } else if (!predicateSafe) {
-    blockReason = weakPredicateReason
-      || `${normalizedType} statements require a non-trivial WHERE predicate for MCP apply.`;
+    blockReason =
+      weakPredicateReason ||
+      `${normalizedType} statements require a non-trivial WHERE predicate for MCP apply.`;
   }
   return {
     whereRequired: true,
@@ -4965,12 +5239,8 @@ function evaluateWriteStatementGuard({ statementType, sql }) {
 
 async function executeWriteSql(args = {}, context = {}) {
   const operation = parseWriteOperation(args && args.operation);
-  const profileName = args && typeof args.profile === 'string'
-    ? args.profile.trim()
-    : '';
-  const sql = args && typeof args.sql === 'string'
-    ? args.sql.trim()
-    : '';
+  const profileName = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+  const sql = args && typeof args.sql === 'string' ? args.sql.trim() : '';
   if (!profileName) {
     const error = new Error('Invalid arguments for zeus.write-sql: profile is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -5007,9 +5277,10 @@ async function executeWriteSql(args = {}, context = {}) {
   const statementType = detectSqlStatementType(sql);
   const tableAllowlistPolicy = evaluateWriteTableAllowlist({
     sql,
-    allowTables: config && config.testData && Array.isArray(config.testData.allowTables)
-      ? config.testData.allowTables
-      : [],
+    allowTables:
+      config && config.testData && Array.isArray(config.testData.allowTables)
+        ? config.testData.allowTables
+        : [],
   });
   const statementGuard = evaluateWriteStatementGuard({
     statementType,
@@ -5021,56 +5292,95 @@ async function executeWriteSql(args = {}, context = {}) {
     statementType,
   });
   const writesEnabled = isTruthyEnvFlag(env.ZEUS_MCP_ENABLE_WRITES);
-  const expectedConfirmToken = typeof env.ZEUS_MCP_WRITE_CONFIRM_TOKEN === 'string'
-    ? env.ZEUS_MCP_WRITE_CONFIRM_TOKEN
-    : '';
-  const providedConfirmToken = args && typeof args.confirmToken === 'string' && args.confirmToken.trim()
-    ? args.confirmToken.trim()
-    : (args && typeof args['confirm-token'] === 'string' ? args['confirm-token'].trim() : '');
+  const expectedConfirmToken =
+    typeof env.ZEUS_MCP_WRITE_CONFIRM_TOKEN === 'string' ? env.ZEUS_MCP_WRITE_CONFIRM_TOKEN : '';
+  const providedConfirmToken =
+    args && typeof args.confirmToken === 'string' && args.confirmToken.trim()
+      ? args.confirmToken.trim()
+      : args && typeof args['confirm-token'] === 'string'
+        ? args['confirm-token'].trim()
+        : '';
   const confirmationRequired = operation === 'apply';
   const applyGateReasons = [];
   if (!writesEnabled) {
-    applyGateReasons.push('MCP write execution is disabled. Set ZEUS_MCP_ENABLE_WRITES=true to enable apply.');
+    applyGateReasons.push(
+      'MCP write execution is disabled. Set ZEUS_MCP_ENABLE_WRITES=true to enable apply.'
+    );
   }
   if (!expectedConfirmToken) {
     applyGateReasons.push('Missing ZEUS_MCP_WRITE_CONFIRM_TOKEN in MCP server environment.');
   }
   if (productionSystem) {
-    applyGateReasons.push('Selected profile is marked as productionSystem=true; write execution is blocked.');
+    applyGateReasons.push(
+      'Selected profile is marked as productionSystem=true; write execution is blocked.'
+    );
   }
   if (tableAllowlistPolicy.allowlistEnabled && !tableAllowlistPolicy.tableAllowed) {
-    applyGateReasons.push(tableAllowlistPolicy.blockReason || 'Target table is not allowlisted for write execution.');
+    applyGateReasons.push(
+      tableAllowlistPolicy.blockReason || 'Target table is not allowlisted for write execution.'
+    );
   }
   if (statementGuard.whereRequired && !statementGuard.wherePresent) {
-    applyGateReasons.push(statementGuard.blockReason || 'Statement policy blocked write execution.');
+    applyGateReasons.push(
+      statementGuard.blockReason || 'Statement policy blocked write execution.'
+    );
   }
-  if (statementGuard.whereRequired && statementGuard.wherePresent && !statementGuard.predicateSafe) {
-    applyGateReasons.push(statementGuard.blockReason || 'Statement policy blocked write execution.');
+  if (
+    statementGuard.whereRequired &&
+    statementGuard.wherePresent &&
+    !statementGuard.predicateSafe
+  ) {
+    applyGateReasons.push(
+      statementGuard.blockReason || 'Statement policy blocked write execution.'
+    );
   }
-  const tokenReady = Boolean(expectedConfirmToken && providedConfirmToken && providedConfirmToken === expectedConfirmToken);
-  const tokenMismatch = Boolean(expectedConfirmToken && providedConfirmToken && providedConfirmToken !== expectedConfirmToken);
+  const tokenReady = Boolean(
+    expectedConfirmToken && providedConfirmToken && providedConfirmToken === expectedConfirmToken
+  );
+  const tokenMismatch = Boolean(
+    expectedConfirmToken && providedConfirmToken && providedConfirmToken !== expectedConfirmToken
+  );
   const canApply = applyGateReasons.length === 0 && tokenReady;
 
   const blockReasons = [];
   if (operation === 'apply' && !writesEnabled) {
-    blockReasons.push('MCP write execution is disabled. Set ZEUS_MCP_ENABLE_WRITES=true to enable apply.');
+    blockReasons.push(
+      'MCP write execution is disabled. Set ZEUS_MCP_ENABLE_WRITES=true to enable apply.'
+    );
   }
   if (operation === 'apply' && !expectedConfirmToken) {
     blockReasons.push('Missing ZEUS_MCP_WRITE_CONFIRM_TOKEN in MCP server environment.');
   }
-  if (operation === 'apply' && expectedConfirmToken && providedConfirmToken !== expectedConfirmToken) {
+  if (
+    operation === 'apply' &&
+    expectedConfirmToken &&
+    providedConfirmToken !== expectedConfirmToken
+  ) {
     blockReasons.push('Invalid confirm token for zeus.write-sql apply.');
   }
   if (operation === 'apply' && productionSystem) {
-    blockReasons.push('Selected profile is marked as productionSystem=true; write execution is blocked.');
+    blockReasons.push(
+      'Selected profile is marked as productionSystem=true; write execution is blocked.'
+    );
   }
-  if (operation === 'apply' && tableAllowlistPolicy.allowlistEnabled && !tableAllowlistPolicy.tableAllowed) {
-    blockReasons.push(tableAllowlistPolicy.blockReason || 'Target table is not allowlisted for write execution.');
+  if (
+    operation === 'apply' &&
+    tableAllowlistPolicy.allowlistEnabled &&
+    !tableAllowlistPolicy.tableAllowed
+  ) {
+    blockReasons.push(
+      tableAllowlistPolicy.blockReason || 'Target table is not allowlisted for write execution.'
+    );
   }
   if (operation === 'apply' && statementGuard.whereRequired && !statementGuard.wherePresent) {
     blockReasons.push(statementGuard.blockReason || 'Statement policy blocked write execution.');
   }
-  if (operation === 'apply' && statementGuard.whereRequired && statementGuard.wherePresent && !statementGuard.predicateSafe) {
+  if (
+    operation === 'apply' &&
+    statementGuard.whereRequired &&
+    statementGuard.wherePresent &&
+    !statementGuard.predicateSafe
+  ) {
     blockReasons.push(statementGuard.blockReason || 'Statement policy blocked write execution.');
   }
 
@@ -5100,30 +5410,34 @@ async function executeWriteSql(args = {}, context = {}) {
       rowSafetyEffectiveMaxRowsAffected: rowSafetyPolicy.effectiveMaxRowsAffected,
       rowSafetyClampApplied: rowSafetyPolicy.clampApplied,
       rowSafetyPreflightRequired: Boolean(
-        rowSafetyPolicy.enabled
-        && rowSafetyPolicy.effectiveMaxRowsAffected
-        && (statementType === 'UPDATE' || statementType === 'DELETE')
+        rowSafetyPolicy.enabled &&
+        rowSafetyPolicy.effectiveMaxRowsAffected &&
+        (statementType === 'UPDATE' || statementType === 'DELETE')
       ),
       canApply,
       blockReasons: [
         ...applyGateReasons,
-        ...(tokenMismatch ? ['Provided confirm token does not match ZEUS_MCP_WRITE_CONFIRM_TOKEN.'] : []),
+        ...(tokenMismatch
+          ? ['Provided confirm token does not match ZEUS_MCP_WRITE_CONFIRM_TOKEN.']
+          : []),
         ...(!providedConfirmToken ? ['Apply requires confirmToken input.'] : []),
       ],
     };
   }
 
   if (blockReasons.length > 0) {
-    const error = new Error(`Tool is not allowed by MCP policy: zeus.write-sql apply blocked. ${blockReasons.join(' ')}`);
+    const error = new Error(
+      `Tool is not allowed by MCP policy: zeus.write-sql apply blocked. ${blockReasons.join(' ')}`
+    );
     error.code = 'TOOL_NOT_ALLOWED';
     throw error;
   }
 
   let preflightRowEstimate = null;
   if (
-    rowSafetyPolicy.enabled
-    && rowSafetyPolicy.effectiveMaxRowsAffected
-    && (statementType === 'UPDATE' || statementType === 'DELETE')
+    rowSafetyPolicy.enabled &&
+    rowSafetyPolicy.effectiveMaxRowsAffected &&
+    (statementType === 'UPDATE' || statementType === 'DELETE')
   ) {
     const preflightQuery = buildRowSafetyPreflightCountQuery({
       targetQualifiedName: tableAllowlistPolicy.targetQualifiedName,
@@ -5131,7 +5445,7 @@ async function executeWriteSql(args = {}, context = {}) {
     });
     if (!preflightQuery) {
       const error = new Error(
-        'Tool is not allowed by MCP policy: zeus.write-sql apply blocked. Row-safety preflight could not resolve target table/predicate.',
+        'Tool is not allowed by MCP policy: zeus.write-sql apply blocked. Row-safety preflight could not resolve target table/predicate.'
       );
       error.code = 'TOOL_NOT_ALLOWED';
       throw error;
@@ -5146,15 +5460,18 @@ async function executeWriteSql(args = {}, context = {}) {
     } catch (error) {
       if (rowSafetyPolicy.blockWhenCountUnavailable) {
         const blocked = new Error(
-          'Tool is not allowed by MCP policy: zeus.write-sql apply blocked. Row-safety preflight count query failed.',
+          'Tool is not allowed by MCP policy: zeus.write-sql apply blocked. Row-safety preflight count query failed.'
         );
         blocked.code = 'TOOL_NOT_ALLOWED';
         throw blocked;
       }
     }
-    if (Number.isFinite(preflightRowEstimate) && preflightRowEstimate > rowSafetyPolicy.effectiveMaxRowsAffected) {
+    if (
+      Number.isFinite(preflightRowEstimate) &&
+      preflightRowEstimate > rowSafetyPolicy.effectiveMaxRowsAffected
+    ) {
       const error = new Error(
-        `Tool is not allowed by MCP policy: zeus.write-sql apply blocked. Estimated affected rows (${preflightRowEstimate}) exceed row-safety limit (${rowSafetyPolicy.effectiveMaxRowsAffected}).`,
+        `Tool is not allowed by MCP policy: zeus.write-sql apply blocked. Estimated affected rows (${preflightRowEstimate}) exceed row-safety limit (${rowSafetyPolicy.effectiveMaxRowsAffected}).`
       );
       error.code = 'TOOL_NOT_ALLOWED';
       throw error;
@@ -5190,37 +5507,33 @@ async function executeWriteSql(args = {}, context = {}) {
     rowSafetyEffectiveMaxRowsAffected: rowSafetyPolicy.effectiveMaxRowsAffected,
     rowSafetyClampApplied: rowSafetyPolicy.clampApplied,
     rowSafetyPreflightRequired: Boolean(
-      rowSafetyPolicy.enabled
-      && rowSafetyPolicy.effectiveMaxRowsAffected
-      && (statementType === 'UPDATE' || statementType === 'DELETE')
+      rowSafetyPolicy.enabled &&
+      rowSafetyPolicy.effectiveMaxRowsAffected &&
+      (statementType === 'UPDATE' || statementType === 'DELETE')
     ),
-    preflightRowEstimate: Number.isFinite(preflightRowEstimate) ? Number(preflightRowEstimate) : null,
+    preflightRowEstimate: Number.isFinite(preflightRowEstimate)
+      ? Number(preflightRowEstimate)
+      : null,
     rowsAffected: Number(result && result.rowsAffected ? result.rowsAffected : 0),
   };
 }
 
 async function executeReadOnlySearchSource(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const sourceRoot = args && typeof args.sourceRoot === 'string'
-    ? args.sourceRoot.trim()
-    : '';
+  const sourceRoot = args && typeof args.sourceRoot === 'string' ? args.sourceRoot.trim() : '';
   if (!sourceRoot) {
     const error = new Error('Invalid arguments for zeus.search-source: sourceRoot is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
-  const searchTerm = args && typeof args.searchTerm === 'string'
-    ? args.searchTerm.trim()
-    : '';
-  const member = args && typeof args.member === 'string'
-    ? args.member.trim()
-    : '';
-  const table = args && typeof args.table === 'string'
-    ? args.table.trim()
-    : '';
+  const searchTerm = args && typeof args.searchTerm === 'string' ? args.searchTerm.trim() : '';
+  const member = args && typeof args.member === 'string' ? args.member.trim() : '';
+  const table = args && typeof args.table === 'string' ? args.table.trim() : '';
   if (!searchTerm && !member && !table) {
-    const error = new Error('Invalid arguments for zeus.search-source: provide searchTerm, member, or table.');
+    const error = new Error(
+      'Invalid arguments for zeus.search-source: provide searchTerm, member, or table.'
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
@@ -5239,20 +5552,23 @@ async function executeReadOnlySearchSource(args = {}, context = {}) {
   });
   const cursorState = decodeMcpCursor('zeus.search-source', args && args.cursor);
 
-  const execution = await executeSearchSource({
-    'source-root': resolvedSourceRoot,
-    ...(searchTerm ? { 'search-term': searchTerm } : {}),
-    ...(member ? { member } : {}),
-    ...(table ? { table } : {}),
-    ...(args && typeof args.filePattern === 'string' && args.filePattern.trim()
-      ? { 'file-pattern': args.filePattern.trim() }
-      : {}),
-    ...(args && args.maxResults !== undefined ? { 'max-results': args.maxResults } : {}),
-    ...(args && args.caseSensitive === true ? { 'case-sensitive': 'true' } : {}),
-    verbose: false,
-  }, {
-    cwd,
-  });
+  const execution = await executeSearchSource(
+    {
+      'source-root': resolvedSourceRoot,
+      ...(searchTerm ? { 'search-term': searchTerm } : {}),
+      ...(member ? { member } : {}),
+      ...(table ? { table } : {}),
+      ...(args && typeof args.filePattern === 'string' && args.filePattern.trim()
+        ? { 'file-pattern': args.filePattern.trim() }
+        : {}),
+      ...(args && args.maxResults !== undefined ? { 'max-results': args.maxResults } : {}),
+      ...(args && args.caseSensitive === true ? { 'case-sensitive': 'true' } : {}),
+      verbose: false,
+    },
+    {
+      cwd,
+    }
+  );
 
   const results = Array.isArray(execution && execution.results) ? execution.results : [];
   const sortedResults = results.slice().sort((left, right) => {
@@ -5264,17 +5580,23 @@ async function executeReadOnlySearchSource(args = {}, context = {}) {
     }
     return String(left.line || '').localeCompare(String(right.line || ''));
   });
-  const payloadLimit = Number.isInteger(maxPayloadItems) ? maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS;
+  const payloadLimit = Number.isInteger(maxPayloadItems)
+    ? maxPayloadItems
+    : DEFAULT_MCP_PAYLOAD_ITEMS;
   const offset = cursorState.offset;
   if (!Number.isFinite(offset) || offset < 0 || offset > sortedResults.length) {
-    throw createInvalidCursorError('zeus.search-source', 'cursor is outside available result range.');
+    throw createInvalidCursorError(
+      'zeus.search-source',
+      'cursor is outside available result range.'
+    );
   }
   const payloadResults = sortedResults.slice(offset, offset + payloadLimit);
   const nextOffset = offset + payloadResults.length;
-  const nextCursor = nextOffset < sortedResults.length
-    ? encodeMcpCursor('zeus.search-source', nextOffset)
-    : null;
-  const uniqueFiles = new Set(sortedResults.map((entry) => String(entry && entry.file ? entry.file : '')).filter(Boolean));
+  const nextCursor =
+    nextOffset < sortedResults.length ? encodeMcpCursor('zeus.search-source', nextOffset) : null;
+  const uniqueFiles = new Set(
+    sortedResults.map(entry => String(entry && entry.file ? entry.file : '')).filter(Boolean)
+  );
   const maxResults = Number(execution && execution.maxResults ? execution.maxResults : 0);
 
   return {
@@ -5283,9 +5605,10 @@ async function executeReadOnlySearchSource(args = {}, context = {}) {
       searchTerm: searchTerm || null,
       member: member || null,
       table: table || null,
-      filePattern: execution && execution.filePattern
-        ? String(execution.filePattern)
-        : normalizeFilePattern(args && args.filePattern ? String(args.filePattern) : ''),
+      filePattern:
+        execution && execution.filePattern
+          ? String(execution.filePattern)
+          : normalizeFilePattern(args && args.filePattern ? String(args.filePattern) : ''),
       caseSensitive: Boolean(args && args.caseSensitive === true),
       maxResults,
     },
@@ -5299,7 +5622,7 @@ async function executeReadOnlySearchSource(args = {}, context = {}) {
     payloadTruncated: nextCursor !== null,
     matchedFileCount: uniqueFiles.size,
     limitReached: maxResults > 0 && sortedResults.length >= maxResults,
-    matches: payloadResults.map((entry) => ({
+    matches: payloadResults.map(entry => ({
       file: entry && entry.file ? String(entry.file) : '',
       lineNumber: Number(entry && entry.lineNumber ? entry.lineNumber : 0),
       line: entry && entry.line ? String(entry.line) : '',
@@ -5348,12 +5671,8 @@ function loadTextFilesRecursive(sourceRoot) {
 
 async function executeReadOnlyFieldSearch(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
-  const sourceRootArg = args && typeof args.sourceRoot === 'string'
-    ? args.sourceRoot.trim()
-    : '';
-  const field = args && typeof args.field === 'string'
-    ? args.field.trim()
-    : '';
+  const sourceRootArg = args && typeof args.sourceRoot === 'string' ? args.sourceRoot.trim() : '';
+  const field = args && typeof args.field === 'string' ? args.field.trim() : '';
   if (!sourceRootArg) {
     const error = new Error('Invalid arguments for zeus.field-search: sourceRoot is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -5391,9 +5710,7 @@ async function executeReadOnlyFieldSearch(args = {}, context = {}) {
     label: 'zeus.field-search contextLines',
     min: 0,
   });
-  const table = args && typeof args.table === 'string'
-    ? args.table.trim()
-    : '';
+  const table = args && typeof args.table === 'string' ? args.table.trim() : '';
 
   const sourceFiles = loadTextFilesRecursive(sourceRoot);
   const localResult = searchLocalSources(sourceFiles, {
@@ -5412,22 +5729,33 @@ async function executeReadOnlyFieldSearch(args = {}, context = {}) {
     }
     return String(left.text || '').localeCompare(String(right.text || ''));
   });
-  const payloadLimit = Number.isInteger(maxPayloadItems) ? maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS;
+  const payloadLimit = Number.isInteger(maxPayloadItems)
+    ? maxPayloadItems
+    : DEFAULT_MCP_PAYLOAD_ITEMS;
   const offset = cursorState.offset;
   if (!Number.isFinite(offset) || offset < 0 || offset > sortedMatches.length) {
-    throw createInvalidCursorError('zeus.field-search', 'cursor is outside available result range.');
+    throw createInvalidCursorError(
+      'zeus.field-search',
+      'cursor is outside available result range.'
+    );
   }
   const payloadMatches = sortedMatches.slice(offset, offset + payloadLimit);
   const nextOffset = offset + payloadMatches.length;
-  const nextCursor = nextOffset < sortedMatches.length
-    ? encodeMcpCursor('zeus.field-search', nextOffset)
-    : null;
-  const uniqueFiles = new Set(sortedMatches.map((entry) => String(entry && entry.file ? entry.file : '')).filter(Boolean));
+  const nextCursor =
+    nextOffset < sortedMatches.length ? encodeMcpCursor('zeus.field-search', nextOffset) : null;
+  const uniqueFiles = new Set(
+    sortedMatches.map(entry => String(entry && entry.file ? entry.file : '')).filter(Boolean)
+  );
 
   return {
     sourceRoot,
     field: localResult && localResult.field ? String(localResult.field) : field.toUpperCase(),
-    table: localResult && localResult.table ? String(localResult.table) : (table ? table.toUpperCase() : null),
+    table:
+      localResult && localResult.table
+        ? String(localResult.table)
+        : table
+          ? table.toUpperCase()
+          : null,
     maxResults: Number.isInteger(maxResults) ? maxResults : 300,
     cursor: cursorState.cursor,
     cursorOffset: offset,
@@ -5440,28 +5768,28 @@ async function executeReadOnlyFieldSearch(args = {}, context = {}) {
     payloadTruncated: nextCursor !== null,
     matchedFileCount: uniqueFiles.size,
     truncated: Boolean(localResult && localResult.truncated),
-    matches: payloadMatches.map((entry) => ({
+    matches: payloadMatches.map(entry => ({
       file: entry && entry.file ? String(entry.file) : '',
       line: Number(entry && entry.line ? entry.line : 0),
       text: entry && entry.text ? String(entry.text) : '',
       tableContexts: Array.isArray(entry && entry.tableContexts)
-        ? entry.tableContexts.map((contextEntry) => ({
-          table: contextEntry && contextEntry.table ? String(contextEntry.table) : '',
-          intent: contextEntry && contextEntry.intent ? String(contextEntry.intent) : '',
-          role: contextEntry && contextEntry.role ? String(contextEntry.role) : '',
-        }))
+        ? entry.tableContexts.map(contextEntry => ({
+            table: contextEntry && contextEntry.table ? String(contextEntry.table) : '',
+            intent: contextEntry && contextEntry.intent ? String(contextEntry.intent) : '',
+            role: contextEntry && contextEntry.role ? String(contextEntry.role) : '',
+          }))
         : [],
       contextBefore: Array.isArray(entry && entry.contextBefore)
-        ? entry.contextBefore.map((contextEntry) => ({
-          lineNo: Number(contextEntry && contextEntry.lineNo ? contextEntry.lineNo : 0),
-          text: contextEntry && contextEntry.text ? String(contextEntry.text) : '',
-        }))
+        ? entry.contextBefore.map(contextEntry => ({
+            lineNo: Number(contextEntry && contextEntry.lineNo ? contextEntry.lineNo : 0),
+            text: contextEntry && contextEntry.text ? String(contextEntry.text) : '',
+          }))
         : [],
       contextAfter: Array.isArray(entry && entry.contextAfter)
-        ? entry.contextAfter.map((contextEntry) => ({
-          lineNo: Number(contextEntry && contextEntry.lineNo ? contextEntry.lineNo : 0),
-          text: contextEntry && contextEntry.text ? String(contextEntry.text) : '',
-        }))
+        ? entry.contextAfter.map(contextEntry => ({
+            lineNo: Number(contextEntry && contextEntry.lineNo ? contextEntry.lineNo : 0),
+            text: contextEntry && contextEntry.text ? String(contextEntry.text) : '',
+          }))
         : [],
     })),
   };
@@ -5469,7 +5797,7 @@ async function executeReadOnlyFieldSearch(args = {}, context = {}) {
 
 async function executeMcpToolCall(name, args = {}, context = {}) {
   // Strict input validation (unknown keys, required, types, lengths, control chars, profile names)
-  const toolDef = listMcpTools().find((t) => t.name === name);
+  const toolDef = listMcpTools().find(t => t.name === name);
   if (toolDef && toolDef.inputSchema) {
     validateMcpToolArgs(name, args, toolDef.inputSchema);
   }
@@ -5545,9 +5873,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.profiles') {
-    const profilesRunner = typeof context.profilesRunner === 'function'
-      ? context.profilesRunner
-      : executeReadOnlyProfiles;
+    const profilesRunner =
+      typeof context.profilesRunner === 'function'
+        ? context.profilesRunner
+        : executeReadOnlyProfiles;
 
     let execution;
     try {
@@ -5557,8 +5886,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -5569,26 +5898,30 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       ok: true,
       service: 'zeus-rpg-promptkit',
       profileCount: Number(execution && execution.profileCount ? execution.profileCount : 0),
-      selectedProfile: execution && execution.selectedProfile ? String(execution.selectedProfile) : null,
+      selectedProfile:
+        execution && execution.selectedProfile ? String(execution.selectedProfile) : null,
       configSource: execution && execution.configSource ? String(execution.configSource) : null,
       profiles: Array.isArray(execution && execution.profiles)
-        ? execution.profiles.map((profile) => ({
-          name: profile && profile.name ? String(profile.name) : '',
-          extends: Array.isArray(profile && profile.extends) ? profile.extends.map((entry) => String(entry)) : [],
-          productionSystem: Boolean(profile && profile.productionSystem),
-          metadataDb: profile && profile.metadataDb ? profile.metadataDb : null,
-          testDataDb: profile && profile.testDataDb ? profile.testDataDb : null,
-          fetch: profile && profile.fetch ? profile.fetch : null,
-        }))
+        ? execution.profiles.map(profile => ({
+            name: profile && profile.name ? String(profile.name) : '',
+            extends: Array.isArray(profile && profile.extends)
+              ? profile.extends.map(entry => String(entry))
+              : [],
+            productionSystem: Boolean(profile && profile.productionSystem),
+            metadataDb: profile && profile.metadataDb ? profile.metadataDb : null,
+            testDataDb: profile && profile.testDataDb ? profile.testDataDb : null,
+            fetch: profile && profile.fetch ? profile.fetch : null,
+          }))
         : [],
       timestamp: new Date().toISOString(),
     });
   }
 
   if (name === 'zeus.resources') {
-    const resourcesRunner = typeof context.resourcesRunner === 'function'
-      ? context.resourcesRunner
-      : resolveProfileResources;
+    const resourcesRunner =
+      typeof context.resourcesRunner === 'function'
+        ? context.resourcesRunner
+        : resolveProfileResources;
 
     let execution;
     try {
@@ -5599,9 +5932,9 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     } catch (error) {
       const message = String(error && error.message ? error.message : '');
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /profile name is required/i.test(message)
-        || /profile ".+" not found/i.test(message)
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /profile name is required/i.test(message) ||
+        /profile ".+" not found/i.test(message)
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -5619,9 +5952,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.discover-environment') {
-    const discoverRunner = typeof context.discoverEnvironmentRunner === 'function'
-      ? context.discoverEnvironmentRunner
-      : executeDiscoverEnvironment;
+    const discoverRunner =
+      typeof context.discoverEnvironmentRunner === 'function'
+        ? context.discoverEnvironmentRunner
+        : executeDiscoverEnvironment;
 
     let execution;
     try {
@@ -5632,10 +5966,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     } catch (error) {
       const message = String(error && error.message ? error.message : '');
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /connection configuration is incomplete/i.test(message)
-        || /profile name is required/i.test(message)
-        || /profile ".+" not found/i.test(message)
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /connection configuration is incomplete/i.test(message) ||
+        /profile name is required/i.test(message) ||
+        /profile ".+" not found/i.test(message)
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
         throw error;
@@ -5649,15 +5983,15 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       readOnly: true,
       profile: execution && execution.profile ? String(execution.profile) : null,
       report: execution && execution.report ? execution.report : null,
-      suggestedResources: execution && execution.suggestedResources ? execution.suggestedResources : null,
+      suggestedResources:
+        execution && execution.suggestedResources ? execution.suggestedResources : null,
       timestamp: new Date().toISOString(),
     });
   }
 
   if (name === 'zeus.pui-edit') {
-    const puiEditRunner = typeof context.puiEditRunner === 'function'
-      ? context.puiEditRunner
-      : executePuiEditMcp;
+    const puiEditRunner =
+      typeof context.puiEditRunner === 'function' ? context.puiEditRunner : executePuiEditMcp;
 
     let execution;
     try {
@@ -5667,8 +6001,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.pui-edit/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.pui-edit/i.test(
+          String(error && error.message ? error.message : '')
+        )
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
         throw error;
@@ -5676,31 +6012,36 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       throw normalizeMcpRuntimeToolError('zeus.pui-edit', error);
     }
 
-    return normalizeMcpResult('zeus.pui-edit', {
-      ok: execution && execution.ok !== false,
-      service: 'zeus-rpg-promptkit',
-      puiAction: execution && execution.action ? String(execution.action) : null,
-      file: execution && execution.file ? String(execution.file) : null,
-      messages: Array.isArray(execution && execution.messages)
-        ? execution.messages.map((message) => String(message))
-        : [],
-      warnings: Array.isArray(execution && execution.warnings)
-        ? execution.warnings.map((warning) => String(warning))
-        : [],
-      writes: Array.isArray(execution && execution.writes)
-        ? execution.writes.map((entry) => String(entry))
-        : [],
-      data: execution && execution.data ? execution.data : {},
-      timestamp: new Date().toISOString(),
-    }, {
-      cliEquivalent: 'node cli/zeus.js pui-edit',
-    });
+    return normalizeMcpResult(
+      'zeus.pui-edit',
+      {
+        ok: execution && execution.ok !== false,
+        service: 'zeus-rpg-promptkit',
+        puiAction: execution && execution.action ? String(execution.action) : null,
+        file: execution && execution.file ? String(execution.file) : null,
+        messages: Array.isArray(execution && execution.messages)
+          ? execution.messages.map(message => String(message))
+          : [],
+        warnings: Array.isArray(execution && execution.warnings)
+          ? execution.warnings.map(warning => String(warning))
+          : [],
+        writes: Array.isArray(execution && execution.writes)
+          ? execution.writes.map(entry => String(entry))
+          : [],
+        data: execution && execution.data ? execution.data : {},
+        timestamp: new Date().toISOString(),
+      },
+      {
+        cliEquivalent: 'node cli/zeus.js pui-edit',
+      }
+    );
   }
 
   if (name === 'zeus.pui-inspect') {
-    const puiInspectRunner = typeof context.puiInspectRunner === 'function'
-      ? context.puiInspectRunner
-      : executePuiInspectMcp;
+    const puiInspectRunner =
+      typeof context.puiInspectRunner === 'function'
+        ? context.puiInspectRunner
+        : executePuiInspectMcp;
 
     let execution;
     try {
@@ -5710,8 +6051,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.pui-inspect/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.pui-inspect/i.test(
+          String(error && error.message ? error.message : '')
+        )
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
         throw error;
@@ -5720,31 +6063,37 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     }
 
     const projection = execution && execution.projection ? execution.projection : {};
-    return normalizeMcpResult('zeus.pui-inspect', {
-      ok: true,
-      service: 'zeus-rpg-promptkit',
-      readOnly: true,
-      mode: execution && execution.mode ? String(execution.mode) : 'projection',
-      file: projection.file ? String(projection.file) : null,
-      recordFormatCount: Number(projection.recordFormatCount || 0),
-      recordFormats: Array.isArray(projection.recordFormats) ? projection.recordFormats : [],
-      signals: Array.isArray(projection.signals) ? projection.signals : [],
-      trace: execution && execution.mode === 'trace'
-        ? {
-          field: execution.field ? String(execution.field) : null,
-          hits: Array.isArray(execution.hits) ? execution.hits : [],
-        }
-        : null,
-      timestamp: new Date().toISOString(),
-    }, {
-      cliEquivalent: 'node cli/zeus.js pui-inspect',
-    });
+    return normalizeMcpResult(
+      'zeus.pui-inspect',
+      {
+        ok: true,
+        service: 'zeus-rpg-promptkit',
+        readOnly: true,
+        mode: execution && execution.mode ? String(execution.mode) : 'projection',
+        file: projection.file ? String(projection.file) : null,
+        recordFormatCount: Number(projection.recordFormatCount || 0),
+        recordFormats: Array.isArray(projection.recordFormats) ? projection.recordFormats : [],
+        signals: Array.isArray(projection.signals) ? projection.signals : [],
+        trace:
+          execution && execution.mode === 'trace'
+            ? {
+                field: execution.field ? String(execution.field) : null,
+                hits: Array.isArray(execution.hits) ? execution.hits : [],
+              }
+            : null,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        cliEquivalent: 'node cli/zeus.js pui-inspect',
+      }
+    );
   }
 
   if (name === 'zeus.fetch-member') {
-    const fetchMemberRunner = typeof context.fetchMemberRunner === 'function'
-      ? context.fetchMemberRunner
-      : executeFetchMember;
+    const fetchMemberRunner =
+      typeof context.fetchMemberRunner === 'function'
+        ? context.fetchMemberRunner
+        : executeFetchMember;
 
     let execution;
     try {
@@ -5754,10 +6103,14 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.fetch-member/i.test(String(error && error.message ? error.message : ''))
-        || /fetch connection configuration is incomplete/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.fetch-member/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /fetch connection configuration is incomplete/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       } else {
@@ -5778,19 +6131,21 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       fetchedCount: Array.isArray(execution && execution.fetched) ? execution.fetched.length : 0,
       failureCount: Array.isArray(execution && execution.failures) ? execution.failures.length : 0,
       fetched: Array.isArray(execution && execution.fetched)
-        ? execution.fetched.map((entry) => ({
-          member: entry && entry.member ? String(entry.member) : '',
-          path: entry && entry.path ? String(entry.path) : '',
-          linesWritten: Number(entry && entry.linesWritten ? entry.linesWritten : 0),
-          usedFallback: Boolean(entry && entry.usedFallback),
-        }))
+        ? execution.fetched.map(entry => ({
+            member: entry && entry.member ? String(entry.member) : '',
+            path: entry && entry.path ? String(entry.path) : '',
+            linesWritten: Number(entry && entry.linesWritten ? entry.linesWritten : 0),
+            usedFallback: Boolean(entry && entry.usedFallback),
+          }))
         : [],
       failures: Array.isArray(execution && execution.failures)
-        ? execution.failures.map((entry) => ({
-          member: entry && entry.member ? String(entry.member) : '',
-          messages: Array.isArray(entry && entry.messages) ? entry.messages.map((message) => String(message)) : [],
-          stderr: entry && entry.stderr ? String(entry.stderr) : '',
-        }))
+        ? execution.failures.map(entry => ({
+            member: entry && entry.member ? String(entry.member) : '',
+            messages: Array.isArray(entry && entry.messages)
+              ? entry.messages.map(message => String(message))
+              : [],
+            stderr: entry && entry.stderr ? String(entry.stderr) : '',
+          }))
         : [],
       timestamp: new Date().toISOString(),
     };
@@ -5804,31 +6159,39 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.docs-generate-catalog/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.docs-generate-catalog/i.test(
+          String(error && error.message ? error.message : '')
+        )
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
       throw error;
     }
 
-    return normalizeMcpResult('zeus.docs-generate-catalog', {
-      ok: true,
-      service: 'zeus-rpg-promptkit',
-      format: execution && execution.format ? String(execution.format) : 'markdown',
-      repoRoot: execution && execution.repoRoot ? String(execution.repoRoot) : (context.cwd || process.cwd()),
-      markdownPath: execution && execution.markdownPath ? String(execution.markdownPath) : null,
-      jsonPath: execution && execution.jsonPath ? String(execution.jsonPath) : null,
-      commandCount: Number(execution && execution.commandCount ? execution.commandCount : 0),
-      presetCount: Number(execution && execution.presetCount ? execution.presetCount : 0),
-      timestamp: new Date().toISOString(),
-    }, { cliEquivalent: 'node cli/zeus.js docs:generate-catalog' });
+    return normalizeMcpResult(
+      'zeus.docs-generate-catalog',
+      {
+        ok: true,
+        service: 'zeus-rpg-promptkit',
+        format: execution && execution.format ? String(execution.format) : 'markdown',
+        repoRoot:
+          execution && execution.repoRoot
+            ? String(execution.repoRoot)
+            : context.cwd || process.cwd(),
+        markdownPath: execution && execution.markdownPath ? String(execution.markdownPath) : null,
+        jsonPath: execution && execution.jsonPath ? String(execution.jsonPath) : null,
+        commandCount: Number(execution && execution.commandCount ? execution.commandCount : 0),
+        presetCount: Number(execution && execution.presetCount ? execution.presetCount : 0),
+        timestamp: new Date().toISOString(),
+      },
+      { cliEquivalent: 'node cli/zeus.js docs:generate-catalog' }
+    );
   }
 
   if (name === 'zeus.bridge') {
-    const bridgeRunner = typeof context.bridgeRunner === 'function'
-      ? context.bridgeRunner
-      : executeReadOnlyBridge;
+    const bridgeRunner =
+      typeof context.bridgeRunner === 'function' ? context.bridgeRunner : executeReadOnlyBridge;
 
     let execution;
     try {
@@ -5837,17 +6200,17 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         env: context.env || process.env,
       });
     } catch (error) {
-      if (
-        (error && error.code === 'TOOL_NOT_ALLOWED')
-      ) {
+      if (error && error.code === 'TOOL_NOT_ALLOWED') {
         throw error;
       }
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.bridge/i.test(String(error && error.message ? error.message : ''))
-        || /missing required option: --/i.test(String(error && error.message ? error.message : ''))
-        || /unknown bridge subcommand/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.bridge/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /missing required option: --/i.test(String(error && error.message ? error.message : '')) ||
+        /unknown bridge subcommand/i.test(String(error && error.message ? error.message : '')) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
         throw error;
@@ -5855,18 +6218,20 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       throw normalizeMcpRuntimeToolError('zeus.bridge', error);
     }
 
-    const plan = execution && execution.plan && typeof execution.plan === 'object'
-      ? execution.plan
-      : {};
-    const approval = execution && execution.approval && typeof execution.approval === 'object'
-      ? execution.approval
-      : {};
-    const artifacts = execution && execution.artifacts && typeof execution.artifacts === 'object'
-      ? execution.artifacts
-      : {};
-    const expectedArtifacts = execution && execution.expectedArtifacts && typeof execution.expectedArtifacts === 'object'
-      ? execution.expectedArtifacts
-      : null;
+    const plan =
+      execution && execution.plan && typeof execution.plan === 'object' ? execution.plan : {};
+    const approval =
+      execution && execution.approval && typeof execution.approval === 'object'
+        ? execution.approval
+        : {};
+    const artifacts =
+      execution && execution.artifacts && typeof execution.artifacts === 'object'
+        ? execution.artifacts
+        : {};
+    const expectedArtifacts =
+      execution && execution.expectedArtifacts && typeof execution.expectedArtifacts === 'object'
+        ? execution.expectedArtifacts
+        : null;
 
     return {
       ok: true,
@@ -5874,9 +6239,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       operation: execution && execution.operation ? String(execution.operation) : '',
       profile: execution && execution.profile ? String(execution.profile) : null,
       program: execution && execution.program ? String(execution.program) : '',
-      dryRun: execution && execution.dryRun !== null && execution.dryRun !== undefined
-        ? Boolean(execution.dryRun)
-        : null,
+      dryRun:
+        execution && execution.dryRun !== null && execution.dryRun !== undefined
+          ? Boolean(execution.dryRun)
+          : null,
       status: execution && execution.status ? String(execution.status) : 'unknown',
       reason: execution && execution.reason ? String(execution.reason) : null,
       plan: {
@@ -5884,11 +6250,11 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         planHash: plan.planHash ? String(plan.planHash) : null,
         riskLevel: plan.riskLevel ? String(plan.riskLevel) : null,
         targetType: plan.targetType ? String(plan.targetType) : null,
-        remoteTarget: plan.remoteTarget && typeof plan.remoteTarget === 'object'
-          ? plan.remoteTarget
-          : null,
+        remoteTarget:
+          plan.remoteTarget && typeof plan.remoteTarget === 'object' ? plan.remoteTarget : null,
       },
-      compileTemplateId: execution && execution.compileTemplateId ? String(execution.compileTemplateId) : null,
+      compileTemplateId:
+        execution && execution.compileTemplateId ? String(execution.compileTemplateId) : null,
       approval: {
         required: Boolean(approval.required),
         status: approval.status ? String(approval.status) : null,
@@ -5928,9 +6294,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
           cwd,
         });
 
-        const fullRunner = typeof context.workflowRunner === 'function'
-          ? context.workflowRunner
-          : runWorkflowEngine;
+        const fullRunner =
+          typeof context.workflowRunner === 'function' ? context.workflowRunner : runWorkflowEngine;
 
         const runArgs = {
           ...args,
@@ -5942,85 +6307,52 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
 
         execution = await fullRunner(runArgs, { cwd, env: context.env || process.env });
       } else {
-        const workflowRunner = typeof context.workflowRunner === 'function'
-          ? context.workflowRunner
-          : executeReadOnlyWorkflow;
+        const workflowRunner =
+          typeof context.workflowRunner === 'function'
+            ? context.workflowRunner
+            : executeReadOnlyWorkflow;
         execution = workflowRunner(args, { cwd });
       }
     } catch (error) {
       const invalidArgCodes = new Set(['PROGRAM_REQUIRED']);
       if (
-        (error && error.code && invalidArgCodes.has(error.code))
-        || /invalid arguments for zeus\.workflow/i.test(String(error && error.message ? error.message : ''))
-        || /missing required option: --program/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
-        || /workflow source program output not found:/i.test(String(error && error.message ? error.message : ''))
-        || /workflow run manifest not found:/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code && invalidArgCodes.has(error.code)) ||
+        /invalid arguments for zeus\.workflow/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /missing required option: --program/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : '')) ||
+        /workflow source program output not found:/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /workflow run manifest not found:/i.test(
+          String(error && error.message ? error.message : '')
+        )
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
       throw error;
     }
 
-    const preset = execution && execution.preset && typeof execution.preset === 'object'
-      ? execution.preset
-      : {};
-    const reviewWorkflow = preset && preset.reviewWorkflow && typeof preset.reviewWorkflow === 'object'
-      ? preset.reviewWorkflow
-      : {};
-    const analyzeRun = execution && execution.analyzeRun && typeof execution.analyzeRun === 'object'
-      ? execution.analyzeRun
-      : {};
-    const bundle = execution && execution.bundle && typeof execution.bundle === 'object'
-      ? execution.bundle
-      : {};
-    const reproducibility = execution && execution.reproducibility && typeof execution.reproducibility === 'object'
-      ? execution.reproducibility
-      : {};
+    const preset =
+      execution && execution.preset && typeof execution.preset === 'object' ? execution.preset : {};
+    const reviewWorkflow =
+      preset && preset.reviewWorkflow && typeof preset.reviewWorkflow === 'object'
+        ? preset.reviewWorkflow
+        : {};
+    const analyzeRun =
+      execution && execution.analyzeRun && typeof execution.analyzeRun === 'object'
+        ? execution.analyzeRun
+        : {};
+    const bundle =
+      execution && execution.bundle && typeof execution.bundle === 'object' ? execution.bundle : {};
+    const reproducibility =
+      execution && execution.reproducibility && typeof execution.reproducibility === 'object'
+        ? execution.reproducibility
+        : {};
 
-    return {
-      ok: true,
-      service: 'zeus-rpg-promptkit',
-      profile: execution && typeof execution.profile === 'string' ? execution.profile : null,
-      program: execution && execution.program ? String(execution.program) : '',
-      schemaVersion: Number(execution && execution.schemaVersion ? execution.schemaVersion : 0),
-      kind: execution && execution.kind ? String(execution.kind) : null,
-      generatedAt: execution && execution.generatedAt ? String(execution.generatedAt) : null,
-      preset: {
-        available: Boolean(preset.available),
-        name: preset.name ? String(preset.name) : null,
-        title: preset.title ? String(preset.title) : null,
-        analyzeMode: preset.analyzeMode ? String(preset.analyzeMode) : null,
-        promptTemplateCount: Number(preset.promptTemplateCount || 0),
-        workflowKeyCount: Number(preset.workflowKeyCount || 0),
-        bundleArtifactCount: Number(preset.bundleArtifactCount || 0),
-        reviewWorkflow: {
-          intendedAudienceCount: Number(reviewWorkflow.intendedAudienceCount || 0),
-          keyQuestionsAnsweredCount: Number(reviewWorkflow.keyQuestionsAnsweredCount || 0),
-          expectedDecisionsCount: Number(reviewWorkflow.expectedDecisionsCount || 0),
-        },
-      },
-      analyzeRun: {
-        available: Boolean(analyzeRun.available),
-        status: analyzeRun.status ? String(analyzeRun.status) : null,
-        completedAt: analyzeRun.completedAt ? String(analyzeRun.completedAt) : null,
-        generatedArtifactCount: Number(analyzeRun.generatedArtifactCount || 0),
-        safeSharingEnabled: Boolean(analyzeRun.safeSharingEnabled),
-        guidedModeName: analyzeRun.guidedModeName ? String(analyzeRun.guidedModeName) : null,
-      },
-      bundle: {
-        available: Boolean(bundle.available),
-        zipPath: bundle.zipPath ? String(bundle.zipPath) : null,
-        totalFiles: Number(bundle.totalFiles || 0),
-        totalSizeBytes: Number(bundle.totalSizeBytes || 0),
-      },
-      reproducibility: {
-        available: Boolean(reproducibility.available),
-        enabled: Boolean(reproducibility.enabled),
-        contentFingerprint: reproducibility.contentFingerprint ? String(reproducibility.contentFingerprint) : null,
-      },
-      timestamp: new Date().toISOString(),
-    };
     const workflowResult = {
       ok: true,
       service: 'zeus-rpg-promptkit',
@@ -6060,7 +6392,9 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       reproducibility: {
         available: Boolean(reproducibility.available),
         enabled: Boolean(reproducibility.enabled),
-        contentFingerprint: reproducibility.contentFingerprint ? String(reproducibility.contentFingerprint) : null,
+        contentFingerprint: reproducibility.contentFingerprint
+          ? String(reproducibility.contentFingerprint)
+          : null,
       },
       timestamp: new Date().toISOString(),
     };
@@ -6068,9 +6402,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.bundle') {
-    const bundleRunner = typeof context.bundleRunner === 'function'
-      ? context.bundleRunner
-      : executeReadOnlyBundle;
+    const bundleRunner =
+      typeof context.bundleRunner === 'function' ? context.bundleRunner : executeReadOnlyBundle;
 
     let execution;
     try {
@@ -6078,52 +6411,63 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         cwd: context.cwd || process.cwd(),
       });
     } catch (error) {
-      const invalidArgCodes = new Set([
-        'PROGRAM_REQUIRED',
-      ]);
+      const invalidArgCodes = new Set(['PROGRAM_REQUIRED']);
       if (
-        (error && error.code && invalidArgCodes.has(error.code))
-        || /invalid arguments for zeus\.bundle/i.test(String(error && error.message ? error.message : ''))
-        || /missing required option: --program/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
-        || /analyze\.outputRoot must be a string/i.test(String(error && error.message ? error.message : ''))
-        || /bundle source program output not found:/i.test(String(error && error.message ? error.message : ''))
-        || /bundle manifest not found:/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code && invalidArgCodes.has(error.code)) ||
+        /invalid arguments for zeus\.bundle/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /missing required option: --program/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : '')) ||
+        /analyze\.outputRoot must be a string/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /bundle source program output not found:/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /bundle manifest not found:/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
       throw error;
     }
 
-    const manifest = execution && execution.manifest && typeof execution.manifest === 'object'
-      ? execution.manifest
-      : {};
-    const manifestSummary = manifest && manifest.summary && typeof manifest.summary === 'object'
-      ? manifest.summary
-      : {};
-    const manifestSafeSharing = manifest && manifest.safeSharing && typeof manifest.safeSharing === 'object'
-      ? manifest.safeSharing
-      : {};
-    const files = execution && execution.files && typeof execution.files === 'object'
-      ? execution.files
-      : {};
-    const artifacts = execution && execution.artifacts && typeof execution.artifacts === 'object'
-      ? execution.artifacts
-      : {};
-    const artifactKinds = artifacts && artifacts.kinds && typeof artifacts.kinds === 'object'
-      ? Object.entries(artifacts.kinds)
-        .map(([kind, count]) => ({ kind: String(kind), count: Number(count || 0) }))
-        .sort((left, right) => left.kind.localeCompare(right.kind))
-      : [];
-    const analyzeRun = execution && execution.analyzeRun && typeof execution.analyzeRun === 'object'
-      ? execution.analyzeRun
-      : {};
-    const sourceProvenance = execution && execution.sourceProvenance && typeof execution.sourceProvenance === 'object'
-      ? execution.sourceProvenance
-      : {};
-    const bundleOutputs = execution && execution.bundleOutputs && typeof execution.bundleOutputs === 'object'
-      ? execution.bundleOutputs
-      : {};
+    const manifest =
+      execution && execution.manifest && typeof execution.manifest === 'object'
+        ? execution.manifest
+        : {};
+    const manifestSummary =
+      manifest && manifest.summary && typeof manifest.summary === 'object' ? manifest.summary : {};
+    const manifestSafeSharing =
+      manifest && manifest.safeSharing && typeof manifest.safeSharing === 'object'
+        ? manifest.safeSharing
+        : {};
+    const files =
+      execution && execution.files && typeof execution.files === 'object' ? execution.files : {};
+    const artifacts =
+      execution && execution.artifacts && typeof execution.artifacts === 'object'
+        ? execution.artifacts
+        : {};
+    const artifactKinds =
+      artifacts && artifacts.kinds && typeof artifacts.kinds === 'object'
+        ? Object.entries(artifacts.kinds)
+            .map(([kind, count]) => ({ kind: String(kind), count: Number(count || 0) }))
+            .sort((left, right) => left.kind.localeCompare(right.kind))
+        : [];
+    const analyzeRun =
+      execution && execution.analyzeRun && typeof execution.analyzeRun === 'object'
+        ? execution.analyzeRun
+        : {};
+    const sourceProvenance =
+      execution && execution.sourceProvenance && typeof execution.sourceProvenance === 'object'
+        ? execution.sourceProvenance
+        : {};
+    const bundleOutputs =
+      execution && execution.bundleOutputs && typeof execution.bundleOutputs === 'object'
+        ? execution.bundleOutputs
+        : {};
 
     return {
       ok: true,
@@ -6143,7 +6487,9 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         safeSharing: {
           enabled: Boolean(manifestSafeSharing.enabled),
           sourceDir: manifestSafeSharing.sourceDir ? String(manifestSafeSharing.sourceDir) : null,
-          redactionManifestFile: manifestSafeSharing.redactionManifestFile ? String(manifestSafeSharing.redactionManifestFile) : null,
+          redactionManifestFile: manifestSafeSharing.redactionManifestFile
+            ? String(manifestSafeSharing.redactionManifestFile)
+            : null,
         },
       },
       files: {
@@ -6164,7 +6510,9 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       sourceProvenance: {
         available: Boolean(sourceProvenance.available),
         sourceLib: sourceProvenance.sourceLib ? String(sourceProvenance.sourceLib) : null,
-        transportUsed: sourceProvenance.transportUsed ? String(sourceProvenance.transportUsed) : null,
+        transportUsed: sourceProvenance.transportUsed
+          ? String(sourceProvenance.transportUsed)
+          : null,
         fileCount: Number(sourceProvenance.fileCount || 0),
         exportedFileCount: Number(sourceProvenance.exportedFileCount || 0),
         failedFileCount: Number(sourceProvenance.failedFileCount || 0),
@@ -6172,9 +6520,13 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       },
       bundleOutputs: {
         root: bundleOutputs.root ? String(bundleOutputs.root) : null,
-        analysisBundleFile: bundleOutputs.analysisBundleFile ? String(bundleOutputs.analysisBundleFile) : null,
+        analysisBundleFile: bundleOutputs.analysisBundleFile
+          ? String(bundleOutputs.analysisBundleFile)
+          : null,
         analysisBundleExists: Boolean(bundleOutputs.analysisBundleExists),
-        safeSharingBundleFile: bundleOutputs.safeSharingBundleFile ? String(bundleOutputs.safeSharingBundleFile) : null,
+        safeSharingBundleFile: bundleOutputs.safeSharingBundleFile
+          ? String(bundleOutputs.safeSharingBundleFile)
+          : null,
         safeSharingBundleExists: Boolean(bundleOutputs.safeSharingBundleExists),
       },
       timestamp: new Date().toISOString(),
@@ -6199,15 +6551,14 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
           cwd,
         });
 
-        const fullRunner = typeof context.analyzeRunner === 'function'
-          ? context.analyzeRunner
-          : executeAnalyze;
+        const fullRunner =
+          typeof context.analyzeRunner === 'function' ? context.analyzeRunner : executeAnalyze;
 
         const runArgs = {
           ...args,
           source: resolvedSource,
           'source-root': resolvedSource,
-          program: (args && args.program ? String(args.program).trim() : ''),
+          program: args && args.program ? String(args.program).trim() : '',
         };
 
         execution = fullRunner(runArgs, { cwd });
@@ -6216,36 +6567,61 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
           execution.sourceRoot = resolvedSource;
         }
       } else {
-        const analyzeRunner = typeof context.analyzeRunner === 'function'
-          ? context.analyzeRunner
-          : executeReadOnlyAnalyze;
+        const analyzeRunner =
+          typeof context.analyzeRunner === 'function'
+            ? context.analyzeRunner
+            : executeReadOnlyAnalyze;
         execution = analyzeRunner(args, { cwd });
       }
     } catch (error) {
       const invalidArgCodes = new Set(['PROGRAM_REQUIRED', 'SOURCE_REQUIRED']);
       if (
-        (error && error.code && invalidArgCodes.has(error.code))
-        || /invalid arguments for zeus\.analyze/i.test(String(error && error.message ? error.message : ''))
-        || /missing required option: --program|--source/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
-        || /analyze output not found:/i.test(String(error && error.message ? error.message : ''))
-        || /analyze run manifest not found:/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code && invalidArgCodes.has(error.code)) ||
+        /invalid arguments for zeus\.analyze/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /missing required option: --program|--source/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : '')) ||
+        /analyze output not found:/i.test(String(error && error.message ? error.message : '')) ||
+        /analyze run manifest not found:/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
       throw error;
     }
 
-    const summary = execution && execution.summary && typeof execution.summary === 'object' ? execution.summary : {};
-    const artifacts = execution && execution.artifacts && typeof execution.artifacts === 'object' ? execution.artifacts : {};
-    const analysisIndex = execution && execution.analysisIndex && typeof execution.analysisIndex === 'object' ? execution.analysisIndex : {};
-    const graph = execution && execution.graph && typeof execution.graph === 'object' ? execution.graph : {};
+    const summary =
+      execution && execution.summary && typeof execution.summary === 'object'
+        ? execution.summary
+        : {};
+    const artifacts =
+      execution && execution.artifacts && typeof execution.artifacts === 'object'
+        ? execution.artifacts
+        : {};
+    const analysisIndex =
+      execution && execution.analysisIndex && typeof execution.analysisIndex === 'object'
+        ? execution.analysisIndex
+        : {};
+    const graph =
+      execution && execution.graph && typeof execution.graph === 'object' ? execution.graph : {};
 
     const result = {
       ok: true,
       service: 'zeus-rpg-promptkit',
-      profile: execution && typeof execution.profile === 'string' ? execution.profile : (args && args.profile ? String(args.profile) : null),
-      program: execution && execution.program ? String(execution.program) : (args && args.program ? String(args.program) : ''),
+      profile:
+        execution && typeof execution.profile === 'string'
+          ? execution.profile
+          : args && args.profile
+            ? String(args.profile)
+            : null,
+      program:
+        execution && execution.program
+          ? String(execution.program)
+          : args && args.program
+            ? String(args.program)
+            : '',
       status: execution && execution.status ? String(execution.status) : 'unknown',
       completedAt: execution && execution.completedAt ? String(execution.completedAt) : null,
       durationMs: Number(execution && execution.durationMs ? execution.durationMs : 0),
@@ -6261,8 +6637,14 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         sourceFileCount: Number(summary.sourceFileCount || 0),
       },
       artifacts: {
-        count: Number(artifacts.count || (Array.isArray(artifacts.files) ? artifacts.files.length : 0) || 0),
-        files: Array.isArray(artifacts.files) ? artifacts.files : (Array.isArray(execution && execution.artifacts) ? execution.artifacts : []),
+        count: Number(
+          artifacts.count || (Array.isArray(artifacts.files) ? artifacts.files.length : 0) || 0
+        ),
+        files: Array.isArray(artifacts.files)
+          ? artifacts.files
+          : Array.isArray(execution && execution.artifacts)
+            ? execution.artifacts
+            : [],
       },
       analysisIndex: {
         available: Boolean(analysisIndex.available),
@@ -6291,27 +6673,26 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.doctor') {
-    const profile = args && typeof args.profile === 'string'
-      ? args.profile.trim()
-      : '';
+    const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
     if (!profile) {
       const error = new Error('Invalid arguments for zeus.doctor: profile is required.');
       error.code = 'TOOL_INVALID_ARGUMENTS';
       throw error;
     }
 
-    const doctorRunner = typeof context.doctorRunner === 'function'
-      ? context.doctorRunner
-      : runDoctorChecks;
-    const result = doctorRunner({ profile }, {
-      cwd: context.cwd || process.cwd(),
-      env: process.env,
-    });
+    const doctorRunner =
+      typeof context.doctorRunner === 'function' ? context.doctorRunner : runDoctorChecks;
+    const result = doctorRunner(
+      { profile },
+      {
+        cwd: context.cwd || process.cwd(),
+        env: process.env,
+      }
+    );
     const checks = Array.isArray(result && result.checks) ? result.checks : [];
     const byStatusCounts = checks.reduce((accumulator, check) => {
-      const status = check && typeof check.status === 'string'
-        ? check.status.toUpperCase()
-        : 'UNKNOWN';
+      const status =
+        check && typeof check.status === 'string' ? check.status.toUpperCase() : 'UNKNOWN';
       accumulator.set(status, (accumulator.get(status) || 0) + 1);
       return accumulator;
     }, new Map());
@@ -6322,37 +6703,45 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         .sort((left, right) => left.status.localeCompare(right.status)),
     };
 
-    return normalizeMcpResult('zeus.doctor', {
-      ok: !Boolean(result && result.hasCriticalFailure),
-      service: 'zeus-rpg-promptkit',
-      profile,
-      summary,
-      checks: checks.map((check) => ({
-        name: check && check.name ? String(check.name) : 'unknown',
-        status: check && check.status ? String(check.status).toUpperCase() : 'UNKNOWN',
-      })),
-      timestamp: new Date().toISOString(),
-    }, { cliEquivalent: `node cli/zeus.js doctor --profile ${profile}` });
+    return normalizeMcpResult(
+      'zeus.doctor',
+      {
+        ok: !(result && result.hasCriticalFailure),
+        service: 'zeus-rpg-promptkit',
+        profile,
+        summary,
+        checks: checks.map(check => ({
+          name: check && check.name ? String(check.name) : 'unknown',
+          status: check && check.status ? String(check.status).toUpperCase() : 'UNKNOWN',
+        })),
+        timestamp: new Date().toISOString(),
+      },
+      { cliEquivalent: `node cli/zeus.js doctor --profile ${profile}` }
+    );
   }
 
   if (name === 'zeus.onboarding') {
     const profile = args && typeof args.profile === 'string' ? args.profile.trim() : 'default';
-    return normalizeMcpResult('zeus.onboarding', {
-      ok: true,
-      service: 'zeus-rpg-promptkit',
-      profile,
-      guidance: 'Run the interactive wizard with: node cli/zeus.js onboarding (or wizard)',
-      nonInteractiveExample: `node cli/zeus.js onboarding --yes --profile ${profile} --source ./rpg_sources --program YOURPGM`,
-      checklist: [
-        'Load env with config/load-env.*',
-        'Create/edit config/local-only/profiles.json',
-        'node cli/zeus.js doctor --profile ' + profile + ' --probe --show-resolved',
-        'Discover with resolve-object / inspect-object / query-sql on QSYS2',
-        'Fetch sources and analyze with --preset onboarding',
-        'Use generated artifacts + ai prompts for AI',
-      ],
-      timestamp: new Date().toISOString(),
-    }, { cliEquivalent: `node cli/zeus.js onboarding --profile ${profile}` });
+    return normalizeMcpResult(
+      'zeus.onboarding',
+      {
+        ok: true,
+        service: 'zeus-rpg-promptkit',
+        profile,
+        guidance: 'Run the interactive wizard with: node cli/zeus.js onboarding (or wizard)',
+        nonInteractiveExample: `node cli/zeus.js onboarding --yes --profile ${profile} --source ./rpg_sources --program YOURPGM`,
+        checklist: [
+          'Load env with config/load-env.*',
+          'Create/edit config/local-only/profiles.json',
+          'node cli/zeus.js doctor --profile ' + profile + ' --probe --show-resolved',
+          'Discover with resolve-object / inspect-object / query-sql on QSYS2',
+          'Fetch sources and analyze with --preset onboarding',
+          'Use generated artifacts + ai prompts for AI',
+        ],
+        timestamp: new Date().toISOString(),
+      },
+      { cliEquivalent: `node cli/zeus.js onboarding --profile ${profile}` }
+    );
   }
 
   if (name === 'zeus.help') {
@@ -6363,9 +6752,11 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       // Overview for AI agents
       const safeDefaults = [...DEFAULT_MCP_SAFE_TOOL_NAMES];
       helpData = {
-        overview: 'Zeus RPG PromptKit MCP default safe surface (S0/S1 local only). Use for evidence gathering and AI context preparation without remote access.',
+        overview:
+          'Zeus RPG PromptKit MCP default safe surface (S0/S1 local only). Use for evidence gathering and AI context preparation without remote access.',
         defaultTools: safeDefaults,
-        safetyReminder: 'Always prefer S0. Use S1 only for local artifact generation inside workspace. Never S2+ without explicit operator allowlist and approval.',
+        safetyReminder:
+          'Always prefer S0. Use S1 only for local artifact generation inside workspace. Never S2+ without explicit operator allowlist and approval.',
         recommendedSequence: [
           'zeus.doctor (check readiness)',
           'zeus.profiles (discover config)',
@@ -6374,28 +6765,37 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
           'zeus.analyze (with source) or zeus.workflow --preset X (full local evidence)',
           'zeus.impact / zeus.assess-risk / zeus.generate-test / zeus.generate-checklist / zeus.qa / zeus.validate-rpg-sql',
           'zeus.bundle (package for review)',
-          'Read generated artifacts + AI prompts via zeus://runs/... resources'
+          'Read generated artifacts + AI prompts via zeus://runs/... resources',
         ],
-        howToGetMore: 'Call zeus.help with a command name for details. Use resources like zeus://docs/tool-catalog.md , zeus://docs/quickstart/onboarding-new-ibm-i.md , zeus://onboarding/checklist.json and zeus://metadata/* for full catalog + onboarding guidance.',
-        aiTip: 'Start new IBM i systems with zeus.onboarding or read zeus://docs/quickstart/onboarding-new-ibm-i.md + zeus://onboarding/checklist.json . After analysis, use resources/read on run URIs or specific ai_prompt_*.md artifacts to load evidence into your context.'
+        howToGetMore:
+          'Call zeus.help with a command name for details. Use resources like zeus://docs/tool-catalog.md , zeus://docs/quickstart/onboarding-new-ibm-i.md , zeus://onboarding/checklist.json and zeus://metadata/* for full catalog + onboarding guidance.',
+        aiTip:
+          'Start new IBM i systems with zeus.onboarding or read zeus://docs/quickstart/onboarding-new-ibm-i.md + zeus://onboarding/checklist.json . After analysis, use resources/read on run URIs or specific ai_prompt_*.md artifacts to load evidence into your context.',
       };
     } else {
       const meta = COMMAND_METADATA[cmd] || COMMAND_METADATA[cmd.replace(':', '')] || null;
-      const uiMeta = listCommandUiMetadata().find((c) => c.name === cmd || c.name === cmd.replace(':', ' ')) || null;
+      const uiMeta =
+        listCommandUiMetadata().find(c => c.name === cmd || c.name === cmd.replace(':', ' ')) ||
+        null;
       if (!meta && !uiMeta) {
-        const error = new Error(`Invalid arguments for zeus.help: unknown command "${cmd}". Use without command for overview or valid name from tool catalog.`);
+        const error = new Error(
+          `Invalid arguments for zeus.help: unknown command "${cmd}". Use without command for overview or valid name from tool catalog.`
+        );
         error.code = 'TOOL_INVALID_ARGUMENTS';
         throw error;
       }
       helpData = {
         command: cmd,
-        safety: meta ? meta.safety : (uiMeta ? 'see catalog' : null),
+        safety: meta ? meta.safety : uiMeta ? 'see catalog' : null,
         scope: meta ? meta.scope : null,
-        purpose: meta ? meta.purpose : (uiMeta ? uiMeta.summary : null),
+        purpose: meta ? meta.purpose : uiMeta ? uiMeta.summary : null,
         example: meta ? meta.example : null,
         usage: uiMeta ? uiMeta.commonOptions : [],
-        aiGuidance: meta && meta.safety && (meta.safety.startsWith('S0') || meta.safety.startsWith('S1')) ? 'Safe for direct MCP use by agents when in default allowlist.' : 'Requires explicit --allow-tools and human review for risk.',
-        nextSteps: uiMeta && uiMeta.recommendedNextCommands ? uiMeta.recommendedNextCommands : []
+        aiGuidance:
+          meta && meta.safety && (meta.safety.startsWith('S0') || meta.safety.startsWith('S1'))
+            ? 'Safe for direct MCP use by agents when in default allowlist.'
+            : 'Requires explicit --allow-tools and human review for risk.',
+        nextSteps: uiMeta && uiMeta.recommendedNextCommands ? uiMeta.recommendedNextCommands : [],
       };
     }
 
@@ -6409,12 +6809,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.query-sql') {
-    const profile = args && typeof args.profile === 'string'
-      ? args.profile.trim()
-      : '';
-    const sql = args && typeof args.sql === 'string'
-      ? args.sql.trim()
-      : '';
+    const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+    const sql = args && typeof args.sql === 'string' ? args.sql.trim() : '';
     if (!profile) {
       const error = new Error('Invalid arguments for zeus.query-sql: profile is required.');
       error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -6426,9 +6822,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       throw error;
     }
 
-    const querySqlRunner = typeof context.querySqlRunner === 'function'
-      ? context.querySqlRunner
-      : executeQuerySql;
+    const querySqlRunner =
+      typeof context.querySqlRunner === 'function' ? context.querySqlRunner : executeQuerySql;
 
     const runnerArgs = {
       profile,
@@ -6455,11 +6850,11 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         'DB2_CONFIG_INCOMPLETE',
       ]);
       if (
-        (error && error.code && invalidArgCodes.has(error.code))
-        || /read-only sql query/i.test(String(error && error.message ? error.message : ''))
-        || /invalid option: --max-rows/i.test(String(error && error.message ? error.message : ''))
-        || /invalid --default-schema/i.test(String(error && error.message ? error.message : ''))
-        || /invalid --liblist/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code && invalidArgCodes.has(error.code)) ||
+        /read-only sql query/i.test(String(error && error.message ? error.message : '')) ||
+        /invalid option: --max-rows/i.test(String(error && error.message ? error.message : '')) ||
+        /invalid --default-schema/i.test(String(error && error.message ? error.message : '')) ||
+        /invalid --liblist/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -6480,9 +6875,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.resolve-object') {
-    const resolveObjectRunner = typeof context.resolveObjectRunner === 'function'
-      ? context.resolveObjectRunner
-      : executeReadOnlyResolveObject;
+    const resolveObjectRunner =
+      typeof context.resolveObjectRunner === 'function'
+        ? context.resolveObjectRunner
+        : executeReadOnlyResolveObject;
 
     let execution;
     try {
@@ -6492,10 +6888,14 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.resolve-object/i.test(String(error && error.message ? error.message : ''))
-        || /db2 connection configuration is incomplete/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.resolve-object/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /db2 connection configuration is incomplete/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       } else {
@@ -6511,23 +6911,22 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       table: execution && execution.table ? String(execution.table) : '',
       schema: execution && execution.schema ? String(execution.schema) : null,
       requireColumns: Array.isArray(execution && execution.requireColumns)
-        ? execution.requireColumns.map((entry) => String(entry))
+        ? execution.requireColumns.map(entry => String(entry))
         : [],
       includeRowCount: Boolean(execution && execution.includeRowCount),
       found: Boolean(execution && execution.found),
       diagnostics: execution && execution.diagnostics ? execution.diagnostics : null,
       objectCount: Number(execution && execution.objectCount ? execution.objectCount : 0),
       objects: Array.isArray(execution && execution.objects)
-        ? execution.objects.map((entry) => (entry && typeof entry === 'object' ? entry : {}))
+        ? execution.objects.map(entry => (entry && typeof entry === 'object' ? entry : {}))
         : [],
       timestamp: new Date().toISOString(),
     };
   }
 
   if (name === 'zeus.impact') {
-    const impactRunner = typeof context.impactRunner === 'function'
-      ? context.impactRunner
-      : executeReadOnlyImpact;
+    const impactRunner =
+      typeof context.impactRunner === 'function' ? context.impactRunner : executeReadOnlyImpact;
 
     let maxItems;
     let cursorState;
@@ -6543,45 +6942,65 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         cwd: context.cwd || process.cwd(),
       });
     } catch (error) {
-      const invalidArgCodes = new Set([
-        'TARGET_REQUIRED',
-      ]);
+      const invalidArgCodes = new Set(['TARGET_REQUIRED']);
       if (
-        (error && error.code && invalidArgCodes.has(error.code))
-        || /invalid arguments for zeus\.impact/i.test(String(error && error.message ? error.message : ''))
-        || /impact analysis requires --target/i.test(String(error && error.message ? error.message : ''))
-        || /missing required option: --target/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
-        || /analyze\.outputRoot must be a string/i.test(String(error && error.message ? error.message : ''))
-        || /output directory not found:/i.test(String(error && error.message ? error.message : ''))
-        || /no program-call-tree\.json found/i.test(String(error && error.message ? error.message : ''))
-        || /could not infer graph for target/i.test(String(error && error.message ? error.message : ''))
-        || /found in multiple program graphs/i.test(String(error && error.message ? error.message : ''))
-        || /target ".+" not found in graph nodes/i.test(String(error && error.message ? error.message : ''))
-        || /cross-program graph not found:/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code && invalidArgCodes.has(error.code)) ||
+        /invalid arguments for zeus\.impact/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /impact analysis requires --target/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /missing required option: --target/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : '')) ||
+        /analyze\.outputRoot must be a string/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /output directory not found:/i.test(String(error && error.message ? error.message : '')) ||
+        /no program-call-tree\.json found/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /could not infer graph for target/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /found in multiple program graphs/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /target ".+" not found in graph nodes/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /cross-program graph not found:/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
       throw error;
     }
 
-    const result = execution && execution.result && typeof execution.result === 'object'
-      ? execution.result
-      : {};
-    const ambiguity = result && result.ambiguity && typeof result.ambiguity === 'object'
-      ? result.ambiguity
-      : {};
+    const result =
+      execution && execution.result && typeof execution.result === 'object' ? execution.result : {};
+    const ambiguity =
+      result && result.ambiguity && typeof result.ambiguity === 'object' ? result.ambiguity : {};
     const itemLimit = Number.isInteger(maxItems) ? maxItems : DEFAULT_MCP_PAYLOAD_ITEMS;
-    const directProgramsRaw = Array.isArray(result && result.directPrograms) ? result.directPrograms : [];
-    const indirectProgramsRaw = Array.isArray(result && result.indirectPrograms) ? result.indirectPrograms : [];
-    const directCallersRaw = Array.isArray(result && result.directCallers) ? result.directCallers : [];
-    const indirectCallersRaw = Array.isArray(result && result.indirectCallers) ? result.indirectCallers : [];
+    const directProgramsRaw = Array.isArray(result && result.directPrograms)
+      ? result.directPrograms
+      : [];
+    const indirectProgramsRaw = Array.isArray(result && result.indirectPrograms)
+      ? result.indirectPrograms
+      : [];
+    const directCallersRaw = Array.isArray(result && result.directCallers)
+      ? result.directCallers
+      : [];
+    const indirectCallersRaw = Array.isArray(result && result.indirectCallers)
+      ? result.indirectCallers
+      : [];
     const offset = cursorState.offset;
     const maxAvailable = Math.max(
       directProgramsRaw.length,
       indirectProgramsRaw.length,
       directCallersRaw.length,
-      indirectCallersRaw.length,
+      indirectCallersRaw.length
     );
     if (!Number.isFinite(offset) || offset < 0 || offset > maxAvailable) {
       throw createInvalidCursorError('zeus.impact', 'cursor is outside available result range.');
@@ -6594,12 +7013,11 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       directPrograms.length,
       indirectPrograms.length,
       directCallers.length,
-      indirectCallers.length,
+      indirectCallers.length
     );
     const nextOffset = offset + pageSpan;
-    const nextCursor = nextOffset < maxAvailable
-      ? encodeMcpCursor('zeus.impact', nextOffset)
-      : null;
+    const nextCursor =
+      nextOffset < maxAvailable ? encodeMcpCursor('zeus.impact', nextOffset) : null;
 
     return {
       ok: true,
@@ -6624,24 +7042,26 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       indirectProgramsTruncated: indirectProgramsRaw.length > offset + indirectPrograms.length,
       directCallersTruncated: directCallersRaw.length > offset + directCallers.length,
       indirectCallersTruncated: indirectCallersRaw.length > offset + indirectCallers.length,
-      totalAffectedPrograms: Number(result && result.totalAffectedPrograms ? result.totalAffectedPrograms : 0),
+      totalAffectedPrograms: Number(
+        result && result.totalAffectedPrograms ? result.totalAffectedPrograms : 0
+      ),
       ambiguity: {
         targetAmbiguous: Boolean(ambiguity.targetAmbiguous),
         targetUnresolved: Boolean(ambiguity.targetUnresolved),
-        ambiguousPrograms: Array.isArray(ambiguity.ambiguousPrograms) ? ambiguity.ambiguousPrograms : [],
-        unresolvedPrograms: Array.isArray(ambiguity.unresolvedPrograms) ? ambiguity.unresolvedPrograms : [],
+        ambiguousPrograms: Array.isArray(ambiguity.ambiguousPrograms)
+          ? ambiguity.ambiguousPrograms
+          : [],
+        unresolvedPrograms: Array.isArray(ambiguity.unresolvedPrograms)
+          ? ambiguity.unresolvedPrograms
+          : [],
       },
       timestamp: new Date().toISOString(),
     };
   }
 
   if (name === 'zeus.query-table') {
-    const profile = args && typeof args.profile === 'string'
-      ? args.profile.trim()
-      : '';
-    const table = args && typeof args.table === 'string'
-      ? args.table.trim()
-      : '';
+    const profile = args && typeof args.profile === 'string' ? args.profile.trim() : '';
+    const table = args && typeof args.table === 'string' ? args.table.trim() : '';
     if (!profile) {
       const error = new Error('Invalid arguments for zeus.query-table: profile is required.');
       error.code = 'TOOL_INVALID_ARGUMENTS';
@@ -6653,9 +7073,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       throw error;
     }
 
-    const queryTableRunner = typeof context.queryTableRunner === 'function'
-      ? context.queryTableRunner
-      : executeQueryTable;
+    const queryTableRunner =
+      typeof context.queryTableRunner === 'function' ? context.queryTableRunner : executeQueryTable;
 
     const runnerArgs = {
       profile,
@@ -6680,17 +7099,19 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         'DB2_CONFIG_INCOMPLETE',
       ]);
       if (
-        (error && error.code && invalidArgCodes.has(error.code))
-        || /invalid --schema/i.test(String(error && error.message ? error.message : ''))
-        || /invalid --table/i.test(String(error && error.message ? error.message : ''))
-        || /invalid --filter pattern/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code && invalidArgCodes.has(error.code)) ||
+        /invalid --schema/i.test(String(error && error.message ? error.message : '')) ||
+        /invalid --table/i.test(String(error && error.message ? error.message : '')) ||
+        /invalid --filter pattern/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
       throw error;
     }
 
-    const tableInfoRows = Array.isArray(execution && execution.tableInfo && execution.tableInfo.rows)
+    const tableInfoRows = Array.isArray(
+      execution && execution.tableInfo && execution.tableInfo.rows
+    )
       ? execution.tableInfo.rows
       : [];
     const columnRows = Array.isArray(execution && execution.columns && execution.columns.rows)
@@ -6703,9 +7124,11 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       profile,
       table: execution && execution.table ? String(execution.table) : table,
       schema: execution && execution.schema ? String(execution.schema) : null,
-      requestedSchema: execution && execution.requestedSchema ? String(execution.requestedSchema) : null,
+      requestedSchema:
+        execution && execution.requestedSchema ? String(execution.requestedSchema) : null,
       filter: execution && execution.filter ? String(execution.filter) : '',
-      discoveredSchema: execution && execution.discoveredSchema ? String(execution.discoveredSchema) : '',
+      discoveredSchema:
+        execution && execution.discoveredSchema ? String(execution.discoveredSchema) : '',
       tableInfo: tableInfoRows,
       columns: columnRows,
       tableCount: tableInfoRows.length,
@@ -6715,9 +7138,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.diff') {
-    const diffRunner = typeof context.diffRunner === 'function'
-      ? context.diffRunner
-      : executeReadOnlyDiff;
+    const diffRunner =
+      typeof context.diffRunner === 'function' ? context.diffRunner : executeReadOnlyDiff;
 
     let execution;
     try {
@@ -6727,13 +7149,23 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.diff/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
-        || /no fetched source found for member/i.test(String(error && error.message ? error.message : ''))
-        || /no workspace copy found for member/i.test(String(error && error.message ? error.message : ''))
-        || /analyze\.sourceRoot must be a string/i.test(String(error && error.message ? error.message : ''))
-        || /analyze\.outputRoot must be a string/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.diff/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : '')) ||
+        /no fetched source found for member/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /no workspace copy found for member/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /analyze\.sourceRoot must be a string/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /analyze\.outputRoot must be a string/i.test(
+          String(error && error.message ? error.message : '')
+        )
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -6751,12 +7183,20 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       workCopyMode: execution && execution.workCopyMode ? String(execution.workCopyMode) : '',
       originalPath: execution && execution.originalPath ? String(execution.originalPath) : '',
       modifiedPath: execution && execution.modifiedPath ? String(execution.modifiedPath) : '',
-      maxPayloadLines: Number(execution && execution.maxPayloadLines ? execution.maxPayloadLines : DEFAULT_MCP_PAYLOAD_ITEMS),
-      payloadLineCount: Number(execution && execution.payloadLineCount ? execution.payloadLineCount : rows.length),
+      maxPayloadLines: Number(
+        execution && execution.maxPayloadLines
+          ? execution.maxPayloadLines
+          : DEFAULT_MCP_PAYLOAD_ITEMS
+      ),
+      payloadLineCount: Number(
+        execution && execution.payloadLineCount ? execution.payloadLineCount : rows.length
+      ),
       payloadTruncated: Boolean(execution && execution.payloadTruncated),
       lineCount: Number(execution && execution.lineCount ? execution.lineCount : rows.length),
-      changedLineCount: Number(execution && execution.changedLineCount ? execution.changedLineCount : 0),
-      rows: rows.map((row) => ({
+      changedLineCount: Number(
+        execution && execution.changedLineCount ? execution.changedLineCount : 0
+      ),
+      rows: rows.map(row => ({
         line: Number(row && row.line ? row.line : 0),
         marker: row && row.marker ? String(row.marker) : ' ',
         original: row && row.original ? String(row.original) : '',
@@ -6767,9 +7207,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.generate-test') {
-    const generateTestRunner = typeof context.generateTestRunner === 'function'
-      ? context.generateTestRunner
-      : executeReadOnlyGenerateTest;
+    const generateTestRunner =
+      typeof context.generateTestRunner === 'function'
+        ? context.generateTestRunner
+        : executeReadOnlyGenerateTest;
 
     let execution;
     try {
@@ -6779,11 +7220,17 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.generate-test/i.test(String(error && error.message ? error.message : ''))
-        || /canonical-analysis\.json not found at:/i.test(String(error && error.message ? error.message : ''))
-        || /failed to parse canonical analysis json:/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.generate-test/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /canonical-analysis\.json not found at:/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /failed to parse canonical analysis json:/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -6799,7 +7246,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       includeChangeScenario: Boolean(execution && execution.includeChangeScenario),
       analysisPath: execution && execution.analysisPath ? String(execution.analysisPath) : '',
       outputRoot: execution && execution.outputRoot ? String(execution.outputRoot) : '',
-      outputPathSuggestion: execution && execution.outputPathSuggestion ? String(execution.outputPathSuggestion) : '',
+      outputPathSuggestion:
+        execution && execution.outputPathSuggestion ? String(execution.outputPathSuggestion) : '',
       contentLength: Number(execution && execution.contentLength ? execution.contentLength : 0),
       content: execution && execution.content ? String(execution.content) : '',
       timestamp: new Date().toISOString(),
@@ -6807,9 +7255,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.generate-checklist') {
-    const generateChecklistRunner = typeof context.generateChecklistRunner === 'function'
-      ? context.generateChecklistRunner
-      : executeReadOnlyGenerateChecklist;
+    const generateChecklistRunner =
+      typeof context.generateChecklistRunner === 'function'
+        ? context.generateChecklistRunner
+        : executeReadOnlyGenerateChecklist;
 
     let execution;
     try {
@@ -6819,11 +7268,17 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.generate-checklist/i.test(String(error && error.message ? error.message : ''))
-        || /failed to parse canonical analysis json:/i.test(String(error && error.message ? error.message : ''))
-        || /failed to parse risk assessment json:/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.generate-checklist/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /failed to parse canonical analysis json:/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /failed to parse risk assessment json:/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -6836,13 +7291,19 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       program: execution && execution.program ? String(execution.program) : '',
       changeType: execution && execution.changeType ? String(execution.changeType) : 'CODE_CHANGE',
       impact: execution && execution.impact ? String(execution.impact) : 'MEDIUM',
-      affectedPrograms: Array.isArray(execution && execution.affectedPrograms) ? execution.affectedPrograms.map((entry) => String(entry)) : [],
+      affectedPrograms: Array.isArray(execution && execution.affectedPrograms)
+        ? execution.affectedPrograms.map(entry => String(entry))
+        : [],
       hasCriticalPath: Boolean(execution && execution.hasCriticalPath),
       outputRoot: execution && execution.outputRoot ? String(execution.outputRoot) : '',
       analysisPath: execution && execution.analysisPath ? String(execution.analysisPath) : null,
       riskPath: execution && execution.riskPath ? String(execution.riskPath) : null,
-      outputPathSuggestion: execution && execution.outputPathSuggestion ? String(execution.outputPathSuggestion) : '',
-      timeline: execution && execution.timeline && typeof execution.timeline === 'object' ? execution.timeline : null,
+      outputPathSuggestion:
+        execution && execution.outputPathSuggestion ? String(execution.outputPathSuggestion) : '',
+      timeline:
+        execution && execution.timeline && typeof execution.timeline === 'object'
+          ? execution.timeline
+          : null,
       riskAreaCount: Number(execution && execution.riskAreaCount ? execution.riskAreaCount : 0),
       contentLength: Number(execution && execution.contentLength ? execution.contentLength : 0),
       content: execution && execution.content ? String(execution.content) : '',
@@ -6851,9 +7312,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.qa') {
-    const qaRunner = typeof context.qaRunner === 'function'
-      ? context.qaRunner
-      : executeReadOnlyQa;
+    const qaRunner = typeof context.qaRunner === 'function' ? context.qaRunner : executeReadOnlyQa;
 
     let execution;
     try {
@@ -6862,23 +7321,30 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.qa/i.test(String(error && error.message ? error.message : ''))
-        || /invalid option: --format/i.test(String(error && error.message ? error.message : ''))
-        || /invalid option: --strict/i.test(String(error && error.message ? error.message : ''))
-        || /input path not found:/i.test(String(error && error.message ? error.message : ''))
-        || /canonical-analysis\.json not found at:/i.test(String(error && error.message ? error.message : ''))
-        || /failed to parse canonical analysis json:/i.test(String(error && error.message ? error.message : ''))
-        || /invalid canonical analysis payload/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.qa/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /invalid option: --format/i.test(String(error && error.message ? error.message : '')) ||
+        /invalid option: --strict/i.test(String(error && error.message ? error.message : '')) ||
+        /input path not found:/i.test(String(error && error.message ? error.message : '')) ||
+        /canonical-analysis\.json not found at:/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /failed to parse canonical analysis json:/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /invalid canonical analysis payload/i.test(
+          String(error && error.message ? error.message : '')
+        )
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
       throw error;
     }
 
-    const report = execution && execution.report && typeof execution.report === 'object'
-      ? execution.report
-      : {};
+    const report =
+      execution && execution.report && typeof execution.report === 'object' ? execution.report : {};
 
     return {
       ok: true,
@@ -6896,9 +7362,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.validate-rpg-sql') {
-    const validateRunner = typeof context.validateRpgSqlRunner === 'function'
-      ? context.validateRpgSqlRunner
-      : runValidateRpgSql;
+    const validateRunner =
+      typeof context.validateRpgSqlRunner === 'function'
+        ? context.validateRpgSqlRunner
+        : runValidateRpgSql;
 
     let execution;
     try {
@@ -6907,11 +7374,13 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.validate-rpg-sql/i.test(String(error && error.message ? error.message : ''))
-        || /Source root not found/i.test(String(error && error.message ? error.message : ''))
-        || /Analysis not found/i.test(String(error && error.message ? error.message : ''))
-        || /Missing required input/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.validate-rpg-sql/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /Source root not found/i.test(String(error && error.message ? error.message : '')) ||
+        /Analysis not found/i.test(String(error && error.message ? error.message : '')) ||
+        /Missing required input/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -6931,9 +7400,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.analyses') {
-    const analysesRunner = typeof context.analysesRunner === 'function'
-      ? context.analysesRunner
-      : executeReadOnlyAnalyses;
+    const analysesRunner =
+      typeof context.analysesRunner === 'function'
+        ? context.analysesRunner
+        : executeReadOnlyAnalyses;
 
     let execution;
     try {
@@ -6943,11 +7413,13 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.analyses/i.test(String(error && error.message ? error.message : ''))
-        || /workspace not found:/i.test(String(error && error.message ? error.message : ''))
-        || /invalid workspace id:/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.analyses/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /workspace not found:/i.test(String(error && error.message ? error.message : '')) ||
+        /invalid workspace id:/i.test(String(error && error.message ? error.message : '')) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -6962,20 +7434,21 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       registryPath: execution && execution.registryPath ? String(execution.registryPath) : '',
       workspaceCount: Number(execution && execution.workspaceCount ? execution.workspaceCount : 0),
       workspaces: Array.isArray(execution && execution.workspaces) ? execution.workspaces : [],
-      workspace: execution && execution.workspace && typeof execution.workspace === 'object'
-        ? execution.workspace
-        : null,
-      index: execution && execution.index && typeof execution.index === 'object'
-        ? execution.index
-        : null,
+      workspace:
+        execution && execution.workspace && typeof execution.workspace === 'object'
+          ? execution.workspace
+          : null,
+      index:
+        execution && execution.index && typeof execution.index === 'object'
+          ? execution.index
+          : null,
       timestamp: new Date().toISOString(),
     };
   }
 
   if (name === 'zeus.fetch') {
-    const fetchRunner = typeof context.fetchRunner === 'function'
-      ? context.fetchRunner
-      : executeReadOnlyFetch;
+    const fetchRunner =
+      typeof context.fetchRunner === 'function' ? context.fetchRunner : executeReadOnlyFetch;
 
     let execution;
     try {
@@ -6985,13 +7458,21 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.fetch/i.test(String(error && error.message ? error.message : ''))
-        || /fetch import manifest not found:/i.test(String(error && error.message ? error.message : ''))
-        || /failed to parse fetch import manifest json at/i.test(String(error && error.message ? error.message : ''))
-        || /invalid fetch import manifest payload/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
-        || /invalid configuration: fetch\./i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.fetch/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /fetch import manifest not found:/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /failed to parse fetch import manifest json at/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /invalid fetch import manifest payload/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : '')) ||
+        /invalid configuration: fetch\./i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -7005,18 +7486,27 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       profile: execution && typeof execution.profile === 'string' ? execution.profile : null,
       fetchRoot: execution && execution.fetchRoot ? String(execution.fetchRoot) : '',
       manifestPath: execution && execution.manifestPath ? String(execution.manifestPath) : '',
-      summary: execution && execution.summary && typeof execution.summary === 'object'
-        ? execution.summary
-        : null,
-      cursor: execution && typeof execution.cursor === 'string' && execution.cursor
-        ? execution.cursor
-        : null,
+      summary:
+        execution && execution.summary && typeof execution.summary === 'object'
+          ? execution.summary
+          : null,
+      cursor:
+        execution && typeof execution.cursor === 'string' && execution.cursor
+          ? execution.cursor
+          : null,
       cursorOffset: Number(execution && execution.cursorOffset ? execution.cursorOffset : 0),
-      nextCursor: execution && typeof execution.nextCursor === 'string' && execution.nextCursor
-        ? execution.nextCursor
-        : null,
-      maxPayloadItems: Number(execution && execution.maxPayloadItems ? execution.maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS),
-      payloadResultCount: Number(execution && execution.payloadResultCount ? execution.payloadResultCount : 0),
+      nextCursor:
+        execution && typeof execution.nextCursor === 'string' && execution.nextCursor
+          ? execution.nextCursor
+          : null,
+      maxPayloadItems: Number(
+        execution && execution.maxPayloadItems
+          ? execution.maxPayloadItems
+          : DEFAULT_MCP_PAYLOAD_ITEMS
+      ),
+      payloadResultCount: Number(
+        execution && execution.payloadResultCount ? execution.payloadResultCount : 0
+      ),
       payloadTruncated: Boolean(execution && execution.payloadTruncated),
       resultCount: Number(execution && execution.resultCount ? execution.resultCount : 0),
       files: Array.isArray(execution && execution.files) ? execution.files : [],
@@ -7025,9 +7515,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.test-run') {
-    const testRunRunner = typeof context.testRunRunner === 'function'
-      ? context.testRunRunner
-      : executeReadOnlyTestRun;
+    const testRunRunner =
+      typeof context.testRunRunner === 'function' ? context.testRunRunner : executeReadOnlyTestRun;
 
     let execution;
     try {
@@ -7037,10 +7526,16 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.test-run/i.test(String(error && error.message ? error.message : ''))
-        || /failed to read test-run manifest at/i.test(String(error && error.message ? error.message : ''))
-        || /datei ist kein test-run-manifest/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.test-run/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /failed to read test-run manifest at/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /datei ist kein test-run-manifest/i.test(
+          String(error && error.message ? error.message : '')
+        )
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -7053,22 +7548,32 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       operation: execution && execution.operation ? String(execution.operation) : '',
       profile: execution && typeof execution.profile === 'string' ? execution.profile : null,
       manifestPath: execution && execution.manifestPath ? String(execution.manifestPath) : '',
-      manifest: execution && execution.manifest && typeof execution.manifest === 'object'
-        ? execution.manifest
-        : null,
+      manifest:
+        execution && execution.manifest && typeof execution.manifest === 'object'
+          ? execution.manifest
+          : null,
       snapshots: Array.isArray(execution && execution.snapshots) ? execution.snapshots : [],
-      maxPayloadItems: Number(execution && execution.maxPayloadItems ? execution.maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS),
-      payloadResultCount: Number(execution && execution.payloadResultCount ? execution.payloadResultCount : 0),
+      maxPayloadItems: Number(
+        execution && execution.maxPayloadItems
+          ? execution.maxPayloadItems
+          : DEFAULT_MCP_PAYLOAD_ITEMS
+      ),
+      payloadResultCount: Number(
+        execution && execution.payloadResultCount ? execution.payloadResultCount : 0
+      ),
       payloadTruncated: Boolean(execution && execution.payloadTruncated),
-      rollbackStatements: Array.isArray(execution && execution.rollbackStatements) ? execution.rollbackStatements : [],
+      rollbackStatements: Array.isArray(execution && execution.rollbackStatements)
+        ? execution.rollbackStatements
+        : [],
       timestamp: new Date().toISOString(),
     };
   }
 
   if (name === 'zeus.copy-to-workspace') {
-    const copyToWorkspaceRunner = typeof context.copyToWorkspaceRunner === 'function'
-      ? context.copyToWorkspaceRunner
-      : executeReadOnlyCopyToWorkspace;
+    const copyToWorkspaceRunner =
+      typeof context.copyToWorkspaceRunner === 'function'
+        ? context.copyToWorkspaceRunner
+        : executeReadOnlyCopyToWorkspace;
 
     let execution;
     try {
@@ -7078,12 +7583,18 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.copy-to-workspace/i.test(String(error && error.message ? error.message : ''))
-        || /missing required option: --profile <name>/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
-        || /fetch output directory not found:/i.test(String(error && error.message ? error.message : ''))
-        || /invalid configuration: fetch\./i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.copy-to-workspace/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /missing required option: --profile <name>/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : '')) ||
+        /fetch output directory not found:/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /invalid configuration: fetch\./i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -7099,22 +7610,36 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       targetRoot: execution && execution.targetRoot ? String(execution.targetRoot) : '',
       workCopyMode: execution && execution.workCopyMode ? String(execution.workCopyMode) : '',
       force: Boolean(execution && execution.force),
-      requestedMemberCount: Number(execution && execution.requestedMemberCount ? execution.requestedMemberCount : 0),
-      discoveredCount: Number(execution && execution.discoveredCount ? execution.discoveredCount : 0),
+      requestedMemberCount: Number(
+        execution && execution.requestedMemberCount ? execution.requestedMemberCount : 0
+      ),
+      discoveredCount: Number(
+        execution && execution.discoveredCount ? execution.discoveredCount : 0
+      ),
       selectedCount: Number(execution && execution.selectedCount ? execution.selectedCount : 0),
-      copyCandidateCount: Number(execution && execution.copyCandidateCount ? execution.copyCandidateCount : 0),
+      copyCandidateCount: Number(
+        execution && execution.copyCandidateCount ? execution.copyCandidateCount : 0
+      ),
       overwriteCount: Number(execution && execution.overwriteCount ? execution.overwriteCount : 0),
       existingCount: Number(execution && execution.existingCount ? execution.existingCount : 0),
       skippedCount: Number(execution && execution.skippedCount ? execution.skippedCount : 0),
-      cursor: execution && typeof execution.cursor === 'string' && execution.cursor
-        ? execution.cursor
-        : null,
+      cursor:
+        execution && typeof execution.cursor === 'string' && execution.cursor
+          ? execution.cursor
+          : null,
       cursorOffset: Number(execution && execution.cursorOffset ? execution.cursorOffset : 0),
-      nextCursor: execution && typeof execution.nextCursor === 'string' && execution.nextCursor
-        ? execution.nextCursor
-        : null,
-      maxPayloadItems: Number(execution && execution.maxPayloadItems ? execution.maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS),
-      payloadResultCount: Number(execution && execution.payloadResultCount ? execution.payloadResultCount : 0),
+      nextCursor:
+        execution && typeof execution.nextCursor === 'string' && execution.nextCursor
+          ? execution.nextCursor
+          : null,
+      maxPayloadItems: Number(
+        execution && execution.maxPayloadItems
+          ? execution.maxPayloadItems
+          : DEFAULT_MCP_PAYLOAD_ITEMS
+      ),
+      payloadResultCount: Number(
+        execution && execution.payloadResultCount ? execution.payloadResultCount : 0
+      ),
       payloadTruncated: Boolean(execution && execution.payloadTruncated),
       resultCount: Number(execution && execution.resultCount ? execution.resultCount : 0),
       entries: Array.isArray(execution && execution.entries) ? execution.entries : [],
@@ -7123,9 +7648,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.serve') {
-    const serveRunner = typeof context.serveRunner === 'function'
-      ? context.serveRunner
-      : executeReadOnlyServe;
+    const serveRunner =
+      typeof context.serveRunner === 'function' ? context.serveRunner : executeReadOnlyServe;
 
     let execution;
     try {
@@ -7135,10 +7659,12 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.serve/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
-        || /invalid configuration: bundle\./i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.serve/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : '')) ||
+        /invalid configuration: bundle\./i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -7160,18 +7686,20 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       registryExists: Boolean(execution && execution.registryExists),
       workspaceCount: Number(execution && execution.workspaceCount ? execution.workspaceCount : 0),
       runCount: Number(execution && execution.runCount ? execution.runCount : 0),
-      latestRun: execution && execution.latestRun && typeof execution.latestRun === 'object'
-        ? execution.latestRun
-        : null,
-      apiRoutes: Array.isArray(execution && execution.apiRoutes) ? execution.apiRoutes.map((entry) => String(entry)) : [],
+      latestRun:
+        execution && execution.latestRun && typeof execution.latestRun === 'object'
+          ? execution.latestRun
+          : null,
+      apiRoutes: Array.isArray(execution && execution.apiRoutes)
+        ? execution.apiRoutes.map(entry => String(entry))
+        : [],
       timestamp: new Date().toISOString(),
     };
   }
 
   if (name === 'zeus.write-sql') {
-    const writeSqlRunner = typeof context.writeSqlRunner === 'function'
-      ? context.writeSqlRunner
-      : executeWriteSql;
+    const writeSqlRunner =
+      typeof context.writeSqlRunner === 'function' ? context.writeSqlRunner : executeWriteSql;
 
     let execution;
     try {
@@ -7180,18 +7708,22 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         env: context.env || process.env,
       });
     } catch (error) {
-      if (
-        (error && error.code === 'TOOL_NOT_ALLOWED')
-      ) {
+      if (error && error.code === 'TOOL_NOT_ALLOWED') {
         throw error;
       }
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.write-sql/i.test(String(error && error.message ? error.message : ''))
-        || /missing required option: --profile/i.test(String(error && error.message ? error.message : ''))
-        || /only accepts dml statements/i.test(String(error && error.message ? error.message : ''))
-        || /db2 connection configuration is incomplete/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.write-sql/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /missing required option: --profile/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /only accepts dml statements/i.test(String(error && error.message ? error.message : '')) ||
+        /db2 connection configuration is incomplete/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
         throw error;
@@ -7205,7 +7737,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       operation: execution && execution.operation ? String(execution.operation) : '',
       profile: execution && execution.profile ? String(execution.profile) : null,
       mode: execution && execution.mode ? String(execution.mode) : 'upsert',
-      statementType: execution && execution.statementType ? String(execution.statementType) : 'UNKNOWN',
+      statementType:
+        execution && execution.statementType ? String(execution.statementType) : 'UNKNOWN',
       sqlLength: Number(execution && execution.sqlLength ? execution.sqlLength : 0),
       sqlFingerprint: execution && execution.sqlFingerprint ? String(execution.sqlFingerprint) : '',
       productionSystem: Boolean(execution && execution.productionSystem),
@@ -7215,41 +7748,55 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       tableAllowed: Boolean(execution && execution.tableAllowed),
       targetSchema: execution && execution.targetSchema ? String(execution.targetSchema) : null,
       targetTable: execution && execution.targetTable ? String(execution.targetTable) : null,
-      targetQualifiedName: execution && execution.targetQualifiedName ? String(execution.targetQualifiedName) : null,
-      allowTables: Array.isArray(execution && execution.allowTables) ? execution.allowTables.map((entry) => String(entry)) : [],
+      targetQualifiedName:
+        execution && execution.targetQualifiedName ? String(execution.targetQualifiedName) : null,
+      allowTables: Array.isArray(execution && execution.allowTables)
+        ? execution.allowTables.map(entry => String(entry))
+        : [],
       whereRequired: Boolean(execution && execution.whereRequired),
       wherePresent: Boolean(execution && execution.wherePresent),
       predicateSafe: Boolean(execution && execution.predicateSafe),
       rowSafetyEnabled: Boolean(execution && execution.rowSafetyEnabled),
       rowSafetyConfiguredMaxRowsAffected:
-        execution && execution.rowSafetyConfiguredMaxRowsAffected !== undefined && execution.rowSafetyConfiguredMaxRowsAffected !== null
+        execution &&
+        execution.rowSafetyConfiguredMaxRowsAffected !== undefined &&
+        execution.rowSafetyConfiguredMaxRowsAffected !== null
           ? Number(execution.rowSafetyConfiguredMaxRowsAffected)
           : null,
       rowSafetyRequestedMaxRowsAffected:
-        execution && execution.rowSafetyRequestedMaxRowsAffected !== undefined && execution.rowSafetyRequestedMaxRowsAffected !== null
+        execution &&
+        execution.rowSafetyRequestedMaxRowsAffected !== undefined &&
+        execution.rowSafetyRequestedMaxRowsAffected !== null
           ? Number(execution.rowSafetyRequestedMaxRowsAffected)
           : null,
       rowSafetyEffectiveMaxRowsAffected:
-        execution && execution.rowSafetyEffectiveMaxRowsAffected !== undefined && execution.rowSafetyEffectiveMaxRowsAffected !== null
+        execution &&
+        execution.rowSafetyEffectiveMaxRowsAffected !== undefined &&
+        execution.rowSafetyEffectiveMaxRowsAffected !== null
           ? Number(execution.rowSafetyEffectiveMaxRowsAffected)
           : null,
       rowSafetyClampApplied: Boolean(execution && execution.rowSafetyClampApplied),
       rowSafetyPreflightRequired: Boolean(execution && execution.rowSafetyPreflightRequired),
       preflightRowEstimate:
-        execution && execution.preflightRowEstimate !== undefined && execution.preflightRowEstimate !== null
+        execution &&
+        execution.preflightRowEstimate !== undefined &&
+        execution.preflightRowEstimate !== null
           ? Number(execution.preflightRowEstimate)
           : null,
       canApply: Boolean(execution && execution.canApply),
-      blockReasons: Array.isArray(execution && execution.blockReasons) ? execution.blockReasons.map((entry) => String(entry)) : [],
+      blockReasons: Array.isArray(execution && execution.blockReasons)
+        ? execution.blockReasons.map(entry => String(entry))
+        : [],
       rowsAffected: Number(execution && execution.rowsAffected ? execution.rowsAffected : 0),
       timestamp: new Date().toISOString(),
     };
   }
 
   if (name === 'zeus.search-source') {
-    const searchSourceRunner = typeof context.searchSourceRunner === 'function'
-      ? context.searchSourceRunner
-      : executeReadOnlySearchSource;
+    const searchSourceRunner =
+      typeof context.searchSourceRunner === 'function'
+        ? context.searchSourceRunner
+        : executeReadOnlySearchSource;
 
     let execution;
     try {
@@ -7258,22 +7805,31 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.search-source/i.test(String(error && error.message ? error.message : ''))
-        || /missing required option: --source-root/i.test(String(error && error.message ? error.message : ''))
-        || /provide at least one search criterion/i.test(String(error && error.message ? error.message : ''))
-        || /source root not found:/i.test(String(error && error.message ? error.message : ''))
-        || /invalid option: --max-results/i.test(String(error && error.message ? error.message : ''))
-        || /glob search failed:/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.search-source/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /missing required option: --source-root/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /provide at least one search criterion/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /source root not found:/i.test(String(error && error.message ? error.message : '')) ||
+        /invalid option: --max-results/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /glob search failed:/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
       throw error;
     }
 
-    const criteria = execution && execution.criteria && typeof execution.criteria === 'object'
-      ? execution.criteria
-      : {};
+    const criteria =
+      execution && execution.criteria && typeof execution.criteria === 'object'
+        ? execution.criteria
+        : {};
     const matches = Array.isArray(execution && execution.matches) ? execution.matches : [];
 
     return {
@@ -7290,19 +7846,29 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       },
       noSourceFiles: Boolean(execution && execution.noSourceFiles),
       resultCount: Number(execution && execution.resultCount ? execution.resultCount : 0),
-      cursor: execution && typeof execution.cursor === 'string' && execution.cursor
-        ? execution.cursor
-        : null,
+      cursor:
+        execution && typeof execution.cursor === 'string' && execution.cursor
+          ? execution.cursor
+          : null,
       cursorOffset: Number(execution && execution.cursorOffset ? execution.cursorOffset : 0),
-      nextCursor: execution && typeof execution.nextCursor === 'string' && execution.nextCursor
-        ? execution.nextCursor
-        : null,
-      maxPayloadItems: Number(execution && execution.maxPayloadItems ? execution.maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS),
-      payloadResultCount: Number(execution && execution.payloadResultCount ? execution.payloadResultCount : matches.length),
+      nextCursor:
+        execution && typeof execution.nextCursor === 'string' && execution.nextCursor
+          ? execution.nextCursor
+          : null,
+      maxPayloadItems: Number(
+        execution && execution.maxPayloadItems
+          ? execution.maxPayloadItems
+          : DEFAULT_MCP_PAYLOAD_ITEMS
+      ),
+      payloadResultCount: Number(
+        execution && execution.payloadResultCount ? execution.payloadResultCount : matches.length
+      ),
       payloadTruncated: Boolean(execution && execution.payloadTruncated),
-      matchedFileCount: Number(execution && execution.matchedFileCount ? execution.matchedFileCount : 0),
+      matchedFileCount: Number(
+        execution && execution.matchedFileCount ? execution.matchedFileCount : 0
+      ),
       limitReached: Boolean(execution && execution.limitReached),
-      matches: matches.map((entry) => ({
+      matches: matches.map(entry => ({
         file: entry && entry.file ? String(entry.file) : '',
         lineNumber: Number(entry && entry.lineNumber ? entry.lineNumber : 0),
         line: entry && entry.line ? String(entry.line) : '',
@@ -7313,7 +7879,11 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
 
   // Prio 1: Investigation session tools
   if (name.startsWith('zeus.investigation.')) {
-    const { focus: doFocus, search: doSearch, generateFocusedPrompt } = require('../investigation/investigationActions');
+    const {
+      focus: doFocus,
+      search: doSearch,
+      generateFocusedPrompt,
+    } = require('../investigation/investigationActions');
     const program = args && args.program;
     if (!program) {
       const err = new Error('program is required for investigation tools');
@@ -7327,9 +7897,19 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     const analysisDir = path.join(outputRoot, program);
     let result;
     if (name === 'zeus.investigation.start' || name === 'zeus.investigation.focus') {
-      result = doFocus({ analysisDir, sessionId: args.session, goal: args.goal, focus: args.focus || {} });
+      result = doFocus({
+        analysisDir,
+        sessionId: args.session,
+        goal: args.goal,
+        focus: args.focus || {},
+      });
     } else if (name === 'zeus.investigation.search') {
-      result = doSearch({ analysisDir, sessionId: args.session, terms: args.terms || [], goal: args.goal });
+      result = doSearch({
+        analysisDir,
+        sessionId: args.session,
+        terms: args.terms || [],
+        goal: args.goal,
+      });
     } else if (name === 'zeus.investigation.generate-prompt') {
       result = generateFocusedPrompt({ analysisDir, sessionId: args.session, goal: args.goal });
     }
@@ -7342,9 +7922,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.field-search') {
-    const fieldSearchRunner = typeof context.fieldSearchRunner === 'function'
-      ? context.fieldSearchRunner
-      : executeReadOnlyFieldSearch;
+    const fieldSearchRunner =
+      typeof context.fieldSearchRunner === 'function'
+        ? context.fieldSearchRunner
+        : executeReadOnlyFieldSearch;
 
     let execution;
     try {
@@ -7353,9 +7934,13 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.field-search/i.test(String(error && error.message ? error.message : ''))
-        || /field-search source root not found:/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.field-search/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /field-search source root not found:/i.test(
+          String(error && error.message ? error.message : '')
+        )
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
@@ -7370,43 +7955,55 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       field: execution && execution.field ? String(execution.field) : '',
       table: execution && execution.table ? String(execution.table) : null,
       maxResults: Number(execution && execution.maxResults ? execution.maxResults : 300),
-      cursor: execution && typeof execution.cursor === 'string' && execution.cursor
-        ? execution.cursor
-        : null,
+      cursor:
+        execution && typeof execution.cursor === 'string' && execution.cursor
+          ? execution.cursor
+          : null,
       cursorOffset: Number(execution && execution.cursorOffset ? execution.cursorOffset : 0),
-      nextCursor: execution && typeof execution.nextCursor === 'string' && execution.nextCursor
-        ? execution.nextCursor
-        : null,
-      maxPayloadItems: Number(execution && execution.maxPayloadItems ? execution.maxPayloadItems : DEFAULT_MCP_PAYLOAD_ITEMS),
-      contextLines: Number(execution && execution.contextLines !== undefined ? execution.contextLines : 2),
+      nextCursor:
+        execution && typeof execution.nextCursor === 'string' && execution.nextCursor
+          ? execution.nextCursor
+          : null,
+      maxPayloadItems: Number(
+        execution && execution.maxPayloadItems
+          ? execution.maxPayloadItems
+          : DEFAULT_MCP_PAYLOAD_ITEMS
+      ),
+      contextLines: Number(
+        execution && execution.contextLines !== undefined ? execution.contextLines : 2
+      ),
       fileCount: Number(execution && execution.fileCount ? execution.fileCount : 0),
       resultCount: Number(execution && execution.resultCount ? execution.resultCount : 0),
-      payloadResultCount: Number(execution && execution.payloadResultCount ? execution.payloadResultCount : matches.length),
+      payloadResultCount: Number(
+        execution && execution.payloadResultCount ? execution.payloadResultCount : matches.length
+      ),
       payloadTruncated: Boolean(execution && execution.payloadTruncated),
-      matchedFileCount: Number(execution && execution.matchedFileCount ? execution.matchedFileCount : 0),
+      matchedFileCount: Number(
+        execution && execution.matchedFileCount ? execution.matchedFileCount : 0
+      ),
       truncated: Boolean(execution && execution.truncated),
-      matches: matches.map((entry) => ({
+      matches: matches.map(entry => ({
         file: entry && entry.file ? String(entry.file) : '',
         line: Number(entry && entry.line ? entry.line : 0),
         text: entry && entry.text ? String(entry.text) : '',
         tableContexts: Array.isArray(entry && entry.tableContexts)
-          ? entry.tableContexts.map((contextEntry) => ({
-            table: contextEntry && contextEntry.table ? String(contextEntry.table) : '',
-            intent: contextEntry && contextEntry.intent ? String(contextEntry.intent) : '',
-            role: contextEntry && contextEntry.role ? String(contextEntry.role) : '',
-          }))
+          ? entry.tableContexts.map(contextEntry => ({
+              table: contextEntry && contextEntry.table ? String(contextEntry.table) : '',
+              intent: contextEntry && contextEntry.intent ? String(contextEntry.intent) : '',
+              role: contextEntry && contextEntry.role ? String(contextEntry.role) : '',
+            }))
           : [],
         contextBefore: Array.isArray(entry && entry.contextBefore)
-          ? entry.contextBefore.map((contextEntry) => ({
-            lineNo: Number(contextEntry && contextEntry.lineNo ? contextEntry.lineNo : 0),
-            text: contextEntry && contextEntry.text ? String(contextEntry.text) : '',
-          }))
+          ? entry.contextBefore.map(contextEntry => ({
+              lineNo: Number(contextEntry && contextEntry.lineNo ? contextEntry.lineNo : 0),
+              text: contextEntry && contextEntry.text ? String(contextEntry.text) : '',
+            }))
           : [],
         contextAfter: Array.isArray(entry && entry.contextAfter)
-          ? entry.contextAfter.map((contextEntry) => ({
-            lineNo: Number(contextEntry && contextEntry.lineNo ? contextEntry.lineNo : 0),
-            text: contextEntry && contextEntry.text ? String(contextEntry.text) : '',
-          }))
+          ? entry.contextAfter.map(contextEntry => ({
+              lineNo: Number(contextEntry && contextEntry.lineNo ? contextEntry.lineNo : 0),
+              text: contextEntry && contextEntry.text ? String(contextEntry.text) : '',
+            }))
           : [],
       })),
       timestamp: new Date().toISOString(),
@@ -7414,9 +8011,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
   }
 
   if (name === 'zeus.joblog') {
-    const joblogRunner = typeof context.joblogRunner === 'function'
-      ? context.joblogRunner
-      : executeReadOnlyJoblog;
+    const joblogRunner =
+      typeof context.joblogRunner === 'function' ? context.joblogRunner : executeReadOnlyJoblog;
 
     let execution;
     try {
@@ -7425,12 +8021,18 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.joblog/i.test(String(error && error.message ? error.message : ''))
-        || /invalid option: --severity/i.test(String(error && error.message ? error.message : ''))
-        || /invalid option: --max-messages/i.test(String(error && error.message ? error.message : ''))
-        || /db2 connection configuration is incomplete/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.joblog/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /invalid option: --severity/i.test(String(error && error.message ? error.message : '')) ||
+        /invalid option: --max-messages/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /db2 connection configuration is incomplete/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       } else {
@@ -7449,20 +8051,24 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       severity: execution && execution.severity ? String(execution.severity) : null,
       maxMessages: Number(execution && execution.maxMessages ? execution.maxMessages : 0),
       backend: execution && execution.backend ? String(execution.backend) : 'JOBLOG_INFO',
-      compatibilityNote: execution && execution.compatibilityNote ? String(execution.compatibilityNote) : null,
+      compatibilityNote:
+        execution && execution.compatibilityNote ? String(execution.compatibilityNote) : null,
       rowCount: Number(execution && execution.rowCount ? execution.rowCount : 0),
-      uniqueMessageIdCount: Number(execution && execution.uniqueMessageIdCount ? execution.uniqueMessageIdCount : 0),
+      uniqueMessageIdCount: Number(
+        execution && execution.uniqueMessageIdCount ? execution.uniqueMessageIdCount : 0
+      ),
       limitReached: Boolean(execution && execution.limitReached),
-      columns: columns.map((column) => String(column)),
-      rows: rows.map((row) => (row && typeof row === 'object' ? row : {})),
+      columns: columns.map(column => String(column)),
+      rows: rows.map(row => (row && typeof row === 'object' ? row : {})),
       timestamp: new Date().toISOString(),
     };
   }
 
   if (name === 'zeus.inspect-object') {
-    const inspectObjectRunner = typeof context.inspectObjectRunner === 'function'
-      ? context.inspectObjectRunner
-      : executeReadOnlyInspectObject;
+    const inspectObjectRunner =
+      typeof context.inspectObjectRunner === 'function'
+        ? context.inspectObjectRunner
+        : executeReadOnlyInspectObject;
 
     let execution;
     try {
@@ -7471,11 +8077,15 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.inspect-object/i.test(String(error && error.message ? error.message : ''))
-        || /invalid identifier/i.test(String(error && error.message ? error.message : ''))
-        || /db2 connection configuration is incomplete/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.inspect-object/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /invalid identifier/i.test(String(error && error.message ? error.message : '')) ||
+        /db2 connection configuration is incomplete/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       } else {
@@ -7495,16 +8105,17 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       type: execution && execution.type ? String(execution.type) : '*PGM',
       journalOnly: Boolean(execution && execution.journalOnly),
       rowCount: Number(execution && execution.rowCount ? execution.rowCount : 0),
-      columns: columns.map((column) => String(column)),
-      rows: rows.map((row) => (row && typeof row === 'object' ? row : {})),
+      columns: columns.map(column => String(column)),
+      rows: rows.map(row => (row && typeof row === 'object' ? row : {})),
       timestamp: new Date().toISOString(),
     };
   }
 
   if (name === 'zeus.assess-risk') {
-    const assessRiskRunner = typeof context.assessRiskRunner === 'function'
-      ? context.assessRiskRunner
-      : executeReadOnlyAssessRisk;
+    const assessRiskRunner =
+      typeof context.assessRiskRunner === 'function'
+        ? context.assessRiskRunner
+        : executeReadOnlyAssessRisk;
 
     let execution;
     try {
@@ -7513,26 +8124,38 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       });
     } catch (error) {
       if (
-        (error && error.code === 'TOOL_INVALID_ARGUMENTS')
-        || /invalid arguments for zeus\.assess-risk/i.test(String(error && error.message ? error.message : ''))
-        || /canonical analysis not found/i.test(String(error && error.message ? error.message : ''))
-        || /profile ".+" not found/i.test(String(error && error.message ? error.message : ''))
-        || /analyze\.outputRoot must be a string/i.test(String(error && error.message ? error.message : ''))
+        (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
+        /invalid arguments for zeus\.assess-risk/i.test(
+          String(error && error.message ? error.message : '')
+        ) ||
+        /canonical analysis not found/i.test(String(error && error.message ? error.message : '')) ||
+        /profile ".+" not found/i.test(String(error && error.message ? error.message : '')) ||
+        /analyze\.outputRoot must be a string/i.test(
+          String(error && error.message ? error.message : '')
+        )
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
       }
       throw error;
     }
 
-    const summary = execution && execution.summary && typeof execution.summary === 'object'
-      ? execution.summary
-      : {};
-    const riskMetrics = execution && execution.riskMetrics && typeof execution.riskMetrics === 'object'
-      ? execution.riskMetrics
-      : {};
-    const recommendations = Array.isArray(execution && execution.recommendations) ? execution.recommendations : [];
-    const accessPoints = Array.isArray(execution && execution.accessPoints) ? execution.accessPoints : [];
-    const criticalPaths = Array.isArray(execution && execution.criticalPaths) ? execution.criticalPaths : [];
+    const summary =
+      execution && execution.summary && typeof execution.summary === 'object'
+        ? execution.summary
+        : {};
+    const riskMetrics =
+      execution && execution.riskMetrics && typeof execution.riskMetrics === 'object'
+        ? execution.riskMetrics
+        : {};
+    const recommendations = Array.isArray(execution && execution.recommendations)
+      ? execution.recommendations
+      : [];
+    const accessPoints = Array.isArray(execution && execution.accessPoints)
+      ? execution.accessPoints
+      : [];
+    const criticalPaths = Array.isArray(execution && execution.criticalPaths)
+      ? execution.criticalPaths
+      : [];
 
     return {
       ok: true,
@@ -7549,34 +8172,47 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         yellowCount: Number(riskMetrics.yellowCount || 0),
         redCount: Number(riskMetrics.redCount || 0),
       },
-      recommendations: recommendations.map((entry) => String(entry)),
-      accessPoints: accessPoints.map((entry) => ({
+      recommendations: recommendations.map(entry => String(entry)),
+      accessPoints: accessPoints.map(entry => ({
         type: entry && entry.type ? String(entry.type) : '',
         subtype: entry && entry.subtype ? String(entry.subtype) : null,
         name: entry && entry.name ? String(entry.name) : null,
         intent: entry && entry.intent ? String(entry.intent) : null,
-        tables: Array.isArray(entry && entry.tables) ? entry.tables.map((table) => String(table)) : [],
-        assessment: entry && entry.assessment && typeof entry.assessment === 'object'
-          ? {
-            risk: entry.assessment.risk ? String(entry.assessment.risk) : 'UNKNOWN',
-            score: Number(entry.assessment.score || 0),
-            reason: entry.assessment.reason ? String(entry.assessment.reason) : null,
-          }
-          : { risk: 'UNKNOWN', score: 0, reason: null },
+        tables: Array.isArray(entry && entry.tables)
+          ? entry.tables.map(table => String(table))
+          : [],
+        assessment:
+          entry && entry.assessment && typeof entry.assessment === 'object'
+            ? {
+                risk: entry.assessment.risk ? String(entry.assessment.risk) : 'UNKNOWN',
+                score: Number(entry.assessment.score || 0),
+                reason: entry.assessment.reason ? String(entry.assessment.reason) : null,
+              }
+            : { risk: 'UNKNOWN', score: 0, reason: null },
         evidenceCount: Number(entry && entry.evidenceCount ? entry.evidenceCount : 0),
       })),
-      criticalPaths: criticalPaths.map((entry) => ({
+      criticalPaths: criticalPaths.map(entry => ({
         type: entry && entry.type ? String(entry.type) : '',
         reason: entry && entry.reason ? String(entry.reason) : null,
-        tables: Array.isArray(entry && entry.tables) ? entry.tables.map((table) => String(table)) : [],
+        tables: Array.isArray(entry && entry.tables)
+          ? entry.tables.map(table => String(table))
+          : [],
         evidenceCount: Number(entry && entry.evidenceCount ? entry.evidenceCount : 0),
       })),
-      accessPointCount: Number(execution && execution.accessPointCount ? execution.accessPointCount : 0),
-      criticalPathCount: Number(execution && execution.criticalPathCount ? execution.criticalPathCount : 0),
+      accessPointCount: Number(
+        execution && execution.accessPointCount ? execution.accessPointCount : 0
+      ),
+      criticalPathCount: Number(
+        execution && execution.criticalPathCount ? execution.criticalPathCount : 0
+      ),
       accessPointsTruncated: Boolean(execution && execution.accessPointsTruncated),
       criticalPathsTruncated: Boolean(execution && execution.criticalPathsTruncated),
-      maxAccessPoints: Number(execution && execution.maxAccessPoints ? execution.maxAccessPoints : 0),
-      maxCriticalPaths: Number(execution && execution.maxCriticalPaths ? execution.maxCriticalPaths : 0),
+      maxAccessPoints: Number(
+        execution && execution.maxAccessPoints ? execution.maxAccessPoints : 0
+      ),
+      maxCriticalPaths: Number(
+        execution && execution.maxCriticalPaths ? execution.maxCriticalPaths : 0
+      ),
       timestamp: new Date().toISOString(),
     };
   }
@@ -7610,15 +8246,12 @@ module.exports = {
 };
 
 // Support dynamic tools (original) + capability generation available via getMcpToolsFromCapabilities (pkg 09)
-const _origList = listMcpTools;
-listMcpTools = function() {
-  const base = _origList() || [];
+const _origListMcpTools = listMcpTools;
+module.exports.listMcpTools = function () {
+  const base = _origListMcpTools() || [];
   const dyn = Array.from(dynamicMcpTools.values());
   const map = new Map();
   base.forEach(t => map.set(t.name, t));
   dyn.forEach(t => map.set(t.name, t));
   return Array.from(map.values());
 };
-
-// Ensure exported listMcpTools uses the wrapped version
-module.exports.listMcpTools = listMcpTools;

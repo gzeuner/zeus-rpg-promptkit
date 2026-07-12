@@ -19,26 +19,34 @@ function asArray(value) {
 }
 
 function normalizePath(value) {
-  return String(value || '').trim().replace(/\\/g, '/');
+  return String(value || '')
+    .trim()
+    .replace(/\\/g, '/');
 }
 
 function normalizeTerms(value) {
-  return Array.from(new Set(asArray(value)
-    .map((entry) => String(entry || '').trim())
-    .filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      asArray(value)
+        .map(entry => String(entry || '').trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function normalizeIgnorePatterns(value) {
-  return Array.from(new Set(asArray(value)
-    .map((entry) => normalizePath(entry).toLowerCase())
-    .filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      asArray(value)
+        .map(entry => normalizePath(entry).toLowerCase())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function shouldIgnore(relativePath, ignorePatterns) {
   const normalized = normalizePath(relativePath).toLowerCase();
-  return ignorePatterns.some((pattern) => normalized.includes(pattern));
+  return ignorePatterns.some(pattern => normalized.includes(pattern));
 }
 
 function buildSearchResult(term, relativePath, metadata, line, context) {
@@ -46,7 +54,8 @@ function buildSearchResult(term, relativePath, metadata, line, context) {
   return {
     term,
     sourcePath: normalizePath(relativePath),
-    sourceCategory: sourceInfo.provenance && sourceInfo.provenance.origin === 'imported' ? 'IMPORTED' : 'LOCAL',
+    sourceCategory:
+      sourceInfo.provenance && sourceInfo.provenance.origin === 'imported' ? 'IMPORTED' : 'LOCAL',
     sourceType: sourceInfo.sourceType || '',
     line: Number(line) || 1,
     context: String(context || '').trim(),
@@ -85,9 +94,8 @@ function summarizeMatches(matches) {
 function runFullTextSearch(sourceTextByRelativePath, sourceFileMetadata, options = {}) {
   const terms = normalizeTerms(options.terms);
   const ignorePatterns = normalizeIgnorePatterns(options.ignorePatterns);
-  const maxResults = Number.isInteger(options.maxResults) && options.maxResults > 0
-    ? options.maxResults
-    : 200;
+  const maxResults =
+    Number.isInteger(options.maxResults) && options.maxResults > 0 ? options.maxResults : 200;
 
   if (terms.length === 0) {
     return {
@@ -109,9 +117,10 @@ function runFullTextSearch(sourceTextByRelativePath, sourceFileMetadata, options
     };
   }
 
-  const entries = sourceTextByRelativePath instanceof Map
-    ? Array.from(sourceTextByRelativePath.entries()).sort((a, b) => a[0].localeCompare(b[0]))
-    : [];
+  const entries =
+    sourceTextByRelativePath instanceof Map
+      ? Array.from(sourceTextByRelativePath.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+      : [];
   const metadataByPath = sourceFileMetadata instanceof Map ? sourceFileMetadata : new Map();
   const matches = [];
   let ignoredFileCount = 0;
@@ -135,14 +144,13 @@ function runFullTextSearch(sourceTextByRelativePath, sourceFileMetadata, options
     }
   }
 
-  const sortedMatches = matches
-    .slice(0, maxResults)
-    .sort((a, b) => {
-      if (a.term !== b.term) return a.term.localeCompare(b.term);
-      if (a.sourceCategory !== b.sourceCategory) return a.sourceCategory.localeCompare(b.sourceCategory);
-      if (a.sourcePath !== b.sourcePath) return a.sourcePath.localeCompare(b.sourcePath);
-      return a.line - b.line;
-    });
+  const sortedMatches = matches.slice(0, maxResults).sort((a, b) => {
+    if (a.term !== b.term) return a.term.localeCompare(b.term);
+    if (a.sourceCategory !== b.sourceCategory)
+      return a.sourceCategory.localeCompare(b.sourceCategory);
+    if (a.sourcePath !== b.sourcePath) return a.sourcePath.localeCompare(b.sourcePath);
+    return a.line - b.line;
+  });
 
   return {
     schemaVersion: FULL_TEXT_SEARCH_SCHEMA_VERSION,
@@ -164,10 +172,7 @@ function runFullTextSearch(sourceTextByRelativePath, sourceFileMetadata, options
 }
 
 function renderFullTextSearchMarkdown(results) {
-  const lines = [
-    '# Full-Text Search Results',
-    '',
-  ];
+  const lines = ['# Full-Text Search Results', ''];
 
   if (!results || !results.enabled) {
     lines.push('No search terms were configured for this run.');

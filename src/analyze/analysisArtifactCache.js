@@ -27,8 +27,12 @@ function normalizeDbFingerprint(dbConfig) {
   return {
     host: String(db.host || '').trim(),
     url: String(db.url || '').trim(),
-    defaultSchema: String(db.defaultSchema || db.defaultLibrary || db.schema || db.library || '').trim().toUpperCase(),
-    user: String(db.user || '').trim().toUpperCase(),
+    defaultSchema: String(db.defaultSchema || db.defaultLibrary || db.schema || db.library || '')
+      .trim()
+      .toUpperCase(),
+    user: String(db.user || '')
+      .trim()
+      .toUpperCase(),
   };
 }
 
@@ -80,9 +84,15 @@ function buildDb2MetadataCacheKey({ program, dependencies, dbConfig }) {
   return hashValue({
     toolVersion,
     kind: 'db2Metadata',
-    program: String(program || '').trim().toUpperCase(),
+    program: String(program || '')
+      .trim()
+      .toUpperCase(),
     requestedTables: ((dependencies && dependencies.tables) || [])
-      .map((entry) => String(entry && entry.name ? entry.name : entry || '').trim().toUpperCase())
+      .map(entry =>
+        String(entry && entry.name ? entry.name : entry || '')
+          .trim()
+          .toUpperCase()
+      )
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b)),
     db: normalizeDbFingerprint(dbConfig),
@@ -93,13 +103,23 @@ function buildTestDataCacheKey({ program, metadataPayload, dbConfig, testDataCon
   return hashValue({
     toolVersion,
     kind: 'testData',
-    program: String(program || '').trim().toUpperCase(),
+    program: String(program || '')
+      .trim()
+      .toUpperCase(),
     tables: ((metadataPayload && metadataPayload.tables) || [])
-      .map((entry) => ({
-        schema: String(entry.schema || '').trim().toUpperCase(),
-        table: String(entry.table || '').trim().toUpperCase(),
-        systemSchema: String(entry.systemSchema || '').trim().toUpperCase(),
-        systemName: String(entry.systemName || '').trim().toUpperCase(),
+      .map(entry => ({
+        schema: String(entry.schema || '')
+          .trim()
+          .toUpperCase(),
+        table: String(entry.table || '')
+          .trim()
+          .toUpperCase(),
+        systemSchema: String(entry.systemSchema || '')
+          .trim()
+          .toUpperCase(),
+        systemName: String(entry.systemName || '')
+          .trim()
+          .toUpperCase(),
       }))
       .sort((a, b) => {
         if (a.table !== b.table) return a.table.localeCompare(b.table);
@@ -107,27 +127,57 @@ function buildTestDataCacheKey({ program, metadataPayload, dbConfig, testDataCon
       }),
     rowLimit: Number(testDataConfig && testDataConfig.limit) || 0,
     maskColumns: Array.isArray(testDataConfig && testDataConfig.maskColumns)
-      ? testDataConfig.maskColumns.map((entry) => String(entry || '').trim().toUpperCase()).sort((a, b) => a.localeCompare(b))
+      ? testDataConfig.maskColumns
+          .map(entry =>
+            String(entry || '')
+              .trim()
+              .toUpperCase()
+          )
+          .sort((a, b) => a.localeCompare(b))
       : [],
     allowTables: Array.isArray(testDataConfig && testDataConfig.allowTables)
-      ? testDataConfig.allowTables.map((entry) => String(entry || '').trim().toUpperCase()).sort((a, b) => a.localeCompare(b))
+      ? testDataConfig.allowTables
+          .map(entry =>
+            String(entry || '')
+              .trim()
+              .toUpperCase()
+          )
+          .sort((a, b) => a.localeCompare(b))
       : [],
     denyTables: Array.isArray(testDataConfig && testDataConfig.denyTables)
-      ? testDataConfig.denyTables.map((entry) => String(entry || '').trim().toUpperCase()).sort((a, b) => a.localeCompare(b))
+      ? testDataConfig.denyTables
+          .map(entry =>
+            String(entry || '')
+              .trim()
+              .toUpperCase()
+          )
+          .sort((a, b) => a.localeCompare(b))
       : [],
     maskRules: Array.isArray(testDataConfig && testDataConfig.maskRules)
-      ? testDataConfig.maskRules.map((entry) => ({
-        schema: String(entry && entry.schema || '').trim().toUpperCase(),
-        table: String(entry && entry.table || '').trim().toUpperCase(),
-        columns: Array.isArray(entry && entry.columns)
-          ? entry.columns.map((column) => String(column || '').trim().toUpperCase()).sort((a, b) => a.localeCompare(b))
-          : [],
-        value: String(entry && entry.value || '').trim(),
-      })).sort((a, b) => {
-        if (a.table !== b.table) return a.table.localeCompare(b.table);
-        if (a.schema !== b.schema) return a.schema.localeCompare(b.schema);
-        return a.value.localeCompare(b.value);
-      })
+      ? testDataConfig.maskRules
+          .map(entry => ({
+            schema: String((entry && entry.schema) || '')
+              .trim()
+              .toUpperCase(),
+            table: String((entry && entry.table) || '')
+              .trim()
+              .toUpperCase(),
+            columns: Array.isArray(entry && entry.columns)
+              ? entry.columns
+                  .map(column =>
+                    String(column || '')
+                      .trim()
+                      .toUpperCase()
+                  )
+                  .sort((a, b) => a.localeCompare(b))
+              : [],
+            value: String((entry && entry.value) || '').trim(),
+          }))
+          .sort((a, b) => {
+            if (a.table !== b.table) return a.table.localeCompare(b.table);
+            if (a.schema !== b.schema) return a.schema.localeCompare(b.schema);
+            return a.value.localeCompare(b.value);
+          })
       : [],
     db: normalizeDbFingerprint(dbConfig),
   });
@@ -160,14 +210,15 @@ function readCachedArtifact(outputProgramDir, cache, artifactKind, cacheKey) {
 }
 
 function storeCachedArtifact(cache, artifactKind, cacheKey, summary, payloadFile, markdownFile) {
-  const next = cache && typeof cache === 'object'
-    ? cache
-    : {
-      schemaVersion: 1,
-      kind: 'analysis-artifact-cache',
-      toolVersion,
-      artifacts: {},
-    };
+  const next =
+    cache && typeof cache === 'object'
+      ? cache
+      : {
+          schemaVersion: 1,
+          kind: 'analysis-artifact-cache',
+          toolVersion,
+          artifacts: {},
+        };
   next.artifacts = next.artifacts && typeof next.artifacts === 'object' ? next.artifacts : {};
   next.artifacts[artifactKind] = {
     cacheKey,

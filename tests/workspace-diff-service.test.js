@@ -4,10 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const {
-  buildLineComparison,
-  resolveDiffPaths,
-} = require('../src/diff/workspaceDiffService');
+const { buildLineComparison, resolveDiffPaths } = require('../src/diff/workspaceDiffService');
 
 function createDiffFixture() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-workspace-diff-'));
@@ -17,16 +14,26 @@ function createDiffFixture() {
   fs.mkdirSync(path.join(fetchRoot, 'QRPGLESRC'), { recursive: true });
   fs.mkdirSync(workspaceRoot, { recursive: true });
   fs.writeFileSync(path.join(fetchRoot, 'QRPGLESRC', 'MAINPROG.rpgle'), '**FREE\nA\nB\n', 'utf8');
-  fs.writeFileSync(path.join(fetchRoot, 'zeus-import-manifest.json'), `${JSON.stringify({
-    files: [{
-      member: 'MAINPROG',
-      localPath: 'QRPGLESRC/MAINPROG.rpgle',
-      origin: {
-        member: 'MAINPROG',
-        localPath: 'QRPGLESRC/MAINPROG.rpgle',
+  fs.writeFileSync(
+    path.join(fetchRoot, 'zeus-import-manifest.json'),
+    `${JSON.stringify(
+      {
+        files: [
+          {
+            member: 'MAINPROG',
+            localPath: 'QRPGLESRC/MAINPROG.rpgle',
+            origin: {
+              member: 'MAINPROG',
+              localPath: 'QRPGLESRC/MAINPROG.rpgle',
+            },
+          },
+        ],
       },
-    }],
-  }, null, 2)}\n`, 'utf8');
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
   fs.writeFileSync(path.join(workspaceRoot, 'MAINPROG.rpgle.txt'), '**FREE\nA\nC\n', 'utf8');
 
   return {
@@ -55,11 +62,11 @@ test('resolveDiffPaths maps a member to fetched original and local work copy', (
 });
 
 test('buildLineComparison marks changed and unchanged rows', () => {
-  const comparison = buildLineComparison(
-    ['A', 'B'],
-    ['A', 'C', 'D'],
-  );
+  const comparison = buildLineComparison(['A', 'B'], ['A', 'C', 'D']);
 
   assert.equal(comparison.changedCount, 2);
-  assert.deepEqual(comparison.rows.map((row) => row.marker), [' ', '~', '+']);
+  assert.deepEqual(
+    comparison.rows.map(row => row.marker),
+    [' ', '~', '+']
+  );
 });

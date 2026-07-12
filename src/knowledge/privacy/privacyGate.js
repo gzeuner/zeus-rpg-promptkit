@@ -14,7 +14,7 @@ function toMalformedReasons(errors) {
       },
     ];
   }
-  return errors.map((detail) => ({
+  return errors.map(detail => ({
     code: 'MALFORMED_FINAL_CATALOG',
     message: `Final catalog shape is invalid: ${detail}`,
   }));
@@ -26,7 +26,8 @@ function evaluateFinalCatalogPrivacy(candidate) {
   if (isRawEvidenceEnvelope(candidate)) {
     reasons.push({
       code: 'RAW_EVIDENCE_NOT_ALLOWED',
-      message: 'Raw evidence envelopes are sensitive and cannot be treated as final catalog output.',
+      message:
+        'Raw evidence envelopes are sensitive and cannot be treated as final catalog output.',
     });
     return { passed: false, reasons };
   }
@@ -34,7 +35,8 @@ function evaluateFinalCatalogPrivacy(candidate) {
   if (isSanitizedCandidateEnvelope(candidate)) {
     reasons.push({
       code: 'SANITIZED_NOT_FINAL',
-      message: 'Sanitized intermediate data is not final-safe by default and must not be exposed as final knowledge.',
+      message:
+        'Sanitized intermediate data is not final-safe by default and must not be exposed as final knowledge.',
     });
     return { passed: false, reasons };
   }

@@ -18,7 +18,11 @@ const {
   recordInvestigationEvent,
   listSessions,
 } = require('../../investigation/investigationSession');
-const { focus, search, generateFocusedPrompt } = require('../../investigation/investigationActions');
+const {
+  focus,
+  search,
+  generateFocusedPrompt,
+} = require('../../investigation/investigationActions');
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
 
 function runInvestigate(args) {
@@ -26,7 +30,14 @@ function runInvestigate(args) {
   if (!args || !args._cap) {
     try {
       const { capabilities } = require('../../api/zeusApi');
-      const res = capabilities && typeof capabilities.execute === 'function' ? capabilities.execute('investigation.investigate', { cwd: process.cwd(), env: process.env, args }, args) : null;
+      const res =
+        capabilities && typeof capabilities.execute === 'function'
+          ? capabilities.execute(
+              'investigation.investigate',
+              { cwd: process.cwd(), env: process.env, args },
+              args
+            )
+          : null;
       if (res && res.ok && res.result) {
         return res.result;
       }
@@ -34,7 +45,9 @@ function runInvestigate(args) {
       // fallthrough to local
     }
   }
-  if (args && args._cap) { delete args._cap; }
+  if (args && args._cap) {
+    delete args._cap;
+  }
 
   const program = args.program || args.member || '';
   if (!program) {
@@ -57,7 +70,7 @@ function runInvestigate(args) {
       return;
     }
     console.log(`Investigation sessions for ${program}:`);
-    sessions.forEach((s) => {
+    sessions.forEach(s => {
       console.log(`  ${s.id}  (last active: ${s.lastActiveAt})  ${s.goal ? '- ' + s.goal : ''}`);
     });
     return;
@@ -107,10 +120,13 @@ function runInvestigate(args) {
   console.log(`Focus: programs=${(f.programs || []).length}, tables=${(f.tables || []).length}`);
 
   const sessionDir = path.join(outputProgramDir, '.investigations', session.id);
-  recordInvestigationEvent({ session, sessionPath: path.join(sessionDir, 'session.json') }, {
-    type: 'session-start',
-    goal: session.goal,
-  });
+  recordInvestigationEvent(
+    { session, sessionPath: path.join(sessionDir, 'session.json') },
+    {
+      type: 'session-start',
+      goal: session.goal,
+    }
+  );
 
   console.log('\nSession ready.');
   console.log('Use --focus "<scope>", --search "<term>", or --generate-prompt');

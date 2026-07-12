@@ -65,9 +65,11 @@ const DEFAULT_DISCOVERY_OPTIONS = Object.freeze({
 
 /** True for IBM-supplied / tooling schemas that should be de-prioritized. */
 function isSystemSchema(name) {
-  const value = String(name === undefined || name === null ? '' : name).trim().toUpperCase();
+  const value = String(name === undefined || name === null ? '' : name)
+    .trim()
+    .toUpperCase();
   if (!value) return true;
-  return SYSTEM_SCHEMA_PREFIXES.some((prefix) => value.startsWith(prefix));
+  return SYSTEM_SCHEMA_PREFIXES.some(prefix => value.startsWith(prefix));
 }
 
 function isPlainObject(value) {
@@ -114,30 +116,32 @@ function rowsOf(result) {
 
 function buildSchemaInventoryQuery({ schemas } = {}) {
   const filter = normalizeIdentifierList(schemas);
-  const where = filter.length > 0
-    ? `WHERE SCHEMA_NAME IN (${filter.map((s) => escapeSqlLiteral(s)).join(', ')})`
-    : "WHERE SCHEMA_NAME NOT LIKE 'Q%' AND SCHEMA_NAME NOT LIKE 'SYS%'";
+  const where =
+    filter.length > 0
+      ? `WHERE SCHEMA_NAME IN (${filter.map(s => escapeSqlLiteral(s)).join(', ')})`
+      : "WHERE SCHEMA_NAME NOT LIKE 'Q%' AND SCHEMA_NAME NOT LIKE 'SYS%'";
   return `SELECT SCHEMA_NAME FROM QSYS2.SYSSCHEMAS ${where} ORDER BY SCHEMA_NAME`;
 }
 
 function buildSourceFileInventoryQuery({ libraries } = {}) {
-  const inList = KNOWN_SOURCE_FILE_NAMES.map((name) => escapeSqlLiteral(name)).join(', ');
+  const inList = KNOWN_SOURCE_FILE_NAMES.map(name => escapeSqlLiteral(name)).join(', ');
   const libs = normalizeIdentifierList(libraries);
-  const libFilter = libs.length > 0
-    ? `AND TABLE_SCHEMA IN (${libs.map((l) => escapeSqlLiteral(l)).join(', ')})`
-    : '';
+  const libFilter =
+    libs.length > 0 ? `AND TABLE_SCHEMA IN (${libs.map(l => escapeSqlLiteral(l)).join(', ')})` : '';
   return [
     'SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TEXT',
     'FROM QSYS2.SYSTABLES',
     `WHERE TABLE_NAME IN (${inList})`,
     libFilter,
     'ORDER BY TABLE_SCHEMA, TABLE_NAME',
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 function buildTableInventoryQuery({ schema } = {}) {
   const normalizedSchema = validateSqlIdentifier(schema, 'schema');
-  const excludeList = KNOWN_SOURCE_FILE_NAMES.map((name) => escapeSqlLiteral(name)).join(', ');
+  const excludeList = KNOWN_SOURCE_FILE_NAMES.map(name => escapeSqlLiteral(name)).join(', ');
   return [
     'SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE',
     'FROM QSYS2.SYSTABLES',
@@ -191,7 +195,7 @@ async function discoverEnvironment({ dbConfig, scope = {}, runQuery, options = {
   }
   const opts = { ...DEFAULT_DISCOVERY_OPTIONS, ...options };
   const execute = typeof runQuery === 'function' ? runQuery : runReadOnlyDb2Query;
-  const run = async (query) => execute({ dbConfig, query, maxRows: opts.maxRows });
+  const run = async query => execute({ dbConfig, query, maxRows: opts.maxRows });
 
   const requestedLibraries = normalizeIdentifierList(scope.libraries);
   const requestedSchemas = normalizeIdentifierList(scope.schemas);
@@ -201,7 +205,7 @@ async function discoverEnvironment({ dbConfig, scope = {}, runQuery, options = {
   let schemas = uniqueSorted([...requestedLibraries, ...requestedSchemas]);
   try {
     const schemaRows = rowsOf(await run(buildSchemaInventoryQuery({ schemas: requestedSchemas })));
-    const discoveredSchemas = schemaRows.map((row) => readCell(row, 'SCHEMA_NAME')).filter(Boolean);
+    const discoveredSchemas = schemaRows.map(row => readCell(row, 'SCHEMA_NAME')).filter(Boolean);
     schemas = uniqueSorted([...schemas, ...discoveredSchemas]);
   } catch (error) {
     notes.push(`Schema discovery skipped: ${error.message}`);
@@ -210,7 +214,9 @@ async function discoverEnvironment({ dbConfig, scope = {}, runQuery, options = {
   // 2) Source physical files.
   const sourceFiles = [];
   try {
-    const sourceRows = rowsOf(await run(buildSourceFileInventoryQuery({ libraries: requestedLibraries })));
+    const sourceRows = rowsOf(
+      await run(buildSourceFileInventoryQuery({ libraries: requestedLibraries }))
+    );
     for (const row of sourceRows) {
       const schemaName = readCell(row, 'TABLE_SCHEMA');
       const fileName = readCell(row, 'TABLE_NAME');
@@ -223,7 +229,7 @@ async function discoverEnvironment({ dbConfig, scope = {}, runQuery, options = {
   }
 
   // Libraries that actually hold source code.
-  const sourceLibraries = uniqueSorted(sourceFiles.map((entry) => entry.schema));
+  const sourceLibraries = uniqueSorted(sourceFiles.map(entry => entry.schema));
   if (sourceLibraries.length > 0) {
     schemas = uniqueSorted([...schemas, ...sourceLibraries]);
   }
@@ -233,9 +239,10 @@ async function discoverEnvironment({ dbConfig, scope = {}, runQuery, options = {
   if (opts.includeTables) {
     // Honor explicit --schemas as-is; otherwise prefer real user schemas so the
     // bounded table-discovery budget is not spent on IBM system libraries.
-    const candidateSchemas = requestedSchemas.length > 0
-      ? requestedSchemas
-      : schemas.filter((schema) => !isSystemSchema(schema));
+    const candidateSchemas =
+      requestedSchemas.length > 0
+        ? requestedSchemas
+        : schemas.filter(schema => !isSystemSchema(schema));
     const tableSchemas = candidateSchemas.slice(0, opts.maxSchemasForTables);
     for (const schema of tableSchemas) {
       try {
@@ -258,7 +265,9 @@ async function discoverEnvironment({ dbConfig, scope = {}, runQuery, options = {
   if (opts.includeMembers) {
     for (const entry of sourceFiles.slice(0, opts.maxSourceFilesForMembers)) {
       try {
-        const memberRows = rowsOf(await run(buildMemberInventoryQuery({ schema: entry.schema, sourceFile: entry.name })));
+        const memberRows = rowsOf(
+          await run(buildMemberInventoryQuery({ schema: entry.schema, sourceFile: entry.name }))
+        );
         for (const row of memberRows) {
           const memberName = readCell(row, 'MEMBER_NAME', 'TABLE_PARTITION');
           if (memberName) {
@@ -284,12 +293,15 @@ async function discoverEnvironment({ dbConfig, scope = {}, runQuery, options = {
     },
     schemas,
     sourceLibraries,
-    sourceFiles: dedupeByKey(sourceFiles, (e) => `${e.schema}.${e.name}`)
-      .sort((a, b) => (`${a.schema}.${a.name}`).localeCompare(`${b.schema}.${b.name}`)),
-    tables: dedupeByKey(tables, (e) => `${e.schema}.${e.name}`)
-      .sort((a, b) => (`${a.schema}.${a.name}`).localeCompare(`${b.schema}.${b.name}`)),
-    members: dedupeByKey(members, (e) => `${e.schema}.${e.sourceFile}.${e.name}`)
-      .sort((a, b) => (`${a.schema}.${a.sourceFile}.${a.name}`).localeCompare(`${b.schema}.${b.sourceFile}.${b.name}`)),
+    sourceFiles: dedupeByKey(sourceFiles, e => `${e.schema}.${e.name}`).sort((a, b) =>
+      `${a.schema}.${a.name}`.localeCompare(`${b.schema}.${b.name}`)
+    ),
+    tables: dedupeByKey(tables, e => `${e.schema}.${e.name}`).sort((a, b) =>
+      `${a.schema}.${a.name}`.localeCompare(`${b.schema}.${b.name}`)
+    ),
+    members: dedupeByKey(members, e => `${e.schema}.${e.sourceFile}.${e.name}`).sort((a, b) =>
+      `${a.schema}.${a.sourceFile}.${a.name}`.localeCompare(`${b.schema}.${b.sourceFile}.${b.name}`)
+    ),
     notes,
   };
 }
@@ -305,23 +317,27 @@ async function discoverEnvironment({ dbConfig, scope = {}, runQuery, options = {
 function suggestResourcesConfig(report, options = {}) {
   const safeReport = isPlainObject(report) ? report : {};
   const system = options.system ? String(options.system).trim() : '';
-  const sourceFiles = uniqueSorted((safeReport.sourceFiles || []).map((entry) => entry.name));
+  const sourceFiles = uniqueSorted((safeReport.sourceFiles || []).map(entry => entry.name));
   const sourceLibraries = uniqueSorted(safeReport.sourceLibraries || []);
   const schemas = uniqueSorted(safeReport.schemas || []);
-  const dataSchemas = uniqueSorted((safeReport.tables || []).map((entry) => entry.schema));
-  const members = uniqueSorted((safeReport.members || []).map((entry) => entry.name));
+  const dataSchemas = uniqueSorted((safeReport.tables || []).map(entry => entry.schema));
+  const members = uniqueSorted((safeReport.members || []).map(entry => entry.name));
 
   // Prefer evidence-backed user schemas (those that actually contained tables),
   // then fall back to non-system schemas from the inventory. Bound the list so
   // the skeleton stays a usable starting point instead of dumping hundreds of
   // IBM-supplied libraries.
-  const userSchemas = schemas.filter((schema) => !isSystemSchema(schema));
-  const metadataSchemas = (dataSchemas.length > 0 ? dataSchemas : userSchemas)
-    .slice(0, MAX_SUGGESTED_SCHEMAS);
-  const dataSchemaList = (dataSchemas.length > 0 ? dataSchemas : userSchemas)
-    .slice(0, MAX_SUGGESTED_SCHEMAS);
+  const userSchemas = schemas.filter(schema => !isSystemSchema(schema));
+  const metadataSchemas = (dataSchemas.length > 0 ? dataSchemas : userSchemas).slice(
+    0,
+    MAX_SUGGESTED_SCHEMAS
+  );
+  const dataSchemaList = (dataSchemas.length > 0 ? dataSchemas : userSchemas).slice(
+    0,
+    MAX_SUGGESTED_SCHEMAS
+  );
 
-  const withSystem = (block) => (system ? { system, ...block } : block);
+  const withSystem = block => (system ? { system, ...block } : block);
 
   return {
     sourceCode: withSystem({

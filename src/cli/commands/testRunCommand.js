@@ -29,7 +29,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
 const path = require('path');
-const { resolveProfile, loadProfiles, resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../../config/runtimeConfig');
+const {
+  resolveProfile,
+  loadProfiles,
+  resolveAnalyzeConfig,
+  resolveAnalyzeDbConfig,
+} = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
 const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
 const { createJsonOutput } = require('../helpers/jsonOutput');
@@ -65,7 +70,10 @@ function parseKeyColumns(rawKeys) {
  * Mehrfach verwendbar.
  */
 function parseTableRef(rawTable) {
-  const s = String(rawTable || '').trim().replace('/', '.').toUpperCase();
+  const s = String(rawTable || '')
+    .trim()
+    .replace('/', '.')
+    .toUpperCase();
   const parts = s.split('.');
   if (parts.length !== 2) {
     throw new Error(`Ungültiges --table Format: "${rawTable}" — erwartet SCHEMA.TABLE`);
@@ -74,7 +82,9 @@ function parseTableRef(rawTable) {
 }
 
 async function run(args) {
-  const subcommand = String(args.subcommand || args.sub || args._[0] || args._[1] || '').trim().toLowerCase();
+  const subcommand = String(args.subcommand || args.sub || args._[0] || args._[1] || '')
+    .trim()
+    .toLowerCase();
 
   if (!subcommand || subcommand === 'help') {
     console.log('');
@@ -130,7 +140,9 @@ async function run(args) {
     const sql = manifest.rollbackSql || [];
     if (sql.length === 0) {
       if (String(manifest.status || '').toUpperCase() === 'CAPTURED') {
-        console.log('Kein Rollback-SQL erforderlich (keine Datenänderung zwischen Before/After erkannt).');
+        console.log(
+          'Kein Rollback-SQL erforderlich (keine Datenänderung zwischen Before/After erkannt).'
+        );
       } else {
         console.log('Kein Rollback-SQL vorhanden (noch kein After-Snapshot aufgenommen?).');
         console.log('Führe zuerst aus: zeus test-run capture --manifest <path>');
@@ -183,15 +195,26 @@ async function run(args) {
   }
 
   if (subcommand === 'start') {
-    const program  = String(args.program || args.p || '').trim().toUpperCase();
+    const program = String(args.program || args.p || '')
+      .trim()
+      .toUpperCase();
     const rawTable = args.table || args.t;
-    const rawKeys  = args.key   || args.k;
-    const label    = String(args.label || args.l || `Testlauf ${new Date().toISOString()}`).trim();
-    const outDir   = String(args.out   || '.').trim();
+    const rawKeys = args.key || args.k;
+    const label = String(args.label || args.l || `Testlauf ${new Date().toISOString()}`).trim();
+    const outDir = String(args.out || '.').trim();
 
-    if (!program) { console.error('Fehler: --program <name> ist erforderlich.'); process.exit(2); }
-    if (!rawTable) { console.error('Fehler: --table <schema.table> ist erforderlich.'); process.exit(2); }
-    if (!rawKeys)  { console.error('Fehler: --key <col=val> ist erforderlich.'); process.exit(2); }
+    if (!program) {
+      console.error('Fehler: --program <name> ist erforderlich.');
+      process.exit(2);
+    }
+    if (!rawTable) {
+      console.error('Fehler: --table <schema.table> ist erforderlich.');
+      process.exit(2);
+    }
+    if (!rawKeys) {
+      console.error('Fehler: --key <col=val> ist erforderlich.');
+      process.exit(2);
+    }
 
     let tableRef, keyColumns;
     try {
@@ -202,7 +225,9 @@ async function run(args) {
       process.exit(2);
     }
 
-    console.log(`\nBefore-Snapshot: ${tableRef.schema}.${tableRef.table} (${JSON.stringify(keyColumns)})`);
+    console.log(
+      `\nBefore-Snapshot: ${tableRef.schema}.${tableRef.table} (${JSON.stringify(keyColumns)})`
+    );
 
     let beforeSnapshot;
     try {
@@ -234,7 +259,9 @@ async function run(args) {
     console.log(`Manifest geschrieben: ${manifestPath}`);
     console.log('');
     console.log('Nächster Schritt nach dem Test:');
-    console.log(`  zeus test-run capture --profile ${args.profile || 'default'} --manifest ${manifestPath}`);
+    console.log(
+      `  zeus test-run capture --profile ${args.profile || 'default'} --manifest ${manifestPath}`
+    );
     return;
   }
 

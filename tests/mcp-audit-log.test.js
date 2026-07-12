@@ -28,21 +28,25 @@ test('readMcpAuditEvents returns normalized events for legacy and current schema
 
   try {
     fs.mkdirSync(path.dirname(auditPath), { recursive: true });
-    fs.writeFileSync(auditPath, [
-      JSON.stringify({
-        timestamp: '2026-05-20T00:00:00.000Z',
-        eventType: 'mcp.tools.call',
-        toolName: 'zeus.health',
-        status: 'success',
-      }),
-      JSON.stringify({
-        timestamp: '2026-05-20T00:00:01.000Z',
-        schemaVersion: MCP_AUDIT_SCHEMA_VERSION,
-        eventType: 'mcp.tools.call',
-        toolName: 'zeus.version',
-        status: 'success',
-      }),
-    ].join('\n'), 'utf8');
+    fs.writeFileSync(
+      auditPath,
+      [
+        JSON.stringify({
+          timestamp: '2026-05-20T00:00:00.000Z',
+          eventType: 'mcp.tools.call',
+          toolName: 'zeus.health',
+          status: 'success',
+        }),
+        JSON.stringify({
+          timestamp: '2026-05-20T00:00:01.000Z',
+          schemaVersion: MCP_AUDIT_SCHEMA_VERSION,
+          eventType: 'mcp.tools.call',
+          toolName: 'zeus.version',
+          status: 'success',
+        }),
+      ].join('\n'),
+      'utf8'
+    );
 
     const result = readMcpAuditEvents({ auditPath });
     assert.equal(result.events.length, 2);
@@ -60,11 +64,19 @@ test('readMcpAuditEvents tolerates malformed lines and reports parse errors', ()
 
   try {
     fs.mkdirSync(path.dirname(auditPath), { recursive: true });
-    fs.writeFileSync(auditPath, [
-      JSON.stringify({ eventType: 'mcp.tools.call', toolName: 'zeus.health' }),
-      '{"eventType":"mcp.tools.call",bad json',
-      JSON.stringify({ schemaVersion: MCP_AUDIT_SCHEMA_VERSION, eventType: 'mcp.tools.call', toolName: 'zeus.version' }),
-    ].join('\n'), 'utf8');
+    fs.writeFileSync(
+      auditPath,
+      [
+        JSON.stringify({ eventType: 'mcp.tools.call', toolName: 'zeus.health' }),
+        '{"eventType":"mcp.tools.call",bad json',
+        JSON.stringify({
+          schemaVersion: MCP_AUDIT_SCHEMA_VERSION,
+          eventType: 'mcp.tools.call',
+          toolName: 'zeus.version',
+        }),
+      ].join('\n'),
+      'utf8'
+    );
 
     const result = readMcpAuditEvents({ auditPath });
     assert.equal(result.events.length, 2);

@@ -13,10 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 'use strict';
 
-const {
-  executeSearchSource,
-  groupResultsByFile,
-} = require('../../core/searchSourceService');
+const { executeSearchSource, groupResultsByFile } = require('../../core/searchSourceService');
 const { createJsonOutput } = require('../helpers/jsonOutput');
 
 async function runSearchSource(args) {
@@ -24,7 +21,14 @@ async function runSearchSource(args) {
   try {
     // Route through capability (package 08)
     const { capabilities } = require('../../api/zeusApi');
-    const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.search-source', { cwd: process.cwd(), env: process.env, args }, args) : null;
+    const res =
+      capabilities && typeof capabilities.execute === 'function'
+        ? await capabilities.execute(
+            'investigation.search-source',
+            { cwd: process.cwd(), env: process.env, args },
+            args
+          )
+        : null;
     if (res && res.ok && res.result) {
       execution = res.result;
     }
@@ -34,7 +38,7 @@ async function runSearchSource(args) {
   if (!execution) {
     try {
       execution = await executeSearchSource(args, {
-        onWarning: (message) => {
+        onWarning: message => {
           console.warn(`Warning: ${message}`);
         },
       });
@@ -66,13 +70,15 @@ async function runSearchSource(args) {
 
   const grouped = groupResultsByFile(results);
 
-  Object.keys(grouped).sort().forEach(file => {
-    console.log(`  ${file}`);
-    grouped[file].forEach(r => {
-      console.log(`    Line ${String(r.lineNumber).padStart(4, ' ')}: ${r.line}`);
+  Object.keys(grouped)
+    .sort()
+    .forEach(file => {
+      console.log(`  ${file}`);
+      grouped[file].forEach(r => {
+        console.log(`    Line ${String(r.lineNumber).padStart(4, ' ')}: ${r.line}`);
+      });
+      console.log('');
     });
-    console.log('');
-  });
 
   if (results.length >= maxResults) {
     console.log(`(showing first ${maxResults} results; use --max-results <n> to increase)`);

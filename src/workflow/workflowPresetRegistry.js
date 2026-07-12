@@ -18,7 +18,8 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
   'architecture-review': Object.freeze({
     name: 'architecture-review',
     title: 'Architecture Review',
-    description: 'Run a structure-first analysis and package graph, architecture, and documentation artifacts together.',
+    description:
+      'Run a structure-first analysis and package graph, architecture, and documentation artifacts together.',
     analyzeMode: 'architecture',
     bundleArtifacts: Object.freeze([
       'analyze-run-manifest.json',
@@ -57,19 +58,32 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
         'Documentation prompt output for architecture narrative support.',
       ],
       recommendedOutputs: [
-        { path: 'architecture-report.md', purpose: 'Primary narrative used in architecture review discussion.' },
+        {
+          path: 'architecture-report.md',
+          purpose: 'Primary narrative used in architecture review discussion.',
+        },
         { path: 'dependency-graph.md', purpose: 'Readable dependency map for the root program.' },
-        { path: 'program-call-tree.md', purpose: 'Readable cross-program dependency path summary.' },
+        {
+          path: 'program-call-tree.md',
+          purpose: 'Readable cross-program dependency path summary.',
+        },
         { path: 'architecture.html', purpose: 'Interactive graph view for live review sessions.' },
-        { path: 'ai_prompt_documentation.md', purpose: 'AI-assisted explanation of the architecture packet.' },
-        { path: 'ai_prompt_architecture_review.md', purpose: 'Architecture-specific prompt for structural review and follow-up questions.' },
+        {
+          path: 'ai_prompt_documentation.md',
+          purpose: 'AI-assisted explanation of the architecture packet.',
+        },
+        {
+          path: 'ai_prompt_architecture_review.md',
+          purpose: 'Architecture-specific prompt for structural review and follow-up questions.',
+        },
       ],
     }),
   }),
   'modernization-review': Object.freeze({
     name: 'modernization-review',
     title: 'Modernization Review',
-    description: 'Bundle modernization prompts, semantic architecture evidence, and change-boundary artifacts.',
+    description:
+      'Bundle modernization prompts, semantic architecture evidence, and change-boundary artifacts.',
     analyzeMode: 'modernization',
     bundleArtifacts: Object.freeze([
       'analyze-run-manifest.json',
@@ -108,18 +122,34 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
         'Shareable bundle outputs that preserve evidence-backed context for review.',
       ],
       recommendedOutputs: [
-        { path: 'ai_prompt_modernization.md', purpose: 'Primary modernization review prompt for blockers, seams, and candidates.' },
-        { path: 'architecture-report.md', purpose: 'Narrative architecture evidence for modernization discussions.' },
-        { path: 'program-call-tree.md', purpose: 'Call-chain context for change-boundary reasoning.' },
-        { path: 'ai_prompt_documentation.md', purpose: 'Supporting documentation prompt for reviewer orientation.' },
-        { path: 'ai_prompt_architecture_review.md', purpose: 'Supporting architecture prompt for reviewing structural blockers and seams.' },
+        {
+          path: 'ai_prompt_modernization.md',
+          purpose: 'Primary modernization review prompt for blockers, seams, and candidates.',
+        },
+        {
+          path: 'architecture-report.md',
+          purpose: 'Narrative architecture evidence for modernization discussions.',
+        },
+        {
+          path: 'program-call-tree.md',
+          purpose: 'Call-chain context for change-boundary reasoning.',
+        },
+        {
+          path: 'ai_prompt_documentation.md',
+          purpose: 'Supporting documentation prompt for reviewer orientation.',
+        },
+        {
+          path: 'ai_prompt_architecture_review.md',
+          purpose: 'Supporting architecture prompt for reviewing structural blockers and seams.',
+        },
       ],
     }),
   }),
   onboarding: Object.freeze({
     name: 'onboarding',
     title: 'Onboarding',
-    description: 'Produce a concise starter bundle for engineers who need orientation and documentation quickly.',
+    description:
+      'Produce a concise starter bundle for engineers who need orientation and documentation quickly.',
     analyzeMode: 'documentation',
     bundleArtifacts: Object.freeze([
       'analyze-run-manifest.json',
@@ -156,15 +186,22 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
       ],
       recommendedOutputs: [
         { path: 'report.md', purpose: 'Broad program summary for quick reading.' },
-        { path: 'architecture-report.md', purpose: 'Architecture context for follow-up onboarding conversations.' },
-        { path: 'ai_prompt_documentation.md', purpose: 'AI-assisted onboarding and explanation prompt.' },
+        {
+          path: 'architecture-report.md',
+          purpose: 'Architecture context for follow-up onboarding conversations.',
+        },
+        {
+          path: 'ai_prompt_documentation.md',
+          purpose: 'AI-assisted onboarding and explanation prompt.',
+        },
       ],
     }),
   }),
   'dependency-risk': Object.freeze({
     name: 'dependency-risk',
     title: 'Dependency Risk',
-    description: 'Package defect-oriented prompts and dependency artifacts for risk review and follow-up investigation.',
+    description:
+      'Package defect-oriented prompts and dependency artifacts for risk review and follow-up investigation.',
     analyzeMode: 'defect-analysis',
     bundleArtifacts: Object.freeze([
       'analyze-run-manifest.json',
@@ -204,9 +241,18 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
         'A shareable bundle that keeps risk evidence and graph context together.',
       ],
       recommendedOutputs: [
-        { path: 'ai_prompt_defect_analysis.md', purpose: 'Primary dependency-risk review prompt with hypotheses and decisions.' },
-        { path: 'ai_prompt_error_analysis.md', purpose: 'Supporting risk evidence prompt for suspicious SQL and error paths.' },
-        { path: 'dependency-graph.md', purpose: 'Readable dependency structure for review discussion.' },
+        {
+          path: 'ai_prompt_defect_analysis.md',
+          purpose: 'Primary dependency-risk review prompt with hypotheses and decisions.',
+        },
+        {
+          path: 'ai_prompt_error_analysis.md',
+          purpose: 'Supporting risk evidence prompt for suspicious SQL and error paths.',
+        },
+        {
+          path: 'dependency-graph.md',
+          purpose: 'Readable dependency structure for review discussion.',
+        },
         { path: 'program-call-tree.md', purpose: 'Readable cross-program blast-radius context.' },
       ],
     }),
@@ -214,7 +260,8 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
   'refactoring-review': Object.freeze({
     name: 'refactoring-review',
     title: 'Refactoring Review',
-    description: 'Bundle architecture and refactoring prompts with dependency evidence for small-scope change planning.',
+    description:
+      'Bundle architecture and refactoring prompts with dependency evidence for small-scope change planning.',
     analyzeMode: 'refactoring',
     bundleArtifacts: Object.freeze([
       'analyze-run-manifest.json',
@@ -251,16 +298,26 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
         'A shareable bundle that keeps architecture context and refactoring guidance together.',
       ],
       recommendedOutputs: [
-        { path: 'ai_prompt_refactoring_plan.md', purpose: 'Primary refactoring guidance with sequencing and safety checks.' },
-        { path: 'ai_prompt_architecture_review.md', purpose: 'Supporting architecture prompt for boundary validation.' },
-        { path: 'dependency-graph.md', purpose: 'Readable dependency map used to constrain change scope.' },
+        {
+          path: 'ai_prompt_refactoring_plan.md',
+          purpose: 'Primary refactoring guidance with sequencing and safety checks.',
+        },
+        {
+          path: 'ai_prompt_architecture_review.md',
+          purpose: 'Supporting architecture prompt for boundary validation.',
+        },
+        {
+          path: 'dependency-graph.md',
+          purpose: 'Readable dependency map used to constrain change scope.',
+        },
       ],
     }),
   }),
   'test-generation-review': Object.freeze({
     name: 'test-generation-review',
     title: 'Test Generation Review',
-    description: 'Bundle documentation and test-generation prompts with evidence for scenario and fixture planning.',
+    description:
+      'Bundle documentation and test-generation prompts with evidence for scenario and fixture planning.',
     analyzeMode: 'test-generation',
     bundleArtifacts: Object.freeze([
       'analyze-run-manifest.json',
@@ -295,8 +352,14 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
         'A shareable bundle targeted at test-scenario and fixture planning.',
       ],
       recommendedOutputs: [
-        { path: 'ai_prompt_test_generation.md', purpose: 'Primary prompt for scenario, fixture, and assertion planning.' },
-        { path: 'ai_prompt_documentation.md', purpose: 'Supporting prompt for program context and flow.' },
+        {
+          path: 'ai_prompt_test_generation.md',
+          purpose: 'Primary prompt for scenario, fixture, and assertion planning.',
+        },
+        {
+          path: 'ai_prompt_documentation.md',
+          purpose: 'Supporting prompt for program context and flow.',
+        },
         { path: 'report.md', purpose: 'Human-readable summary for validating proposed coverage.' },
       ],
     }),
@@ -304,7 +367,8 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
   'security-review': Object.freeze({
     name: 'security-review',
     title: 'Security Review',
-    description: 'Bundle security-analysis prompt with evidence artifacts for IBM i RPG security risk review.',
+    description:
+      'Bundle security-analysis prompt with evidence artifacts for IBM i RPG security risk review.',
     analyzeMode: 'security',
     bundleArtifacts: Object.freeze([
       'analyze-run-manifest.json',
@@ -340,16 +404,24 @@ const WORKFLOW_PRESET_REGISTRY = Object.freeze({
         'Security analysis prompt grounded in source-backed evidence with EVxxxx citation support.',
       ],
       recommendedOutputs: [
-        { path: 'ai_prompt_security_analysis.md', purpose: 'Primary security review prompt for IBM i RPG risk categories.' },
+        {
+          path: 'ai_prompt_security_analysis.md',
+          purpose: 'Primary security review prompt for IBM i RPG risk categories.',
+        },
         { path: 'report.md', purpose: 'Human-readable summary for tracking security findings.' },
-        { path: 'canonical-analysis.json', purpose: 'Source-backed semantic evidence for validating security claims.' },
+        {
+          path: 'canonical-analysis.json',
+          purpose: 'Source-backed semantic evidence for validating security claims.',
+        },
       ],
     }),
   }),
 });
 
 function normalizeWorkflowPresetName(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase();
 }
 
 function getWorkflowPreset(presetName) {

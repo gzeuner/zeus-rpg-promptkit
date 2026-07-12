@@ -8,15 +8,21 @@ const zeusApi = require('../src/api/zeusApi');
 
 test('mcp tool surface does not expose knowledge-lab or legacy knowledge tools', () => {
   const tools = listMcpTools();
-  const names = tools.map((tool) => String(tool && tool.name ? tool.name : ''));
+  const names = tools.map(tool => String(tool && tool.name ? tool.name : ''));
 
   assert.equal(names.includes('zeus.knowledge'), false);
-  assert.equal(names.some((name) => /knowledge-lab|local-ai-classifier/i.test(name)), false);
+  assert.equal(
+    names.some(name => /knowledge-lab|local-ai-classifier/i.test(name)),
+    false
+  );
 });
 
 test('zeus api exports no internal knowledge-lab runtime surface', () => {
   const exportNames = Object.keys(zeusApi);
-  assert.equal(exportNames.some((name) => /knowledge-lab|local-ai-classifier/i.test(name)), false);
+  assert.equal(
+    exportNames.some(name => /knowledge-lab|local-ai-classifier/i.test(name)),
+    false
+  );
 });
 
 test('public knowledge-claims guard passes', () => {

@@ -43,15 +43,8 @@ const {
   parseJsonFromGroup,
   serializeJsonToGroup,
 } = require('./puiDdsParser');
-const {
-  applyChangeSetToJson,
-  cloneJson,
-  normalizeChangeSet,
-} = require('./puiEditEngine');
-const {
-  buildPuiDddlPayloadV1,
-  parsePuiDddlPayload,
-} = require('./puiDddl');
+const { applyChangeSetToJson, cloneJson, normalizeChangeSet } = require('./puiEditEngine');
+const { buildPuiDddlPayloadV1, parsePuiDddlPayload } = require('./puiDddl');
 
 const READ_ONLY_ACTIONS = Object.freeze(['roundtrip-check', 'dump-json', 'validate-json', 'plan']);
 const WRITE_ACTIONS = Object.freeze(['export-json', 'import-json', 'apply', 'grid-add-column']);
@@ -93,14 +86,16 @@ function executePuiEdit(args = {}, options = {}) {
   const action = args.action || args.a;
   if (!action) {
     throw invalid(
-      '--action is required (roundtrip-check | dump-json | validate-json | export-json | import-json | plan | apply | grid-add-column)',
+      '--action is required (roundtrip-check | dump-json | validate-json | export-json | import-json | plan | apply | grid-add-column)'
     );
   }
   if (!ALL_ACTIONS.includes(action)) {
     throw invalid(`Unknown action: ${action}. Allowed: ${ALL_ACTIONS.join(', ')}`);
   }
   if (!allowWrites && WRITE_ACTIONS.includes(action)) {
-    const error = new Error(`Action "${action}" is a write operation and is not permitted in this context.`);
+    const error = new Error(
+      `Action "${action}" is a write operation and is not permitted in this context.`
+    );
     error.code = 'PUI_EDIT_WRITE_BLOCKED';
     throw error;
   }
@@ -149,13 +144,17 @@ function actionRoundtripCheck(parsed, original, filePath) {
   const result = createResult('roundtrip-check', filePath);
   const serialized = serializeDds(parsed);
   const normalizedOriginal = original.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const htmlBlocks = parsed.segments.filter((s) => s.kind === 'html').length;
+  const htmlBlocks = parsed.segments.filter(s => s.kind === 'html').length;
 
   if (serialized === normalizedOriginal) {
     result.messages.push('OK Roundtrip — output is identical to input');
     result.messages.push(`  Segments: ${parsed.segments.length}`);
     result.messages.push(`  HTML blocks: ${htmlBlocks}`);
-    result.data = { roundtrip: true, segmentCount: parsed.segments.length, htmlBlockCount: htmlBlocks };
+    result.data = {
+      roundtrip: true,
+      segmentCount: parsed.segments.length,
+      htmlBlockCount: htmlBlocks,
+    };
     return result;
   }
 
@@ -250,7 +249,9 @@ function actionExportJson(parsed, args, filePath, cwd) {
     throw invalid('--out is required for --action export-json');
   }
   const { group, obj, compactSource } = readJsonFromParsed(parsed);
-  const format = String(args.format || 'pretty').trim().toLowerCase();
+  const format = String(args.format || 'pretty')
+    .trim()
+    .toLowerCase();
   const resolvedOutput = resolvePath(cwd, outPath);
   fs.mkdirSync(path.dirname(resolvedOutput), { recursive: true });
 
@@ -260,12 +261,16 @@ function actionExportJson(parsed, args, filePath, cwd) {
   } else if (format === 'compact') {
     payload = JSON.stringify(obj);
   } else if (format === 'dddl') {
-    payload = JSON.stringify(buildDddlPayload({
-      filePath,
-      group,
-      obj,
-      compactSource,
-    }), null, 2);
+    payload = JSON.stringify(
+      buildDddlPayload({
+        filePath,
+        group,
+        obj,
+        compactSource,
+      }),
+      null,
+      2
+    );
   } else {
     throw invalid('--format must be pretty, compact or dddl');
   }
@@ -344,7 +349,7 @@ function readJsonFromParsed(parsed) {
   if (!group) {
     throw invalid('No JSON segment found');
   }
-  const compactSource = group.segments.map((s) => s.content).join('');
+  const compactSource = group.segments.map(s => s.content).join('');
   const obj = parseJsonFromGroup(group);
   if (!obj) {
     throw invalid(`JSON parsing failed. Segment preview: ${compactSource.slice(0, 200)}`);
@@ -422,12 +427,16 @@ function fillChangeSetMessages(result, preview, filePath, applied) {
     result.messages.push(`  ${line}`);
   }
   if (!applied) {
-    result.messages.push('Preview created. Use --confirm with --action apply to write the changes.');
+    result.messages.push(
+      'Preview created. Use --confirm with --action apply to write the changes.'
+    );
   }
   result.data = {
     description: preview.description,
     operationCount: preview.operationCount,
-    summaryLines: Array.isArray(preview.applied.summaryLines) ? preview.applied.summaryLines.slice() : [],
+    summaryLines: Array.isArray(preview.applied.summaryLines)
+      ? preview.applied.summaryLines.slice()
+      : [],
     applied,
   };
 }
@@ -479,7 +488,9 @@ function actionGridAddColumn(parsed, args, filePath) {
   const fieldLength = parseInt(args['field-length'] || '10', 10);
   const fieldWidth = args['field-width'] || '100px';
   const sflFields = args['sfl-field']
-    ? (Array.isArray(args['sfl-field']) ? args['sfl-field'] : [args['sfl-field']])
+    ? Array.isArray(args['sfl-field'])
+      ? args['sfl-field']
+      : [args['sfl-field']]
     : [];
   const sflRecord = args['sfl-record'] ? String(args['sfl-record']).trim() : '';
   const autoAdjust = !args['no-auto-adjust'];
@@ -487,7 +498,7 @@ function actionGridAddColumn(parsed, args, filePath) {
 
   if (!gridId || isNaN(colPos) || !colHeading || isNaN(colWidth) || !fieldId || !fieldName) {
     throw invalid(
-      'grid-add-column requires: --grid-id, --col-position, --col-heading, --col-width, --field-id, --field-name and --confirm to write',
+      'grid-add-column requires: --grid-id, --col-position, --col-heading, --col-width, --field-id, --field-name and --confirm to write'
     );
   }
 
@@ -496,9 +507,11 @@ function actionGridAddColumn(parsed, args, filePath) {
 
   const { obj: json } = readJsonFromParsed(parsed);
 
-  const grid = (json.items || []).find((item) => item.id === gridId);
+  const grid = (json.items || []).find(item => item.id === gridId);
   if (!grid) {
-    throw invalid(`Grid element "${gridId}" not found. Available IDs: ${(json.items || []).map((i) => i.id).join(', ')}`);
+    throw invalid(
+      `Grid element "${gridId}" not found. Available IDs: ${(json.items || []).map(i => i.id).join(', ')}`
+    );
   }
 
   const oldCount = parseInt(grid['number of columns'] || '0', 10);
@@ -527,7 +540,16 @@ function actionGridAddColumn(parsed, args, filePath) {
     for (const line of autoAdjustLog) result.messages.push(`  Auto-Adjust: ${line}`);
   }
 
-  const newFieldDef = buildFieldDefinition(fieldId, fieldName, fieldType, fieldDataType, fieldLength, fieldWidth, gridId, colPos);
+  const newFieldDef = buildFieldDefinition(
+    fieldId,
+    fieldName,
+    fieldType,
+    fieldDataType,
+    fieldLength,
+    fieldWidth,
+    gridId,
+    colPos
+  );
   const lastGridItemIdx = (() => {
     let last = -1;
     for (let i = 0; i < json.items.length; i++) {
@@ -568,7 +590,9 @@ function actionGridAddColumn(parsed, args, filePath) {
   }
 
   writeDisplayWithBackup(filePath, output, result);
-  result.messages.push(`Column "${colHeading}" inserted at position ${colPos} (${oldCount} -> ${oldCount + 1} columns)`);
+  result.messages.push(
+    `Column "${colHeading}" inserted at position ${colPos} (${oldCount} -> ${oldCount + 1} columns)`
+  );
   if (sflFields.length > 0) {
     result.messages.push(`${sflFields.length} SFL field(s) inserted`);
   }
@@ -586,16 +610,16 @@ function autoAdjustLayout(json, gridId, colWidth) {
   const log = [];
   const items = json.items || [];
 
-  const grid = items.find((i) => i.id === gridId);
+  const grid = items.find(i => i.id === gridId);
   if (!grid) return log;
 
-  const colWidths = (grid['column widths'] || '').split(',').map((w) => parseInt(w, 10));
+  const colWidths = (grid['column widths'] || '').split(',').map(w => parseInt(w, 10));
   const newGridWidth = colWidths.reduce((a, b) => a + b, 0) + 1;
   const oldGridWidth = parsePx(grid.width);
   grid.width = `${newGridWidth}px`;
   log.push(`Grid "${gridId}" width: ${oldGridWidth}px -> ${newGridWidth}px`);
 
-  const panel = items.find((i) => i['field type'] === 'css panel');
+  const panel = items.find(i => i['field type'] === 'css panel');
   if (!panel) return log;
 
   const oldPanelWidth = parsePx(panel.width);
@@ -627,7 +651,16 @@ function parsePx(val) {
 }
 
 /** Builds a PUI field definition for a new output field in the grid. */
-function buildFieldDefinition(id, fieldName, fieldType, dataType, dataLength, width, gridId, column) {
+function buildFieldDefinition(
+  id,
+  fieldName,
+  fieldType,
+  dataType,
+  dataLength,
+  width,
+  gridId,
+  column
+) {
   const isNumeric = dataType === 'zoned' || dataType === 'Number';
   const def = {
     id,
@@ -701,7 +734,10 @@ function insertSflFields(parsed, sflFieldLines, preferredRecordName = '', result
         break;
       }
       const upperRaw = raw.toUpperCase();
-      if ((targetRecord && upperRaw.includes(targetRecord)) || (!targetRecord && upperRaw.includes('SFL'))) {
+      if (
+        (targetRecord && upperRaw.includes(targetRecord)) ||
+        (!targetRecord && upperRaw.includes('SFL'))
+      ) {
         insideSfl = true;
       }
     }
@@ -715,8 +751,10 @@ function insertSflFields(parsed, sflFieldLines, preferredRecordName = '', result
     return 0;
   }
 
-  const newSegments = sflFieldLines.map((fieldLine) => {
-    const normalized = fieldLine.startsWith('     A') ? fieldLine : `     A            ${fieldLine}`;
+  const newSegments = sflFieldLines.map(fieldLine => {
+    const normalized = fieldLine.startsWith('     A')
+      ? fieldLine
+      : `     A            ${fieldLine}`;
     return { kind: 'dds', raw: normalized, lineIndex: -1 };
   });
 

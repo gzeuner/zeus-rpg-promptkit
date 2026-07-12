@@ -99,23 +99,23 @@ test('analyze pipeline validates malformed source files before scanning', () => 
     logVerbose() {},
   });
 
-  const collectStage = result.stageReports.find((stage) => stage.id === 'collect-scan');
+  const collectStage = result.stageReports.find(stage => stage.id === 'collect-scan');
   assert.ok(collectStage);
   assert.equal(collectStage.metadata.sourceFileCount, 2);
   assert.equal(collectStage.metadata.scannableSourceFileCount, 1);
   assert.equal(collectStage.metadata.invalidSourceFileCount, 1);
   assert.equal(collectStage.metadata.importManifestFound, true);
   assert.ok(
-    collectStage.diagnostics.some((entry) => entry.code === 'INVALID_UTF8'),
-    'expected INVALID_UTF8 diagnostic',
+    collectStage.diagnostics.some(entry => entry.code === 'INVALID_UTF8'),
+    'expected INVALID_UTF8 diagnostic'
   );
   assert.ok(
-    collectStage.diagnostics.some((entry) => entry.code === 'SOURCE_CHANGED_SINCE_IMPORT'),
-    'expected checksum drift diagnostic',
+    collectStage.diagnostics.some(entry => entry.code === 'SOURCE_CHANGED_SINCE_IMPORT'),
+    'expected checksum drift diagnostic'
   );
   assert.equal(result.scanSummary.sourceFiles.length, 1);
   assert.equal(result.context.program, 'ORDERPGM');
-  assert.ok(result.notes.some((note) => note.includes('Invalid UTF-8 source encoding detected')));
+  assert.ok(result.notes.some(note => note.includes('Invalid UTF-8 source encoding detected')));
   assert.equal(result.sourceFiles.length, 2);
   assert.equal(result.scannableSourceFiles.length, 1);
 

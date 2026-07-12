@@ -121,14 +121,19 @@ test('resolveTableNameBothDirections resolves system and SQL names in schema', (
       },
     ],
     [
-      (query) => {
+      query => {
         assert.match(query, /QSYS2\.SYSTABLES/);
         assert.match(query, /TABLE_SCHEMA = 'SCHEMA_A'/);
       },
-    ],
+    ]
   );
 
-  const resolved = resolveTableNameBothDirections(sampleDbConfig(), 'tab_sys_a', 'schema_a', runtime);
+  const resolved = resolveTableNameBothDirections(
+    sampleDbConfig(),
+    'tab_sys_a',
+    'schema_a',
+    runtime
+  );
   assert.equal(resolved.found, true);
   assert.equal(resolved.systemName, 'TAB_SYS_A');
   assert.equal(resolved.sqlName, 'TABLE_A');
@@ -293,8 +298,22 @@ test('resolveObjectsByName matches SQL and system names across schemas and valid
           stdout: JSON.stringify({
             columns: [],
             rows: [
-              { COLUMN_NAME: 'ORDER_ID', DATA_TYPE: 'DECIMAL', LENGTH: 9, NUMERIC_SCALE: 0, IS_NULLABLE: 'NO', ORDINAL_POSITION: 1 },
-              { COLUMN_NAME: 'CUSTOMER_ID', DATA_TYPE: 'DECIMAL', LENGTH: 9, NUMERIC_SCALE: 0, IS_NULLABLE: 'NO', ORDINAL_POSITION: 2 },
+              {
+                COLUMN_NAME: 'ORDER_ID',
+                DATA_TYPE: 'DECIMAL',
+                LENGTH: 9,
+                NUMERIC_SCALE: 0,
+                IS_NULLABLE: 'NO',
+                ORDINAL_POSITION: 1,
+              },
+              {
+                COLUMN_NAME: 'CUSTOMER_ID',
+                DATA_TYPE: 'DECIMAL',
+                LENGTH: 9,
+                NUMERIC_SCALE: 0,
+                IS_NULLABLE: 'NO',
+                ORDINAL_POSITION: 2,
+              },
             ],
             rowCount: 2,
           }),
@@ -331,8 +350,8 @@ test('resolveObjectsByName matches SQL and system names across schemas and valid
   assert.equal(resolved.diagnostics.searchMode, 'schema-discovery');
   assert.equal(resolved.diagnostics.attemptCount, 1);
   assert.match(resolved.diagnostics.recommendations.join('\n'), /Use --schema APPDATA/);
-  assert.ok(queries.some((query) => /FROM QSYS2\.SYSTABLES/.test(query)));
-  assert.ok(queries.some((query) => /FROM QSYS2\.SYSCOLUMNS/.test(query)));
+  assert.ok(queries.some(query => /FROM QSYS2\.SYSTABLES/.test(query)));
+  assert.ok(queries.some(query => /FROM QSYS2\.SYSCOLUMNS/.test(query)));
 });
 
 test('buildResolveObjectDiagnostics reports fallback usage and scoped recommendations', () => {

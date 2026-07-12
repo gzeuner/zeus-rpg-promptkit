@@ -20,9 +20,9 @@
 'use strict';
 
 // Zeilenanfang für HTML-Keyword-Zeilen (genau wie PUI Designer schreibt)
-const DDS_PREFIX_FIRST   = '     A                                  1  2HTML(\'';
-const DDS_PREFIX_CONT    = '     A                                      ';
-const DDS_LINE_MAX_COL   = 80; // IBM i Quelldatei: 80 Zeichen je Zeile (ohne Zeilenende)
+const DDS_PREFIX_FIRST = "     A                                  1  2HTML('";
+const DDS_PREFIX_CONT = '     A                                      ';
+const DDS_LINE_MAX_COL = 80; // IBM i Quelldatei: 80 Zeichen je Zeile (ohne Zeilenende)
 
 // Nutzbare Zeichenbreite für den HTML-Inhalt:
 //   Erste Zeile: nach dem HTML(', vor dem abschließenden ' oder dem Continuation-'-'
@@ -42,7 +42,7 @@ const CONTENT_WIDTH_FIRST = DDS_LINE_MAX_COL - DDS_PREFIX_FIRST.length; // 80 - 
 
 // Gemessene Werte aus echter PUI-Datei:
 const HTML_CONTENT_PER_FIRST_LINE = DDS_LINE_MAX_COL - DDS_PREFIX_FIRST.length - 1; // 80 - 48 - 1 = 31
-const HTML_CONTENT_PER_CONT_LINE  = DDS_LINE_MAX_COL - DDS_PREFIX_CONT.length  - 1; // 80 - 45 - 1 = 34
+const HTML_CONTENT_PER_CONT_LINE = DDS_LINE_MAX_COL - DDS_PREFIX_CONT.length - 1; // 80 - 45 - 1 = 34
 
 /**
  * Liest eine DDS-Datei und gibt ein geparste Struktur zurück.
@@ -234,9 +234,7 @@ function buildHtmlLines(content) {
  * Für den vollständigen JSON → findJsonSegmentGroup() verwenden.
  */
 function findJsonSegment(parsed) {
-  return parsed.segments.find(
-    (s) => s.kind === 'html' && s.content.trimStart().startsWith('{'),
-  );
+  return parsed.segments.find(s => s.kind === 'html' && s.content.trimStart().startsWith('{'));
 }
 
 /**
@@ -298,7 +296,7 @@ function findJsonSegmentGroup(parsed) {
  */
 function parseJsonFromGroup(group) {
   if (!group) return null;
-  const fullContent = group.segments.map((s) => s.content).join('');
+  const fullContent = group.segments.map(s => s.content).join('');
   try {
     return JSON.parse(fullContent);
   } catch {

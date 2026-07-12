@@ -12,10 +12,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
-const {
-  runClCommand,
-  exportSourceMemberViaJdbc,
-} = require('./jt400CommandRunner');
+const { runClCommand, exportSourceMemberViaJdbc } = require('./jt400CommandRunner');
 
 const DEFAULT_STREAM_FILE_CCSID = 1208;
 
@@ -60,14 +57,16 @@ function buildCopyCommandWithEncoding({
   const fromMember = `/QSYS.LIB/${sourceLib}.LIB/${sourceFile}.FILE/${member}.MBR`;
   const toFile = buildRemoteTargetPath({ sourceFile, member, ifsDir });
   const stmfOpt = replace ? '*REPLACE' : '*NONE';
-  const targetCcsid = Number.isInteger(streamFileCcsid) && streamFileCcsid > 0
-    ? streamFileCcsid
-    : DEFAULT_STREAM_FILE_CCSID;
+  const targetCcsid =
+    Number.isInteger(streamFileCcsid) && streamFileCcsid > 0
+      ? streamFileCcsid
+      : DEFAULT_STREAM_FILE_CCSID;
   return `CPYTOSTMF FROMMBR(${clQuote(fromMember)}) TOSTMF(${clQuote(toFile)}) STMFOPT(${stmfOpt}) STMFCODPAG(${targetCcsid})`;
 }
 
 function shouldUseJdbcFallback(result) {
-  const combined = `${result && result.stderr ? result.stderr : ''} ${((result && result.messages) || []).join(' ')}`.toUpperCase();
+  const combined =
+    `${result && result.stderr ? result.stderr : ''} ${((result && result.messages) || []).join(' ')}`.toUpperCase();
   return combined.includes('CPDA08C') || combined.includes('CCSID 65535');
 }
 
@@ -81,11 +80,13 @@ function ensureRemoteDirectory(options, remoteDir) {
     return;
   }
 
-  const combined = `${mkdirResult.stderr || ''} ${(mkdirResult.messages || []).join(' ')}`.toUpperCase();
-  const alreadyExists = combined.includes('ALREADY EXISTS')
-    || combined.includes('CPFA0A9')
-    || combined.includes('CPFA0A0')
-    || combined.includes('CPF0000');
+  const combined =
+    `${mkdirResult.stderr || ''} ${(mkdirResult.messages || []).join(' ')}`.toUpperCase();
+  const alreadyExists =
+    combined.includes('ALREADY EXISTS') ||
+    combined.includes('CPFA0A9') ||
+    combined.includes('CPFA0A0') ||
+    combined.includes('CPF0000');
 
   if (!alreadyExists) {
     throw new Error(`Failed to ensure IFS directory ${remoteDir}: ${combined || 'unknown error'}`);
@@ -143,9 +144,9 @@ function exportMembersForSourceFile({
         finalResult = {
           ok: true,
           messages: [
-            ...((result.messages || []).filter(Boolean)),
+            ...(result.messages || []).filter(Boolean),
             `Fell back to JDBC source export for ${sourceLib}/${sourceFile}(${member}).`,
-            ...((fallback.messages || []).filter(Boolean)),
+            ...(fallback.messages || []).filter(Boolean),
           ],
           stderr: fallback.stderr || '',
         };

@@ -29,7 +29,10 @@ test('qa command loads canonical-analysis.json from directory and file path', ()
   try {
     assert.deepEqual(loadCanonicalAnalysis(tempDir), payload);
     assert.deepEqual(loadCanonicalAnalysis(filePath), payload);
-    assert.throws(() => loadCanonicalAnalysis(path.join(tempDir, 'missing')), /Input path not found/);
+    assert.throws(
+      () => loadCanonicalAnalysis(path.join(tempDir, 'missing')),
+      /Input path not found/
+    );
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }

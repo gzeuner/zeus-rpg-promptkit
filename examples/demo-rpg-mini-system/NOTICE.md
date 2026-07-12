@@ -10,4 +10,3 @@ IBM, IBM i, AS/400, and DB2 may be trademarks of International Business Machines
 This demo is not affiliated with, endorsed by, or sponsored by IBM.
 
 Repository license: Apache License 2.0 (see `/LICENSE`).
-

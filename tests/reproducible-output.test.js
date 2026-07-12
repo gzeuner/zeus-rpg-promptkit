@@ -57,41 +57,50 @@ test('reproducible mode produces identical analyze, impact, and bundle artifacts
   ];
 
   function executeCycle() {
-    runCli([
-      'analyze',
-      '--source',
-      sourceRoot,
-      '--program',
-      'ORDERPGM',
-      '--out',
-      outputRoot,
-      '--optimize-context',
-      '--test-data-limit',
-      '25',
-      '--reproducible',
-    ], projectRoot);
+    runCli(
+      [
+        'analyze',
+        '--source',
+        sourceRoot,
+        '--program',
+        'ORDERPGM',
+        '--out',
+        outputRoot,
+        '--optimize-context',
+        '--test-data-limit',
+        '25',
+        '--reproducible',
+      ],
+      projectRoot
+    );
 
-    runCli([
-      'impact',
-      '--target',
-      'ORDERS',
-      '--program',
-      'ORDERPGM',
-      '--out',
-      outputRoot,
-      '--reproducible',
-    ], projectRoot);
+    runCli(
+      [
+        'impact',
+        '--target',
+        'ORDERS',
+        '--program',
+        'ORDERPGM',
+        '--out',
+        outputRoot,
+        '--reproducible',
+      ],
+      projectRoot
+    );
 
-    runCli([
-      'bundle',
-      '--program',
-      'ORDERPGM',
-      '--source-output-root',
-      outputRoot,
-      '--output',
-      bundleRoot,
-      '--reproducible',
-    ], projectRoot);
+    runCli(
+      [
+        'bundle',
+        '--program',
+        'ORDERPGM',
+        '--source-output-root',
+        outputRoot,
+        '--output',
+        bundleRoot,
+        '--reproducible',
+      ],
+      projectRoot
+    );
 
     const artifacts = captureFiles(programOutputDir, trackedArtifacts);
     const bundlePath = path.join(bundleRoot, 'ORDERPGM-analysis-bundle.zip');
@@ -123,16 +132,20 @@ test('reproducible mode produces identical analyze, impact, and bundle artifacts
 
     assert.deepEqual(
       Object.keys(firstRun.artifacts).sort(),
-      Object.keys(secondRun.artifacts).sort(),
+      Object.keys(secondRun.artifacts).sort()
     );
     for (const relativePath of Object.keys(firstRun.artifacts)) {
       assert.equal(
         Buffer.compare(firstRun.artifacts[relativePath], secondRun.artifacts[relativePath]),
         0,
-        `artifact changed between reproducible runs: ${relativePath}`,
+        `artifact changed between reproducible runs: ${relativePath}`
       );
     }
-    assert.equal(Buffer.compare(firstRun.bundleBytes, secondRun.bundleBytes), 0, 'bundle zip changed between reproducible runs');
+    assert.equal(
+      Buffer.compare(firstRun.bundleBytes, secondRun.bundleBytes),
+      0,
+      'bundle zip changed between reproducible runs'
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

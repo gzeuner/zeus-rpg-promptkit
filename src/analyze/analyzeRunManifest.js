@@ -59,27 +59,30 @@ function inferArtifactKind(fileName) {
 
 function collectArtifactFileNames(outputProgramDir, generatedFiles) {
   if (Array.isArray(generatedFiles) && generatedFiles.length > 0) {
-    return Array.from(new Set(
-      generatedFiles
-        .map((fileName) => String(fileName || '').trim())
-        .filter((fileName) => fileName && fileName !== ANALYZE_RUN_MANIFEST_FILE),
-    )).sort((a, b) => a.localeCompare(b));
+    return Array.from(
+      new Set(
+        generatedFiles
+          .map(fileName => String(fileName || '').trim())
+          .filter(fileName => fileName && fileName !== ANALYZE_RUN_MANIFEST_FILE)
+      )
+    ).sort((a, b) => a.localeCompare(b));
   }
 
   if (!outputProgramDir || !fs.existsSync(outputProgramDir)) {
     return [];
   }
 
-  return fs.readdirSync(outputProgramDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name !== ANALYZE_RUN_MANIFEST_FILE)
-    .map((entry) => entry.name)
+  return fs
+    .readdirSync(outputProgramDir, { withFileTypes: true })
+    .filter(entry => entry.isFile() && entry.name !== ANALYZE_RUN_MANIFEST_FILE)
+    .map(entry => entry.name)
     .sort((a, b) => a.localeCompare(b));
 }
 
 function buildArtifacts(outputProgramDir, generatedFiles) {
   const artifactFileNames = collectArtifactFileNames(outputProgramDir, generatedFiles);
 
-  return artifactFileNames.map((fileName) => {
+  return artifactFileNames.map(fileName => {
     const absolutePath = path.join(outputProgramDir, fileName);
     const exists = fs.existsSync(absolutePath);
     const sizeBytes = exists ? fs.statSync(absolutePath).size : 0;
@@ -108,26 +111,30 @@ function buildSourceSnapshot(sourceRoot, sourceFiles, reproducibility) {
   const files = Array.isArray(sourceFiles) ? sourceFiles : [];
   const entries = files
     .filter(Boolean)
-    .map((filePath) => {
+    .map(filePath => {
       const absolutePath = path.resolve(filePath);
       const stats = fs.existsSync(absolutePath) ? fs.statSync(absolutePath) : null;
-      const relativePath = normalizedRoot ? path.relative(normalizedRoot, absolutePath) : path.basename(absolutePath);
+      const relativePath = normalizedRoot
+        ? path.relative(normalizedRoot, absolutePath)
+        : path.basename(absolutePath);
       const sha256 = stats ? hashContent(fs.readFileSync(absolutePath)) : null;
       return {
         path: relativePath.split(path.sep).join('/'),
         sizeBytes: stats ? stats.size : 0,
-        mtimeMs: reproducibilitySettings.enabled ? null : (stats ? Math.trunc(stats.mtimeMs) : 0),
+        mtimeMs: reproducibilitySettings.enabled ? null : stats ? Math.trunc(stats.mtimeMs) : 0,
         sha256,
       };
     })
     .sort((a, b) => a.path.localeCompare(b.path));
 
-  const contentFingerprint = hashContent(entries
-    .map((entry) => `${entry.path}|${entry.sizeBytes}|${entry.sha256 || ''}`)
-    .join('\n'));
+  const contentFingerprint = hashContent(
+    entries.map(entry => `${entry.path}|${entry.sizeBytes}|${entry.sha256 || ''}`).join('\n')
+  );
   const fingerprint = reproducibilitySettings.enabled
     ? contentFingerprint
-    : hashContent(entries.map((entry) => `${entry.path}|${entry.sizeBytes}|${entry.mtimeMs}`).join('\n'));
+    : hashContent(
+        entries.map(entry => `${entry.path}|${entry.sizeBytes}|${entry.mtimeMs}`).join('\n')
+      );
 
   return {
     root: normalizedRoot,
@@ -141,11 +148,11 @@ function buildSourceSnapshot(sourceRoot, sourceFiles, reproducibility) {
 function buildSummary(stageReports, diagnostics, artifacts, sourceSnapshot) {
   return {
     stageCount: stageReports.length,
-    completedStageCount: stageReports.filter((stage) => stage.status === 'completed').length,
-    failedStageCount: stageReports.filter((stage) => stage.status === 'failed').length,
+    completedStageCount: stageReports.filter(stage => stage.status === 'completed').length,
+    failedStageCount: stageReports.filter(stage => stage.status === 'failed').length,
     diagnosticCount: diagnostics.length,
-    errorCount: diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length,
-    warningCount: diagnostics.filter((diagnostic) => diagnostic.severity === 'warning').length,
+    errorCount: diagnostics.filter(diagnostic => diagnostic.severity === 'error').length,
+    warningCount: diagnostics.filter(diagnostic => diagnostic.severity === 'warning').length,
     generatedArtifactCount: artifacts.length,
     sourceFileCount: sourceSnapshot.fileCount,
   };
@@ -161,28 +168,44 @@ function buildComparison(previousManifest, currentManifest, reproducibility) {
     return null;
   }
 
-  const previousArtifacts = Array.isArray(previousManifest.artifacts) ? previousManifest.artifacts : [];
-  const currentArtifacts = Array.isArray(currentManifest.artifacts) ? currentManifest.artifacts : [];
-  const previousArtifactPaths = new Set(previousArtifacts.map((artifact) => artifact.path));
-  const currentArtifactPaths = new Set(currentArtifacts.map((artifact) => artifact.path));
-  const previousSourceFingerprint = previousManifest.inputs && previousManifest.inputs.sourceSnapshot
-    ? previousManifest.inputs.sourceSnapshot.fingerprint
-    : null;
+  const previousArtifacts = Array.isArray(previousManifest.artifacts)
+    ? previousManifest.artifacts
+    : [];
+  const currentArtifacts = Array.isArray(currentManifest.artifacts)
+    ? currentManifest.artifacts
+    : [];
+  const previousArtifactPaths = new Set(previousArtifacts.map(artifact => artifact.path));
+  const currentArtifactPaths = new Set(currentArtifacts.map(artifact => artifact.path));
+  const previousSourceFingerprint =
+    previousManifest.inputs && previousManifest.inputs.sourceSnapshot
+      ? previousManifest.inputs.sourceSnapshot.fingerprint
+      : null;
   const currentSourceFingerprint = currentManifest.inputs.sourceSnapshot.fingerprint;
 
   return {
-    previousRunStatus: previousManifest.run && previousManifest.run.status ? previousManifest.run.status : null,
-    previousCompletedAt: previousManifest.run && previousManifest.run.completedAt ? previousManifest.run.completedAt : null,
-    sourceFingerprintChanged: previousSourceFingerprint !== null && previousSourceFingerprint !== currentSourceFingerprint,
+    previousRunStatus:
+      previousManifest.run && previousManifest.run.status ? previousManifest.run.status : null,
+    previousCompletedAt:
+      previousManifest.run && previousManifest.run.completedAt
+        ? previousManifest.run.completedAt
+        : null,
+    sourceFingerprintChanged:
+      previousSourceFingerprint !== null && previousSourceFingerprint !== currentSourceFingerprint,
     addedArtifacts: currentArtifacts
-      .map((artifact) => artifact.path)
-      .filter((artifactPath) => !previousArtifactPaths.has(artifactPath)),
+      .map(artifact => artifact.path)
+      .filter(artifactPath => !previousArtifactPaths.has(artifactPath)),
     removedArtifacts: previousArtifacts
-      .map((artifact) => artifact.path)
-      .filter((artifactPath) => !currentArtifactPaths.has(artifactPath)),
-    stageCountDelta: currentManifest.summary.stageCount - Number(previousManifest.summary && previousManifest.summary.stageCount || 0),
-    diagnosticCountDelta: currentManifest.summary.diagnosticCount - Number(previousManifest.summary && previousManifest.summary.diagnosticCount || 0),
-    artifactCountDelta: currentManifest.summary.generatedArtifactCount - Number(previousManifest.summary && previousManifest.summary.generatedArtifactCount || 0),
+      .map(artifact => artifact.path)
+      .filter(artifactPath => !currentArtifactPaths.has(artifactPath)),
+    stageCountDelta:
+      currentManifest.summary.stageCount -
+      Number((previousManifest.summary && previousManifest.summary.stageCount) || 0),
+    diagnosticCountDelta:
+      currentManifest.summary.diagnosticCount -
+      Number((previousManifest.summary && previousManifest.summary.diagnosticCount) || 0),
+    artifactCountDelta:
+      currentManifest.summary.generatedArtifactCount -
+      Number((previousManifest.summary && previousManifest.summary.generatedArtifactCount) || 0),
   };
 }
 
@@ -196,22 +219,24 @@ function buildAnalyzeRunManifest({
   const reproducibility = normalizeReproducibilitySettings(context.reproducibility);
   const stageReports = Array.isArray(result && result.stageReports)
     ? result.stageReports
-    : Array.isArray(error && error.stageReports) ? error.stageReports : [];
-  const diagnostics = stageReports.flatMap((stage) => stage.diagnostics || []);
+    : Array.isArray(error && error.stageReports)
+      ? error.stageReports
+      : [];
+  const diagnostics = stageReports.flatMap(stage => stage.diagnostics || []);
   const sourceSnapshot = buildSourceSnapshot(
     context.sourceRoot,
     result && Array.isArray(result.sourceFiles) ? result.sourceFiles : [],
-    reproducibility,
+    reproducibility
   );
   const importManifestSummary = summarizeImportManifest(
     result && result.importManifest ? result.importManifest : null,
     {
       manifestPath: result && result.importManifestPath ? result.importManifestPath : null,
-    },
+    }
   );
   const artifacts = buildArtifacts(
     context.outputProgramDir,
-    result && Array.isArray(result.generatedFiles) ? result.generatedFiles : null,
+    result && Array.isArray(result.generatedFiles) ? result.generatedFiles : null
   );
 
   // Use shared run manifest builder (package 03) for consistent contract
@@ -226,15 +251,19 @@ function buildAnalyzeRunManifest({
       cwd: context.cwd,
       outputDir: context.outputProgramDir,
       reproducible: reproducibility.enabled,
-      ...(error ? {
-        failure: {
-          message: error.message,
-          ...(error.stageId ? { stageId: error.stageId } : {}),
-        },
-      } : {}),
+      ...(error
+        ? {
+            failure: {
+              message: error.message,
+              ...(error.stageId ? { stageId: error.stageId } : {}),
+            },
+          }
+        : {}),
     },
     inputs: {
-      program: String(context.program || '').trim().toUpperCase(),
+      program: String(context.program || '')
+        .trim()
+        .toUpperCase(),
       sourceRoot: context.sourceRoot,
       outputRoot: context.outputRoot,
       options: {
@@ -244,39 +273,54 @@ function buildAnalyzeRunManifest({
         emitDiagnosticsEnabled: Boolean(context.emitDiagnosticsEnabled),
         skipTestData: Boolean(context.skipTestData),
         testDataLimit: Number(context.testDataLimit) || null,
-        analysisLimits: context.analysisLimits && typeof context.analysisLimits === 'object'
-          ? context.analysisLimits
-          : null,
-        testDataPolicy: context.testDataPolicy && typeof context.testDataPolicy === 'object'
-          ? context.testDataPolicy
-          : null,
+        analysisLimits:
+          context.analysisLimits && typeof context.analysisLimits === 'object'
+            ? context.analysisLimits
+            : null,
+        testDataPolicy:
+          context.testDataPolicy && typeof context.testDataPolicy === 'object'
+            ? context.testDataPolicy
+            : null,
         extensions: Array.isArray(context.extensions) ? context.extensions : [],
         reproducibleEnabled: reproducibility.enabled,
         guidedMode: context.guidedMode || null,
         workflowPreset: context.workflowPreset || null,
-        investigation: context.investigation && typeof context.investigation === 'object'
-          ? {
-            scanIfsPathsEnabled: Boolean(context.investigation.scanIfsPathsEnabled),
-            searchTerms: Array.isArray(context.investigation.searchTerms) ? context.investigation.searchTerms : [],
-            searchIgnorePatterns: Array.isArray(context.investigation.searchIgnorePatterns) ? context.investigation.searchIgnorePatterns : [],
-            searchMaxResults: Number(context.investigation.searchMaxResults) || 0,
-            diagnosticPacks: Array.isArray(context.investigation.diagnosticPacks) ? context.investigation.diagnosticPacks : [],
-            diagnosticParameterString: typeof context.investigation.diagnosticParameterString === 'string'
-              ? context.investigation.diagnosticParameterString
-              : '',
-          }
-          : null,
-        knownFacts: context.knownFacts && typeof context.knownFacts === 'object'
-          ? {
-            enabled: Boolean(context.knownFacts.enabled),
-            profile: typeof context.knownFacts.profile === 'string' && context.knownFacts.profile.trim()
-              ? context.knownFacts.profile
-              : null,
-            storePath: typeof context.knownFacts.storePath === 'string' && context.knownFacts.storePath.trim()
-              ? context.knownFacts.storePath
-              : null,
-          }
-          : null,
+        investigation:
+          context.investigation && typeof context.investigation === 'object'
+            ? {
+                scanIfsPathsEnabled: Boolean(context.investigation.scanIfsPathsEnabled),
+                searchTerms: Array.isArray(context.investigation.searchTerms)
+                  ? context.investigation.searchTerms
+                  : [],
+                searchIgnorePatterns: Array.isArray(context.investigation.searchIgnorePatterns)
+                  ? context.investigation.searchIgnorePatterns
+                  : [],
+                searchMaxResults: Number(context.investigation.searchMaxResults) || 0,
+                diagnosticPacks: Array.isArray(context.investigation.diagnosticPacks)
+                  ? context.investigation.diagnosticPacks
+                  : [],
+                diagnosticParameterString:
+                  typeof context.investigation.diagnosticParameterString === 'string'
+                    ? context.investigation.diagnosticParameterString
+                    : '',
+              }
+            : null,
+        knownFacts:
+          context.knownFacts && typeof context.knownFacts === 'object'
+            ? {
+                enabled: Boolean(context.knownFacts.enabled),
+                profile:
+                  typeof context.knownFacts.profile === 'string' &&
+                  context.knownFacts.profile.trim()
+                    ? context.knownFacts.profile
+                    : null,
+                storePath:
+                  typeof context.knownFacts.storePath === 'string' &&
+                  context.knownFacts.storePath.trim()
+                    ? context.knownFacts.storePath
+                    : null,
+              }
+            : null,
       },
       sourceSnapshot,
       importManifest: importManifestSummary,
@@ -291,7 +335,7 @@ function buildAnalyzeRunManifest({
     summary: buildSummary(stageReports, diagnostics, artifacts, sourceSnapshot),
     cacheStatus: result && result.cacheStatus ? result.cacheStatus : null,
     diagnostics,
-    stages: stageReports.map((stage) => ({
+    stages: stageReports.map(stage => ({
       id: stage.id,
       status: stage.status,
       startedAt: stage.startedAt,
@@ -306,12 +350,12 @@ function buildAnalyzeRunManifest({
 
   const pathReplacements = reproducibility.enabled
     ? buildReproduciblePathReplacements({
-      cwd: context.cwd,
-      sourceRoot: context.sourceRoot,
-      outputRoot: context.outputRoot,
-      outputProgramDir: context.outputProgramDir,
-      program: context.program,
-    })
+        cwd: context.cwd,
+        sourceRoot: context.sourceRoot,
+        outputRoot: context.outputRoot,
+        outputProgramDir: context.outputProgramDir,
+        program: context.program,
+      })
     : null;
   const fingerprintSource = {
     tool: manifest.tool,
@@ -319,14 +363,14 @@ function buildAnalyzeRunManifest({
     inputs: manifest.inputs,
     summary: manifest.summary,
     diagnostics: manifest.diagnostics,
-    stages: manifest.stages.map((stage) => ({
+    stages: manifest.stages.map(stage => ({
       id: stage.id,
       status: stage.status,
       definition: stage.definition,
       metadata: stage.metadata,
       diagnostics: stage.diagnostics,
     })),
-    artifacts: manifest.artifacts.map((artifact) => ({
+    artifacts: manifest.artifacts.map(artifact => ({
       path: artifact.path,
       kind: artifact.kind,
       exists: artifact.exists,
@@ -337,7 +381,7 @@ function buildAnalyzeRunManifest({
   const contentFingerprint = hashNormalizedValue(
     reproducibility.enabled
       ? replaceExactStringsDeep(fingerprintSource, pathReplacements)
-      : fingerprintSource,
+      : fingerprintSource
   );
   manifest.reproducibility = buildReproducibilityMetadata(reproducibility, contentFingerprint, {
     runtimeMetadataSuppressed: reproducibility.enabled,
@@ -346,7 +390,11 @@ function buildAnalyzeRunManifest({
   manifest.comparison = buildComparison(previousManifest, manifest, reproducibility);
 
   // Package 03: validate against contract before returning/writing
-  const validation = schemaRegistry.validate(CONTRACT_IDS.RUN_MANIFEST, MANIFEST_SCHEMA_VERSION, manifest);
+  const validation = schemaRegistry.validate(
+    CONTRACT_IDS.RUN_MANIFEST,
+    MANIFEST_SCHEMA_VERSION,
+    manifest
+  );
   if (!validation.ok) {
     // Attach validation errors but do not break existing runs (log-style for now, tests will cover failure paths)
     manifest.validationErrors = validation.errors;
@@ -356,10 +404,7 @@ function buildAnalyzeRunManifest({
     return manifest;
   }
 
-  return replaceExactStringsDeep(
-    manifest,
-    pathReplacements,
-  );
+  return replaceExactStringsDeep(manifest, pathReplacements);
 }
 
 function readAnalyzeRunManifest(outputProgramDir) {
@@ -371,7 +416,11 @@ function readAnalyzeRunManifest(outputProgramDir) {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
   // Package 03: validate on read at trust boundary
-  const validation = schemaRegistry.validate(CONTRACT_IDS.RUN_MANIFEST, MANIFEST_SCHEMA_VERSION, manifest);
+  const validation = schemaRegistry.validate(
+    CONTRACT_IDS.RUN_MANIFEST,
+    MANIFEST_SCHEMA_VERSION,
+    manifest
+  );
   if (!validation.ok) {
     manifest._validation = { ok: false, errors: validation.errors };
   }

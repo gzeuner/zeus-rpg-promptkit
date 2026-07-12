@@ -32,7 +32,7 @@ function createTempProject(profiles) {
   fs.writeFileSync(
     path.join(tempRoot, 'config', 'profiles.example.json'),
     `${JSON.stringify(profiles, null, 2)}\n`,
-    'utf8',
+    'utf8'
   );
   return tempRoot;
 }
@@ -58,12 +58,26 @@ test('loadProfiles resolves config directory from --config before cwd/config', (
   const customConfigDir = path.join(tempRoot, 'custom-config');
   fs.mkdirSync(defaultConfigDir, { recursive: true });
   fs.mkdirSync(customConfigDir, { recursive: true });
-  fs.writeFileSync(path.join(defaultConfigDir, 'profiles.example.json'), `${JSON.stringify({
-    default: { sourceRoot: './default' },
-  }, null, 2)}\n`);
-  fs.writeFileSync(path.join(customConfigDir, 'profiles.json'), `${JSON.stringify({
-    custom: { sourceRoot: './custom' },
-  }, null, 2)}\n`);
+  fs.writeFileSync(
+    path.join(defaultConfigDir, 'profiles.example.json'),
+    `${JSON.stringify(
+      {
+        default: { sourceRoot: './default' },
+      },
+      null,
+      2
+    )}\n`
+  );
+  fs.writeFileSync(
+    path.join(customConfigDir, 'profiles.json'),
+    `${JSON.stringify(
+      {
+        custom: { sourceRoot: './custom' },
+      },
+      null,
+      2
+    )}\n`
+  );
 
   try {
     const profiles = loadProfiles({
@@ -84,23 +98,44 @@ test('loadProfiles applies overlay files in deterministic sorted order', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-runtime-config-overlays-'));
   const configDir = path.join(tempRoot, 'config');
   fs.mkdirSync(configDir, { recursive: true });
-  fs.writeFileSync(path.join(configDir, 'profiles.json'), `${JSON.stringify({
-    sample: {
-      sourceRoot: './base-source',
-      outputRoot: './base-output',
-      extensions: ['.rpgle'],
-    },
-  }, null, 2)}\n`);
-  fs.writeFileSync(path.join(configDir, 'profiles.alpha.json'), `${JSON.stringify({
-    sample: {
-      outputRoot: './alpha-output',
-    },
-  }, null, 2)}\n`);
-  fs.writeFileSync(path.join(configDir, 'profiles.beta.json'), `${JSON.stringify({
-    sample: {
-      outputRoot: './beta-output',
-    },
-  }, null, 2)}\n`);
+  fs.writeFileSync(
+    path.join(configDir, 'profiles.json'),
+    `${JSON.stringify(
+      {
+        sample: {
+          sourceRoot: './base-source',
+          outputRoot: './base-output',
+          extensions: ['.rpgle'],
+        },
+      },
+      null,
+      2
+    )}\n`
+  );
+  fs.writeFileSync(
+    path.join(configDir, 'profiles.alpha.json'),
+    `${JSON.stringify(
+      {
+        sample: {
+          outputRoot: './alpha-output',
+        },
+      },
+      null,
+      2
+    )}\n`
+  );
+  fs.writeFileSync(
+    path.join(configDir, 'profiles.beta.json'),
+    `${JSON.stringify(
+      {
+        sample: {
+          outputRoot: './beta-output',
+        },
+      },
+      null,
+      2
+    )}\n`
+  );
 
   try {
     const profiles = loadProfiles({ cwd: tempRoot, env: {} });
@@ -110,8 +145,12 @@ test('loadProfiles applies overlay files in deterministic sorted order', () => {
     assert.equal(profiles.sample.outputRoot, './beta-output');
     assert.ok(metadata.sourceFileLabel.includes('profiles.alpha.json +'));
     assert.ok(metadata.sourceFileLabel.includes('profiles.beta.json'));
-    const alphaIndex = metadata.attemptedPaths.findIndex((entry) => entry.endsWith(path.join('config', 'profiles.alpha.json')));
-    const betaIndex = metadata.attemptedPaths.findIndex((entry) => entry.endsWith(path.join('config', 'profiles.beta.json')));
+    const alphaIndex = metadata.attemptedPaths.findIndex(entry =>
+      entry.endsWith(path.join('config', 'profiles.alpha.json'))
+    );
+    const betaIndex = metadata.attemptedPaths.findIndex(entry =>
+      entry.endsWith(path.join('config', 'profiles.beta.json'))
+    );
     assert.ok(alphaIndex >= 0);
     assert.ok(betaIndex >= 0);
     assert.ok(alphaIndex < betaIndex);
@@ -130,7 +169,10 @@ test('resolveProfilesConfigPaths honors ZEUS_CONFIG_DIR when --config is absent'
   });
 
   assert.equal(resolved.source, 'env');
-  assert.equal(resolved.preferredPath.endsWith(path.join('profiles-dir', 'local-only', 'profiles.json')), true);
+  assert.equal(
+    resolved.preferredPath.endsWith(path.join('profiles-dir', 'local-only', 'profiles.json')),
+    true
+  );
 });
 
 test('resolveProfilesConfigPaths supports --config with direct JSON file path', () => {
@@ -224,11 +266,13 @@ test('resolveProfile supports inheritance and env placeholder expansion for secr
       },
       testData: {
         denyTables: ['APP.AUDITLOG'],
-        maskRules: [{
-          table: 'CUSTOMERS',
-          columns: ['PHONE'],
-          value: 'MASKED_PHONE',
-        }],
+        maskRules: [
+          {
+            table: 'CUSTOMERS',
+            columns: ['PHONE'],
+            value: 'MASKED_PHONE',
+          },
+        ],
       },
     },
   });
@@ -314,17 +358,21 @@ test('readWorkflowConfig merges global, profile, and workflow preset definitions
         outputRoot: './analysis',
         defaultPreset: 'local',
         analyzeModes: ['documentation', 'defect-analysis'],
-        tables: [{
-          table: 'ORDERS',
-          schema: 'APP',
-        }],
+        tables: [
+          {
+            table: 'ORDERS',
+            schema: 'APP',
+          },
+        ],
         presets: {
           local: {
             steps: ['fetch', 'copy', 'analyze', 'report'],
-            impact: [{
-              field: 'CUSTOMER_ID',
-              member: 'ORDERPGM',
-            }],
+            impact: [
+              {
+                field: 'CUSTOMER_ID',
+                member: 'ORDERPGM',
+              },
+            ],
           },
         },
       },
@@ -340,11 +388,13 @@ test('readWorkflowConfig merges global, profile, and workflow preset definitions
     assert.equal(workflowConfig.outputRoot, './analysis');
     assert.equal(workflowConfig.defaultPreset, 'local');
     assert.deepEqual(workflowConfig.analyzeModes, ['documentation', 'defect-analysis']);
-    assert.deepEqual(workflowConfig.tables, [{
-      table: 'ORDERS',
-      schema: 'APP',
-      filter: '',
-    }]);
+    assert.deepEqual(workflowConfig.tables, [
+      {
+        table: 'ORDERS',
+        schema: 'APP',
+        filter: '',
+      },
+    ]);
     assert.deepEqual(Object.keys(workflowConfig.presets).sort(), ['local', 'shared']);
     assert.deepEqual(preset.steps, ['fetch', 'copy', 'analyze', 'report']);
     assert.deepEqual(preset.members, ['ORDERPGM']);
@@ -378,7 +428,7 @@ test('resolveAnalyzeConfig applies environment overrides for DB credentials', ()
           ZEUS_DB_PASSWORD: 'env-pass',
           ZEUS_DB_DEFAULT_SCHEMA: 'ENVLIB',
         },
-      },
+      }
     );
 
     assert.deepEqual(config.db, {
@@ -424,7 +474,7 @@ test('resolveAnalyzeConfig decrypts an encrypted DB password provided via env ov
           ZEUS_SECRET_KEY: KEY,
           ZEUS_DB_PASSWORD: token,
         },
-      },
+      }
     );
     // Der verschluesselte Env-Wert muss am Ende als Klartext ankommen.
     assert.equal(config.db.password, 'plain-db-pass');
@@ -452,7 +502,7 @@ test('resolveAnalyzeConfig CLI --schema/--library override profile and env schem
       {
         cwd: tempRoot,
         env: { ZEUS_DB_DEFAULT_SCHEMA: 'ENVLIB' },
-      },
+      }
     );
 
     // CLI-Werte haben Vorrang und werden normalisiert (UPPERCASE).
@@ -476,7 +526,7 @@ test('resolveAnalyzeConfig accepts --source-root as an alias for --source', () =
   try {
     const config = resolveAnalyzeConfig(
       { profile: 'sample', 'source-root': './cli-src' },
-      { cwd: tempRoot, env: {} },
+      { cwd: tempRoot, env: {} }
     );
     assert.equal(config.sourceRoot, './cli-src');
   } finally {
@@ -505,7 +555,7 @@ test('resolveAnalyzeConfig does not flag delegated env placeholders as runtime c
           ZEUS_DB_USER: 'readonly-user',
           ZEUS_DB_PASSWORD: 'readonly-pass',
         },
-      },
+      }
     );
 
     const metadata = getRuntimeConfigMetadata(config.db);
@@ -550,7 +600,7 @@ test('resolveAnalyzeConfig supports dedicated metadata and test-data DB roles wi
           ZEUS_TESTDATA_DB_USER: 'test-user',
           ZEUS_TESTDATA_DB_PASSWORD: 'test-pass',
         },
-      },
+      }
     );
 
     assert.deepEqual(resolveAnalyzeDbConfig(config, 'metadata'), {
@@ -606,7 +656,7 @@ test('resolveFetchConfig accepts environment overrides for sensitive fetch setti
           ZEUS_FETCH_TRANSPORT: 'jt400',
           ZEUS_FETCH_REPLACE: 'true',
         },
-      },
+      }
     );
 
     assert.equal(config.host, 'env-host');
@@ -645,7 +695,7 @@ test('resolveFetchConfig resolves fetch port from profile and environment overri
       {
         cwd: tempRoot,
         env: {},
-      },
+      }
     );
     assert.equal(configFromProfile.port, 2222);
 
@@ -656,7 +706,7 @@ test('resolveFetchConfig resolves fetch port from profile and environment overri
         env: {
           ZEUS_FETCH_PORT: '2200',
         },
-      },
+      }
     );
     assert.equal(configFromEnv.port, 2200);
 
@@ -667,7 +717,7 @@ test('resolveFetchConfig resolves fetch port from profile and environment overri
         env: {
           ZEUS_FETCH_PORT: '2200',
         },
-      },
+      }
     );
     assert.equal(configFromArgs.port, 2022);
   } finally {
@@ -715,7 +765,7 @@ test('resolveFetchConfig allows fetch to switch to another named system via CLI'
           ZEUS_FETCH_USER: 'stale-env-user',
           ZEUS_FETCH_PASSWORD: 'stale-env-pass',
         },
-      },
+      }
     );
 
     assert.equal(config.host, 'prod-host');
@@ -749,7 +799,7 @@ test('resolveFetchConfig reports unknown fetch system overrides clearly', () => 
   try {
     assert.throws(
       () => resolveFetchConfig({ profile: 'multi', system: 'missing' }, { cwd: tempRoot, env: {} }),
-      /Fetch system "missing" not found in profile systems. Available systems: dev/,
+      /Fetch system "missing" not found in profile systems. Available systems: dev/
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -779,7 +829,7 @@ test('resolveFetchConfig preserves boolean fetch toggles from profile definition
       {
         cwd: tempRoot,
         env: {},
-      },
+      }
     );
 
     assert.equal(config.diagnoseTransport, true);
@@ -796,7 +846,7 @@ test('resolveBundleConfig throws for unknown profiles', () => {
   try {
     assert.throws(
       () => resolveBundleConfig({ profile: 'missing' }, { cwd: tempRoot }),
-      /Profile "missing" not found/,
+      /Profile "missing" not found/
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -829,7 +879,7 @@ test('loadProfiles rejects invalid profile structure', () => {
   try {
     assert.throws(
       () => loadProfiles({ cwd: tempRoot, env: {} }),
-      /Failed to load profiles from .*Invalid configuration: profile "broken"\.extensions must be an array of strings/,
+      /Failed to load profiles from .*Invalid configuration: profile "broken"\.extensions must be an array of strings/
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -840,9 +890,11 @@ test('loadProfiles rejects invalid test-data policy shape', () => {
   const tempRoot = createTempProject({
     broken: {
       testData: {
-        maskRules: [{
-          columns: [],
-        }],
+        maskRules: [
+          {
+            columns: [],
+          },
+        ],
       },
     },
   });
@@ -850,7 +902,7 @@ test('loadProfiles rejects invalid test-data policy shape', () => {
   try {
     assert.throws(
       () => loadProfiles({ cwd: tempRoot, env: {} }),
-      /Failed to load profiles from .*Invalid configuration: profile "broken"\.testData\.maskRules\[0\] must define at least one of \.table or \.schema/,
+      /Failed to load profiles from .*Invalid configuration: profile "broken"\.testData\.maskRules\[0\] must define at least one of \.table or \.schema/
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -866,7 +918,7 @@ test('resolveProfile rejects cyclic inheritance chains', () => {
   try {
     assert.throws(
       () => resolveProfile(loadProfiles({ cwd: tempRoot, env: {} }), 'a', { env: {} }),
-      /cyclic inheritance chain/i,
+      /cyclic inheritance chain/i
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -883,7 +935,7 @@ test('resolveAnalyzeConfig rejects invalid global test data limit', () => {
   try {
     assert.throws(
       () => resolveAnalyzeConfig({}, { cwd: tempRoot, env: {} }),
-      /Invalid configuration: testData\.limit must be a positive integer/,
+      /Invalid configuration: testData\.limit must be a positive integer/
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -903,7 +955,7 @@ test('resolveFetchConfig rejects unsupported transport values', () => {
     assert.equal(ALLOWED_FETCH_TRANSPORTS.has('smtp'), false);
     assert.throws(
       () => resolveFetchConfig({ profile: 'fetcher' }, { cwd: tempRoot, env: {} }),
-      /Invalid configuration: profile "fetcher"\.fetch\.transport must be one of: auto, sftp, jt400, ftp/,
+      /Invalid configuration: profile "fetcher"\.fetch\.transport must be one of: auto, sftp, jt400, ftp/
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -922,7 +974,7 @@ test('resolveFetchConfig rejects invalid stream file CCSID values', () => {
   try {
     assert.throws(
       () => resolveFetchConfig({ profile: 'fetcher' }, { cwd: tempRoot, env: {} }),
-      /Invalid configuration: profile "fetcher"\.fetch\.streamFileCcsid must be a positive integer/,
+      /Invalid configuration: profile "fetcher"\.fetch\.streamFileCcsid must be a positive integer/
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -942,7 +994,7 @@ test('loadProfiles rejects invalid bridge mode values', () => {
   try {
     assert.throws(
       () => loadProfiles({ cwd: tempRoot, env: {} }),
-      /Invalid configuration: profile "broken"\.bridge\.mode must be one of: plan-only, plan-stage-apply, plan-stage-apply-compile/,
+      /Invalid configuration: profile "broken"\.bridge\.mode must be one of: plan-only, plan-stage-apply, plan-stage-apply-compile/
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -951,19 +1003,22 @@ test('loadProfiles rejects invalid bridge mode values', () => {
 
 test('validateProfiles accepts minimal valid structures and rejects invalid profile shape', () => {
   assert.doesNotThrow(() => validateProfiles({}));
-  assert.doesNotThrow(() => validateProfiles({
-    default: {
-      sourceRoot: './src',
-    },
-  }));
+  assert.doesNotThrow(() =>
+    validateProfiles({
+      default: {
+        sourceRoot: './src',
+      },
+    })
+  );
 
   assert.throws(
-    () => validateProfiles({
-      broken: {
-        extensions: '.rpgle',
-      },
-    }),
-    /Invalid configuration: profile "broken"\.extensions must be an array of strings/,
+    () =>
+      validateProfiles({
+        broken: {
+          extensions: '.rpgle',
+        },
+      }),
+    /Invalid configuration: profile "broken"\.extensions must be an array of strings/
   );
 });
 
@@ -973,17 +1028,31 @@ test('loadProfiles with --config JSON file path loads only that file (no overlay
   fs.mkdirSync(configDir, { recursive: true });
 
   const directPath = path.join(configDir, 'custom-profiles.json');
-  fs.writeFileSync(directPath, `${JSON.stringify({
-    sample: {
-      sourceRoot: './direct-source',
-      outputRoot: './direct-output',
-    },
-  }, null, 2)}\n`);
-  fs.writeFileSync(path.join(configDir, 'profiles.alpha.json'), `${JSON.stringify({
-    sample: {
-      outputRoot: './overlay-output',
-    },
-  }, null, 2)}\n`);
+  fs.writeFileSync(
+    directPath,
+    `${JSON.stringify(
+      {
+        sample: {
+          sourceRoot: './direct-source',
+          outputRoot: './direct-output',
+        },
+      },
+      null,
+      2
+    )}\n`
+  );
+  fs.writeFileSync(
+    path.join(configDir, 'profiles.alpha.json'),
+    `${JSON.stringify(
+      {
+        sample: {
+          outputRoot: './overlay-output',
+        },
+      },
+      null,
+      2
+    )}\n`
+  );
 
   try {
     const profiles = loadProfiles({
@@ -1010,18 +1079,32 @@ test('loadProfiles prefers local-only/profiles.json over config/profiles.json', 
   const localOnlyDir = path.join(configDir, 'local-only');
   fs.mkdirSync(localOnlyDir, { recursive: true });
 
-  fs.writeFileSync(path.join(configDir, 'profiles.json'), `${JSON.stringify({
-    sample: {
-      sourceRoot: './shared-source',
-      outputRoot: './shared-output',
-    },
-  }, null, 2)}\n`);
-  fs.writeFileSync(path.join(localOnlyDir, 'profiles.json'), `${JSON.stringify({
-    sample: {
-      sourceRoot: './local-source',
-      outputRoot: './local-output',
-    },
-  }, null, 2)}\n`);
+  fs.writeFileSync(
+    path.join(configDir, 'profiles.json'),
+    `${JSON.stringify(
+      {
+        sample: {
+          sourceRoot: './shared-source',
+          outputRoot: './shared-output',
+        },
+      },
+      null,
+      2
+    )}\n`
+  );
+  fs.writeFileSync(
+    path.join(localOnlyDir, 'profiles.json'),
+    `${JSON.stringify(
+      {
+        sample: {
+          sourceRoot: './local-source',
+          outputRoot: './local-output',
+        },
+      },
+      null,
+      2
+    )}\n`
+  );
 
   try {
     const profiles = loadProfiles({ cwd: tempRoot, env: {} });
@@ -1045,15 +1128,19 @@ test('readWorkflowConfig normalizes workflow preset fields deterministically', (
             steps: [' Analyze ', 'REPORT', 'report'],
             members: ['orderpgm', ' ORDERPGM ', 'bpgm'],
             analyzeModes: ['documentation', 'documentation', 'error-analysis'],
-            tables: [{
-              table: ' orders ',
-              schema: ' app ',
-              filter: 'status = "o"',
-            }],
-            impact: [{
-              field: 'customer_id',
-              member: 'orderpgm',
-            }],
+            tables: [
+              {
+                table: ' orders ',
+                schema: ' app ',
+                filter: 'status = "o"',
+              },
+            ],
+            impact: [
+              {
+                field: 'customer_id',
+                member: 'orderpgm',
+              },
+            ],
           },
         },
       },
@@ -1068,17 +1155,21 @@ test('readWorkflowConfig normalizes workflow preset fields deterministically', (
     assert.deepEqual(preset.steps, ['analyze', 'report']);
     assert.deepEqual(preset.members, ['BPGM', 'ORDERPGM']);
     assert.deepEqual(preset.analyzeModes, ['documentation', 'error-analysis']);
-    assert.deepEqual(preset.tables, [{
-      schema: 'APP',
-      table: 'ORDERS',
-      filter: 'STATUS = "O"',
-    }]);
-    assert.deepEqual(preset.impact, [{
-      target: '',
-      field: 'CUSTOMER_ID',
-      program: '',
-      member: 'ORDERPGM',
-    }]);
+    assert.deepEqual(preset.tables, [
+      {
+        schema: 'APP',
+        table: 'ORDERS',
+        filter: 'STATUS = "O"',
+      },
+    ]);
+    assert.deepEqual(preset.impact, [
+      {
+        target: '',
+        field: 'CUSTOMER_ID',
+        program: '',
+        member: 'ORDERPGM',
+      },
+    ]);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

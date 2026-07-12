@@ -799,6 +799,7 @@ Prompt:
 
 ```markdown
 Use the attached Zeus prompt and explain:
+
 1. the program purpose
 2. the high-level control flow
 3. table access behavior
@@ -847,6 +848,7 @@ Prompt:
 
 ```markdown
 Using the impact analysis and call-tree artifacts, identify:
+
 1. directly affected programs
 2. indirectly affected upstream callers
 3. unresolved or ambiguous resolution risks
@@ -896,6 +898,7 @@ Prompt:
 ```markdown
 Draft developer documentation for this program.
 Requirements:
+
 - do not invent behavior not backed by the supplied artifacts
 - cite uncertainties explicitly
 - include tables, calls, and operational risks
@@ -939,6 +942,7 @@ Prompt:
 
 ```markdown
 Using the modernization prompt and supporting artifacts, identify:
+
 1. candidate extraction seams
 2. data and integration blockers
 3. native I/O behaviors that complicate migration
@@ -1015,6 +1019,7 @@ Prompt:
 ```markdown
 Generate a test matrix for this RPG program.
 For each case include:
+
 - intent
 - inputs
 - preconditions
@@ -1068,6 +1073,7 @@ node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --profile s
 Assume a baseline test suite already exists.
 Using the supplied artifacts, identify only the missing high-value tests.
 Prioritize:
+
 1. risky branches
 2. write SQL
 3. external calls
@@ -1113,6 +1119,7 @@ node .\cli\zeus.js analyze --source .\rpg_sources --program ORDERPGM --profile s
 ```markdown
 These tests need repair after source changes.
 Using the artifacts, identify:
+
 1. which assertions likely broke because of data-shape change
 2. which broke because of dependency or call-path change
 3. how to refactor tests while preserving behavioral coverage

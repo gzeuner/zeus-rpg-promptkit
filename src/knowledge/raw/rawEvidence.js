@@ -28,10 +28,12 @@ function createRawEvidenceEnvelope(input = {}) {
 }
 
 function isRawEvidenceEnvelope(value) {
-  return isPlainObject(value)
-    && value.layer === 'raw'
-    && typeof value.schemaVersion === 'string'
-    && value.sensitive === true;
+  return (
+    isPlainObject(value) &&
+    value.layer === 'raw' &&
+    typeof value.schemaVersion === 'string' &&
+    value.sensitive === true
+  );
 }
 
 module.exports = {

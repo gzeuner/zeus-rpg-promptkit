@@ -27,7 +27,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   zeus inspect-object --profile <name> --lib <lib> --name <name> --journal   (nur Journal-Info)
  */
 
-const { resolveProfile, loadProfiles, resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../../config/runtimeConfig');
+const {
+  resolveProfile,
+  loadProfiles,
+  resolveAnalyzeConfig,
+  resolveAnalyzeDbConfig,
+} = require('../../config/runtimeConfig');
 const { isDbConfigured } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
 const { validateSqlIdentifier, escapeSqlLiteral } = require('../../db2/readOnlyQueryService');
@@ -35,7 +40,16 @@ const { renderAsciiTable } = require('../helpers/asciiTable');
 const { createJsonOutput } = require('../helpers/jsonOutput');
 const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
 
-const SUPPORTED_TYPES = ['*PGM', '*SRVPGM', '*MODULE', '*FILE', '*CMD', '*DTAARA', '*JOBQ', '*OUTQ'];
+const SUPPORTED_TYPES = [
+  '*PGM',
+  '*SRVPGM',
+  '*MODULE',
+  '*FILE',
+  '*CMD',
+  '*DTAARA',
+  '*JOBQ',
+  '*OUTQ',
+];
 
 function buildObjectStatisticsQuery(lib, name, objType) {
   const libLiteral = escapeSqlLiteral(lib.toUpperCase());
@@ -86,41 +100,43 @@ function renderObjectInfo(rows) {
   const results = [];
   for (const row of rows) {
     const fields = [
-      ['Name',            row.NAME       || row.name       || ''],
-      ['Type',            row.TYPE       || row.type       || ''],
-      ['Library',         row.LIBRARY    || row.library    || ''],
-      ['Attribute',       row.ATTRIBUTE  || row.attribute  || ''],
-      ['Owner',           row.OWNER      || row.owner      || ''],
-      ['Definer',         row.DEFINER    || row.definer    || ''],
-      ['Created',         row.CREATED    || row.created    || ''],
-      ['Last Changed',    row.LAST_CHANGED || row.last_changed || ''],
-      ['Last Used',       row.LAST_USED  || row.last_used  || ''],
-      ['Text',            row.TEXT       || row.text       || ''],
-      ['Source File',     row.SRC_FILE   || row.src_file   || ''],
-      ['Source Library',  row.SRC_LIB    || row.src_lib    || ''],
-      ['Source Member',   row.SRC_MEMBER || row.src_member || ''],
-      ['Source Timestamp',row.SRC_TIMESTAMP || row.src_timestamp || ''],
+      ['Name', row.NAME || row.name || ''],
+      ['Type', row.TYPE || row.type || ''],
+      ['Library', row.LIBRARY || row.library || ''],
+      ['Attribute', row.ATTRIBUTE || row.attribute || ''],
+      ['Owner', row.OWNER || row.owner || ''],
+      ['Definer', row.DEFINER || row.definer || ''],
+      ['Created', row.CREATED || row.created || ''],
+      ['Last Changed', row.LAST_CHANGED || row.last_changed || ''],
+      ['Last Used', row.LAST_USED || row.last_used || ''],
+      ['Text', row.TEXT || row.text || ''],
+      ['Source File', row.SRC_FILE || row.src_file || ''],
+      ['Source Library', row.SRC_LIB || row.src_lib || ''],
+      ['Source Member', row.SRC_MEMBER || row.src_member || ''],
+      ['Source Timestamp', row.SRC_TIMESTAMP || row.src_timestamp || ''],
       ['Created on System', row.CREATED_ON || row.created_on || ''],
-      ['OS Version',      row.OS_VERSION || row.os_version || ''],
-      ['Compiler',        row.COMPILER   || row.compiler   || ''],
-      ['Compiler Version',row.COMPILER_VERSION || row.compiler_version || ''],
-      ['Size',            formatBytes(row.SIZE_BYTES || row.size_bytes)],
-      ['SQL Type',        row.SQL_TYPE   || row.sql_type   || ''],
+      ['OS Version', row.OS_VERSION || row.os_version || ''],
+      ['Compiler', row.COMPILER || row.compiler || ''],
+      ['Compiler Version', row.COMPILER_VERSION || row.compiler_version || ''],
+      ['Size', formatBytes(row.SIZE_BYTES || row.size_bytes)],
+      ['SQL Type', row.SQL_TYPE || row.sql_type || ''],
     ].filter(([, v]) => String(v || '').trim() !== '');
 
     // Journal-Info
-    const journaled = String(row.JOURNALED || row.journaled || 'NO').trim().toUpperCase();
+    const journaled = String(row.JOURNALED || row.journaled || 'NO')
+      .trim()
+      .toUpperCase();
     const journalName = String(row.JOURNAL_NAME || row.journal_name || '').trim();
-    const journalLib  = String(row.JOURNAL_LIB  || row.journal_lib  || '').trim();
+    const journalLib = String(row.JOURNAL_LIB || row.journal_lib || '').trim();
     const journalImages = String(row.JOURNAL_IMAGES || row.journal_images || '').trim();
 
     if (journaled === 'YES') {
-      fields.push(['Journalized',  '✓ YES']);
+      fields.push(['Journalized', '✓ YES']);
       if (journalLib && journalName) {
-        fields.push(['Journal',    `${journalLib}/${journalName} (${journalImages || '*AFTER'})`]);
+        fields.push(['Journal', `${journalLib}/${journalName} (${journalImages || '*AFTER'})`]);
       }
     } else {
-      fields.push(['Journalized',  '✗ NO — SQLSTATE 55019 möglich bei COMMIT/ROLLBACK']);
+      fields.push(['Journalized', '✗ NO — SQLSTATE 55019 möglich bei COMMIT/ROLLBACK']);
     }
 
     results.push(renderAsciiTable(['Field', 'Value'], fields));
@@ -133,9 +149,15 @@ async function runInspectObject(args) {
   const cwd = process.cwd();
   const env = process.env;
 
-  const lib  = String(args.lib  || args.library || '').trim().toUpperCase();
-  const name = String(args.name || '').trim().toUpperCase();
-  const type = String(args.type || '*PGM').trim().toUpperCase();
+  const lib = String(args.lib || args.library || '')
+    .trim()
+    .toUpperCase();
+  const name = String(args.name || '')
+    .trim()
+    .toUpperCase();
+  const type = String(args.type || '*PGM')
+    .trim()
+    .toUpperCase();
   const journalOnly = Boolean(args.journal);
 
   if (!lib) {
@@ -147,7 +169,9 @@ async function runInspectObject(args) {
     process.exit(2);
   }
   if (!SUPPORTED_TYPES.includes(type)) {
-    console.error(`Fehler: --type muss einer der folgenden Werte sein: ${SUPPORTED_TYPES.join(', ')}`);
+    console.error(
+      `Fehler: --type muss einer der folgenden Werte sein: ${SUPPORTED_TYPES.join(', ')}`
+    );
     process.exit(2);
   }
 
@@ -176,7 +200,9 @@ async function runInspectObject(args) {
   const dbConfig = resolveAnalyzeDbConfig(resolvedAnalyzeConfig, 'metadata');
   printDbRuntimeConflictWarnings(dbConfig);
   if (!isDbConfigured(dbConfig)) {
-    console.error('Fehler: DB2-Verbindung nicht konfiguriert. Prüfe das Profil mit: zeus doctor --profile <name>');
+    console.error(
+      'Fehler: DB2-Verbindung nicht konfiguriert. Prüfe das Profil mit: zeus doctor --profile <name>'
+    );
     process.exit(2);
   }
 
@@ -197,19 +223,21 @@ async function runInspectObject(args) {
 
   if (!result.rows || result.rows.length === 0) {
     console.log(`Kein Objekt ${lib}/${name} (${type}) gefunden.`);
-    console.log('Tipp: Prüfe Bibliothek und Objektname. Unterstützte Typen: ' + SUPPORTED_TYPES.join(', '));
+    console.log(
+      'Tipp: Prüfe Bibliothek und Objektname. Unterstützte Typen: ' + SUPPORTED_TYPES.join(', ')
+    );
     return;
   }
 
   if (journalOnly) {
     const headers = ['Library', 'Name', 'Type', 'Journalized', 'Journal', 'Library', 'Images'];
-    const matrix = result.rows.map((r) => [
+    const matrix = result.rows.map(r => [
       r.LIBRARY || r.library || '',
-      r.NAME    || r.name    || '',
-      r.TYPE    || r.type    || '',
+      r.NAME || r.name || '',
+      r.TYPE || r.type || '',
       String(r.JOURNALED || r.journaled || 'NO').trim(),
       r.JOURNAL_NAME || r.journal_name || '',
-      r.JOURNAL_LIB  || r.journal_lib  || '',
+      r.JOURNAL_LIB || r.journal_lib || '',
       r.JOURNAL_IMAGES || r.journal_images || '',
     ]);
     console.log(renderAsciiTable(headers, matrix));

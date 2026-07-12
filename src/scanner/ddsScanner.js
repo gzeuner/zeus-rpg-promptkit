@@ -15,7 +15,9 @@ const fs = require('fs');
 const path = require('path');
 
 function normalizeName(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function normalizeObjectName(value) {
@@ -41,7 +43,9 @@ function uniqueByName(items) {
     }
     const target = map.get(key);
     for (const evidence of item.evidence || []) {
-      const exists = target.evidence.some((entry) => JSON.stringify(entry) === JSON.stringify(evidence));
+      const exists = target.evidence.some(
+        entry => JSON.stringify(entry) === JSON.stringify(evidence)
+      );
       if (!exists) {
         target.evidence.push(evidence);
       }
@@ -64,7 +68,9 @@ function detectDdsKind(filePath, lines, sourceType) {
 
 function scanDdsContent(filePath, content, sourceType = '') {
   const lines = String(content || '').split('\n');
-  const objectName = normalizeName(path.basename(String(filePath || ''), path.extname(String(filePath || ''))));
+  const objectName = normalizeName(
+    path.basename(String(filePath || ''), path.extname(String(filePath || '')))
+  );
   const fileKind = detectDdsKind(filePath, lines, sourceType);
   const recordFormats = [];
   const referencedFiles = [];
@@ -73,11 +79,13 @@ function scanDdsContent(filePath, content, sourceType = '') {
     const rawLine = lines[index];
     const lineNumber = index + 1;
     const trimmed = rawLine.trim();
-    const evidence = [{
-      file: filePath,
-      line: lineNumber,
-      text: trimmed,
-    }];
+    const evidence = [
+      {
+        file: filePath,
+        line: lineNumber,
+        text: trimmed,
+      },
+    ];
 
     const recordMatch = trimmed.match(/\bR\s+([A-Z0-9_#$@]+)\b/i);
     if (recordMatch) {
@@ -119,17 +127,21 @@ function scanDdsContent(filePath, content, sourceType = '') {
     procedures: [],
     prototypes: [],
     procedureCalls: [],
-    nativeFiles: [{
-      name: objectName,
-      kind: fileKind,
-      declaredAccess: [],
-      keyed: false,
-      evidence: [{
-        file: filePath,
-        line: 1,
-        text: `${objectName} ${fileKind}`,
-      }],
-    }],
+    nativeFiles: [
+      {
+        name: objectName,
+        kind: fileKind,
+        declaredAccess: [],
+        keyed: false,
+        evidence: [
+          {
+            file: filePath,
+            line: 1,
+            text: `${objectName} ${fileKind}`,
+          },
+        ],
+      },
+    ],
     nativeFileAccesses: [],
     modules: [],
     bindingDirectories: [],
@@ -138,18 +150,22 @@ function scanDdsContent(filePath, content, sourceType = '') {
     notes: [],
     commands: [],
     objectUsages: [],
-    ddsFiles: [{
-      name: objectName,
-      kind: fileKind,
-      sourceType: normalizeName(sourceType) || 'DDS',
-      recordFormats: uniqueByName(recordFormats).map((entry) => entry.name),
-      referencedFiles: uniqueByName(referencedFiles).map((entry) => entry.name),
-      evidence: [{
-        file: filePath,
-        line: 1,
-        text: objectName,
-      }],
-    }],
+    ddsFiles: [
+      {
+        name: objectName,
+        kind: fileKind,
+        sourceType: normalizeName(sourceType) || 'DDS',
+        recordFormats: uniqueByName(recordFormats).map(entry => entry.name),
+        referencedFiles: uniqueByName(referencedFiles).map(entry => entry.name),
+        evidence: [
+          {
+            file: filePath,
+            line: 1,
+            text: objectName,
+          },
+        ],
+      },
+    ],
     sourceTypeAnalysis: {
       ownerProgram: objectName,
       sourceType: normalizeName(sourceType) || 'DDS',
@@ -158,7 +174,8 @@ function scanDdsContent(filePath, content, sourceType = '') {
 }
 
 function scanDdsFile(filePath, options = {}) {
-  const content = options.content !== undefined ? String(options.content) : fs.readFileSync(filePath, 'utf8');
+  const content =
+    options.content !== undefined ? String(options.content) : fs.readFileSync(filePath, 'utf8');
   return scanDdsContent(filePath, content, options.sourceType || '');
 }
 

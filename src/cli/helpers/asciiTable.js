@@ -41,7 +41,7 @@ function renderCell(value, options = {}) {
 }
 
 function buildSeparator(widths) {
-  return `+-${widths.map((width) => repeat('-', width)).join('-+-')}-+`;
+  return `+-${widths.map(width => repeat('-', width)).join('-+-')}-+`;
 }
 
 function buildRow(values, widths, options) {
@@ -49,23 +49,23 @@ function buildRow(values, widths, options) {
 }
 
 function renderAsciiTable(columns, rows, options = {}) {
-  const headers = Array.isArray(columns) ? columns.map((column) => String(column || '')) : [];
+  const headers = Array.isArray(columns) ? columns.map(column => String(column || '')) : [];
   const normalizedRows = Array.isArray(rows) ? rows : [];
-  const widths = headers.map((header, columnIndex) => Math.max(
-    header.length,
-    ...normalizedRows.map((row) => renderCell(Array.isArray(row) ? row[columnIndex] : '', options).length),
-  ));
+  const widths = headers.map((header, columnIndex) =>
+    Math.max(
+      header.length,
+      ...normalizedRows.map(
+        row => renderCell(Array.isArray(row) ? row[columnIndex] : '', options).length
+      )
+    )
+  );
 
   if (widths.length === 0) {
     return '';
   }
 
   const separator = buildSeparator(widths);
-  const lines = [
-    separator,
-    buildRow(headers, widths, options),
-    separator,
-  ];
+  const lines = [separator, buildRow(headers, widths, options), separator];
 
   for (const row of normalizedRows) {
     lines.push(buildRow(Array.isArray(row) ? row : [], widths, options));

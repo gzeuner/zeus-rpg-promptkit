@@ -16,13 +16,13 @@ Current safety model (consistently documented across inspected sources on baseli
 
 Observed levels:
 
-| Level | Meaning                  | Typical Action                              |
-|-------|--------------------------|---------------------------------------------|
-| S0    | Local read-only          | Read local files, inspect artifacts, doctor, serve |
-| S1    | Local write              | Create/update reports, bundles, prompts, analysis artifacts |
-| S2    | Remote read-only         | Fetch sources, query Db2, inspect objects, joblog (no mutation) |
+| Level | Meaning                  | Typical Action                                                    |
+| ----- | ------------------------ | ----------------------------------------------------------------- |
+| S0    | Local read-only          | Read local files, inspect artifacts, doctor, serve                |
+| S1    | Local write              | Create/update reports, bundles, prompts, analysis artifacts       |
+| S2    | Remote read-only         | Fetch sources, query Db2, inspect objects, joblog (no mutation)   |
 | S3    | Controlled write         | DML (upsert/insert/update/delete) with explicit approval + backup |
-| S4    | Operator-gated high risk | Bridge (plan / stage / apply / compile) actions |
+| S4    | Operator-gated high risk | Bridge (plan / stage / apply / compile) actions                   |
 
 Enforcement mechanisms observed:
 
@@ -38,6 +38,7 @@ Enforcement mechanisms observed:
 Higher-risk commands declare S3/S4 and are routed through guarded paths. Local artifact production (S1) is the common case for analysis.
 
 Trust zone separation:
+
 - Local workspace (trusted for S0/S1)
 - Remote IBM i / Db2 (S2 read-only by default; S3/S4 only with explicit gates)
 - External sharing (sanitized artifacts)

@@ -73,15 +73,16 @@ test('validateApprovalForAction accepts matching approval', () => {
 
 test('validateApprovalForAction rejects missing approval', () => {
   assert.throws(
-    () => validateApprovalForAction({
-      approval: null,
-      requiredAction: 'stage',
-      expectedProgram: 'ORDERPGM',
-      expectedProfileName: 'default',
-      expectedPlanId: buildPlan().planId,
-      expectedPlanHash: buildPlan().planHash,
-    }),
-    /Approval artifact is missing/,
+    () =>
+      validateApprovalForAction({
+        approval: null,
+        requiredAction: 'stage',
+        expectedProgram: 'ORDERPGM',
+        expectedProfileName: 'default',
+        expectedPlanId: buildPlan().planId,
+        expectedPlanHash: buildPlan().planHash,
+      }),
+    /Approval artifact is missing/
   );
 });
 
@@ -98,15 +99,16 @@ test('validateApprovalForAction rejects wrong program', () => {
   });
 
   assert.throws(
-    () => validateApprovalForAction({
-      approval,
-      requiredAction: 'stage',
-      expectedProgram: 'ORDERPGM',
-      expectedProfileName: 'default',
-      expectedPlanId: buildPlan().planId,
-      expectedPlanHash: buildPlan().planHash,
-    }),
-    /program does not match/,
+    () =>
+      validateApprovalForAction({
+        approval,
+        requiredAction: 'stage',
+        expectedProgram: 'ORDERPGM',
+        expectedProfileName: 'default',
+        expectedPlanId: buildPlan().planId,
+        expectedPlanHash: buildPlan().planHash,
+      }),
+    /program does not match/
   );
 });
 
@@ -120,15 +122,16 @@ test('validateApprovalForAction rejects wrong action', () => {
   });
 
   assert.throws(
-    () => validateApprovalForAction({
-      approval,
-      requiredAction: 'apply',
-      expectedProgram: 'ORDERPGM',
-      expectedProfileName: 'default',
-      expectedPlanId: buildPlan().planId,
-      expectedPlanHash: buildPlan().planHash,
-    }),
-    /required action: apply/,
+    () =>
+      validateApprovalForAction({
+        approval,
+        requiredAction: 'apply',
+        expectedProgram: 'ORDERPGM',
+        expectedProfileName: 'default',
+        expectedPlanId: buildPlan().planId,
+        expectedPlanHash: buildPlan().planHash,
+      }),
+    /required action: apply/
   );
 });
 
@@ -142,15 +145,16 @@ test('validateApprovalForAction rejects wrong plan identity', () => {
   });
 
   assert.throws(
-    () => validateApprovalForAction({
-      approval,
-      requiredAction: 'apply',
-      expectedProgram: 'ORDERPGM',
-      expectedProfileName: 'default',
-      expectedPlanId: 'plan-other',
-      expectedPlanHash: buildPlan().planHash,
-    }),
-    /planId does not match/,
+    () =>
+      validateApprovalForAction({
+        approval,
+        requiredAction: 'apply',
+        expectedProgram: 'ORDERPGM',
+        expectedProfileName: 'default',
+        expectedPlanId: 'plan-other',
+        expectedPlanHash: buildPlan().planHash,
+      }),
+    /planId does not match/
   );
 });
 
@@ -165,16 +169,17 @@ test('validateApprovalForAction rejects expired approval', () => {
   });
 
   assert.throws(
-    () => validateApprovalForAction({
-      approval,
-      requiredAction: 'apply',
-      expectedProgram: 'ORDERPGM',
-      expectedProfileName: 'default',
-      expectedPlanId: buildPlan().planId,
-      expectedPlanHash: buildPlan().planHash,
-      now: '2026-05-10T12:00:00.000Z',
-    }),
-    /Approval has expired/,
+    () =>
+      validateApprovalForAction({
+        approval,
+        requiredAction: 'apply',
+        expectedProgram: 'ORDERPGM',
+        expectedProfileName: 'default',
+        expectedPlanId: buildPlan().planId,
+        expectedPlanHash: buildPlan().planHash,
+        now: '2026-05-10T12:00:00.000Z',
+      }),
+    /Approval has expired/
   );
 });
 

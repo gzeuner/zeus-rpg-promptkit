@@ -23,7 +23,9 @@ const { buildCanonicalAnalysisModel } = require('../../context/canonicalAnalysis
 const { createJsonOutput } = require('../helpers/jsonOutput');
 
 function normalizeFormat(value) {
-  const format = String(value || 'markdown').trim().toLowerCase();
+  const format = String(value || 'markdown')
+    .trim()
+    .toLowerCase();
   if (!['markdown', 'json'].includes(format)) {
     throw new Error('Invalid option: --format must be markdown or json');
   }
@@ -55,7 +57,11 @@ function collectSqlValidationFromCanonical(canonicalAnalysis) {
   if (!canonicalAnalysis) return { errors: [], warnings: [], statements: [] };
   const sqlBlock = (canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.sql) || {};
   const validation = sqlBlock.validation || { errors: [], warnings: [] };
-  const statements = (sqlBlock.statements || canonicalAnalysis.entities && canonicalAnalysis.entities.sqlStatements || []).map(s => ({
+  const statements = (
+    sqlBlock.statements ||
+    (canonicalAnalysis.entities && canonicalAnalysis.entities.sqlStatements) ||
+    []
+  ).map(s => ({
     ...s,
     validationErrors: s.validationErrors || [],
   }));
@@ -164,15 +170,20 @@ async function runValidateRpgSql(args = {}, config = {}) {
     // Dedicated --program filtering in scan mode
     if (program) {
       const progUpper = program.toUpperCase();
-      const matching = allFiles.filter((f) => {
+      const matching = allFiles.filter(f => {
         const base = path.basename(f, path.extname(f)).toUpperCase();
         return base === progUpper;
       });
       if (matching.length > 0) {
         filesToScan = matching;
-        if (verbose) console.log(`[verbose] Program filter: found ${filesToScan.length} file(s) matching ${progUpper}`);
+        if (verbose)
+          console.log(
+            `[verbose] Program filter: found ${filesToScan.length} file(s) matching ${progUpper}`
+          );
       } else if (verbose) {
-        console.log(`[verbose] No exact file match for program ${progUpper} (basename), scanning all ${allFiles.length} files`);
+        console.log(
+          `[verbose] No exact file match for program ${progUpper} (basename), scanning all ${allFiles.length} files`
+        );
       }
     }
 
@@ -190,7 +201,9 @@ async function runValidateRpgSql(args = {}, config = {}) {
 
     if (!program) program = 'SCAN';
   } else {
-    console.error('Missing required input: provide --input <analyze-output> or --source <dir> [--program <name>]');
+    console.error(
+      'Missing required input: provide --input <analyze-output> or --source <dir> [--program <name>]'
+    );
     process.exit(2);
   }
 
@@ -221,7 +234,13 @@ async function runValidateRpgSql(args = {}, config = {}) {
 
   // Optionally write artifacts
   if (outRoot || inputPath) {
-    const targetDir = outRoot || (inputPath ? (fs.statSync(inputPath).isDirectory() ? inputPath : path.dirname(inputPath)) : cwd);
+    const targetDir =
+      outRoot ||
+      (inputPath
+        ? fs.statSync(inputPath).isDirectory()
+          ? inputPath
+          : path.dirname(inputPath)
+        : cwd);
     const base = program ? `${program}-sql-validation` : 'sql-validation';
     fs.mkdirSync(targetDir, { recursive: true });
 

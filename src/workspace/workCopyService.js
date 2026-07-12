@@ -16,18 +16,23 @@ const path = require('path');
 const { readImportManifest } = require('../fetch/importManifest');
 
 function normalizeMemberName(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function parseMembersCsv(value) {
   if (value === undefined || value === null || value === true) {
     return [];
   }
-  return Array.from(new Set(String(value)
-    .split(',')
-    .map((entry) => normalizeMemberName(entry))
-    .filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      String(value)
+        .split(',')
+        .map(entry => normalizeMemberName(entry))
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function walkFiles(rootDir) {
@@ -67,9 +72,12 @@ function discoverFetchedSources(sourceRoot) {
 
   if (manifestResult.manifest && Array.isArray(manifestResult.manifest.files)) {
     for (const fileEntry of manifestResult.manifest.files) {
-      const localPath = fileEntry && fileEntry.origin ? fileEntry.origin.localPath : fileEntry.localPath;
+      const localPath =
+        fileEntry && fileEntry.origin ? fileEntry.origin.localPath : fileEntry.localPath;
       const sourcePath = localPath ? path.join(resolvedSourceRoot, localPath) : '';
-      const member = normalizeMemberName(fileEntry && fileEntry.origin ? fileEntry.origin.member : fileEntry.member);
+      const member = normalizeMemberName(
+        fileEntry && fileEntry.origin ? fileEntry.origin.member : fileEntry.member
+      );
       const extension = path.extname(sourcePath);
       if (!sourcePath || !member || !fs.existsSync(sourcePath) || !extension) {
         continue;
@@ -91,14 +99,14 @@ function discoverFetchedSources(sourceRoot) {
   }
 
   return walkFiles(resolvedSourceRoot)
-    .filter((filePath) => path.basename(filePath) !== 'zeus-import-manifest.json')
-    .map((filePath) => ({
+    .filter(filePath => path.basename(filePath) !== 'zeus-import-manifest.json')
+    .map(filePath => ({
       member: normalizeMemberName(path.basename(filePath, path.extname(filePath))),
       extension: path.extname(filePath),
       relativePath: path.relative(resolvedSourceRoot, filePath).replace(/\\/g, '/'),
       sourcePath: filePath,
     }))
-    .filter((entry) => entry.member && entry.extension)
+    .filter(entry => entry.member && entry.extension)
     .sort((a, b) => {
       if (a.member !== b.member) return a.member.localeCompare(b.member);
       return a.relativePath.localeCompare(b.relativePath);
@@ -113,10 +121,13 @@ function copyFetchedSourcesToWorkspace({
   members = [],
 }) {
   const discovered = discoverFetchedSources(sourceRoot);
-  const requestedMembers = new Set((members || []).map((entry) => normalizeMemberName(entry)).filter(Boolean));
-  const selectedEntries = requestedMembers.size > 0
-    ? discovered.filter((entry) => requestedMembers.has(entry.member))
-    : discovered;
+  const requestedMembers = new Set(
+    (members || []).map(entry => normalizeMemberName(entry)).filter(Boolean)
+  );
+  const selectedEntries =
+    requestedMembers.size > 0
+      ? discovered.filter(entry => requestedMembers.has(entry.member))
+      : discovered;
   const results = [];
 
   fs.mkdirSync(targetRoot, { recursive: true });
@@ -158,7 +169,7 @@ function copyFetchedSourcesToWorkspace({
   }
 
   if (requestedMembers.size > 0) {
-    const discoveredMembers = new Set(selectedEntries.map((entry) => entry.member));
+    const discoveredMembers = new Set(selectedEntries.map(entry => entry.member));
     for (const requestedMember of Array.from(requestedMembers).sort((a, b) => a.localeCompare(b))) {
       if (discoveredMembers.has(requestedMember)) {
         continue;
@@ -176,10 +187,10 @@ function copyFetchedSourcesToWorkspace({
   return {
     discoveredCount: discovered.length,
     selectedCount: selectedEntries.length,
-    copiedCount: results.filter((entry) => entry.status === 'copied').length,
-    skippedCount: results.filter((entry) => entry.status === 'skipped').length,
-    existingCount: results.filter((entry) => entry.status === 'already exists').length,
-    errorCount: results.filter((entry) => entry.status === 'error').length,
+    copiedCount: results.filter(entry => entry.status === 'copied').length,
+    skippedCount: results.filter(entry => entry.status === 'skipped').length,
+    existingCount: results.filter(entry => entry.status === 'already exists').length,
+    errorCount: results.filter(entry => entry.status === 'error').length,
     results,
   };
 }

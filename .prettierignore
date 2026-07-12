@@ -6,19 +6,18 @@ docs/tool-catalog.*
 examples/demo-rpg-mini-system/output*/
 *.tgz
 .git/
-.vscode/
 coverage/
-vscode-extension/
-tests/
-config/
-rpg_sources/
-analysis/
-.zeus/fixtures/
-docs/
-examples/
 .local/
-tests/
-config/
-rpg_sources/
-analysis/
 .zeus/
+java/bin/
+java/lib/
+bundles/
+*.zip
+*.7z
+# intentionally format-sensitive fixtures (if any) kept out of broad; no blanket test/doc/example ignore
+config/local-only/
+analysis/
+rpg_sources/
+vscode-extension/.vscode/
+tests/fixtures/sanitized-corpus/
+# end

@@ -1,7 +1,7 @@
-name: "Bug"
-description: "Something is broken"
-title: "Bug: <short title>"
-labels: ["bug"]
+name: 'Bug'
+description: 'Something is broken'
+title: 'Bug: <short title>'
+labels: ['bug']
 body:
   - type: textarea
     id: repro
@@ -17,27 +17,27 @@ body:
     id: expected
     attributes:
       label: Expected behavior
-      placeholder: "What should happen?"
+      placeholder: 'What should happen?'
     validations:
       required: true
   - type: textarea
     id: actual
     attributes:
       label: Actual behavior
-      placeholder: "What happens instead?"
+      placeholder: 'What happens instead?'
     validations:
       required: true
   - type: textarea
     id: impact
     attributes:
       label: Impact / priority
-      placeholder: "P0/P1/P2 and why"
+      placeholder: 'P0/P1/P2 and why'
     validations:
       required: true
   - type: textarea
     id: hints
     attributes:
       label: Suspected location
-      placeholder: "Files, commits, stack traces"
+      placeholder: 'Files, commits, stack traces'
     validations:
       required: false

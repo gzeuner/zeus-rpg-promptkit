@@ -37,8 +37,8 @@ function createInterface() {
 }
 
 function question(rl, prompt) {
-  return new Promise((resolve) => {
-    rl.question(prompt, (answer) => resolve(answer.trim()));
+  return new Promise(resolve => {
+    rl.question(prompt, answer => resolve(answer.trim()));
   });
 }
 
@@ -87,7 +87,9 @@ async function ensureProfiles(rl) {
   console.log(`✓ Created ${LOCAL_PROFILE_PATH} from example.`);
 
   console.log('\nIMPORTANT: Edit this file and replace placeholders with your IBM i details.');
-  console.log('Or set environment variables (ZEUS_FETCH_HOST, ZEUS_DB_HOST, etc.) - they take precedence.');
+  console.log(
+    'Or set environment variables (ZEUS_FETCH_HOST, ZEUS_DB_HOST, etc.) - they take precedence.'
+  );
   await question(rl, 'Press ENTER after you have reviewed/edited the profile...');
 
   return localPath;
@@ -104,7 +106,11 @@ async function selectProfile(rl, profilesPath) {
     process.exit(1);
   }
 
-  const names = Object.keys(profiles).filter(k => !k.startsWith('_') && !['qa', 'contextOptimizer', 'analysisLimits', 'testData', 'presets'].includes(k));
+  const names = Object.keys(profiles).filter(
+    k =>
+      !k.startsWith('_') &&
+      !['qa', 'contextOptimizer', 'analysisLimits', 'testData', 'presets'].includes(k)
+  );
 
   if (names.length > 0) {
     console.log('Available profiles:');
@@ -125,10 +131,14 @@ async function runDoctor(profile) {
   printStep(3, 8, 'Environment & Connection Check (doctor)');
 
   console.log(`Running: node cli/zeus.js doctor --profile ${profile} --show-resolved`);
-  const result = spawnSync(process.execPath, ['cli/zeus.js', 'doctor', '--profile', profile, '--show-resolved'], {
-    stdio: 'inherit',
-    cwd: process.cwd(),
-  });
+  const result = spawnSync(
+    process.execPath,
+    ['cli/zeus.js', 'doctor', '--profile', profile, '--show-resolved'],
+    {
+      stdio: 'inherit',
+      cwd: process.cwd(),
+    }
+  );
 
   if (result.status !== 0) {
     console.log('\nDoctor reported issues. Fix them before continuing.');
@@ -137,17 +147,23 @@ async function runDoctor(profile) {
   const probe = await confirm('Run with --probe (live remote checks)? (y/N) ');
   if (probe) {
     console.log(`Running: node cli/zeus.js doctor --profile ${profile} --probe --show-resolved`);
-    spawnSync(process.execPath, ['cli/zeus.js', 'doctor', '--profile', profile, '--probe', '--show-resolved'], {
-      stdio: 'inherit',
-      cwd: process.cwd(),
-    });
+    spawnSync(
+      process.execPath,
+      ['cli/zeus.js', 'doctor', '--profile', profile, '--probe', '--show-resolved'],
+      {
+        stdio: 'inherit',
+        cwd: process.cwd(),
+      }
+    );
   }
 }
 
 async function discoverSource(profile) {
   printStep(4, 8, 'Source Discovery');
 
-  console.log('Common source file libraries on IBM i: QRPGLESRC, QCLSRC, QDDSSRC, QCPYSRC, QSQLSRC, QSRVSRC...');
+  console.log(
+    'Common source file libraries on IBM i: QRPGLESRC, QCLSRC, QDDSSRC, QCPYSRC, QSQLSRC, QSRVSRC...'
+  );
   const lib = await question('Enter main source library (e.g. APPLIB or QRPGLESRC): ');
 
   if (lib) {
@@ -159,7 +175,9 @@ async function discoverSource(profile) {
   const wantSearch = await confirm('Run search-source example after you have sources? (Y/n) ');
   if (wantSearch) {
     console.log('After fetching sources, run e.g.:');
-    console.log('  node cli/zeus.js search-source --source-root ./rpg_sources --search-term "ORDER"');
+    console.log(
+      '  node cli/zeus.js search-source --source-root ./rpg_sources --search-term "ORDER"'
+    );
   }
 }
 
@@ -172,12 +190,16 @@ async function objectAndTableDiscovery(profile) {
 
   if (lib && pgm) {
     console.log(`\nInspect program:`);
-    console.log(`  node cli/zeus.js inspect-object --profile ${profile} --lib ${lib} --name ${pgm} --type *PGM`);
+    console.log(
+      `  node cli/zeus.js inspect-object --profile ${profile} --lib ${lib} --name ${pgm} --type *PGM`
+    );
   }
   if (lib && tbl) {
     console.log(`Resolve / query table:`);
     console.log(`  node cli/zeus.js resolve-object --profile ${profile} --table ${tbl}`);
-    console.log(`  node cli/zeus.js query-table --profile ${profile} --table ${tbl} --schema ${lib}`);
+    console.log(
+      `  node cli/zeus.js query-table --profile ${profile} --table ${tbl} --schema ${lib}`
+    );
   }
 
   console.log('\nFor catalog discovery use query-sql against QSYS2.SYSTABLES etc.');
@@ -190,14 +212,18 @@ async function runFetchOrAnalyze(profile, preSource = null, preProgram = null) {
   let prog = preProgram;
 
   if (!src && !preSource) {
-    const hasSources = await confirm('Do you have local sources ready (or want to fetch now)? (y/N) ');
+    const hasSources = await confirm(
+      'Do you have local sources ready (or want to fetch now)? (y/N) '
+    );
     if (hasSources) {
       const doFetch = await confirm('Run fetch now? (requires fetch config) (y/N) ');
       if (doFetch) {
-        spawnSync(process.execPath, ['cli/zeus.js', 'fetch', '--profile', profile], { stdio: 'inherit' });
+        spawnSync(process.execPath, ['cli/zeus.js', 'fetch', '--profile', profile], {
+          stdio: 'inherit',
+        });
       }
     }
-    src = await question('Source directory (default ./rpg_sources): ') || './rpg_sources';
+    src = (await question('Source directory (default ./rpg_sources): ')) || './rpg_sources';
   } else {
     src = src || './rpg_sources';
   }
@@ -208,13 +234,29 @@ async function runFetchOrAnalyze(profile, preSource = null, preProgram = null) {
 
   if (prog) {
     console.log(`\nRecommended first analysis (onboarding preset):`);
-    console.log(`  node cli/zeus.js workflow --preset onboarding --profile ${profile} --source ${src} --program ${prog} --out ./output`);
+    console.log(
+      `  node cli/zeus.js workflow --preset onboarding --profile ${profile} --source ${src} --program ${prog} --out ./output`
+    );
     const runNow = await confirm('Run it now? (y/N) ');
     if (runNow) {
-      spawnSync(process.execPath, [
-        'cli/zeus.js', 'workflow', '--preset', 'onboarding',
-        '--profile', profile, '--source', src, '--program', prog, '--out', './output'
-      ], { stdio: 'inherit' });
+      spawnSync(
+        process.execPath,
+        [
+          'cli/zeus.js',
+          'workflow',
+          '--preset',
+          'onboarding',
+          '--profile',
+          profile,
+          '--source',
+          src,
+          '--program',
+          prog,
+          '--out',
+          './output',
+        ],
+        { stdio: 'inherit' }
+      );
     }
   }
 }
@@ -234,15 +276,29 @@ async function finalSteps(profile) {
   const mcp = await confirm('Start MCP server now with safe onboarding tools? (y/N) ');
   if (mcp) {
     console.log('Starting MCP (use Ctrl+C to stop later):');
-    spawnSync(process.execPath, [
-      'cli/zeus.js', 'mcp', 'serve', '--verbose',
-      '--allow-tools', 'zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run'
-    ], { stdio: 'inherit' });
+    spawnSync(
+      process.execPath,
+      [
+        'cli/zeus.js',
+        'mcp',
+        'serve',
+        '--verbose',
+        '--allow-tools',
+        'zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run',
+      ],
+      { stdio: 'inherit' }
+    );
   }
 }
 
 async function runOnboarding(args = {}) {
-  const nonInteractive = !!(args.yes || args['yes'] || args.y || args.nonInteractive || args['non-interactive']);
+  const nonInteractive = !!(
+    args.yes ||
+    args['yes'] ||
+    args.y ||
+    args.nonInteractive ||
+    args['non-interactive']
+  );
   const preProfile = args.profile ? String(args.profile).trim() : null;
   const preSource = args.source ? String(args.source).trim() : null;
   const preProgram = args.program ? String(args.program).trim() : null;
@@ -257,10 +313,12 @@ async function runOnboarding(args = {}) {
   try {
     printHeader('Welcome');
 
-    console.log('This wizard helps you connect Zeus to a new IBM i system and run your first analysis safely.');
+    console.log(
+      'This wizard helps you connect Zeus to a new IBM i system and run your first analysis safely.'
+    );
     console.log('All actions are read-oriented by default. You stay in control.\n');
 
-    if (rl && !await confirm(rl, 'Start the onboarding wizard? (Y/n) ')) {
+    if (rl && !(await confirm(rl, 'Start the onboarding wizard? (Y/n) '))) {
       console.log('Aborted.');
       return;
     }
@@ -300,7 +358,6 @@ async function runOnboarding(args = {}) {
     fs.writeFileSync(setupPath, setupScript, 'utf8');
     console.log(`\nGenerated repeatable setup script: ${setupPath}`);
     console.log('Source it or run it in future sessions.');
-
   } finally {
     if (rl) rl.close();
   }

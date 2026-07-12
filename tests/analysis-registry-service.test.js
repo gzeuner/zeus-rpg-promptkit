@@ -65,7 +65,10 @@ test('register/list/touch/unregister workspace lifecycle works with persisted re
   const found = readWorkspaceById(registryPath, 'workspace_a');
   assert.equal(found.id, 'workspace_a');
   const rawRegistryJson = fs.readFileSync(registryPath, 'utf8');
-  assert.doesNotMatch(rawRegistryJson, new RegExp(workspacePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.doesNotMatch(
+    rawRegistryJson,
+    new RegExp(workspacePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  );
 
   assert.equal(unregisterWorkspace(registryPath, 'workspace_a'), true);
   assert.equal(unregisterWorkspace(registryPath, 'workspace_a'), false);

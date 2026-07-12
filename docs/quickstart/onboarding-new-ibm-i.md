@@ -52,6 +52,7 @@ source ./config/load-env.sh project
 **Essential variables for a new system** (set in your shell or `.env` style file before loading):
 
 ### Fetch (Source Code Download)
+
 ```bash
 ZEUS_FETCH_HOST=your-ibmi.example.com
 ZEUS_FETCH_USER=YOURUSER
@@ -62,6 +63,7 @@ ZEUS_FETCH_OUT=./rpg_sources
 ```
 
 ### DB2 / Metadata & Data
+
 ```bash
 ZEUS_DB_HOST=your-ibmi.example.com
 ZEUS_DB_USER=YOURUSER
@@ -71,6 +73,7 @@ ZEUS_DB_DEFAULT_LIBRARY=APPLIB
 ```
 
 **Recommended separation for safety** (use different hosts/users):
+
 - `ZEUS_METADATA_DB_*` → for catalog / schema discovery (read-only privileged)
 - `ZEUS_TESTDATA_DB_*` → for sampling real data (often same as metadata)
 
@@ -114,6 +117,7 @@ node cli/zeus.js doctor --profile new-system --probe --show-resolved   # perform
 `--probe` executes safe read-only tests (CL commands, DB2 catalog access, fetch probe).
 
 Common outputs:
+
 - `[PASS]` for Java + config
 - Warnings for missing env vars (profiles provide fallbacks)
 - Remote probes show whether fetch / DB2 actually work
@@ -122,15 +126,15 @@ Common outputs:
 
 Common IBM i source file types / libraries:
 
-| Object Type | Typical Library | Description |
-|-------------|------------------|-------------|
-| QRPGLESRC   | MYLIB / APPLIB   | RPGLE / free-form sources |
-| QCLSRC / QCLLESRC | ...         | CL, CLLE |
-| QDDSSRC     | ...              | DDS (PF/LF/DSPF/PRTF) |
-| QCPYSRC     | ...              | Copy books |
-| QSQLSRC     | ...              | Pure SQL scripts |
-| QSRVSRC     | ...              | Service program exports / binder |
-| IFS         | /home/user/... or /QSYS.LIB/... | Stream files, sometimes source |
+| Object Type       | Typical Library                 | Description                      |
+| ----------------- | ------------------------------- | -------------------------------- |
+| QRPGLESRC         | MYLIB / APPLIB                  | RPGLE / free-form sources        |
+| QCLSRC / QCLLESRC | ...                             | CL, CLLE                         |
+| QDDSSRC           | ...                             | DDS (PF/LF/DSPF/PRTF)            |
+| QCPYSRC           | ...                             | Copy books                       |
+| QSQLSRC           | ...                             | Pure SQL scripts                 |
+| QSRVSRC           | ...                             | Service program exports / binder |
+| IFS               | /home/user/... or /QSYS.LIB/... | Stream files, sometimes source   |
 
 **Discovery commands**:
 
@@ -161,11 +165,13 @@ After fetch: sources land in `./rpg_sources` (or your `ZEUS_FETCH_OUT`).
 ## 6. Discovering Objects (PGM, Tables, etc.)
 
 ### PGM / *SRVPGM Objects
+
 ```bash
 node cli/zeus.js inspect-object --profile new-system --lib PRODLIB --name ORDERPGM --type *PGM --journal
 ```
 
 ### Tables / Files (Physical / Logical)
+
 ```bash
 # High-level table metadata
 node cli/zeus.js query-table --profile new-system --table ORDERS --schema APPDATA
@@ -177,6 +183,7 @@ node cli/zeus.js query-sql --profile new-system \
 ```
 
 ### DDL Generation / Structure
+
 Use catalog queries or the internal metadata export (part of analyze when DB configured):
 
 - `QSYS2.SYSCOLUMNS`
@@ -189,6 +196,7 @@ See `docs/sql/system-environment-discovery.sql` for a ready-made set of discover
 ## 7. Obtaining Metadata and Data
 
 **Metadata** (schema, columns, keys, programs):
+
 - `doctor --probe`
 - `query-table`
 - `query-sql` against QSYS2.*
@@ -196,11 +204,13 @@ See `docs/sql/system-environment-discovery.sql` for a ready-made set of discover
 - `resolve-object`
 
 **Data** (sample rows):
+
 - During analyze: `--test-data-limit 25`
 - Direct: `query-sql` with `FETCH FIRST n ROWS ONLY`
 - Test data export is controlled by profile `testData.*` (masking, allow/deny lists)
 
 **Example safe data peek**:
+
 ```bash
 node cli/zeus.js query-sql --profile new-system \
   --sql "SELECT * FROM APPDATA.CUSTOMERS FETCH FIRST 5 ROWS ONLY" \
@@ -279,6 +289,7 @@ Use the generated `ai_prompt_documentation.md` or `report.md` + `canonical-analy
   ```
 
 For deeper dives see:
+
 - `docs/sql/index.md`
 - `docs/workflows/investigation-workflows.md`
 - `docs/safety/best-practice-guide.md`
@@ -287,4 +298,4 @@ For deeper dives see:
 
 ---
 
-*This guide is intentionally tool- and command-first. Zeus does not store connections permanently — you control them via shell environment + profiles.*
+_This guide is intentionally tool- and command-first. Zeus does not store connections permanently — you control them via shell environment + profiles._

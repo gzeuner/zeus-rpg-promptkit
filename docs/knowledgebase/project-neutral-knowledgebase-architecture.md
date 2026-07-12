@@ -62,17 +62,17 @@ Do not try to solve these yet:
 
 Primary leakage paths:
 
-| Threat | Example |
-|---|---|
-| Raw artifact persistence | storing full `puiJson`, DDS-derived JSON, SQL text, source lines |
-| Provenance persistence | source paths, source file names, member names, record formats |
-| Label leakage | screen captions, button text, business terms, comments |
-| Identifier leakage | field names, table names, library names, program names |
-| Structural reconstruction | storing enough template detail to rebuild an original screen |
-| Debug/report leakage | logs, error payloads, reports, summaries with raw values |
-| MCP leakage | exposing raw or sanitized-but-still-sensitive intermediate artifacts |
-| Test/documentation leakage | fixtures/docs/examples derived from real projects |
-| Commit leakage | generated `.zeus` artifacts accidentally committed |
+| Threat                     | Example                                                              |
+| -------------------------- | -------------------------------------------------------------------- |
+| Raw artifact persistence   | storing full `puiJson`, DDS-derived JSON, SQL text, source lines     |
+| Provenance persistence     | source paths, source file names, member names, record formats        |
+| Label leakage              | screen captions, button text, business terms, comments               |
+| Identifier leakage         | field names, table names, library names, program names               |
+| Structural reconstruction  | storing enough template detail to rebuild an original screen         |
+| Debug/report leakage       | logs, error payloads, reports, summaries with raw values             |
+| MCP leakage                | exposing raw or sanitized-but-still-sensitive intermediate artifacts |
+| Test/documentation leakage | fixtures/docs/examples derived from real projects                    |
+| Commit leakage             | generated `.zeus` artifacts accidentally committed                   |
 
 Threat boundary:
 
@@ -107,7 +107,7 @@ Layer rules:
 Suggested path:
 
 - `output/knowledge-work/<run-id>/raw/`
-or
+  or
 - `.zeus/raw-evidence/<run-id>/`
 
 ### Layer B. Sanitized Intermediate
@@ -140,17 +140,17 @@ Do not create a committed global toolkit knowledgebase yet.
 
 Recommended boundaries:
 
-| Module | Responsibility |
-|---|---|
-| `src/knowledge/extractors/` | source-family-specific extraction to raw evidence |
-| `src/knowledge/raw/` | raw evidence schemas and local-only IO |
-| `src/knowledge/sanitize/` | redaction, tokenization, identifier classification |
-| `src/knowledge/normalize/` | convert sanitized evidence into pattern candidates |
-| `src/knowledge/privacy/` | fail-closed privacy gate and rejection reports |
-| `src/knowledge/schema/` | final JSON schema, taxonomy, validation |
-| `src/knowledge/catalog/` | read-only access to final safe catalog |
-| `src/knowledge/cli/` | CLI commands for extract/validate/inspect |
-| `src/knowledge/mcp/` | MCP adapters that read final safe catalog only |
+| Module                      | Responsibility                                     |
+| --------------------------- | -------------------------------------------------- |
+| `src/knowledge/extractors/` | source-family-specific extraction to raw evidence  |
+| `src/knowledge/raw/`        | raw evidence schemas and local-only IO             |
+| `src/knowledge/sanitize/`   | redaction, tokenization, identifier classification |
+| `src/knowledge/normalize/`  | convert sanitized evidence into pattern candidates |
+| `src/knowledge/privacy/`    | fail-closed privacy gate and rejection reports     |
+| `src/knowledge/schema/`     | final JSON schema, taxonomy, validation            |
+| `src/knowledge/catalog/`    | read-only access to final safe catalog             |
+| `src/knowledge/cli/`        | CLI commands for extract/validate/inspect          |
+| `src/knowledge/mcp/`        | MCP adapters that read final safe catalog only     |
 
 Important architectural rule:
 
@@ -474,14 +474,14 @@ MVP output scope:
 
 ## 16. Risks and Mitigations
 
-| Risk | Mitigation |
-|---|---|
-| Neutral model still leaks via labels/identifiers | fail-closed privacy gate |
-| Safe-looking summaries are backed by unsafe stores | separate storage and naming by layer |
-| Profound UI overfits the core model | keep taxonomy domain-based, not tool-specific |
-| Global knowledge becomes stale or mixed | use per-run generated outputs first |
-| MCP legitimizes unsafe internals | expose only final safe catalog |
-| Developers commit local raw artifacts | ignore `.zeus/` and generated knowledge work dirs |
+| Risk                                               | Mitigation                                        |
+| -------------------------------------------------- | ------------------------------------------------- |
+| Neutral model still leaks via labels/identifiers   | fail-closed privacy gate                          |
+| Safe-looking summaries are backed by unsafe stores | separate storage and naming by layer              |
+| Profound UI overfits the core model                | keep taxonomy domain-based, not tool-specific     |
+| Global knowledge becomes stale or mixed            | use per-run generated outputs first               |
+| MCP legitimizes unsafe internals                   | expose only final safe catalog                    |
+| Developers commit local raw artifacts              | ignore `.zeus/` and generated knowledge work dirs |
 
 ## 17. Review Checklist For Future PRs
 
@@ -517,25 +517,25 @@ MVP output scope:
 
 ## 19. Inventory of Contradictory / Unsafe Existing Code
 
-| File / Area | Why it is contradictory or unsafe | Recommended action |
-|---|---|---|
-| `src/pui/puiDddlKnowledgeBase.js` | Persists full `puiJson` plus source metadata under `.zeus/knowledge/pui-dddl` | Remove from final knowledge path; move to raw evidence/local-only area or delete |
-| `src/pui/puiDddl.js` | DDDL payload intentionally stores source file/path and full PUI JSON | Keep only as local raw interchange for `pui-edit`; explicitly mark non-knowledge, non-MCP |
-| `src/pui/puiDddlExportService.js` | Exports raw DDDL artifacts and report with source-root details | Keep local-only; do not feed final knowledge pipeline directly |
-| `.local/internal-tools/build-pui-knowledgebase.js` | Builds a “knowledgebase” by exporting raw DDDL, promoting it, and activating libraries | Remove or rename as unsafe local experiment |
-| `.local/internal-tools/build-pui-catalog.js` | Mixes safe neutral catalog generation with unsafe DDDL promotion and AI library activation | Split into safe catalog build vs local raw export tooling |
-| `src/ai/aiKnowledgePatternLibrary.js` | Derives reusable pattern cards from an unsafe persisted DDDL library | Rebuild against privacy-gated final catalog only |
-| `src/ai/knowledgeBaseService.js` | Consumer surface is okay, but currently backed by unsafe upstream persistence | Keep interface idea; replace backing store |
-| `src/analyze/analyzePipeline.js` | Auto-loads active pattern registries and refreshes AI library during analyze | Remove auto-promotion/activation from analyze path |
-| `src/ai/knowledgeProjection.js` | Injects mutable knowledge library summaries into `ai-knowledge.json` | Keep only after knowledge source is privacy-gated and explicit |
-| `src/mcp/mcpTools.js` / `src/mcp/mcpServer.js` | Exposes `zeus.knowledge` backed by current local knowledge library | Freeze or restrict until backed by final safe schema |
-| `src/api/zeusApi.js` | Exposes `readKnowledge()` from current knowledge library | Rebind to final safe catalog only |
-| `docs/mcp/operator-guide.md` and `docs/tool-catalog.md` | Documentation is out of sync with the current `zeus.knowledge` surface, which indicates the feature is not yet stable/governed | Update only after the backing model is redesigned and privacy-gated |
-| `tests/pui-dddl-knowledgebase.test.js` | Treats persistent template KB as correct behavior | Replace with tests for raw evidence isolation or remove |
-| `tests/ai-knowledge-pattern-library.test.js` | Normalizes derived reusable library built from persisted templates | Replace with final-catalog tests |
-| `tests/knowledge-base-service.test.js` | Proves edge sanitization, but still accepts unsafe upstream DDDL storage | Rewrite to use only privacy-passed final catalog fixtures |
-| `tests/zeus-api.test.js` | Normalizes API knowledge from DDDL-ingest path | Rewrite to final safe catalog path |
-| `.zeus/knowledge/**` | Current generated artifacts include raw/sensitive/reconstructable data and should not be committed | Remove local artifacts and keep ignored |
+| File / Area                                             | Why it is contradictory or unsafe                                                                                              | Recommended action                                                                        |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `src/pui/puiDddlKnowledgeBase.js`                       | Persists full `puiJson` plus source metadata under `.zeus/knowledge/pui-dddl`                                                  | Remove from final knowledge path; move to raw evidence/local-only area or delete          |
+| `src/pui/puiDddl.js`                                    | DDDL payload intentionally stores source file/path and full PUI JSON                                                           | Keep only as local raw interchange for `pui-edit`; explicitly mark non-knowledge, non-MCP |
+| `src/pui/puiDddlExportService.js`                       | Exports raw DDDL artifacts and report with source-root details                                                                 | Keep local-only; do not feed final knowledge pipeline directly                            |
+| `.local/internal-tools/build-pui-knowledgebase.js`      | Builds a “knowledgebase” by exporting raw DDDL, promoting it, and activating libraries                                         | Remove or rename as unsafe local experiment                                               |
+| `.local/internal-tools/build-pui-catalog.js`            | Mixes safe neutral catalog generation with unsafe DDDL promotion and AI library activation                                     | Split into safe catalog build vs local raw export tooling                                 |
+| `src/ai/aiKnowledgePatternLibrary.js`                   | Derives reusable pattern cards from an unsafe persisted DDDL library                                                           | Rebuild against privacy-gated final catalog only                                          |
+| `src/ai/knowledgeBaseService.js`                        | Consumer surface is okay, but currently backed by unsafe upstream persistence                                                  | Keep interface idea; replace backing store                                                |
+| `src/analyze/analyzePipeline.js`                        | Auto-loads active pattern registries and refreshes AI library during analyze                                                   | Remove auto-promotion/activation from analyze path                                        |
+| `src/ai/knowledgeProjection.js`                         | Injects mutable knowledge library summaries into `ai-knowledge.json`                                                           | Keep only after knowledge source is privacy-gated and explicit                            |
+| `src/mcp/mcpTools.js` / `src/mcp/mcpServer.js`          | Exposes `zeus.knowledge` backed by current local knowledge library                                                             | Freeze or restrict until backed by final safe schema                                      |
+| `src/api/zeusApi.js`                                    | Exposes `readKnowledge()` from current knowledge library                                                                       | Rebind to final safe catalog only                                                         |
+| `docs/mcp/operator-guide.md` and `docs/tool-catalog.md` | Documentation is out of sync with the current `zeus.knowledge` surface, which indicates the feature is not yet stable/governed | Update only after the backing model is redesigned and privacy-gated                       |
+| `tests/pui-dddl-knowledgebase.test.js`                  | Treats persistent template KB as correct behavior                                                                              | Replace with tests for raw evidence isolation or remove                                   |
+| `tests/ai-knowledge-pattern-library.test.js`            | Normalizes derived reusable library built from persisted templates                                                             | Replace with final-catalog tests                                                          |
+| `tests/knowledge-base-service.test.js`                  | Proves edge sanitization, but still accepts unsafe upstream DDDL storage                                                       | Rewrite to use only privacy-passed final catalog fixtures                                 |
+| `tests/zeus-api.test.js`                                | Normalizes API knowledge from DDDL-ingest path                                                                                 | Rewrite to final safe catalog path                                                        |
+| `.zeus/knowledge/**`                                    | Current generated artifacts include raw/sensitive/reconstructable data and should not be committed                             | Remove local artifacts and keep ignored                                                   |
 
 ## 20. Which Existing Files Currently Risk Leakage
 

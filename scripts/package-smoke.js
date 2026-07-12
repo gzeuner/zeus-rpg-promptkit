@@ -47,17 +47,17 @@ try {
   try {
     const h = sh(bin + ' --help 2>&1 || true');
     console.log('help len:', (h || '').length);
-  } catch (e) {
+  } catch (_e) {
     console.log('bin present');
   }
   try {
     const a = sh('node -e "console.log(!!require(\'zeus-rpg-promptkit/api\'))" 2>&1 || true', inst);
     console.log('api:', a);
-  } catch (e) {}
+  } catch (_e) {}
 
   console.log('PACKAGE SMOKE PASSED');
-} catch (e) {
-  console.error('SMOKE FAIL:', e.message);
+} catch (_e) {
+  console.error('SMOKE FAIL:', _e.message);
   process.exit(1);
 } finally {
   try {

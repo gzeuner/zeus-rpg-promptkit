@@ -8,7 +8,7 @@ const { createMcpServer } = require('../src/mcp/mcpServer');
 const { listMcpTools } = require('../src/mcp/mcpTools');
 const { buildHtmlLines } = require('../src/pui/puiDdsParser');
 
-const ALL_TOOL_NAMES = listMcpTools().map((tool) => tool.name);
+const ALL_TOOL_NAMES = listMcpTools().map(tool => tool.name);
 
 function writeSyntheticDisplay(filePath) {
   const uiJson = {
@@ -37,17 +37,17 @@ function writeSyntheticDisplay(filePath) {
 }
 
 test('listMcpTools exposes zeus.pui-edit with action required', () => {
-  const byName = new Map(listMcpTools().map((tool) => [tool.name, tool]));
+  const byName = new Map(listMcpTools().map(tool => [tool.name, tool]));
   const tool = byName.get('zeus.pui-edit');
   assert.ok(tool, 'zeus.pui-edit should be registered');
   assert.deepEqual(tool.inputSchema.required, ['action']);
   assert.ok(
     tool.inputSchema.properties.action.enum.includes('grid-add-column'),
-    'action enum should include grid-add-column',
+    'action enum should include grid-add-column'
   );
   assert.ok(
     tool.inputSchema.properties.action.enum.includes('dump-json'),
-    'action enum should include dump-json',
+    'action enum should include dump-json'
   );
 });
 
@@ -106,11 +106,11 @@ test('mcp tools call zeus.pui-edit rejects file outside workspace root', async (
           arguments: { action: 'dump-json', file: outsideFile },
         },
       }),
-      (error) => {
+      error => {
         assert.equal(error.code, -32602);
         assert.match(String(error.message || ''), /workspace root/i);
         return true;
-      },
+      }
     );
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
@@ -146,11 +146,11 @@ test('mcp tools call zeus.pui-edit blocks apply without confirm', async () => {
           },
         },
       }),
-      (error) => {
+      error => {
         assert.equal(error.code, -32602);
         assert.match(String(error.message || ''), /confirm/i);
         return true;
-      },
+      }
     );
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });

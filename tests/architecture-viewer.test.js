@@ -24,9 +24,7 @@ function createGraphFixture() {
       { id: 'ORDERPGM', type: 'PROGRAM' },
       { id: 'ORDERS', type: 'TABLE' },
     ],
-    edges: [
-      { from: 'ORDERPGM', to: 'ORDERS', type: 'USES_TABLE' },
-    ],
+    edges: [{ from: 'ORDERPGM', to: 'ORDERS', type: 'USES_TABLE' }],
     unresolvedPrograms: [],
   };
 }

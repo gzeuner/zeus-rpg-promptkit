@@ -22,18 +22,26 @@ const { executeImpact } = require('../core/impactService');
 const { executeQueryTable } = require('../core/queryService');
 const { resolveFetchConfig } = require('../config/runtimeConfig');
 
-const WORKFLOW_STEP_ORDER = Object.freeze(['fetch', 'copy', 'analyze', 'impact', 'query-table', 'report']);
+const WORKFLOW_STEP_ORDER = Object.freeze([
+  'fetch',
+  'copy',
+  'analyze',
+  'impact',
+  'query-table',
+  'report',
+]);
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
 function sanitizeFilePart(value) {
-  return String(value || '')
-    .trim()
-    .replace(/[^A-Z0-9._-]+/gi, '-')
-    .replace(/^-+|-+$/g, '')
-    || 'entry';
+  return (
+    String(value || '')
+      .trim()
+      .replace(/[^A-Z0-9._-]+/gi, '-')
+      .replace(/^-+|-+$/g, '') || 'entry'
+  );
 }
 
 function directoryHasFiles(rootDir) {
@@ -88,15 +96,17 @@ function discoverMembersForSourceRoot(sourceRoot, extensions) {
 }
 
 function resolveWorkflowMembers(state, sourceRoot) {
-  const configuredMembers = state.plan.members && state.plan.members.length > 0
-    ? state.plan.members
-    : [];
+  const configuredMembers =
+    state.plan.members && state.plan.members.length > 0 ? state.plan.members : [];
   if (configuredMembers.length > 0) {
     return configuredMembers;
   }
-  const fetchMembers = state.fetchConfig && Array.isArray(state.fetchConfig.members) && state.fetchConfig.members.length > 0
-    ? state.fetchConfig.members
-    : [];
+  const fetchMembers =
+    state.fetchConfig &&
+    Array.isArray(state.fetchConfig.members) &&
+    state.fetchConfig.members.length > 0
+      ? state.fetchConfig.members
+      : [];
   if (fetchMembers.length > 0) {
     return fetchMembers;
   }
@@ -104,14 +114,21 @@ function resolveWorkflowMembers(state, sourceRoot) {
 }
 
 function buildWorkflowReport(state) {
-  const stepLines = state.stepResults.map((step) => `- ${step.name}: ${step.status} (${step.durationMs} ms)${step.note ? ` — ${step.note}` : ''}`).join('\n');
+  const stepLines = state.stepResults
+    .map(
+      step =>
+        `- ${step.name}: ${step.status} (${step.durationMs} ms)${step.note ? ` — ${step.note}` : ''}`
+    )
+    .join('\n');
   const analyzeEntries = Array.isArray(state.results.analyze && state.results.analyze.entries)
     ? state.results.analyze.entries
     : [];
   const impactEntries = Array.isArray(state.results.impact && state.results.impact.entries)
     ? state.results.impact.entries
     : [];
-  const queryEntries = Array.isArray(state.results['query-table'] && state.results['query-table'].entries)
+  const queryEntries = Array.isArray(
+    state.results['query-table'] && state.results['query-table'].entries
+  )
     ? state.results['query-table'].entries
     : [];
 
@@ -128,19 +145,27 @@ function buildWorkflowReport(state) {
 ${stepLines || '- none'}
 
 ## Analyze
-${analyzeEntries.length === 0
+${
+  analyzeEntries.length === 0
     ? '- No analyze entries.'
-    : analyzeEntries.map((entry) => `- ${entry.member} [${entry.mode}] -> ${entry.outputProgramDir}`).join('\n')}
+    : analyzeEntries
+        .map(entry => `- ${entry.member} [${entry.mode}] -> ${entry.outputProgramDir}`)
+        .join('\n')
+}
 
 ## Impact
-${impactEntries.length === 0
+${
+  impactEntries.length === 0
     ? '- No impact entries.'
-    : impactEntries.map((entry) => `- ${entry.target} -> ${entry.outputProgramDir}`).join('\n')}
+    : impactEntries.map(entry => `- ${entry.target} -> ${entry.outputProgramDir}`).join('\n')
+}
 
 ## DB
-${queryEntries.length === 0
+${
+  queryEntries.length === 0
     ? '- No DB catalog queries.'
-    : queryEntries.map((entry) => `- ${entry.tableLookup} -> ${entry.outputPath}`).join('\n')}
+    : queryEntries.map(entry => `- ${entry.tableLookup} -> ${entry.outputPath}`).join('\n')
+}
 
 ## Paths
 - Fetch: ${state.paths.fetchRoot}
@@ -164,14 +189,17 @@ async function runFetchStep(state) {
   }
 
   ensureDir(state.paths.fetchRoot);
-  const execution = await executeFetch({
-    ...state.args,
-    profile: state.profileName,
-    out: state.paths.fetchRoot,
-  }, {
-    cwd: state.cwd,
-    env: state.env,
-  });
+  const execution = await executeFetch(
+    {
+      ...state.args,
+      profile: state.profileName,
+      out: state.paths.fetchRoot,
+    },
+    {
+      cwd: state.cwd,
+      env: state.env,
+    }
+  );
   state.runtime.fetchRoot = execution.summary.localDestination;
 
   return {
@@ -197,17 +225,20 @@ async function runCopyStep(state) {
   }
 
   ensureDir(state.paths.workspaceRoot);
-  const execution = executeCopyToWorkspace({
-    ...state.args,
-    profile: state.profileName,
-  }, {
-    cwd: state.cwd,
-    env: state.env,
-    sourceRoot,
-    targetRoot: state.paths.workspaceRoot,
-    workCopyMode: 'original',
-    force: true,
-  });
+  const execution = executeCopyToWorkspace(
+    {
+      ...state.args,
+      profile: state.profileName,
+    },
+    {
+      cwd: state.cwd,
+      env: state.env,
+      sourceRoot,
+      targetRoot: state.paths.workspaceRoot,
+      workCopyMode: 'original',
+      force: true,
+    }
+  );
   state.runtime.workspaceRoot = execution.targetRoot;
 
   return {
@@ -250,24 +281,28 @@ async function runAnalyzeStep(state) {
 
     for (const member of members) {
       try {
-        const execution = executeAnalyze({
-          ...state.args,
-          profile: state.profileName,
-          source: sourceRoot,
-          out: modeOutputRoot,
-          member,
-          mode,
-        }, {
-          cwd: state.cwd,
-        });
+        const execution = executeAnalyze(
+          {
+            ...state.args,
+            profile: state.profileName,
+            source: sourceRoot,
+            out: modeOutputRoot,
+            member,
+            mode,
+          },
+          {
+            cwd: state.cwd,
+          }
+        );
         entries.push({
           member,
           mode,
           program: execution.program,
           outputProgramDir: execution.outputProgramDir,
-          manifestStatus: execution.analyzeManifest && execution.analyzeManifest.run
-            ? execution.analyzeManifest.run.status
-            : 'succeeded',
+          manifestStatus:
+            execution.analyzeManifest && execution.analyzeManifest.run
+              ? execution.analyzeManifest.run.status
+              : 'succeeded',
         });
       } catch (error) {
         const summary = summarizeError(error);
@@ -288,7 +323,9 @@ async function runAnalyzeStep(state) {
   }
 
   state.runtime.analyzeSourceRoot = sourceRoot;
-  state.runtime.primaryAnalyzeMode = sanitizeFilePart(state.plan.analyzeModes[0] || 'documentation');
+  state.runtime.primaryAnalyzeMode = sanitizeFilePart(
+    state.plan.analyzeModes[0] || 'documentation'
+  );
 
   return {
     status: errors.length > 0 ? 'failed' : 'passed',
@@ -315,7 +352,10 @@ async function runImpactStep(state) {
     };
   }
 
-  const outputRoot = path.join(state.paths.analyzeRoot, state.runtime.primaryAnalyzeMode || 'documentation');
+  const outputRoot = path.join(
+    state.paths.analyzeRoot,
+    state.runtime.primaryAnalyzeMode || 'documentation'
+  );
   if (!fs.existsSync(outputRoot)) {
     return {
       status: 'skipped',
@@ -331,18 +371,21 @@ async function runImpactStep(state) {
 
   for (const definition of configured) {
     try {
-      const execution = executeImpact({
-        ...state.args,
-        profile: state.profileName,
-        source: state.runtime.analyzeSourceRoot,
-        out: outputRoot,
-        target: definition.target || definition.field,
-        field: definition.field || definition.target,
-        program: definition.program,
-        member: definition.member,
-      }, {
-        cwd: state.cwd,
-      });
+      const execution = executeImpact(
+        {
+          ...state.args,
+          profile: state.profileName,
+          source: state.runtime.analyzeSourceRoot,
+          out: outputRoot,
+          target: definition.target || definition.field,
+          field: definition.field || definition.target,
+          program: definition.program,
+          member: definition.member,
+        },
+        {
+          cwd: state.cwd,
+        }
+      );
       entries.push({
         target: execution.target,
         program: execution.program,
@@ -387,25 +430,36 @@ async function runQueryTableStep(state) {
 
   for (const definition of definitions) {
     try {
-      const execution = executeQueryTable({
-        ...state.args,
-        profile: state.profileName,
-        table: definition.table,
-        schema: definition.schema || undefined,
-        filter: definition.filter || undefined,
-      }, {
-        cwd: state.cwd,
-      });
+      const execution = executeQueryTable(
+        {
+          ...state.args,
+          profile: state.profileName,
+          table: definition.table,
+          schema: definition.schema || undefined,
+          filter: definition.filter || undefined,
+        },
+        {
+          cwd: state.cwd,
+        }
+      );
       const baseName = sanitizeFilePart(`${execution.schema || 'AUTO'}-${execution.table}`);
       const outputPath = path.join(state.paths.dbRoot, `${baseName}.json`);
-      fs.writeFileSync(outputPath, `${JSON.stringify({
-        table: execution.table,
-        schema: execution.schema,
-        requestedSchema: execution.requestedSchema,
-        filter: execution.filter,
-        tableInfo: execution.tableInfo.rows || [],
-        columns: execution.columns.rows || [],
-      }, null, 2)}\n`, 'utf8');
+      fs.writeFileSync(
+        outputPath,
+        `${JSON.stringify(
+          {
+            table: execution.table,
+            schema: execution.schema,
+            requestedSchema: execution.requestedSchema,
+            filter: execution.filter,
+            tableInfo: execution.tableInfo.rows || [],
+            columns: execution.columns.rows || [],
+          },
+          null,
+          2
+        )}\n`,
+        'utf8'
+      );
       entries.push({
         tableLookup: execution.schema ? `${execution.schema}.${execution.table}` : execution.table,
         rowCount: (execution.columns.rows || []).length,

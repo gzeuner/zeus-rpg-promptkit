@@ -12,7 +12,11 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
-const { loadProfiles, resolveAnalyzeConfig, resolveProfile } = require('../../config/runtimeConfig');
+const {
+  loadProfiles,
+  resolveAnalyzeConfig,
+  resolveProfile,
+} = require('../../config/runtimeConfig');
 const { appendBridgeAuditEvent } = require('../../bridge/bridgeAuditLog');
 const {
   readApprovalArtifact,
@@ -49,11 +53,21 @@ function parseBoolean(value, fallback = false) {
 
 function printBridgeHelp() {
   console.log('Bridge commands (experimental, opt-in):');
-  console.log('  zeus bridge plan --profile <name> --program <name> --source <path> --target-lib <lib> --target-file <file> --target-member <member> [--target-type source-member|ifs-streamfile] [--target-ifs <path>] [--json]');
-  console.log('  zeus bridge stage --profile <name> --program <name> [--dry-run] [--approval-file <path>] [--json]');
-  console.log('  zeus bridge apply --profile <name> --program <name> [--dry-run] [--approval-file <path>] [--json]');
-  console.log('  zeus bridge compile-plan --profile <name> --program <name> --template <id> [--json]');
-  console.log('  zeus bridge compile-run --profile <name> --program <name> --template <id> [--dry-run] [--approval-file <path>] [--json]');
+  console.log(
+    '  zeus bridge plan --profile <name> --program <name> --source <path> --target-lib <lib> --target-file <file> --target-member <member> [--target-type source-member|ifs-streamfile] [--target-ifs <path>] [--json]'
+  );
+  console.log(
+    '  zeus bridge stage --profile <name> --program <name> [--dry-run] [--approval-file <path>] [--json]'
+  );
+  console.log(
+    '  zeus bridge apply --profile <name> --program <name> [--dry-run] [--approval-file <path>] [--json]'
+  );
+  console.log(
+    '  zeus bridge compile-plan --profile <name> --program <name> --template <id> [--json]'
+  );
+  console.log(
+    '  zeus bridge compile-run --profile <name> --program <name> --template <id> [--dry-run] [--approval-file <path>] [--json]'
+  );
   console.log('  zeus bridge report --profile <name> --program <name> [--json]');
 }
 
@@ -82,7 +96,8 @@ function ensureBridgeEnabled(bridgeConfig) {
   if (bridgeConfig.enabled !== true) {
     throwBridgeRefusal({
       code: 'BRIDGE_DISABLED',
-      message: 'Bridge mode is disabled by default. Set profile.bridge.enabled=true to use bridge commands.',
+      message:
+        'Bridge mode is disabled by default. Set profile.bridge.enabled=true to use bridge commands.',
       hints: [
         'Keep bridge mode disabled on production profiles by default.',
         'Use plan-only mode first and review artifacts before enabling stage/apply workflows.',
@@ -104,7 +119,10 @@ function buildBridgeTargetFromArgs(args) {
 }
 
 function validateAllowlistedTarget(args, bridgeConfig) {
-  const targetInfo = validateBridgeTarget(buildBridgeTargetFromArgs(args), bridgeConfig.allowedTargets);
+  const targetInfo = validateBridgeTarget(
+    buildBridgeTargetFromArgs(args),
+    bridgeConfig.allowedTargets
+  );
   if (!targetInfo.allowlisted) {
     throwBridgeRefusal({
       code: 'TARGET_NOT_ALLOWLISTED',
@@ -120,7 +138,9 @@ function validateAllowlistedTarget(args, bridgeConfig) {
 }
 
 function resolveProgram(args) {
-  const value = String(args.program || '').trim().toUpperCase();
+  const value = String(args.program || '')
+    .trim()
+    .toUpperCase();
   if (!value) {
     throw new Error('Missing required option: --program <name>');
   }
@@ -148,7 +168,9 @@ function executePlan(args, context) {
     beforeHash: String(args['before-hash'] || '').trim(),
     afterHash: String(args['after-hash'] || '').trim(),
     diffSummary: String(args['diff-summary'] || 'Diff summary is pending.').trim(),
-    riskLevel: String(args['risk-level'] || 'UNKNOWN').trim().toUpperCase(),
+    riskLevel: String(args['risk-level'] || 'UNKNOWN')
+      .trim()
+      .toUpperCase(),
     requiredApprovals: ['operator-review', 'change-approval'],
     staging: {
       library: context.bridgeConfig.staging.library,
@@ -198,7 +220,10 @@ function executePlan(args, context) {
 
 function isApprovalRequired(command, bridgeConfig) {
   if (command === 'compile-run') {
-    return Boolean(bridgeConfig.requireConfirmation || (bridgeConfig.compile && bridgeConfig.compile.requireApproval));
+    return Boolean(
+      bridgeConfig.requireConfirmation ||
+      (bridgeConfig.compile && bridgeConfig.compile.requireApproval)
+    );
   }
   if (command === 'stage' || command === 'apply') {
     return Boolean(bridgeConfig.requireConfirmation);
@@ -206,12 +231,7 @@ function isApprovalRequired(command, bridgeConfig) {
   return false;
 }
 
-function evaluateApprovalState({
-  args,
-  context,
-  command,
-  program,
-}) {
+function evaluateApprovalState({ args, context, command, program }) {
   const planResult = readChangePlanArtifact({
     outputRoot: context.outputRoot,
     program,
@@ -540,7 +560,9 @@ function formatResultForConsole(result) {
 }
 
 async function executeBridgeCommand(args, runtime = {}) {
-  const subcommand = String((Array.isArray(args._) && args._[0]) || '').trim().toLowerCase();
+  const subcommand = String((Array.isArray(args._) && args._[0]) || '')
+    .trim()
+    .toLowerCase();
   if (!subcommand || subcommand === 'help') {
     return {
       command: 'help',

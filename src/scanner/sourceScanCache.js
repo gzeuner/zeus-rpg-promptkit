@@ -30,7 +30,9 @@ function buildCacheKey(filePath, options) {
   const absolutePath = path.resolve(String(filePath || ''));
   const stats = fs.statSync(absolutePath);
   const contentHash = hashFileContent(absolutePath);
-  const version = String(options && options.toolVersion ? options.toolVersion : toolVersion || '0').trim();
+  const version = String(
+    options && options.toolVersion ? options.toolVersion : toolVersion || '0'
+  ).trim();
   return {
     absolutePath,
     contentHash,
@@ -102,9 +104,7 @@ function createSourceScanCache(options = {}) {
     invalidations: 0,
     writes: 0,
   };
-  const cacheDir = options.cacheDir
-    ? path.resolve(String(options.cacheDir))
-    : null;
+  const cacheDir = options.cacheDir ? path.resolve(String(options.cacheDir)) : null;
 
   return {
     getOrScan(filePath, scanFn) {

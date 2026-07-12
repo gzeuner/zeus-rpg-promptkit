@@ -31,7 +31,9 @@ const SOURCE_TYPE_BY_EXTENSION = Object.freeze({
 });
 
 function normalizeSourceType(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function classifySourceFile(filePath, explicitSourceType = '') {

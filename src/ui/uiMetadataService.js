@@ -17,10 +17,7 @@ const {
   CONFIG_UI_SECTIONS,
   listConfigUiFields,
 } = require('../config/configUiMetadata');
-const {
-  COMMAND_CATEGORIES,
-  listCommandUiMetadata,
-} = require('../cli/commandMetadata');
+const { COMMAND_CATEGORIES, listCommandUiMetadata } = require('../cli/commandMetadata');
 const { listMcpTools } = require('../mcp/mcpTools');
 const {
   AI_SESSION_GOAL_MAX_LENGTH,
@@ -34,7 +31,8 @@ const WORKFLOW_CARD_DEFINITIONS = Object.freeze([
   Object.freeze({
     id: 'configure',
     title: 'Setup',
-    description: 'Review profile, environment overrides, connection targets, and readiness before using other workflows.',
+    description:
+      'Review profile, environment overrides, connection targets, and readiness before using other workflows.',
     category: 'configure',
     primaryActionLabel: 'Open Setup',
     availability: 'production-ready',
@@ -58,14 +56,16 @@ const WORKFLOW_CARD_DEFINITIONS = Object.freeze([
   Object.freeze({
     id: 'analyze-workspace',
     title: 'Analyze Workspace',
-    description: 'Run the existing local-only analyze pipeline against an already configured workspace source root.',
+    description:
+      'Run the existing local-only analyze pipeline against an already configured workspace source root.',
     category: 'analyze',
     primaryActionLabel: 'Analyze Workspace',
     availability: 'advanced',
     enabledInShell: true,
     uiTarget: 'analyze-workspace',
     area: 'advanced',
-    explanation: 'Available as an advanced local-only tool after Setup is ready. It is optional and does not fetch remote sources.',
+    explanation:
+      'Available as an advanced local-only tool after Setup is ready. It is optional and does not fetch remote sources.',
   }),
   Object.freeze({
     id: 'query-db2',
@@ -82,14 +82,16 @@ const WORKFLOW_CARD_DEFINITIONS = Object.freeze([
   Object.freeze({
     id: 'review-reports',
     title: 'Reports',
-    description: 'Inspect generated reports, artifacts, and grouped read-only report views after analysis output exists.',
+    description:
+      'Inspect generated reports, artifacts, and grouped read-only report views after analysis output exists.',
     category: 'review',
     primaryActionLabel: 'Open Reports',
     availability: 'production-ready',
     enabledInShell: true,
     uiTarget: 'reports',
     area: 'secondary',
-    explanation: 'Read-only report overview, Graph, DB2/Test Data, Prompt Compare, and artifact review are supported now.',
+    explanation:
+      'Read-only report overview, Graph, DB2/Test Data, Prompt Compare, and artifact review are supported now.',
   }),
   Object.freeze({
     id: 'generate-ai-context',
@@ -109,7 +111,8 @@ const PROFILE_WIZARD_METADATA = Object.freeze({
   schemaVersion: 1,
   mode: 'local-only-profile-wizard',
   localOnlyTarget: './config/local-only/profiles.json',
-  purpose: 'Create or update local-only profiles and environment routing without exposing secrets in browser responses.',
+  purpose:
+    'Create or update local-only profiles and environment routing without exposing secrets in browser responses.',
   principles: Object.freeze([
     'Never mark config-derived candidates as remotely discovered.',
     'Keep secret material in environment variables and only emit placeholders into saved profile content.',
@@ -119,13 +122,15 @@ const PROFILE_WIZARD_METADATA = Object.freeze({
     Object.freeze({
       id: 'identity',
       title: 'Name The Profile',
-      description: 'Set the profile name, comment, and base profile extensions for the local-only overlay.',
+      description:
+        'Set the profile name, comment, and base profile extensions for the local-only overlay.',
       statusWhenMissing: 'needs-profile-input',
     }),
     Object.freeze({
       id: 'workspace',
       title: 'Confirm Workspace Paths',
-      description: 'Review source, output, and analysis registry paths so the CLI handoff stays aligned.',
+      description:
+        'Review source, output, and analysis registry paths so the CLI handoff stays aligned.',
       statusWhenMissing: 'needs-profile-input',
     }),
     Object.freeze({
@@ -137,19 +142,22 @@ const PROFILE_WIZARD_METADATA = Object.freeze({
     Object.freeze({
       id: 'fetch-scope',
       title: 'Scope Source Fetch',
-      description: 'Define the source library, optional IFS directory, files, members, and transport.',
+      description:
+        'Define the source library, optional IFS directory, files, members, and transport.',
       statusWhenMissing: 'needs-scope',
     }),
     Object.freeze({
       id: 'managed-environments',
       title: 'Manage Local Environments',
-      description: 'Create placeholder-based environment definitions that stay local-only and secret-free.',
+      description:
+        'Create placeholder-based environment definitions that stay local-only and secret-free.',
       statusWhenMissing: 'needs-profile-input',
     }),
     Object.freeze({
       id: 'preview-save',
       title: 'Preview And Save',
-      description: 'Validate the draft, inspect the safe CLI preview, and save only to config/local-only.',
+      description:
+        'Validate the draft, inspect the safe CLI preview, and save only to config/local-only.',
       statusWhenMissing: 'preview-ready',
     }),
   ]),
@@ -168,7 +176,8 @@ function buildSetupMetadata() {
       {
         id: 'choose-profile',
         title: 'Choose Or Create A Profile',
-        description: 'Review shared profiles or prepare a local-only overlay before running Doctor.',
+        description:
+          'Review shared profiles or prepare a local-only overlay before running Doctor.',
       },
       {
         id: 'preview-save',
@@ -178,7 +187,8 @@ function buildSetupMetadata() {
       {
         id: 'doctor',
         title: 'Run Zeus Doctor',
-        description: 'Validate the effective runtime config after CLI, env, and profile precedence are applied.',
+        description:
+          'Validate the effective runtime config after CLI, env, and profile precedence are applied.',
       },
     ],
     precedenceRules: [
@@ -196,8 +206,10 @@ function buildSetupMetadata() {
       'warnings do not auto-abort',
     ],
     doctorStatusGuidance: {
-      ready: 'Setup looks ready. Continue to Reports when output exists, or use Advanced / Tools if you need local-only analysis or prompt work.',
-      warning: 'Review the warning cards below. Env vars may be changing the effective target even when the saved profile looks correct.',
+      ready:
+        'Setup looks ready. Continue to Reports when output exists, or use Advanced / Tools if you need local-only analysis or prompt work.',
+      warning:
+        'Review the warning cards below. Env vars may be changing the effective target even when the saved profile looks correct.',
       failed: 'Resolve the failed doctor checks before moving on.',
       error: 'Review the readiness error, then try Check Readiness again.',
       running: 'Wait for Check Readiness to finish.',
@@ -215,7 +227,7 @@ function buildAiSessionStarterMetadata() {
     'zeus.query-table',
     'zeus.query-sql',
     'zeus.bundle',
-  ].filter((name) => mcpTools.some((tool) => tool && tool.name === name));
+  ].filter(name => mcpTools.some(tool => tool && tool.name === name));
 
   return {
     schemaVersion: 1,
@@ -272,13 +284,16 @@ function buildAiSessionStarterMetadata() {
 }
 
 function deriveWorkflowCards(commandEntries = listCommandUiMetadata()) {
-  return WORKFLOW_CARD_DEFINITIONS.map((definition) => {
-    const matchingCommands = commandEntries.filter((entry) => entry.category === definition.category);
+  return WORKFLOW_CARD_DEFINITIONS.map(definition => {
+    const matchingCommands = commandEntries.filter(entry => entry.category === definition.category);
     const firstCommand = matchingCommands[0] || null;
     const availability = definition.availability || 'coming-later';
-    const status = availability === 'production-ready'
-      ? 'Available now'
-      : (availability === 'advanced' ? 'Advanced tool' : 'Coming later');
+    const status =
+      availability === 'production-ready'
+        ? 'Available now'
+        : availability === 'advanced'
+          ? 'Advanced tool'
+          : 'Coming later';
     return {
       id: definition.id,
       title: definition.title,
@@ -292,11 +307,14 @@ function deriveWorkflowCards(commandEntries = listCommandUiMetadata()) {
       uiTarget: definition.uiTarget || null,
       area: definition.area || 'advanced',
       explanation: definition.explanation || '',
-      recommendedNext: firstCommand && firstCommand.recommendedNextCommands && firstCommand.recommendedNextCommands[0]
-        ? firstCommand.recommendedNextCommands[0]
-        : null,
+      recommendedNext:
+        firstCommand &&
+        firstCommand.recommendedNextCommands &&
+        firstCommand.recommendedNextCommands[0]
+          ? firstCommand.recommendedNextCommands[0]
+          : null,
       commandCount: matchingCommands.length,
-      commands: matchingCommands.map((entry) => ({
+      commands: matchingCommands.map(entry => ({
         name: entry.name,
         title: entry.title,
         summary: entry.summary,

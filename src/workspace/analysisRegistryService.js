@@ -20,7 +20,9 @@ const WORKSPACE_ID_PATTERN = /^[a-z0-9_-]+$/;
 const WORKSPACE_PATH_ENCODING = 'base64utf8';
 
 function normalizeWorkspaceId(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase();
 }
 
 function encodeWorkspacePath(value) {
@@ -32,7 +34,11 @@ function decodeWorkspacePath(value, encoding = '') {
   if (!raw) {
     return '';
   }
-  if (String(encoding || '').trim().toLowerCase() === WORKSPACE_PATH_ENCODING) {
+  if (
+    String(encoding || '')
+      .trim()
+      .toLowerCase() === WORKSPACE_PATH_ENCODING
+  ) {
     return Buffer.from(raw, 'base64').toString('utf8');
   }
   return raw;
@@ -66,10 +72,11 @@ function resolveRegistryPath(config = {}) {
   const env = config.env || process.env;
   const profile = config.profile || null;
 
-  const candidate = explicit
-    || (env && env.ZEUS_ANALYSES_REGISTRY)
-    || (profile && profile.analysesRegistryPath)
-    || path.join(os.homedir(), '.zeus', 'analyses-registry.json');
+  const candidate =
+    explicit ||
+    (env && env.ZEUS_ANALYSES_REGISTRY) ||
+    (profile && profile.analysesRegistryPath) ||
+    path.join(os.homedir(), '.zeus', 'analyses-registry.json');
 
   return path.resolve(config.cwd || process.cwd(), String(candidate));
 }
@@ -99,7 +106,9 @@ function normalizeWorkspaceEntry(entry = {}) {
     outputDir,
     sourceDir,
     tags: Array.isArray(entry.tags)
-      ? Array.from(new Set(entry.tags.map((tag) => String(tag || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b))
+      ? Array.from(new Set(entry.tags.map(tag => String(tag || '').trim()).filter(Boolean))).sort(
+          (a, b) => a.localeCompare(b)
+        )
       : [],
     registeredAt: String(entry.registeredAt || now),
     lastAccessedAt: String(entry.lastAccessedAt || now),
@@ -124,7 +133,9 @@ function readRegistry(registryPath) {
   }
 
   const parsed = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
-  const workspaces = Array.isArray(parsed.workspaces) ? parsed.workspaces.map((entry) => normalizeWorkspaceEntry(entry)) : [];
+  const workspaces = Array.isArray(parsed.workspaces)
+    ? parsed.workspaces.map(entry => normalizeWorkspaceEntry(entry))
+    : [];
 
   return {
     schemaVersion: REGISTRY_SCHEMA_VERSION,
@@ -142,14 +153,14 @@ function writeRegistry(registryPath, data) {
     schemaVersion: REGISTRY_SCHEMA_VERSION,
     registeredAt: String(data && data.registeredAt ? data.registeredAt : new Date().toISOString()),
     workspaces: Array.isArray(data && data.workspaces)
-      ? data.workspaces.map((entry) => {
-        const normalized = normalizeWorkspaceEntry(entry);
-        return {
-          ...normalized,
-          path: encodeWorkspacePath(normalized.path),
-          pathEncoding: WORKSPACE_PATH_ENCODING,
-        };
-      })
+      ? data.workspaces.map(entry => {
+          const normalized = normalizeWorkspaceEntry(entry);
+          return {
+            ...normalized,
+            path: encodeWorkspacePath(normalized.path),
+            pathEncoding: WORKSPACE_PATH_ENCODING,
+          };
+        })
       : [],
   };
 
@@ -163,12 +174,16 @@ function registerWorkspace(registryPath, workspaceEntry) {
   const registry = readRegistry(registryPath);
   const normalized = normalizeWorkspaceEntry(workspaceEntry);
 
-  if (!normalized.path || !fs.existsSync(normalized.path) || !fs.statSync(normalized.path).isDirectory()) {
+  if (
+    !normalized.path ||
+    !fs.existsSync(normalized.path) ||
+    !fs.statSync(normalized.path).isDirectory()
+  ) {
     throw new Error(`Workspace path not found: ${normalized.path}`);
   }
 
-  const byIdIndex = registry.workspaces.findIndex((entry) => entry.id === normalized.id);
-  const byPathIndex = registry.workspaces.findIndex((entry) => entry.path === normalized.path);
+  const byIdIndex = registry.workspaces.findIndex(entry => entry.id === normalized.id);
+  const byPathIndex = registry.workspaces.findIndex(entry => entry.path === normalized.path);
   const existingIndex = byIdIndex !== -1 ? byIdIndex : byPathIndex;
 
   if (existingIndex >= 0) {
@@ -191,7 +206,7 @@ function unregisterWorkspace(registryPath, workspaceId) {
   const normalizedId = validateWorkspaceId(workspaceId);
   const registry = readRegistry(registryPath);
   const previousCount = registry.workspaces.length;
-  registry.workspaces = registry.workspaces.filter((entry) => entry.id !== normalizedId);
+  registry.workspaces = registry.workspaces.filter(entry => entry.id !== normalizedId);
   if (registry.workspaces.length === previousCount) {
     return false;
   }
@@ -214,7 +229,7 @@ function listWorkspaces(registryPath) {
 function touchWorkspace(registryPath, workspaceId) {
   const normalizedId = validateWorkspaceId(workspaceId);
   const registry = readRegistry(registryPath);
-  const workspace = registry.workspaces.find((entry) => entry.id === normalizedId);
+  const workspace = registry.workspaces.find(entry => entry.id === normalizedId);
   if (!workspace) {
     throw new Error(`Workspace not found: ${normalizedId}`);
   }
@@ -225,7 +240,7 @@ function touchWorkspace(registryPath, workspaceId) {
 
 function readWorkspaceById(registryPath, workspaceId) {
   const normalizedId = validateWorkspaceId(workspaceId);
-  return listWorkspaces(registryPath).find((entry) => entry.id === normalizedId) || null;
+  return listWorkspaces(registryPath).find(entry => entry.id === normalizedId) || null;
 }
 
 module.exports = {

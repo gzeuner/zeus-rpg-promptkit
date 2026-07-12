@@ -55,15 +55,24 @@ test('query builders are read-only and escape identifiers', () => {
 test('discoverEnvironment assembles a sanitized report from injected rows', async () => {
   const { runQuery, calls } = makeFakeRunner([
     ['SYSSCHEMAS', [{ SCHEMA_NAME: 'DEVLIB' }, { SCHEMA_NAME: 'APPDATA' }]],
-    ['SYSTABLES WHERE TABLE_NAME IN', [
-      { TABLE_SCHEMA: 'DEVLIB', TABLE_NAME: 'QRPGLESRC', TABLE_TEXT: 'RPG source' },
-      { TABLE_SCHEMA: 'DEVLIB', TABLE_NAME: 'QDDSSRC', TABLE_TEXT: 'DDS source' },
-    ]],
-    ['TABLE_NAME NOT IN', [
-      { TABLE_SCHEMA: 'APPDATA', TABLE_NAME: 'CUSTOMER', TABLE_TYPE: 'T' },
-      { TABLE_SCHEMA: 'APPDATA', TABLE_NAME: 'ORDERS', TABLE_TYPE: 'T' },
-    ]],
-    ['SYSPARTITIONSTAT WHERE TABLE_SCHEMA = \'DEVLIB\' AND TABLE_NAME = \'QRPGLESRC\'', [{ MEMBER_NAME: 'ORDERPGM' }, { MEMBER_NAME: 'CUSTSRV' }]],
+    [
+      'SYSTABLES WHERE TABLE_NAME IN',
+      [
+        { TABLE_SCHEMA: 'DEVLIB', TABLE_NAME: 'QRPGLESRC', TABLE_TEXT: 'RPG source' },
+        { TABLE_SCHEMA: 'DEVLIB', TABLE_NAME: 'QDDSSRC', TABLE_TEXT: 'DDS source' },
+      ],
+    ],
+    [
+      'TABLE_NAME NOT IN',
+      [
+        { TABLE_SCHEMA: 'APPDATA', TABLE_NAME: 'CUSTOMER', TABLE_TYPE: 'T' },
+        { TABLE_SCHEMA: 'APPDATA', TABLE_NAME: 'ORDERS', TABLE_TYPE: 'T' },
+      ],
+    ],
+    [
+      "SYSPARTITIONSTAT WHERE TABLE_SCHEMA = 'DEVLIB' AND TABLE_NAME = 'QRPGLESRC'",
+      [{ MEMBER_NAME: 'ORDERPGM' }, { MEMBER_NAME: 'CUSTSRV' }],
+    ],
   ]);
 
   const report = await discoverEnvironment({
@@ -76,9 +85,18 @@ test('discoverEnvironment assembles a sanitized report from injected rows', asyn
   assert.equal(report.kind, 'environment-discovery-report');
   assert.equal(report.target.host.toLowerCase(), 'test.example.local');
   assert.deepEqual(report.sourceLibraries, ['DEVLIB']);
-  assert.deepEqual(report.sourceFiles.map((f) => f.name), ['QDDSSRC', 'QRPGLESRC']);
-  assert.deepEqual(report.tables.map((t) => t.name), ['CUSTOMER', 'ORDERS']);
-  assert.deepEqual(report.members.map((m) => m.name), ['CUSTSRV', 'ORDERPGM']);
+  assert.deepEqual(
+    report.sourceFiles.map(f => f.name),
+    ['QDDSSRC', 'QRPGLESRC']
+  );
+  assert.deepEqual(
+    report.tables.map(t => t.name),
+    ['CUSTOMER', 'ORDERS']
+  );
+  assert.deepEqual(
+    report.members.map(m => m.name),
+    ['CUSTSRV', 'ORDERPGM']
+  );
 
   // No secrets leak into the report.
   const serialized = JSON.stringify(report);
@@ -97,13 +115,16 @@ test('discoverEnvironment records notes when a query fails (best-effort, read-on
     dbConfig: { host: 'h', user: 'u', password: 'p' },
     runQuery,
   });
-  assert.ok(report.notes.some((note) => /Schema discovery skipped/.test(note)));
+  assert.ok(report.notes.some(note => /Schema discovery skipped/.test(note)));
 });
 
 test('suggestResourcesConfig builds a paste-ready resources skeleton', () => {
   const report = {
     sourceLibraries: ['DEVLIB'],
-    sourceFiles: [{ schema: 'DEVLIB', name: 'QRPGLESRC' }, { schema: 'DEVLIB', name: 'QDDSSRC' }],
+    sourceFiles: [
+      { schema: 'DEVLIB', name: 'QRPGLESRC' },
+      { schema: 'DEVLIB', name: 'QDDSSRC' },
+    ],
     schemas: ['DEVLIB', 'APPDATA'],
     tables: [{ schema: 'APPDATA', name: 'CUSTOMER' }],
     members: [{ schema: 'DEVLIB', sourceFile: 'QRPGLESRC', name: 'ORDERPGM' }],
@@ -119,7 +140,10 @@ test('suggestResourcesConfig builds a paste-ready resources skeleton', () => {
 });
 
 test('suggestResourcesConfig omits system when none is provided', () => {
-  const skeleton = suggestResourcesConfig({ sourceLibraries: ['L'], sourceFiles: [{ name: 'QRPGLESRC' }] });
+  const skeleton = suggestResourcesConfig({
+    sourceLibraries: ['L'],
+    sourceFiles: [{ name: 'QRPGLESRC' }],
+  });
   assert.equal(skeleton.sourceCode.system, undefined);
   assert.deepEqual(skeleton.sourceCode.sourceFiles, ['QRPGLESRC']);
 });
@@ -142,12 +166,15 @@ test('isSystemSchema flags IBM-supplied / tooling libraries', () => {
 test('discoverEnvironment skips system schemas for bounded table discovery', async () => {
   // Inventory returns system libs first (alphabetical), like a real IBM i.
   const { runQuery } = makeFakeRunner([
-    ['SYSSCHEMAS', [
-      { SCHEMA_NAME: '#CGULIB' },
-      { SCHEMA_NAME: '$$EDHJRN' },
-      { SCHEMA_NAME: 'APPDATA' },
-      { SCHEMA_NAME: 'QGPL' },
-    ]],
+    [
+      'SYSSCHEMAS',
+      [
+        { SCHEMA_NAME: '#CGULIB' },
+        { SCHEMA_NAME: '$$EDHJRN' },
+        { SCHEMA_NAME: 'APPDATA' },
+        { SCHEMA_NAME: 'QGPL' },
+      ],
+    ],
     ['TABLE_NAME NOT IN', [{ TABLE_SCHEMA: 'APPDATA', TABLE_NAME: 'CUSTOMER', TABLE_TYPE: 'T' }]],
   ]);
 
@@ -159,12 +186,18 @@ test('discoverEnvironment skips system schemas for bounded table discovery', asy
 
   // Without filtering, the budget (2) would be spent on '#CGULIB' and '$$EDHJRN'
   // (which validateSqlIdentifier rejects) and produce only noise notes.
-  assert.deepEqual(report.tables.map((t) => t.name), ['CUSTOMER']);
+  assert.deepEqual(
+    report.tables.map(t => t.name),
+    ['CUSTOMER']
+  );
   assert.equal(report.notes.length, 0);
 });
 
 test('suggestResourcesConfig filters system schemas and bounds the list', () => {
-  const manyUserSchemas = Array.from({ length: 40 }, (_, i) => `USERLIB${String(i).padStart(2, '0')}`);
+  const manyUserSchemas = Array.from(
+    { length: 40 },
+    (_, i) => `USERLIB${String(i).padStart(2, '0')}`
+  );
   const report = {
     sourceLibraries: ['DEVLIB'],
     sourceFiles: [{ schema: 'DEVLIB', name: 'QRPGLESRC' }],
@@ -173,10 +206,9 @@ test('suggestResourcesConfig filters system schemas and bounds the list', () => 
   };
   const skeleton = suggestResourcesConfig(report);
   // No system schemas leak into the skeleton.
-  assert.ok(!skeleton.metadata.schemas.some((s) => isSystemSchema(s)));
-  assert.ok(!skeleton.data.schemas.some((s) => isSystemSchema(s)));
+  assert.ok(!skeleton.metadata.schemas.some(s => isSystemSchema(s)));
+  assert.ok(!skeleton.data.schemas.some(s => isSystemSchema(s)));
   // Bounded to a usable size, not all discovered schemas.
   assert.ok(skeleton.metadata.schemas.length <= 25);
   assert.ok(skeleton.metadata.schemas.includes('USERLIB00'));
 });
-

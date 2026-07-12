@@ -12,11 +12,12 @@ test('normalizeBridgeConfig keeps bridge disabled by default', () => {
 
 test('normalizeBridgeConfig rejects invalid bridge mode', () => {
   assert.throws(
-    () => normalizeBridgeConfig({
-      bridge: {
-        mode: 'ship-it',
-      },
-    }),
-    /Invalid bridge.mode/,
+    () =>
+      normalizeBridgeConfig({
+        bridge: {
+          mode: 'ship-it',
+        },
+      }),
+    /Invalid bridge.mode/
   );
 });

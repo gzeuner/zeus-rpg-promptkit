@@ -7,15 +7,21 @@ const {
   resolveSqlStatements,
   validateWriteSql,
 } = require('../src/cli/commands/writeSqlCommand');
-const {
-  executeWriteDb2QueriesRaw,
-} = require('../src/db2/writeQueryService');
+const { executeWriteDb2QueriesRaw } = require('../src/db2/writeQueryService');
 
 test('validateWriteSql accepts INSERT/UPDATE/DELETE/MERGE in upsert mode', () => {
-  assert.doesNotThrow(() => validateWriteSql('INSERT INTO T (ID) VALUES (1)', { mode: 'upsert-sql' }));
-  assert.doesNotThrow(() => validateWriteSql('UPDATE T SET STATUS = 1 WHERE ID = 1', { mode: 'upsert-sql' }));
+  assert.doesNotThrow(() =>
+    validateWriteSql('INSERT INTO T (ID) VALUES (1)', { mode: 'upsert-sql' })
+  );
+  assert.doesNotThrow(() =>
+    validateWriteSql('UPDATE T SET STATUS = 1 WHERE ID = 1', { mode: 'upsert-sql' })
+  );
   assert.doesNotThrow(() => validateWriteSql('DELETE FROM T WHERE ID = 1', { mode: 'upsert-sql' }));
-  assert.doesNotThrow(() => validateWriteSql('MERGE INTO T USING S ON T.ID = S.ID WHEN MATCHED THEN UPDATE SET T.N = S.N', { mode: 'upsert-sql' }));
+  assert.doesNotThrow(() =>
+    validateWriteSql('MERGE INTO T USING S ON T.ID = S.ID WHEN MATCHED THEN UPDATE SET T.N = S.N', {
+      mode: 'upsert-sql',
+    })
+  );
 });
 
 test('validateWriteSql rejects SELECT in upsert mode', () => {
@@ -34,7 +40,9 @@ test('validateWriteSql insert mode accepts only INSERT', () => {
 });
 
 test('validateWriteSql update mode accepts only UPDATE', () => {
-  assert.doesNotThrow(() => validateWriteSql('UPDATE T SET STATUS = 1 WHERE ID = 1', { mode: 'update' }));
+  assert.doesNotThrow(() =>
+    validateWriteSql('UPDATE T SET STATUS = 1 WHERE ID = 1', { mode: 'update' })
+  );
   assert.throws(
     () => validateWriteSql('INSERT INTO T (ID) VALUES (1)', { mode: 'update' }),
     /update only accepts DML statements: UPDATE/i
@@ -53,18 +61,19 @@ test('buildBackupObjectName generates IBM i compatible backup names without lead
 
 test('ensureBackupCreated aborts when require-backup is set and no target table can be resolved', () => {
   assert.throws(
-    () => ensureBackupCreated({
-      args: { 'require-backup': true },
-      config: { db: { defaultSchema: 'APP' } },
-      dbConfig: { host: 'ibmi.example.com', user: 'ZEUS', password: 'secret' },
-      sql: 'MERGE INTO APP.ORDERS O USING APP.STAGE S ON O.ID = S.ID WHEN MATCHED THEN UPDATE SET O.STATUS = S.STATUS',
-      services: {
-        runWriteDb2Query() {
-          throw new Error('should not be called');
+    () =>
+      ensureBackupCreated({
+        args: { 'require-backup': true },
+        config: { db: { defaultSchema: 'APP' } },
+        dbConfig: { host: 'ibmi.example.com', user: 'ZEUS', password: 'secret' },
+        sql: 'MERGE INTO APP.ORDERS O USING APP.STAGE S ON O.ID = S.ID WHEN MATCHED THEN UPDATE SET O.STATUS = S.STATUS',
+        services: {
+          runWriteDb2Query() {
+            throw new Error('should not be called');
+          },
         },
-      },
-    }),
-    /require-backup/i,
+      }),
+    /require-backup/i
   );
 });
 
@@ -84,7 +93,10 @@ test('ensureBackupCreated executes backup creation before writes', () => {
   });
 
   assert.equal(statements.length, 1);
-  assert.match(statements[0], /^CREATE TABLE ARCHIVE\.BAK[A-Z0-9_]+ AS \(SELECT \* FROM APP\.ORDERS\) WITH DATA$/);
+  assert.match(
+    statements[0],
+    /^CREATE TABLE ARCHIVE\.BAK[A-Z0-9_]+ AS \(SELECT \* FROM APP\.ORDERS\) WITH DATA$/
+  );
   assert.equal(created.targetTable, 'APP.ORDERS');
 });
 
@@ -93,10 +105,7 @@ test('resolveSqlStatements splits multiple DML statements', () => {
     resolveSqlStatements({
       sql: "INSERT INTO T (NAME) VALUES ('A;B'); UPDATE T SET STATUS = 'Y' WHERE ID = 1;",
     }),
-    [
-      "INSERT INTO T (NAME) VALUES ('A;B')",
-      "UPDATE T SET STATUS = 'Y' WHERE ID = 1",
-    ],
+    ["INSERT INTO T (NAME) VALUES ('A;B')", "UPDATE T SET STATUS = 'Y' WHERE ID = 1"]
   );
 });
 
@@ -108,10 +117,7 @@ test('executeWriteDb2QueriesRaw uses one Java call with a statements file', () =
       user: 'ZEUS',
       password: 'secret',
     },
-    statements: [
-      'INSERT INTO T (ID) VALUES (1)',
-      'UPDATE T SET STATUS = 1 WHERE ID = 1',
-    ],
+    statements: ['INSERT INTO T (ID) VALUES (1)', 'UPDATE T SET STATUS = 1 WHERE ID = 1'],
     runtime: {
       skipConnectionGuard: true,
       runJavaHelper(className, args) {
@@ -137,5 +143,8 @@ test('executeWriteDb2QueriesRaw uses one Java call with a statements file', () =
   assert.equal(capturedArgs[2], '@ZEUS_SECRET_ENV@');
   assert.equal(result.rowsAffected, 2);
   assert.equal(result.statementCount, 2);
-  assert.deepEqual(result.results.map((entry) => entry.rowsAffected), [1, 1]);
+  assert.deepEqual(
+    result.results.map(entry => entry.rowsAffected),
+    [1, 1]
+  );
 });

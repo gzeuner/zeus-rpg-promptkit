@@ -13,7 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
-const { ensureJavaHelperCompiled, runJavaHelper, SECRET_ENV_SENTINEL } = require('../fetch/jt400CommandRunner');
+const {
+  ensureJavaHelperCompiled,
+  runJavaHelper,
+  SECRET_ENV_SENTINEL,
+} = require('../fetch/jt400CommandRunner');
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function uniqueSortedStrings(values) {
+  return Array.from(
+    new Set(
+      asArray(values)
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+}
+
 const {
   normalizeIdentifier,
   resolveDefaultSchema,
@@ -48,7 +67,9 @@ function normalizeColumn(column) {
     systemName: normalizeIdentifier(column && column.systemName),
     type: normalizeIdentifier(column && column.type),
     length: Number.isFinite(Number(column && column.length)) ? Number(column.length) : null,
-    precision: Number.isFinite(Number(column && column.precision)) ? Number(column.precision) : null,
+    precision: Number.isFinite(Number(column && column.precision))
+      ? Number(column.precision)
+      : null,
     scale: Number.isFinite(Number(column && column.scale)) ? Number(column.scale) : null,
     nullable: Boolean(column && column.nullable),
     primaryKey: Boolean(column && column.primaryKey),
@@ -88,26 +109,30 @@ function normalizeDerivedObject(derivedObject) {
     systemSchema: normalizeIdentifier(derivedObject && derivedObject.systemSchema),
     systemName: normalizeIdentifier(derivedObject && derivedObject.systemName),
     objectType: normalizeIdentifier(derivedObject && derivedObject.objectType) || 'VIEW',
-    textDescription: String(derivedObject && derivedObject.textDescription || '').trim() || null,
+    textDescription: String((derivedObject && derivedObject.textDescription) || '').trim() || null,
   };
 }
 
 function normalizeRawTable(table) {
   const columns = (table && Array.isArray(table.columns) ? table.columns : [])
     .map(normalizeColumn)
-    .filter((column) => column.name && column.type);
+    .filter(column => column.name && column.type);
   const foreignKeys = (table && Array.isArray(table.foreignKeys) ? table.foreignKeys : [])
     .map(normalizeForeignKey)
-    .filter((foreignKey) => foreignKey.column && foreignKey.referencesTable && foreignKey.referencesColumn)
+    .filter(
+      foreignKey => foreignKey.column && foreignKey.referencesTable && foreignKey.referencesColumn
+    )
     .sort((a, b) => {
       if (a.column !== b.column) return a.column.localeCompare(b.column);
-      if (a.referencesSchema !== b.referencesSchema) return a.referencesSchema.localeCompare(b.referencesSchema);
-      if (a.referencesTable !== b.referencesTable) return a.referencesTable.localeCompare(b.referencesTable);
+      if (a.referencesSchema !== b.referencesSchema)
+        return a.referencesSchema.localeCompare(b.referencesSchema);
+      if (a.referencesTable !== b.referencesTable)
+        return a.referencesTable.localeCompare(b.referencesTable);
       return a.referencesColumn.localeCompare(b.referencesColumn);
     });
   const triggers = (table && Array.isArray(table.triggers) ? table.triggers : [])
     .map(normalizeTrigger)
-    .filter((trigger) => trigger.name || trigger.systemName)
+    .filter(trigger => trigger.name || trigger.systemName)
     .sort((a, b) => {
       const aName = a.name || a.systemName;
       const bName = b.name || b.systemName;
@@ -116,7 +141,7 @@ function normalizeRawTable(table) {
     });
   const derivedObjects = (table && Array.isArray(table.derivedObjects) ? table.derivedObjects : [])
     .map(normalizeDerivedObject)
-    .filter((entry) => entry.name || entry.systemName)
+    .filter(entry => entry.name || entry.systemName)
     .sort((a, b) => {
       if (a.schema !== b.schema) return a.schema.localeCompare(b.schema);
       const aName = a.name || a.systemName;
@@ -131,8 +156,10 @@ function normalizeRawTable(table) {
     systemSchema: normalizeIdentifier(table && table.systemSchema),
     systemName: normalizeIdentifier(table && table.systemName),
     objectType: normalizeIdentifier(table && table.objectType) || 'TABLE',
-    textDescription: String(table && table.textDescription || '').trim() || null,
-    estimatedRowCount: Number.isFinite(Number(table && table.estimatedRowCount)) ? Number(table.estimatedRowCount) : null,
+    textDescription: String((table && table.textDescription) || '').trim() || null,
+    estimatedRowCount: Number.isFinite(Number(table && table.estimatedRowCount))
+      ? Number(table.estimatedRowCount)
+      : null,
     lookupStrategy: normalizeIdentifier(table && table.lookupStrategy) || 'JDBC_METADATA',
     columns,
     foreignKeys,
@@ -171,15 +198,16 @@ function buildRequestedTableNames(dependencies) {
   return Array.from(
     new Set(
       ((dependencies && dependencies.tables) || [])
-        .map((entry) => normalizeIdentifier(entry && entry.name ? entry.name : entry))
-        .filter(Boolean),
-    ),
+        .map(entry => normalizeIdentifier(entry && entry.name ? entry.name : entry))
+        .filter(Boolean)
+    )
   ).sort((a, b) => a.localeCompare(b));
 }
 
 function buildRequestedExternalObjectNames(canonicalAnalysis) {
-  return Array.from(new Set(buildExternalCallRequests(canonicalAnalysis).map((entry) => entry.requestedName)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(buildExternalCallRequests(canonicalAnalysis).map(entry => entry.requestedName))
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function renderLength(column) {
@@ -189,7 +217,11 @@ function renderLength(column) {
   if (column.scale !== null && column.scale !== undefined) {
     return `${column.length}${column.scale > 0 ? `/${column.scale}` : ''}`;
   }
-  if (column.precision !== null && column.precision !== undefined && column.precision !== column.length) {
+  if (
+    column.precision !== null &&
+    column.precision !== undefined &&
+    column.precision !== column.length
+  ) {
     return `${column.length}/${column.precision}`;
   }
   return String(column.length);
@@ -200,12 +232,7 @@ function renderForeignKeyRule(rule) {
 }
 
 function renderDb2MetadataMarkdown(program, tables, externalObjects, notes) {
-  const lines = [
-    '# DB2 Metadata',
-    '',
-    `Program: ${normalizeIdentifier(program)}`,
-    '',
-  ];
+  const lines = ['# DB2 Metadata', '', `Program: ${normalizeIdentifier(program)}`, ''];
 
   if (notes.length > 0) {
     lines.push('Notes:');
@@ -226,7 +253,9 @@ function renderDb2MetadataMarkdown(program, tables, externalObjects, notes) {
     lines.push('');
     lines.push(`Schema: ${table.schema || '(unknown)'}`);
     if (table.systemSchema || table.systemName) {
-      lines.push(`System Name: ${(table.systemSchema || table.schema || '(unknown)')}/${table.systemName || '(unknown)'}`);
+      lines.push(
+        `System Name: ${table.systemSchema || table.schema || '(unknown)'}/${table.systemName || '(unknown)'}`
+      );
     }
     lines.push(`Object Type: ${table.objectType || 'TABLE'}`);
     if (table.textDescription) {
@@ -254,7 +283,9 @@ function renderDb2MetadataMarkdown(program, tables, externalObjects, notes) {
       if ((table.sourceLink.sqlReferences || []).length > 0) {
         lines.push('Related SQL:');
         for (const statement of table.sourceLink.sqlReferences) {
-          lines.push(`- ${statement.type}${statement.dynamic ? ' (dynamic)' : ''}${statement.unresolved ? ' (unresolved)' : ''}`);
+          lines.push(
+            `- ${statement.type}${statement.dynamic ? ' (dynamic)' : ''}${statement.unresolved ? ' (unresolved)' : ''}`
+          );
         }
         lines.push('');
       }
@@ -276,7 +307,9 @@ function renderDb2MetadataMarkdown(program, tables, externalObjects, notes) {
     lines.push('| Column | System | Type | Length | Nullable | PK |');
     lines.push('| --- | --- | --- | --- | --- | --- |');
     for (const column of table.columns || []) {
-      lines.push(`| ${column.name} | ${column.systemName || ''} | ${column.type} | ${renderLength(column)} | ${column.nullable ? 'Yes' : 'No'} | ${column.primaryKey ? 'Yes' : 'No'} |`);
+      lines.push(
+        `| ${column.name} | ${column.systemName || ''} | ${column.type} | ${renderLength(column)} | ${column.nullable ? 'Yes' : 'No'} | ${column.primaryKey ? 'Yes' : 'No'} |`
+      );
     }
 
     if ((table.foreignKeys || []).length > 0) {
@@ -284,7 +317,9 @@ function renderDb2MetadataMarkdown(program, tables, externalObjects, notes) {
       lines.push('Foreign Keys:');
       for (const foreignKey of table.foreignKeys) {
         const schemaPrefix = foreignKey.referencesSchema ? `${foreignKey.referencesSchema}.` : '';
-        lines.push(`- ${foreignKey.column} -> ${schemaPrefix}${foreignKey.referencesTable}.${foreignKey.referencesColumn}${renderForeignKeyRule(foreignKey.deleteRule || foreignKey.updateRule)}${foreignKey.deleteRule ? ` delete ${foreignKey.deleteRule}` : ''}${foreignKey.updateRule ? ` update ${foreignKey.updateRule}` : ''}`);
+        lines.push(
+          `- ${foreignKey.column} -> ${schemaPrefix}${foreignKey.referencesTable}.${foreignKey.referencesColumn}${renderForeignKeyRule(foreignKey.deleteRule || foreignKey.updateRule)}${foreignKey.deleteRule ? ` delete ${foreignKey.deleteRule}` : ''}${foreignKey.updateRule ? ` update ${foreignKey.updateRule}` : ''}`
+        );
       }
     }
 
@@ -292,7 +327,9 @@ function renderDb2MetadataMarkdown(program, tables, externalObjects, notes) {
       lines.push('');
       lines.push('Triggers:');
       for (const trigger of table.triggers) {
-        lines.push(`- ${trigger.name || trigger.systemName} [${trigger.actionTiming || 'UNKNOWN'} ${trigger.eventManipulation || 'UNKNOWN'} ${trigger.actionOrientation || 'UNKNOWN'}]${trigger.programLibrary || trigger.programName ? ` via ${(trigger.programLibrary || '')}${trigger.programLibrary && trigger.programName ? '/' : ''}${trigger.programName || ''}` : ''}`);
+        lines.push(
+          `- ${trigger.name || trigger.systemName} [${trigger.actionTiming || 'UNKNOWN'} ${trigger.eventManipulation || 'UNKNOWN'} ${trigger.actionOrientation || 'UNKNOWN'}]${trigger.programLibrary || trigger.programName ? ` via ${trigger.programLibrary || ''}${trigger.programLibrary && trigger.programName ? '/' : ''}${trigger.programName || ''}` : ''}`
+        );
       }
     }
 
@@ -300,12 +337,15 @@ function renderDb2MetadataMarkdown(program, tables, externalObjects, notes) {
       lines.push('');
       lines.push('Derived Objects:');
       for (const derivedObject of table.derivedObjects) {
-        const qualifiedName = derivedObject.schema && derivedObject.name
-          ? `${derivedObject.schema}.${derivedObject.name}`
-          : derivedObject.systemSchema && derivedObject.systemName
-            ? `${derivedObject.systemSchema}/${derivedObject.systemName}`
-            : derivedObject.name || derivedObject.systemName;
-        lines.push(`- ${qualifiedName} [${derivedObject.objectType || 'VIEW'}]${derivedObject.textDescription ? ` ${derivedObject.textDescription}` : ''}`);
+        const qualifiedName =
+          derivedObject.schema && derivedObject.name
+            ? `${derivedObject.schema}.${derivedObject.name}`
+            : derivedObject.systemSchema && derivedObject.systemName
+              ? `${derivedObject.systemSchema}/${derivedObject.systemName}`
+              : derivedObject.name || derivedObject.systemName;
+        lines.push(
+          `- ${qualifiedName} [${derivedObject.objectType || 'VIEW'}]${derivedObject.textDescription ? ` ${derivedObject.textDescription}` : ''}`
+        );
       }
     }
 
@@ -317,9 +357,14 @@ function renderDb2MetadataMarkdown(program, tables, externalObjects, notes) {
     lines.push('');
     for (const externalObject of externalObjects) {
       const library = externalObject.library || externalObject.schema || '(unknown)';
-      const name = externalObject.sqlName || externalObject.systemName || externalObject.requestedName;
-      const qualifier = externalObject.systemName ? `${library}/${externalObject.systemName}` : `${library}.${name}`;
-      lines.push(`- ${externalObject.requestedName}: ${qualifier} [${externalObject.objectType || 'OBJECT'}]${externalObject.sqlName && externalObject.sqlName !== externalObject.systemName ? ` SQL ${externalObject.sqlName}` : ''}${externalObject.textDescription ? ` ${externalObject.textDescription}` : ''}`);
+      const name =
+        externalObject.sqlName || externalObject.systemName || externalObject.requestedName;
+      const qualifier = externalObject.systemName
+        ? `${library}/${externalObject.systemName}`
+        : `${library}.${name}`;
+      lines.push(
+        `- ${externalObject.requestedName}: ${qualifier} [${externalObject.objectType || 'OBJECT'}]${externalObject.sqlName && externalObject.sqlName !== externalObject.systemName ? ` SQL ${externalObject.sqlName}` : ''}${externalObject.textDescription ? ` ${externalObject.textDescription}` : ''}`
+      );
     }
     lines.push('');
   }
@@ -332,12 +377,18 @@ function buildDb2MetadataCanonicalUpdatesFromPayload({ canonicalAnalysis, payloa
     canonicalAnalysis,
     tableLinks: Array.isArray(payload && payload.tableLinks) ? payload.tableLinks : [],
     exportedTables: Array.isArray(payload && payload.tables) ? payload.tables : [],
-    externalObjects: Array.isArray(payload && payload.externalObjects) ? payload.externalObjects : [],
+    externalObjects: Array.isArray(payload && payload.externalObjects)
+      ? payload.externalObjects
+      : [],
   });
 }
 
 function writeOutputs(outputDir, payload, markdown) {
-  fs.writeFileSync(path.join(outputDir, JSON_FILE), `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(
+    path.join(outputDir, JSON_FILE),
+    `${JSON.stringify(payload, null, 2)}\n`,
+    'utf8'
+  );
   fs.writeFileSync(path.join(outputDir, MARKDOWN_FILE), markdown, 'utf8');
 }
 
@@ -371,18 +422,19 @@ function runTableMetadataExport({ jdbcUrl, dbConfig, defaultSchema, requestedTab
     console.log(`[verbose] Exporting DB2 metadata for ${requestedTables.length} tables`);
   }
 
-  const result = runJavaHelper('Db2MetadataExporter', [
-    jdbcUrl,
-    String(dbConfig.user),
-    SECRET_ENV_SENTINEL,
-    defaultSchema,
-    requestedTables.join(','),
-  ], { password: String(dbConfig.password), timeout: 180000 }); // 3min hard timeout for large table sets (#7)
+  const result = runJavaHelper(
+    'Db2MetadataExporter',
+    [jdbcUrl, String(dbConfig.user), SECRET_ENV_SENTINEL, defaultSchema, requestedTables.join(',')],
+    { password: String(dbConfig.password), timeout: 180000 }
+  ); // 3min hard timeout for large table sets (#7)
 
   // Surface recent progress markers from Java stderr so hangs are observable
-  const prog = (result.stderr || '').split(/\r?\n/).filter((l) => /\[progress\].*metadata/.test(l)).slice(-5);
+  const prog = (result.stderr || '')
+    .split(/\r?\n/)
+    .filter(l => /\[progress\].*metadata/.test(l))
+    .slice(-5);
   if (prog.length && (verbose || requestedTables.length > 30)) {
-    prog.forEach((p) => console.log(p));
+    prog.forEach(p => console.log(p));
   }
 
   if (result.status !== 0) {
@@ -400,15 +452,16 @@ function runExternalObjectExport({ jdbcUrl, dbConfig, requestedNames, verbose })
 
   ensureJavaHelperCompiled('Db2ExternalObjectResolver.java', 'Db2ExternalObjectResolver');
   if (verbose) {
-    console.log(`[verbose] Resolving ${requestedNames.length} unresolved external IBM i object names`);
+    console.log(
+      `[verbose] Resolving ${requestedNames.length} unresolved external IBM i object names`
+    );
   }
 
-  const result = runJavaHelper('Db2ExternalObjectResolver', [
-    jdbcUrl,
-    String(dbConfig.user),
-    SECRET_ENV_SENTINEL,
-    requestedNames.join(','),
-  ], { password: String(dbConfig.password), timeout: 120000 });
+  const result = runJavaHelper(
+    'Db2ExternalObjectResolver',
+    [jdbcUrl, String(dbConfig.user), SECRET_ENV_SENTINEL, requestedNames.join(',')],
+    { password: String(dbConfig.password), timeout: 120000 }
+  );
 
   if (result.status !== 0) {
     const errorText = (result.stderr || '').trim() || 'unknown DB2 external object error';
@@ -418,7 +471,17 @@ function runExternalObjectExport({ jdbcUrl, dbConfig, requestedNames, verbose })
   return parseJavaJson(result.stdout);
 }
 
-function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose, canonicalAnalysis, context, skip, reproducible } = {}) {
+function exportDb2Metadata({
+  program,
+  dependencies,
+  dbConfig,
+  outputDir,
+  verbose,
+  canonicalAnalysis,
+  context,
+  skip,
+  reproducible,
+} = {}) {
   if (skip || reproducible) {
     return {
       summary: createSkippedSummary('skipped via --skip-db2-metadata or --reproducible'),
@@ -434,7 +497,9 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
   if (!isDbConfigured(dbConfig)) {
     return {
       summary,
-      notes: ['DB2 metadata export was skipped because no DB2 connection configuration was available.'],
+      notes: [
+        'DB2 metadata export was skipped because no DB2 connection configuration was available.',
+      ],
       canonicalUpdates: { entities: {}, relations: [] },
     };
   }
@@ -443,13 +508,17 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
   if (!jdbcUrl) {
     return {
       summary: createSkippedSummary('DB2 connection configuration is incomplete'),
-      notes: ['DB2 metadata export was skipped because DB2 connection configuration is incomplete.'],
+      notes: [
+        'DB2 metadata export was skipped because DB2 connection configuration is incomplete.',
+      ],
       canonicalUpdates: { entities: {}, relations: [] },
     };
   }
 
   if (verbose) {
-    console.log(`[verbose] Starting DB2 metadata export for ${requestedTables.length} tables + ${requestedExternalObjects.length} externals (timeouts + progress; --skip-db2-metadata to bypass).`);
+    console.log(
+      `[verbose] Starting DB2 metadata export for ${requestedTables.length} tables + ${requestedExternalObjects.length} externals (timeouts + progress; --skip-db2-metadata to bypass).`
+    );
   }
   if (requestedTables.length === 0 && requestedExternalObjects.length === 0) {
     const payload = {
@@ -463,7 +532,9 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
     return {
       payload,
       summary: {
-        ...createSkippedSummary('no source-linked DB2 tables or unresolved external calls were detected'),
+        ...createSkippedSummary(
+          'no source-linked DB2 tables or unresolved external calls were detected'
+        ),
         status: 'exported',
       },
       notes: [],
@@ -493,20 +564,37 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
       canonicalAnalysis,
       context,
     });
-    const linkedTables = tables.map((table) => {
-      const sourceLink = linkage.tableLinkByExactKey.get(`${normalizeIdentifier(table.schema)}|${normalizeIdentifier(table.table)}`)
-        || linkage.tableLinkByExactKey.get(`${normalizeIdentifier(table.systemSchema)}|${normalizeIdentifier(table.systemName)}`)
-        || null;
+    const linkedTables = tables.map(table => {
+      const sourceLink =
+        linkage.tableLinkByExactKey.get(
+          `${normalizeIdentifier(table.schema)}|${normalizeIdentifier(table.table)}`
+        ) ||
+        linkage.tableLinkByExactKey.get(
+          `${normalizeIdentifier(table.systemSchema)}|${normalizeIdentifier(table.systemName)}`
+        ) ||
+        null;
       const compactLink = sourceLink ? buildCompactDb2TableLink(sourceLink, table) : null;
       return {
         ...table,
-        ...(sourceLink ? { sourceLink: { ...sourceLink, ...(compactLink ? { matchedBy: compactLink.matchedBy } : {}) } } : {}),
+        ...(sourceLink
+          ? {
+              sourceLink: {
+                ...sourceLink,
+                ...(compactLink ? { matchedBy: compactLink.matchedBy } : {}),
+              },
+            }
+          : {}),
       };
     });
-    const normalizedExternalObjects = (rawExternalExport.objects || rawExternalExport.externalObjects || [])
+    const normalizedExternalObjects = (
+      rawExternalExport.objects ||
+      rawExternalExport.externalObjects ||
+      []
+    )
       .map(normalizeExternalObject)
       .sort((a, b) => {
-        if (a.requestedName !== b.requestedName) return a.requestedName.localeCompare(b.requestedName);
+        if (a.requestedName !== b.requestedName)
+          return a.requestedName.localeCompare(b.requestedName);
         if (a.library !== b.library) return a.library.localeCompare(b.library);
         return (a.systemName || a.sqlName).localeCompare(b.systemName || b.sqlName);
       });
@@ -524,7 +612,9 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
       notes.push(`DB2 metadata lookup did not resolve tables: ${unresolvedTables.join(', ')}.`);
     }
     if (linkage.ambiguousTables.length > 0) {
-      notes.push(`DB2 metadata lookup matched multiple catalog objects for tables: ${linkage.ambiguousTables.map((entry) => `${entry.requestedName} (${entry.matchedSchemas.join(', ')})`).join('; ')}.`);
+      notes.push(
+        `DB2 metadata lookup matched multiple catalog objects for tables: ${linkage.ambiguousTables.map(entry => `${entry.requestedName} (${entry.matchedSchemas.join(', ')})`).join('; ')}.`
+      );
     }
     for (const diagnostic of linkage.diagnostics || []) {
       if (diagnostic.code === 'DB2_TABLE_LOOKUP_FALLBACK') {
@@ -539,7 +629,11 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
       externalObjects: normalizedExternalObjects,
       notes: uniqueSortedStrings(notes),
     };
-    writeOutputs(outputDir, payload, renderDb2MetadataMarkdown(program, linkedTables, normalizedExternalObjects, payload.notes));
+    writeOutputs(
+      outputDir,
+      payload,
+      renderDb2MetadataMarkdown(program, linkedTables, normalizedExternalObjects, payload.notes)
+    );
 
     return {
       payload,
@@ -549,24 +643,38 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
         markdownFile: MARKDOWN_FILE,
         tableCount: tables.length,
         requestedTableCount: requestedTables.length,
-        resolvedTableCount: linkage.tableLinks.filter((entry) => entry.matchStatus === 'resolved').length,
+        resolvedTableCount: linkage.tableLinks.filter(entry => entry.matchStatus === 'resolved')
+          .length,
         unresolvedTableCount: unresolvedTables.length,
         ambiguousTableCount: linkage.ambiguousTables.length,
         triggerCount: linkedTables.reduce((sum, entry) => sum + (entry.triggers || []).length, 0),
-        derivedObjectCount: linkedTables.reduce((sum, entry) => sum + (entry.derivedObjects || []).length, 0),
+        derivedObjectCount: linkedTables.reduce(
+          (sum, entry) => sum + (entry.derivedObjects || []).length,
+          0
+        ),
         externalObjectCount: normalizedExternalObjects.length,
-        catalogResolvedProgramCount: Object.keys(canonicalUpdates.entities || {}).includes('programs')
+        catalogResolvedProgramCount: Object.keys(canonicalUpdates.entities || {}).includes(
+          'programs'
+        )
           ? canonicalUpdates.entities.programs.length
           : 0,
-        catalogResolvedProcedureCount: (
-          (canonicalUpdates.entities && canonicalUpdates.entities.prototypes ? canonicalUpdates.entities.prototypes.length : 0)
-          + (canonicalUpdates.entities && canonicalUpdates.entities.procedureReferences ? canonicalUpdates.entities.procedureReferences.length : 0)
-        ),
-        fallbackLookupCount: (linkage.diagnostics || []).filter((entry) => entry.code === 'DB2_TABLE_LOOKUP_FALLBACK').length,
-        tables: linkedTables.map((table) => {
-          const sourceLink = linkage.tableLinkByExactKey.get(`${normalizeIdentifier(table.schema)}|${normalizeIdentifier(table.table)}`)
-            || linkage.tableLinkByExactKey.get(`${normalizeIdentifier(table.systemSchema)}|${normalizeIdentifier(table.systemName)}`)
-            || {
+        catalogResolvedProcedureCount:
+          (canonicalUpdates.entities && canonicalUpdates.entities.prototypes
+            ? canonicalUpdates.entities.prototypes.length
+            : 0) +
+          (canonicalUpdates.entities && canonicalUpdates.entities.procedureReferences
+            ? canonicalUpdates.entities.procedureReferences.length
+            : 0),
+        fallbackLookupCount: (linkage.diagnostics || []).filter(
+          entry => entry.code === 'DB2_TABLE_LOOKUP_FALLBACK'
+        ).length,
+        tables: linkedTables.map(table => {
+          const sourceLink = linkage.tableLinkByExactKey.get(
+            `${normalizeIdentifier(table.schema)}|${normalizeIdentifier(table.table)}`
+          ) ||
+            linkage.tableLinkByExactKey.get(
+              `${normalizeIdentifier(table.systemSchema)}|${normalizeIdentifier(table.systemName)}`
+            ) || {
               requestedName: normalizeIdentifier(table.table || table.systemName),
               matchStatus: 'resolved',
               matches: [],
@@ -587,7 +695,9 @@ function exportDb2Metadata({ program, dependencies, dbConfig, outputDir, verbose
   } catch (error) {
     return {
       summary: createSkippedSummary(`the DB2 helper could not run: ${error.message}`),
-      notes: [`DB2 metadata export was skipped because the DB2 helper could not run: ${error.message}`],
+      notes: [
+        `DB2 metadata export was skipped because the DB2 helper could not run: ${error.message}`,
+      ],
       canonicalUpdates: { entities: {}, relations: [] },
     };
   }

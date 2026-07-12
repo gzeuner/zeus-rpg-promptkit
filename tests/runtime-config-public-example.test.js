@@ -3,11 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
-const {
-  loadProfiles,
-  resolveProfile,
-  validateProfiles,
-} = require('../src/config/runtimeConfig');
+const { loadProfiles, resolveProfile, validateProfiles } = require('../src/config/runtimeConfig');
 const { getConnectionTargetMetadata } = require('../src/config/connectionTargetMetadata');
 
 const projectRoot = path.resolve(__dirname, '..');
@@ -57,12 +53,24 @@ test('profiles.example.json is strict JSON, validates, and exposes the public pr
     'BEGIN OPENSSH',
     'Kopie.local',
   ]) {
-    assert.equal(raw.includes(blocked), false, `did not expect ${blocked} in profiles.example.json`);
+    assert.equal(
+      raw.includes(blocked),
+      false,
+      `did not expect ${blocked} in profiles.example.json`
+    );
   }
 
   assert.equal(raw.includes('"analyzeMode"'), false, 'public example should use analyzeModes');
-  assert.equal(raw.includes('"compiledProgramLib"'), false, 'unsupported runtimeContext.compiledProgramLib should not be documented');
-  assert.equal(raw.includes('"activeLibraries"'), false, 'unsupported runtimeContext.activeLibraries should not be documented');
+  assert.equal(
+    raw.includes('"compiledProgramLib"'),
+    false,
+    'unsupported runtimeContext.compiledProgramLib should not be documented'
+  );
+  assert.equal(
+    raw.includes('"activeLibraries"'),
+    false,
+    'unsupported runtimeContext.activeLibraries should not be documented'
+  );
 });
 
 test('public example profiles resolve mixins and workflow presets without local-only files', () => {

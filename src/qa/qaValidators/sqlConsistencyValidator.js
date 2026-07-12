@@ -1,6 +1,6 @@
 /**
  * SQL Consistency Validator
- * 
+ *
  * Validates SQL statements for:
  * - Proper filter logic
  * - JOIN consistency
@@ -15,7 +15,7 @@ class SQLConsistencyValidator {
 
   /**
    * Validate SQL consistency
-   * 
+   *
    * @param {Object} canonicalAnalysis - Canonical analysis model
    * @param {Array} sourceFiles - Source files
    * @param {Object} context - Analysis context
@@ -50,7 +50,7 @@ class SQLConsistencyValidator {
 
   /**
    * Validate a single SQL statement
-   * 
+   *
    * @param {Object} sql - SQL statement
    * @returns {Array} Issues found
    */
@@ -108,7 +108,7 @@ class SQLConsistencyValidator {
 
   /**
    * Check if WHERE clause has exclusion filter (<>)
-   * 
+   *
    * @param {String} whereClause - WHERE clause
    * @returns {Boolean}
    */
@@ -118,7 +118,7 @@ class SQLConsistencyValidator {
 
   /**
    * Check if WHERE clause has NULL handling
-   * 
+   *
    * @param {String} whereClause - WHERE clause
    * @returns {Boolean}
    */
@@ -128,7 +128,7 @@ class SQLConsistencyValidator {
 
   /**
    * Check for duplicate table joins
-   * 
+   *
    * @param {Object} sql - SQL statement
    * @returns {Boolean}
    */

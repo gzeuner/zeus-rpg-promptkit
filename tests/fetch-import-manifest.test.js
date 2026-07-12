@@ -15,38 +15,43 @@ test('fetchSources writes an import manifest with validated downloaded files', a
   const outDir = path.join(tempRoot, 'rpg_sources');
 
   try {
-    const summary = await fetchSources({
-      host: 'myibmi.example.com',
-      user: 'MYUSER',
-      password: 'MYPASSWORD',
-      sourceLib: 'SOURCEN',
-      ifsDir: '/home/zeus/rpg_sources',
-      out: outDir,
-      files: ['QRPGLESRC'],
-      members: ['ORDERPGM'],
-      replace: true,
-      transport: 'sftp',
-      streamFileCcsid: 1208,
-      verbose: false,
-    }, {
-      exportMembersForSourceFileFn() {
-        return [{
-          sourceFile: 'QRPGLESRC',
-          member: 'ORDERPGM',
-          ok: true,
-          command: 'CPYTOSTMF ...',
-          messages: [],
-          stderr: '',
-          fallbackUsed: false,
-        }];
+    const summary = await fetchSources(
+      {
+        host: 'myibmi.example.com',
+        user: 'MYUSER',
+        password: 'MYPASSWORD',
+        sourceLib: 'SOURCEN',
+        ifsDir: '/home/zeus/rpg_sources',
+        out: outDir,
+        files: ['QRPGLESRC'],
+        members: ['ORDERPGM'],
+        replace: true,
+        transport: 'sftp',
+        streamFileCcsid: 1208,
+        verbose: false,
       },
-      async downloadDirectoryFn(params) {
-        const filePath = path.join(params.localDir, 'QRPGLESRC', 'ORDERPGM.rpgle');
-        fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        fs.writeFileSync(filePath, '**FREE\nDCL-F ORDERS DISK;\n', 'utf8');
-        return { downloadedCount: 1 };
-      },
-    });
+      {
+        exportMembersForSourceFileFn() {
+          return [
+            {
+              sourceFile: 'QRPGLESRC',
+              member: 'ORDERPGM',
+              ok: true,
+              command: 'CPYTOSTMF ...',
+              messages: [],
+              stderr: '',
+              fallbackUsed: false,
+            },
+          ];
+        },
+        async downloadDirectoryFn(params) {
+          const filePath = path.join(params.localDir, 'QRPGLESRC', 'ORDERPGM.rpgle');
+          fs.mkdirSync(path.dirname(filePath), { recursive: true });
+          fs.writeFileSync(filePath, '**FREE\nDCL-F ORDERS DISK;\n', 'utf8');
+          return { downloadedCount: 1 };
+        },
+      }
+    );
 
     const manifestPath = path.join(outDir, IMPORT_MANIFEST_FILE);
     assert.equal(summary.importManifestPath, manifestPath);
@@ -81,35 +86,40 @@ test('fetchSources records failed member exports as machine-readable provenance 
   const outDir = path.join(tempRoot, 'rpg_sources');
 
   try {
-    await fetchSources({
-      host: 'myibmi.example.com',
-      user: 'MYUSER',
-      password: 'MYPASSWORD',
-      sourceLib: 'SOURCEN',
-      ifsDir: '/home/zeus/rpg_sources',
-      out: outDir,
-      files: ['QRPGLESRC'],
-      members: ['BROKENPGM'],
-      replace: true,
-      transport: 'sftp',
-      streamFileCcsid: 1208,
-      verbose: false,
-    }, {
-      exportMembersForSourceFileFn() {
-        return [{
-          sourceFile: 'QRPGLESRC',
-          member: 'BROKENPGM',
-          ok: false,
-          command: 'CPYTOSTMF ...',
-          messages: ['CPF1234 export failed'],
-          stderr: 'CPF1234',
-          fallbackUsed: false,
-        }];
+    await fetchSources(
+      {
+        host: 'myibmi.example.com',
+        user: 'MYUSER',
+        password: 'MYPASSWORD',
+        sourceLib: 'SOURCEN',
+        ifsDir: '/home/zeus/rpg_sources',
+        out: outDir,
+        files: ['QRPGLESRC'],
+        members: ['BROKENPGM'],
+        replace: true,
+        transport: 'sftp',
+        streamFileCcsid: 1208,
+        verbose: false,
       },
-      async downloadDirectoryFn() {
-        return { downloadedCount: 0 };
-      },
-    });
+      {
+        exportMembersForSourceFileFn() {
+          return [
+            {
+              sourceFile: 'QRPGLESRC',
+              member: 'BROKENPGM',
+              ok: false,
+              command: 'CPYTOSTMF ...',
+              messages: ['CPF1234 export failed'],
+              stderr: 'CPF1234',
+              fallbackUsed: false,
+            },
+          ];
+        },
+        async downloadDirectoryFn() {
+          return { downloadedCount: 0 };
+        },
+      }
+    );
 
     const manifest = JSON.parse(fs.readFileSync(path.join(outDir, IMPORT_MANIFEST_FILE), 'utf8'));
     assert.equal(manifest.summary.exportedFileCount, 0);

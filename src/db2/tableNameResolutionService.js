@@ -30,20 +30,32 @@ function normalizeRowValue(row, ...keys) {
 }
 
 function normalizeTableRow(row) {
-  const sqlName = String(normalizeRowValue(row, 'SQL_TABLE_NAME', 'sql_table_name', 'TABLE_NAME', 'table_name') || '').trim().toUpperCase();
+  const sqlName = String(
+    normalizeRowValue(row, 'SQL_TABLE_NAME', 'sql_table_name', 'TABLE_NAME', 'table_name') || ''
+  )
+    .trim()
+    .toUpperCase();
   return {
-    systemName: String(normalizeRowValue(
-      row,
-      'SYSTEM_TABLE_NAME',
-      'system_table_name',
-      'SQL_TABLE_NAME',
-      'sql_table_name',
-      'TABLE_NAME',
-      'table_name',
-    ) || '').trim().toUpperCase(),
+    systemName: String(
+      normalizeRowValue(
+        row,
+        'SYSTEM_TABLE_NAME',
+        'system_table_name',
+        'SQL_TABLE_NAME',
+        'sql_table_name',
+        'TABLE_NAME',
+        'table_name'
+      ) || ''
+    )
+      .trim()
+      .toUpperCase(),
     sqlName,
-    schema: String(normalizeRowValue(row, 'TABLE_SCHEMA', 'table_schema') || '').trim().toUpperCase(),
-    type: String(normalizeRowValue(row, 'TABLE_TYPE', 'table_type') || '').trim().toUpperCase(),
+    schema: String(normalizeRowValue(row, 'TABLE_SCHEMA', 'table_schema') || '')
+      .trim()
+      .toUpperCase(),
+    type: String(normalizeRowValue(row, 'TABLE_TYPE', 'table_type') || '')
+      .trim()
+      .toUpperCase(),
   };
 }
 
@@ -65,7 +77,7 @@ FETCH FIRST 1 ROW ONLY`;
     runtime,
     degradedMode: 'empty',
     retryHandlers: {
-      '42703': () => ({
+      42703: () => ({
         name: 'without-system-table-name',
         query: `SELECT TABLE_NAME AS SQL_TABLE_NAME, TABLE_SCHEMA
 FROM QSYS2.SYSTABLES
@@ -113,7 +125,7 @@ ORDER BY TABLE_NAME`;
     runtime,
     degradedMode: 'empty',
     retryHandlers: {
-      '42703': () => ({
+      42703: () => ({
         name: 'without-system-table-name',
         query: `SELECT TABLE_NAME AS SQL_TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE
 FROM QSYS2.SYSTABLES
@@ -123,7 +135,7 @@ ORDER BY TABLE_NAME`,
     },
   });
 
-  const tables = (result.rows || []).map((row) => normalizeTableRow(row));
+  const tables = (result.rows || []).map(row => normalizeTableRow(row));
   return {
     tables,
     schema: resolvedSchema,
@@ -148,12 +160,19 @@ ORDER BY ORDINAL_POSITION`;
     runtime,
   });
 
-  const columns = (result.rows || []).map((row) => ({
-    name: String(normalizeRowValue(row, 'COLUMN_NAME', 'column_name') || '').trim().toUpperCase(),
-    type: String(normalizeRowValue(row, 'DATA_TYPE', 'data_type') || '').trim().toUpperCase(),
+  const columns = (result.rows || []).map(row => ({
+    name: String(normalizeRowValue(row, 'COLUMN_NAME', 'column_name') || '')
+      .trim()
+      .toUpperCase(),
+    type: String(normalizeRowValue(row, 'DATA_TYPE', 'data_type') || '')
+      .trim()
+      .toUpperCase(),
     length: Number(normalizeRowValue(row, 'LENGTH', 'length') || 0),
     scale: Number(normalizeRowValue(row, 'NUMERIC_SCALE', 'numeric_scale') || 0),
-    nullable: String(normalizeRowValue(row, 'IS_NULLABLE', 'is_nullable') || '').trim().toUpperCase() === 'YES',
+    nullable:
+      String(normalizeRowValue(row, 'IS_NULLABLE', 'is_nullable') || '')
+        .trim()
+        .toUpperCase() === 'YES',
     ordinal: Number(normalizeRowValue(row, 'ORDINAL_POSITION', 'ordinal_position') || 0),
   }));
 
@@ -176,7 +195,9 @@ function buildResolveObjectsQuery({ name, schema, includeSystemTableName = true 
   ];
 
   if (schema) {
-    whereClauses.push(`TABLE_SCHEMA = ${escapeSqlLiteral(validateSqlIdentifier(schema, '--schema'))}`);
+    whereClauses.push(
+      `TABLE_SCHEMA = ${escapeSqlLiteral(validateSqlIdentifier(schema, '--schema'))}`
+    );
   }
 
   const selectedColumns = includeSystemTableName
@@ -190,34 +211,43 @@ ORDER BY TABLE_SCHEMA, TABLE_NAME`;
 }
 
 function normalizeRequiredColumns(columns = []) {
-  return Array.from(new Set((columns || []).map((column) => validateSqlIdentifier(column, '--require-column'))));
+  return Array.from(
+    new Set((columns || []).map(column => validateSqlIdentifier(column, '--require-column')))
+  );
 }
 
-function buildResolveObjectDiagnostics({
-  catalogResult,
-  elapsedMs,
-  normalizedSchema,
-  objects,
-}) {
-  const schemas = Array.from(new Set(
-    (objects || [])
-      .map((entry) => String(entry && entry.schema ? entry.schema : '').trim().toUpperCase())
-      .filter(Boolean),
-  ));
+function buildResolveObjectDiagnostics({ catalogResult, elapsedMs, normalizedSchema, objects }) {
+  const schemas = Array.from(
+    new Set(
+      (objects || [])
+        .map(entry =>
+          String(entry && entry.schema ? entry.schema : '')
+            .trim()
+            .toUpperCase()
+        )
+        .filter(Boolean)
+    )
+  );
   const meta = catalogResult && catalogResult.meta ? catalogResult.meta : {};
   const recommendations = [];
 
   if (!normalizedSchema) {
-    recommendations.push('Schema-free resolution searches across visible schemas and can be slower on shared systems.');
+    recommendations.push(
+      'Schema-free resolution searches across visible schemas and can be slower on shared systems.'
+    );
     if (schemas.length === 1) {
       recommendations.push(`Use --schema ${schemas[0]} for faster follow-up checks.`);
     } else {
-      recommendations.push('Use --schema <LIB> to reduce search scope when the target library is known.');
+      recommendations.push(
+        'Use --schema <LIB> to reduce search scope when the target library is known.'
+      );
     }
   }
 
   if (meta.usedVariant && meta.usedVariant !== 'primary') {
-    recommendations.push('A catalog fallback query variant was used because some QSYS2 columns were unavailable.');
+    recommendations.push(
+      'A catalog fallback query variant was used because some QSYS2 columns were unavailable.'
+    );
   }
 
   return {
@@ -236,12 +266,7 @@ function buildResolveObjectDiagnostics({
 function resolveObjectsByName(
   dbConfig,
   tableNameOrAlias,
-  {
-    schema = null,
-    requireColumns = [],
-    includeRowCount = false,
-    runtime = {},
-  } = {},
+  { schema = null, requireColumns = [], includeRowCount = false, runtime = {} } = {}
 ) {
   const startedAt = Date.now();
   const normalizedName = validateSqlIdentifier(tableNameOrAlias, '--table');
@@ -259,7 +284,7 @@ function resolveObjectsByName(
     runtime,
     degradedMode: 'empty',
     retryHandlers: {
-      '42703': () => ({
+      42703: () => ({
         name: 'without-system-table-name',
         query: buildResolveObjectsQuery({
           name: normalizedName,
@@ -270,7 +295,7 @@ function resolveObjectsByName(
     },
   });
 
-  const objects = (result.rows || []).map((row) => {
+  const objects = (result.rows || []).map(row => {
     const normalized = normalizeTableRow(row);
     let columnInfo = null;
     let rowCount = null;
@@ -298,8 +323,10 @@ function resolveObjectsByName(
       }
     }
 
-    const availableColumns = columnInfo ? columnInfo.columns.map((column) => column.name) : [];
-    const missingRequiredColumns = requiredColumns.filter((column) => !availableColumns.includes(column));
+    const availableColumns = columnInfo ? columnInfo.columns.map(column => column.name) : [];
+    const missingRequiredColumns = requiredColumns.filter(
+      column => !availableColumns.includes(column)
+    );
 
     return {
       ...normalized,

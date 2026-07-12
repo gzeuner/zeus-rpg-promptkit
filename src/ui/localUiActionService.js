@@ -33,23 +33,28 @@ const {
   AiSessionPromptError,
   createAiSessionPromptService,
 } = require('./aiSessionPromptService');
-const { buildDiscoveryActionPreview, getGuidedDiscoveryAction } = require('./guidedConfigWizardModel');
+const {
+  buildDiscoveryActionPreview,
+  getGuidedDiscoveryAction,
+} = require('./guidedConfigWizardModel');
 
 const ALLOWED_DOCTOR_KEYS = new Set(['profile', 'showResolved']);
 const ALLOWED_ANALYZE_WORKSPACE_KEYS = new Set(['profile', 'program', 'member', 'safeSharing']);
 const ALLOWED_DISCOVERY_PREVIEW_KEYS = new Set(['profile', 'actionId']);
-const ALLOWED_AI_SESSION_PROMPT_KEYS = new Set(['profile', 'environment', 'goal', 'includeDoctorSummary', 'doctorSummary']);
+const ALLOWED_AI_SESSION_PROMPT_KEYS = new Set([
+  'profile',
+  'environment',
+  'goal',
+  'includeDoctorSummary',
+  'doctorSummary',
+]);
 const FETCH_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
   'discover-source-libraries',
   'discover-source-physical-files',
   'discover-members',
 ]);
-const ANALYZE_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
-  'discover-db2-tables',
-]);
-const OBJECT_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
-  'discover-object-types',
-]);
+const ANALYZE_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set(['discover-db2-tables']);
+const OBJECT_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set(['discover-object-types']);
 const PROFILE_NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 const OBJECT_NAME_PATTERN = /^[A-Za-z0-9_]{1,64}$/;
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/u;
@@ -61,7 +66,14 @@ const KNOWN_ANALYZE_FAILURE_CODES = new Set([
   'SOURCE_ROOT_MISSING',
 ]);
 const ALLOWED_DOCTOR_SUMMARY_KEYS = new Set(['status', 'summary', 'finishedAt']);
-const ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS = new Set(['total', 'pass', 'fail', 'warn', 'info', 'skip']);
+const ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS = new Set([
+  'total',
+  'pass',
+  'fail',
+  'warn',
+  'info',
+  'skip',
+]);
 
 class UiActionError extends Error {
   constructor(message, statusCode = 400) {
@@ -115,18 +127,26 @@ function validateOptionalSimpleName(value, fieldName) {
 }
 
 function normalizeGoal(goal) {
-  const trimmed = String(goal || '').replace(/\r\n/g, '\n').trim();
+  const trimmed = String(goal || '')
+    .replace(/\r\n/g, '\n')
+    .trim();
   if (!trimmed) {
     throw new UiActionError('Invalid payload: goal is required', 400);
   }
   if (trimmed.length > AI_SESSION_GOAL_MAX_LENGTH) {
-    throw new UiActionError(`Invalid payload: goal exceeds ${AI_SESSION_GOAL_MAX_LENGTH} characters`, 400);
+    throw new UiActionError(
+      `Invalid payload: goal exceeds ${AI_SESSION_GOAL_MAX_LENGTH} characters`,
+      400
+    );
   }
   if (CONTROL_CHARACTER_PATTERN.test(trimmed)) {
     throw new UiActionError('Invalid payload: goal contains unsupported control characters', 400);
   }
   if (JDBC_CREDENTIAL_PATTERN.test(trimmed) || maskSecretsInText(trimmed) !== trimmed) {
-    throw new UiActionError('Invalid payload: goal appears to contain secrets or credential-bearing connection text', 400);
+    throw new UiActionError(
+      'Invalid payload: goal appears to contain secrets or credential-bearing connection text',
+      400
+    );
   }
   return trimmed;
 }
@@ -139,14 +159,24 @@ function normalizeDoctorSummary(rawDoctorSummary) {
     throw new UiActionError('Invalid payload: doctorSummary must be an object', 400);
   }
 
-  const unknownKeys = Object.keys(rawDoctorSummary).filter((key) => !ALLOWED_DOCTOR_SUMMARY_KEYS.has(key));
+  const unknownKeys = Object.keys(rawDoctorSummary).filter(
+    key => !ALLOWED_DOCTOR_SUMMARY_KEYS.has(key)
+  );
   if (unknownKeys.length > 0) {
-    throw new UiActionError(`Invalid payload: unsupported doctorSummary key(s): ${unknownKeys.join(', ')}`, 400);
+    throw new UiActionError(
+      `Invalid payload: unsupported doctorSummary key(s): ${unknownKeys.join(', ')}`,
+      400
+    );
   }
 
-  const status = String(rawDoctorSummary.status || '').trim().toLowerCase();
+  const status = String(rawDoctorSummary.status || '')
+    .trim()
+    .toLowerCase();
   if (!status) {
-    throw new UiActionError('Invalid payload: doctorSummary.status is required when doctorSummary is provided', 400);
+    throw new UiActionError(
+      'Invalid payload: doctorSummary.status is required when doctorSummary is provided',
+      400
+    );
   }
 
   let summary = null;
@@ -154,10 +184,14 @@ function normalizeDoctorSummary(rawDoctorSummary) {
     if (!isPlainObject(rawDoctorSummary.summary)) {
       throw new UiActionError('Invalid payload: doctorSummary.summary must be an object', 400);
     }
-    const unknownSummaryKeys = Object.keys(rawDoctorSummary.summary)
-      .filter((key) => !ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS.has(key));
+    const unknownSummaryKeys = Object.keys(rawDoctorSummary.summary).filter(
+      key => !ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS.has(key)
+    );
     if (unknownSummaryKeys.length > 0) {
-      throw new UiActionError(`Invalid payload: unsupported doctorSummary.summary key(s): ${unknownSummaryKeys.join(', ')}`, 400);
+      throw new UiActionError(
+        `Invalid payload: unsupported doctorSummary.summary key(s): ${unknownSummaryKeys.join(', ')}`,
+        400
+      );
     }
     summary = {};
     for (const key of ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS) {
@@ -166,19 +200,24 @@ function normalizeDoctorSummary(rawDoctorSummary) {
       }
       const numericValue = Number(rawDoctorSummary.summary[key]);
       if (!Number.isInteger(numericValue) || numericValue < 0) {
-        throw new UiActionError(`Invalid payload: doctorSummary.summary.${key} must be a non-negative integer`, 400);
+        throw new UiActionError(
+          `Invalid payload: doctorSummary.summary.${key} must be a non-negative integer`,
+          400
+        );
       }
       summary[key] = numericValue;
     }
   }
 
-  const finishedAt = rawDoctorSummary.finishedAt === undefined
-    ? null
-    : String(rawDoctorSummary.finishedAt).trim();
+  const finishedAt =
+    rawDoctorSummary.finishedAt === undefined ? null : String(rawDoctorSummary.finishedAt).trim();
   if (finishedAt) {
     const timestamp = new Date(finishedAt);
     if (Number.isNaN(timestamp.getTime())) {
-      throw new UiActionError('Invalid payload: doctorSummary.finishedAt must be an ISO timestamp', 400);
+      throw new UiActionError(
+        'Invalid payload: doctorSummary.finishedAt must be an ISO timestamp',
+        400
+      );
     }
   }
 
@@ -194,13 +233,14 @@ function normalizeDoctorPayload(rawPayload) {
     throw new UiActionError('Invalid payload: expected JSON object', 400);
   }
 
-  const unknownKeys = Object.keys(rawPayload).filter((key) => !ALLOWED_DOCTOR_KEYS.has(key));
+  const unknownKeys = Object.keys(rawPayload).filter(key => !ALLOWED_DOCTOR_KEYS.has(key));
   if (unknownKeys.length > 0) {
     throw new UiActionError(`Invalid payload: unsupported key(s): ${unknownKeys.join(', ')}`, 400);
   }
 
   const profile = validateProfileName(rawPayload.profile);
-  const showResolved = rawPayload.showResolved === undefined ? false : Boolean(rawPayload.showResolved);
+  const showResolved =
+    rawPayload.showResolved === undefined ? false : Boolean(rawPayload.showResolved);
   return {
     profile,
     showResolved,
@@ -212,7 +252,9 @@ function normalizeAnalyzeExistingWorkspacePayload(rawPayload) {
     throw new UiActionError('Invalid payload: expected JSON object', 400);
   }
 
-  const unknownKeys = Object.keys(rawPayload).filter((key) => !ALLOWED_ANALYZE_WORKSPACE_KEYS.has(key));
+  const unknownKeys = Object.keys(rawPayload).filter(
+    key => !ALLOWED_ANALYZE_WORKSPACE_KEYS.has(key)
+  );
   if (unknownKeys.length > 0) {
     throw new UiActionError(`Invalid payload: unsupported key(s): ${unknownKeys.join(', ')}`, 400);
   }
@@ -237,7 +279,9 @@ function normalizeDiscoveryPreviewPayload(rawPayload) {
     throw new UiActionError('Invalid payload: expected JSON object', 400);
   }
 
-  const unknownKeys = Object.keys(rawPayload).filter((key) => !ALLOWED_DISCOVERY_PREVIEW_KEYS.has(key));
+  const unknownKeys = Object.keys(rawPayload).filter(
+    key => !ALLOWED_DISCOVERY_PREVIEW_KEYS.has(key)
+  );
   if (unknownKeys.length > 0) {
     throw new UiActionError(`Invalid payload: unsupported key(s): ${unknownKeys.join(', ')}`, 400);
   }
@@ -262,7 +306,9 @@ function normalizeAiSessionPromptPayload(rawPayload) {
     throw new UiActionError('Invalid payload: expected JSON object', 400);
   }
 
-  const unknownKeys = Object.keys(rawPayload).filter((key) => !ALLOWED_AI_SESSION_PROMPT_KEYS.has(key));
+  const unknownKeys = Object.keys(rawPayload).filter(
+    key => !ALLOWED_AI_SESSION_PROMPT_KEYS.has(key)
+  );
   if (unknownKeys.length > 0) {
     throw new UiActionError(`Invalid payload: unsupported key(s): ${unknownKeys.join(', ')}`, 400);
   }
@@ -271,9 +317,10 @@ function normalizeAiSessionPromptPayload(rawPayload) {
   const environment = validateOptionalSimpleName(rawPayload.environment, 'environment');
   const goal = normalizeGoal(rawPayload.goal);
   const doctorSummary = normalizeDoctorSummary(rawPayload.doctorSummary);
-  const includeDoctorSummary = rawPayload.includeDoctorSummary === undefined
-    ? Boolean(doctorSummary)
-    : Boolean(rawPayload.includeDoctorSummary);
+  const includeDoctorSummary =
+    rawPayload.includeDoctorSummary === undefined
+      ? Boolean(doctorSummary)
+      : Boolean(rawPayload.includeDoctorSummary);
 
   return {
     profile,
@@ -321,8 +368,10 @@ function summarizeDoctorDiagnostics(diagnostics = []) {
 function isSensitiveDiagnosticField(path, envVar) {
   const normalizedPath = String(path || '').trim();
   const normalizedEnvVar = String(envVar || '').trim();
-  return /password|secret|token|key|credential|pwd/i.test(normalizedPath)
-    || SECRET_LIKE_PATTERN.test(normalizedEnvVar);
+  return (
+    /password|secret|token|key|credential|pwd/i.test(normalizedPath) ||
+    SECRET_LIKE_PATTERN.test(normalizedEnvVar)
+  );
 }
 
 function normalizeDoctorDiagnostics(diagnostics = []) {
@@ -331,10 +380,13 @@ function normalizeDoctorDiagnostics(diagnostics = []) {
   }
 
   return diagnostics
-    .filter((entry) => isPlainObject(entry))
-    .map((entry) => {
+    .filter(entry => isPlainObject(entry))
+    .map(entry => {
       const code = String(entry.code || '').trim() || 'DOCTOR_DIAGNOSTIC';
-      const severity = String(entry.severity || '').trim().toUpperCase() || 'INFO';
+      const severity =
+        String(entry.severity || '')
+          .trim()
+          .toUpperCase() || 'INFO';
       const path = String(entry.path || '').trim();
       const profile = String(entry.profile || '').trim();
       const envVar = String(entry.envVar || '').trim();
@@ -345,15 +397,16 @@ function normalizeDoctorDiagnostics(diagnostics = []) {
       const effectiveValue = sensitive
         ? '(redacted)'
         : summarizeTargetValue(path, entry.effectiveValue);
-      const message = code === 'ENV_PROFILE_CONFLICT'
-        ? buildEnvProfileConflictMessage({
-          profile,
-          path,
-          profileValue,
-          envVar,
-          effectiveValue,
-        })
-        : String(entry.message || '').trim();
+      const message =
+        code === 'ENV_PROFILE_CONFLICT'
+          ? buildEnvProfileConflictMessage({
+              profile,
+              path,
+              profileValue,
+              envVar,
+              effectiveValue,
+            })
+          : String(entry.message || '').trim();
 
       return {
         code,
@@ -366,7 +419,7 @@ function normalizeDoctorDiagnostics(diagnostics = []) {
         message,
       };
     })
-    .filter((entry) => entry.message || entry.code || entry.path);
+    .filter(entry => entry.message || entry.code || entry.path);
 }
 
 function mapDoctorOutcome({ hasCriticalFailure, summary, diagnosticsSummary }) {
@@ -421,9 +474,17 @@ function normalizeUppercaseList(values) {
   if (!Array.isArray(values)) {
     return [];
   }
-  return Array.from(new Set(values
-    .map((entry) => String(entry || '').trim().toUpperCase())
-    .filter(Boolean)));
+  return Array.from(
+    new Set(
+      values
+        .map(entry =>
+          String(entry || '')
+            .trim()
+            .toUpperCase()
+        )
+        .filter(Boolean)
+    )
+  );
 }
 
 function matchesDefaultSourceFiles(sourceFiles) {
@@ -441,7 +502,9 @@ function buildDiscoveryConfigContext(fetchConfig, cwd) {
   }
 
   return {
-    sourceLibrary: String(fetchConfig.sourceLibrary || fetchConfig.sourceLib || '').trim().toUpperCase(),
+    sourceLibrary: String(fetchConfig.sourceLibrary || fetchConfig.sourceLib || '')
+      .trim()
+      .toUpperCase(),
     sourceFiles: normalizeUppercaseList(fetchConfig.files),
     members: normalizeUppercaseList(fetchConfig.members),
     outputRoot: sanitizeWorkspacePathForUi(fetchConfig.out, cwd),
@@ -455,12 +518,18 @@ function normalizeWorkflowTableList(values) {
     return [];
   }
   return values
-    .map((entry) => ({
-      schema: String(entry && entry.schema || '').trim().toUpperCase(),
-      table: String(entry && entry.table || '').trim().toUpperCase(),
-      filter: String(entry && entry.filter || '').trim().toUpperCase(),
+    .map(entry => ({
+      schema: String((entry && entry.schema) || '')
+        .trim()
+        .toUpperCase(),
+      table: String((entry && entry.table) || '')
+        .trim()
+        .toUpperCase(),
+      filter: String((entry && entry.filter) || '')
+        .trim()
+        .toUpperCase(),
     }))
-    .filter((entry) => entry.table);
+    .filter(entry => entry.table);
 }
 
 function buildDb2DiscoveryConfigContext(analyzeConfig, workflowConfig) {
@@ -468,22 +537,43 @@ function buildDb2DiscoveryConfigContext(analyzeConfig, workflowConfig) {
     return null;
   }
 
-  const metadataDb = analyzeConfig.dbRoles && analyzeConfig.dbRoles.metadata
-    ? analyzeConfig.dbRoles.metadata
-    : analyzeConfig.db;
-  const testDataDb = analyzeConfig.dbRoles && analyzeConfig.dbRoles.testData
-    ? analyzeConfig.dbRoles.testData
-    : metadataDb;
+  const metadataDb =
+    analyzeConfig.dbRoles && analyzeConfig.dbRoles.metadata
+      ? analyzeConfig.dbRoles.metadata
+      : analyzeConfig.db;
+  const testDataDb =
+    analyzeConfig.dbRoles && analyzeConfig.dbRoles.testData
+      ? analyzeConfig.dbRoles.testData
+      : metadataDb;
   const workflowTables = normalizeWorkflowTableList(workflowConfig && workflowConfig.tables);
-  const testData = analyzeConfig.testData && typeof analyzeConfig.testData === 'object'
-    ? analyzeConfig.testData
-    : {};
+  const testData =
+    analyzeConfig.testData && typeof analyzeConfig.testData === 'object'
+      ? analyzeConfig.testData
+      : {};
 
   return {
-    metadataSchema: String(metadataDb && (metadataDb.defaultSchema || metadataDb.defaultLibrary) || '').trim().toUpperCase(),
-    testDataSchema: String(testDataDb && (testDataDb.defaultSchema || testDataDb.defaultLibrary) || '').trim().toUpperCase(),
-    metadataRoleProfileKey: String(analyzeConfig.connections && analyzeConfig.connections.metadata && analyzeConfig.connections.metadata.profileKey || 'db').trim(),
-    testDataRoleProfileKey: String(analyzeConfig.connections && analyzeConfig.connections.testData && analyzeConfig.connections.testData.profileKey || 'db').trim(),
+    metadataSchema: String(
+      (metadataDb && (metadataDb.defaultSchema || metadataDb.defaultLibrary)) || ''
+    )
+      .trim()
+      .toUpperCase(),
+    testDataSchema: String(
+      (testDataDb && (testDataDb.defaultSchema || testDataDb.defaultLibrary)) || ''
+    )
+      .trim()
+      .toUpperCase(),
+    metadataRoleProfileKey: String(
+      (analyzeConfig.connections &&
+        analyzeConfig.connections.metadata &&
+        analyzeConfig.connections.metadata.profileKey) ||
+        'db'
+    ).trim(),
+    testDataRoleProfileKey: String(
+      (analyzeConfig.connections &&
+        analyzeConfig.connections.testData &&
+        analyzeConfig.connections.testData.profileKey) ||
+        'db'
+    ).trim(),
     workflowTables,
     testDataLimit: Number(testData.limit) || null,
     allowTables: normalizeUppercaseList(testData.allowTables),
@@ -495,11 +585,15 @@ function buildDb2DiscoveryConfigContext(analyzeConfig, workflowConfig) {
 
 function buildObjectDiscoveryConfigContext(fetchConfig, workflowConfig, preparationWarnings = []) {
   const workflowMembers = normalizeUppercaseList(workflowConfig && workflowConfig.members);
-  const sourceLibrary = String(fetchConfig && (fetchConfig.sourceLibrary || fetchConfig.sourceLib) || '').trim().toUpperCase();
+  const sourceLibrary = String(
+    (fetchConfig && (fetchConfig.sourceLibrary || fetchConfig.sourceLib)) || ''
+  )
+    .trim()
+    .toUpperCase();
   const sourceFiles = normalizeUppercaseList(fetchConfig && fetchConfig.files);
   const fetchMembers = normalizeUppercaseList(fetchConfig && fetchConfig.members);
   const warnings = Array.isArray(preparationWarnings)
-    ? preparationWarnings.map((entry) => String(entry || '').trim()).filter(Boolean)
+    ? preparationWarnings.map(entry => String(entry || '').trim()).filter(Boolean)
     : [];
 
   return {
@@ -515,23 +609,31 @@ function buildObjectDiscoveryConfigContext(fetchConfig, workflowConfig, preparat
 }
 
 function isExpectedAnalyzeFailure(error) {
-  const code = String(error && error.code || '').trim().toUpperCase();
+  const code = String((error && error.code) || '')
+    .trim()
+    .toUpperCase();
   if (KNOWN_ANALYZE_FAILURE_CODES.has(code)) {
     return true;
   }
 
-  const message = String(error && error.message || '');
-  return /failed to load profiles|profile ".*" not found|missing required option|source directory not found|member ".*" not found|ambiguous/i.test(message);
+  const message = String((error && error.message) || '');
+  return /failed to load profiles|profile ".*" not found|missing required option|source directory not found|member ".*" not found|ambiguous/i.test(
+    message
+  );
 }
 
 function isExpectedDiscoveryPreparationFailure(error) {
-  const message = String(error && error.message || '');
-  return /failed to load profiles|profile ".*" not found|invalid fetch config|invalid analyze config|source library|fetch/i.test(message);
+  const message = String((error && error.message) || '');
+  return /failed to load profiles|profile ".*" not found|invalid fetch config|invalid analyze config|source library|fetch/i.test(
+    message
+  );
 }
 
 function summarizeAnalyzeFailure(error) {
-  const code = String(error && error.code || '').trim().toUpperCase();
-  const message = String(error && error.message || '').trim();
+  const code = String((error && error.code) || '')
+    .trim()
+    .toUpperCase();
+  const message = String((error && error.message) || '').trim();
   if (/source directory not found/i.test(message)) {
     return 'The selected profile source root was not found locally.';
   }
@@ -554,7 +656,7 @@ function summarizeAnalyzeFailure(error) {
 }
 
 function summarizeDiscoveryPreparationFailure(error) {
-  const message = String(error && error.message || '').trim();
+  const message = String((error && error.message) || '').trim();
   if (/profile ".*" not found/i.test(message)) {
     return 'The selected profile could not be resolved from local runtime configuration.';
   }
@@ -568,29 +670,31 @@ function summarizeDiscoveryPreparationFailure(error) {
 }
 
 function summarizeAnalyzeDiagnostics(manifest) {
-  const summary = manifest && manifest.summary && typeof manifest.summary === 'object'
-    ? manifest.summary
-    : {};
+  const summary =
+    manifest && manifest.summary && typeof manifest.summary === 'object' ? manifest.summary : {};
   const warningCount = Number(summary.warningCount || 0);
   const errorCount = Number(summary.errorCount || 0);
   if (warningCount <= 0 && errorCount <= 0) {
     return [];
   }
 
-  return [{
-    code: errorCount > 0 ? 'ANALYZE_ERRORS' : 'ANALYZE_WARNINGS',
-    severity: errorCount > 0 ? 'ERROR' : 'WARN',
-    message: errorCount > 0
-      ? `Analysis completed with ${errorCount} error(s) and ${warningCount} warning(s).`
-      : `Analysis completed with ${warningCount} warning(s).`,
-    errorCount,
-    warningCount,
-  }];
+  return [
+    {
+      code: errorCount > 0 ? 'ANALYZE_ERRORS' : 'ANALYZE_WARNINGS',
+      severity: errorCount > 0 ? 'ERROR' : 'WARN',
+      message:
+        errorCount > 0
+          ? `Analysis completed with ${errorCount} error(s) and ${warningCount} warning(s).`
+          : `Analysis completed with ${warningCount} warning(s).`,
+      errorCount,
+      warningCount,
+    },
+  ];
 }
 
 function buildAnalyzeWorkspaceOutput(program, manifest) {
   const artifacts = Array.isArray(manifest && manifest.artifacts) ? manifest.artifacts : [];
-  const reportArtifact = artifacts.find((artifact) => artifact && artifact.path === 'report.md');
+  const reportArtifact = artifacts.find(artifact => artifact && artifact.path === 'report.md');
   const manifestPath = `${program}/${ANALYZE_RUN_MANIFEST_FILE}`;
   const reportArtifactPath = reportArtifact ? `${program}/report.md` : null;
 
@@ -659,14 +763,16 @@ function createLocalUiActionService({
         hasCriticalFailure: Boolean(doctorResult && doctorResult.hasCriticalFailure),
         summary,
         diagnosticsSummary,
-        checks: checks.map((entry) => ({
+        checks: checks.map(entry => ({
           name: entry.name,
           status: entry.status,
           details: entry.details,
         })),
       },
       notes: payload.showResolved
-        ? ['showResolved is accepted, but resolved connection internals are intentionally not exposed in UI action responses.']
+        ? [
+            'showResolved is accepted, but resolved connection internals are intentionally not exposed in UI action responses.',
+          ]
         : [],
     };
   }
@@ -697,16 +803,20 @@ function createLocalUiActionService({
         durationMs: finishedAt.getTime() - startedAt.getTime(),
         input: payload,
         workspace: buildAnalyzeWorkspaceContext(payload, null, cwd),
-        diagnostics: [{
-          code: 'ANALYZE_FAILED',
-          severity: 'ERROR',
-          message: summarizeAnalyzeFailure(error),
-        }],
+        diagnostics: [
+          {
+            code: 'ANALYZE_FAILED',
+            severity: 'ERROR',
+            message: summarizeAnalyzeFailure(error),
+          },
+        ],
         result: {
           code: String(error.code || '').trim() || 'ANALYZE_FAILED',
           message: summarizeAnalyzeFailure(error),
         },
-        notes: ['Analyze Workspace uses the configured local profile source root and does not accept browser-provided filesystem paths.'],
+        notes: [
+          'Analyze Workspace uses the configured local profile source root and does not accept browser-provided filesystem paths.',
+        ],
       };
     }
 
@@ -715,7 +825,9 @@ function createLocalUiActionService({
       const manifest = execution && execution.analyzeManifest ? execution.analyzeManifest : null;
       const diagnostics = summarizeAnalyzeDiagnostics(manifest);
       const finishedAt = new Date();
-      const status = diagnostics.some((entry) => String(entry.severity || '').toUpperCase() === 'ERROR')
+      const status = diagnostics.some(
+        entry => String(entry.severity || '').toUpperCase() === 'ERROR'
+      )
         ? 'failed'
         : diagnostics.length > 0
           ? 'warning'
@@ -734,20 +846,25 @@ function createLocalUiActionService({
         result: {
           program: execution.program,
           member: payload.member,
-          summary: manifest && manifest.summary ? {
-            stageCount: Number(manifest.summary.stageCount || 0),
-            diagnosticCount: Number(manifest.summary.diagnosticCount || 0),
-            warningCount: Number(manifest.summary.warningCount || 0),
-            errorCount: Number(manifest.summary.errorCount || 0),
-            generatedArtifactCount: Number(manifest.summary.generatedArtifactCount || 0),
-            sourceFileCount: Number(manifest.summary.sourceFileCount || 0),
-          } : null,
+          summary:
+            manifest && manifest.summary
+              ? {
+                  stageCount: Number(manifest.summary.stageCount || 0),
+                  diagnosticCount: Number(manifest.summary.diagnosticCount || 0),
+                  warningCount: Number(manifest.summary.warningCount || 0),
+                  errorCount: Number(manifest.summary.errorCount || 0),
+                  generatedArtifactCount: Number(manifest.summary.generatedArtifactCount || 0),
+                  sourceFileCount: Number(manifest.summary.sourceFileCount || 0),
+                }
+              : null,
           manifestStatus: manifest && manifest.run ? manifest.run.status || null : null,
         },
         notes: [
           'Analyze Workspace reuses the existing local analyze pipeline and does not fetch remote sources.',
           payload.safeSharing ? 'Safe-sharing artifacts were generated for this run.' : null,
-          payload.member && !payload.program ? 'Program resolution was derived from the selected member within the configured source root.' : null,
+          payload.member && !payload.program
+            ? 'Program resolution was derived from the selected member within the configured source root.'
+            : null,
         ].filter(Boolean),
       };
     } catch (error) {
@@ -763,17 +880,20 @@ function createLocalUiActionService({
         durationMs: finishedAt.getTime() - startedAt.getTime(),
         input: payload,
         workspace: buildAnalyzeWorkspaceContext(payload, analyzeConfig, cwd),
-        diagnostics: [{
-          code: 'ANALYZE_FAILED',
-          severity: 'ERROR',
-          message: summarizeAnalyzeFailure(error),
-        }],
+        diagnostics: [
+          {
+            code: 'ANALYZE_FAILED',
+            severity: 'ERROR',
+            message: summarizeAnalyzeFailure(error),
+          },
+        ],
         result: {
           code: String(error.code || '').trim() || 'ANALYZE_FAILED',
           message: summarizeAnalyzeFailure(error),
-          manifestStatus: error && error.analyzeManifest && error.analyzeManifest.run
-            ? error.analyzeManifest.run.status || null
-            : null,
+          manifestStatus:
+            error && error.analyzeManifest && error.analyzeManifest.run
+              ? error.analyzeManifest.run.status || null
+              : null,
         },
         notes: [
           'Analyze Workspace uses the configured local profile source root and does not accept browser-provided filesystem paths.',
@@ -839,7 +959,11 @@ function createLocalUiActionService({
         preparationWarnings.push(summarizeDiscoveryPreparationFailure(error));
       }
 
-      configContext = buildObjectDiscoveryConfigContext(fetchConfig, workflowConfig, preparationWarnings);
+      configContext = buildObjectDiscoveryConfigContext(
+        fetchConfig,
+        workflowConfig,
+        preparationWarnings
+      );
     }
 
     const preview = buildDiscoveryActionPreview({
@@ -857,15 +981,16 @@ function createLocalUiActionService({
       durationMs: finishedAt.getTime() - startedAt.getTime(),
       input: payload,
       result: preview,
-      notes: preview.previewKind === 'config-derived-local-preview'
-        ? [
-          'This preview was derived locally from resolved runtime configuration only.',
-          'No remote discovery or DB2 access was executed for this UI response.',
-        ]
-        : [
-          'This preview is explicit about not executing remote discovery yet.',
-          'Use the CLI as the operational foundation until GUI-backed discovery is wired to read-only backend flows.',
-        ],
+      notes:
+        preview.previewKind === 'config-derived-local-preview'
+          ? [
+              'This preview was derived locally from resolved runtime configuration only.',
+              'No remote discovery or DB2 access was executed for this UI response.',
+            ]
+          : [
+              'This preview is explicit about not executing remote discovery yet.',
+              'Use the CLI as the operational foundation until GUI-backed discovery is wired to read-only backend flows.',
+            ],
     };
   }
 
@@ -892,14 +1017,17 @@ function createLocalUiActionService({
         },
         prompt: promptResult.prompt,
         warnings: Array.isArray(promptResult.warnings) ? promptResult.warnings : [],
-        metadata: promptResult.metadata && typeof promptResult.metadata === 'object'
-          ? promptResult.metadata
-          : {
-            profile: payload.profile,
-            environment: payload.environment,
-            includedDoctorSummary: Boolean(payload.includeDoctorSummary && payload.doctorSummary),
-            templateSource: null,
-          },
+        metadata:
+          promptResult.metadata && typeof promptResult.metadata === 'object'
+            ? promptResult.metadata
+            : {
+                profile: payload.profile,
+                environment: payload.environment,
+                includedDoctorSummary: Boolean(
+                  payload.includeDoctorSummary && payload.doctorSummary
+                ),
+                templateSource: null,
+              },
       };
     } catch (error) {
       if (!(error instanceof AiSessionPromptError)) {
@@ -910,7 +1038,9 @@ function createLocalUiActionService({
   }
 
   async function executeAction(actionName, payload) {
-    const normalizedAction = String(actionName || '').trim().toLowerCase();
+    const normalizedAction = String(actionName || '')
+      .trim()
+      .toLowerCase();
     if (!normalizedAction) {
       throw new UiActionError('Unknown action', 404);
     }

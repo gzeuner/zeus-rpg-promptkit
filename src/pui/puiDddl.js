@@ -17,7 +17,7 @@ function cloneObject(value) {
 }
 
 function collectUnknownKeys(payload, allowedKeys) {
-  return Object.keys(payload).filter((key) => !allowedKeys.has(key));
+  return Object.keys(payload).filter(key => !allowedKeys.has(key));
 }
 
 function validatePuiDddlV1(payload, { strict = true } = {}) {
@@ -63,14 +63,23 @@ function validatePuiDddlV1(payload, { strict = true } = {}) {
     if (!isPlainObject(payload.ddsJsonGroup)) {
       errors.push('ddsJsonGroup must be an object when provided');
     } else {
-      if (!Number.isInteger(payload.ddsJsonGroup.segmentCount) || payload.ddsJsonGroup.segmentCount < 1) {
+      if (
+        !Number.isInteger(payload.ddsJsonGroup.segmentCount) ||
+        payload.ddsJsonGroup.segmentCount < 1
+      ) {
         errors.push('ddsJsonGroup.segmentCount must be an integer >= 1');
       }
-      if (!Number.isInteger(payload.ddsJsonGroup.compactSourceLength) || payload.ddsJsonGroup.compactSourceLength < 0) {
+      if (
+        !Number.isInteger(payload.ddsJsonGroup.compactSourceLength) ||
+        payload.ddsJsonGroup.compactSourceLength < 0
+      ) {
         errors.push('ddsJsonGroup.compactSourceLength must be an integer >= 0');
       }
       if (strict) {
-        const groupUnknown = collectUnknownKeys(payload.ddsJsonGroup, new Set(['segmentCount', 'compactSourceLength']));
+        const groupUnknown = collectUnknownKeys(
+          payload.ddsJsonGroup,
+          new Set(['segmentCount', 'compactSourceLength'])
+        );
         for (const key of groupUnknown) {
           errors.push(`ddsJsonGroup contains unknown key: ${key}`);
         }

@@ -16,10 +16,17 @@ const path = require('path');
 const { scanSourceFiles } = require('./rpgScanner');
 
 function normalizeStrings(values) {
-  return Array.from(new Set((values || [])
-    .map((entry) => String(entry || '').trim().toUpperCase())
-    .filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      (values || [])
+        .map(entry =>
+          String(entry || '')
+            .trim()
+            .toUpperCase()
+        )
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function readScannerCorpus(corpusPath) {
@@ -35,16 +42,24 @@ function readScannerCorpus(corpusPath) {
 function collectActualDetections(scanSummary) {
   const sourceFiles = Array.isArray(scanSummary.sourceFiles) ? scanSummary.sourceFiles : [];
   return {
-    sourceTypes: normalizeStrings(sourceFiles.map((entry) => entry.sourceType)),
-    tables: normalizeStrings((scanSummary.tables || []).map((entry) => entry.name || entry)),
-    calls: normalizeStrings((scanSummary.calls || []).map((entry) => entry.name || entry)),
-    copyMembers: normalizeStrings((scanSummary.copyMembers || []).map((entry) => entry.name || entry)),
-    sqlTables: normalizeStrings((scanSummary.sqlStatements || []).flatMap((entry) => entry.tables || [])),
-    procedures: normalizeStrings((scanSummary.procedures || []).map((entry) => entry.name || entry)),
-    prototypes: normalizeStrings((scanSummary.prototypes || []).map((entry) => entry.name || entry)),
-    modules: normalizeStrings((scanSummary.modules || []).map((entry) => entry.name || entry)),
-    servicePrograms: normalizeStrings((scanSummary.servicePrograms || []).map((entry) => entry.name || entry)),
-    bindingDirectories: normalizeStrings((scanSummary.bindingDirectories || []).map((entry) => entry.name || entry)),
+    sourceTypes: normalizeStrings(sourceFiles.map(entry => entry.sourceType)),
+    tables: normalizeStrings((scanSummary.tables || []).map(entry => entry.name || entry)),
+    calls: normalizeStrings((scanSummary.calls || []).map(entry => entry.name || entry)),
+    copyMembers: normalizeStrings(
+      (scanSummary.copyMembers || []).map(entry => entry.name || entry)
+    ),
+    sqlTables: normalizeStrings(
+      (scanSummary.sqlStatements || []).flatMap(entry => entry.tables || [])
+    ),
+    procedures: normalizeStrings((scanSummary.procedures || []).map(entry => entry.name || entry)),
+    prototypes: normalizeStrings((scanSummary.prototypes || []).map(entry => entry.name || entry)),
+    modules: normalizeStrings((scanSummary.modules || []).map(entry => entry.name || entry)),
+    servicePrograms: normalizeStrings(
+      (scanSummary.servicePrograms || []).map(entry => entry.name || entry)
+    ),
+    bindingDirectories: normalizeStrings(
+      (scanSummary.bindingDirectories || []).map(entry => entry.name || entry)
+    ),
   };
 }
 
@@ -73,8 +88,9 @@ function runScannerCorpus(corpusPath) {
   const results = [];
 
   for (const corpusCase of cases) {
-    const filePaths = (corpusCase.files || [])
-      .map((relativePath) => path.join(corpusDir, relativePath));
+    const filePaths = (corpusCase.files || []).map(relativePath =>
+      path.join(corpusDir, relativePath)
+    );
     const scanSummary = scanSourceFiles(filePaths);
     const actual = collectActualDetections(scanSummary);
     const mismatches = compareDetections(corpusCase.expected || {}, actual);
@@ -94,8 +110,8 @@ function runScannerCorpus(corpusPath) {
     name: corpus.name || path.basename(corpusPath),
     summary: {
       caseCount: results.length,
-      passedCaseCount: results.filter((entry) => entry.passed).length,
-      failedCaseCount: results.filter((entry) => !entry.passed).length,
+      passedCaseCount: results.filter(entry => entry.passed).length,
+      failedCaseCount: results.filter(entry => !entry.passed).length,
     },
     results,
   };

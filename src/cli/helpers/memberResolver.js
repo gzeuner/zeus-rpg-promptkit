@@ -25,7 +25,9 @@ function resolveMemberProgram({ member, sourceRoot, extensions }) {
 
   const resolvedSourceRoot = path.resolve(sourceRoot);
   if (!fs.existsSync(resolvedSourceRoot)) {
-    throw new Error(`Source directory not found: ${resolvedSourceRoot}. Provide a valid --source path.`);
+    throw new Error(
+      `Source directory not found: ${resolvedSourceRoot}. Provide a valid --source path.`
+    );
   }
 
   const sourceFiles = collectSourceFiles(resolvedSourceRoot, extensions);

@@ -26,7 +26,10 @@ const {
 const { workflowStepHandlers, WORKFLOW_STEP_ORDER, summarizeError } = require('./workflowSteps');
 
 function buildRunId(now = new Date()) {
-  const iso = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  const iso = now
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}Z$/, 'Z');
   return iso.replace('T', 'T');
 }
 
@@ -43,18 +46,17 @@ function parseMembersArg(value) {
     return [];
   }
   if (Array.isArray(value)) {
-    return value.map((entry) => String(entry).trim().toUpperCase()).filter(Boolean);
+    return value.map(entry => String(entry).trim().toUpperCase()).filter(Boolean);
   }
   return String(value)
     .split(',')
-    .map((entry) => entry.trim().toUpperCase())
+    .map(entry => entry.trim().toUpperCase())
     .filter(Boolean);
 }
 
 function normalizeWorkflowPlan({ workflowConfig, preset, args, fetchConfig }) {
-  const requestedSteps = preset && preset.steps.length > 0
-    ? preset.steps
-    : [...DEFAULT_WORKFLOW_STEPS];
+  const requestedSteps =
+    preset && preset.steps.length > 0 ? preset.steps : [...DEFAULT_WORKFLOW_STEPS];
   const included = new Set(requestedSteps);
   if (!preset && Array.isArray(workflowConfig.impact) && workflowConfig.impact.length > 0) {
     included.add('impact');
@@ -65,17 +67,27 @@ function normalizeWorkflowPlan({ workflowConfig, preset, args, fetchConfig }) {
 
   return {
     presetName: preset ? preset.name : '',
-    steps: WORKFLOW_STEP_ORDER.filter((step) => included.has(step)),
-    analyzeModes: preset && preset.analyzeModes.length > 0
-      ? preset.analyzeModes
-      : (workflowConfig.analyzeModes.length > 0 ? workflowConfig.analyzeModes : [...DEFAULT_WORKFLOW_ANALYZE_MODES]),
-    members: parseMembersArg(args.members).length > 0
-      ? parseMembersArg(args.members)
-      : (preset && preset.members.length > 0 ? preset.members : workflowConfig.members),
+    steps: WORKFLOW_STEP_ORDER.filter(step => included.has(step)),
+    analyzeModes:
+      preset && preset.analyzeModes.length > 0
+        ? preset.analyzeModes
+        : workflowConfig.analyzeModes.length > 0
+          ? workflowConfig.analyzeModes
+          : [...DEFAULT_WORKFLOW_ANALYZE_MODES],
+    members:
+      parseMembersArg(args.members).length > 0
+        ? parseMembersArg(args.members)
+        : preset && preset.members.length > 0
+          ? preset.members
+          : workflowConfig.members,
     tables: preset && preset.tables.length > 0 ? preset.tables : workflowConfig.tables,
     impact: preset && preset.impact.length > 0 ? preset.impact : workflowConfig.impact,
-    continueOnError: Boolean(args['continue-on-error']) || Boolean((preset && preset.continueOnError) || workflowConfig.continueOnError),
-    fetchConfigured: Boolean(fetchConfig && fetchConfig.host && fetchConfig.user && fetchConfig.password),
+    continueOnError:
+      Boolean(args['continue-on-error']) ||
+      Boolean((preset && preset.continueOnError) || workflowConfig.continueOnError),
+    fetchConfigured: Boolean(
+      fetchConfig && fetchConfig.host && fetchConfig.user && fetchConfig.password
+    ),
   };
 }
 
@@ -94,7 +106,19 @@ function createWorkflowPaths(cwd, baseOutputRoot, runId) {
   };
 }
 
-function buildInitialState({ args, cwd, env, profiles, profileName, profile, workflowConfig, plan, fetchConfig, runId, paths }) {
+function buildInitialState({
+  args,
+  cwd,
+  env,
+  profiles,
+  profileName,
+  profile,
+  workflowConfig,
+  plan,
+  fetchConfig,
+  runId,
+  paths,
+}) {
   return {
     args,
     cwd,
@@ -110,7 +134,9 @@ function buildInitialState({ args, cwd, env, profiles, profileName, profile, wor
     runtime: {
       fetchRoot: paths.fetchRoot,
       workspaceRoot: paths.workspaceRoot,
-      analyzeExtensions: Array.from(new Set([...(profile.extensions || DEFAULT_EXTENSIONS), '.txt', '.work'])),
+      analyzeExtensions: Array.from(
+        new Set([...(profile.extensions || DEFAULT_EXTENSIONS), '.txt', '.work'])
+      ),
       primaryAnalyzeMode: '',
       analyzeSourceRoot: '',
     },
@@ -157,11 +183,20 @@ async function runWorkflowEngine(args, { cwd = process.cwd(), env = process.env 
   const profile = resolveProfile(profiles, args.profile, { env });
   const workflowConfig = readWorkflowConfig(profiles, profile, env);
   const presetName = args.preset || workflowConfig.defaultPreset || '';
-  const preset = presetName ? resolveWorkflowPresetConfig(profiles, profile, presetName, env) : null;
-  const fetchConfig = resolveFetchConfig({
-    ...args,
-    out: path.join(args.out || workflowConfig.outputRoot || profile.outputRoot || 'analysis', 'runs', 'placeholder'),
-  }, { cwd, env });
+  const preset = presetName
+    ? resolveWorkflowPresetConfig(profiles, profile, presetName, env)
+    : null;
+  const fetchConfig = resolveFetchConfig(
+    {
+      ...args,
+      out: path.join(
+        args.out || workflowConfig.outputRoot || profile.outputRoot || 'analysis',
+        'runs',
+        'placeholder'
+      ),
+    },
+    { cwd, env }
+  );
   const plan = normalizeWorkflowPlan({
     workflowConfig,
     preset,
@@ -169,7 +204,11 @@ async function runWorkflowEngine(args, { cwd = process.cwd(), env = process.env 
     fetchConfig,
   });
   const runId = buildRunId();
-  const paths = createWorkflowPaths(cwd, args.out || workflowConfig.outputRoot || profile.outputRoot || 'analysis', runId);
+  const paths = createWorkflowPaths(
+    cwd,
+    args.out || workflowConfig.outputRoot || profile.outputRoot || 'analysis',
+    runId
+  );
 
   ensureDir(paths.runRoot);
   ensureDir(paths.fetchRoot);
@@ -186,10 +225,13 @@ async function runWorkflowEngine(args, { cwd = process.cwd(), env = process.env 
     profile,
     workflowConfig,
     plan,
-    fetchConfig: resolveFetchConfig({
-      ...args,
-      out: paths.fetchRoot,
-    }, { cwd, env }),
+    fetchConfig: resolveFetchConfig(
+      {
+        ...args,
+        out: paths.fetchRoot,
+      },
+      { cwd, env }
+    ),
     runId,
     paths,
   });
@@ -264,9 +306,11 @@ async function runWorkflowEngine(args, { cwd = process.cwd(), env = process.env 
     }
   }
 
-  state.status = state.stepResults.some((entry) => entry.status === 'failed') ? 'failed' : 'succeeded';
+  state.status = state.stepResults.some(entry => entry.status === 'failed')
+    ? 'failed'
+    : 'succeeded';
   state.completedAt = new Date().toISOString();
-  if (state.stepResults.some((entry) => entry.name === 'report')) {
+  if (state.stepResults.some(entry => entry.name === 'report')) {
     await workflowStepHandlers.report(state);
   }
   writeWorkflowState(state);

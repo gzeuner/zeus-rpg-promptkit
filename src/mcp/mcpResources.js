@@ -48,21 +48,24 @@ const RESOURCE_DEFINITIONS = Object.freeze([
   Object.freeze({
     uri: 'zeus://docs/quickstart/onboarding-new-ibm-i.md',
     name: 'Onboarding Guide for New IBM i Systems',
-    description: 'Step-by-step guide to connect to a fresh AS/400 / IBM i / Power system, discover sources, PGM/table objects, metadata, and data.',
+    description:
+      'Step-by-step guide to connect to a fresh AS/400 / IBM i / Power system, discover sources, PGM/table objects, metadata, and data.',
     mimeType: 'text/markdown',
     filePath: 'docs/quickstart/onboarding-new-ibm-i.md',
   }),
   Object.freeze({
     uri: 'zeus://docs/ai/rpg-agent-guidance.md',
     name: 'RPG Agent Guidance',
-    description: 'Project-neutral RPG/ILE patterns, modernization notes, BIFs, indicators, and agent rules for safe code proposals.',
+    description:
+      'Project-neutral RPG/ILE patterns, modernization notes, BIFs, indicators, and agent rules for safe code proposals.',
     mimeType: 'text/markdown',
     filePath: 'docs/ai/rpg-agent-guidance.md',
   }),
   Object.freeze({
     uri: 'zeus://docs/sql/system-environment-discovery.sql',
     name: 'IBM i Environment Discovery SQL',
-    description: 'Ready-to-use read-only queries for source libraries, tables, objects, columns, keys, and catalog exploration.',
+    description:
+      'Ready-to-use read-only queries for source libraries, tables, objects, columns, keys, and catalog exploration.',
     mimeType: 'text/plain',
     filePath: 'docs/sql/system-environment-discovery.sql',
   }),
@@ -76,7 +79,8 @@ const RESOURCE_DEFINITIONS = Object.freeze([
   Object.freeze({
     uri: 'zeus://metadata/mcp-tools.json',
     name: 'MCP Tool Inventory',
-    description: 'Structured inventory of currently registered MCP tools and default allowlist posture.',
+    description:
+      'Structured inventory of currently registered MCP tools and default allowlist posture.',
     mimeType: 'application/json',
     generator: buildMcpToolInventoryResource,
   }),
@@ -97,14 +101,15 @@ const RESOURCE_DEFINITIONS = Object.freeze([
   Object.freeze({
     uri: 'zeus://onboarding/checklist.json',
     name: 'Onboarding Checklist',
-    description: 'Structured, agent-friendly checklist for first connection to a new IBM i system (sources, objects, metadata, data).',
+    description:
+      'Structured, agent-friendly checklist for first connection to a new IBM i system (sources, objects, metadata, data).',
     mimeType: 'application/json',
     generator: buildOnboardingChecklistResource,
   }),
 ]);
 
 function listMcpResources(cwd = process.cwd()) {
-  const staticResources = RESOURCE_DEFINITIONS.map((entry) => ({
+  const staticResources = RESOURCE_DEFINITIONS.map(entry => ({
     uri: entry.uri,
     name: entry.name,
     description: entry.description,
@@ -122,11 +127,12 @@ function readMcpResource(uri, context = {}) {
     throw error;
   }
 
-  const definition = RESOURCE_DEFINITIONS.find((entry) => entry.uri === normalizedUri);
+  const definition = RESOURCE_DEFINITIONS.find(entry => entry.uri === normalizedUri);
   if (definition) {
-    const text = typeof definition.generator === 'function'
-      ? `${JSON.stringify(definition.generator(context), null, 2)}\n`
-      : readRepoFile(definition.filePath, context.cwd || process.cwd());
+    const text =
+      typeof definition.generator === 'function'
+        ? `${JSON.stringify(definition.generator(context), null, 2)}\n`
+        : readRepoFile(definition.filePath, context.cwd || process.cwd());
 
     return {
       contents: [
@@ -149,7 +155,7 @@ function readRepoFile(relativePath, cwd) {
 
 function buildCommandCatalogResource() {
   return {
-    commands: COMMAND_ORDER.map((name) => ({
+    commands: COMMAND_ORDER.map(name => ({
       command: name,
       ...COMMAND_METADATA[name],
     })),
@@ -159,7 +165,7 @@ function buildCommandCatalogResource() {
 function buildMcpToolInventoryResource() {
   return {
     defaultAllowlist: [...DEFAULT_MCP_SAFE_TOOL_NAMES],
-    tools: listMcpTools().map((tool) => ({
+    tools: listMcpTools().map(tool => ({
       name: tool.name,
       description: tool.description,
       defaultAllowlisted: DEFAULT_MCP_SAFE_TOOL_NAMES.includes(tool.name),
@@ -170,7 +176,7 @@ function buildMcpToolInventoryResource() {
 
 function buildWorkflowPresetResource() {
   return {
-    presets: listWorkflowPresets().map((preset) => ({
+    presets: listWorkflowPresets().map(preset => ({
       name: preset.name,
       title: preset.title,
       description: preset.description,
@@ -183,7 +189,7 @@ function buildWorkflowPresetResource() {
 
 function buildPromptContractsResource() {
   return {
-    promptContracts: listPromptContracts().map((contract) => ({
+    promptContracts: listPromptContracts().map(contract => ({
       name: contract.name,
       version: contract.version,
       workflow: contract.workflow,
@@ -206,16 +212,16 @@ function buildOnboardingChecklistResource() {
         actions: [
           'Copy config/profiles.example.json to config/local-only/profiles.json',
           'Load env: source ./config/load-env.sh <env> (or PowerShell equivalent)',
-          'Set ZEUS_FETCH_* and ZEUS_DB_* (and ZEUS_METADATA_* / ZEUS_TESTDATA_* for separation)'
-        ]
+          'Set ZEUS_FETCH_* and ZEUS_DB_* (and ZEUS_METADATA_* / ZEUS_TESTDATA_* for separation)',
+        ],
       },
       {
         step: 2,
         title: 'Verify Connection',
         actions: [
           'node cli/zeus.js doctor --profile <name> --show-resolved',
-          'node cli/zeus.js doctor --profile <name> --probe --show-resolved (live read-only checks)'
-        ]
+          'node cli/zeus.js doctor --profile <name> --probe --show-resolved (live read-only checks)',
+        ],
       },
       {
         step: 3,
@@ -223,8 +229,8 @@ function buildOnboardingChecklistResource() {
         actions: [
           'Common: QRPGLESRC, QCLSRC, QDDSSRC, QCPYSRC, QSQLSRC, QSRVSRC',
           'Use zeus fetch --profile <name> or point --source to existing tree',
-          'zeus search-source and zeus field-search for exploration'
-        ]
+          'zeus search-source and zeus field-search for exploration',
+        ],
       },
       {
         step: 4,
@@ -232,8 +238,8 @@ function buildOnboardingChecklistResource() {
         actions: [
           'zeus resolve-object --profile <name> --table <name>',
           'zeus inspect-object --profile <name> --lib <lib> --name <pgm> --type *PGM',
-          'zeus query-table and zeus query-sql against QSYS2.SYSTABLES / SYSCOLUMNS'
-        ]
+          'zeus query-table and zeus query-sql against QSYS2.SYSTABLES / SYSCOLUMNS',
+        ],
       },
       {
         step: 5,
@@ -241,8 +247,8 @@ function buildOnboardingChecklistResource() {
         actions: [
           'zeus query-sql with QSYS2 catalog queries (see zeus://docs/sql/system-environment-discovery.sql)',
           'zeus analyze ... (enriches with DB metadata when configured)',
-          'Use --test-data-limit for samples; respect allow/deny + masking'
-        ]
+          'Use --test-data-limit for samples; respect allow/deny + masking',
+        ],
       },
       {
         step: 6,
@@ -250,18 +256,19 @@ function buildOnboardingChecklistResource() {
         actions: [
           'node cli/zeus.js onboarding (interactive zeus-onboarding-wizard)',
           'node cli/zeus.js workflow --preset onboarding --profile <name> --source <dir> --program <PGM>',
-          'Bundle artifacts + use ai_prompt_*.md with your agent'
-        ]
-      }
+          'Bundle artifacts + use ai_prompt_*.md with your agent',
+        ],
+      },
     ],
     recommendedMcpResources: [
       'zeus://docs/quickstart/onboarding-new-ibm-i.md',
       'zeus://docs/ai/rpg-agent-guidance.md',
       'zeus://docs/sql/system-environment-discovery.sql',
       'zeus://docs/ai/session-prompt.md',
-      'zeus://metadata/workflow-presets.json'
+      'zeus://metadata/workflow-presets.json',
     ],
-    notes: 'Always prefer read-only (S0/S2). Use zeus.doctor first. Human approval for any remote access.'
+    notes:
+      'Always prefer read-only (S0/S2). Use zeus.doctor first. Human approval for any remote access.',
   };
 }
 
@@ -318,7 +325,7 @@ function buildRunViewsUri(program) {
 function buildRunArtifactUri(program, artifactPath) {
   const encodedArtifactPath = String(artifactPath || '')
     .split('/')
-    .map((segment) => encodeURIComponent(segment))
+    .map(segment => encodeURIComponent(segment))
     .join('/');
   return `zeus://runs/${encodeURIComponent(program)}/artifacts/${encodedArtifactPath}`;
 }
@@ -354,7 +361,7 @@ function parseDynamicRunUri(uri) {
       program: decodeURIComponent(artifactMatch[1]),
       artifactPath: artifactMatch[2]
         .split('/')
-        .map((segment) => decodeURIComponent(segment))
+        .map(segment => decodeURIComponent(segment))
         .join('/'),
     };
   }

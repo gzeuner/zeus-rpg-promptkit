@@ -1,6 +1,6 @@
 /**
  * QA Stage Runner
- * 
+ *
  * Executes QA validation stages with error isolation.
  * QA stage failures do NOT stop the main analysis pipeline.
  * Behavior controlled by qaStrict mode.
@@ -16,13 +16,13 @@ class QAStageRunner {
 
   /**
    * Run a QA validation stage
-   * 
+   *
    * @param {Object} context - Analysis context
    * @returns {Promise<Object>} Stage result
    */
   async run(context) {
     const startTime = Date.now();
-    
+
     try {
       const stage = this.config.stage || {};
       const stageMethod = stage.validate || stage.analyze || stage.check || stage.run;
@@ -59,7 +59,7 @@ class QAStageRunner {
             message: error.message,
             stack: error.stack,
             code: error.code || 'UNKNOWN_ERROR',
-          }
+          },
         ],
       };
     }
@@ -67,16 +67,16 @@ class QAStageRunner {
 
   /**
    * Determine if failure should be fatal based on strictness level
-   * 
+   *
    * @param {String} qaStrict - Strictness level: 'STRICT' | 'LENIENT'
    * @returns {Boolean} True if should fail hard
    */
   shouldFailHard(qaStrict) {
     if (qaStrict === 'STRICT') {
-      return true;  // ← Strict: Any error fails
+      return true; // ← Strict: Any error fails
     }
     if (qaStrict === 'LENIENT') {
-      return false;  // ← Lenient: Only log, never fail
+      return false; // ← Lenient: Only log, never fail
     }
     // Default: Errors fail, warnings don't
     return this.severity === 'ERROR';

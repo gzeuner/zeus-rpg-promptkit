@@ -24,41 +24,57 @@ const {
 const WORKFLOW_RUN_MANIFEST_FILE = 'workflow-run-manifest.json';
 const WORKFLOW_RUN_MANIFEST_SCHEMA_VERSION = 1;
 
-function buildWorkflowRunManifest({ preset, analyzeManifest, bundleManifest, bundlePath, reproducibility = null }) {
+function buildWorkflowRunManifest({
+  preset,
+  analyzeManifest,
+  bundleManifest,
+  bundlePath,
+  reproducibility = null,
+}) {
   const reproducibilitySettings = normalizeReproducibilitySettings(reproducibility);
   const manifest = {
     schemaVersion: WORKFLOW_RUN_MANIFEST_SCHEMA_VERSION,
     kind: 'workflow-run-manifest',
     generatedAt: resolveTimestamp(reproducibilitySettings),
     program: analyzeManifest && analyzeManifest.inputs ? analyzeManifest.inputs.program : null,
-    preset: preset ? {
-      name: preset.name,
-      title: preset.title,
-      description: preset.description,
-      analyzeMode: preset.analyzeMode,
-      promptTemplates: [...(preset.promptTemplates || [])],
-      workflowKeys: [...(preset.workflowKeys || [])],
-      bundleArtifacts: [...(preset.bundleArtifacts || [])],
-      reviewWorkflow: cloneReviewWorkflow(preset.reviewWorkflow),
-    } : null,
-    analyzeRun: analyzeManifest ? {
-      manifestFile: 'analyze-run-manifest.json',
-      status: analyzeManifest.run ? analyzeManifest.run.status : null,
-      completedAt: analyzeManifest.run ? analyzeManifest.run.completedAt : null,
-      generatedArtifactCount: analyzeManifest.summary ? analyzeManifest.summary.generatedArtifactCount : 0,
-      safeSharingEnabled: analyzeManifest.inputs && analyzeManifest.inputs.options
-        ? Boolean(analyzeManifest.inputs.options.safeSharingEnabled)
-        : false,
-      guidedMode: analyzeManifest.inputs && analyzeManifest.inputs.options
-        ? analyzeManifest.inputs.options.guidedMode
-        : null,
-    } : null,
-    bundle: bundleManifest ? {
-      manifestFile: 'bundle-manifest.json',
-      zipPath: bundlePath ? path.basename(bundlePath) : null,
-      totalFiles: bundleManifest.summary ? bundleManifest.summary.totalFiles : 0,
-      totalSizeBytes: bundleManifest.summary ? bundleManifest.summary.totalSizeBytes : 0,
-    } : null,
+    preset: preset
+      ? {
+          name: preset.name,
+          title: preset.title,
+          description: preset.description,
+          analyzeMode: preset.analyzeMode,
+          promptTemplates: [...(preset.promptTemplates || [])],
+          workflowKeys: [...(preset.workflowKeys || [])],
+          bundleArtifacts: [...(preset.bundleArtifacts || [])],
+          reviewWorkflow: cloneReviewWorkflow(preset.reviewWorkflow),
+        }
+      : null,
+    analyzeRun: analyzeManifest
+      ? {
+          manifestFile: 'analyze-run-manifest.json',
+          status: analyzeManifest.run ? analyzeManifest.run.status : null,
+          completedAt: analyzeManifest.run ? analyzeManifest.run.completedAt : null,
+          generatedArtifactCount: analyzeManifest.summary
+            ? analyzeManifest.summary.generatedArtifactCount
+            : 0,
+          safeSharingEnabled:
+            analyzeManifest.inputs && analyzeManifest.inputs.options
+              ? Boolean(analyzeManifest.inputs.options.safeSharingEnabled)
+              : false,
+          guidedMode:
+            analyzeManifest.inputs && analyzeManifest.inputs.options
+              ? analyzeManifest.inputs.options.guidedMode
+              : null,
+        }
+      : null,
+    bundle: bundleManifest
+      ? {
+          manifestFile: 'bundle-manifest.json',
+          zipPath: bundlePath ? path.basename(bundlePath) : null,
+          totalFiles: bundleManifest.summary ? bundleManifest.summary.totalFiles : 0,
+          totalSizeBytes: bundleManifest.summary ? bundleManifest.summary.totalSizeBytes : 0,
+        }
+      : null,
   };
 
   manifest.reproducibility = buildReproducibilityMetadata(
@@ -68,7 +84,7 @@ function buildWorkflowRunManifest({ preset, analyzeManifest, bundleManifest, bun
       preset: manifest.preset,
       analyzeRun: manifest.analyzeRun,
       bundle: manifest.bundle,
-    }),
+    })
   );
   return manifest;
 }

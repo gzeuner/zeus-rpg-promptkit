@@ -34,7 +34,7 @@ describe('QA Report Generator', () => {
 
   it('should generate markdown report', () => {
     const report = qaReportGenerator.generateReport(mockResults, { format: 'markdown' });
-    
+
     assert.strictEqual(report.format, 'markdown');
     assert(report.content.includes('QA Validation Report'));
     assert(report.content.includes('ldmlan'));
@@ -42,7 +42,7 @@ describe('QA Report Generator', () => {
 
   it('should generate Jira report', () => {
     const report = qaReportGenerator.generateReport(mockResults, { format: 'jira' });
-    
+
     assert.strictEqual(report.format, 'jira');
     assert(report.content.includes('h2'));
     assert(report.content.includes('ERROR'));
@@ -50,7 +50,7 @@ describe('QA Report Generator', () => {
 
   it('should generate JSON report', () => {
     const report = qaReportGenerator.generateReport(mockResults, { format: 'json' });
-    
+
     assert.strictEqual(report.format, 'json');
     assert(report.timestamp);
     assert(report.summary);
@@ -59,7 +59,7 @@ describe('QA Report Generator', () => {
 
   it('should count issues correctly', () => {
     const report = qaReportGenerator.generateReport(mockResults, { format: 'json' });
-    
+
     assert.strictEqual(report.summary.totalIssues, 2);
     assert.strictEqual(report.summary.errorCount, 1);
     assert.strictEqual(report.summary.warningCount, 1);
@@ -67,7 +67,7 @@ describe('QA Report Generator', () => {
 
   it('should extract recommendations', () => {
     const report = qaReportGenerator.generateReport(mockResults, { format: 'json' });
-    
+
     assert(Array.isArray(report.recommendations));
     assert(report.recommendations.length > 0);
   });

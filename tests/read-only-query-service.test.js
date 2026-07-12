@@ -23,10 +23,7 @@ test('read-only query batches use one Java call with a statements file', () => {
       user: 'ZEUS',
       password: 'secret',
     },
-    queries: [
-      'SELECT 1 AS A FROM SYSIBM.SYSDUMMY1',
-      'SELECT 2 AS B FROM SYSIBM.SYSDUMMY1',
-    ],
+    queries: ['SELECT 1 AS A FROM SYSIBM.SYSDUMMY1', 'SELECT 2 AS B FROM SYSIBM.SYSDUMMY1'],
     maxRows: 5,
     runtime: {
       skipConnectionGuard: true,
@@ -40,8 +37,18 @@ test('read-only query batches use one Java call with a statements file', () => {
           stdout: JSON.stringify({
             statementCount: 2,
             statements: [
-              { sql: 'SELECT 1 AS A FROM SYSIBM.SYSDUMMY1', columns: ['A'], rows: [{ A: 1 }], rowCount: 1 },
-              { sql: 'SELECT 2 AS B FROM SYSIBM.SYSDUMMY1', columns: ['B'], rows: [{ B: 2 }], rowCount: 1 },
+              {
+                sql: 'SELECT 1 AS A FROM SYSIBM.SYSDUMMY1',
+                columns: ['A'],
+                rows: [{ A: 1 }],
+                rowCount: 1,
+              },
+              {
+                sql: 'SELECT 2 AS B FROM SYSIBM.SYSDUMMY1',
+                columns: ['B'],
+                rows: [{ B: 2 }],
+                rowCount: 1,
+              },
             ],
           }),
           stderr: '',
@@ -58,12 +65,13 @@ test('read-only query batches use one Java call with a statements file', () => {
 
 test('runReadOnlyDb2Queries validates every statement as read-only', () => {
   assert.throws(
-    () => runReadOnlyDb2Queries({
-      dbConfig: { host: 'ibmi.example.com', user: 'ZEUS', password: 'secret' },
-      queries: ['SELECT 1 FROM SYSIBM.SYSDUMMY1', 'DELETE FROM T'],
-      runtime: { skipConnectionGuard: true },
-    }),
-    /must start with SELECT or WITH|non-read-only/i,
+    () =>
+      runReadOnlyDb2Queries({
+        dbConfig: { host: 'ibmi.example.com', user: 'ZEUS', password: 'secret' },
+        queries: ['SELECT 1 FROM SYSIBM.SYSDUMMY1', 'DELETE FROM T'],
+        runtime: { skipConnectionGuard: true },
+      }),
+    /must start with SELECT or WITH|non-read-only/i
   );
 });
 

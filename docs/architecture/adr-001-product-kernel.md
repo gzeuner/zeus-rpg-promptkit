@@ -35,6 +35,7 @@ Define the **product kernel** as the combination of:
 5. Safety policy classification and enforcement boundaries
 
 The kernel is responsible for:
+
 - Producing deterministic, auditable evidence from sources + optional Db2.
 - Maintaining provenance via manifests and import manifests.
 - Supporting controlled reduction (dense, optimize-context, safe-sharing).

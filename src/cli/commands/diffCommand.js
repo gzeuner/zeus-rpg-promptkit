@@ -12,10 +12,20 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
-const { loadProfiles, readWorkCopyConfig, resolveAnalyzeConfig, resolveFetchConfig, resolveProfile } = require('../../config/runtimeConfig');
+const {
+  loadProfiles,
+  readWorkCopyConfig,
+  resolveAnalyzeConfig,
+  resolveFetchConfig,
+  resolveProfile,
+} = require('../../config/runtimeConfig');
 const { renderAsciiTable } = require('../helpers/asciiTable');
 const { createJsonOutput } = require('../helpers/jsonOutput');
-const { buildLineComparison, readLines, resolveDiffPaths } = require('../../diff/workspaceDiffService');
+const {
+  buildLineComparison,
+  readLines,
+  resolveDiffPaths,
+} = require('../../diff/workspaceDiffService');
 
 async function runDiff(args) {
   if (!args.profile || !String(args.profile).trim()) {
@@ -45,18 +55,20 @@ async function runDiff(args) {
     });
     const comparison = buildLineComparison(
       readLines(resolved.originalPath),
-      readLines(resolved.modifiedPath),
+      readLines(resolved.modifiedPath)
     );
 
     console.log(`Member: ${resolved.member}`);
     console.log(`Original: ${resolved.originalPath}`);
     console.log(`Modified: ${resolved.modifiedPath}`);
     console.log('');
-    console.log(renderAsciiTable(
-      ['Line', 'Diff', 'Original', 'Modified'],
-      comparison.rows.map((row) => [row.line, row.marker, row.original, row.modified]),
-      { maxCellWidth: 60 },
-    ));
+    console.log(
+      renderAsciiTable(
+        ['Line', 'Diff', 'Original', 'Modified'],
+        comparison.rows.map(row => [row.line, row.marker, row.original, row.modified]),
+        { maxCellWidth: 60 }
+      )
+    );
     console.log(`Changed lines: ${comparison.changedCount}`);
 
     const json = createJsonOutput(args);

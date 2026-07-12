@@ -26,7 +26,10 @@ const { buildContext } = require('../context/contextBuilder');
 const { optimizeContext, DEFAULT_CONTEXT_OPTIMIZER_OPTIONS } = require('../ai/contextOptimizer');
 const { buildAiKnowledgeProjection } = require('../ai/knowledgeProjection');
 const { estimateTokensFromObject, computeReduction } = require('../ai/tokenEstimator');
-const { exportDb2Metadata, buildDb2MetadataCanonicalUpdatesFromPayload } = require('../db2/metadataExportService');
+const {
+  exportDb2Metadata,
+  buildDb2MetadataCanonicalUpdatesFromPayload,
+} = require('../db2/metadataExportService');
 const { exportTestData } = require('../db2/testDataExportService');
 const { buildDependencyGraph, buildGraphSummary } = require('../dependency/dependencyGraphBuilder');
 const { buildCrossProgramGraph } = require('../dependency/crossProgramGraphBuilder');
@@ -57,13 +60,18 @@ function resolvePromptContext(context, optimizedContext) {
 }
 
 function buildSourceFileMetadataMap(canonicalAnalysis) {
-  return new Map((canonicalAnalysis && canonicalAnalysis.sourceFiles ? canonicalAnalysis.sourceFiles : [])
-    .map((entry) => [entry.path, entry]));
+  return new Map(
+    (canonicalAnalysis && canonicalAnalysis.sourceFiles ? canonicalAnalysis.sourceFiles : []).map(
+      entry => [entry.path, entry]
+    )
+  );
 }
 
 function mergeObject(baseValue, patchValue) {
-  const base = baseValue && typeof baseValue === 'object' && !Array.isArray(baseValue) ? baseValue : {};
-  const patch = patchValue && typeof patchValue === 'object' && !Array.isArray(patchValue) ? patchValue : {};
+  const base =
+    baseValue && typeof baseValue === 'object' && !Array.isArray(baseValue) ? baseValue : {};
+  const patch =
+    patchValue && typeof patchValue === 'object' && !Array.isArray(patchValue) ? patchValue : {};
   return {
     ...base,
     ...patch,
@@ -149,11 +157,11 @@ function collectAndScanStage(state) {
   });
   logVerbose(`Validated scannable source files: ${validation.validFiles.length}`);
 
-  const sourceMetadataByPath = new Map(validation.results.map((result) => [result.path, result]));
+  const sourceMetadataByPath = new Map(validation.results.map(result => [result.path, result]));
   const normalizedSourceTextByRelativePath = new Map(
     validation.results
-      .filter((result) => typeof result.normalizedText === 'string')
-      .map((result) => [result.relativePath, result.normalizedText]),
+      .filter(result => typeof result.normalizedText === 'string')
+      .map(result => [result.relativePath, result.normalizedText])
   );
   const scanSummary = scanSourceFiles(validation.validFiles, {
     scanCache,
@@ -161,7 +169,7 @@ function collectAndScanStage(state) {
   });
   const notes = [
     ...(scanSummary.notes || []),
-    ...validation.results.flatMap((result) => result.issues.map((issue) => issue.message)),
+    ...validation.results.flatMap(result => result.issues.map(issue => issue.message)),
   ];
   const stageDiagnostics = [];
 
@@ -384,10 +392,7 @@ function buildContextStage(state) {
       scanCache: scanCache ? scanCache.getStats() : null,
       sourceSnippetFound: Boolean(sourceSnippet),
     },
-    stageDiagnostics: [
-      ...(crossProgramGraph.diagnostics || []),
-      ...stageDiagnostics,
-    ],
+    stageDiagnostics: [...(crossProgramGraph.diagnostics || []), ...stageDiagnostics],
   };
 }
 
@@ -472,7 +477,7 @@ function loadKnownFactsStage(state) {
       factCount: knownFacts.factCount,
       expired: Boolean(readResult.expired),
     },
-    stageDiagnostics: notes.map((message) => ({
+    stageDiagnostics: notes.map(message => ({
       severity: 'warning',
       code: readResult.status === 'expired' ? 'KNOWN_FACTS_EXPIRED' : 'KNOWN_FACTS_MISSING',
       message,
@@ -553,7 +558,7 @@ function investigateSourcesStage(state) {
       searchMatchCount: Number(searchResults.summary.matchCount) || 0,
       searchTruncated: Boolean(searchResults.summary.truncated),
     },
-    stageDiagnostics: (searchResults.notes || []).map((message) => ({
+    stageDiagnostics: (searchResults.notes || []).map(message => ({
       severity: 'warning',
       code: 'SEARCH_RESULT_LIMIT',
       message,
@@ -575,7 +580,9 @@ function optimizeContextStage(state) {
         contextTokens,
         optimizedTokens: contextTokens,
         reductionPercent: 0,
-        softTokenLimit: Number(config.contextOptimizer.softTokenLimit) || DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit,
+        softTokenLimit:
+          Number(config.contextOptimizer.softTokenLimit) ||
+          DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit,
         warning: false,
       },
       stageMetadata: {
@@ -594,7 +601,12 @@ function optimizeContextStage(state) {
     cwd: state.cwd,
     env: state.env,
   });
-  const optimizedContext = optimizeContext(context, config.contextOptimizer, baseAiProjection, denseLevel);
+  const optimizedContext = optimizeContext(
+    context,
+    config.contextOptimizer,
+    baseAiProjection,
+    denseLevel
+  );
   const optimizedTokens = estimateTokensFromObject(optimizedContext);
 
   return {
@@ -606,8 +618,13 @@ function optimizeContextStage(state) {
       contextTokens,
       optimizedTokens,
       reductionPercent: computeReduction(contextTokens, optimizedTokens),
-      softTokenLimit: Number(config.contextOptimizer.softTokenLimit) || DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit,
-      warning: optimizedTokens > (Number(config.contextOptimizer.softTokenLimit) || DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit),
+      softTokenLimit:
+        Number(config.contextOptimizer.softTokenLimit) ||
+        DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit,
+      warning:
+        optimizedTokens >
+        (Number(config.contextOptimizer.softTokenLimit) ||
+          DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit),
     },
     stageMetadata: {
       enabled: true,
@@ -615,17 +632,24 @@ function optimizeContextStage(state) {
       optimizedTokens,
       reductionPercent: computeReduction(contextTokens, optimizedTokens),
     },
-    stageDiagnostics: optimizedTokens > (Number(config.contextOptimizer.softTokenLimit) || DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit)
-      ? [{
-        severity: 'warning',
-        code: 'OPTIMIZED_CONTEXT_EXCEEDS_SOFT_LIMIT',
-        message: 'Optimized context may exceed the configured soft token limit.',
-        details: {
-          optimizedTokens,
-          softTokenLimit: Number(config.contextOptimizer.softTokenLimit) || DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit,
-        },
-      }]
-      : [],
+    stageDiagnostics:
+      optimizedTokens >
+      (Number(config.contextOptimizer.softTokenLimit) ||
+        DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit)
+        ? [
+            {
+              severity: 'warning',
+              code: 'OPTIMIZED_CONTEXT_EXCEEDS_SOFT_LIMIT',
+              message: 'Optimized context may exceed the configured soft token limit.',
+              details: {
+                optimizedTokens,
+                softTokenLimit:
+                  Number(config.contextOptimizer.softTokenLimit) ||
+                  DEFAULT_CONTEXT_OPTIMIZER_OPTIONS.softTokenLimit,
+              },
+            },
+          ]
+        : [],
   };
 }
 
@@ -647,20 +671,23 @@ function exportDb2Stage(state) {
   const metadataDbConfig = resolveAnalyzeDbConfig(config, 'metadata');
   const cacheKey = outputProgramDir
     ? buildDb2MetadataCacheKey({
-      program,
-      dependencies: context.dependencies,
-      dbConfig: metadataDbConfig,
-    })
+        program,
+        dependencies: context.dependencies,
+        dbConfig: metadataDbConfig,
+      })
     : null;
-  const cachedArtifact = cacheKey && outputProgramDir
-    ? readCachedArtifact(outputProgramDir, analysisArtifactCache, 'db2Metadata', cacheKey)
-    : null;
+  const cachedArtifact =
+    cacheKey && outputProgramDir
+      ? readCachedArtifact(outputProgramDir, analysisArtifactCache, 'db2Metadata', cacheKey)
+      : null;
 
   let nextAnalysisArtifactCache = analysisArtifactCache;
   let db2Export;
   let db2CacheMetadata;
 
-  const skipRequested = Boolean(state.skipDb2Metadata || (state.reproducibility && state.reproducibility.enabled));
+  const skipRequested = Boolean(
+    state.skipDb2Metadata || (state.reproducibility && state.reproducibility.enabled)
+  );
   if (skipRequested) {
     db2Export = {
       summary: { status: 'skipped', reason: 'skipped by --reproducible or --skip-db2-metadata' },
@@ -711,21 +738,21 @@ function exportDb2Stage(state) {
         cacheKey,
         db2Export.summary,
         db2Export.summary.file || 'db2-metadata.json',
-        db2Export.summary.markdownFile || 'db2-metadata.md',
+        db2Export.summary.markdownFile || 'db2-metadata.md'
       );
       writeAnalysisArtifactCache(outputProgramDir, nextAnalysisArtifactCache);
     }
 
     db2CacheMetadata = {
       ...currentDb2Cache,
-      status: exported ? 'miss' : (currentDb2Cache.status || 'skipped'),
+      status: exported ? 'miss' : currentDb2Cache.status || 'skipped',
       hits: currentDb2Hits,
       misses: exported ? currentDb2Misses + 1 : currentDb2Misses,
       cacheKey: exported ? cacheKey : null,
-      payloadFile: exported ? (db2Export.summary.file || 'db2-metadata.json') : null,
-      markdownFile: exported ? (db2Export.summary.markdownFile || 'db2-metadata.md') : null,
+      payloadFile: exported ? db2Export.summary.file || 'db2-metadata.json' : null,
+      markdownFile: exported ? db2Export.summary.markdownFile || 'db2-metadata.md' : null,
       manifestFile: outputProgramDir ? ANALYSIS_ARTIFACT_CACHE_FILE : null,
-      reason: exported ? null : (db2Export.summary ? db2Export.summary.reason || null : null),
+      reason: exported ? null : db2Export.summary ? db2Export.summary.reason || null : null,
     };
     db2Export.summary = {
       ...(db2Export.summary || {}),
@@ -740,8 +767,14 @@ function exportDb2Stage(state) {
     db2Metadata: db2CacheMetadata,
   });
   const nextCanonicalAnalysis = enrichCanonicalAnalysisModel(canonicalAnalysis, {
-    entities: db2Export.canonicalUpdates && db2Export.canonicalUpdates.entities ? db2Export.canonicalUpdates.entities : undefined,
-    relations: db2Export.canonicalUpdates && db2Export.canonicalUpdates.relations ? db2Export.canonicalUpdates.relations : undefined,
+    entities:
+      db2Export.canonicalUpdates && db2Export.canonicalUpdates.entities
+        ? db2Export.canonicalUpdates.entities
+        : undefined,
+    relations:
+      db2Export.canonicalUpdates && db2Export.canonicalUpdates.relations
+        ? db2Export.canonicalUpdates.relations
+        : undefined,
     db2Metadata: db2Export.summary,
     analysisCache: nextCacheStatus,
     notes: db2Export.notes || [],
@@ -766,17 +799,17 @@ function exportDb2Stage(state) {
       cache: db2CacheMetadata,
     },
     stageDiagnostics: [
-      ...(db2Export.notes || []).map((message) => ({
+      ...(db2Export.notes || []).map(message => ({
         severity: db2Export.summary.status === 'skipped' ? 'warning' : 'info',
         code: db2Export.summary.status === 'skipped' ? 'DB2_EXPORT_SKIPPED' : 'DB2_EXPORT_NOTE',
         message,
       })),
-      ...((db2Export.diagnostics || []).map((entry) => ({
+      ...(db2Export.diagnostics || []).map(entry => ({
         severity: entry.severity || 'warning',
         code: entry.code || 'DB2_EXPORT_DIAGNOSTIC',
         message: entry.message || 'DB2 export diagnostic',
         details: entry.details || {},
-      }))),
+      })),
     ],
   };
 }
@@ -806,15 +839,16 @@ function exportTestDataStage(state) {
   };
   const cacheKey = outputProgramDir
     ? buildTestDataCacheKey({
-      program,
-      metadataPayload: db2Export && db2Export.payload ? db2Export.payload : null,
-      dbConfig: testDataDbConfig,
-      testDataConfig,
-    })
+        program,
+        metadataPayload: db2Export && db2Export.payload ? db2Export.payload : null,
+        dbConfig: testDataDbConfig,
+        testDataConfig,
+      })
     : null;
-  const cachedArtifact = cacheKey && outputProgramDir
-    ? readCachedArtifact(outputProgramDir, analysisArtifactCache, 'testData', cacheKey)
-    : null;
+  const cachedArtifact =
+    cacheKey && outputProgramDir
+      ? readCachedArtifact(outputProgramDir, analysisArtifactCache, 'testData', cacheKey)
+      : null;
 
   let nextAnalysisArtifactCache = analysisArtifactCache;
   let testDataExport;
@@ -861,21 +895,25 @@ function exportTestDataStage(state) {
         cacheKey,
         testDataExport.summary,
         testDataExport.summary.file || 'test-data.json',
-        testDataExport.summary.markdownFile || 'test-data.md',
+        testDataExport.summary.markdownFile || 'test-data.md'
       );
       writeAnalysisArtifactCache(outputProgramDir, nextAnalysisArtifactCache);
     }
 
     testDataCacheMetadata = {
       ...currentTestDataCache,
-      status: exported ? 'miss' : (currentTestDataCache.status || 'skipped'),
+      status: exported ? 'miss' : currentTestDataCache.status || 'skipped',
       hits: currentTestDataHits,
       misses: exported ? currentTestDataMisses + 1 : currentTestDataMisses,
       cacheKey: exported ? cacheKey : null,
-      payloadFile: exported ? (testDataExport.summary.file || 'test-data.json') : null,
-      markdownFile: exported ? (testDataExport.summary.markdownFile || 'test-data.md') : null,
+      payloadFile: exported ? testDataExport.summary.file || 'test-data.json' : null,
+      markdownFile: exported ? testDataExport.summary.markdownFile || 'test-data.md' : null,
       manifestFile: outputProgramDir ? ANALYSIS_ARTIFACT_CACHE_FILE : null,
-      reason: exported ? null : (testDataExport.summary ? testDataExport.summary.reason || null : null),
+      reason: exported
+        ? null
+        : testDataExport.summary
+          ? testDataExport.summary.reason || null
+          : null,
     };
     testDataExport.summary = {
       ...(testDataExport.summary || {}),
@@ -910,7 +948,7 @@ function exportTestDataStage(state) {
       connectionRole: 'testData',
       cache: testDataCacheMetadata,
     },
-    stageDiagnostics: (testDataExport.notes || []).map((message) => ({
+    stageDiagnostics: (testDataExport.notes || []).map(message => ({
       severity: testDataExport.summary.status === 'skipped' ? 'warning' : 'info',
       code: testDataExport.summary.status === 'skipped' ? 'TEST_DATA_SKIPPED' : 'TEST_DATA_NOTE',
       message,
@@ -963,7 +1001,7 @@ function runDiagnosticPacksStage(state) {
       failedPackCount: Number(diagnosticResult.report.summary.failedPackCount) || 0,
       stepCount: Number(diagnosticResult.report.summary.stepCount) || 0,
     },
-    stageDiagnostics: (diagnosticResult.notes || []).map((message) => ({
+    stageDiagnostics: (diagnosticResult.notes || []).map(message => ({
       severity: 'warning',
       code: 'DIAGNOSTIC_PACK_NOTE',
       message,
@@ -990,7 +1028,8 @@ function registerCoreAnalyzeStages(registry) {
   registry.registerStage({
     id: 'load-known-facts',
     title: 'Load local known facts',
-    description: 'Optionally reads profile-scoped local known facts and folds them into the local analysis context.',
+    description:
+      'Optionally reads profile-scoped local known facts and folds them into the local analysis context.',
     category: 'analysis',
     after: 'build-context',
     run: loadKnownFactsStage,
@@ -1030,7 +1069,8 @@ function registerCoreAnalyzeStages(registry) {
   registry.registerStage({
     id: 'run-diagnostic-packs',
     title: 'Run diagnostic packs',
-    description: 'Executes optional read-only investigation packs after the main semantic pipeline.',
+    description:
+      'Executes optional read-only investigation packs after the main semantic pipeline.',
     category: 'investigation',
     after: 'export-test-data',
     run: runDiagnosticPacksStage,
@@ -1053,7 +1093,9 @@ function buildAnalyzeStageRegistry(options = {}) {
     const { zeus } = require('../api/zeusApi');
     if (zeus && zeus.analyzeStages) {
       // register core if not already (simple check)
-      const existing = zeus.analyzeStages.listStages ? zeus.analyzeStages.listStages().map(s => s.id) : [];
+      const existing = zeus.analyzeStages.listStages
+        ? zeus.analyzeStages.listStages().map(s => s.id)
+        : [];
       if (existing.length === 0) {
         registerCoreAnalyzeStages(zeus.analyzeStages);
       }
@@ -1068,22 +1110,27 @@ function getAnalyzeCoreStages(options = {}) {
 }
 
 function runAnalyzeCore(initialState) {
-  const stageRegistry = initialState && initialState.stageRegistry && typeof initialState.stageRegistry.resolveStages === 'function'
-    ? initialState.stageRegistry
-    : buildAnalyzeStageRegistry({
-      plugins: initialState && Array.isArray(initialState.analyzePlugins) ? initialState.analyzePlugins : [],
-    });
+  const stageRegistry =
+    initialState &&
+    initialState.stageRegistry &&
+    typeof initialState.stageRegistry.resolveStages === 'function'
+      ? initialState.stageRegistry
+      : buildAnalyzeStageRegistry({
+          plugins:
+            initialState && Array.isArray(initialState.analyzePlugins)
+              ? initialState.analyzePlugins
+              : [],
+        });
   return runStages(stageRegistry.resolveStages(), initialState, {
-    lifecycleHooks: typeof stageRegistry.resolveLifecycleHooks === 'function'
-      ? stageRegistry.resolveLifecycleHooks()
-      : [],
+    lifecycleHooks:
+      typeof stageRegistry.resolveLifecycleHooks === 'function'
+        ? stageRegistry.resolveLifecycleHooks()
+        : [],
   });
 }
 
 function runAnalyzeArtifactAdapter(initialState) {
-  return runStages([
-    { id: 'write-artifacts', run: writeAnalyzeArtifacts },
-  ], initialState);
+  return runStages([{ id: 'write-artifacts', run: writeAnalyzeArtifacts }], initialState);
 }
 
 function runAnalyzePipeline(initialState) {

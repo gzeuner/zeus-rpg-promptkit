@@ -27,7 +27,7 @@ function isPlainObject(value) {
 }
 
 function isStringArray(value) {
-  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+  return Array.isArray(value) && value.every(entry => typeof entry === 'string');
 }
 
 function normalizeString(value, fallback = '') {
@@ -81,7 +81,7 @@ function validatePattern(pattern, index) {
   if (!Array.isArray(pattern.elements)) {
     errors.push(`patterns[${index}].elements must be an array`);
   } else {
-    pattern.elements.forEach((element) => {
+    pattern.elements.forEach(element => {
       errors.push(...validatePatternElement(element, index));
     });
   }
@@ -89,7 +89,9 @@ function validatePattern(pattern, index) {
   if (!isPlainObject(pattern.confidence)) {
     errors.push(`patterns[${index}].confidence must be an object`);
   } else {
-    const level = String(pattern.confidence.level || '').trim().toLowerCase();
+    const level = String(pattern.confidence.level || '')
+      .trim()
+      .toLowerCase();
     if (!CONFIDENCE_LEVELS.has(level)) {
       errors.push(`patterns[${index}].confidence.level must be one of high|medium|low|unknown`);
     }
@@ -104,7 +106,9 @@ function validatePattern(pattern, index) {
   if (!isPlainObject(pattern.privacyAssessment)) {
     errors.push(`patterns[${index}].privacyAssessment must be an object`);
   } else {
-    const status = String(pattern.privacyAssessment.status || '').trim().toLowerCase();
+    const status = String(pattern.privacyAssessment.status || '')
+      .trim()
+      .toLowerCase();
     if (!PRIVACY_ASSESSMENT_STATUS.has(status)) {
       errors.push(`patterns[${index}].privacyAssessment.status must be passed|needs-review|failed`);
     }
@@ -134,17 +138,26 @@ function validateFinalKnowledgeCatalog(candidate) {
   if (!isPlainObject(candidate.generator)) {
     errors.push('generator must be an object');
   } else {
-    if (typeof candidate.generator.name !== 'string' || candidate.generator.name.trim().length === 0) {
+    if (
+      typeof candidate.generator.name !== 'string' ||
+      candidate.generator.name.trim().length === 0
+    ) {
       errors.push('generator.name must be a non-empty string');
     }
-    if (typeof candidate.generator.version !== 'string' || candidate.generator.version.trim().length === 0) {
+    if (
+      typeof candidate.generator.version !== 'string' ||
+      candidate.generator.version.trim().length === 0
+    ) {
       errors.push('generator.version must be a non-empty string');
     }
   }
   if (typeof candidate.privacyMode !== 'string' || candidate.privacyMode.trim().length === 0) {
     errors.push('privacyMode must be a non-empty string');
   }
-  if (typeof candidate.taxonomyVersion !== 'string' || candidate.taxonomyVersion.trim().length === 0) {
+  if (
+    typeof candidate.taxonomyVersion !== 'string' ||
+    candidate.taxonomyVersion.trim().length === 0
+  ) {
     errors.push('taxonomyVersion must be a non-empty string');
   }
   if (!Array.isArray(candidate.patterns)) {

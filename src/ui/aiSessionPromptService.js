@@ -30,7 +30,10 @@ class AiSessionPromptError extends Error {
 function defaultTemplateLoader(templatePath = AI_SESSION_PROMPT_TEMPLATE_PATH) {
   const absolutePath = path.resolve(__dirname, '..', '..', templatePath);
   if (!fs.existsSync(absolutePath)) {
-    throw new AiSessionPromptError(`AI session prompt template is unavailable: ${templatePath}`, 500);
+    throw new AiSessionPromptError(
+      `AI session prompt template is unavailable: ${templatePath}`,
+      500
+    );
   }
   return fs.readFileSync(absolutePath, 'utf8');
 }
@@ -39,7 +42,10 @@ function extractSessionPromptTemplate(markdown) {
   const source = String(markdown || '');
   const sectionMatch = source.match(/##\s+Session Start Prompt[^\n]*/m);
   if (!sectionMatch || typeof sectionMatch.index !== 'number') {
-    throw new AiSessionPromptError('AI session prompt template is missing the Session Start Prompt text block.', 500);
+    throw new AiSessionPromptError(
+      'AI session prompt template is missing the Session Start Prompt text block.',
+      500
+    );
   }
 
   const sectionStart = sectionMatch.index;
@@ -47,18 +53,27 @@ function extractSessionPromptTemplate(markdown) {
   fenceMatch.lastIndex = sectionStart;
   const openingFenceMatch = fenceMatch.exec(source);
   if (!openingFenceMatch) {
-    throw new AiSessionPromptError('AI session prompt template is missing the Session Start Prompt text block.', 500);
+    throw new AiSessionPromptError(
+      'AI session prompt template is missing the Session Start Prompt text block.',
+      500
+    );
   }
 
   const promptStart = openingFenceMatch.index + openingFenceMatch[0].length;
   const closingFenceIndex = source.indexOf(`\n${openingFenceMatch[1]}`, promptStart);
   if (closingFenceIndex < promptStart) {
-    throw new AiSessionPromptError('AI session prompt template is missing the Session Start Prompt closing fence.', 500);
+    throw new AiSessionPromptError(
+      'AI session prompt template is missing the Session Start Prompt closing fence.',
+      500
+    );
   }
 
   const promptTemplate = source.slice(promptStart, closingFenceIndex);
   if (!promptTemplate.includes(AI_SESSION_PROMPT_PLACEHOLDER)) {
-    throw new AiSessionPromptError('AI session prompt template is missing the session goal placeholder.', 500);
+    throw new AiSessionPromptError(
+      'AI session prompt template is missing the session goal placeholder.',
+      500
+    );
   }
   return promptTemplate;
 }
@@ -68,9 +83,10 @@ function formatDoctorSummary(doctorSummary) {
     return null;
   }
 
-  const summary = doctorSummary.summary && typeof doctorSummary.summary === 'object'
-    ? doctorSummary.summary
-    : null;
+  const summary =
+    doctorSummary.summary && typeof doctorSummary.summary === 'object'
+      ? doctorSummary.summary
+      : null;
   const counts = [];
   if (summary) {
     for (const key of ['pass', 'warn', 'fail', 'info', 'skip']) {
@@ -99,7 +115,7 @@ function buildSessionGoalBlock({
     'Session context from Local UI Setup (safe metadata only):',
     `- Profile: ${profile}`,
     environment ? `- Environment hint: ${environment}` : null,
-    '- Env loading is shell-scoped. The Local UI cannot inject env vars into the user\'s already-open terminal session.',
+    "- Env loading is shell-scoped. The Local UI cannot inject env vars into the user's already-open terminal session.",
     '- The Local UI server only sees env vars that were present when it started.',
     includeDoctorSummary && formatDoctorSummary(doctorSummary)
       ? `- Doctor summary: ${formatDoctorSummary(doctorSummary)}`
@@ -136,7 +152,7 @@ function createAiSessionPromptService({
     const sanitizedGoal = sanitizeValue(String(goal || '').trim());
     const prompt = promptTemplate.replace(
       AI_SESSION_PROMPT_PLACEHOLDER,
-      `${sessionGoalPrefix}${sanitizedGoal}`,
+      `${sessionGoalPrefix}${sanitizedGoal}`
     );
     const warnings = [
       includeDoctorSummary

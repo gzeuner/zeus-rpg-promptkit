@@ -30,9 +30,14 @@ async function runFetchMember(args) {
     process.exit(2);
   }
 
-  const members = memberArg.split(',').map((m) => m.trim().toUpperCase()).filter(Boolean);
+  const members = memberArg
+    .split(',')
+    .map(m => m.trim().toUpperCase())
+    .filter(Boolean);
 
-  const sourceFile = String(args.file || args['source-file'] || DEFAULT_SOURCE_FILE).trim().toUpperCase();
+  const sourceFile = String(args.file || args['source-file'] || DEFAULT_SOURCE_FILE)
+    .trim()
+    .toUpperCase();
 
   let fetchConfig;
   let outDir;
@@ -54,9 +59,18 @@ async function runFetchMember(args) {
     process.exit(2);
   }
 
-  const sourceLib = String(args.lib || args['source-lib'] || (fetchConfig && (fetchConfig.sourceLib || fetchConfig.sourceLibrary)) || '').trim().toUpperCase();
+  const sourceLib = String(
+    args.lib ||
+      args['source-lib'] ||
+      (fetchConfig && (fetchConfig.sourceLib || fetchConfig.sourceLibrary)) ||
+      ''
+  )
+    .trim()
+    .toUpperCase();
   if (!sourceLib) {
-    console.error('Missing required option: --lib <library> oder Profilwert fetch.sourceLib/fetch.sourceLibrary');
+    console.error(
+      'Missing required option: --lib <library> oder Profilwert fetch.sourceLib/fetch.sourceLibrary'
+    );
     process.exit(2);
   }
 
@@ -64,28 +78,30 @@ async function runFetchMember(args) {
   if (/^Q[A-Z0-9]*SRC$/i.test(sourceLib) || /SRC$/i.test(sourceLib)) {
     console.warn(
       `[WARN] --lib / sourceLib="${sourceLib}" sieht aus wie ein Source-File-Name (z. B. QRPGLESRC). ` +
-      'Falls gemeint war der Source File, nutze --file. ' +
-      'Falls eine Library gemeint ist, ignoriere diese Warnung.'
+        'Falls gemeint war der Source File, nutze --file. ' +
+        'Falls eine Library gemeint ist, ignoriere diese Warnung.'
     );
   }
 
   if (!host || !user || !password) {
-    console.error('Fehlende Verbindungskonfiguration (host/user/password). --profile oder Env-Variablen setzen.');
+    console.error(
+      'Fehlende Verbindungskonfiguration (host/user/password). --profile oder Env-Variablen setzen.'
+    );
     process.exit(2);
   }
 
   if (fetchConfig && fetchConfig.hostEnvOverride) {
     console.warn(
-      `[WARN] ZEUS_FETCH_HOST="${fetchConfig.hostEnvOverride.envValue}" ueberschreibt`
-      + ` Profil-Wert "${fetchConfig.hostEnvOverride.profileValue}".`
-      + ' Benutze --host <HOST> zum expliziten Setzen.',
+      `[WARN] ZEUS_FETCH_HOST="${fetchConfig.hostEnvOverride.envValue}" ueberschreibt` +
+        ` Profil-Wert "${fetchConfig.hostEnvOverride.profileValue}".` +
+        ' Benutze --host <HOST> zum expliziten Setzen.'
     );
   }
   if (fetchConfig && fetchConfig.sourceLibEnvOverride) {
     console.warn(
-      `[WARN] ZEUS_FETCH_SOURCE_LIB="${fetchConfig.sourceLibEnvOverride.envValue}" ueberschreibt`
-      + ` Profil-Wert "${fetchConfig.sourceLibEnvOverride.profileValue}".`
-      + ' Benutze --lib <LIB> zum expliziten Setzen.',
+      `[WARN] ZEUS_FETCH_SOURCE_LIB="${fetchConfig.sourceLibEnvOverride.envValue}" ueberschreibt` +
+        ` Profil-Wert "${fetchConfig.sourceLibEnvOverride.profileValue}".` +
+        ' Benutze --lib <LIB> zum expliziten Setzen.'
     );
   }
 
@@ -105,7 +121,9 @@ async function runFetchMember(args) {
       console.log('[verbose] Local:  ' + localFile);
     }
 
-    console.log('Fetching ' + sourceLib + '/' + sourceFile + '(' + member + ') -> ' + localFile + ' ...');
+    console.log(
+      'Fetching ' + sourceLib + '/' + sourceFile + '(' + member + ') -> ' + localFile + ' ...'
+    );
 
     const result = exportSourceMemberViaJdbc({
       host,
@@ -164,7 +182,12 @@ function resolveExtension(sourceFile) {
   if (upper === 'QCPYSRC') return '.rpgleinc';
   if (upper === 'QSRVSRC') return '.bnd';
   // Heuristics for custom / non-standard source files (e.g. SQLTBLSRC, DDL sources)
-  if (upper.includes('SQL') || upper.includes('TBL') || upper.includes('TABLE') || upper.includes('DDL')) {
+  if (
+    upper.includes('SQL') ||
+    upper.includes('TBL') ||
+    upper.includes('TABLE') ||
+    upper.includes('DDL')
+  ) {
     return '.sql';
   }
   if (upper.includes('DDS')) return '.dds';

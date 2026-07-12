@@ -97,7 +97,7 @@ function exportPuiDddlBatch(options = {}) {
         continue;
       }
 
-      const compactSource = group.segments.map((segment) => segment.content).join('');
+      const compactSource = group.segments.map(segment => segment.content).join('');
       const dddl = buildPuiDddlPayloadV1({
         filePath,
         group,

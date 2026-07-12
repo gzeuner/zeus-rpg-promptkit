@@ -8,35 +8,53 @@ const { createPromptWorkbenchService } = require('../src/ui/promptWorkbenchServi
 
 function createServiceFixture() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-prompt-workbench-service-'));
-  const templateStorePath = path.join(tempRoot, 'config', 'local-only', 'prompt-workbench', 'templates.json');
+  const templateStorePath = path.join(
+    tempRoot,
+    'config',
+    'local-only',
+    'prompt-workbench',
+    'templates.json'
+  );
   const outputRoot = path.join(tempRoot, 'output');
   const programDir = path.join(outputRoot, 'ORDERPGM');
   fs.mkdirSync(programDir, { recursive: true });
-  fs.writeFileSync(path.join(programDir, 'ai_prompt_documentation.md'), '# Documentation Prompt\n\nExplain ORDERPGM.\n', 'utf8');
-  fs.writeFileSync(path.join(programDir, 'analyze-run-manifest.json'), `${JSON.stringify({
-    schemaVersion: 1,
-    tool: { name: 'zeus-rpg-promptkit', command: 'analyze' },
-    run: {
-      status: 'succeeded',
-      completedAt: '2026-04-14T12:00:00.000Z',
-    },
-    inputs: {
-      sourceRoot: '/tmp/src',
-      options: {
-        guidedMode: { name: 'documentation' },
+  fs.writeFileSync(
+    path.join(programDir, 'ai_prompt_documentation.md'),
+    '# Documentation Prompt\n\nExplain ORDERPGM.\n',
+    'utf8'
+  );
+  fs.writeFileSync(
+    path.join(programDir, 'analyze-run-manifest.json'),
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        tool: { name: 'zeus-rpg-promptkit', command: 'analyze' },
+        run: {
+          status: 'succeeded',
+          completedAt: '2026-04-14T12:00:00.000Z',
+        },
+        inputs: {
+          sourceRoot: '/tmp/src',
+          options: {
+            guidedMode: { name: 'documentation' },
+          },
+          sourceSnapshot: {
+            fileCount: 1,
+          },
+        },
+        summary: {
+          stageCount: 3,
+          diagnosticCount: 0,
+        },
+        artifacts: [
+          { path: 'ai_prompt_documentation.md', kind: 'markdown', sizeBytes: 42, sha256: 'a' },
+        ],
       },
-      sourceSnapshot: {
-        fileCount: 1,
-      },
-    },
-    summary: {
-      stageCount: 3,
-      diagnosticCount: 0,
-    },
-    artifacts: [
-      { path: 'ai_prompt_documentation.md', kind: 'markdown', sizeBytes: 42, sha256: 'a' },
-    ],
-  }, null, 2)}\n`, 'utf8');
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
   const service = createPromptWorkbenchService({ templateStorePath, outputRoot });
   return {
     tempRoot,
@@ -53,15 +71,18 @@ test('prompt workbench service exposes contracts, registries, preview, and templ
     assert.equal(contract.version, 1);
     assert.equal(contract.routes.preview.path, '/api/prompt-builder/preview');
     assert.equal(contract.routes.contextSourcesList.path, '/api/prompt-builder/context-sources');
-    assert.equal(contract.routes.contextSourcesImport.path, '/api/prompt-builder/context-sources/import');
+    assert.equal(
+      contract.routes.contextSourcesImport.path,
+      '/api/prompt-builder/context-sources/import'
+    );
 
     const useCases = fixture.service.listUseCases();
     assert.ok(useCases.useCases.length >= 6);
-    assert.ok(useCases.useCases.some((entry) => entry.id === 'documentation-generation'));
+    assert.ok(useCases.useCases.some(entry => entry.id === 'documentation-generation'));
 
     const modules = fixture.service.listModules();
     assert.ok(modules.modules.length >= 6);
-    assert.ok(modules.modules.some((entry) => entry.id === 'system-role'));
+    assert.ok(modules.modules.some(entry => entry.id === 'system-role'));
 
     const preview = fixture.service.previewPrompt({
       useCaseId: 'documentation-generation',
@@ -76,10 +97,14 @@ test('prompt workbench service exposes contracts, registries, preview, and templ
     assert.match(preview.preview.content, /Output Contract/);
 
     assert.throws(() => fixture.service.previewPrompt({ fields: {} }), /useCaseId/);
-    assert.throws(() => fixture.service.previewPrompt({
-      useCaseId: 'documentation-generation',
-      moduleIds: 'system-role',
-    }), /moduleIds/);
+    assert.throws(
+      () =>
+        fixture.service.previewPrompt({
+          useCaseId: 'documentation-generation',
+          moduleIds: 'system-role',
+        }),
+      /moduleIds/
+    );
 
     const created = fixture.service.createTemplate({
       name: 'Prompt Workbench API Implementation',
@@ -120,11 +145,17 @@ test('prompt workbench service exposes contracts, registries, preview, and templ
     const contextSources = fixture.service.listContextSources();
     assert.equal(contextSources.contextSources.length, 1);
     assert.equal(contextSources.contextSources[0].program, 'ORDERPGM');
-    assert.ok(contextSources.contextSources[0].promptArtifacts.some((entry) => entry.path === 'ai_prompt_documentation.md'));
+    assert.ok(
+      contextSources.contextSources[0].promptArtifacts.some(
+        entry => entry.path === 'ai_prompt_documentation.md'
+      )
+    );
 
     const contextPrompts = fixture.service.listContextSourcePrompts('ORDERPGM');
     assert.equal(contextPrompts.program, 'ORDERPGM');
-    assert.ok(contextPrompts.promptArtifacts.some((entry) => entry.path === 'ai_prompt_documentation.md'));
+    assert.ok(
+      contextPrompts.promptArtifacts.some(entry => entry.path === 'ai_prompt_documentation.md')
+    );
 
     const imported = fixture.service.importContextPrompt({
       program: 'ORDERPGM',
@@ -133,20 +164,32 @@ test('prompt workbench service exposes contracts, registries, preview, and templ
     assert.match(imported.seed.content, /Documentation Prompt/);
     assert.ok(imported.seed.estimatedTokens > 0);
 
-    assert.throws(() => fixture.service.importContextPrompt({
-      program: 'ORDERPGM',
-      path: 'report.md',
-    }), /ai_prompt_/);
-    assert.throws(() => fixture.service.createTemplate({
-      name: 'Invalid use case',
-      useCaseId: 'not-real',
-      moduleIds: ['system-role'],
-    }), /Unknown prompt-builder use case/);
+    assert.throws(
+      () =>
+        fixture.service.importContextPrompt({
+          program: 'ORDERPGM',
+          path: 'report.md',
+        }),
+      /ai_prompt_/
+    );
+    assert.throws(
+      () =>
+        fixture.service.createTemplate({
+          name: 'Invalid use case',
+          useCaseId: 'not-real',
+          moduleIds: ['system-role'],
+        }),
+      /Unknown prompt-builder use case/
+    );
     assert.throws(() => fixture.service.listContextSourcePrompts(''), /program is required/i);
-    assert.throws(() => fixture.service.importContextPrompt({
-      program: '',
-      path: '',
-    }), /requires program/i);
+    assert.throws(
+      () =>
+        fixture.service.importContextPrompt({
+          program: '',
+          path: '',
+        }),
+      /requires program/i
+    );
   } finally {
     fs.rmSync(fixture.tempRoot, { recursive: true, force: true });
   }

@@ -16,15 +16,26 @@ const fs = require('fs');
 const path = require('path');
 const { createJsonOutput } = require('../helpers/jsonOutput');
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
-const { generateJestTestTemplate, generateMarkdownTestPlan, generateChangeTestScenario } = require('../../investigation/testScenarioGenerator');
+const {
+  generateJestTestTemplate,
+  generateMarkdownTestPlan,
+  generateChangeTestScenario,
+} = require('../../investigation/testScenarioGenerator');
 
 async function runGenerateTest(args) {
   // Route through capability (package 08) - additive; cap registration uses generators directly
   try {
     const { capabilities } = require('../../api/zeusApi');
-    const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.generate-test', { cwd: process.cwd(), env: process.env, args }, args) : null;
+    const res =
+      capabilities && typeof capabilities.execute === 'function'
+        ? await capabilities.execute(
+            'investigation.generate-test',
+            { cwd: process.cwd(), env: process.env, args },
+            args
+          )
+        : null;
     if (res && res.ok && res.result) {
-      const out = (typeof res.result === 'string') ? res.result : JSON.stringify(res.result, null, 2);
+      const out = typeof res.result === 'string' ? res.result : JSON.stringify(res.result, null, 2);
       console.log(out);
       return;
     }
@@ -56,7 +67,9 @@ async function runGenerateTest(args) {
     }
 
     const canonicalAnalysis = JSON.parse(fs.readFileSync(analysisPath, 'utf8'));
-    const format = String(args.format || 'markdown').trim().toLowerCase();
+    const format = String(args.format || 'markdown')
+      .trim()
+      .toLowerCase();
     if (format !== 'markdown' && format !== 'jest') {
       console.error(`Invalid format "${format}". Use --format markdown or --format jest.`);
       process.exit(2);
@@ -88,7 +101,9 @@ async function runGenerateTest(args) {
         column: args.column || 'UNKNOWN',
         oldType: args.oldType,
         newType: args.newType,
-        affectedPrograms: args.affectedPrograms ? args.affectedPrograms.split(',').map((p) => ({ name: p, accessType: 'UNKNOWN' })) : [],
+        affectedPrograms: args.affectedPrograms
+          ? args.affectedPrograms.split(',').map(p => ({ name: p, accessType: 'UNKNOWN' }))
+          : [],
       });
       output += '\n\n' + changeScenario;
     }

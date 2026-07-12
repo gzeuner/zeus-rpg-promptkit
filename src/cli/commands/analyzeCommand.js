@@ -12,7 +12,10 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const path = require('path');
-const { listWorkflowModes, resolveWorkflowModeSettings } = require('../../workflow/workflowModeRegistry');
+const {
+  listWorkflowModes,
+  resolveWorkflowModeSettings,
+} = require('../../workflow/workflowModeRegistry');
 const { createJsonOutput } = require('../helpers/jsonOutput');
 const { resolvePromptTemplates } = require('../../prompt/promptBuilder');
 const { listDiagnosticPacks } = require('../../investigation/diagnosticPackRegistry');
@@ -26,8 +29,12 @@ function printWorkflowModes() {
     console.log(`  auto-optimize-context: ${mode.autoOptimizeContext ? 'yes' : 'no'}`);
     console.log(`  prompt templates: ${templates.length > 0 ? templates.join(', ') : 'none'}`);
     if (mode.reviewWorkflow) {
-      console.log(`  intended audience: ${(mode.reviewWorkflow.intendedAudience || []).join('; ') || 'n/a'}`);
-      console.log(`  expected decisions: ${(mode.reviewWorkflow.expectedDecisions || []).join('; ') || 'n/a'}`);
+      console.log(
+        `  intended audience: ${(mode.reviewWorkflow.intendedAudience || []).join('; ') || 'n/a'}`
+      );
+      console.log(
+        `  expected decisions: ${(mode.reviewWorkflow.expectedDecisions || []).join('; ') || 'n/a'}`
+      );
     }
   }
 }
@@ -36,7 +43,9 @@ function printDiagnosticPacks() {
   console.log('Supported diagnostic packs:');
   for (const pack of listDiagnosticPacks()) {
     console.log(`- ${pack.name}: ${pack.description}`);
-    console.log(`  parameters: ${pack.parameters.map((parameter) => `${parameter.name}${parameter.required ? ' (required)' : ''}`).join(', ')}`);
+    console.log(
+      `  parameters: ${pack.parameters.map(parameter => `${parameter.name}${parameter.required ? ' (required)' : ''}`).join(', ')}`
+    );
     console.log(`  steps: ${(pack.steps || []).length}`);
   }
 }
@@ -55,7 +64,14 @@ async function runAnalyze(args) {
     let execution;
     try {
       const { capabilities } = require('../../api/zeusApi');
-      const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('analysis.analyze', { cwd: process.cwd(), env: process.env, args }, args) : null;
+      const res =
+        capabilities && typeof capabilities.execute === 'function'
+          ? await capabilities.execute(
+              'analysis.analyze',
+              { cwd: process.cwd(), env: process.env, args },
+              args
+            )
+          : null;
       if (res && res.ok && res.result) {
         execution = res.result;
       }
@@ -65,7 +81,18 @@ async function runAnalyze(args) {
     if (!execution) {
       execution = executeAnalyze(args);
     }
-    const { result, program, outputProgramDir, guidedMode, workflowPreset, safeSharingEnabled, denseLevel, searchTerms, diagnosticPacks, emitDiagnostics } = execution;
+    const {
+      result,
+      program,
+      outputProgramDir,
+      guidedMode,
+      workflowPreset,
+      safeSharingEnabled,
+      denseLevel,
+      searchTerms,
+      diagnosticPacks,
+      emitDiagnostics,
+    } = execution;
 
     console.log(`Analysis complete for program ${program}`);
     if (guidedMode) {
@@ -88,16 +115,32 @@ async function runAnalyze(args) {
     }
     console.log(`Source files scanned: ${(result.scanSummary.sourceFiles || []).length}`);
     if (result.cacheStatus && result.cacheStatus.sourceScan) {
-      console.log(`Source scan cache: ${result.cacheStatus.sourceScan.hits || 0} hits, ${result.cacheStatus.sourceScan.misses || 0} misses`);
+      console.log(
+        `Source scan cache: ${result.cacheStatus.sourceScan.hits || 0} hits, ${result.cacheStatus.sourceScan.misses || 0} misses`
+      );
     }
-    if (result.cacheStatus && result.cacheStatus.db2Metadata && result.cacheStatus.db2Metadata.status !== 'disabled') {
+    if (
+      result.cacheStatus &&
+      result.cacheStatus.db2Metadata &&
+      result.cacheStatus.db2Metadata.status !== 'disabled'
+    ) {
       console.log(`DB2 metadata cache: ${result.cacheStatus.db2Metadata.status}`);
     }
-    if (result.cacheStatus && result.cacheStatus.testData && result.cacheStatus.testData.status !== 'disabled') {
+    if (
+      result.cacheStatus &&
+      result.cacheStatus.testData &&
+      result.cacheStatus.testData.status !== 'disabled'
+    ) {
       console.log(`Test data cache: ${result.cacheStatus.testData.status}`);
     }
-    if (result.context && result.context.knownFacts && result.context.knownFacts.status !== 'disabled') {
-      console.log(`Known facts: ${result.context.knownFacts.status} (${result.context.knownFacts.factCount || 0} facts)`);
+    if (
+      result.context &&
+      result.context.knownFacts &&
+      result.context.knownFacts.status !== 'disabled'
+    ) {
+      console.log(
+        `Known facts: ${result.context.knownFacts.status} (${result.context.knownFacts.factCount || 0} facts)`
+      );
     }
     if (result.optimizationReport.enabled) {
       console.log(`Context tokens: ${result.optimizationReport.contextTokens}`);
@@ -110,7 +153,9 @@ async function runAnalyze(args) {
       console.log(`Context tokens: ${result.optimizationReport.contextTokens}`);
     }
     if (emitDiagnostics) {
-      console.log(`Diagnostics written to: ${path.join(outputProgramDir, 'analysis-diagnostics.json')}`);
+      console.log(
+        `Diagnostics written to: ${path.join(outputProgramDir, 'analysis-diagnostics.json')}`
+      );
     }
     console.log(`Output written to: ${outputProgramDir}`);
 

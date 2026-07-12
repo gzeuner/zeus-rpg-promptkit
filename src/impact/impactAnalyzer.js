@@ -19,12 +19,19 @@ const {
 } = require('../reproducibility/reproducibility');
 
 function normalizeId(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function sortUnique(values) {
-  return Array.from(new Set(Array.from(values || []).map((value) => normalizeId(value)).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(
+    new Set(
+      Array.from(values || [])
+        .map(value => normalizeId(value))
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function loadGraph(graphPath) {
@@ -177,7 +184,7 @@ function analyzeImpactFromGraph(graph, targetInput) {
 
 function toMarkdownList(values) {
   if (!values || values.length === 0) return '- None';
-  return values.map((value) => `- ${value}`).join('\n');
+  return values.map(value => `- ${value}`).join('\n');
 }
 
 function renderImpactMarkdown(result) {
@@ -237,7 +244,7 @@ function generateImpactAnalysis({
         ambiguousPrograms: [],
         unresolvedPrograms: [],
       },
-    }),
+    })
   );
 
   fs.writeFileSync(jsonOutputPath, `${JSON.stringify(result, null, 2)}\n`, 'utf8');

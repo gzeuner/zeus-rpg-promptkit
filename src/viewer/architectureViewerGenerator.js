@@ -70,7 +70,7 @@ function renderSummary(graph) {
   const summary = (graph && graph.summary) || {};
   const unresolvedCount = Array.isArray(summary.unresolvedPrograms)
     ? summary.unresolvedPrograms.length
-    : (Number(summary.unresolvedPrograms) || 0);
+    : Number(summary.unresolvedPrograms) || 0;
 
   return [
     `Programs discovered: ${Number(summary.programCount) || 0}`,
@@ -83,9 +83,10 @@ function renderSummary(graph) {
 
 function renderHtml(graph) {
   const unresolvedPrograms = (graph && graph.unresolvedPrograms) || [];
-  const unresolvedSection = unresolvedPrograms.length > 0
-    ? `<div class="unresolved"><strong>Unresolved Programs:</strong> ${unresolvedPrograms.join(', ')}</div>`
-    : '';
+  const unresolvedSection =
+    unresolvedPrograms.length > 0
+      ? `<div class="unresolved"><strong>Unresolved Programs:</strong> ${unresolvedPrograms.join(', ')}</div>`
+      : '';
   const viewerAsset = loadViewerAsset();
   const assetComment = `${viewerAsset.metadata.packageName}@${viewerAsset.metadata.version} | ${viewerAsset.metadata.asset} | ${viewerAsset.metadata.license || 'license-unknown'}`;
 

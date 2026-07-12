@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { createMcpServer } = require('../src/mcp/mcpServer');
 const { listMcpTools } = require('../src/mcp/mcpTools');
 
-const ALL_TOOL_NAMES = listMcpTools().map((tool) => tool.name);
+const ALL_TOOL_NAMES = listMcpTools().map(tool => tool.name);
 
 function createTestServer(runtime = {}) {
   return createMcpServer({
@@ -15,7 +15,7 @@ function createTestServer(runtime = {}) {
 }
 
 test('listMcpTools exposes zeus.resources and zeus.discover-environment', () => {
-  const byName = new Map(listMcpTools().map((tool) => [tool.name, tool]));
+  const byName = new Map(listMcpTools().map(tool => [tool.name, tool]));
 
   const resources = byName.get('zeus.resources');
   assert.ok(resources, 'zeus.resources should be registered');
@@ -82,17 +82,17 @@ test('mcp tools call zeus.resources without profile raises invalid arguments', a
         arguments: {},
       },
     }),
-    (error) => {
+    error => {
       assert.equal(error.code, -32602);
       assert.match(String(error.message || ''), /profile/i);
       return true;
-    },
+    }
   );
 });
 
 test('mcp tools call zeus.discover-environment returns report and suggested resources', async () => {
   const server = createTestServer({
-    discoverEnvironmentRunner: async (args) => {
+    discoverEnvironmentRunner: async args => {
       assert.equal(args.profile, 'dev');
       assert.deepEqual(args.libraries, ['DEVLIB']);
       return {
@@ -140,7 +140,9 @@ test('mcp tools call zeus.discover-environment returns report and suggested reso
 test('mcp tools call zeus.discover-environment surfaces incomplete config as invalid arguments', async () => {
   const server = createTestServer({
     discoverEnvironmentRunner: async () => {
-      const error = new Error('DB2 connection configuration is incomplete for the selected profile.');
+      const error = new Error(
+        'DB2 connection configuration is incomplete for the selected profile.'
+      );
       error.code = 'TOOL_INVALID_ARGUMENTS';
       throw error;
     },
@@ -156,10 +158,10 @@ test('mcp tools call zeus.discover-environment surfaces incomplete config as inv
         arguments: { profile: 'dev' },
       },
     }),
-    (error) => {
+    error => {
       assert.equal(error.code, -32602);
       assert.match(String(error.message || ''), /incomplete/i);
       return true;
-    },
+    }
   );
 });

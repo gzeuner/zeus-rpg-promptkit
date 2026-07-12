@@ -25,7 +25,9 @@ Diese 3 Features reduzieren Planungszeit um **~80%** für Code-Change-Szenarien 
 ## 1. Risk Assessment Analyzer
 
 ### Zweck
+
 Automatische Klassifizierung aller SQL/RPG-Zugriffe nach Risiko:
+
 - 🟢 **GREEN** — read-only, keine kritischen Effekte
 - 🟡 **YELLOW** — Schreiboperationen, normale Geschäftslogik
 - 🔴 **RED** — kritische Pfade (Status-Übergänge, Workflow-Abschluss)
@@ -45,6 +47,7 @@ node cli/zeus.js assess-risk --program APPPGM --verbose
 ```
 
 ### Output-Dateien
+
 - `output/APPPGM/risk-assessment.json` — strukturierte Daten
 - `output/APPPGM/risk-assessment.md` — lesbarer Report
 
@@ -62,33 +65,30 @@ node cli/zeus.js assess-risk --program APPPGM --verbose
       "type": "SQL",
       "reason": "Status=5 completion path (critical workflow milestone)",
       "tables": ["APP_TABLE"],
-      "evidence": [
-        { "file": "APPPGM.rpgle", "startLine": 3152 }
-      ]
+      "evidence": [{ "file": "APPPGM.rpgle", "startLine": 3152 }]
     }
   ],
-  "recommendations": [
-    "⚠️  CRITICAL PATHS DETECTED: Require intensive UAT and regression testing"
-  ]
+  "recommendations": ["⚠️  CRITICAL PATHS DETECTED: Require intensive UAT and regression testing"]
 }
 ```
 
 ### Risk-Assessment Regeln
 
-| Pattern | Risk | Grund |
-|---------|------|-------|
-| SELECT-Statement | 🟢 | Read-only, non-blocking |
-| UPDATE mit Fallback | 🟡 | State change, but recoverable |
-| DELETE-Statement | 🟡 | Data loss risk, requires testing |
-| Transfer zu APP_TABLE @ Status=5 | 🔴 | Workflow completion milestone |
-| EAV-Pattern (APP_STAGING_00) | 🟡 | Type conversion + joins |
-| Nested Subqueries in Loop | 🔴 | Performance + logic risk |
+| Pattern                          | Risk | Grund                            |
+| -------------------------------- | ---- | -------------------------------- |
+| SELECT-Statement                 | 🟢   | Read-only, non-blocking          |
+| UPDATE mit Fallback              | 🟡   | State change, but recoverable    |
+| DELETE-Statement                 | 🟡   | Data loss risk, requires testing |
+| Transfer zu APP_TABLE @ Status=5 | 🔴   | Workflow completion milestone    |
+| EAV-Pattern (APP_STAGING_00)     | 🟡   | Type conversion + joins          |
+| Nested Subqueries in Loop        | 🔴   | Performance + logic risk         |
 
 ---
 
 ## 2. Test Scenario Generator
 
 ### Zweck
+
 Automatische Generierung von Test-Plans und Jest-Templates basierend auf canonical analysis.
 
 ### Nutzung
@@ -110,6 +110,7 @@ node cli/zeus.js generate-test --program APPPGM \
 ```
 
 ### Output-Dateien
+
 - `output/APPPGM/test-scenarios.test-plan.md` — Markdown checklist
 - `output/APPPGM/test-scenarios.test.js` — Jest Template
 
@@ -122,25 +123,28 @@ node cli/zeus.js generate-test --program APPPGM \
 
 ## Test Scope
 
-| Category | Count |
-|----------|-------|
-| READ operations | 4 |
-| WRITE operations | 2 |
-| Related programs | 2 |
+| Category         | Count |
+| ---------------- | ----- |
+| READ operations  | 4     |
+| WRITE operations | 2     |
+| Related programs | 2     |
 
 ## Unit Tests (Jest)
 
 ### 1. Basic Functionality
+
 - [ ] APPPGM initializes without errors
 - [ ] APPPGM loads all required modules
 - [ ] APPPGM executes without SQL errors
 
 ### 2. READ Operations (4)
+
 - [ ] SELECT from APP_TABLE_00 returns correct structure
 - [ ] SELECT handles NULL values correctly
 - [ ] SELECT handles empty result sets
 
 ### 3. WRITE Operations (2)
+
 - [ ] UPDATE to APP_TABLE_00 succeeds with valid data
 - [ ] UPDATE to APP_TABLE_00 rejects invalid data
 - [ ] UPDATE rolls back on error
@@ -173,7 +177,7 @@ describe('APPPGM', () => {
 
   describe('WRITE operations', () => {
     test('should write to APP_TABLE_00', async () => {
-      const result = await apppgmservice.write({ /* data */ });
+      const result = await apppgmservice.write({/* data */});
       expect(result.success).toBe(true);
     });
   });
@@ -185,7 +189,9 @@ describe('APPPGM', () => {
 ## 3. Deployment Checklist Generator
 
 ### Zweck
+
 Strukturierte Pre-/During-/Post-Deployment Checkliste mit:
+
 - Timeline-Schätzung
 - Phasen-Breakdown (Code Review → Build → UAT → Deploy)
 - Risk Area Identification
@@ -211,6 +217,7 @@ node cli/zeus.js generate-checklist --program APPPGM --type CODE_CHANGE
 ```
 
 ### Output-Datei
+
 - `output/APPPGM/deployment-checklist.md` — vollständige Checkliste
 
 ### Beispiel-Output
@@ -227,12 +234,14 @@ node cli/zeus.js generate-checklist --program APPPGM --type CODE_CHANGE
 ## Phase 1: Preparation (8h before deployment)
 
 ### A. Code Review
+
 - [ ] Source code changes reviewed by RPG-Lead
 - [ ] DDL syntax validated (no SQLSTATE errors)
 - [ ] All changes committed to version control
 - [ ] Change approval documented
 
 ### B. Build Verification
+
 - [ ] DDL compiles without errors on TEST system
 - [ ] Tables created with correct structure
 - [ ] Indexes/constraints applied
@@ -245,12 +254,14 @@ node cli/zeus.js generate-checklist --program APPPGM --type CODE_CHANGE
 ## Phase 2: UAT (16h, Business Validation)
 
 ### A. Functional Testing (Happy Path)
+
 - [ ] Core business functions work correctly
 - [ ] Data reads return expected results
 - [ ] Data writes persist correctly
 - [ ] User workflows execute end-to-end
 
 ### ⚠️ C. Critical Path Testing (INTENSIVE)
+
 - [ ] Status transitions tested exhaustively
 - [ ] Completion paths verified
 - [ ] Rollback scenarios covered
@@ -263,21 +274,21 @@ node cli/zeus.js generate-checklist --program APPPGM --type CODE_CHANGE
 
 **Total Time:** 24 hours (3 working days)
 
-| Phase | Hours |
-|-------|-------|
-| codeReview | 2h |
-| build | 2h |
-| unitTest | 2h |
-| functionalUAT | 8h |
-| errorUAT | 4h |
-| deploy | 1h |
-| monitoring | 4h |
+| Phase         | Hours |
+| ------------- | ----- |
+| codeReview    | 2h    |
+| build         | 2h    |
+| unitTest      | 2h    |
+| functionalUAT | 8h    |
+| errorUAT      | 4h    |
+| deploy        | 1h    |
+| monitoring    | 4h    |
 
 ## Identified Risk Areas
 
 🔴 **DATA_DELETION** (CRITICAL)
-   Description: 2 DELETE operations found
-   Mitigation: Backup required before deployment; test DELETE logic thoroughly
+Description: 2 DELETE operations found
+Mitigation: Backup required before deployment; test DELETE logic thoroughly
 ```
 
 ---
@@ -322,7 +333,7 @@ output/
     risk-assessment.md            ← Lesbar
     test-scenarios.test-plan.md   ← Test-Checkliste
     deployment-checklist.md       ← Deployment-Plan
-    
+
   APPHELP/
     canonical-analysis.json
     risk-assessment.json
@@ -366,6 +377,7 @@ node cli/zeus.js workflow --preset change-planning \
 ## Parameter-Referenz
 
 ### `assess-risk`
+
 ```
 --program <name>    Programm zur Analyse (Pflicht)
 --verbose          Detailliert console output
@@ -373,6 +385,7 @@ node cli/zeus.js workflow --preset change-planning \
 ```
 
 ### `generate-test`
+
 ```
 --program <name>    Programm (Pflicht)
 --format <fmt>     jest | markdown (Default: markdown)
@@ -386,6 +399,7 @@ node cli/zeus.js workflow --preset change-planning \
 ```
 
 ### `generate-checklist`
+
 ```
 --program <name>    Programm (Pflicht)
 --type <type>      DDL_CHANGE | CODE_CHANGE | BOTH (Default: CODE_CHANGE)
@@ -399,12 +413,12 @@ node cli/zeus.js workflow --preset change-planning \
 
 ## Performance & Komplexität
 
-| Feature | Setup-Zeit | Lauf-Zeit | Output-Größe |
-|---------|-----------|-----------|--------------|
-| assess-risk | ~2s | ~0.5s | ~50 KB JSON |
-| generate-test | ~1s | ~0.2s | ~100 KB Markdown |
-| generate-checklist | ~1s | ~0.3s | ~50 KB Markdown |
-| **Summe** | **~4s** | **~1s** | **~200 KB** |
+| Feature            | Setup-Zeit | Lauf-Zeit | Output-Größe     |
+| ------------------ | ---------- | --------- | ---------------- |
+| assess-risk        | ~2s        | ~0.5s     | ~50 KB JSON      |
+| generate-test      | ~1s        | ~0.2s     | ~100 KB Markdown |
+| generate-checklist | ~1s        | ~0.3s     | ~50 KB Markdown  |
+| **Summe**          | **~4s**    | **~1s**   | **~200 KB**      |
 
 ---
 

@@ -48,7 +48,8 @@ const RUNTIME_BLOCKED_TERMS = [
 ];
 
 const ZEUS_KNOWLEDGE_PATTERN = /\bzeus\.knowledge\b/i;
-const ZEUS_KNOWLEDGE_NEGATIVE_CONTEXT = /\b(not part|is not part|not available|disabled|removed|reset|no longer|nicht teil|ist nicht teil|nicht verfuegbar|nicht verfügbar|deaktiviert|entfernt|zurueckgesetzt|zurückgesetzt|nicht mehr)\b/i;
+const ZEUS_KNOWLEDGE_NEGATIVE_CONTEXT =
+  /\b(not part|is not part|not available|disabled|removed|reset|no longer|nicht teil|ist nicht teil|nicht verfuegbar|nicht verfügbar|deaktiviert|entfernt|zurueckgesetzt|zurückgesetzt|nicht mehr)\b/i;
 
 function normalizePath(value) {
   return String(value || '').replace(/\\/g, '/');
@@ -101,7 +102,7 @@ function findDocIssues(lines, filePath) {
   lines.forEach((line, index) => {
     const lineNumber = index + 1;
 
-    DOC_BLOCKED_TERMS.forEach((term) => {
+    DOC_BLOCKED_TERMS.forEach(term => {
       const termRegex = new RegExp(escapeRegex(term), 'i');
       if (!termRegex.test(line)) {
         return;
@@ -132,7 +133,7 @@ function findRuntimeIssues(lines, filePath) {
   const issues = [];
   lines.forEach((line, index) => {
     const lineNumber = index + 1;
-    RUNTIME_BLOCKED_TERMS.forEach((term) => {
+    RUNTIME_BLOCKED_TERMS.forEach(term => {
       const termRegex = new RegExp(escapeRegex(term), 'i');
       if (!termRegex.test(line)) {
         return;
@@ -158,7 +159,7 @@ function collectDocTargets() {
   const docsRoot = path.resolve(ROOT, 'docs');
   files.push(...listMarkdownFiles(docsRoot));
 
-  const unique = new Set(files.map((entry) => path.resolve(entry)));
+  const unique = new Set(files.map(entry => path.resolve(entry)));
   return [...unique];
 }
 
@@ -187,8 +188,8 @@ function collectRuntimeTargets() {
     path.resolve(ROOT, 'cli'),
   ];
   const files = [];
-  roots.forEach((rootDir) => listFilesRecursive(rootDir, files));
-  const unique = new Set(files.map((entry) => path.resolve(entry)));
+  roots.forEach(rootDir => listFilesRecursive(rootDir, files));
+  const unique = new Set(files.map(entry => path.resolve(entry)));
   return [...unique];
 }
 
@@ -197,7 +198,7 @@ function main() {
   const runtimeTargets = collectRuntimeTargets();
   const issues = [];
 
-  docTargets.forEach((absolutePath) => {
+  docTargets.forEach(absolutePath => {
     const relativePath = normalizePath(path.relative(ROOT, absolutePath));
     if (!isPublicDoc(relativePath)) {
       return;
@@ -211,7 +212,7 @@ function main() {
     issues.push(...findDocIssues(lines, relativePath));
   });
 
-  runtimeTargets.forEach((absolutePath) => {
+  runtimeTargets.forEach(absolutePath => {
     const relativePath = normalizePath(path.relative(ROOT, absolutePath));
     const content = fs.readFileSync(absolutePath, 'utf8');
     const lines = content.split(/\r?\n/);
@@ -221,7 +222,7 @@ function main() {
   if (issues.length > 0) {
     console.error('Public knowledge-claims guard failed.');
     console.error('The following files contain blocked legacy/internal knowledge exposure terms:');
-    issues.forEach((issue) => {
+    issues.forEach(issue => {
       console.error(`- ${issue.filePath}:${issue.lineNumber} [${issue.term}] ${issue.message}`);
     });
     process.exit(1);

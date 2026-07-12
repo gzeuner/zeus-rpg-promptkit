@@ -36,7 +36,7 @@ test('ui metadata payload exposes config, command, and workflow card contracts',
 
 test('workflow cards are derived from command metadata categories', () => {
   const cards = deriveWorkflowCards();
-  const cardIds = cards.map((card) => card.id).sort();
+  const cardIds = cards.map(card => card.id).sort();
 
   assert.deepEqual(cardIds, [
     'analyze-workspace',
@@ -58,14 +58,14 @@ test('workflow cards are derived from command metadata categories', () => {
     assert.ok(card.commands.length >= 1);
   }
 
-  const setupCard = cards.find((card) => card.id === 'configure');
+  const setupCard = cards.find(card => card.id === 'configure');
   assert.equal(setupCard.title, 'Setup');
   assert.equal(setupCard.availability, 'production-ready');
   assert.equal(setupCard.enabledInShell, true);
   assert.equal(setupCard.status, 'Available now');
   assert.equal(setupCard.area, 'primary');
 
-  const reportsCard = cards.find((card) => card.id === 'review-reports');
+  const reportsCard = cards.find(card => card.id === 'review-reports');
   assert.equal(reportsCard.title, 'Reports');
   assert.equal(reportsCard.availability, 'production-ready');
   assert.equal(reportsCard.enabledInShell, true);
@@ -74,12 +74,12 @@ test('workflow cards are derived from command metadata categories', () => {
   assert.equal(reportsCard.uiTarget, 'reports');
   assert.match(reportsCard.explanation, /Graph/);
 
-  const deferredCard = cards.find((card) => card.id === 'fetch-sources');
+  const deferredCard = cards.find(card => card.id === 'fetch-sources');
   assert.equal(deferredCard.availability, 'coming-later');
   assert.equal(deferredCard.enabledInShell, false);
   assert.equal(deferredCard.status, 'Coming later');
 
-  const advancedCard = cards.find((card) => card.id === 'analyze-workspace');
+  const advancedCard = cards.find(card => card.id === 'analyze-workspace');
   assert.equal(advancedCard.availability, 'advanced');
   assert.equal(advancedCard.status, 'Advanced tool');
   assert.equal(advancedCard.area, 'advanced');
@@ -89,8 +89,8 @@ test('workflow cards are derived from command metadata categories', () => {
 test('ui metadata includes sensitive field markers but no resolved values', () => {
   const payload = buildUiMetadataPayload();
   const passwordFields = payload.config.fields
-    .filter((field) => field.type === 'password')
-    .map((field) => field.key)
+    .filter(field => field.type === 'password')
+    .map(field => field.key)
     .sort();
 
   assert.deepEqual(passwordFields, ['profile.db.password', 'profile.fetch.password']);
@@ -107,7 +107,10 @@ test('ui metadata includes sensitive field markers but no resolved values', () =
   assert.ok(Array.isArray(payload.setup.boundaryNotes));
   assert.ok(Array.isArray(payload.setup.recommendedNextTokens));
   assert.equal(payload.setup.primaryAction.label, 'Check Readiness');
-  assert.equal(payload.aiSessionStarter.envLoading.powerShell.command.includes('load-env.ps1'), true);
+  assert.equal(
+    payload.aiSessionStarter.envLoading.powerShell.command.includes('load-env.ps1'),
+    true
+  );
   assert.equal(payload.aiSessionStarter.envLoading.bash.command.includes('load-env.sh'), true);
   assert.ok(Array.isArray(payload.aiSessionStarter.capabilityGuidance.starterCommands));
   assert.ok(Array.isArray(payload.aiSessionStarter.capabilityGuidance.approvalRequiredCommands));

@@ -152,6 +152,7 @@ local/
 .local-roadmap/
 **/.local/
 **/.zeus/
+**/.zeus-cache/
 **/.analysis-cache/
 
 # -----------------------------

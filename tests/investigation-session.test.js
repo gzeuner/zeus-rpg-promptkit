@@ -58,7 +58,9 @@ function createTempAnalysisDir() {
 }
 
 function cleanup(dir) {
-  try { fs.rmSync(dir, { recursive: true, force: true }); } catch (_) {}
+  try {
+    fs.rmSync(dir, { recursive: true, force: true });
+  } catch (_) {}
 }
 
 test('createOrLoadSession creates a new session with defaults', () => {
@@ -208,50 +210,50 @@ test('investigate CLI creates session and supports focus/search/generate-prompt 
 
   try {
     // First, run a minimal analyze to create base artifacts
-    runCli([
-      'analyze',
-      '--source', sourceRoot,
-      '--program', program,
-      '--out', outputRoot,
-    ], projectRoot);
+    runCli(
+      ['analyze', '--source', sourceRoot, '--program', program, '--out', outputRoot],
+      projectRoot
+    );
 
     const programDir = path.join(outputRoot, program);
 
     // Run investigate --list (should be empty initially)
-    let listOutput = runCli([
-      'investigate', '--program', program, '--out', outputRoot, '--list'
-    ], projectRoot);
+    let listOutput = runCli(
+      ['investigate', '--program', program, '--out', outputRoot, '--list'],
+      projectRoot
+    );
     assert.match(listOutput, /No investigation sessions found/);
 
     // Start session with goal
-    runCli([
-      'investigate', '--program', program, '--out', outputRoot,
-      '--goal', 'Focus on error paths'
-    ], projectRoot);
+    runCli(
+      ['investigate', '--program', program, '--out', outputRoot, '--goal', 'Focus on error paths'],
+      projectRoot
+    );
 
     // List should now show a session
-    listOutput = runCli([
-      'investigate', '--program', program, '--out', outputRoot, '--list'
-    ], projectRoot);
+    listOutput = runCli(
+      ['investigate', '--program', program, '--out', outputRoot, '--list'],
+      projectRoot
+    );
     assert.match(listOutput, /inv-/);
 
     // Use --focus
-    runCli([
-      'investigate', '--program', program, '--out', outputRoot,
-      '--focus', 'error paths'
-    ], projectRoot);
+    runCli(
+      ['investigate', '--program', program, '--out', outputRoot, '--focus', 'error paths'],
+      projectRoot
+    );
 
     // Use --search
-    runCli([
-      'investigate', '--program', program, '--out', outputRoot,
-      '--search', 'DYNAMIC'
-    ], projectRoot);
+    runCli(
+      ['investigate', '--program', program, '--out', outputRoot, '--search', 'DYNAMIC'],
+      projectRoot
+    );
 
     // Use --generate-prompt
-    const promptOutput = runCli([
-      'investigate', '--program', program, '--out', outputRoot,
-      '--generate-prompt'
-    ], projectRoot);
+    const promptOutput = runCli(
+      ['investigate', '--program', program, '--out', outputRoot, '--generate-prompt'],
+      projectRoot
+    );
     assert.match(promptOutput, /Investigation Goal:/);
     assert.match(promptOutput, /Focused Programs:/);
 

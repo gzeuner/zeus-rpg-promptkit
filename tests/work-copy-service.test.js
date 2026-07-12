@@ -17,26 +17,34 @@ function createFetchedSourceFixture() {
   fs.mkdirSync(path.join(fetchRoot, 'QSQLRPGLESRC'), { recursive: true });
   fs.writeFileSync(path.join(fetchRoot, 'QRPGLESRC', 'MAINPROG.rpgle'), '**FREE\n', 'utf8');
   fs.writeFileSync(path.join(fetchRoot, 'QSQLRPGLESRC', 'ORDERPGM.sqlrpgle'), '**FREE\n', 'utf8');
-  fs.writeFileSync(path.join(fetchRoot, 'zeus-import-manifest.json'), `${JSON.stringify({
-    files: [
+  fs.writeFileSync(
+    path.join(fetchRoot, 'zeus-import-manifest.json'),
+    `${JSON.stringify(
       {
-        member: 'MAINPROG',
-        localPath: 'QRPGLESRC/MAINPROG.rpgle',
-        origin: {
-          member: 'MAINPROG',
-          localPath: 'QRPGLESRC/MAINPROG.rpgle',
-        },
+        files: [
+          {
+            member: 'MAINPROG',
+            localPath: 'QRPGLESRC/MAINPROG.rpgle',
+            origin: {
+              member: 'MAINPROG',
+              localPath: 'QRPGLESRC/MAINPROG.rpgle',
+            },
+          },
+          {
+            member: 'ORDERPGM',
+            localPath: 'QSQLRPGLESRC/ORDERPGM.sqlrpgle',
+            origin: {
+              member: 'ORDERPGM',
+              localPath: 'QSQLRPGLESRC/ORDERPGM.sqlrpgle',
+            },
+          },
+        ],
       },
-      {
-        member: 'ORDERPGM',
-        localPath: 'QSQLRPGLESRC/ORDERPGM.sqlrpgle',
-        origin: {
-          member: 'ORDERPGM',
-          localPath: 'QSQLRPGLESRC/ORDERPGM.sqlrpgle',
-        },
-      },
-    ],
-  }, null, 2)}\n`, 'utf8');
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
   return {
     tempRoot,
     fetchRoot,
@@ -83,7 +91,9 @@ test('copyFetchedSourcesToWorkspace copies requested members and reports missing
     assert.equal(summary.copiedCount, 1);
     assert.equal(summary.selectedCount, 1);
     assert.ok(fs.existsSync(path.join(targetRoot, 'MAINPROG.rpgle.txt')));
-    assert.ok(summary.results.some((entry) => entry.status === 'skipped' && entry.member === 'MISSINGPGM'));
+    assert.ok(
+      summary.results.some(entry => entry.status === 'skipped' && entry.member === 'MISSINGPGM')
+    );
   } finally {
     fs.rmSync(fixture.tempRoot, { recursive: true, force: true });
   }

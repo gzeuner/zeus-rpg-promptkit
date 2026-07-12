@@ -1,10 +1,10 @@
 /**
  * QA Stage Registry
- * 
+ *
  * Registers all QA validation stages.
  * All stages are OPTIONAL and disabled by default.
  * This ensures backward compatibility - existing workflows are unaffected.
- * 
+ *
  * Usage:
  *   Enable in config: qaMode: true
  *   Or via CLI: --qa-mode enabled
@@ -15,18 +15,18 @@ const QA_STAGE_REGISTRY = Object.freeze({
     name: 'qa-test-precondition-validation',
     title: 'Test Precondition Validator',
     description: 'Validates that test preconditions match code implementation',
-    enabled: false,  // ← DEFAULT OFF - Opt-in only
+    enabled: false, // ← DEFAULT OFF - Opt-in only
     stage: require('./qaValidators/testPreconditionValidator'),
     runsAfter: 'build-canonical-analysis',
     optional: true,
-    severity: 'ERROR',  // ← Inconsistencies are errors
+    severity: 'ERROR', // ← Inconsistencies are errors
   },
 
   'qa-regression-risk-analyzer': {
     name: 'qa-regression-risk-analyzer',
     title: 'Regression Risk Analyzer',
     description: 'Analyzes code changes for regression risk',
-    enabled: false,  // ← DEFAULT OFF
+    enabled: false, // ← DEFAULT OFF
     stage: require('./qaValidators/regressionRiskAnalyzer'),
     runsAfter: 'build-canonical-analysis',
     optional: true,
@@ -37,7 +37,7 @@ const QA_STAGE_REGISTRY = Object.freeze({
     name: 'qa-sql-consistency-validator',
     title: 'SQL Consistency Validator',
     description: 'Validates SQL filters, joins, and WHERE clauses',
-    enabled: false,  // ← DEFAULT OFF
+    enabled: false, // ← DEFAULT OFF
     stage: require('./qaValidators/sqlConsistencyValidator'),
     runsAfter: 'build-canonical-analysis',
     optional: true,
@@ -48,7 +48,7 @@ const QA_STAGE_REGISTRY = Object.freeze({
     name: 'qa-ibm-i-platform-checker',
     title: 'IBM i Platform Checker',
     description: 'Checks for IBM i platform best practices and gotchas',
-    enabled: false,  // ← DEFAULT OFF
+    enabled: false, // ← DEFAULT OFF
     stage: require('./qaValidators/ibmiPlatformChecker'),
     runsAfter: 'build-canonical-analysis',
     optional: true,
@@ -58,7 +58,7 @@ const QA_STAGE_REGISTRY = Object.freeze({
 
 /**
  * Load QA stages based on configuration
- * 
+ *
  * @param {Object} config - Configuration object
  * @param {Boolean} config.qaMode - Enable QA mode
  * @param {String} config.qaStrict - Strict mode: 'STRICT' fails on warnings, 'LENIENT' continues
@@ -66,7 +66,7 @@ const QA_STAGE_REGISTRY = Object.freeze({
  */
 function loadQAStages(config = {}) {
   if (!config.qaMode) {
-    return [];  // ← No QA stages if not enabled
+    return []; // ← No QA stages if not enabled
   }
 
   return Object.values(QA_STAGE_REGISTRY)
@@ -82,7 +82,7 @@ function loadQAStages(config = {}) {
 
 /**
  * Get registry metadata (for debugging, CLI help, etc)
- * 
+ *
  * @returns {Object} Registry metadata
  */
 function getRegistryMetadata() {

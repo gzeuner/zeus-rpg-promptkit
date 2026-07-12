@@ -19,7 +19,10 @@ test('local known facts store writes profile-scoped local-only facts with ttl me
   const storePath = normalizeKnownFactsStorePath('dev', { cwd: tempRoot });
 
   try {
-    assert.equal(storePath.endsWith(path.join('config', 'local-only', 'known-facts', 'dev.json')), true);
+    assert.equal(
+      storePath.endsWith(path.join('config', 'local-only', 'known-facts', 'dev.json')),
+      true
+    );
     assert.deepEqual(buildEmptyKnownFactsStore('dev'), {
       schemaVersion: 1,
       kind: LOCAL_KNOWN_FACTS_KIND,
@@ -34,22 +37,28 @@ test('local known facts store writes profile-scoped local-only facts with ttl me
       facts: [],
     });
 
-    const written = writeKnownFactsStore('dev', {
-      versionMarker: {
-        ttlDays: 14,
+    const written = writeKnownFactsStore(
+      'dev',
+      {
+        versionMarker: {
+          ttlDays: 14,
+        },
+        facts: [
+          {
+            subject: 'ORDERS',
+            attribute: 'primaryKey',
+            value: 'ORDER_ID',
+            confidence: 'high',
+            source: 'local schema note',
+            tags: ['db2', 'v7'],
+          },
+        ],
       },
-      facts: [{
-        subject: 'ORDERS',
-        attribute: 'primaryKey',
-        value: 'ORDER_ID',
-        confidence: 'high',
-        source: 'local schema note',
-        tags: ['db2', 'v7'],
-      }],
-    }, {
-      cwd: tempRoot,
-      now,
-    });
+      {
+        cwd: tempRoot,
+        now,
+      }
+    );
 
     assert.equal(fs.existsSync(written.path), true);
     assert.equal(written.store.versionMarker.ttlDays, 14);
@@ -73,20 +82,26 @@ test('local known facts store flags expired payloads and rejects secret-like val
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-known-facts-expired-'));
 
   try {
-    writeKnownFactsStore('qa', {
-      versionMarker: {
-        updatedAt: '2026-06-01T00:00:00.000Z',
-        ttlDays: 1,
+    writeKnownFactsStore(
+      'qa',
+      {
+        versionMarker: {
+          updatedAt: '2026-06-01T00:00:00.000Z',
+          ttlDays: 1,
+        },
+        facts: [
+          {
+            subject: 'ORDERS',
+            attribute: 'ownerProgram',
+            value: 'ORDERPGM',
+          },
+        ],
       },
-      facts: [{
-        subject: 'ORDERS',
-        attribute: 'ownerProgram',
-        value: 'ORDERPGM',
-      }],
-    }, {
-      cwd: tempRoot,
-      now: '2026-06-01T00:00:00.000Z',
-    });
+      {
+        cwd: tempRoot,
+        now: '2026-06-01T00:00:00.000Z',
+      }
+    );
 
     const expired = readKnownFactsStore('qa', {
       cwd: tempRoot,
@@ -95,16 +110,26 @@ test('local known facts store flags expired payloads and rejects secret-like val
     assert.equal(expired.status, 'expired');
     assert.equal(expired.expired, true);
 
-    assert.throws(() => writeKnownFactsStore('qa', {
-      facts: [{
-        subject: 'DB2',
-        attribute: 'passwordHint',
-        value: 'password=secret123',
-      }],
-    }, {
-      cwd: tempRoot,
-      now: '2026-06-16T10:00:00.000Z',
-    }), /must not store secrets/i);
+    assert.throws(
+      () =>
+        writeKnownFactsStore(
+          'qa',
+          {
+            facts: [
+              {
+                subject: 'DB2',
+                attribute: 'passwordHint',
+                value: 'password=secret123',
+              },
+            ],
+          },
+          {
+            cwd: tempRoot,
+            now: '2026-06-16T10:00:00.000Z',
+          }
+        ),
+      /must not store secrets/i
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

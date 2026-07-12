@@ -19,7 +19,7 @@ test('encodeMcpCursor and decodeMcpCursor round-trip opaque cursor state', () =>
 test('decodeMcpCursor rejects legacy numeric cursor input', () => {
   assert.throws(
     () => __private.decodeMcpCursor('zeus.field-search', '7'),
-    /legacy numeric cursor input is no longer supported/i,
+    /legacy numeric cursor input is no longer supported/i
   );
 });
 
@@ -28,26 +28,29 @@ test('decodeMcpCursor rejects cursor token for another tool', () => {
 
   assert.throws(
     () => __private.decodeMcpCursor('zeus.impact', encoded),
-    /token target does not match this tool/i,
+    /token target does not match this tool/i
   );
 });
 
 test('decodeMcpCursor rejects unsupported cursor version', () => {
-  const badVersionCursor = Buffer.from(JSON.stringify({
-    v: 999,
-    t: 'zeus.search-source',
-    o: 1,
-  }), 'utf8').toString('base64url');
+  const badVersionCursor = Buffer.from(
+    JSON.stringify({
+      v: 999,
+      t: 'zeus.search-source',
+      o: 1,
+    }),
+    'utf8'
+  ).toString('base64url');
 
   assert.throws(
     () => __private.decodeMcpCursor('zeus.search-source', badVersionCursor),
-    /unsupported cursor version/i,
+    /unsupported cursor version/i
   );
 });
 
 test('decodeMcpCursor rejects malformed opaque tokens', () => {
   assert.throws(
     () => __private.decodeMcpCursor('zeus.search-source', 'not-a-valid-token'),
-    /opaque versioned token/i,
+    /opaque versioned token/i
   );
 });

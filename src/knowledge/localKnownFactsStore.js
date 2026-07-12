@@ -19,8 +19,10 @@ const { version: toolVersion } = require('../../package.json');
 const LOCAL_KNOWN_FACTS_SCHEMA_VERSION = 1;
 const LOCAL_KNOWN_FACTS_KIND = 'zeus-local-known-facts';
 const DEFAULT_TTL_DAYS = 30;
-const SECRET_FIELD_PATTERN = /(password|passwd|secret|token|api[_-]?key|access[_-]?key|credential|connection[_-]?string|dsn|private[_-]?key)/i;
-const SECRET_VALUE_PATTERN = /\b(?:pwd|password|secret|token|api[_-]?key|authorization|bearer)\s*[:=]/i;
+const SECRET_FIELD_PATTERN =
+  /(password|passwd|secret|token|api[_-]?key|access[_-]?key|credential|connection[_-]?string|dsn|private[_-]?key)/i;
+const SECRET_VALUE_PATTERN =
+  /\b(?:pwd|password|secret|token|api[_-]?key|authorization|bearer)\s*[:=]/i;
 
 function normalizeString(value, fallback = '') {
   const normalized = String(value === undefined || value === null ? '' : value).trim();
@@ -29,8 +31,9 @@ function normalizeString(value, fallback = '') {
 
 function normalizeStringArray(value) {
   if (!Array.isArray(value)) return [];
-  return Array.from(new Set(value.map((entry) => normalizeString(entry)).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b));
+  return Array.from(new Set(value.map(entry => normalizeString(entry)).filter(Boolean))).sort(
+    (a, b) => a.localeCompare(b)
+  );
 }
 
 function normalizeProfileName(profileName) {
@@ -57,7 +60,13 @@ function normalizeKnownFactsStorePath(profileName, { cwd = process.cwd(), storeP
   if (provided) {
     return path.resolve(cwd, provided);
   }
-  return path.resolve(cwd, 'config', 'local-only', 'known-facts', `${sanitizeProfileSegment(profileName)}.json`);
+  return path.resolve(
+    cwd,
+    'config',
+    'local-only',
+    'known-facts',
+    `${sanitizeProfileSegment(profileName)}.json`
+  );
 }
 
 function ensureStoreDirectory(storePath) {
@@ -86,7 +95,7 @@ function resolveExpiresAt(updatedAt, ttlDays) {
   if (!Number.isFinite(timestamp)) {
     return null;
   }
-  return new Date(timestamp + (normalizeTtlDays(ttlDays) * 24 * 60 * 60 * 1000)).toISOString();
+  return new Date(timestamp + normalizeTtlDays(ttlDays) * 24 * 60 * 60 * 1000).toISOString();
 }
 
 function normalizeConfidence(value) {
@@ -103,21 +112,22 @@ function assertSafeText(label, value) {
   const text = normalizeString(value);
   if (!text) return;
   if (
-    SECRET_FIELD_PATTERN.test(fieldLabel)
-    || SECRET_FIELD_PATTERN.test(text)
-    || SECRET_VALUE_PATTERN.test(text)
-    || /:\/\/[^/\s:@]+:[^/\s@]+@/.test(text)
+    SECRET_FIELD_PATTERN.test(fieldLabel) ||
+    SECRET_FIELD_PATTERN.test(text) ||
+    SECRET_VALUE_PATTERN.test(text) ||
+    /:\/\/[^/\s:@]+:[^/\s@]+@/.test(text)
   ) {
     throw new Error(`Known facts must not store secrets: ${fieldLabel || 'value'}`);
   }
 }
 
 function createFactId(subject, attribute) {
-  const base = `${normalizeString(subject)}-${normalizeString(attribute)}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .slice(0, 48) || 'known-fact';
+  const base =
+    `${normalizeString(subject)}-${normalizeString(attribute)}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+      .slice(0, 48) || 'known-fact';
   return `${base}-${randomUUID().split('-')[0]}`;
 }
 
@@ -191,14 +201,19 @@ function buildEmptyKnownFactsStore(profileName, options = {}) {
 
 function buildStorePayload(profileName, input = {}, options = {}) {
   const nowIso = normalizeTimestamp(options.now, new Date().toISOString());
-  const ttlDays = normalizeTtlDays((input.versionMarker && input.versionMarker.ttlDays) || options.ttlDays);
-  const updatedAt = normalizeTimestamp(input.versionMarker && input.versionMarker.updatedAt, nowIso);
+  const ttlDays = normalizeTtlDays(
+    (input.versionMarker && input.versionMarker.ttlDays) || options.ttlDays
+  );
+  const updatedAt = normalizeTimestamp(
+    input.versionMarker && input.versionMarker.updatedAt,
+    nowIso
+  );
   const expiresAt = normalizeTimestamp(
     input.versionMarker && input.versionMarker.expiresAt,
-    resolveExpiresAt(updatedAt, ttlDays),
+    resolveExpiresAt(updatedAt, ttlDays)
   );
   const facts = Array.isArray(input.facts)
-    ? input.facts.map((entry) => sanitizeFact(entry, updatedAt))
+    ? input.facts.map(entry => sanitizeFact(entry, updatedAt))
     : [];
 
   return {
@@ -207,7 +222,10 @@ function buildStorePayload(profileName, input = {}, options = {}) {
     mode: 'local-only',
     profile: normalizeProfileName(profileName),
     versionMarker: {
-      toolVersion: normalizeString(input.versionMarker && input.versionMarker.toolVersion, toolVersion),
+      toolVersion: normalizeString(
+        input.versionMarker && input.versionMarker.toolVersion,
+        toolVersion
+      ),
       updatedAt,
       expiresAt,
       ttlDays,
@@ -238,8 +256,7 @@ function readKnownFactsStore(profileName, options = {}) {
   const store = buildStorePayload(profileName, parsed, options);
   const nowIso = normalizeTimestamp(options.now, new Date().toISOString());
   const expired = Boolean(
-    store.versionMarker.expiresAt
-    && Date.parse(store.versionMarker.expiresAt) <= Date.parse(nowIso),
+    store.versionMarker.expiresAt && Date.parse(store.versionMarker.expiresAt) <= Date.parse(nowIso)
   );
 
   return {
@@ -258,8 +275,7 @@ function writeKnownFactsStore(profileName, input = {}, options = {}) {
   const nowIso = normalizeTimestamp(options.now, new Date().toISOString());
 
   const expired = Boolean(
-    store.versionMarker.expiresAt
-    && Date.parse(store.versionMarker.expiresAt) <= Date.parse(nowIso),
+    store.versionMarker.expiresAt && Date.parse(store.versionMarker.expiresAt) <= Date.parse(nowIso)
   );
 
   return {

@@ -1,6 +1,6 @@
 /**
  * QA Report Generator
- * 
+ *
  * Transforms QA validation results into various output formats.
  * Supports: Jira, Markdown, JSON
  */
@@ -12,7 +12,7 @@ class QAReportGenerator {
 
   /**
    * Generate report from QA results
-   * 
+   *
    * @param {Object} qaResults - Combined QA validation results
    * @param {Object} config - Report configuration
    * @returns {Object} Generated report
@@ -34,7 +34,7 @@ class QAReportGenerator {
 
   /**
    * Generate Jira markup report
-   * 
+   *
    * @param {Object} qaResults - QA results
    * @param {Object} config - Config
    * @param {String} timestamp - Timestamp
@@ -75,7 +75,7 @@ class QAReportGenerator {
 
   /**
    * Generate Markdown report
-   * 
+   *
    * @param {Object} qaResults - QA results
    * @param {Object} config - Config
    * @param {String} timestamp - Timestamp
@@ -111,7 +111,7 @@ class QAReportGenerator {
 
   /**
    * Generate JSON report
-   * 
+   *
    * @param {Object} qaResults - QA results
    * @param {Object} config - Config
    * @param {String} timestamp - Timestamp
@@ -137,7 +137,8 @@ class QAReportGenerator {
   // Helper methods
 
   calculateStatus(qaResults) {
-    const errors = this.countBySeverity(qaResults, 'ERROR') + this.countBySeverity(qaResults, 'CRITICAL');
+    const errors =
+      this.countBySeverity(qaResults, 'ERROR') + this.countBySeverity(qaResults, 'CRITICAL');
     if (errors > 0) return '❌ ISSUES FOUND';
     if (this.countBySeverity(qaResults, 'WARNING') > 0) return '⚠️ WARNINGS';
     return '✅ PASS';
@@ -197,7 +198,7 @@ class QAReportGenerator {
   formatJiraRecommendations(qaResults) {
     let content = '';
     const seen = new Set();
-    
+
     for (const validator of Object.values(qaResults)) {
       if (validator.inconsistencies) {
         for (const issue of validator.inconsistencies) {
@@ -229,7 +230,7 @@ class QAReportGenerator {
   formatMarkdownRecommendations(qaResults) {
     let content = '';
     const seen = new Set();
-    
+
     for (const validator of Object.values(qaResults)) {
       if (validator.inconsistencies) {
         for (const issue of validator.inconsistencies) {
@@ -256,7 +257,7 @@ class QAReportGenerator {
   extractRecommendations(qaResults) {
     const recs = [];
     const seen = new Set();
-    
+
     for (const validator of Object.values(qaResults)) {
       for (const key of ['inconsistencies', 'issues', 'findings']) {
         if (validator[key]) {

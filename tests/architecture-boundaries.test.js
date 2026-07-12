@@ -53,6 +53,7 @@ test('architecture boundary: src/core must not import CLI/MCP/viewer/vscode adap
   assert.deepStrictEqual(
     violations,
     [],
-    'src/core must not directly import adapter layers (cli, mcp, viewer, vscode). Violations:\n' + violations.join('\n')
+    'src/core must not directly import adapter layers (cli, mcp, viewer, vscode). Violations:\n' +
+      violations.join('\n')
   );
 });

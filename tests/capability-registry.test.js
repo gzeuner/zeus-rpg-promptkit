@@ -49,7 +49,9 @@ test('capability registry execute returns error envelope on failure', async () =
     ...TINY_VERSION_CAPABILITY,
     id: 'test.fail',
     aliases: [],
-    execute: async () => { throw new Error('boom with secret123'); },
+    execute: async () => {
+      throw new Error('boom with secret123');
+    },
   });
 
   const res = await reg.execute('test.fail');

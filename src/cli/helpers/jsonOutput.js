@@ -15,10 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const fs = require('fs');
 const path = require('path');
 
-const {
-  sanitizeValue,
-  collectSensitiveTermsFromEnv,
-} = require('../../security/secretMasking');
+const { sanitizeValue, collectSensitiveTermsFromEnv } = require('../../security/secretMasking');
 
 /**
  * createJsonOutput(args, opts)
@@ -111,7 +108,10 @@ function createJsonOutput(args = {}, opts = {}) {
  * Lightweight direct stringify helper for cases where full controller is overkill.
  * Still applies sanitization by default.
  */
-function stringifyJson(data, { compact = false, maskSecrets = true, additionalSensitiveTerms = [] } = {}) {
+function stringifyJson(
+  data,
+  { compact = false, maskSecrets = true, additionalSensitiveTerms = [] } = {}
+) {
   const indent = compact ? 0 : 2;
   let toSerialize = data;
   if (maskSecrets) {

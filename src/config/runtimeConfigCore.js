@@ -47,7 +47,7 @@ function resolveSystemReferences(profile) {
     const sysDef = systems[sysName];
     if (!sysDef) {
       throw new Error(
-        `Profil referenziert unbekanntes System "${sysName}". Verfügbare Systeme: ${Object.keys(systems).join(', ')}`,
+        `Profil referenziert unbekanntes System "${sysName}". Verfügbare Systeme: ${Object.keys(systems).join(', ')}`
       );
     }
     const { system: _removed, ...overrides } = obj;
@@ -55,7 +55,7 @@ function resolveSystemReferences(profile) {
     // env-Placeholder-Expansion nicht gesetzter Variablen aus geerbten Profil-Blöcken
     // (z. B. default-shared) und sollen die System-Definition nicht überschreiben.
     const cleanOverrides = Object.fromEntries(
-      Object.entries(overrides).filter(([, v]) => v !== null && v !== undefined && v !== ''),
+      Object.entries(overrides).filter(([, v]) => v !== null && v !== undefined && v !== '')
     );
     const {
       displayName: _displayName,
@@ -64,18 +64,21 @@ function resolveSystemReferences(profile) {
       ...systemConnectionFields
     } = sysDef;
     const resolved = { ...systemConnectionFields, ...cleanOverrides };
-    return attachConnectionTargetMetadata(resolved, buildConnectionTargetMetadata({
-      systemKey: sysName,
-      systemDefinition: sysDef,
-      resolvedConfig: resolved,
-    }));
+    return attachConnectionTargetMetadata(
+      resolved,
+      buildConnectionTargetMetadata({
+        systemKey: sysName,
+        systemDefinition: sysDef,
+        resolvedConfig: resolved,
+      })
+    );
   }
 
   const result = { ...profile };
   if (result.db) result.db = resolveRef(result.db);
   if (result.dbRoles && isPlainObject(result.dbRoles)) {
     result.dbRoles = Object.fromEntries(
-      Object.entries(result.dbRoles).map(([role, cfg]) => [role, resolveRef(cfg)]),
+      Object.entries(result.dbRoles).map(([role, cfg]) => [role, resolveRef(cfg)])
     );
   }
   if (result.fetch && isPlainObject(result.fetch) && typeof result.fetch.system === 'string') {
@@ -88,7 +91,9 @@ function mergeConfigLayers(baseValue, overrideValue) {
   if (overrideValue === undefined) {
     if (Array.isArray(baseValue)) return [...baseValue];
     if (isPlainObject(baseValue)) {
-      return Object.fromEntries(Object.entries(baseValue).map(([key, value]) => [key, mergeConfigLayers(value, undefined)]));
+      return Object.fromEntries(
+        Object.entries(baseValue).map(([key, value]) => [key, mergeConfigLayers(value, undefined)])
+      );
     }
     return baseValue;
   }
@@ -107,7 +112,12 @@ function mergeConfigLayers(baseValue, overrideValue) {
   }
 
   if (isPlainObject(overrideValue)) {
-    return Object.fromEntries(Object.entries(overrideValue).map(([key, value]) => [key, mergeConfigLayers(undefined, value)]));
+    return Object.fromEntries(
+      Object.entries(overrideValue).map(([key, value]) => [
+        key,
+        mergeConfigLayers(undefined, value),
+      ])
+    );
   }
 
   return overrideValue;

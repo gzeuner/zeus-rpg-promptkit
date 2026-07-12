@@ -37,14 +37,16 @@ function getDenseMultipliers(denseLevel) {
   if (!denseLevel) return { max: 1, snippet: 1, budget: 1 };
   if (denseLevel === 'lite') return { max: 0.85, snippet: 0.9, budget: 0.9 };
   if (denseLevel === 'full') return { max: 0.55, snippet: 0.6, budget: 0.6 };
-  if (denseLevel === 'ultra') return { max: 0.40, snippet: 0.45, budget: 0.45 }; // tuned: still aggressive but keeps some items on large programs
+  if (denseLevel === 'ultra') return { max: 0.4, snippet: 0.45, budget: 0.45 }; // tuned: still aggressive but keeps some items on large programs
   return { max: 0.55, snippet: 0.6, budget: 0.6 };
 }
 
 const WORKFLOW_KEYS = ['documentation', 'errorAnalysis', 'security', 'modernization'];
 
 function normalizeName(value) {
-  return String(value || '').trim().toUpperCase();
+  return String(value || '')
+    .trim()
+    .toUpperCase();
 }
 
 function asArray(value) {
@@ -53,7 +55,13 @@ function asArray(value) {
 }
 
 function uniqueStrings(values) {
-  return Array.from(new Set(asArray(values).map((value) => String(value || '').trim()).filter(Boolean)));
+  return Array.from(
+    new Set(
+      asArray(values)
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+    )
+  );
 }
 
 function sortByName(values) {
@@ -75,9 +83,7 @@ function dedupeByKey(items, keyFn) {
 }
 
 function normalizeWorkflowBudgets(value) {
-  const input = value && typeof value === 'object' && !Array.isArray(value)
-    ? value
-    : {};
+  const input = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const resolved = {};
   for (const key of WORKFLOW_KEYS) {
     const raw = input[key];
@@ -99,13 +105,27 @@ function normalizeOptions(config, denseLevel = null) {
   const m = getDenseMultipliers(denseLevel);
 
   const base = {
-    maxTables: Number.isFinite(Number(input.maxTables)) ? Math.max(0, Number(input.maxTables)) : DEFAULT_OPTIONS.maxTables,
-    maxProgramCalls: Number.isFinite(Number(input.maxProgramCalls)) ? Math.max(0, Number(input.maxProgramCalls)) : DEFAULT_OPTIONS.maxProgramCalls,
-    maxCopyMembers: Number.isFinite(Number(input.maxCopyMembers)) ? Math.max(0, Number(input.maxCopyMembers)) : DEFAULT_OPTIONS.maxCopyMembers,
-    maxSQLStatements: Number.isFinite(Number(input.maxSQLStatements)) ? Math.max(0, Number(input.maxSQLStatements)) : DEFAULT_OPTIONS.maxSQLStatements,
-    maxSourceSnippets: Number.isFinite(Number(input.maxSourceSnippets)) ? Math.max(1, Number(input.maxSourceSnippets)) : DEFAULT_OPTIONS.maxSourceSnippets,
-    maxSnippetLines: Number.isFinite(Number(input.maxSnippetLines)) ? Math.max(1, Number(input.maxSnippetLines)) : DEFAULT_OPTIONS.maxSnippetLines,
-    softTokenLimit: Number.isFinite(Number(input.softTokenLimit)) ? Math.max(1, Number(input.softTokenLimit)) : DEFAULT_OPTIONS.softTokenLimit,
+    maxTables: Number.isFinite(Number(input.maxTables))
+      ? Math.max(0, Number(input.maxTables))
+      : DEFAULT_OPTIONS.maxTables,
+    maxProgramCalls: Number.isFinite(Number(input.maxProgramCalls))
+      ? Math.max(0, Number(input.maxProgramCalls))
+      : DEFAULT_OPTIONS.maxProgramCalls,
+    maxCopyMembers: Number.isFinite(Number(input.maxCopyMembers))
+      ? Math.max(0, Number(input.maxCopyMembers))
+      : DEFAULT_OPTIONS.maxCopyMembers,
+    maxSQLStatements: Number.isFinite(Number(input.maxSQLStatements))
+      ? Math.max(0, Number(input.maxSQLStatements))
+      : DEFAULT_OPTIONS.maxSQLStatements,
+    maxSourceSnippets: Number.isFinite(Number(input.maxSourceSnippets))
+      ? Math.max(1, Number(input.maxSourceSnippets))
+      : DEFAULT_OPTIONS.maxSourceSnippets,
+    maxSnippetLines: Number.isFinite(Number(input.maxSnippetLines))
+      ? Math.max(1, Number(input.maxSnippetLines))
+      : DEFAULT_OPTIONS.maxSnippetLines,
+    softTokenLimit: Number.isFinite(Number(input.softTokenLimit))
+      ? Math.max(1, Number(input.softTokenLimit))
+      : DEFAULT_OPTIONS.softTokenLimit,
     workflowTokenBudgets: normalizeWorkflowBudgets(input.workflowTokenBudgets),
   };
 
@@ -120,7 +140,10 @@ function normalizeOptions(config, denseLevel = null) {
     maxSnippetLines: Math.max(1, Math.floor(base.maxSnippetLines * m.snippet)),
     softTokenLimit: base.softTokenLimit,
     workflowTokenBudgets: Object.fromEntries(
-      Object.entries(base.workflowTokenBudgets).map(([k, v]) => [k, Math.max(100, Math.floor(v * m.budget))])
+      Object.entries(base.workflowTokenBudgets).map(([k, v]) => [
+        k,
+        Math.max(100, Math.floor(v * m.budget)),
+      ])
     ),
   };
 }
@@ -147,7 +170,10 @@ function toSnippet(context, evidence, maxSnippetLines) {
   if (content === null) return null;
 
   const startLine = Math.max(1, Number(evidence.startLine || evidence.line || 1));
-  const evidenceEndLine = Math.max(startLine, Number(evidence.endLine || evidence.line || startLine));
+  const evidenceEndLine = Math.max(
+    startLine,
+    Number(evidence.endLine || evidence.line || startLine)
+  );
   const endLine = Math.min(evidenceEndLine, startLine + maxSnippetLines - 1);
   const text = lineSlice(content, startLine, endLine).trim();
   if (!text) return null;
@@ -187,18 +213,18 @@ function sortCandidates(candidates) {
 }
 
 function shallowCloneItem(item) {
-  return item && typeof item === 'object'
-    ? JSON.parse(JSON.stringify(item))
-    : item;
+  return item && typeof item === 'object' ? JSON.parse(JSON.stringify(item)) : item;
 }
 
 function mapByName(items) {
-  return new Map(sortByName(items).map((entry) => [normalizeName(entry && entry.name), shallowCloneItem(entry)]));
+  return new Map(
+    sortByName(items).map(entry => [normalizeName(entry && entry.name), shallowCloneItem(entry)])
+  );
 }
 
 function buildFallbackProjection(context) {
-  const sqlStatements = asArray(context && context.sql && context.sql.statements)
-    .map((statement, index) => ({
+  const sqlStatements = asArray(context && context.sql && context.sql.statements).map(
+    (statement, index) => ({
       id: `SQL_FALLBACK_${index + 1}`,
       type: normalizeName(statement.type || 'OTHER') || 'OTHER',
       intent: normalizeName(statement.intent || 'OTHER') || 'OTHER',
@@ -210,7 +236,8 @@ function buildFallbackProjection(context) {
       uncertainty: uniqueStrings(statement.uncertainty),
       evidenceRefs: [],
       evidence: asArray(statement.evidence),
-    }));
+    })
+  );
   return {
     program: normalizeName(context && context.program),
     riskMarkers: uniqueStrings(context && context.aiContext && context.aiContext.riskHints),
@@ -218,7 +245,9 @@ function buildFallbackProjection(context) {
     evidenceIndex: [],
     entities: {
       tables: sortByName(context && context.dependencies && context.dependencies.tables),
-      programCalls: sortByName(context && context.dependencies && context.dependencies.programCalls),
+      programCalls: sortByName(
+        context && context.dependencies && context.dependencies.programCalls
+      ),
       procedureCalls: [],
       copyMembers: sortByName(context && context.dependencies && context.dependencies.copyMembers),
       sqlStatements,
@@ -231,12 +260,21 @@ function buildFallbackProjection(context) {
 }
 
 function buildEvidenceMap(projection) {
-  return new Map(asArray(projection && projection.evidenceIndex).map((entry) => [String(entry.id || ''), entry]));
+  return new Map(
+    asArray(projection && projection.evidenceIndex).map(entry => [String(entry.id || ''), entry])
+  );
 }
 
-function resolveFirstEvidence(projection, evidenceMap, refs, inlineEvidence, context, maxSnippetLines) {
+function resolveFirstEvidence(
+  projection,
+  evidenceMap,
+  refs,
+  inlineEvidence,
+  context,
+  maxSnippetLines
+) {
   const byRef = asArray(refs)
-    .map((ref) => evidenceMap.get(String(ref)))
+    .map(ref => evidenceMap.get(String(ref)))
     .find(Boolean);
   if (byRef) {
     return {
@@ -255,7 +293,10 @@ function resolveFirstEvidence(projection, evidenceMap, refs, inlineEvidence, con
     ref: null,
     file: fallbackEvidence.file || '',
     startLine: Number(fallbackEvidence.startLine || fallbackEvidence.line || 0) || undefined,
-    endLine: Number(fallbackEvidence.endLine || fallbackEvidence.line || fallbackEvidence.startLine || 0) || undefined,
+    endLine:
+      Number(
+        fallbackEvidence.endLine || fallbackEvidence.line || fallbackEvidence.startLine || 0
+      ) || undefined,
     snippet: snippet ? snippet.text : String(fallbackEvidence.text || '').trim(),
   };
 }
@@ -318,34 +359,36 @@ function scoreErrorPathLine(text) {
 }
 
 function buildSqlCandidates(context, projection, evidenceMap, options) {
-  return sortCandidates(asArray(projection.entities && projection.entities.sqlStatements)
-    .map((statement) => {
-      const evidence = resolveFirstEvidence(
-        projection,
-        evidenceMap,
-        statement.evidenceRefs,
-        statement.evidence,
-        context,
-        options.maxSnippetLines,
-      );
-      if (!evidence || !evidence.file) return null;
-      return {
-        key: `sql:${statement.id || evidenceLocationKey(evidence)}`,
-        category: 'sql',
-        score: scoreSqlStatement(statement),
-        label: `${normalizeName(statement.type || 'SQL') || 'SQL'} SQL`,
-        file: evidence.file,
-        startLine: evidence.startLine,
-        endLine: evidence.endLine,
-        snippet: evidence.snippet || statement.text || '',
-        ref: evidence.ref,
-        sqlStatementId: statement.id,
-        tableNames: uniqueStrings(statement.tables),
-        programCallNames: [],
-        nativeFileNames: [],
-      };
-    })
-    .filter(Boolean));
+  return sortCandidates(
+    asArray(projection.entities && projection.entities.sqlStatements)
+      .map(statement => {
+        const evidence = resolveFirstEvidence(
+          projection,
+          evidenceMap,
+          statement.evidenceRefs,
+          statement.evidence,
+          context,
+          options.maxSnippetLines
+        );
+        if (!evidence || !evidence.file) return null;
+        return {
+          key: `sql:${statement.id || evidenceLocationKey(evidence)}`,
+          category: 'sql',
+          score: scoreSqlStatement(statement),
+          label: `${normalizeName(statement.type || 'SQL') || 'SQL'} SQL`,
+          file: evidence.file,
+          startLine: evidence.startLine,
+          endLine: evidence.endLine,
+          snippet: evidence.snippet || statement.text || '',
+          ref: evidence.ref,
+          sqlStatementId: statement.id,
+          tableNames: uniqueStrings(statement.tables),
+          programCallNames: [],
+          nativeFileNames: [],
+        };
+      })
+      .filter(Boolean)
+  );
 }
 
 function buildProgramCallCandidates(context, projection, evidenceMap, options) {
@@ -357,7 +400,7 @@ function buildProgramCallCandidates(context, projection, evidenceMap, options) {
       call.evidenceRefs,
       call.evidence,
       context,
-      options.maxSnippetLines,
+      options.maxSnippetLines
     );
     if (!evidence || !evidence.file) continue;
     candidates.push({
@@ -384,7 +427,7 @@ function buildProgramCallCandidates(context, projection, evidenceMap, options) {
       call.evidenceRefs,
       call.evidence,
       context,
-      options.maxSnippetLines,
+      options.maxSnippetLines
     );
     if (!evidence || !evidence.file) continue;
     candidates.push({
@@ -404,7 +447,9 @@ function buildProgramCallCandidates(context, projection, evidenceMap, options) {
     });
   }
 
-  for (const moduleEntity of asArray(projection.entities && projection.entities.binding && projection.entities.binding.modules)) {
+  for (const moduleEntity of asArray(
+    projection.entities && projection.entities.binding && projection.entities.binding.modules
+  )) {
     if (!moduleEntity.unresolvedBindings) continue;
     const evidence = resolveFirstEvidence(
       projection,
@@ -412,7 +457,7 @@ function buildProgramCallCandidates(context, projection, evidenceMap, options) {
       moduleEntity.evidenceRefs,
       moduleEntity.evidence,
       context,
-      options.maxSnippetLines,
+      options.maxSnippetLines
     );
     if (!evidence || !evidence.file) continue;
     candidates.push({
@@ -436,34 +481,36 @@ function buildProgramCallCandidates(context, projection, evidenceMap, options) {
 }
 
 function buildNativeFileCandidates(context, projection, evidenceMap, options) {
-  return sortCandidates(asArray(projection.entities && projection.entities.nativeFiles)
-    .map((file) => {
-      const evidence = resolveFirstEvidence(
-        projection,
-        evidenceMap,
-        file.evidenceRefs,
-        file.evidence,
-        context,
-        options.maxSnippetLines,
-      );
-      if (!evidence || !evidence.file) return null;
-      return {
-        key: `native-file:${normalizeName(file.name)}`,
-        category: 'fileUsage',
-        score: scoreNativeFile(file),
-        label: `Native File ${file.name}`,
-        file: evidence.file,
-        startLine: evidence.startLine,
-        endLine: evidence.endLine,
-        snippet: evidence.snippet || file.name,
-        ref: evidence.ref,
-        sqlStatementId: null,
-        tableNames: [],
-        programCallNames: [],
-        nativeFileNames: [file.name],
-      };
-    })
-    .filter(Boolean));
+  return sortCandidates(
+    asArray(projection.entities && projection.entities.nativeFiles)
+      .map(file => {
+        const evidence = resolveFirstEvidence(
+          projection,
+          evidenceMap,
+          file.evidenceRefs,
+          file.evidence,
+          context,
+          options.maxSnippetLines
+        );
+        if (!evidence || !evidence.file) return null;
+        return {
+          key: `native-file:${normalizeName(file.name)}`,
+          category: 'fileUsage',
+          score: scoreNativeFile(file),
+          label: `Native File ${file.name}`,
+          file: evidence.file,
+          startLine: evidence.startLine,
+          endLine: evidence.endLine,
+          snippet: evidence.snippet || file.name,
+          ref: evidence.ref,
+          sqlStatementId: null,
+          tableNames: [],
+          programCallNames: [],
+          nativeFileNames: [file.name],
+        };
+      })
+      .filter(Boolean)
+  );
 }
 
 function buildHeuristicSourceSignals(context) {
@@ -520,8 +567,8 @@ function buildHeuristicSourceSignals(context) {
   }
 
   return {
-    conditionals: sortCandidates(dedupeByKey(conditionalCandidates, (entry) => entry.key)),
-    errorPaths: sortCandidates(dedupeByKey(errorCandidates, (entry) => entry.key)),
+    conditionals: sortCandidates(dedupeByKey(conditionalCandidates, entry => entry.key)),
+    errorPaths: sortCandidates(dedupeByKey(errorCandidates, entry => entry.key)),
   };
 }
 
@@ -530,12 +577,18 @@ function buildRankedTables(context, projection, sqlCandidates, fileCandidates) {
   const scoreMap = new Map();
 
   for (const table of tableMap.values()) {
-    scoreMap.set(normalizeName(table.name), Number(table.evidenceRefs && table.evidenceRefs.length ? table.evidenceRefs.length * 5 : 0));
+    scoreMap.set(
+      normalizeName(table.name),
+      Number(table.evidenceRefs && table.evidenceRefs.length ? table.evidenceRefs.length * 5 : 0)
+    );
   }
 
   for (const candidate of sqlCandidates) {
     for (const tableName of asArray(candidate.tableNames)) {
-      scoreMap.set(tableName, (scoreMap.get(tableName) || 0) + Math.max(10, Math.floor(candidate.score / 2)));
+      scoreMap.set(
+        tableName,
+        (scoreMap.get(tableName) || 0) + Math.max(10, Math.floor(candidate.score / 2))
+      );
     }
   }
 
@@ -545,12 +598,17 @@ function buildRankedTables(context, projection, sqlCandidates, fileCandidates) {
     scoreMap.set(nativeName, (scoreMap.get(nativeName) || 0) + candidate.score);
   }
 
-  for (const primaryTable of uniqueStrings(context && context.aiContext && context.aiContext.primaryTables)) {
-    scoreMap.set(normalizeName(primaryTable), (scoreMap.get(normalizeName(primaryTable)) || 0) + 30);
+  for (const primaryTable of uniqueStrings(
+    context && context.aiContext && context.aiContext.primaryTables
+  )) {
+    scoreMap.set(
+      normalizeName(primaryTable),
+      (scoreMap.get(normalizeName(primaryTable)) || 0) + 30
+    );
   }
 
   return Array.from(tableMap.values())
-    .map((entry) => ({
+    .map(entry => ({
       ...entry,
       _score: scoreMap.get(normalizeName(entry.name)) || 0,
     }))
@@ -565,7 +623,10 @@ function buildRankedProgramCalls(context, projection, callCandidates) {
   const scoreMap = new Map();
 
   for (const call of programCalls.values()) {
-    scoreMap.set(normalizeName(call.name), Number(call.evidenceRefs && call.evidenceRefs.length ? call.evidenceRefs.length * 5 : 0));
+    scoreMap.set(
+      normalizeName(call.name),
+      Number(call.evidenceRefs && call.evidenceRefs.length ? call.evidenceRefs.length * 5 : 0)
+    );
   }
 
   for (const candidate of callCandidates) {
@@ -575,13 +636,15 @@ function buildRankedProgramCalls(context, projection, callCandidates) {
     }
   }
 
-  for (const primaryCall of uniqueStrings(context && context.aiContext && context.aiContext.primaryCalls)) {
+  for (const primaryCall of uniqueStrings(
+    context && context.aiContext && context.aiContext.primaryCalls
+  )) {
     const key = normalizeName(primaryCall);
     scoreMap.set(key, (scoreMap.get(key) || 0) + 25);
   }
 
   return Array.from(programCalls.values())
-    .map((entry) => ({
+    .map(entry => ({
       ...entry,
       _score: scoreMap.get(normalizeName(entry.name)) || 0,
     }))
@@ -592,16 +655,15 @@ function buildRankedProgramCalls(context, projection, callCandidates) {
 }
 
 function buildRankedCopyMembers(projection) {
-  return sortByName(projection.entities && projection.entities.copyMembers)
-    .map((entry, index) => ({
-      ...entry,
-      _score: Math.max(1, 100 - index),
-    }));
+  return sortByName(projection.entities && projection.entities.copyMembers).map((entry, index) => ({
+    ...entry,
+    _score: Math.max(1, 100 - index),
+  }));
 }
 
 function buildRankedNativeFiles(projection) {
   return sortByName(projection.entities && projection.entities.nativeFiles)
-    .map((entry) => ({
+    .map(entry => ({
       ...entry,
       _score: scoreNativeFile(entry),
     }))
@@ -613,7 +675,7 @@ function buildRankedNativeFiles(projection) {
 
 function buildRankedSqlStatements(projection) {
   return asArray(projection.entities && projection.entities.sqlStatements)
-    .map((entry) => ({
+    .map(entry => ({
       ...entry,
       _score: scoreSqlStatement(entry),
     }))
@@ -737,33 +799,33 @@ function deriveWorkflowEntities(selection, rankedSets, options) {
   const tables = [];
   addFillers(
     tables,
-    rankedSets.tables.filter((entry) => tableNames.has(normalizeName(entry.name))),
+    rankedSets.tables.filter(entry => tableNames.has(normalizeName(entry.name))),
     new Set(),
     options.maxTables,
-    (item) => item.name,
+    item => item.name
   );
   addFillers(
     tables,
     rankedSets.tables,
-    new Set(tables.map((item) => normalizeName(item.name))),
+    new Set(tables.map(item => normalizeName(item.name))),
     options.maxTables,
-    (item) => item.name,
+    item => item.name
   );
 
   const programCalls = [];
   addFillers(
     programCalls,
-    rankedSets.programCalls.filter((entry) => programCallNames.has(normalizeName(entry.name))),
+    rankedSets.programCalls.filter(entry => programCallNames.has(normalizeName(entry.name))),
     new Set(),
     options.maxProgramCalls,
-    (item) => item.name,
+    item => item.name
   );
   addFillers(
     programCalls,
     rankedSets.programCalls,
-    new Set(programCalls.map((item) => normalizeName(item.name))),
+    new Set(programCalls.map(item => normalizeName(item.name))),
     options.maxProgramCalls,
-    (item) => item.name,
+    item => item.name
   );
 
   const copyMembers = [];
@@ -772,39 +834,39 @@ function deriveWorkflowEntities(selection, rankedSets, options) {
     rankedSets.copyMembers,
     new Set(),
     options.maxCopyMembers,
-    (item) => item.name,
+    item => item.name
   );
 
   const sqlStatements = [];
   addFillers(
     sqlStatements,
-    rankedSets.sqlStatements.filter((entry) => sqlIds.has(String(entry.id))),
+    rankedSets.sqlStatements.filter(entry => sqlIds.has(String(entry.id))),
     new Set(),
     options.maxSQLStatements,
-    (item) => item.id,
+    item => item.id
   );
   addFillers(
     sqlStatements,
     rankedSets.sqlStatements,
-    new Set(sqlStatements.map((item) => String(item.id))),
+    new Set(sqlStatements.map(item => String(item.id))),
     options.maxSQLStatements,
-    (item) => item.id,
+    item => item.id
   );
 
   const nativeFiles = [];
   addFillers(
     nativeFiles,
-    rankedSets.nativeFiles.filter((entry) => nativeFileNames.has(normalizeName(entry.name))),
+    rankedSets.nativeFiles.filter(entry => nativeFileNames.has(normalizeName(entry.name))),
     new Set(),
     Math.max(1, Math.min(options.maxTables, options.maxSourceSnippets)),
-    (item) => item.name,
+    item => item.name
   );
   addFillers(
     nativeFiles,
     rankedSets.nativeFiles,
-    new Set(nativeFiles.map((item) => normalizeName(item.name))),
+    new Set(nativeFiles.map(item => normalizeName(item.name))),
     Math.max(1, Math.min(options.maxTables, options.maxSourceSnippets)),
-    (item) => item.name,
+    item => item.name
   );
 
   return {
@@ -845,7 +907,15 @@ function buildEvidencePacks(selection) {
   return packs;
 }
 
-function materializeWorkflow(workflowName, selection, projection, rankedSets, context, options, budget) {
+function materializeWorkflow(
+  workflowName,
+  selection,
+  projection,
+  rankedSets,
+  context,
+  options,
+  budget
+) {
   const entities = deriveWorkflowEntities(selection, rankedSets, options);
   const evidencePacks = buildEvidencePacks(selection);
   const evidenceHighlights = selection.map((candidate, index) => ({
@@ -865,21 +935,21 @@ function materializeWorkflow(workflowName, selection, projection, rankedSets, co
     tokenBudget: budget,
     estimatedTokens: 0,
     summary: context && context.summary ? context.summary.text : '',
-    tables: entities.tables.map((entry) => ({
+    tables: entities.tables.map(entry => ({
       name: entry.name,
       kind: entry.kind || 'TABLE',
       evidenceRefs: asArray(entry.evidenceRefs),
     })),
-    programCalls: entities.programCalls.map((entry) => ({
+    programCalls: entities.programCalls.map(entry => ({
       name: entry.name,
       kind: entry.kind || 'PROGRAM',
       evidenceRefs: asArray(entry.evidenceRefs),
     })),
-    copyMembers: entities.copyMembers.map((entry) => ({
+    copyMembers: entities.copyMembers.map(entry => ({
       name: entry.name,
       evidenceRefs: asArray(entry.evidenceRefs),
     })),
-    sqlStatements: entities.sqlStatements.map((entry) => ({
+    sqlStatements: entities.sqlStatements.map(entry => ({
       id: entry.id,
       type: entry.type,
       intent: entry.intent || 'OTHER',
@@ -891,7 +961,7 @@ function materializeWorkflow(workflowName, selection, projection, rankedSets, co
       uncertainty: asArray(entry.uncertainty),
       evidenceRefs: asArray(entry.evidenceRefs),
     })),
-    nativeFiles: entities.nativeFiles.map((entry) => ({
+    nativeFiles: entities.nativeFiles.map(entry => ({
       name: entry.name,
       kind: entry.kind || 'FILE',
       keyed: Boolean(entry.keyed),
@@ -929,15 +999,16 @@ function selectWorkflowCandidates(workflowName, candidatesByCategory, options, b
   let consumedTokens = 0;
   const availableBudget = Math.max(120, budget - 220);
 
-  const categoryOrder = workflowName === 'errorAnalysis'
-    ? ['errorPaths', 'sql', 'calls', 'fileUsage', 'conditionals']
-    : ['sql', 'fileUsage', 'calls', 'conditionals', 'errorPaths'];
+  const categoryOrder =
+    workflowName === 'errorAnalysis'
+      ? ['errorPaths', 'sql', 'calls', 'fileUsage', 'conditionals']
+      : ['sql', 'fileUsage', 'calls', 'conditionals', 'errorPaths'];
 
   function trySelect(candidate) {
     if (!candidate || selectedKeys.has(candidate.key)) return false;
     if ((counters[candidate.category] || 0) >= (caps[candidate.category] || 0)) return false;
     const candidateTokens = estimateCandidateTokens(candidate);
-    if ((consumedTokens + candidateTokens) > availableBudget && selected.length > 0) return false;
+    if (consumedTokens + candidateTokens > availableBudget && selected.length > 0) return false;
     selected.push(candidate);
     selectedKeys.add(candidate.key);
     counters[candidate.category] += 1;
@@ -950,27 +1021,32 @@ function selectWorkflowCandidates(workflowName, candidatesByCategory, options, b
     trySelect(first);
   }
 
-  const allCandidates = sortCandidates(Object.values(candidatesByCategory)
-    .flatMap((entries) => asArray(entries))
-    .map((candidate) => ({
-      ...candidate,
-      workflowScore: scoreWorkflowCandidate(candidate, workflowName),
-    })));
+  const allCandidates = sortCandidates(
+    Object.values(candidatesByCategory)
+      .flatMap(entries => asArray(entries))
+      .map(candidate => ({
+        ...candidate,
+        workflowScore: scoreWorkflowCandidate(candidate, workflowName),
+      }))
+  );
 
   for (const candidate of allCandidates) {
     trySelect(candidate);
   }
 
-  return sortCandidates(selected.map((candidate) => ({
-    ...candidate,
-    workflowScore: scoreWorkflowCandidate(candidate, workflowName),
-  })));
+  return sortCandidates(
+    selected.map(candidate => ({
+      ...candidate,
+      workflowScore: scoreWorkflowCandidate(candidate, workflowName),
+    }))
+  );
 }
 
 function buildSummaryText(optimized, context) {
-  const nativeSummary = context && context.nativeFileUsage && context.nativeFileUsage.summary
-    ? context.nativeFileUsage.summary
-    : null;
+  const nativeSummary =
+    context && context.nativeFileUsage && context.nativeFileUsage.summary
+      ? context.nativeFileUsage.summary
+      : null;
 
   const nativeText = nativeSummary
     ? ` It preserves ${nativeSummary.fileCount || 0} native files (${nativeSummary.mutatingFileCount || 0} mutating, ${nativeSummary.interactiveFileCount || 0} interactive).`
@@ -993,9 +1069,10 @@ function summarize(optimized) {
 
 function optimizeContext(context, config = {}, aiProjectionInput = null, denseLevel = null) {
   const options = normalizeOptions(config, denseLevel);
-  const projection = aiProjectionInput && typeof aiProjectionInput === 'object'
-    ? aiProjectionInput
-    : buildFallbackProjection(context);
+  const projection =
+    aiProjectionInput && typeof aiProjectionInput === 'object'
+      ? aiProjectionInput
+      : buildFallbackProjection(context);
   const evidenceMap = buildEvidenceMap(projection);
 
   const sqlCandidates = buildSqlCandidates(context, projection, evidenceMap, options);
@@ -1023,7 +1100,7 @@ function optimizeContext(context, config = {}, aiProjectionInput = null, denseLe
         errorPaths: heuristicSignals.errorPaths,
       },
       options,
-      options.workflowTokenBudgets[workflowKey],
+      options.workflowTokenBudgets[workflowKey]
     );
 
     let workflow = materializeWorkflow(
@@ -1033,11 +1110,14 @@ function optimizeContext(context, config = {}, aiProjectionInput = null, denseLe
       rankedSets,
       context,
       options,
-      options.workflowTokenBudgets[workflowKey],
+      options.workflowTokenBudgets[workflowKey]
     );
 
     let trimmedSelection = [...selection];
-    while (trimmedSelection.length > 1 && workflow.estimatedTokens > options.workflowTokenBudgets[workflowKey]) {
+    while (
+      trimmedSelection.length > 1 &&
+      workflow.estimatedTokens > options.workflowTokenBudgets[workflowKey]
+    ) {
       trimmedSelection.pop();
       workflow = materializeWorkflow(
         workflowKey,
@@ -1046,7 +1126,7 @@ function optimizeContext(context, config = {}, aiProjectionInput = null, denseLe
         rankedSets,
         context,
         options,
-        options.workflowTokenBudgets[workflowKey],
+        options.workflowTokenBudgets[workflowKey]
       );
     }
 
@@ -1058,11 +1138,14 @@ function optimizeContext(context, config = {}, aiProjectionInput = null, denseLe
     program: normalizeName(context && context.program),
     scannedAt: context && context.scannedAt ? context.scannedAt : new Date().toISOString(),
     sourceRoot: context && context.sourceRoot ? context.sourceRoot : '',
-    graph: context && context.graph ? context.graph : {
-      nodeCount: 0,
-      edgeCount: 0,
-      files: {},
-    },
+    graph:
+      context && context.graph
+        ? context.graph
+        : {
+            nodeCount: 0,
+            edgeCount: 0,
+            files: {},
+          },
     summary: {},
     tables: asArray(documentationWorkflow && documentationWorkflow.tables),
     programCalls: asArray(documentationWorkflow && documentationWorkflow.programCalls),
@@ -1070,7 +1153,7 @@ function optimizeContext(context, config = {}, aiProjectionInput = null, denseLe
     sqlStatements: asArray(documentationWorkflow && documentationWorkflow.sqlStatements),
     snippets: asArray(documentationWorkflow && documentationWorkflow.evidenceHighlights)
       .slice(0, options.maxSourceSnippets)
-      .map((entry) => ({
+      .map(entry => ({
         file: entry.file,
         startLine: entry.startLine,
         endLine: entry.endLine,

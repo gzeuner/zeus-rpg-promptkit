@@ -14,11 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const path = require('path');
 
 const { resolveBundleConfig } = require('../config/runtimeConfig');
-const {
-  listAnalysisRuns,
-  readAnalysisRun,
-  readArtifactContent,
-} = require('../ui/localUiDataApi');
+const { listAnalysisRuns, readAnalysisRun, readArtifactContent } = require('../ui/localUiDataApi');
 
 function resolveExplorerOutputRoot(args = {}, { cwd = process.cwd(), env = process.env } = {}) {
   const explicitOutputRoot = args.outputRoot || args.sourceOutputRoot || args['source-output-root'];
@@ -26,9 +22,12 @@ function resolveExplorerOutputRoot(args = {}, { cwd = process.cwd(), env = proce
     return path.resolve(cwd, explicitOutputRoot);
   }
 
-  const config = resolveBundleConfig({
-    profile: args.profile,
-  }, { cwd, env });
+  const config = resolveBundleConfig(
+    {
+      profile: args.profile,
+    },
+    { cwd, env }
+  );
   return path.resolve(cwd, config.sourceOutputRoot);
 }
 
