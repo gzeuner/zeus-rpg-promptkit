@@ -158,7 +158,9 @@ npm run package:smoke
 npm run demo:run
 ```
 
-See `package.json` scripts and `CONTRIBUTING.md` (if present) for details.
+See `package.json` scripts, `CONTRIBUTING.md`, `CHANGELOG.md`, and `.github/workflows/release.yml` for release process.
+
+**Beta status (0.2.0-beta.1):** This is a prerelease. Core contracts are stabilizing, but some surfaces remain experimental. See the GitHub release notes and CHANGELOG for compatibility details. Always use the golden path tutorial and run `npm run docs:check` / `npm run package:smoke` locally before production use of artifacts.
 
 ### Golden Corpus & Quality Metrics (package 11)
 
