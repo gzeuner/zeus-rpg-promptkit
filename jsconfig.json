@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "types": ["node"]
+  },
+  "include": ["src/core/capabilityRegistry.js", "src/mcp/mcpPolicy.js", "src/api/zeusApi.js"],
+  "exclude": ["node_modules", "output"]
+}

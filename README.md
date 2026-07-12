@@ -52,18 +52,18 @@ Damit beantwortet Zeus Fragen wie:
 
 ## ✨ Kernfunktionen
 
-| Bereich | Was Zeus leistet |
-|---|---|
-| Source-Beschaffung | Source-Member und IFS-Inhalte per SFTP, JT400 oder FTP lesen und lokal ablegen |
-| Statische Analyse | RPG, CL und DDS scannen, Entitäten erkennen und Referenzen extrahieren |
-| Abhängigkeiten | Programmaufrufe, Datei-/Tabellennutzung, Felder und Reverse-Impact-Beziehungen sichtbar machen |
-| Db2-Kontext | Tabellen, Spalten, Keys, Trigger, Views, Aliase und weitere Metadaten read-only ergänzen |
-| Evidence-Artefakte | Markdown-Reports, JSON-Modelle, Mermaid-Graphen, Manifeste und KI-Prompts erzeugen |
-| Investigation | Vorhandene Analyseergebnisse fokussiert durchsuchen und schrittweise vertiefen |
-| Review & Planung | Risikoanalysen, Testszenarien, QA-Ausgaben, Checklisten und Bundles vorbereiten |
-| KI-Integration | Lokale MCP-Tools, kuratierte Ressourcen und Prompt-Verträge kontrolliert bereitstellen |
-| Erweiterbarkeit | Eigene Analyzer, Analyse-Stages, Plugins und MCP-Tools über die Programmatic API registrieren |
-| Editor-Integration | Experimentelle VS-Code-Extension mit lokaler Analyse und optionaler Code-for-IBM-i-Anbindung |
+| Bereich            | Was Zeus leistet                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| Source-Beschaffung | Source-Member und IFS-Inhalte per SFTP, JT400 oder FTP lesen und lokal ablegen                 |
+| Statische Analyse  | RPG, CL und DDS scannen, Entitäten erkennen und Referenzen extrahieren                         |
+| Abhängigkeiten     | Programmaufrufe, Datei-/Tabellennutzung, Felder und Reverse-Impact-Beziehungen sichtbar machen |
+| Db2-Kontext        | Tabellen, Spalten, Keys, Trigger, Views, Aliase und weitere Metadaten read-only ergänzen       |
+| Evidence-Artefakte | Markdown-Reports, JSON-Modelle, Mermaid-Graphen, Manifeste und KI-Prompts erzeugen             |
+| Investigation      | Vorhandene Analyseergebnisse fokussiert durchsuchen und schrittweise vertiefen                 |
+| Review & Planung   | Risikoanalysen, Testszenarien, QA-Ausgaben, Checklisten und Bundles vorbereiten                |
+| KI-Integration     | Lokale MCP-Tools, kuratierte Ressourcen und Prompt-Verträge kontrolliert bereitstellen         |
+| Erweiterbarkeit    | Eigene Analyzer, Analyse-Stages, Plugins und MCP-Tools über die Programmatic API registrieren  |
+| Editor-Integration | Experimentelle VS-Code-Extension mit lokaler Analyse und optionaler Code-for-IBM-i-Anbindung   |
 
 Zeus ist KI-anbieterneutral. Die erzeugten Artefakte können in klassischen Reviews oder mit ChatGPT, GitHub Copilot, Claude, lokalen Modellen und anderen Werkzeugen verwendet werden.
 
@@ -94,13 +94,13 @@ Der typische Ablauf bleibt bewusst nachvollziehbar:
 
 ## 🛡️ Safety-Modell
 
-| Level | Bedeutung | Typische Aktion |
-|---|---|---|
-| `S0` | Lokal read-only | Dateien lesen, Konfiguration prüfen, Artefakte anzeigen |
-| `S1` | Lokaler Schreibzugriff | Reports, Bundles, Prompts oder Analyseartefakte erzeugen |
-| `S2` | Remote read-only | IBM i oder Db2 lesen, ohne Daten oder Objekte zu verändern |
-| `S3` | Kontrolliertes Schreiben | DML ausschließlich mit expliziter Freigabe und Guardrails |
-| `S4` | Operator-gated High Risk | Bridge-, Apply- oder Compile-artige Aktionen; niemals implizit |
+| Level | Bedeutung                | Typische Aktion                                                |
+| ----- | ------------------------ | -------------------------------------------------------------- |
+| `S0`  | Lokal read-only          | Dateien lesen, Konfiguration prüfen, Artefakte anzeigen        |
+| `S1`  | Lokaler Schreibzugriff   | Reports, Bundles, Prompts oder Analyseartefakte erzeugen       |
+| `S2`  | Remote read-only         | IBM i oder Db2 lesen, ohne Daten oder Objekte zu verändern     |
+| `S3`  | Kontrolliertes Schreiben | DML ausschließlich mit expliziter Freigabe und Guardrails      |
+| `S4`  | Operator-gated High Risk | Bridge-, Apply- oder Compile-artige Aktionen; niemals implizit |
 
 Wichtige Leitplanken:
 
@@ -146,6 +146,46 @@ node cli/zeus.js serve \
 
 Danach im Browser öffnen:
 
+### Development
+
+```bash
+npm install
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run package:smoke
+npm run demo:run
+```
+
+See `package.json` scripts and `CONTRIBUTING.md` (if present) for details.
+
+````
+
+## English version (excerpt)
+
+### Install and run
+
+```bash
+git clone https://github.com/gzeuner/zeus-rpg-promptkit.git
+cd zeus-rpg-promptkit
+npm install
+npm run demo:run
+````
+
+### Development
+
+```bash
+npm install
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run package:smoke
+```
+
+See `package.json` scripts.
+
 ```text
 http://127.0.0.1:4782
 ```
@@ -171,15 +211,15 @@ node cli/zeus.js analyze \
 
 Nützliche Optionen für größere Programme und reproduzierbare Läufe:
 
-| Option | Zweck |
-|---|---|
+| Option                      | Zweck                                                            |
+| --------------------------- | ---------------------------------------------------------------- |
 | `--dense lite\|full\|ultra` | rangbasierte Reduktion und Kompaktierung von Reports und Prompts |
-| `--prompt-max-tokens <n>` | maximales Token-Budget für Prompt-Artefakte |
-| `--skip-db2-metadata` | Analyse ohne Db2-Metadaten ausführen |
-| `--with-known-facts` | lokale, profilbezogene Known Facts explizit einblenden |
-| `--safe-sharing` | sensible Inhalte für externe Weitergabe reduzieren |
-| `--reproducible` | stabile, reproduzierbare Ausgabe für CI und Vergleiche |
-| `--json` | maschinenlesbare Kommandoausgabe erzeugen |
+| `--prompt-max-tokens <n>`   | maximales Token-Budget für Prompt-Artefakte                      |
+| `--skip-db2-metadata`       | Analyse ohne Db2-Metadaten ausführen                             |
+| `--with-known-facts`        | lokale, profilbezogene Known Facts explizit einblenden           |
+| `--safe-sharing`            | sensible Inhalte für externe Weitergabe reduzieren               |
+| `--reproducible`            | stabile, reproduzierbare Ausgabe für CI und Vergleiche           |
+| `--json`                    | maschinenlesbare Kommandoausgabe erzeugen                        |
 
 Typische Ergebnisstruktur:
 
@@ -335,19 +375,19 @@ Details: [`docs/quickstart/secrets-and-overrides.md`](docs/quickstart/secrets-an
 
 Der automatisch erzeugte [`docs/tool-catalog.md`](docs/tool-catalog.md) ist die **verbindliche Referenz** für Befehle, Optionen, Safety-Level und Beispiele.
 
-| Aufgabe | Befehle | Safety |
-|---|---|---:|
-| Setup & Profile | `doctor`, `profiles`, `resources`, `secret` | `S0` |
-| Discovery | `discover-environment`, `resolve-object`, `inspect-object`, `joblog` | `S0/S2` |
-| Quellen | `fetch`, `fetch-member`, `copy-to-workspace`, `diff` | `S1/S2` |
-| Analyse | `analyze`, `investigate`, `workflow`, `workflow run` | `S0/S1` |
-| Suche & Beziehungen | `search-source`, `field-search`, `trace`, `xref`, `impact` | `S0–S2` |
-| Db2 read-only | `query-table`, `query-sql`, `sql` | `S2` |
-| Review & Planung | `assess-risk`, `generate-test`, `generate-checklist`, `qa` | `S1` |
-| Artefakte | `bundle`, `analyses`, `serve` | `S0/S1` |
-| Kontrollierte Writes | `write-sql`, `upsert`, `insert`, `update`, `delete` | `S3` |
-| Operator-gated | `bridge` | `S4` |
-| Integrationen | `mcp`, `docs:generate-catalog`, `pui-inspect`, `pui-edit` | abhängig vom Kommando |
+| Aufgabe              | Befehle                                                              |                Safety |
+| -------------------- | -------------------------------------------------------------------- | --------------------: |
+| Setup & Profile      | `doctor`, `profiles`, `resources`, `secret`                          |                  `S0` |
+| Discovery            | `discover-environment`, `resolve-object`, `inspect-object`, `joblog` |               `S0/S2` |
+| Quellen              | `fetch`, `fetch-member`, `copy-to-workspace`, `diff`                 |               `S1/S2` |
+| Analyse              | `analyze`, `investigate`, `workflow`, `workflow run`                 |               `S0/S1` |
+| Suche & Beziehungen  | `search-source`, `field-search`, `trace`, `xref`, `impact`           |               `S0–S2` |
+| Db2 read-only        | `query-table`, `query-sql`, `sql`                                    |                  `S2` |
+| Review & Planung     | `assess-risk`, `generate-test`, `generate-checklist`, `qa`           |                  `S1` |
+| Artefakte            | `bundle`, `analyses`, `serve`                                        |               `S0/S1` |
+| Kontrollierte Writes | `write-sql`, `upsert`, `insert`, `update`, `delete`                  |                  `S3` |
+| Operator-gated       | `bridge`                                                             |                  `S4` |
+| Integrationen        | `mcp`, `docs:generate-catalog`, `pui-inspect`, `pui-edit`            | abhängig vom Kommando |
 
 Beispiele:
 
@@ -385,16 +425,16 @@ Für reale Workflows sollte die Oberfläche mit `--allow-tools` auf die tatsäch
 
 Sicherheitsrahmen:
 
-| Bereich | Verhalten |
-|---|---|
-| Transport | lokal über `stdio` |
-| Policy | sichere Default-Oberfläche plus explizite Allowlist |
-| Ressourcen | kuratierte Dokumentation, Metadaten und Run-Artefakte |
-| Redaction | Maskierung typischer Secrets in Responses und Fehlern |
-| Audit | append-only JSONL unter `.local/mcp/audit/mcp-audit.jsonl` |
-| Guardrails | Timeouts, Antwortgrößenlimits und deterministische Fehler |
-| Pfade | lokale Pfade müssen innerhalb des Workspace bleiben |
-| Writes | standardmäßig blockiert; Apply benötigt mehrere explizite Freigaben |
+| Bereich    | Verhalten                                                           |
+| ---------- | ------------------------------------------------------------------- |
+| Transport  | lokal über `stdio`                                                  |
+| Policy     | sichere Default-Oberfläche plus explizite Allowlist                 |
+| Ressourcen | kuratierte Dokumentation, Metadaten und Run-Artefakte               |
+| Redaction  | Maskierung typischer Secrets in Responses und Fehlern               |
+| Audit      | append-only JSONL unter `.local/mcp/audit/mcp-audit.jsonl`          |
+| Guardrails | Timeouts, Antwortgrößenlimits und deterministische Fehler           |
+| Pfade      | lokale Pfade müssen innerhalb des Workspace bleiben                 |
+| Writes     | standardmäßig blockiert; Apply benötigt mehrere explizite Freigaben |
 
 `zeus.write-sql` unterscheidet zwischen nicht mutierendem `plan` und streng geschütztem `apply`. Apply benötigt unter anderem aktivierte Write-Pfade, ein Bestätigungstoken und passende Profilregeln; Produktionsprofile bleiben blockiert.
 
@@ -410,13 +450,13 @@ const { zeus } = require('zeus-rpg-promptkit/api');
 zeus.analyzers.registerAnalyzer('my-analyzer', {
   run(context) {
     return { customEvidence: true };
-  }
+  },
 });
 
 zeus.mcpTools.registerTool('my.tool', {
   description: 'Custom local tool',
   inputSchema: { type: 'object' },
-  execute: async (args) => ({ ok: true, args })
+  execute: async args => ({ ok: true, args }),
 });
 
 zeus.registerPlugin(myPlugin);
@@ -458,31 +498,31 @@ Die Extension ist derzeit ein Entwicklungsartefakt und noch nicht der primäre P
 
 ## 📦 Analyseartefakte
 
-| Datei | Inhalt |
-|---|---|
-| `report.md` | kompakte Programmzusammenfassung |
-| `architecture-report.md` | Struktur, Call-Beziehungen und Abhängigkeiten |
-| `canonical-analysis.json` | vollständiges Entitäts- und Evidenzmodell |
-| `ai-knowledge.json` | token-optimierter Kontext für diesen Analyse-Run |
-| `ai_prompt_*.md` | aufgabenspezifische, einsatzbereite KI-Prompts |
-| `dependency-graph.mmd` | Mermaid-Abhängigkeitsgraph |
-| `analyze-run-manifest.json` | Run-Metadaten und Artefaktinventar |
+| Datei                       | Inhalt                                           |
+| --------------------------- | ------------------------------------------------ |
+| `report.md`                 | kompakte Programmzusammenfassung                 |
+| `architecture-report.md`    | Struktur, Call-Beziehungen und Abhängigkeiten    |
+| `canonical-analysis.json`   | vollständiges Entitäts- und Evidenzmodell        |
+| `ai-knowledge.json`         | token-optimierter Kontext für diesen Analyse-Run |
+| `ai_prompt_*.md`            | aufgabenspezifische, einsatzbereite KI-Prompts   |
+| `dependency-graph.mmd`      | Mermaid-Abhängigkeitsgraph                       |
+| `analyze-run-manifest.json` | Run-Metadaten und Artefaktinventar               |
 
 `ai-knowledge.json` ist **keine persistente, projektneutrale Knowledgebase**, sondern eine Projektion eines konkreten Analyse-Laufs.
 
 ## 📚 Dokumentation
 
-| Einstieg | Zweck |
-|---|---|
-| [`docs/index.md`](docs/index.md) | zentraler Dokumentations-Hub |
-| [`docs/tool-catalog.md`](docs/tool-catalog.md) | verbindliche Command-, Safety- und Scope-Referenz |
-| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md) | Bootstrap für Evidence-first-KI-Sessions |
-| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md) | schnellster lokaler Einstieg |
-| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md) | vollständiges IBM-i-Onboarding |
-| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md) | MCP-Betrieb, Policy und Troubleshooting |
-| [`docs/safety/`](docs/safety/) | Governance, sichere Weitergabe und Workspace-Regeln |
-| [`docs/workflows/`](docs/workflows/) | geführte Analyse- und Agenten-Workflows |
-| [`docs/sql/`](docs/sql/) | reproduzierbare Discovery-Abfragen für Db2 for i |
+| Einstieg                                                                             | Zweck                                               |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| [`docs/index.md`](docs/index.md)                                                     | zentraler Dokumentations-Hub                        |
+| [`docs/tool-catalog.md`](docs/tool-catalog.md)                                       | verbindliche Command-, Safety- und Scope-Referenz   |
+| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)                             | Bootstrap für Evidence-first-KI-Sessions            |
+| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)                       | schnellster lokaler Einstieg                        |
+| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md) | vollständiges IBM-i-Onboarding                      |
+| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md)                           | MCP-Betrieb, Policy und Troubleshooting             |
+| [`docs/safety/`](docs/safety/)                                                       | Governance, sichere Weitergabe und Workspace-Regeln |
+| [`docs/workflows/`](docs/workflows/)                                                 | geführte Analyse- und Agenten-Workflows             |
+| [`docs/sql/`](docs/sql/)                                                             | reproduzierbare Discovery-Abfragen für Db2 for i    |
 
 Tool-Katalog nach Änderungen an der CLI neu erzeugen:
 
@@ -498,20 +538,20 @@ node cli/zeus.js docs:generate-catalog --json-output docs/tool-catalog.json
 
 ## 🏗️ Architekturüberblick
 
-| Bereich | Verantwortung |
-|---|---|
-| `cli/` | ausführbare CLI und Catalog-Generator |
-| `src/collector/`, `src/fetch/`, `src/source/` | Source Discovery und Beschaffung |
-| `src/scanner/`, `src/dependency/` | Scanner, Beziehungen und Cross-References |
-| `src/context/`, `src/analyze/`, `src/investigation/` | kanonisches Modell, Pipeline und Vertiefung |
-| `src/db2/`, `src/java/` | Db2-/JT400-nahe Runtime-Funktionen |
-| `src/report/`, `src/prompt/`, `src/bundle/` | Reports, Prompts und Review-Bundles |
-| `src/security/`, `src/sharing/`, `src/reproducibility/` | Secrets, Redaction, Safe Sharing und stabile Outputs |
-| `src/mcp/` | lokaler MCP-Server, Policy, Ressourcen, Prompts und Audit |
-| `src/api/` | Programmatic API und Registries |
-| `src/viewer/`, `src/ui/`, `src/pui/` | optionale lokale Ansichten und experimentelle UI-Funktionen |
-| `vscode-extension/` | experimentelle Editor-Integration |
-| `tests/` | Unit-, Contract-, Smoke-, Corpus- und Benchmark-Tests |
+| Bereich                                                 | Verantwortung                                               |
+| ------------------------------------------------------- | ----------------------------------------------------------- |
+| `cli/`                                                  | ausführbare CLI und Catalog-Generator                       |
+| `src/collector/`, `src/fetch/`, `src/source/`           | Source Discovery und Beschaffung                            |
+| `src/scanner/`, `src/dependency/`                       | Scanner, Beziehungen und Cross-References                   |
+| `src/context/`, `src/analyze/`, `src/investigation/`    | kanonisches Modell, Pipeline und Vertiefung                 |
+| `src/db2/`, `src/java/`                                 | Db2-/JT400-nahe Runtime-Funktionen                          |
+| `src/report/`, `src/prompt/`, `src/bundle/`             | Reports, Prompts und Review-Bundles                         |
+| `src/security/`, `src/sharing/`, `src/reproducibility/` | Secrets, Redaction, Safe Sharing und stabile Outputs        |
+| `src/mcp/`                                              | lokaler MCP-Server, Policy, Ressourcen, Prompts und Audit   |
+| `src/api/`                                              | Programmatic API und Registries                             |
+| `src/viewer/`, `src/ui/`, `src/pui/`                    | optionale lokale Ansichten und experimentelle UI-Funktionen |
+| `vscode-extension/`                                     | experimentelle Editor-Integration                           |
+| `tests/`                                                | Unit-, Contract-, Smoke-, Corpus- und Benchmark-Tests       |
 
 ## ✅ Tests
 
@@ -614,18 +654,18 @@ Zeus helps answer questions such as:
 
 ## ✨ Core capabilities
 
-| Area | What Zeus provides |
-|---|---|
-| Source acquisition | Read source members and IFS content through SFTP, JT400, or FTP and store them locally |
-| Static analysis | Scan RPG, CL, and DDS, identify entities, and extract references |
-| Dependencies | Reveal program calls, file/table usage, fields, and reverse-impact relationships |
-| Db2 context | Add read-only metadata for tables, columns, keys, triggers, views, aliases, and more |
-| Evidence artifacts | Generate Markdown reports, JSON models, Mermaid graphs, manifests, and AI prompts |
-| Investigation | Search and deepen existing analysis results in focused, iterative sessions |
-| Review and planning | Prepare risk assessments, test scenarios, QA output, checklists, and review bundles |
-| AI integration | Expose local MCP tools, curated resources, and prompt contracts under explicit policy |
-| Extensibility | Register custom analyzers, analysis stages, plugins, and MCP tools through the API |
-| Editor integration | Use an experimental VS Code extension with local analysis and optional Code for IBM i support |
+| Area                | What Zeus provides                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| Source acquisition  | Read source members and IFS content through SFTP, JT400, or FTP and store them locally        |
+| Static analysis     | Scan RPG, CL, and DDS, identify entities, and extract references                              |
+| Dependencies        | Reveal program calls, file/table usage, fields, and reverse-impact relationships              |
+| Db2 context         | Add read-only metadata for tables, columns, keys, triggers, views, aliases, and more          |
+| Evidence artifacts  | Generate Markdown reports, JSON models, Mermaid graphs, manifests, and AI prompts             |
+| Investigation       | Search and deepen existing analysis results in focused, iterative sessions                    |
+| Review and planning | Prepare risk assessments, test scenarios, QA output, checklists, and review bundles           |
+| AI integration      | Expose local MCP tools, curated resources, and prompt contracts under explicit policy         |
+| Extensibility       | Register custom analyzers, analysis stages, plugins, and MCP tools through the API            |
+| Editor integration  | Use an experimental VS Code extension with local analysis and optional Code for IBM i support |
 
 Zeus is AI-provider agnostic. Its artifacts can be used in traditional reviews or with ChatGPT, GitHub Copilot, Claude, local models, and other tools.
 
@@ -656,13 +696,13 @@ The normal operating sequence is intentionally transparent:
 
 ## 🛡️ Safety model
 
-| Level | Meaning | Typical action |
-|---|---|---|
-| `S0` | Local read-only | read files, validate configuration, inspect artifacts |
-| `S1` | Local write | create reports, bundles, prompts, or analysis artifacts |
-| `S2` | Remote read-only | read IBM i or Db2 without changing data or objects |
-| `S3` | Controlled write | run DML only with explicit approval and guardrails |
-| `S4` | Operator-gated high risk | bridge/apply/compile-style operations; never implicit |
+| Level | Meaning                  | Typical action                                          |
+| ----- | ------------------------ | ------------------------------------------------------- |
+| `S0`  | Local read-only          | read files, validate configuration, inspect artifacts   |
+| `S1`  | Local write              | create reports, bundles, prompts, or analysis artifacts |
+| `S2`  | Remote read-only         | read IBM i or Db2 without changing data or objects      |
+| `S3`  | Controlled write         | run DML only with explicit approval and guardrails      |
+| `S4`  | Operator-gated high risk | bridge/apply/compile-style operations; never implicit   |
 
 Key guardrails:
 
@@ -733,15 +773,15 @@ node cli/zeus.js analyze \
 
 Useful options for larger programs and reproducible runs:
 
-| Option | Purpose |
-|---|---|
+| Option                      | Purpose                                                     |
+| --------------------------- | ----------------------------------------------------------- |
 | `--dense lite\|full\|ultra` | rank-aware reduction and compaction for reports and prompts |
-| `--prompt-max-tokens <n>` | set the token budget for prompt artifacts |
-| `--skip-db2-metadata` | run without Db2 metadata enrichment |
-| `--with-known-facts` | explicitly include local profile-scoped known facts |
-| `--safe-sharing` | reduce sensitive content for external sharing |
-| `--reproducible` | produce stable output for CI and comparisons |
-| `--json` | return machine-readable command output |
+| `--prompt-max-tokens <n>`   | set the token budget for prompt artifacts                   |
+| `--skip-db2-metadata`       | run without Db2 metadata enrichment                         |
+| `--with-known-facts`        | explicitly include local profile-scoped known facts         |
+| `--safe-sharing`            | reduce sensitive content for external sharing               |
+| `--reproducible`            | produce stable output for CI and comparisons                |
+| `--json`                    | return machine-readable command output                      |
 
 Typical output structure:
 
@@ -897,19 +937,19 @@ Details: [`docs/quickstart/secrets-and-overrides.md`](docs/quickstart/secrets-an
 
 The generated [`docs/tool-catalog.md`](docs/tool-catalog.md) is the **authoritative reference** for commands, options, safety levels, and examples.
 
-| Task | Commands | Safety |
-|---|---|---:|
-| Setup and profiles | `doctor`, `profiles`, `resources`, `secret` | `S0` |
-| Discovery | `discover-environment`, `resolve-object`, `inspect-object`, `joblog` | `S0/S2` |
-| Sources | `fetch`, `fetch-member`, `copy-to-workspace`, `diff` | `S1/S2` |
-| Analysis | `analyze`, `investigate`, `workflow`, `workflow run` | `S0/S1` |
-| Search and relationships | `search-source`, `field-search`, `trace`, `xref`, `impact` | `S0–S2` |
-| Db2 read-only | `query-table`, `query-sql`, `sql` | `S2` |
-| Review and planning | `assess-risk`, `generate-test`, `generate-checklist`, `qa` | `S1` |
-| Artifacts | `bundle`, `analyses`, `serve` | `S0/S1` |
-| Controlled writes | `write-sql`, `upsert`, `insert`, `update`, `delete` | `S3` |
-| Operator-gated | `bridge` | `S4` |
-| Integrations | `mcp`, `docs:generate-catalog`, `pui-inspect`, `pui-edit` | command-specific |
+| Task                     | Commands                                                             |           Safety |
+| ------------------------ | -------------------------------------------------------------------- | ---------------: |
+| Setup and profiles       | `doctor`, `profiles`, `resources`, `secret`                          |             `S0` |
+| Discovery                | `discover-environment`, `resolve-object`, `inspect-object`, `joblog` |          `S0/S2` |
+| Sources                  | `fetch`, `fetch-member`, `copy-to-workspace`, `diff`                 |          `S1/S2` |
+| Analysis                 | `analyze`, `investigate`, `workflow`, `workflow run`                 |          `S0/S1` |
+| Search and relationships | `search-source`, `field-search`, `trace`, `xref`, `impact`           |          `S0–S2` |
+| Db2 read-only            | `query-table`, `query-sql`, `sql`                                    |             `S2` |
+| Review and planning      | `assess-risk`, `generate-test`, `generate-checklist`, `qa`           |             `S1` |
+| Artifacts                | `bundle`, `analyses`, `serve`                                        |          `S0/S1` |
+| Controlled writes        | `write-sql`, `upsert`, `insert`, `update`, `delete`                  |             `S3` |
+| Operator-gated           | `bridge`                                                             |             `S4` |
+| Integrations             | `mcp`, `docs:generate-catalog`, `pui-inspect`, `pui-edit`            | command-specific |
 
 Examples:
 
@@ -947,16 +987,16 @@ For real workflows, restrict the surface to the tools actually required using `-
 
 Security posture:
 
-| Area | Behavior |
-|---|---|
-| Transport | local `stdio` |
-| Policy | safe default surface plus explicit allowlisting |
-| Resources | curated documentation, metadata, and run artifacts |
-| Redaction | masking of common secret patterns in responses and errors |
-| Audit | append-only JSONL at `.local/mcp/audit/mcp-audit.jsonl` |
-| Guardrails | timeouts, response-size limits, and deterministic errors |
-| Paths | local paths must remain inside the workspace |
-| Writes | blocked by default; apply requires multiple explicit approvals |
+| Area       | Behavior                                                       |
+| ---------- | -------------------------------------------------------------- |
+| Transport  | local `stdio`                                                  |
+| Policy     | safe default surface plus explicit allowlisting                |
+| Resources  | curated documentation, metadata, and run artifacts             |
+| Redaction  | masking of common secret patterns in responses and errors      |
+| Audit      | append-only JSONL at `.local/mcp/audit/mcp-audit.jsonl`        |
+| Guardrails | timeouts, response-size limits, and deterministic errors       |
+| Paths      | local paths must remain inside the workspace                   |
+| Writes     | blocked by default; apply requires multiple explicit approvals |
 
 `zeus.write-sql` separates non-mutating `plan` from strictly guarded `apply`. Apply requires enabled write paths, a confirmation token, and matching profile policies; production profiles remain blocked.
 
@@ -972,13 +1012,13 @@ const { zeus } = require('zeus-rpg-promptkit/api');
 zeus.analyzers.registerAnalyzer('my-analyzer', {
   run(context) {
     return { customEvidence: true };
-  }
+  },
 });
 
 zeus.mcpTools.registerTool('my.tool', {
   description: 'Custom local tool',
   inputSchema: { type: 'object' },
-  execute: async (args) => ({ ok: true, args })
+  execute: async args => ({ ok: true, args }),
 });
 
 zeus.registerPlugin(myPlugin);
@@ -1020,31 +1060,31 @@ The extension is currently a development artifact and not the primary product pa
 
 ## 📦 Analysis artifacts
 
-| File | Content |
-|---|---|
-| `report.md` | concise program summary |
-| `architecture-report.md` | structure, call relationships, and dependencies |
-| `canonical-analysis.json` | complete entity and evidence model |
-| `ai-knowledge.json` | token-optimized context for this analysis run |
-| `ai_prompt_*.md` | task-specific, ready-to-use AI prompts |
-| `dependency-graph.mmd` | Mermaid dependency graph |
-| `analyze-run-manifest.json` | run metadata and artifact inventory |
+| File                        | Content                                         |
+| --------------------------- | ----------------------------------------------- |
+| `report.md`                 | concise program summary                         |
+| `architecture-report.md`    | structure, call relationships, and dependencies |
+| `canonical-analysis.json`   | complete entity and evidence model              |
+| `ai-knowledge.json`         | token-optimized context for this analysis run   |
+| `ai_prompt_*.md`            | task-specific, ready-to-use AI prompts          |
+| `dependency-graph.mmd`      | Mermaid dependency graph                        |
+| `analyze-run-manifest.json` | run metadata and artifact inventory             |
 
 `ai-knowledge.json` is **not a persistent project-neutral knowledgebase**. It is a projection of one specific analysis run.
 
 ## 📚 Documentation
 
-| Entry point | Purpose |
-|---|---|
-| [`docs/index.md`](docs/index.md) | central documentation hub |
-| [`docs/tool-catalog.md`](docs/tool-catalog.md) | authoritative command, safety, and scope reference |
-| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md) | bootstrap for evidence-first AI sessions |
-| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md) | fastest local entry point |
-| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md) | complete IBM i onboarding |
-| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md) | MCP operation, policy, and troubleshooting |
-| [`docs/safety/`](docs/safety/) | governance, safe sharing, and workspace policies |
-| [`docs/workflows/`](docs/workflows/) | guided analysis and agent workflows |
-| [`docs/sql/`](docs/sql/) | reproducible discovery queries for Db2 for i |
+| Entry point                                                                          | Purpose                                            |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| [`docs/index.md`](docs/index.md)                                                     | central documentation hub                          |
+| [`docs/tool-catalog.md`](docs/tool-catalog.md)                                       | authoritative command, safety, and scope reference |
+| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)                             | bootstrap for evidence-first AI sessions           |
+| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)                       | fastest local entry point                          |
+| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md) | complete IBM i onboarding                          |
+| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md)                           | MCP operation, policy, and troubleshooting         |
+| [`docs/safety/`](docs/safety/)                                                       | governance, safe sharing, and workspace policies   |
+| [`docs/workflows/`](docs/workflows/)                                                 | guided analysis and agent workflows                |
+| [`docs/sql/`](docs/sql/)                                                             | reproducible discovery queries for Db2 for i       |
 
 Regenerate the tool catalog after CLI changes:
 
@@ -1060,20 +1100,20 @@ node cli/zeus.js docs:generate-catalog --json-output docs/tool-catalog.json
 
 ## 🏗️ Architecture overview
 
-| Area | Responsibility |
-|---|---|
-| `cli/` | executable CLI and catalog generator |
-| `src/collector/`, `src/fetch/`, `src/source/` | source discovery and acquisition |
-| `src/scanner/`, `src/dependency/` | scanners, relationships, and cross-references |
-| `src/context/`, `src/analyze/`, `src/investigation/` | canonical model, pipeline, and focused investigation |
-| `src/db2/`, `src/java/` | Db2/JT400-adjacent runtime functions |
-| `src/report/`, `src/prompt/`, `src/bundle/` | reports, prompts, and review bundles |
-| `src/security/`, `src/sharing/`, `src/reproducibility/` | secrets, redaction, safe sharing, and stable output |
-| `src/mcp/` | local MCP server, policy, resources, prompts, and audit |
-| `src/api/` | programmatic API and registries |
-| `src/viewer/`, `src/ui/`, `src/pui/` | optional local views and experimental UI features |
-| `vscode-extension/` | experimental editor integration |
-| `tests/` | unit, contract, smoke, corpus, and benchmark tests |
+| Area                                                    | Responsibility                                          |
+| ------------------------------------------------------- | ------------------------------------------------------- |
+| `cli/`                                                  | executable CLI and catalog generator                    |
+| `src/collector/`, `src/fetch/`, `src/source/`           | source discovery and acquisition                        |
+| `src/scanner/`, `src/dependency/`                       | scanners, relationships, and cross-references           |
+| `src/context/`, `src/analyze/`, `src/investigation/`    | canonical model, pipeline, and focused investigation    |
+| `src/db2/`, `src/java/`                                 | Db2/JT400-adjacent runtime functions                    |
+| `src/report/`, `src/prompt/`, `src/bundle/`             | reports, prompts, and review bundles                    |
+| `src/security/`, `src/sharing/`, `src/reproducibility/` | secrets, redaction, safe sharing, and stable output     |
+| `src/mcp/`                                              | local MCP server, policy, resources, prompts, and audit |
+| `src/api/`                                              | programmatic API and registries                         |
+| `src/viewer/`, `src/ui/`, `src/pui/`                    | optional local views and experimental UI features       |
+| `vscode-extension/`                                     | experimental editor integration                         |
+| `tests/`                                                | unit, contract, smoke, corpus, and benchmark tests      |
 
 ## ✅ Tests
 
