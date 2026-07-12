@@ -29,6 +29,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run check:public-knowledge-claims
+      - run: npm run test:quality
+      - run: npm run docs:check
 
   test-linux-20:
     name: Test Node 20 (linux)

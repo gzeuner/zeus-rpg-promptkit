@@ -14,7 +14,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const fs = require('fs');
 const path = require('path');
-const { listWorkflowPresets, resolveWorkflowPresetSettings } = require('../../src/workflow/workflowPresetRegistry');
+const {
+  listWorkflowPresets,
+  resolveWorkflowPresetSettings,
+} = require('../../src/workflow/workflowPresetRegistry');
 const {
   COMMAND_METADATA,
   COMMAND_ORDER,
@@ -58,7 +61,8 @@ function listCommandSourceFiles(repoRoot) {
   const queue = [commandsDir];
   while (queue.length > 0) {
     const currentDir = queue.shift();
-    const entries = fs.readdirSync(currentDir, { withFileTypes: true })
+    const entries = fs
+      .readdirSync(currentDir, { withFileTypes: true })
       .sort((a, b) => a.name.localeCompare(b.name));
 
     for (const entry of entries) {
@@ -87,7 +91,7 @@ function extractCliCommands(cliSource) {
 
 function extractUsageLines(cliSource) {
   const usageLines = [];
-  const re = /console\.log\((['"`])  zeus ([\s\S]*?)\1\);/g;
+  const re = /console\.log\((['"`]) {2}zeus ([\s\S]*?)\1\);/g;
   for (const match of cliSource.matchAll(re)) {
     usageLines.push(String(match[2]).trim());
   }
@@ -95,7 +99,10 @@ function extractUsageLines(cliSource) {
 }
 
 function normalizeCommandFromUsage(usageLine) {
-  const cleaned = String(usageLine || '').replace(/\[[^\]]+\]/g, ' ').replace(/\s+/g, ' ').trim();
+  const cleaned = String(usageLine || '')
+    .replace(/\[[^\]]+\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!cleaned) {
     return null;
   }
@@ -116,7 +123,7 @@ function normalizeCommandFromUsage(usageLine) {
 }
 
 function extractOptionsFromUsage(usageLine) {
-  return [...new Set((String(usageLine).match(/--[a-z0-9-]+/g) || []))];
+  return [...new Set(String(usageLine).match(/--[a-z0-9-]+/g) || [])];
 }
 
 function escapePipe(value) {
@@ -190,11 +197,11 @@ function buildCatalogModel({ repoRoot }) {
   }
 
   const extras = [...commandsInCode]
-    .filter((command) => !ordered.includes(command))
+    .filter(command => !ordered.includes(command))
     .sort((a, b) => a.localeCompare(b));
   ordered.push(...extras);
 
-  const commandRows = ordered.map((command) => {
+  const commandRows = ordered.map(command => {
     let metadata = COMMAND_METADATA[command] || {
       safety: 'S0',
       scope: 'Local',
@@ -217,7 +224,7 @@ function buildCatalogModel({ repoRoot }) {
       const capId = capIdMap[command];
       if (capId) {
         const cap = capabilities && capabilities.resolve ? capabilities.resolve(capId) : null;
-        console.error("DEBUG cap for", command, "capId", capId, "found?", !!cap);
+        console.error('DEBUG cap for', command, 'capId', capId, 'found?', !!cap);
         if (cap) {
           metadata = {
             safety: cap.safety && cap.safety.level ? cap.safety.level : metadata.safety,
@@ -250,7 +257,7 @@ function buildCatalogModel({ repoRoot }) {
   });
 
   const workflowPresets = listWorkflowPresets()
-    .map((preset) => {
+    .map(preset => {
       const settings = resolveWorkflowPresetSettings(preset.name);
       return {
         name: preset.name,
@@ -285,14 +292,18 @@ function renderMarkdown(model, now = new Date()) {
   lines.push('');
   lines.push('---');
   lines.push('Title: Zeus RPG PromptKit Tool Catalog');
-  lines.push('Description: Verbindlicher, sicherheitsklassifizierter Katalog aller CLI-Befehle und Workflow-Presets fuer Menschen und KI-Assistenten.');
+  lines.push(
+    'Description: Verbindlicher, sicherheitsklassifizierter Katalog aller CLI-Befehle und Workflow-Presets fuer Menschen und KI-Assistenten.'
+  );
   lines.push(`Last Updated: ${generatedDate}`);
   lines.push('---');
   lines.push('');
   lines.push('# Zeus RPG PromptKit Tool Catalog');
   lines.push('');
   lines.push('This document is the authoritative tool reference for Zeus RPG PromptKit.');
-  lines.push('All AI assistants (GPT, Claude, Grok, Copilot, local agents) should treat this file as the single source of truth for command purpose, risk level, and usage.');
+  lines.push(
+    'All AI assistants (GPT, Claude, Grok, Copilot, local agents) should treat this file as the single source of truth for command purpose, risk level, and usage.'
+  );
   lines.push('');
   lines.push('Related:');
   lines.push('- [`index.md`](index.md)');
@@ -304,7 +315,9 @@ function renderMarkdown(model, now = new Date()) {
   lines.push('| Level | Meaning | Typical Action |');
   lines.push('|---|---|---|');
   for (const level of model.safetyLevels) {
-    lines.push(`| \`${level.level}\` | ${escapePipe(level.meaning)} | ${escapePipe(level.typicalAction)} |`);
+    lines.push(
+      `| \`${level.level}\` | ${escapePipe(level.meaning)} | ${escapePipe(level.typicalAction)} |`
+    );
   }
   lines.push('');
   lines.push('## AI Execution Rules (Mandatory)');
@@ -318,7 +331,9 @@ function renderMarkdown(model, now = new Date()) {
   lines.push('| Command | Safety | Scope | Purpose | Example |');
   lines.push('|---|---|---|---|---|');
   for (const row of model.commandRows) {
-    lines.push(`| \`${escapePipe(row.command)}\` | \`${escapePipe(row.safety)}\` | ${escapePipe(row.scope)} | ${escapePipe(row.purpose)} | \`${escapePipe(row.example)}\` |`);
+    lines.push(
+      `| \`${escapePipe(row.command)}\` | \`${escapePipe(row.safety)}\` | ${escapePipe(row.scope)} | ${escapePipe(row.purpose)} | \`${escapePipe(row.example)}\` |`
+    );
   }
   lines.push('');
   lines.push('## Workflow Presets');
@@ -326,7 +341,9 @@ function renderMarkdown(model, now = new Date()) {
   lines.push('| Preset | Analyze Mode | Goal |');
   lines.push('|---|---|---|');
   for (const preset of model.workflowPresets) {
-    lines.push(`| \`${escapePipe(preset.name)}\` | \`${escapePipe(preset.analyzeMode)}\` | ${escapePipe(preset.goal)} |`);
+    lines.push(
+      `| \`${escapePipe(preset.name)}\` | \`${escapePipe(preset.analyzeMode)}\` | ${escapePipe(preset.goal)} |`
+    );
   }
   lines.push('');
   lines.push('## Recommended AI Operating Sequence');
@@ -339,7 +356,9 @@ function renderMarkdown(model, now = new Date()) {
   lines.push('');
   lines.push('- Regenerate with `zeus docs:generate-catalog` after CLI command-surface changes.');
   lines.push('- Command metadata lives in `src/docs/toolCatalogMetadata.js`.');
-  lines.push('- Historical proposal is no longer needed; generation logic lives in `cli/commands/generate-tool-catalog.js`.');
+  lines.push(
+    '- Historical proposal is no longer needed; generation logic lives in `cli/commands/generate-tool-catalog.js`.'
+  );
   lines.push('');
 
   return `${lines.join('\n')}`;
@@ -391,13 +410,13 @@ async function runDocsGenerateCatalog(args) {
     const outputArg = args.output ? String(args.output).trim() : null;
     const jsonOutputArg = args['json-output'] ? String(args['json-output']).trim() : null;
 
-    const markdownOutputPath = format === 'markdown'
-      ? (outputArg || DEFAULT_MARKDOWN_OUTPUT)
-      : DEFAULT_MARKDOWN_OUTPUT;
+    const markdownOutputPath =
+      format === 'markdown' ? outputArg || DEFAULT_MARKDOWN_OUTPUT : DEFAULT_MARKDOWN_OUTPUT;
 
-    const jsonOutputPath = format === 'json'
-      ? (outputArg || jsonOutputArg || DEFAULT_JSON_OUTPUT)
-      : (jsonOutputArg || DEFAULT_JSON_OUTPUT);
+    const jsonOutputPath =
+      format === 'json'
+        ? outputArg || jsonOutputArg || DEFAULT_JSON_OUTPUT
+        : jsonOutputArg || DEFAULT_JSON_OUTPUT;
 
     const result = generateToolCatalog({
       repoRoot: process.cwd(),

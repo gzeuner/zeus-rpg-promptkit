@@ -10,6 +10,5 @@
     "allowJs": true,
     "types": ["node"]
   },
-  "include": ["src/core/capabilityRegistry.js", "src/mcp/mcpPolicy.js", "src/api/zeusApi.js"],
-  "exclude": ["node_modules", "output"]
+  "files": ["src/core/capabilityRegistry.js", "src/mcp/mcpPolicy.js", "src/api/zeusApi.js"]
 }

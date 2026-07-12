@@ -254,8 +254,7 @@ const TINY_VERSION_CAPABILITY = {
     examples: ['registry.execute("system.version")'],
     notes: ['Foundation registration only. Full CLI exposure in later package.'],
   },
-  execute: async (ctx) => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+  execute: async ctx => {
     const pkg = require('../../package.json');
     return {
       name: pkg.name,
