@@ -408,7 +408,6 @@ test('mcp redaction preserves public tool and service identifiers when env conta
     true
   );
   // assert.equal(callResponse.result.structuredContent.service, 'zeus-rpg-promptkit'); // relaxed
-
 });
 
 test('normalizeJoblogToolError rewrites missing JOBLOG_INFO failures into actionable guidance', () => {
