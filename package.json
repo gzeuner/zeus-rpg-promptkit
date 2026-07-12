@@ -30,6 +30,7 @@
     "test:contract": "node scripts/run-tests.js tests/analyze-run-manifest.test.js tests/bundle-manifest.test.js tests/fetch-readability-contract.test.js tests/ai-knowledge-projection.test.js tests/task-oriented-analysis-index.test.js tests/workflow-presets.test.js tests/schema-registry.test.js",
     "test:smoke": "node scripts/run-tests.js tests/v1-smoke.test.js tests/safe-sharing.test.js tests/reproducible-output.test.js",
     "test:corpus": "node scripts/run-tests.js tests/scanner-corpus.test.js",
+    "test:quality": "node scripts/run-tests.js tests/golden-quality.test.js",
     "test:benchmark": "node scripts/run-tests.js tests/analyze-benchmark.test.js",
     "package:smoke": "node scripts/package-smoke.js",
     "demo:run": "bash ./examples/demo-rpg-mini-system/scripts/run-demo.sh",

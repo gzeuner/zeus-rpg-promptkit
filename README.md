@@ -160,6 +160,15 @@ npm run demo:run
 
 See `package.json` scripts and `CONTRIBUTING.md` (if present) for details.
 
+### Golden Corpus & Quality Metrics (package 11)
+
+- `npm run test:corpus` validates scanner patterns.
+- `npm run test:quality` runs golden evaluator (precision/recall proxy via match rate, unresolved, reproducibility with `--reproducible`, safe-sharing leakage with synthetic secrets).
+- Baseline in test expectations. Regressions fail deterministically.
+- Add only synthetic/redistributable cases + labeled expectations. Document any unsupported behavior explicitly.
+
+See tests/golden-quality.test.js and tests/fixtures/sanitized-corpus/.
+
 ````
 
 ## English version (excerpt)
