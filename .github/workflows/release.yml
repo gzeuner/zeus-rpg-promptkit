@@ -15,7 +15,7 @@ on:
 
 permissions:
   contents: write
-  id-token: write   # for future OIDC/attestation if configured
+  id-token: write # for future OIDC/attestation if configured
 
 jobs:
   release:

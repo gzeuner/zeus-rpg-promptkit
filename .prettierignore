@@ -8,3 +8,17 @@ examples/demo-rpg-mini-system/output*/
 .git/
 .vscode/
 coverage/
+vscode-extension/
+tests/
+config/
+rpg_sources/
+analysis/
+.zeus/fixtures/
+docs/
+examples/
+.local/
+tests/
+config/
+rpg_sources/
+analysis/
+.zeus/
