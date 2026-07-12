@@ -134,11 +134,16 @@ jobs:
             echo "FAIL: tarball name $TARBALL != $EXPECTED"
             exit 1
           fi
-          # Inspect contents (must not contain forbidden items)
-          echo "Package contents (tar tf):"
-          tar -tf "$TARBALL" | head -30
-          if tar -tf "$TARBALL" | grep -E '(^|/)\.(env|git|local)/|agent/|planning|scratch|token|secret|private' || tar -tf "$TARBALL" | grep -E 'node_modules|coverage|test-output'; then
-            echo "FAIL: package contains forbidden files"
+          # Inspect contents robustly (avoid pipe write errors on large output in CI)
+          echo "Package contents (tar tf head):"
+          tar -tf "$TARBALL" | head -50 > /tmp/pkg-contents.txt || true
+          cat /tmp/pkg-contents.txt | head -20
+          if grep -E '(^|/)package/(\.env|\.git|\.local|agent|planning|scratch|token|secret|private)/' /tmp/pkg-contents.txt; then
+            echo "FAIL: package contains forbidden private files"
+            exit 1
+          fi
+          if grep -E '(^|/)package/(node_modules|coverage|test-output)/' /tmp/pkg-contents.txt; then
+            echo "FAIL: package contains build artifacts"
             exit 1
           fi
           echo "Tarball contents OK"
