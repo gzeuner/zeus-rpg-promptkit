@@ -73,6 +73,20 @@ function findValueMentions(sourceRoot, value, maxResults = 50) {
 }
 
 async function runTrace(args) {
+  // Route through capability (package 08) - guard _cap to prevent recursion when cap delegates back to run
+  if (!args || !args._cap) {
+    try {
+      const { capabilities } = require('../../api/zeusApi');
+      const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.trace', { cwd: process.cwd(), env: process.env, args }, args) : null;
+      if (res && res.ok) {
+        return res.result;
+      }
+    } catch (e) {
+      // fallthrough
+    }
+  }
+  if (args && args._cap) { delete args._cap; }
+
   const value = args.value ? String(args.value).trim().toUpperCase() : null;
   const field = args.field ? String(args.field).trim().toUpperCase() : null;
   const startTable = args['start-table'] || args.table ? String(args['start-table'] || args.table).trim().toUpperCase() : null;

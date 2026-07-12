@@ -15,7 +15,7 @@ test('command UI metadata validates and includes workflow-card categories', () =
   assert.deepEqual(validateCommandUiMetadata(), []);
 
   const categories = COMMAND_CATEGORIES.map((entry) => entry.id).sort();
-  assert.deepEqual(categories, ['analyze', 'configure', 'context', 'fetch', 'query', 'review']);
+  assert.deepEqual(categories, ['analyze', 'configure', 'context', 'fetch', 'investigation', 'query', 'review']);
 
   const commandNames = COMMAND_UI_METADATA.map((entry) => entry.name);
   for (const required of [

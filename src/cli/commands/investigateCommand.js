@@ -22,6 +22,20 @@ const { focus, search, generateFocusedPrompt } = require('../../investigation/in
 const { resolveAnalyzeConfig } = require('../../config/runtimeConfig');
 
 function runInvestigate(args) {
+  // Route through capability (package 08) with fallback for standalone use
+  if (!args || !args._cap) {
+    try {
+      const { capabilities } = require('../../api/zeusApi');
+      const res = capabilities && typeof capabilities.execute === 'function' ? capabilities.execute('investigation.investigate', { cwd: process.cwd(), env: process.env, args }, args) : null;
+      if (res && res.ok && res.result) {
+        return res.result;
+      }
+    } catch (e) {
+      // fallthrough to local
+    }
+  }
+  if (args && args._cap) { delete args._cap; }
+
   const program = args.program || args.member || '';
   if (!program) {
     console.error('Missing required option: --program <name> or --member <name>');

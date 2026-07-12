@@ -20,3 +20,15 @@ node cli/zeus.js analyze \
 rm -rf ./examples/demo-rpg-mini-system/output-baseline/.zeus-cache
 
 echo "Demo analyze run completed."
+
+echo "=== Demo: investigation + review (package 08 goal -> artifacts) ==="
+INV_OUT=./examples/demo-rpg-mini-system/output-baseline
+node cli/zeus.js investigate --program PROGRAM_100 --out "$INV_OUT" --goal "Review ID/STATUS field lineage, usage, impact and deployment risk in demo mini-system" --search "ID,STATUS,AMOUNT" || true
+node cli/zeus.js trace --field ID --start-program PROGRAM_200 --source ./examples/demo-rpg-mini-system/rpg_sources || true
+node cli/zeus.js xref --program PROGRAM_200 --source ./examples/demo-rpg-mini-system/rpg_sources || true
+node cli/zeus.js impact --target ID --program PROGRAM_100 --out "$INV_OUT" --source ./examples/demo-rpg-mini-system/rpg_sources || true
+node cli/zeus.js assess-risk --program PROGRAM_100 --out "$INV_OUT" || true
+node cli/zeus.js generate-test --program PROGRAM_100 --format markdown --out "$INV_OUT" || true
+node cli/zeus.js generate-checklist --program PROGRAM_100 --out "$INV_OUT" || true
+node cli/zeus.js qa --input "$INV_OUT/PROGRAM_100" --format markdown || true
+echo "Demo investigation from goal to review-ready artifacts completed."

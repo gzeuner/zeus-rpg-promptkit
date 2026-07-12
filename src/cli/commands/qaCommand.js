@@ -82,6 +82,20 @@ function renderReport(report) {
 }
 
 async function run(args, config = {}) {
+  // Route through capability (package 08) - additive only; cap uses qaIntegration directly so no recursion
+  try {
+    const { capabilities } = require('../../api/zeusApi');
+    const res = capabilities && typeof capabilities.execute === 'function' ? await capabilities.execute('investigation.qa', { cwd: process.cwd(), env: process.env, args }, args) : null;
+    if (res && res.ok && res.result) {
+      // Cap produced the report; print it here for CLI
+      const out = (typeof res.result === 'string') ? res.result : (res.result && res.result.content ? res.result.content : JSON.stringify(res.result, null, 2));
+      process.stdout.write(out.endsWith('\n') ? out : out + '\n');
+      return;
+    }
+  } catch (e) {
+    // fallthrough
+  }
+
   try {
     const cwd = process.cwd();
     const format = normalizeFormat(args.format);
