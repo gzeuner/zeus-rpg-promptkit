@@ -1,6 +1,6 @@
 {
   "name": "zeus-rpg-promptkit",
-  "version": "0.1.0",
+  "version": "0.2.0-beta.1",
   "description": "Evidence and Investigation Platform for IBM i — turn source, metadata and runtime evidence into reproducible, review-ready artifacts with humans in control.",
   "main": "cli/zeus.js",
   "exports": {

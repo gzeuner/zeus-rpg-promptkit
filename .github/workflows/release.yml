@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 0.2.0-beta.1)'
+        required: true
+        default: '0.2.0-beta.1'
+      prerelease:
+        description: 'Mark as prerelease'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  id-token: write   # for future OIDC/attestation if configured
+
+jobs:
+  release:
+    name: Prepare and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java (for optional components)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Full quality gates
+        run: |
+          npm run format:check
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run test:quality
+          npm run test:benchmark
+          npm run package:smoke
+          npm run docs:check
+          npm audit --omit=dev
+
+      - name: Create package tarball
+        run: npm pack
+
+      - name: Verify tarball (smoke on fresh install)
+        run: |
+          TARBALL=$(ls *.tgz | head -1)
+          echo "Tarball: $TARBALL"
+          mkdir -p /tmp/zeus-release-smoke
+          cd /tmp/zeus-release-smoke
+          npm init -y
+          npm install --no-audit --no-fund "$OLDPWD/$TARBALL"
+          ./node_modules/.bin/zeus --help
+          node -e "console.log('API import:', !!require('zeus-rpg-promptkit/api'))"
+          echo "Release smoke passed."
+
+      - name: Create GitHub prerelease (and attach artifact)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          PRERELEASE="${{ github.event.inputs.prerelease }}"
+          TARBALL=$(ls *.tgz | head -1)
+
+          # Create annotated tag on the current commit (the merged main commit)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${VERSION}" -m "Zeus RPG PromptKit ${VERSION}"
+
+          gh release create "v${VERSION}" \
+            --title "Zeus RPG PromptKit ${VERSION}" \
+            --notes-file <(cat <<'NOTES'
+          ## Zeus RPG PromptKit ${VERSION}
+
+          First governed prerelease after the full implementation pack.
+
+          See CHANGELOG.md for details.
+
+          **Highlights**
+          - Capability registry as single source of truth for CLI/API/MCP
+          - Full investigation lifecycle (sessions, impact, risk, tests, QA, bundles)
+          - Comprehensive CI gates + golden corpus quality metrics
+          - Canonical golden path documentation + offline docs:check
+          - Local-first, safe-sharing, human approval model
+
+          **Installation (tarball)**
+          ```bash
+          npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v${VERSION}/zeus-rpg-promptkit-${VERSION}.tgz
+          ```
+
+          **GitHub Prerelease**
+          This is a prerelease. Contracts and surfaces may evolve during the 0.2 beta series.
+
+          Run `zeus --help` and the demo after installation to verify.
+          NOTES
+          ) \
+          --prerelease="$PRERELEASE" \
+          "$TARBALL"
+
+          echo "Release v${VERSION} created."
+
+      - name: Upload release artifact (as backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: zeus-rpg-promptkit-${{ github.event.inputs.version }}
+          path: '*.tgz'
+          retention-days: 90
