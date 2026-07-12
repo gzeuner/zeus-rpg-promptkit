@@ -207,10 +207,11 @@ jobs:
           TARBALL=$(ls zeus-rpg-promptkit-*.tgz | head -1)
           echo "Verified tarball: $TARBALL"
 
+          ARTIFACT_DIR="$GITHUB_WORKSPACE/release-artifacts"
           INSTALL_DIR=$(mktemp -d)
           cd "$INSTALL_DIR"
           npm init -y
-          npm install --no-audit --no-fund "$OLDPWD/$TARBALL"
+          npm install --no-audit --no-fund "$ARTIFACT_DIR/$TARBALL"
 
           # Public API
           node -e "
@@ -257,10 +258,11 @@ jobs:
           sha256sum --check SHA256SUMS
           TARBALL=$(ls zeus-rpg-promptkit-*.tgz | head -1)
 
+          ARTIFACT_DIR="$GITHUB_WORKSPACE/release-artifacts"
           INSTALL_DIR=$(mktemp -d)
           cd "$INSTALL_DIR"
           npm init -y
-          npm install --no-audit --no-fund "$OLDPWD/$TARBALL"
+          npm install --no-audit --no-fund "$ARTIFACT_DIR/$TARBALL"
 
           node -e "
             const p = require('zeus-rpg-promptkit/package.json');
@@ -311,11 +313,12 @@ jobs:
           $TARBALL = (Get-ChildItem zeus-rpg-promptkit-*.tgz | Select-Object -First 1).Name
           Write-Host "Tarball: $TARBALL"
 
+          $artifactDir = Join-Path $env:GITHUB_WORKSPACE "release-artifacts"
           $installDir = Join-Path $env:TEMP ("zeus-verify-" + [System.Guid]::NewGuid())
           New-Item -ItemType Directory -Path $installDir | Out-Null
           cd $installDir
           npm init -y
-          npm install --no-audit --no-fund (Join-Path ".." "release-artifacts" $TARBALL)
+          npm install --no-audit --no-fund (Join-Path $artifactDir $TARBALL)
 
           node -e "
             const p = require('zeus-rpg-promptkit/package.json');
