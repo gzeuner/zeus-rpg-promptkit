@@ -45,6 +45,8 @@ test('reproducible mode produces identical analyze, impact, and bundle artifacts
     'context.json',
     'optimized-context.json',
     'ai-knowledge.json',
+    'evidence-graph.json',
+    'context-plan.json',
     'analysis-index.json',
     'architecture.html',
     'report.md',

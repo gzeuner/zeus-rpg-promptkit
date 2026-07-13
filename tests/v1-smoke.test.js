@@ -55,6 +55,7 @@ test('V1 smoke flow generates analysis artifacts and bundle outputs', () => {
       'optimized-context.json',
       'ai-knowledge.json',
       'evidence-graph.json',
+      'context-plan.json',
       'analysis-index.json',
       'report.md',
       'architecture-report.md',

@@ -130,6 +130,61 @@ function evidenceGraphSchema(value) {
 }
 
 /**
+ * Validator for context-plan/v1 (graph-guided evidence planning).
+ * Captures goal, targets, budget, selected evidence with reasons/paths,
+ * omissions, unresolved relationships, and confidence.
+ */
+function contextPlanSchema(value) {
+  const errors = basicHeaderValidator(1)(value);
+  if (!value || typeof value !== 'object') return errors;
+
+  if (typeof value.kind !== 'string' || value.kind !== 'context-plan') {
+    errors.push({ path: '/kind', message: 'kind must be "context-plan"' });
+  }
+  if (typeof value.goal !== 'string' || !value.goal.trim()) {
+    errors.push({ path: '/goal', message: 'goal is required' });
+  }
+  if (typeof value.tokenBudget !== 'number' || value.tokenBudget <= 0) {
+    errors.push({ path: '/tokenBudget', message: 'positive tokenBudget is required' });
+  }
+  if (!Array.isArray(value.selected)) {
+    errors.push({ path: '/selected', message: 'selected must be an array' });
+  } else {
+    value.selected.forEach((item, i) => {
+      if (!item || typeof item !== 'object') {
+        errors.push({ path: `/selected/${i}`, message: 'selected item must be object' });
+        return;
+      }
+      if (typeof item.id !== 'string' || !item.id) {
+        errors.push({ path: `/selected/${i}/id`, message: 'id required' });
+      }
+      if (!Array.isArray(item.reasons)) {
+        errors.push({ path: `/selected/${i}/reasons`, message: 'reasons array required' });
+      }
+      if (item.graphPath && !Array.isArray(item.graphPath)) {
+        errors.push({
+          path: `/selected/${i}/graphPath`,
+          message: 'graphPath must be array if present',
+        });
+      }
+      if (item.confidence && typeof item.confidence !== 'string') {
+        errors.push({ path: `/selected/${i}/confidence`, message: 'confidence must be string' });
+      }
+      if (item.location && typeof item.location !== 'object') {
+        errors.push({ path: `/selected/${i}/location`, message: 'location must be object' });
+      }
+    });
+  }
+  if (value.omissions && !Array.isArray(value.omissions)) {
+    errors.push({ path: '/omissions', message: 'omissions must be array if present' });
+  }
+  if (value.unresolved && !Array.isArray(value.unresolved)) {
+    errors.push({ path: '/unresolved', message: 'unresolved must be array if present' });
+  }
+  return errors;
+}
+
+/**
  * Metadata-only shells for the contracts introduced in package 02.
  * These only enforce common header/identity fields for now.
  * Full structural schemas will be added by later packages.
@@ -216,6 +271,7 @@ const safetyPolicySchema = value => {
 const INITIAL_SCHEMAS = Object.freeze({
   [CONTRACT_IDS.EVIDENCE_MODEL]: { version: 1, schema: evidenceModelSchema },
   [CONTRACT_IDS.EVIDENCE_GRAPH]: { version: 1, schema: evidenceGraphSchema },
+  [CONTRACT_IDS.CONTEXT_PLAN]: { version: 1, schema: contextPlanSchema },
   [CONTRACT_IDS.RUN_MANIFEST]: { version: 1, schema: runManifestSchema },
   [CONTRACT_IDS.ARTIFACT_REFERENCE]: { version: 1, schema: artifactReferenceSchema },
   [CONTRACT_IDS.INVESTIGATION_SESSION]: { version: 1, schema: investigationSessionSchema },
