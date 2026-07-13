@@ -8,6 +8,9 @@ on:
 
 permissions:
   contents: read
+  checks: read
+  statuses: read
+  pull-requests: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -103,6 +106,9 @@ jobs:
     needs: [quality, test-linux-20, test-linux-lts, test-windows-20, package-smoke]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 20
@@ -110,10 +116,26 @@ jobs:
       - run: npm ci
       - name: Run repository control for this PR (read-only, after other checks)
         run: |
-          PR_NUMBER=$(gh pr view --json number -q .number)
-          node scripts/repository-control.js --scope pr --pr "$PR_NUMBER" --strict --timeout-seconds 300 || true
-          # The control may exit 1 if PR not yet ready; we still want the job to provide the report.
-          # For branch protection, configure the check name as required.
-          # For this PR we will use admin fallback only if purely procedural.
+          node scripts/repository-control.js --scope pr --pr "${{ github.event.pull_request.number }}" --local-sha "${{ github.event.pull_request.head.sha }}" --wait --strict --timeout-seconds 300
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  repository-control-main:
+    name: Repository Control Main
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'push'
+    needs: [quality, test-linux-20, test-linux-lts, test-windows-20, package-smoke]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Run repository control for this exact main commit
+        run: node scripts/repository-control.js --scope main --wait --strict --timeout-seconds 300
         env:
           GH_TOKEN: ${{ github.token }}

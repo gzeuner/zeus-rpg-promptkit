@@ -43,7 +43,8 @@
     "check:repo-portability": "node scripts/check-repo-portability.js",
     "release:preflight": "node scripts/release-preflight.js",
     "sbom:validate": "node scripts/validate-sbom.js",
-    "repo:control": "node scripts/repository-control.js"
+    "repo:control": "node scripts/repository-control.js",
+    "test:repository-control": "node --test tests/repository-control.test.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",

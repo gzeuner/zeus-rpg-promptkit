@@ -8,6 +8,7 @@ function renderMarkdownReport(report) {
   lines.push(`**Repository**: ${report.repository.nameWithOwner}`);
   lines.push(`**Scope**: ${report.scope}`);
   lines.push(`**Decision**: ${report.decision}`);
+  lines.push(`**Technical Decision**: ${report.technicalDecision}`);
   lines.push(`**Observed SHA**: ${report.observedSha || 'N/A'}`);
   if (report.localCandidateSha) {
     lines.push(`**Local Candidate**: ${report.localCandidateSha}`);

@@ -14,28 +14,17 @@ const fs = require('fs');
 const path = require('path');
 const { parseArgs } = require('util');
 
-const { DEFAULTS, loadConfig } = require('./repository-control/config');
+const { ConfigError, loadConfig, resolveSafePath } = require('./repository-control/config');
 const EXIT_CODES = require('./repository-control/exitCodes');
 
-const {
-  getCurrentBranchSha,
-  compareWithMain,
-  getLocalSha,
-} = require('./repository-control/gitProbe');
-const {
-  fetchPrDetails,
-  fetchChecksForSha,
-  fetchMainDetails,
-  fetchCompare,
-  fetchBranches,
-  fetchReleases,
-} = require('./repository-control/githubProbe');
+const { getOperations } = require('./repository-control/githubProbe');
 const {
   evaluatePr,
   evaluateMain,
   evaluateOverview,
+  finalizeDecision,
 } = require('./repository-control/checkEvaluation');
-const { renderJsonReport, renderMarkdownReport } = require('./repository-control/reportRenderer');
+const { renderMarkdownReport } = require('./repository-control/reportRenderer');
 
 function printHelp() {
   console.log(`
@@ -95,7 +84,7 @@ async function main() {
         reproducible: { type: 'boolean', default: false },
         config: { type: 'string' },
       },
-      strict: false,
+      strict: true,
     });
     options = values;
   } catch (err) {
@@ -107,12 +96,8 @@ async function main() {
   const prNumber = options.pr ? Number(options.pr) : null;
   const localSha = options['local-sha'] || null;
   const wait = !!options.wait;
-  const timeoutSeconds = options['timeout-seconds']
-    ? Number(options['timeout-seconds'])
-    : DEFAULTS.timeoutSeconds;
-  const pollSeconds = options['poll-seconds']
-    ? Number(options['poll-seconds'])
-    : DEFAULTS.pollSeconds;
+  let timeoutSeconds = options['timeout-seconds'] ? Number(options['timeout-seconds']) : null;
+  let pollSeconds = options['poll-seconds'] ? Number(options['poll-seconds']) : null;
   const strict = !!options.strict;
   const outputJson = !!options.json;
   const jsonOutputPath = options['json-output'] || null;
@@ -125,7 +110,7 @@ async function main() {
     process.exit(EXIT_CODES.INVALID_USAGE);
   }
 
-  if (scope === 'pr' && !prNumber) {
+  if (scope === 'pr' && (!Number.isSafeInteger(prNumber) || prNumber <= 0)) {
     console.error('--pr <number> is required when --scope pr');
     process.exit(EXIT_CODES.INVALID_USAGE);
   }
@@ -135,12 +120,41 @@ async function main() {
     process.exit(EXIT_CODES.INVALID_USAGE);
   }
 
-  if (pollSeconds < 5 || pollSeconds > 60) {
-    console.error('--poll-seconds must be between 5 and 60');
+  let config;
+  let safeJsonOutputPath;
+  let safeMdOutputPath;
+  try {
+    config = loadConfig(configPath);
+    timeoutSeconds ??= config.polling.defaultTimeoutSeconds;
+    pollSeconds ??= config.polling.defaultPollSeconds;
+    if (
+      !Number.isInteger(pollSeconds) ||
+      pollSeconds < config.polling.minPollSeconds ||
+      pollSeconds > config.polling.maxPollSeconds
+    ) {
+      throw new ConfigError(
+        `--poll-seconds must be between ${config.polling.minPollSeconds} and ${config.polling.maxPollSeconds}`
+      );
+    }
+    if (
+      !Number.isInteger(timeoutSeconds) ||
+      timeoutSeconds <= 0 ||
+      timeoutSeconds > config.polling.maxTimeoutSeconds
+    ) {
+      throw new ConfigError(
+        `--timeout-seconds must be between 1 and ${config.polling.maxTimeoutSeconds}`
+      );
+    }
+    safeJsonOutputPath = jsonOutputPath
+      ? resolveSafePath(jsonOutputPath, { purpose: 'JSON output path' })
+      : null;
+    safeMdOutputPath = mdOutputPath
+      ? resolveSafePath(mdOutputPath, { purpose: 'Markdown output path' })
+      : null;
+  } catch (error) {
+    console.error(`Invalid repository-control configuration or path: ${error.message}`);
     process.exit(EXIT_CODES.INVALID_USAGE);
   }
-
-  const config = loadConfig(configPath);
 
   const report = {
     schemaVersion: 'repository-control-report/v1',
@@ -150,6 +164,7 @@ async function main() {
     },
     scope,
     decision: 'UNKNOWN',
+    technicalDecision: 'UNKNOWN',
     observedSha: null,
     localCandidateSha: localSha,
     blockers: [],
@@ -163,6 +178,7 @@ async function main() {
     observedAt: reproducible ? 'REPRODUCIBLE' : new Date().toISOString(),
     reproducible,
     configPath,
+    githubOperations: [],
   };
 
   try {
@@ -183,18 +199,8 @@ async function main() {
       await evaluateOverview({ report, wait, timeoutSeconds, pollSeconds, strict, config });
     }
 
-    // Final decision logic
-    if (report.blockers.length > 0) {
-      report.decision = 'BLOCKED';
-    } else if (report.unknowns.length > 0 && strict) {
-      report.decision = 'BLOCKED';
-    } else if (report.unknowns.length > 0) {
-      report.decision = 'UNKNOWN';
-    } else if (report.warnings.length > 0 && strict) {
-      report.decision = 'BLOCKED';
-    } else {
-      report.decision = scope === 'pr' ? 'READY' : 'HEALTHY';
-    }
+    finalizeDecision(report, scope, strict);
+    report.githubOperations = getOperations();
 
     // Render outputs
     const jsonReport = JSON.stringify(report, null, 2);
@@ -203,15 +209,13 @@ async function main() {
       console.log(jsonReport);
     }
 
-    if (jsonOutputPath) {
-      fs.mkdirSync(path.dirname(jsonOutputPath), { recursive: true });
-      fs.writeFileSync(jsonOutputPath, jsonReport + '\n');
+    if (safeJsonOutputPath) {
+      writeSafeFile(safeJsonOutputPath, jsonReport + '\n');
     }
 
-    if (mdOutputPath) {
+    if (safeMdOutputPath) {
       const md = renderMarkdownReport(report);
-      fs.mkdirSync(path.dirname(mdOutputPath), { recursive: true });
-      fs.writeFileSync(mdOutputPath, md);
+      writeSafeFile(safeMdOutputPath, md);
     }
 
     if (!outputJson && !jsonOutputPath && !mdOutputPath) {
@@ -239,6 +243,23 @@ async function main() {
       console.log(JSON.stringify(report, null, 2));
     }
     process.exit(EXIT_CODES.UNKNOWN);
+  }
+}
+
+function writeSafeFile(target, contents) {
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  // Revalidate after directory creation and reject a last-moment symlink swap.
+  const safe = resolveSafePath(target, { purpose: 'output path' });
+  const flags =
+    fs.constants.O_WRONLY |
+    fs.constants.O_CREAT |
+    fs.constants.O_TRUNC |
+    (fs.constants.O_NOFOLLOW || 0);
+  const fd = fs.openSync(safe, flags, 0o600);
+  try {
+    fs.writeFileSync(fd, contents, 'utf8');
+  } finally {
+    fs.closeSync(fd);
   }
 }
 
