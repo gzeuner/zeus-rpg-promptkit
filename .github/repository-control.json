@@ -21,7 +21,8 @@
       "Package Smoke",
       "Demo Safety Corpus Guard",
       "Public Knowledge Claims Guard",
-      "Runtime Config Boundary Guard"
+      "Runtime Config Boundary Guard",
+      "Repository Control (PR)"
     ]
   },
   "optionalChecks": [],
