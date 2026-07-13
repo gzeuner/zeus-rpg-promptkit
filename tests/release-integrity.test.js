@@ -216,10 +216,15 @@ test('no retroactive Beta 2 attestation repair workflow exists', () => {
 });
 
 test('published package excludes repository workflows and retains runtime assets', () => {
-  const output = execFileSync('npm', ['pack', '--dry-run', '--json'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  });
+  assert.ok(process.env.npm_execpath, 'npm CLI path is required for package inspection');
+  const output = execFileSync(
+    process.execPath,
+    [process.env.npm_execpath, 'pack', '--dry-run', '--json'],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+    }
+  );
   const [result] = JSON.parse(output);
   const files = new Set(result.files.map(entry => entry.path));
   assert.equal(
