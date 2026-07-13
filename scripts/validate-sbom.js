@@ -3,17 +3,17 @@
 
 /**
  * Focused SBOM validation for release artifacts.
- * Usage: node scripts/validate-sbom.js zeus-rpg-promptkit-0.2.0-beta.2.sbom.cdx.json 0.2.0-beta.2
+ * Usage: node scripts/validate-sbom.js <sbom.json> <expected-version>
  */
 
 const fs = require('fs');
 const path = require('path');
 
 const file = process.argv[2];
-const expectedVersion = process.argv[3] || '0.2.0-beta.2';
+const expectedVersion = process.argv[3];
 
-if (!file) {
-  console.error('Usage: node scripts/validate-sbom.js <sbom.json> [expectedVersion]');
+if (!file || !expectedVersion) {
+  console.error('Usage: node scripts/validate-sbom.js <sbom.json> <expected-version>');
   process.exit(1);
 }
 

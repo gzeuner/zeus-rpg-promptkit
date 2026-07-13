@@ -39,10 +39,17 @@ Hardened beta with complete MCP test coverage, deterministic recursive test disc
 
 ### Known Limitations (Beta)
 
+- v0.2.0-beta.2 has no valid public build-provenance attestation: its immutable tag points to
+  `6b0786becbb3d9044acc3b8628557fbb1a2c2f66`, while the checksum-verified published tarball is
+  byte-identical to a build from `7345100964ed43166224e3b67847b036817554e5`; this is an accepted,
+  publicly documented historical exception and the tag and assets remain unchanged;
 - type checking currently covers the declared core contract subset, not the complete JavaScript repository;
 - some legacy `no-unused-vars` exceptions remain outside the hardened paths;
 - selected remote IBM i and Db2 behavior still requires environment-specific validation;
 - experimental surfaces remain experimental as documented.
+
+See [the release-integrity policy](docs/maintainers/release-integrity.md) for the exact hashes,
+evidence, and mandatory future-release controls.
 
 ## [0.2.0-beta.1] - 2026-07-12
 

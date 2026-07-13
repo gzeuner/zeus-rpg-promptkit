@@ -6,7 +6,7 @@ Hardened beta with complete MCP test coverage and deterministic test discovery.
 - Restore and harden the full MCP server test suite and contract validation.
 - Introduce deterministic recursive test discovery with omission/duplicate failure gates.
 - Update all GitHub Actions to current Node-24-based implementations with immutable pins.
-- Add release preflight, SBOM, SHA-256 checksums, and build-provenance attestation.
+- Add release preflight, SBOM, and SHA-256 checksums.
 - Enforce identical tarball verification across Linux (Node 20 + LTS) and Windows.
 
 **Major fixes since Beta 1**
@@ -23,11 +23,25 @@ npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.2
 ```bash
 # checksums
 sha256sum --check SHA256SUMS
-# attestation (after download)
-gh attestation verify zeus-rpg-promptkit-0.2.0-beta.2.tgz --repo gzeuner/zeus-rpg-promptkit
 # smoke from tarball only
 mkdir /tmp/verify && cd /tmp/verify && npm init -y && npm install ../zeus-...tgz && ./node_modules/.bin/zeus --help
 ```
+
+**Historical provenance note**
+
+The published v0.2.0-beta.2 tarball is checksum-verified, SBOM-verified and fresh-install verified.
+Its SHA-256 is
+`a14ffe303bc7158a2c0144e3d2a8e422b9301331175bd617b7364251a7f223ea`.
+
+The artifact is byte-identical to a build from commit
+`7345100964ed43166224e3b67847b036817554e5`. The immutable v0.2.0-beta.2 release tag points to
+`6b0786becbb3d9044acc3b8628557fbb1a2c2f66`.
+
+Because the tagged source and published artifact source do not match, no build-provenance
+attestation is claimed for this historical prerelease. The tag and release assets remain
+unchanged. Future releases require source SHA, release tag, artifact digest, SBOM and attestation
+provenance to agree before publication. See the
+[release-integrity policy](https://github.com/gzeuner/zeus-rpg-promptkit/blob/main/docs/maintainers/release-integrity.md).
 
 **Supported environments**
 - Node.js >= 20 (tested on 20 and current LTS)
