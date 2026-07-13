@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "repository-control-config/v1",
+  "repository": "gzeuner/zeus-rpg-promptkit",
+  "defaultBranch": "main",
+  "requiredChecks": {
+    "pullRequest": [
+      "Quality (format, lint, typecheck)",
+      "Test Node 20 (linux)",
+      "Test current LTS (linux)",
+      "Test Node 20 (windows)",
+      "Package Smoke",
+      "Demo Safety Corpus Guard",
+      "Public Knowledge Claims Guard",
+      "Runtime Config Boundary Guard"
+    ],
+    "main": [
+      "Quality (format, lint, typecheck)",
+      "Test Node 20 (linux)",
+      "Test current LTS (linux)",
+      "Test Node 20 (windows)",
+      "Package Smoke",
+      "Demo Safety Corpus Guard",
+      "Public Knowledge Claims Guard",
+      "Runtime Config Boundary Guard",
+      "Repository Control (PR)"
+    ]
+  },
+  "optionalChecks": [],
+  "allowedSkippedChecks": [],
+  "policies": {
+    "branchMustContainMain": true,
+    "directMainCommit": "warning",
+    "unresolvedReviewThreads": "block",
+    "changesRequested": "block",
+    "draftPullRequest": "block",
+    "mergedBranchRetentionDays": 0,
+    "releaseVersionMismatch": "warning",
+    "prBehindMain": "block"
+  },
+  "polling": {
+    "defaultPollSeconds": 15,
+    "minPollSeconds": 5,
+    "maxPollSeconds": 60,
+    "defaultTimeoutSeconds": 1800,
+    "maxTimeoutSeconds": 7200
+  }
+}

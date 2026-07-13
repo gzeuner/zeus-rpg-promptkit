@@ -42,7 +42,8 @@
     "docs:check": "node scripts/docs-check.js",
     "check:repo-portability": "node scripts/check-repo-portability.js",
     "release:preflight": "node scripts/release-preflight.js",
-    "sbom:validate": "node scripts/validate-sbom.js"
+    "sbom:validate": "node scripts/validate-sbom.js",
+    "repo:control": "node scripts/repository-control.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
