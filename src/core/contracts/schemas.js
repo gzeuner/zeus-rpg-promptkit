@@ -39,6 +39,97 @@ function basicHeaderValidator(expectedVersion) {
 }
 
 /**
+ * Validator for typed evidence-graph v1.
+ * This is the foundation schema. Nodes and edges carry provenance, confidence,
+ * locations and uncertainty. Extra fields are tolerated for additive evolution.
+ */
+function evidenceGraphSchema(value) {
+  const errors = basicHeaderValidator(1)(value);
+  if (!value || typeof value !== 'object') return errors;
+
+  if (typeof value.kind !== 'string' || value.kind !== 'evidence-graph') {
+    errors.push({ path: '/kind', message: 'kind must be "evidence-graph"' });
+  }
+  if (typeof value.program !== 'string' || !value.program) {
+    errors.push({ path: '/program', message: 'program is required' });
+  }
+  if (!Array.isArray(value.nodes)) {
+    errors.push({ path: '/nodes', message: 'nodes must be an array' });
+  } else {
+    value.nodes.forEach((node, i) => {
+      if (!node || typeof node !== 'object') {
+        errors.push({ path: `/nodes/${i}`, message: 'node must be object' });
+        return;
+      }
+      if (typeof node.id !== 'string' || !node.id) {
+        errors.push({ path: `/nodes/${i}/id`, message: 'id required' });
+      }
+      const allowedNodeTypes = [
+        'PROGRAM',
+        'PROCEDURE',
+        'SUBROUTINE',
+        'SOURCE_MEMBER',
+        'COPYBOOK',
+        'INCLUDE',
+        'FILE',
+        'TABLE',
+        'FIELD',
+        'UNRESOLVED_SYMBOL',
+      ];
+      if (node.type && !allowedNodeTypes.includes(String(node.type))) {
+        errors.push({ path: `/nodes/${i}/type`, message: 'unrecognized node type' });
+      }
+      if (node.confidence && typeof node.confidence !== 'string') {
+        errors.push({ path: `/nodes/${i}/confidence`, message: 'confidence must be string' });
+      }
+      if (node.provenance && typeof node.provenance !== 'object') {
+        errors.push({ path: `/nodes/${i}/provenance`, message: 'provenance must be object' });
+      }
+      if (node.locations && !Array.isArray(node.locations)) {
+        errors.push({ path: `/nodes/${i}/locations`, message: 'locations must be array' });
+      }
+    });
+  }
+  if (!Array.isArray(value.edges)) {
+    errors.push({ path: '/edges', message: 'edges must be an array' });
+  } else {
+    const allowedEdgeTypes = [
+      'PROGRAM_CALL',
+      'BOUND_PROCEDURE_CALL',
+      'SUBROUTINE_CALL',
+      'COPY_INCLUDE',
+      'FILE_READ',
+      'FILE_WRITE',
+      'TABLE_REFERENCE',
+      'FIELD_REFERENCE',
+      'TRIGGER_DEPENDENCY',
+      'VIEW_DEPENDENCY',
+      'BINDING_CANDIDATE',
+      'DYNAMIC_UNRESOLVED_CALL',
+    ];
+    value.edges.forEach((edge, i) => {
+      if (!edge || typeof edge !== 'object') {
+        errors.push({ path: `/edges/${i}`, message: 'edge must be object' });
+        return;
+      }
+      if (typeof edge.from !== 'string' || !edge.from) {
+        errors.push({ path: `/edges/${i}/from`, message: 'from required' });
+      }
+      if (typeof edge.to !== 'string' || !edge.to) {
+        errors.push({ path: `/edges/${i}/to`, message: 'to required' });
+      }
+      if (edge.type && !allowedEdgeTypes.includes(String(edge.type))) {
+        errors.push({ path: `/edges/${i}/type`, message: 'unrecognized edge type' });
+      }
+      if (edge.confidence && typeof edge.confidence !== 'string') {
+        errors.push({ path: `/edges/${i}/confidence`, message: 'confidence must be string' });
+      }
+    });
+  }
+  return errors;
+}
+
+/**
  * Metadata-only shells for the contracts introduced in package 02.
  * These only enforce common header/identity fields for now.
  * Full structural schemas will be added by later packages.
@@ -124,6 +215,7 @@ const safetyPolicySchema = value => {
 
 const INITIAL_SCHEMAS = Object.freeze({
   [CONTRACT_IDS.EVIDENCE_MODEL]: { version: 1, schema: evidenceModelSchema },
+  [CONTRACT_IDS.EVIDENCE_GRAPH]: { version: 1, schema: evidenceGraphSchema },
   [CONTRACT_IDS.RUN_MANIFEST]: { version: 1, schema: runManifestSchema },
   [CONTRACT_IDS.ARTIFACT_REFERENCE]: { version: 1, schema: artifactReferenceSchema },
   [CONTRACT_IDS.INVESTIGATION_SESSION]: { version: 1, schema: investigationSessionSchema },

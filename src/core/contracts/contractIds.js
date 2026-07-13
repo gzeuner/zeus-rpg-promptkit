@@ -18,6 +18,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 module.exports = Object.freeze({
   EVIDENCE_MODEL: 'zeus.evidence-model',
+  EVIDENCE_GRAPH: 'zeus.evidence-graph',
   RUN_MANIFEST: 'zeus.run-manifest',
   ARTIFACT_REFERENCE: 'zeus.artifact-reference',
   INVESTIGATION_SESSION: 'zeus.investigation-session',
