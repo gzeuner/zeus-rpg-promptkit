@@ -14,11 +14,30 @@ test('evidence-graph registers and validates', () => {
   }
   assert.ok(registry.hasContract(CONTRACT_IDS.EVIDENCE_GRAPH, 1));
 
-  const samplePath = path.join(
-    __dirname,
-    '../examples/demo-rpg-mini-system/output/PROGRAM_100/canonical-analysis.json'
-  );
-  const sample = JSON.parse(fs.readFileSync(samplePath, 'utf8'));
+  // Minimal inline canonical (avoids gitignored generated outputs)
+  const sample = {
+    schemaVersion: 1,
+    kind: 'canonical-analysis',
+    rootProgram: 'TESTPGM',
+    sourceRoot: '/tmp',
+    entities: {
+      programs: [{ name: 'TESTPGM', evidence: [{ file: 'src/test.rpgle', startLine: 1 }] }],
+      procedures: [
+        { name: 'MAIN', program: 'TESTPGM', evidence: [{ file: 'src/test.rpgle', startLine: 5 }] },
+      ],
+      tables: [{ name: 'MYTABLE', evidence: [] }],
+    },
+    relations: [
+      {
+        type: 'CALLS_PROGRAM',
+        from: 'TESTPGM',
+        to: 'OTHERPGM',
+        evidence: [{ file: 'src/test.rpgle' }],
+      },
+    ],
+    sqlStatements: [],
+    sourceFiles: [],
+  };
   const graph = buildEvidenceGraph(sample);
   const res = registry.validate(CONTRACT_IDS.EVIDENCE_GRAPH, 1, graph);
   if (!res.ok) {
@@ -30,11 +49,16 @@ test('evidence-graph registers and validates', () => {
 });
 
 test('evidence-graph is deterministic on repeat builds', () => {
-  const samplePath = path.join(
-    __dirname,
-    '../examples/demo-rpg-mini-system/output/PROGRAM_100/canonical-analysis.json'
-  );
-  const sample = JSON.parse(fs.readFileSync(samplePath, 'utf8'));
+  const sample = {
+    schemaVersion: 1,
+    kind: 'canonical-analysis',
+    rootProgram: 'TESTPGM',
+    sourceRoot: '/tmp',
+    entities: { programs: [{ name: 'TESTPGM', evidence: [] }], procedures: [] },
+    relations: [],
+    sqlStatements: [],
+    sourceFiles: [],
+  };
   const g1 = buildEvidenceGraph(sample);
   const g2 = buildEvidenceGraph(sample);
   assert.equal(JSON.stringify(g1), JSON.stringify(g2));
@@ -53,11 +77,20 @@ test('evidence-graph rejects invalid doc', () => {
 });
 
 test('evidence-graph produces typed content from canonical', () => {
-  const samplePath = path.join(
-    __dirname,
-    '../examples/demo-rpg-mini-system/output/PROGRAM_100/canonical-analysis.json'
-  );
-  const sample = JSON.parse(fs.readFileSync(samplePath, 'utf8'));
+  const sample = {
+    schemaVersion: 1,
+    kind: 'canonical-analysis',
+    rootProgram: 'TESTPGM',
+    sourceRoot: '/tmp',
+    entities: {
+      programs: [{ name: 'TESTPGM', evidence: [] }],
+      procedures: [{ name: 'P1', program: 'TESTPGM', evidence: [] }],
+      tables: [{ name: 'T1', evidence: [] }],
+    },
+    relations: [{ type: 'CALLS_PROGRAM', from: 'TESTPGM', to: 'OTHER', evidence: [] }],
+    sqlStatements: [],
+    sourceFiles: [],
+  };
   const g = buildEvidenceGraph(sample);
   const types = new Set(g.nodes.map(n => n.type));
   assert.ok(types.has('PROGRAM') || types.has('PROCEDURE') || types.has('TABLE'));
