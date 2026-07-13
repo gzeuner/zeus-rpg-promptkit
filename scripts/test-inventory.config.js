@@ -7,6 +7,7 @@ module.exports = {
       'tests/analyze-run-manifest.test.js',
       'tests/bundle-manifest.test.js',
       'tests/evidence-graph.test.js',
+      'tests/graph-guided-context-planner.test.js',
       'tests/fetch-readability-contract.test.js',
       'tests/schema-registry.test.js',
       'tests/task-oriented-analysis-index.test.js',

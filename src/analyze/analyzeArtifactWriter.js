@@ -34,6 +34,7 @@ const {
   renderCrossProgramMarkdown,
 } = require('../dependency/graphSerializer');
 const { buildEvidenceGraph } = require('./evidenceGraphBuilder');
+const { buildContextPlan } = require('./graphGuidedContextPlanner');
 const {
   buildReproduciblePathReplacements,
   normalizeReproducibilitySettings,
@@ -135,6 +136,31 @@ function writeAnalyzeArtifacts(state) {
     sourceRoot: state.sourceRoot || state.cwd,
   });
 
+  // Graph-guided context plan (iteration 03)
+  let contextPlan = null;
+  try {
+    const planGoal =
+      state.program || (canonicalAnalysis && canonicalAnalysis.rootProgram) || 'analyze';
+    const planTargets = state.targets || [planGoal];
+    const budget = (state.tokenBudgets && state.tokenBudgets[workflowMode]) || 8000;
+    contextPlan = buildContextPlan({
+      canonicalAnalysis,
+      evidenceGraph,
+      goal: planGoal,
+      targets: planTargets,
+      tokenBudget: budget,
+      options: { maxGraphDepth: 2 },
+    });
+  } catch (e) {
+    // non-fatal in this foundation step
+    contextPlan = {
+      schemaVersion: 1,
+      kind: 'context-plan',
+      goal: 'error',
+      error: String(e.message || e),
+    };
+  }
+
   const generatedPromptFiles = selectedPromptTemplates.map(
     templateName => getPromptContract(templateName).outputFileName
   );
@@ -177,6 +203,7 @@ function writeAnalyzeArtifacts(state) {
     ...(knownFactsArtifactEnabled ? ['known-facts.json'] : []),
     'analysis-index.json',
     'evidence-graph.json',
+    'context-plan.json',
     'dependency-graph.json',
     'dependency-graph.mmd',
     'dependency-graph.md',
@@ -239,6 +266,12 @@ function writeAnalyzeArtifacts(state) {
       ? replaceExactStringsDeep(evidenceGraph, pathReplacements)
       : evidenceGraph;
     writeJsonReport(path.join(outputProgramDir, 'evidence-graph.json'), writtenEvidenceGraph);
+  }
+  if (contextPlan) {
+    const writtenContextPlan = reproducibilitySettings.enabled
+      ? replaceExactStringsDeep(contextPlan, pathReplacements)
+      : contextPlan;
+    writeJsonReport(path.join(outputProgramDir, 'context-plan.json'), writtenContextPlan);
   }
   if (knownFactsArtifactEnabled) {
     const knownFactsArtifact = reproducibilitySettings.enabled
