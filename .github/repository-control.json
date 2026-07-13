@@ -24,6 +24,28 @@
       "Runtime Config Boundary Guard"
     ]
   },
+  "checkConclusions": {
+    "pullRequest": {
+      "Quality (format, lint, typecheck)": ["success"],
+      "Test Node 20 (linux)": ["success"],
+      "Test current LTS (linux)": ["success"],
+      "Test Node 20 (windows)": ["success"],
+      "Package Smoke": ["success"],
+      "Demo Safety Corpus Guard": ["success"],
+      "Public Knowledge Claims Guard": ["success"],
+      "Runtime Config Boundary Guard": ["success"]
+    },
+    "main": {
+      "Quality (format, lint, typecheck)": ["success"],
+      "Test Node 20 (linux)": ["success"],
+      "Test current LTS (linux)": ["success"],
+      "Test Node 20 (windows)": ["success"],
+      "Package Smoke": ["success"],
+      "Demo Safety Corpus Guard": ["success"],
+      "Public Knowledge Claims Guard": ["success"],
+      "Runtime Config Boundary Guard": ["success"]
+    }
+  },
   "optionalChecks": [],
   "allowedSkippedChecks": [],
   "policies": {
@@ -34,7 +56,9 @@
     "draftPullRequest": "block",
     "mergedBranchRetentionDays": 0,
     "releaseVersionMismatch": "warning",
-    "prBehindMain": "block"
+    "prBehindMain": "block",
+    "mergeability": "block",
+    "mergeState": "ignore"
   },
   "polling": {
     "defaultPollSeconds": 15,
