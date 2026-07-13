@@ -106,6 +106,7 @@ const mcpTools = new McpToolRegistry();
 const knowledgeProviders = new ComponentRegistry();
 
 const { createSchemaRegistry } = require('../core/contracts');
+const { buildEvidenceGraph } = require('../analyze/evidenceGraphBuilder');
 const schemaRegistry = createSchemaRegistry();
 
 // Seed the initial metadata shells from package 02 (additive, no migration)
@@ -772,6 +773,9 @@ const zeus = {
   readRunViews,
   runWorkflow,
 
+  // Evidence graph (typed projection foundation)
+  buildEvidenceGraph,
+
   analyzers,
   mcpTools,
   knowledgeProviders,
@@ -832,6 +836,9 @@ module.exports = {
   readRun,
   readRunViews,
   runWorkflow,
+
+  // Evidence graph builder (additive)
+  buildEvidenceGraph,
 
   // Schema / contract foundation (package 02)
   createSchemaRegistry,

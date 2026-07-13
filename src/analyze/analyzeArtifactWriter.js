@@ -33,6 +33,7 @@ const {
   renderMarkdown,
   renderCrossProgramMarkdown,
 } = require('../dependency/graphSerializer');
+const { buildEvidenceGraph } = require('./evidenceGraphBuilder');
 const {
   buildReproduciblePathReplacements,
   normalizeReproducibilitySettings,
@@ -130,6 +131,10 @@ function writeAnalyzeArtifacts(state) {
     env: state.env,
   });
 
+  const evidenceGraph = buildEvidenceGraph(canonicalAnalysis, {
+    sourceRoot: state.sourceRoot || state.cwd,
+  });
+
   const generatedPromptFiles = selectedPromptTemplates.map(
     templateName => getPromptContract(templateName).outputFileName
   );
@@ -171,6 +176,7 @@ function writeAnalyzeArtifacts(state) {
     'ai-knowledge.json',
     ...(knownFactsArtifactEnabled ? ['known-facts.json'] : []),
     'analysis-index.json',
+    'evidence-graph.json',
     'dependency-graph.json',
     'dependency-graph.mmd',
     'dependency-graph.md',
@@ -228,6 +234,12 @@ function writeAnalyzeArtifacts(state) {
     writeJsonReport(path.join(outputProgramDir, 'optimized-context.json'), writtenOptimizedContext);
   }
   writeJsonReport(path.join(outputProgramDir, 'ai-knowledge.json'), writtenAiKnowledge);
+  if (evidenceGraph) {
+    const writtenEvidenceGraph = reproducibilitySettings.enabled
+      ? replaceExactStringsDeep(evidenceGraph, pathReplacements)
+      : evidenceGraph;
+    writeJsonReport(path.join(outputProgramDir, 'evidence-graph.json'), writtenEvidenceGraph);
+  }
   if (knownFactsArtifactEnabled) {
     const knownFactsArtifact = reproducibilitySettings.enabled
       ? replaceExactStringsDeep(buildKnownFactsArtifact(context), pathReplacements)

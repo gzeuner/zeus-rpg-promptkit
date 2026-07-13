@@ -2352,6 +2352,9 @@ module.exports = {
   defaultSearchResults,
   defaultSqlAnalysis,
   enrichCanonicalAnalysisModel,
+  normalizeName,
+  uniqueSortedStrings,
+  normalizeEvidenceList,
   summarizeSqlStatements,
   validateCanonicalAnalysisModel,
 };
