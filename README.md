@@ -162,6 +162,11 @@ See `package.json` scripts, `CONTRIBUTING.md`, `CHANGELOG.md`, and `.github/work
 
 **Beta status (0.2.0-beta.2):** This is a prerelease. Core contracts are stabilizing, but some surfaces remain experimental. See the GitHub release notes and CHANGELOG for compatibility details. Always use the golden path tutorial and run `npm run docs:check` / `npm run package:smoke` locally before production use of artifacts.
 
+Beta.2's checksum, SBOM, and clean installation are verified, but it has no valid public artifact
+attestation because its immutable tag and the published artifact source differ. The accepted
+historical exception and the stricter policy for every future release are documented in
+[`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
+
 ### Golden Corpus & Quality Metrics (package 11)
 
 - `npm run test:corpus` validates scanner patterns.

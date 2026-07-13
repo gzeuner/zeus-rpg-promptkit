@@ -32,6 +32,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:discovery
+      - run: npm run test:release-integrity
       - run: npm run check:repo-portability
       - run: npm run check:public-knowledge-claims
       - run: npm run test:quality
