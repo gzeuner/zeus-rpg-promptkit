@@ -1,7 +1,5 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const path = require('path');
 
 const { createSchemaRegistry } = require('../src/core/contracts/schemaRegistry');
 const { CONTRACT_IDS, INITIAL_SCHEMAS } = require('../src/core/contracts/schemas');
