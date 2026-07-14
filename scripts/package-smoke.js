@@ -55,7 +55,7 @@ try {
   const inst = path.join(TMP, 'i');
   fs.mkdirSync(inst, { recursive: true });
   sh('npm init -y', inst);
-  sh('npm install --offline --no-audit --no-fund ' + tgz, inst);
+  sh('npm install --no-audit --no-fund ' + tgz, inst);
 
   // Strictly verify the executable and public API from the temporary installation.
   const binName = process.platform === 'win32' ? 'zeus.cmd' : 'zeus';
