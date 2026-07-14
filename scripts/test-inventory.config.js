@@ -6,6 +6,7 @@ module.exports = {
       'tests/ai-knowledge-projection.test.js',
       'tests/analyze-run-manifest.test.js',
       'tests/bundle-manifest.test.js',
+      'tests/cli-help.test.js',
       'tests/evidence-graph.test.js',
       'tests/graph-guided-context-planner.test.js',
       'tests/release-integrity.test.js',

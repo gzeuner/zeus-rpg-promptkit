@@ -77,6 +77,16 @@ test('all platform jobs consume the same captured workflow artifact', () => {
   }
 });
 
+test('all platform jobs strictly verify both installed top-level help flags', () => {
+  for (const name of ['verify-linux-20', 'verify-linux-lts', 'verify-windows-20']) {
+    const section = job(name);
+    assert.match(section, /node_modules[\\/.]\.bin[\\/]zeus --help/, name);
+    assert.match(section, /node_modules[\\/.]\.bin[\\/]zeus -h/, name);
+    assert.doesNotMatch(section, /zeus (?:--help|-h).*\|\|\s*(?:true|echo)\b/, name);
+  }
+  assert.match(job('verify-windows-20'), /& \.\\node_modules\\\.bin\\zeus --help/);
+});
+
 test('source SHA is captured once from github.sha and exported', () => {
   const section = job('build');
   assert.equal(occurrences(section, /SOURCE_SHA="\$GITHUB_SHA"/g), 1);

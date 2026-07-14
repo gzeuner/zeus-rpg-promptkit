@@ -33,6 +33,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:discovery
       - run: npm run test:release-integrity
+      - run: npm run test:cli-help
       - run: npm run check:repo-portability
       - run: npm run check:public-knowledge-claims
       - run: npm run test:quality
@@ -82,6 +83,7 @@ jobs:
       - run: npm ci
       - run: npm run test:discovery
       - run: npm test
+      - run: npm run package:smoke
 
   package-smoke:
     name: Package Smoke

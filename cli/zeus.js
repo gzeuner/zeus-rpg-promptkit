@@ -497,6 +497,13 @@ async function main() {
   }
 
   let { command, args } = splitCommandArgs(argv);
+  const topLevelHelpRequested =
+    (command === null || command === '-h') &&
+    argv.some(token => token === '--help' || token === '-h');
+  if (topLevelHelpRequested) {
+    printHelp();
+    return;
+  }
   if (!command) {
     printHelp();
     process.exit(1);
