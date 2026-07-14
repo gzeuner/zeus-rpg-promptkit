@@ -223,6 +223,7 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund "$ARTIFACT_DIR/$TARBALL"
           node -e "const p=require('zeus-rpg-promptkit/package.json'); if(p.version!==process.env.RELEASE_VERSION) process.exit(1); require('zeus-rpg-promptkit/api')"
           ./node_modules/.bin/zeus --help >/dev/null
+          ./node_modules/.bin/zeus -h >/dev/null
 
   verify-linux-lts:
     name: Verify release artifact on Linux current LTS
@@ -257,6 +258,7 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund "$ARTIFACT_DIR/$TARBALL"
           node -e "const p=require('zeus-rpg-promptkit/package.json'); if(p.version!==process.env.RELEASE_VERSION) process.exit(1); require('zeus-rpg-promptkit/api')"
           ./node_modules/.bin/zeus --help >/dev/null
+          ./node_modules/.bin/zeus -h >/dev/null
 
   verify-windows-20:
     name: Verify release artifact on Windows Node 20
@@ -298,6 +300,7 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund (Join-Path $artifactDir $env:TARBALL)
           node -e "const p=require('zeus-rpg-promptkit/package.json'); if(p.version!==process.env.RELEASE_VERSION) process.exit(1); require('zeus-rpg-promptkit/api')"
           & .\node_modules\.bin\zeus --help | Out-Null
+          & .\node_modules\.bin\zeus -h | Out-Null
 
   attest:
     name: Attest and strictly verify the release artifact

@@ -15,6 +15,7 @@ const os = require('os');
 const ROOT = path.resolve(__dirname, '..');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-smoke-'));
 const PACK_DIR = path.join(TMP, 'pack');
+const EXPECTED_VERSION = require('../package.json').version;
 
 function sh(cmd, cwd = ROOT) {
   console.log('$ ' + cmd);
@@ -24,6 +25,20 @@ function sh(cmd, cwd = ROOT) {
     throw new Error('failed: ' + cmd);
   }
   return r.stdout || '';
+}
+
+function runInstalled(file, args, cwd) {
+  console.log('$ ' + [file, ...args].join(' '));
+  const result = spawnSync(file, args, {
+    cwd,
+    encoding: 'utf8',
+    shell: process.platform === 'win32',
+  });
+  if (result.status !== 0) {
+    console.error(result.stderr || result.stdout);
+    throw new Error('failed installed executable: ' + file + ' ' + args.join(' '));
+  }
+  return result.stdout || '';
 }
 
 try {
@@ -40,20 +55,27 @@ try {
   const inst = path.join(TMP, 'i');
   fs.mkdirSync(inst, { recursive: true });
   sh('npm init -y', inst);
-  sh('npm install --no-audit --no-fund ' + tgz, inst);
+  sh('npm install --offline --no-audit --no-fund ' + tgz, inst);
 
-  // bin + api (best effort)
-  const bin = path.join(inst, 'node_modules', '.bin', 'zeus');
-  try {
-    const h = sh(bin + ' --help 2>&1 || true');
-    console.log('help len:', (h || '').length);
-  } catch (_e) {
-    console.log('bin present');
+  // Strictly verify the executable and public API from the temporary installation.
+  const binName = process.platform === 'win32' ? 'zeus.cmd' : 'zeus';
+  const bin = path.join(inst, 'node_modules', '.bin', binName);
+  const resolvedBin = fs.realpathSync(bin);
+  const installedNodeModules = path.join(inst, 'node_modules') + path.sep;
+  if (!resolvedBin.startsWith(installedNodeModules)) {
+    throw new Error('installed executable resolves outside temporary installation: ' + resolvedBin);
   }
-  try {
-    const a = sh('node -e "console.log(!!require(\'zeus-rpg-promptkit/api\'))" 2>&1 || true', inst);
-    console.log('api:', a);
-  } catch (_e) {}
+  const longHelp = runInstalled(bin, ['--help'], inst);
+  const shortHelp = runInstalled(bin, ['-h'], inst);
+  if (!/Usage:\s*\n\s*zeus /.test(longHelp) || !/Usage:\s*\n\s*zeus /.test(shortHelp)) {
+    throw new Error('installed help output is missing top-level usage');
+  }
+  sh(
+    "node -e \"const p=require('zeus-rpg-promptkit/package.json');" +
+      `if(p.version!=='${EXPECTED_VERSION}') process.exit(1);` +
+      "require('zeus-rpg-promptkit/api')\"",
+    inst
+  );
 
   console.log('PACKAGE SMOKE PASSED');
 } catch (_e) {
