@@ -1,7 +1,7 @@
 ---
 Title: Zeus RPG PromptKit Documentation Hub (v2.1)
-Description: Zentrale, KI-freundliche Navigation über alle Dokumentationsdomänen inklusive Safety-First-Einstieg und schnellen Referenzpfaden.
-Last Updated: 2026-06-19
+Description: Zentrale, KI-freundliche Navigation über alle Dokumentationsdomänen inklusive Safety-First-Einstieg, Open-Core-Grenzen und schnellen Referenzpfaden.
+Last Updated: 2026-07-16
 ---
 
 # Zeus RPG PromptKit Documentation Hub (v2.1)
@@ -44,17 +44,18 @@ See the lifecycle diagram and "What Zeus is / is not" there.
 
 ## Quick Links For AI Assistants
 
-| Need                              | Go To                                                                          | Why                                                                  |
-| --------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| Authoritative command behavior    | [`tool-catalog.md`](tool-catalog.md)                                           | Single source of truth für Commands, Safety und Beispiele            |
-| Session bootstrap                 | [`ai/session-prompt.md`](ai/session-prompt.md)                                 | Standardisierte Arbeitsweise mit Safety-Gates                        |
-| MCP operator setup                | [`mcp/operator-guide.md`](mcp/operator-guide.md)                               | Start-/Policy-/Audit-Referenz fuer lokalen MCP-Betrieb               |
-| Prompt schema and constraints     | [`ai/prompt-contracts.md`](ai/prompt-contracts.md)                             | Verhindert inkonsistente Prompt-Ausgaben                             |
-| Workflow options                  | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md) | Zeigt Opt-in Vertiefungsfeatures                                     |
-| Architecture decisions & baseline | [`architecture/index.md`](architecture/index.md)                               | ADRs for kernel, dependencies, contracts, registry, and safety zones |
-| Safe sharing guidance             | [`safety/safe-sharing.md`](safety/safe-sharing.md)                             | Reduktions-/Sanitization-Regeln für externe Nutzung                  |
-| CLI examples                      | [`cli/examples.md`](cli/examples.md)                                           | Schnell nutzbare, reproduzierbare Befehlsmuster                      |
-| DB2 discovery SQL                 | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql) | Standardisierte Discovery-Queries fuer System- und Ticketkontext     |
+| Need                              | Go To                                                                                                                    | Why                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Authoritative command behavior    | [`tool-catalog.md`](tool-catalog.md)                                                                                     | Single source of truth für Commands, Safety und Beispiele                                |
+| Session bootstrap                 | [`ai/session-prompt.md`](ai/session-prompt.md)                                                                           | Standardisierte Arbeitsweise mit Safety-Gates                                            |
+| MCP operator setup                | [`mcp/operator-guide.md`](mcp/operator-guide.md)                                                                         | Start-/Policy-/Audit-Referenz fuer lokalen MCP-Betrieb                                   |
+| Prompt schema and constraints     | [`ai/prompt-contracts.md`](ai/prompt-contracts.md)                                                                       | Verhindert inkonsistente Prompt-Ausgaben                                                 |
+| Workflow options                  | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md)                                           | Zeigt Opt-in Vertiefungsfeatures                                                         |
+| Architecture decisions & baseline | [`architecture/index.md`](architecture/index.md)                                                                         | ADRs for kernel, dependencies, contracts, registry, and safety zones                     |
+| Open-core module boundary         | [`architecture/adr-006-commercial-extension-architecture.md`](architecture/adr-006-commercial-extension-architecture.md) | Public/private ownership, explicit registration, compatibility, and artifact portability |
+| Safe sharing guidance             | [`safety/safe-sharing.md`](safety/safe-sharing.md)                                                                       | Reduktions-/Sanitization-Regeln für externe Nutzung                                      |
+| CLI examples                      | [`cli/examples.md`](cli/examples.md)                                                                                     | Schnell nutzbare, reproduzierbare Befehlsmuster                                          |
+| DB2 discovery SQL                 | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql)                                           | Standardisierte Discovery-Queries fuer System- und Ticketkontext                         |
 
 ## Visual Map
 
@@ -84,7 +85,7 @@ flowchart TD
 ## Governance Notes
 
 - `docs/tool-catalog.md` bleibt die verbindliche Referenz für KI-Assistenten.
-- `docs/architecture/index.md` (und die ADRs darin) sind die autoritative Quelle für Produkt-Kernel, Abhängigkeitsrichtung, versionierte Verträge, Capability-Registry und Safety-Trust-Zones.
+- `docs/architecture/index.md` (und die ADRs darin) sind die autoritative Quelle für Produkt-Kernel, Abhängigkeitsrichtung, versionierte Verträge, Capability-Registry, Safety-Trust-Zones und Open-Core-Modulgrenzen.
 - CLI und MCP bleiben der unterstützte Produktpfad; der lokale Viewer ist optional und experimentell.
 - Dokumentänderungen sollen Safety-Level und Scope-Terminologie konsistent halten (`S0` bis `S4`).
 - Regenerierung funktioniert direkt ueber `zeus docs:generate-catalog` oder `zeus docs generate-catalog` und haelt den Tool-Katalog aktuell.

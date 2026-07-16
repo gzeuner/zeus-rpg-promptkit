@@ -478,6 +478,13 @@ zeus.mcpTools.registerTool('my.tool', {
 zeus.registerPlugin(myPlugin);
 ```
 
+Diese Hooks sind ausschließlich für explizit importierten, vertrauenswürdigen In-Process-Code
+bestimmt. `registerPlugin` ist kein dynamischer Modul-Loader, keine Sandbox, kein Marketplace und
+keine Lizenz- oder Kompatibilitätsgrenze. Die spezifizierte zukünftige Modulgrenze sowie die
+Trennung von öffentlichem Core und separaten kommerziellen Implementierungen beschreibt
+[`ADR-006`](docs/architecture/adr-006-commercial-extension-architecture.md); eine ausführbare
+Modul-Registry oder kommerzielle Funktion wird damit noch nicht bereitgestellt.
+
 Zentrale Erweiterungspunkte:
 
 - Analyzer Registry
@@ -1039,6 +1046,13 @@ zeus.mcpTools.registerTool('my.tool', {
 
 zeus.registerPlugin(myPlugin);
 ```
+
+These hooks are only for explicitly imported, trusted in-process code. `registerPlugin` is not a
+dynamic module loader, sandbox, marketplace, license gate, or compatibility boundary. The
+specified future module boundary and the separation between public core contracts and separately
+distributed commercial implementations are defined in
+[`ADR-006`](docs/architecture/adr-006-commercial-extension-architecture.md); this does not yet ship
+an executable module registrar or commercial capability.
 
 Primary extension points:
 
