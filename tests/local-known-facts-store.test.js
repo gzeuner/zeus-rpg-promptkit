@@ -63,6 +63,7 @@ test('local known facts store writes profile-scoped local-only facts with ttl me
     assert.equal(fs.existsSync(written.path), true);
     assert.equal(written.store.versionMarker.ttlDays, 14);
     assert.equal(written.store.versionMarker.updatedAt, now);
+    assert.equal(written.store.versionMarker.expiresAt, '2026-06-30T10:00:00.000Z');
     assert.equal(written.store.facts.length, 1);
     assert.equal(written.store.facts[0].confidence, 'HIGH');
 
@@ -78,7 +79,7 @@ test('local known facts store writes profile-scoped local-only facts with ttl me
   }
 });
 
-test('local known facts store flags expired payloads and rejects secret-like values', () => {
+test('local known facts store evaluates controlled time before, at, and after expiry', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-known-facts-expired-'));
 
   try {
@@ -86,8 +87,9 @@ test('local known facts store flags expired payloads and rejects secret-like val
       'qa',
       {
         versionMarker: {
-          updatedAt: '2026-06-01T00:00:00.000Z',
-          ttlDays: 1,
+          updatedAt: '2000-01-01T00:00:00.000Z',
+          expiresAt: '2000-01-02T00:00:00.000Z',
+          ttlDays: 30,
         },
         facts: [
           {
@@ -99,17 +101,90 @@ test('local known facts store flags expired payloads and rejects secret-like val
       },
       {
         cwd: tempRoot,
-        now: '2026-06-01T00:00:00.000Z',
+        now: '2000-01-01T00:00:00.000Z',
       }
     );
 
-    const expired = readKnownFactsStore('qa', {
+    const ready = readKnownFactsStore('qa', {
       cwd: tempRoot,
-      now: '2026-06-16T00:00:00.000Z',
+      now: '2000-01-01T23:59:59.999Z',
     });
-    assert.equal(expired.status, 'expired');
-    assert.equal(expired.expired, true);
+    assert.equal(ready.status, 'ready');
+    assert.equal(ready.expired, false);
 
+    const atBoundary = readKnownFactsStore('qa', {
+      cwd: tempRoot,
+      now: '2000-01-02T00:00:00.000Z',
+    });
+    assert.equal(atBoundary.status, 'expired');
+    assert.equal(atBoundary.expired, true);
+
+    const afterBoundary = readKnownFactsStore('qa', {
+      cwd: tempRoot,
+      now: '2000-01-02T00:00:00.001Z',
+    });
+    assert.equal(afterBoundary.status, 'expired');
+    assert.equal(afterBoundary.expired, true);
+
+    const defaultClock = readKnownFactsStore('qa', { cwd: tempRoot });
+    assert.equal(defaultClock.status, 'expired');
+    assert.equal(defaultClock.expired, true);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('local known facts store rejects invalid time and preserves missing status', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-known-facts-time-policy-'));
+
+  try {
+    const missing = readKnownFactsStore('missing', {
+      cwd: tempRoot,
+      now: '2000-01-01T00:00:00.000Z',
+    });
+    assert.equal(missing.status, 'missing');
+    assert.equal(missing.expired, false);
+
+    assert.throws(
+      () =>
+        writeKnownFactsStore(
+          'invalid-expiry',
+          {
+            versionMarker: {
+              updatedAt: '2000-01-01T00:00:00.000Z',
+              expiresAt: 'not-a-timestamp',
+            },
+            facts: [],
+          },
+          { cwd: tempRoot, now: '2000-01-01T00:00:00.000Z' }
+        ),
+      /Invalid timestamp: not-a-timestamp/
+    );
+
+    writeKnownFactsStore(
+      'invalid-now',
+      {
+        versionMarker: {
+          updatedAt: '2000-01-01T00:00:00.000Z',
+          expiresAt: '2000-01-02T00:00:00.000Z',
+        },
+        facts: [],
+      },
+      { cwd: tempRoot, now: '2000-01-01T00:00:00.000Z' }
+    );
+    assert.throws(
+      () => readKnownFactsStore('invalid-now', { cwd: tempRoot, now: 'not-a-timestamp' }),
+      /Invalid timestamp: not-a-timestamp/
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('local known facts store rejects secret-like values', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-known-facts-secrets-'));
+
+  try {
     assert.throws(
       () =>
         writeKnownFactsStore(

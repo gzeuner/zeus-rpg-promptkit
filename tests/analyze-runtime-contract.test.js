@@ -5,6 +5,10 @@ const os = require('os');
 const path = require('path');
 
 const { runAnalyzeArtifactAdapter, runAnalyzeCore } = require('../src/analyze/analyzePipeline');
+const { REPRODUCIBLE_TIMESTAMP } = require('../src/reproducibility/reproducibility');
+
+const KNOWN_FACTS_UPDATED_AT = '1999-12-16T00:00:00.000Z';
+const KNOWN_FACTS_EXPIRES_AT = '2000-01-15T00:00:00.000Z';
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -149,8 +153,8 @@ test('analyze core can opt in local known facts without auto-loading them by def
         profile: 'dev',
         versionMarker: {
           toolVersion: '0.1.0',
-          updatedAt: '2026-06-16T10:00:00.000Z',
-          expiresAt: '2026-07-16T10:00:00.000Z',
+          updatedAt: KNOWN_FACTS_UPDATED_AT,
+          expiresAt: KNOWN_FACTS_EXPIRES_AT,
           ttlDays: 30,
         },
         facts: [
@@ -175,6 +179,10 @@ test('analyze core can opt in local known facts without auto-loading them by def
       outputRoot,
       profile: 'dev',
       loadKnownFactsEnabled: true,
+      reproducibility: {
+        enabled: true,
+        stableTimestamp: REPRODUCIBLE_TIMESTAMP,
+      },
       cwd: tempRoot,
       config: {
         extensions: ['.rpgle'],
