@@ -8,6 +8,7 @@ interface Error {
 declare const path: any;
 declare const fs: any;
 declare const process: any;
+declare const Buffer: any;
 
 declare module '*package.json' {
   const value: any;

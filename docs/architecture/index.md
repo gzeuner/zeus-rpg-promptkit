@@ -20,6 +20,7 @@ All subsequent implementation and agent guidance must be consistent with these d
 | [004](adr-004-capability-registry.md)               | Capability Registry               | Accepted               |
 | [005](adr-005-safety-trust-zones.md)                | Safety Trust Zones                | Accepted               |
 | [006](adr-006-commercial-extension-architecture.md) | Commercial Extension Architecture | Accepted specification |
+| [007](adr-007-provider-neutral-contracts.md)        | Provider-Neutral AI Contracts     | Accepted               |
 
 ## Related Reviews
 
@@ -34,6 +35,8 @@ All subsequent implementation and agent guidance must be consistent with these d
 - The product kernel (ADR-001) defines the stable evidence and artifact production responsibilities.
 - External modules and capabilities must follow the open-core ownership, explicit registration,
   compatibility, failure-isolation, and artifact-portability rules in ADR-006.
+- Optional AI adapters must follow the versioned contracts, explicit provider identity,
+  private-by-default policy, redaction, and evidence-separation rules in ADR-007.
 
 ## Regenerating Supporting Artifacts
 
