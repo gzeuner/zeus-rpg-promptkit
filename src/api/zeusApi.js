@@ -15,6 +15,11 @@ const { runWorkflowEngine } = require('../workflow/workflowRunner');
 const { executeFetch } = require('../core/fetchService');
 const { executeAnalyze } = require('../core/analyzeService');
 const investigationSession = require('../investigation/investigationSession');
+const providerContracts = require('../providers/contracts');
+const { createProviderRegistry } = require('../providers/providerRegistry');
+const providerPolicy = require('../providers/egressPolicy');
+const providerRedaction = require('../providers/redaction');
+const providerTesting = require('../providers/testing');
 const { executeQueryTable } = require('../core/queryService');
 const {
   executeListRuns,
@@ -104,6 +109,17 @@ class McpToolRegistry extends ComponentRegistry {
 const analyzers = new AnalyzerRegistry();
 const mcpTools = new McpToolRegistry();
 const knowledgeProviders = new ComponentRegistry();
+function createProviderNamespace() {
+  return Object.freeze({
+    registry: createProviderRegistry(),
+    createRegistry: createProviderRegistry,
+    contracts: providerContracts,
+    policy: providerPolicy,
+    redaction: providerRedaction,
+    testing: providerTesting,
+  });
+}
+const providers = createProviderNamespace();
 
 const { createSchemaRegistry } = require('../core/contracts');
 const { buildEvidenceGraph } = require('../analyze/evidenceGraphBuilder');
@@ -834,6 +850,9 @@ const zeus = {
   analyzers,
   mcpTools,
   knowledgeProviders,
+  // Provider-neutral Community contracts. Empty by default; registration is
+  // explicit and restricted to trusted, already-imported in-process adapters.
+  providers,
   components: new ComponentRegistry(),
   analyzeStages: analyzeStageRegistry,
 
@@ -903,6 +922,10 @@ module.exports = {
   createCapabilityRegistry,
   capabilities: zeus.capabilities,
 
+  // Provider-neutral contracts and trusted in-process registration API.
+  providers,
+  createProviderRegistry,
+
   zeus,
-  createZeus: () => ({ ...zeus }),
+  createZeus: () => ({ ...zeus, providers: createProviderNamespace() }),
 };

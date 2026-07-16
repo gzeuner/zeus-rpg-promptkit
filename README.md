@@ -494,6 +494,27 @@ Zentrale Erweiterungspunkte:
 - Workflow-, Fetch-, Query- und Run-Explorer-Services
 - persistente lokale Investigation Sessions
 
+### Providerneutrale Verträge (optional und offline)
+
+Die Programmatic API stellt unter `providers` versionierte Verträge und eine standardmäßig leere
+Registry für explizit importierte, vertrauenswürdige In-Process-Adapter bereit:
+
+```js
+const { providers } = require('zeus-rpg-promptkit/api');
+
+const registry = providers.createRegistry();
+const policy = providers.policy.createEgressPolicy([
+  { classification: 'public-metadata', trustZone: 'local', allow: true },
+]);
+```
+
+Ohne Registrierung arbeitet Zeus unverändert weiter. Jede Verarbeitung – auch lokal – benötigt
+eine genaue Klassifikations-/Trust-Zone-Regel; `secret` wird immer abgelehnt. Providerantworten sind
+nur beratend und niemals Evidenz oder Source of Truth. Diese Version enthält keine reale Modell-
+oder Netzwerk-Integration, keine automatische Auswahl oder Prüfung und keine kommerzielle
+Providerverwaltung. `providers.testing` enthält ausschließlich deterministische Offline-Doubles
+für Vertrags- und Integrationstests. Architektur und API-Grenzen: [`ADR-007`](docs/architecture/adr-007-provider-neutral-contracts.md).
+
 Die Knowledge API bleibt absichtlich deaktiviert, bis ein finaler, projektneutraler Katalog alle Privacy-Gates bestanden hat.
 
 ## 🧠 Projektneutrale Knowledge-Pipeline
@@ -1062,6 +1083,27 @@ Primary extension points:
 - plugin registration
 - workflow, fetch, query, and run-explorer services
 - persistent local investigation sessions
+
+### Provider-neutral contracts (optional and offline)
+
+The programmatic API exposes versioned contracts and an empty-by-default registry under `providers`
+for explicitly imported, trusted in-process adapters:
+
+```js
+const { providers } = require('zeus-rpg-promptkit/api');
+
+const registry = providers.createRegistry();
+const policy = providers.policy.createEgressPolicy([
+  { classification: 'public-metadata', trustZone: 'local', allow: true },
+]);
+```
+
+Zeus continues to work unchanged without registration. Every processing operation, including local
+processing, needs an exact classification/trust-zone rule; `secret` is always denied. Provider
+responses are advisory only and are never evidence or a source of truth. This version includes no
+real model or network integration, automatic selection or probing, or commercial provider
+management. `providers.testing` contains deterministic offline doubles exclusively for contract and
+integration tests. Architecture and API boundary: [`ADR-007`](docs/architecture/adr-007-provider-neutral-contracts.md).
 
 The Knowledge API intentionally remains disabled until a final project-neutral catalog has passed all privacy gates.
 

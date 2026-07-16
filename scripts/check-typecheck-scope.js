@@ -10,6 +10,11 @@ const REQUIRED = [
   'src/core/capabilityRegistry.js',
   'src/mcp/mcpPolicy.js',
   'src/api/zeusApi.js',
+  'src/providers/contracts.js',
+  'src/providers/egressPolicy.js',
+  'src/providers/redaction.js',
+  'src/providers/providerRegistry.js',
+  'src/providers/testing.js',
   'types.d.ts',
 ];
 

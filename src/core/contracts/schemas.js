@@ -268,6 +268,8 @@ const safetyPolicySchema = value => {
   return errors;
 };
 
+const { PROVIDER_SCHEMAS } = require('../../providers/contracts');
+
 const INITIAL_SCHEMAS = Object.freeze({
   [CONTRACT_IDS.EVIDENCE_MODEL]: { version: 1, schema: evidenceModelSchema },
   [CONTRACT_IDS.EVIDENCE_GRAPH]: { version: 1, schema: evidenceGraphSchema },
@@ -276,6 +278,7 @@ const INITIAL_SCHEMAS = Object.freeze({
   [CONTRACT_IDS.ARTIFACT_REFERENCE]: { version: 1, schema: artifactReferenceSchema },
   [CONTRACT_IDS.INVESTIGATION_SESSION]: { version: 1, schema: investigationSessionSchema },
   [CONTRACT_IDS.SAFETY_POLICY]: { version: 1, schema: safetyPolicySchema },
+  ...PROVIDER_SCHEMAS,
 });
 
 module.exports = {
