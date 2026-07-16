@@ -20,7 +20,7 @@ const COMMAND_METADATA = Object.freeze({
     example: 'node cli/zeus.js doctor --profile default --show-resolved',
   }),
   secret: Object.freeze({
-    safety: 'S0',
+    safety: 'S1',
     scope: 'Local',
     purpose:
       'Manage encrypted credentials (Secret Vault). Create key (init-key [--windows] for DPAPI on Windows), encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. Supports migrate, check (with --warn-only), status.',
@@ -40,8 +40,8 @@ const COMMAND_METADATA = Object.freeze({
     example: 'node cli/zeus.js resources --profile dev --json',
   }),
   'discover-environment': Object.freeze({
-    safety: 'S0',
-    scope: 'Local',
+    safety: 'S2',
+    scope: 'IBM i read',
     purpose:
       'Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.',
     example: 'node cli/zeus.js discover-environment --profile dev --json',
@@ -84,10 +84,10 @@ const COMMAND_METADATA = Object.freeze({
       'node cli/zeus.js workflow run --profile default --preset onboarding --out ./output --dense full',
   }),
   investigate: Object.freeze({
-    safety: 'S0',
+    safety: 'S1',
     scope: 'Local',
     purpose:
-      'Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state. Designed for interactive use and MCP agents.',
+      'Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state through the CLI and in-process API.',
     example:
       'node cli/zeus.js investigate --program ORDERPGM --profile dev --goal "Focus on error paths" --focus "error paths" --search "dynamic sql" --generate-prompt',
   }),
@@ -153,7 +153,7 @@ const COMMAND_METADATA = Object.freeze({
     example: 'node cli/zeus.js joblog --profile default --severity ERROR --max-messages 100',
   }),
   'field-search': Object.freeze({
-    safety: 'S0/S2',
+    safety: 'S2',
     scope: 'Local + IBM i read',
     purpose: 'Find field/table usage in local sources and or remote members.',
     example:
@@ -190,6 +190,18 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Render QA validations/checks to jira, markdown, or json.',
     example: 'node cli/zeus.js qa --input ./output/ORDERPGM --format markdown --strict STRICT',
   }),
+  trace: Object.freeze({
+    safety: 'S2',
+    scope: 'Local + IBM i read',
+    purpose: 'Trace data and value lineage across programs and tables.',
+    example: 'node cli/zeus.js trace --value 123 --start-table ORDERS --profile default',
+  }),
+  xref: Object.freeze({
+    safety: 'S2',
+    scope: 'Local + IBM i read',
+    purpose: 'Build a who-calls or who-uses cross-reference for programs and tables.',
+    example: 'node cli/zeus.js xref --program ORDERPGM --profile default',
+  }),
   'validate-rpg-sql': Object.freeze({
     safety: 'S1',
     scope: 'Local',
@@ -199,17 +211,11 @@ const COMMAND_METADATA = Object.freeze({
       'node cli/zeus.js validate-rpg-sql --source ./rpg_sources --program ORDERPGM --format markdown --out ./output',
   }),
   onboarding: Object.freeze({
-    safety: 'S0',
+    safety: 'S1',
     scope: 'Local',
     purpose:
       'Interactive zeus-onboarding-wizard. Guides through profile setup, doctor checks, source/object discovery, first fetch and analyze for a new IBM i system.',
     example: 'node cli/zeus.js onboarding',
-  }),
-  wizard: Object.freeze({
-    safety: 'S0',
-    scope: 'Local',
-    purpose: 'Alias for the zeus-onboarding-wizard.',
-    example: 'node cli/zeus.js wizard',
   }),
   'inspect-object': Object.freeze({
     safety: 'S2',
@@ -219,7 +225,7 @@ const COMMAND_METADATA = Object.freeze({
       'node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_00 --type *FILE --journal',
   }),
   'test-run': Object.freeze({
-    safety: 'S2/S1',
+    safety: 'S2',
     scope: 'DB2 read + local',
     purpose: 'Capture before and after test snapshots plus rollback SQL text.',
     example:
@@ -287,19 +293,19 @@ const COMMAND_METADATA = Object.freeze({
     example:
       'node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json',
   }),
-  'docs:generate-catalog': Object.freeze({
-    safety: 'S0',
-    scope: 'Local read-only',
-    purpose:
-      'Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.',
-    example: 'node cli/zeus.js docs:generate-catalog',
-  }),
-  help: Object.freeze({
+  'pui-inspect': Object.freeze({
     safety: 'S0',
     scope: 'Local',
     purpose:
-      'Structured help for any command or overview of MCP-safe capabilities for AI agents. Returns purpose, safety, examples and agent guidance.',
-    example: 'node cli/zeus.js help --command analyze  (or via MCP zeus.help)',
+      'Inspect a local Profound UI display-file projection and optionally trace field bindings.',
+    example: 'node cli/zeus.js pui-inspect --file ./display/DSPFILE.MBR --json',
+  }),
+  'docs:generate-catalog': Object.freeze({
+    safety: 'S1',
+    scope: 'Local',
+    purpose:
+      'Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.',
+    example: 'node cli/zeus.js docs:generate-catalog',
   }),
   mcp: Object.freeze({
     safety: 'S0',
@@ -311,10 +317,340 @@ const COMMAND_METADATA = Object.freeze({
   }),
 });
 
+function catalogContract({ aliases, status, availability, sideEffects, capabilityId }) {
+  return Object.freeze({
+    aliases: Object.freeze([...aliases]),
+    status,
+    availability: Object.freeze({ ...availability }),
+    sideEffects: Object.freeze([...sideEffects]),
+    capabilityId,
+  });
+}
+
+const CLI_ONLY = Object.freeze({ cli: true, api: false, mcp: false });
+const CLI_API = Object.freeze({ cli: true, api: true, mcp: false });
+const CLI_MCP = Object.freeze({ cli: true, api: false, mcp: true });
+const ALL_PUBLIC_SURFACES = Object.freeze({ cli: true, api: true, mcp: true });
+
+// Authoritative public command projection. Generator output must never infer or
+// repair these contracts from runtime registries, help text, or file-system order.
+const COMMAND_CATALOG_CONTRACTS = Object.freeze({
+  doctor: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: [],
+    capabilityId: 'configure.doctor',
+  }),
+  secret: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: ['local-secret-write'],
+    capabilityId: null,
+  }),
+  profiles: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: [],
+    capabilityId: 'configure.profiles',
+  }),
+  resources: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: [],
+    capabilityId: 'configure.resources',
+  }),
+  'discover-environment': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['remote-read'],
+    capabilityId: 'configure.discover-environment',
+  }),
+  fetch: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['remote-read', 'local-artifact-write'],
+    capabilityId: null,
+  }),
+  'fetch-member': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['remote-read', 'local-artifact-write'],
+    capabilityId: null,
+  }),
+  analyze: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: 'analysis.analyze',
+  }),
+  workflow: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: 'analysis.workflow',
+  }),
+  'workflow run': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: null,
+  }),
+  investigate: catalogContract({
+    aliases: ['investigation'],
+    status: 'stable',
+    availability: CLI_API,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: 'investigation.investigate',
+  }),
+  bundle: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: 'bundle.create',
+  }),
+  impact: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: 'investigation.impact',
+  }),
+  'assess-risk': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: 'investigation.assess-risk',
+  }),
+  'generate-test': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: 'investigation.generate-test',
+  }),
+  'generate-checklist': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: 'investigation.generate-checklist',
+  }),
+  'query-table': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['remote-read'],
+    capabilityId: null,
+  }),
+  'resolve-object': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['remote-read'],
+    capabilityId: null,
+  }),
+  'query-sql': catalogContract({
+    aliases: ['sql'],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['remote-read'],
+    capabilityId: null,
+  }),
+  joblog: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['remote-read'],
+    capabilityId: null,
+  }),
+  'field-search': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['local-read', 'remote-read'],
+    capabilityId: 'investigation.field-search',
+  }),
+  'search-source': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['local-read'],
+    capabilityId: 'investigation.search-source',
+  }),
+  'copy-to-workspace': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: null,
+  }),
+  diff: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['remote-read'],
+    capabilityId: null,
+  }),
+  serve: catalogContract({
+    aliases: [],
+    status: 'experimental',
+    availability: CLI_MCP,
+    sideEffects: ['local-listener'],
+    capabilityId: null,
+  }),
+  qa: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: 'investigation.qa',
+  }),
+  trace: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_API,
+    sideEffects: ['local-read', 'remote-read'],
+    capabilityId: 'investigation.trace',
+  }),
+  xref: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_API,
+    sideEffects: ['local-read', 'remote-read'],
+    capabilityId: 'investigation.xref',
+  }),
+  'validate-rpg-sql': catalogContract({
+    aliases: ['validate-rpgsql'],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: null,
+  }),
+  onboarding: catalogContract({
+    aliases: ['wizard', 'onboard', 'zeus-onboarding-wizard'],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['local-config-write', 'remote-read'],
+    capabilityId: null,
+  }),
+  'inspect-object': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['remote-read'],
+    capabilityId: null,
+  }),
+  'test-run': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['remote-read', 'local-artifact-write'],
+    capabilityId: null,
+  }),
+  'write-sql': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['remote-write'],
+    capabilityId: null,
+  }),
+  upsert: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: ['remote-write'],
+    capabilityId: null,
+  }),
+  'upsert-sql': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: ['remote-write'],
+    capabilityId: null,
+  }),
+  insert: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: ['remote-write'],
+    capabilityId: null,
+  }),
+  update: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: ['remote-write'],
+    capabilityId: null,
+  }),
+  delete: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: ['remote-write'],
+    capabilityId: null,
+  }),
+  analyses: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: null,
+  }),
+  bridge: catalogContract({
+    aliases: [],
+    status: 'experimental',
+    availability: CLI_MCP,
+    sideEffects: ['operator-gated'],
+    capabilityId: null,
+  }),
+  'pui-edit': catalogContract({
+    aliases: [],
+    status: 'experimental',
+    availability: CLI_MCP,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: null,
+  }),
+  'pui-inspect': catalogContract({
+    aliases: [],
+    status: 'experimental',
+    availability: CLI_MCP,
+    sideEffects: ['local-read'],
+    capabilityId: null,
+  }),
+  'docs:generate-catalog': catalogContract({
+    aliases: ['docs generate-catalog'],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['local-artifact-write'],
+    capabilityId: null,
+  }),
+  mcp: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: ['local-process-stdio'],
+    capabilityId: null,
+  }),
+});
+
 const COMMAND_ORDER = Object.freeze([
   'doctor',
+  'secret',
   'profiles',
-  'help',
+  'resources',
+  'discover-environment',
   'fetch',
   'fetch-member',
   'analyze',
@@ -331,6 +667,10 @@ const COMMAND_ORDER = Object.freeze([
   'query-sql',
   'joblog',
   'field-search',
+  'trace',
+  'xref',
+  'validate-rpg-sql',
+  'onboarding',
   'search-source',
   'copy-to-workspace',
   'diff',
@@ -347,6 +687,7 @@ const COMMAND_ORDER = Object.freeze([
   'analyses',
   'bridge',
   'pui-edit',
+  'pui-inspect',
   'docs:generate-catalog',
   'mcp',
 ]);
@@ -400,6 +741,7 @@ const RECOMMENDED_AI_SEQUENCE = Object.freeze([
 
 module.exports = {
   COMMAND_METADATA,
+  COMMAND_CATALOG_CONTRACTS,
   COMMAND_ORDER,
   SAFETY_LEVELS,
   MANDATORY_AI_RULES,

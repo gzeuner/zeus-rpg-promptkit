@@ -14,12 +14,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const {
   buildCatalogModel,
+  extractCliRoutes,
+  formatOutputLabel,
   generateToolCatalog,
+  renderJson,
   renderMarkdown,
+  resolveGeneratedAt,
+  validateCatalogMetadata,
+  validateRenderedCatalog,
 } = require('../../cli/commands/generate-tool-catalog');
 
 module.exports = {
   buildCatalogModel,
+  extractCliRoutes,
+  formatOutputLabel,
   generateToolCatalog,
+  renderJson,
   renderMarkdown,
+  resolveGeneratedAt,
+  validateCatalogMetadata,
+  validateRenderedCatalog,
 };

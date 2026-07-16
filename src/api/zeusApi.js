@@ -628,11 +628,15 @@ try {
       title: 'Investigation',
       description: 'Start or continue a focused, stateful investigation.',
       category: 'investigation',
-      safety: { level: 'S0', sideEffects: [], requiresExplicitApproval: false },
+      safety: {
+        level: 'S1',
+        sideEffects: ['local-artifact-write'],
+        requiresExplicitApproval: false,
+      },
       aliases: ['investigate', 'investigation'],
       inputContract: null,
       outputContract: null,
-      availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
+      availability: { cli: true, mcp: false, api: true, viewer: false, vscode: true },
       docs: {
         examples: [
           'zeus investigate --program MYPROG --goal "understand orders" --search "customer"',

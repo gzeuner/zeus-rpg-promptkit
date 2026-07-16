@@ -1,556 +1,816 @@
 {
-  "generatedAt": "2026-07-12T12:50:21.815Z",
+  "schemaVersion": 1,
+  "package": {
+    "name": "zeus-rpg-promptkit",
+    "version": "0.2.0-beta.2"
+  },
+  "generatedAt": "2026-07-12T00:00:00.000Z",
+  "cliFile": "cli/zeus.js",
   "commandRows": [
     {
       "command": "doctor",
+      "aliases": [],
+      "status": "stable",
       "safety": "S0",
       "scope": "Local",
+      "sideEffects": [],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "configure.doctor",
       "purpose": "Validate runtime, profiles, Java/runtime wiring, and env contracts.",
-      "example": "node cli/zeus.js doctor --profile default --show-resolved",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "profiles",
-      "safety": "S0",
-      "scope": "Local",
-      "purpose": "List profiles and show masked runtime defaults and resolved routing hints.",
-      "example": "node cli/zeus.js profiles --profile default --show-env",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "fetch",
-      "safety": "S2",
-      "scope": "IBM i read",
-      "purpose": "Fetch source members/IFS content into the local workspace. Supports --system <name> to select a named profile system at operator request without changing the loaded profile.",
-      "example": "node cli/zeus.js fetch --profile combined-fetch-and-query --system dev",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "fetch-member",
-      "safety": "S2",
-      "scope": "IBM i read",
-      "purpose": "Fetch one or more specific source members into a local output directory.",
-      "example": "node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "analyze",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context, --dense [lite|full|ultra] (rank-aware token reduction + compaction), --prompt-max-tokens, --skip-db2-metadata, --reproducible for large programs and CI stability.",
-      "example": "node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "workflow",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "Run preset-guided analyze and bundle flow. Supports --dense (forwarded to analyze steps).",
-      "example": "node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output --dense ultra",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "workflow run",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "Run workflow definitions from profile/runtime configuration. --dense [lite|full|ultra] is supported and forwarded to inner analyze steps (rank-aware token reduction & compaction).",
-      "example": "node cli/zeus.js workflow run --profile default --preset onboarding --out ./output --dense full",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": false,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "bundle",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "Package analysis artifacts for sharing and review.",
-      "example": "node cli/zeus.js bundle --program ORDERPGM --source-output-root ./output --include-md --include-json",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "impact",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "Build reverse-impact analysis by target or field.",
-      "example": "node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "assess-risk",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "Produce a risk-oriented summary for a program.",
-      "example": "node cli/zeus.js assess-risk --program ORDERPGM --out ./output",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "generate-test",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "Generate test plan or test template artifacts.",
-      "example": "node cli/zeus.js generate-test --program ORDERPGM --format markdown --out ./output",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "generate-checklist",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "Generate deployment and change checklist artifacts.",
-      "example": "node cli/zeus.js generate-checklist --program ORDERPGM --type BOTH --impact HIGH --out ./output",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "query-table",
-      "safety": "S2",
-      "scope": "DB2 read",
-      "purpose": "Query DB2 table metadata. Supports --json for machine readable output.",
-      "example": "node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA --json",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "resolve-object",
-      "safety": "S2",
-      "scope": "DB2 read",
-      "purpose": "Resolve SQL/system object names and optionally verify required columns.",
-      "example": "node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "joblog",
-      "safety": "S2",
-      "scope": "IBM i read",
-      "purpose": "Inspect IBM i joblog messages.",
-      "example": "node cli/zeus.js joblog --profile default --severity ERROR --max-messages 100",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "field-search",
-      "safety": "S0/S2",
-      "scope": "Local + IBM i read",
-      "purpose": "Find field/table usage in local sources and or remote members.",
-      "example": "node cli/zeus.js field-search --profile default --field FIELD_ALPHA --table APP_TABLE --source ./rpg_sources --mode all",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "search-source",
-      "safety": "S0",
-      "scope": "Local",
-      "purpose": "Search the local source tree by term, member, or table.",
-      "example": "node cli/zeus.js search-source --source-root ./rpg_sources --search-term \"CHAIN(\" --max-results 50",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "copy-to-workspace",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "Copy fetched source members into the active workspace.",
-      "example": "node cli/zeus.js copy-to-workspace --profile default --members ORDERPGM,INVOICEPGM",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "diff",
-      "safety": "S2",
-      "scope": "IBM i read + local",
-      "purpose": "Compare local source members with IBM i members.",
-      "example": "node cli/zeus.js diff --profile default --member ORDERPGM",
-      "usage": [
-        "[--config <path>] diff --profile <name> --member <name>"
-      ],
-      "options": [
-        "--config",
-        "--profile",
-        "--member"
-      ],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": true
-      }
-    },
-    {
-      "command": "serve",
-      "safety": "S0",
-      "scope": "Local",
-      "purpose": "Start the optional local artifact viewer and experimental UI shell.",
-      "example": "node cli/zeus.js serve --source-output-root ./output --host 127.0.0.1 --port 4782",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "qa",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "Render QA validations/checks to jira, markdown, or json.",
-      "example": "node cli/zeus.js qa --input ./output/ORDERPGM --format markdown --strict STRICT",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "inspect-object",
-      "safety": "S2",
-      "scope": "IBM i read",
-      "purpose": "Read object metadata and journaling details.",
-      "example": "node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_00 --type *FILE --journal",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "test-run",
-      "safety": "S2/S1",
-      "scope": "DB2 read + local",
-      "purpose": "Capture before and after test snapshots plus rollback SQL text.",
-      "example": "node cli/zeus.js test-run start --profile default --program ORDERPGM --table APPLIB.APP_TABLE_00 --key ID=1",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "write-sql",
-      "safety": "S3",
-      "scope": "DB2 write",
-      "purpose": "Execute one or more guarded DML statements with confirmation, backup, and safety preflight options.",
-      "example": "node cli/zeus.js write-sql --profile default --sql \"DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'\" --confirm --backup",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "upsert",
-      "safety": "S3",
-      "scope": "DB2 write",
-      "purpose": "DML wrapper for INSERT/UPDATE/DELETE/MERGE with guardrails.",
-      "example": "node cli/zeus.js upsert --profile default --sql \"UPDATE APPDATA.APP_TABLE_00 SET STATUS='X' WHERE ID=1\"",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "upsert-sql",
-      "safety": "S3",
-      "scope": "DB2 write",
-      "purpose": "Backward-compatible alias for the upsert flow.",
-      "example": "node cli/zeus.js upsert-sql --profile default --sql \"INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)\"",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "insert",
-      "safety": "S3",
-      "scope": "DB2 write",
-      "purpose": "Strict insert-only DML command.",
-      "example": "node cli/zeus.js insert --profile default --sql \"INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)\"",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "update",
-      "safety": "S3",
-      "scope": "DB2 write",
-      "purpose": "Strict update-only DML command.",
-      "example": "node cli/zeus.js update --profile default --sql \"UPDATE APPDATA.APP_TABLE_00 SET STATUS='Y' WHERE ID=1\"",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "delete",
-      "safety": "S3",
-      "scope": "DB2 write",
-      "purpose": "Strict delete-only DML command with the shared write-safety guardrails.",
-      "example": "node cli/zeus.js delete --profile default --sql \"DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'\" --confirm --backup",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "analyses",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "List, register, inspect, and open locally tracked analysis artifacts.",
-      "example": "node cli/zeus.js analyses list --profile default",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "bridge",
-      "safety": "S4",
-      "scope": "Operator-gated",
-      "purpose": "Bridge planning/staging/apply/compile/report flow; never implicit.",
-      "example": "node cli/zeus.js bridge plan --profile default --help",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "pui-edit",
-      "safety": "S1",
-      "scope": "Local",
-      "purpose": "Apply structured UI edit operations to local display artifacts.",
-      "example": "node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "docs:generate-catalog",
-      "safety": "S0",
-      "scope": "Local read-only",
-      "purpose": "Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.",
-      "example": "node cli/zeus.js docs:generate-catalog",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "mcp",
-      "safety": "S0",
-      "scope": "Local read-mostly",
-      "purpose": "Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.",
-      "example": "node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run",
-      "usage": [
-        "[--config <path>] mcp <serve|help> [--stdio true|false] [--verbose]"
-      ],
-      "options": [
-        "--config",
-        "--stdio",
-        "--verbose"
-      ],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": true
-      }
-    },
-    {
-      "command": "discover-environment",
-      "safety": "S0",
-      "scope": "Local",
-      "purpose": "Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.",
-      "example": "node cli/zeus.js discover-environment --profile dev --json",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "pui-inspect",
-      "safety": "S0",
-      "scope": "Local",
-      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
-      "example": "node cli/zeus.js pui-inspect",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
-    },
-    {
-      "command": "resources",
-      "safety": "S0",
-      "scope": "Local",
-      "purpose": "Show resolved resource model (Source/Objects/Metadata/Data) per system.",
-      "example": "node cli/zeus.js resources --profile dev --json",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
+      "example": "node cli/zeus.js doctor --profile default --show-resolved"
     },
     {
       "command": "secret",
-      "safety": "S0",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
       "scope": "Local",
+      "sideEffects": [
+        "local-secret-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
       "purpose": "Manage encrypted credentials (Secret Vault). Create key (init-key [--windows] for DPAPI on Windows), encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. Supports migrate, check (with --warn-only), status.",
-      "example": "node cli/zeus.js secret init-key --windows && node cli/zeus.js secret encrypt --value \"myDbPass\"",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
+      "example": "node cli/zeus.js secret init-key --windows && node cli/zeus.js secret encrypt --value \"myDbPass\""
     },
     {
-      "command": "sql",
+      "command": "profiles",
+      "aliases": [],
+      "status": "stable",
       "safety": "S0",
       "scope": "Local",
-      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
-      "example": "node cli/zeus.js sql",
-      "usage": [
-        "sql (alias for query-sql, implies --repl if no --sql/--file)"
+      "sideEffects": [],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "configure.profiles",
+      "purpose": "List profiles and show masked runtime defaults and resolved routing hints.",
+      "example": "node cli/zeus.js profiles --profile default --show-env"
+    },
+    {
+      "command": "resources",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S0",
+      "scope": "Local",
+      "sideEffects": [],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "configure.resources",
+      "purpose": "Show resolved resource model (Source/Objects/Metadata/Data) per system.",
+      "example": "node cli/zeus.js resources --profile dev --json"
+    },
+    {
+      "command": "discover-environment",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "IBM i read",
+      "sideEffects": [
+        "remote-read"
       ],
-      "options": [
-        "--repl",
-        "--sql",
-        "--file"
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "configure.discover-environment",
+      "purpose": "Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.",
+      "example": "node cli/zeus.js discover-environment --profile dev --json"
+    },
+    {
+      "command": "fetch",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "IBM i read",
+      "sideEffects": [
+        "remote-read",
+        "local-artifact-write"
       ],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": true
-      }
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Fetch source members/IFS content into the local workspace. Supports --system <name> to select a named profile system at operator request without changing the loaded profile.",
+      "example": "node cli/zeus.js fetch --profile combined-fetch-and-query --system dev"
+    },
+    {
+      "command": "fetch-member",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "IBM i read",
+      "sideEffects": [
+        "remote-read",
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Fetch one or more specific source members into a local output directory.",
+      "example": "node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM"
+    },
+    {
+      "command": "analyze",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "analysis.analyze",
+      "purpose": "Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context, --dense [lite|full|ultra] (rank-aware token reduction + compaction), --prompt-max-tokens, --skip-db2-metadata, --reproducible for large programs and CI stability.",
+      "example": "node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000"
+    },
+    {
+      "command": "investigate",
+      "aliases": [
+        "investigation"
+      ],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": false
+      },
+      "capabilityId": "investigation.investigate",
+      "purpose": "Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state through the CLI and in-process API.",
+      "example": "node cli/zeus.js investigate --program ORDERPGM --profile dev --goal \"Focus on error paths\" --focus \"error paths\" --search \"dynamic sql\" --generate-prompt"
+    },
+    {
+      "command": "workflow",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "analysis.workflow",
+      "purpose": "Run preset-guided analyze and bundle flow. Supports --dense (forwarded to analyze steps).",
+      "example": "node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output --dense ultra"
+    },
+    {
+      "command": "workflow run",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "purpose": "Run workflow definitions from profile/runtime configuration. --dense [lite|full|ultra] is supported and forwarded to inner analyze steps (rank-aware token reduction & compaction).",
+      "example": "node cli/zeus.js workflow run --profile default --preset onboarding --out ./output --dense full"
+    },
+    {
+      "command": "bundle",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "bundle.create",
+      "purpose": "Package analysis artifacts for sharing and review.",
+      "example": "node cli/zeus.js bundle --program ORDERPGM --source-output-root ./output --include-md --include-json"
+    },
+    {
+      "command": "impact",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "investigation.impact",
+      "purpose": "Build reverse-impact analysis by target or field.",
+      "example": "node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output"
+    },
+    {
+      "command": "assess-risk",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "investigation.assess-risk",
+      "purpose": "Produce a risk-oriented summary for a program.",
+      "example": "node cli/zeus.js assess-risk --program ORDERPGM --out ./output"
+    },
+    {
+      "command": "generate-test",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "investigation.generate-test",
+      "purpose": "Generate test plan or test template artifacts.",
+      "example": "node cli/zeus.js generate-test --program ORDERPGM --format markdown --out ./output"
+    },
+    {
+      "command": "generate-checklist",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "investigation.generate-checklist",
+      "purpose": "Generate deployment and change checklist artifacts.",
+      "example": "node cli/zeus.js generate-checklist --program ORDERPGM --type BOTH --impact HIGH --out ./output"
+    },
+    {
+      "command": "query-table",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "DB2 read",
+      "sideEffects": [
+        "remote-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Query DB2 table metadata. Supports --json for machine readable output.",
+      "example": "node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA --json"
+    },
+    {
+      "command": "resolve-object",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "DB2 read",
+      "sideEffects": [
+        "remote-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Resolve SQL/system object names and optionally verify required columns.",
+      "example": "node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS"
+    },
+    {
+      "command": "query-sql",
+      "aliases": [
+        "sql"
+      ],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "DB2 read",
+      "sideEffects": [
+        "remote-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Run one or more read-only SQL statements (SELECT/WITH). Semicolon-separated --sql and --file batches execute through one DB2 runner call.",
+      "example": "node cli/zeus.js query-sql --profile default --sql \"SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY; SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1\""
+    },
+    {
+      "command": "joblog",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "IBM i read",
+      "sideEffects": [
+        "remote-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Inspect IBM i joblog messages.",
+      "example": "node cli/zeus.js joblog --profile default --severity ERROR --max-messages 100"
+    },
+    {
+      "command": "field-search",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "Local + IBM i read",
+      "sideEffects": [
+        "local-read",
+        "remote-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "investigation.field-search",
+      "purpose": "Find field/table usage in local sources and or remote members.",
+      "example": "node cli/zeus.js field-search --profile default --field FIELD_ALPHA --table APP_TABLE --source ./rpg_sources --mode all"
     },
     {
       "command": "trace",
-      "safety": "S0",
-      "scope": "Local",
-      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
-      "example": "node cli/zeus.js trace",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "Local + IBM i read",
+      "sideEffects": [
+        "local-read",
+        "remote-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": false
+      },
+      "capabilityId": "investigation.trace",
+      "purpose": "Trace data and value lineage across programs and tables.",
+      "example": "node cli/zeus.js trace --value 123 --start-table ORDERS --profile default"
     },
     {
       "command": "xref",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "Local + IBM i read",
+      "sideEffects": [
+        "local-read",
+        "remote-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": false
+      },
+      "capabilityId": "investigation.xref",
+      "purpose": "Build a who-calls or who-uses cross-reference for programs and tables.",
+      "example": "node cli/zeus.js xref --program ORDERPGM --profile default"
+    },
+    {
+      "command": "validate-rpg-sql",
+      "aliases": [
+        "validate-rpgsql"
+      ],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Validate embedded SQL in RPG sources for cursor/fetch mismatches, dynamic SQL patterns and host variable issues. Uses scanner + sqlRpgValidator.",
+      "example": "node cli/zeus.js validate-rpg-sql --source ./rpg_sources --program ORDERPGM --format markdown --out ./output"
+    },
+    {
+      "command": "onboarding",
+      "aliases": [
+        "wizard",
+        "onboard",
+        "zeus-onboarding-wizard"
+      ],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-config-write",
+        "remote-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Interactive zeus-onboarding-wizard. Guides through profile setup, doctor checks, source/object discovery, first fetch and analyze for a new IBM i system.",
+      "example": "node cli/zeus.js onboarding"
+    },
+    {
+      "command": "search-source",
+      "aliases": [],
+      "status": "stable",
       "safety": "S0",
       "scope": "Local",
-      "purpose": "Command metadata missing; update src/docs/toolCatalogMetadata.js.",
-      "example": "node cli/zeus.js xref",
-      "usage": [],
-      "options": [],
-      "source": {
-        "routeDetected": true,
-        "usageDetected": false
-      }
+      "sideEffects": [
+        "local-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "investigation.search-source",
+      "purpose": "Search the local source tree by term, member, or table.",
+      "example": "node cli/zeus.js search-source --source-root ./rpg_sources --search-term \"CHAIN(\" --max-results 50"
+    },
+    {
+      "command": "copy-to-workspace",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Copy fetched source members into the active workspace.",
+      "example": "node cli/zeus.js copy-to-workspace --profile default --members ORDERPGM,INVOICEPGM"
+    },
+    {
+      "command": "diff",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "IBM i read + local",
+      "sideEffects": [
+        "remote-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Compare local source members with IBM i members.",
+      "example": "node cli/zeus.js diff --profile default --member ORDERPGM"
+    },
+    {
+      "command": "serve",
+      "aliases": [],
+      "status": "experimental",
+      "safety": "S0",
+      "scope": "Local",
+      "sideEffects": [
+        "local-listener"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Start the optional local artifact viewer and experimental UI shell.",
+      "example": "node cli/zeus.js serve --source-output-root ./output --host 127.0.0.1 --port 4782"
+    },
+    {
+      "command": "qa",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": true
+      },
+      "capabilityId": "investigation.qa",
+      "purpose": "Render QA validations/checks to jira, markdown, or json.",
+      "example": "node cli/zeus.js qa --input ./output/ORDERPGM --format markdown --strict STRICT"
+    },
+    {
+      "command": "inspect-object",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "IBM i read",
+      "sideEffects": [
+        "remote-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Read object metadata and journaling details.",
+      "example": "node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_00 --type *FILE --journal"
+    },
+    {
+      "command": "test-run",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "DB2 read + local",
+      "sideEffects": [
+        "remote-read",
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Capture before and after test snapshots plus rollback SQL text.",
+      "example": "node cli/zeus.js test-run start --profile default --program ORDERPGM --table APPLIB.APP_TABLE_00 --key ID=1"
+    },
+    {
+      "command": "write-sql",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S3",
+      "scope": "DB2 write",
+      "sideEffects": [
+        "remote-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Execute one or more guarded DML statements with confirmation, backup, and safety preflight options.",
+      "example": "node cli/zeus.js write-sql --profile default --sql \"DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'\" --confirm --backup"
+    },
+    {
+      "command": "upsert",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S3",
+      "scope": "DB2 write",
+      "sideEffects": [
+        "remote-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "purpose": "DML wrapper for INSERT/UPDATE/DELETE/MERGE with guardrails.",
+      "example": "node cli/zeus.js upsert --profile default --sql \"UPDATE APPDATA.APP_TABLE_00 SET STATUS='X' WHERE ID=1\""
+    },
+    {
+      "command": "upsert-sql",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S3",
+      "scope": "DB2 write",
+      "sideEffects": [
+        "remote-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "purpose": "Backward-compatible alias for the upsert flow.",
+      "example": "node cli/zeus.js upsert-sql --profile default --sql \"INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)\""
+    },
+    {
+      "command": "insert",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S3",
+      "scope": "DB2 write",
+      "sideEffects": [
+        "remote-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "purpose": "Strict insert-only DML command.",
+      "example": "node cli/zeus.js insert --profile default --sql \"INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)\""
+    },
+    {
+      "command": "update",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S3",
+      "scope": "DB2 write",
+      "sideEffects": [
+        "remote-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "purpose": "Strict update-only DML command.",
+      "example": "node cli/zeus.js update --profile default --sql \"UPDATE APPDATA.APP_TABLE_00 SET STATUS='Y' WHERE ID=1\""
+    },
+    {
+      "command": "delete",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S3",
+      "scope": "DB2 write",
+      "sideEffects": [
+        "remote-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "purpose": "Strict delete-only DML command with the shared write-safety guardrails.",
+      "example": "node cli/zeus.js delete --profile default --sql \"DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'\" --confirm --backup"
+    },
+    {
+      "command": "analyses",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "List, register, inspect, and open locally tracked analysis artifacts.",
+      "example": "node cli/zeus.js analyses list --profile default"
+    },
+    {
+      "command": "bridge",
+      "aliases": [],
+      "status": "experimental",
+      "safety": "S4",
+      "scope": "Operator-gated",
+      "sideEffects": [
+        "operator-gated"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Bridge planning/staging/apply/compile/report flow; never implicit.",
+      "example": "node cli/zeus.js bridge plan --profile default --help"
+    },
+    {
+      "command": "pui-edit",
+      "aliases": [],
+      "status": "experimental",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Apply structured UI edit operations to local display artifacts.",
+      "example": "node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json"
+    },
+    {
+      "command": "pui-inspect",
+      "aliases": [],
+      "status": "experimental",
+      "safety": "S0",
+      "scope": "Local",
+      "sideEffects": [
+        "local-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Inspect a local Profound UI display-file projection and optionally trace field bindings.",
+      "example": "node cli/zeus.js pui-inspect --file ./display/DSPFILE.MBR --json"
+    },
+    {
+      "command": "docs:generate-catalog",
+      "aliases": [
+        "docs generate-catalog"
+      ],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.",
+      "example": "node cli/zeus.js docs:generate-catalog"
+    },
+    {
+      "command": "mcp",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S0",
+      "scope": "Local read-mostly",
+      "sideEffects": [
+        "local-process-stdio"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "purpose": "Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.",
+      "example": "node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run"
     }
   ],
   "workflowPresets": [
@@ -633,7 +893,5 @@
     "generated artifacts and `bundle` for review/sharing; optional `serve` for local viewing",
     "`upsert`/`upsert-sql`/`insert`/`update` only after explicit user approval",
     "`bridge` only in operator-gated, explicitly approved flows"
-  ],
-  "repoRoot": "zeus-rpg-promptkit",
-  "cliFile": "cli/zeus.js"
+  ]
 }

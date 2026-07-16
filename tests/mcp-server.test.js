@@ -850,20 +850,18 @@ test('mcp tools call docs-generate-catalog writes bounded outputs and returns de
   fs.mkdirSync(path.join(tempRoot, 'cli', 'commands'), { recursive: true });
   fs.mkdirSync(path.join(tempRoot, 'src', 'docs'), { recursive: true });
   fs.mkdirSync(path.join(tempRoot, 'src', 'workflow'), { recursive: true });
-  fs.writeFileSync(
-    path.join(tempRoot, 'cli', 'zeus.js'),
-    `
-const command = process.argv[2];
-if (command === 'doctor') {}
-if (command === 'docs:generate-catalog') {}
-console.log('  zeus doctor --profile default');
-console.log('  zeus docs:generate-catalog');
-`,
-    'utf8'
+  fs.copyFileSync(
+    path.resolve(__dirname, '..', 'cli', 'zeus.js'),
+    path.join(tempRoot, 'cli', 'zeus.js')
   );
   fs.writeFileSync(
     path.join(tempRoot, 'package.json'),
-    `${JSON.stringify({ version: '9.9.9-test' }, null, 2)}\n`,
+    `${JSON.stringify({ name: 'zeus-test-export', version: '9.9.9-test' }, null, 2)}\n`,
+    'utf8'
+  );
+  fs.writeFileSync(
+    path.join(tempRoot, 'CHANGELOG.md'),
+    '# Changelog\n\n## [9.9.9-test] - 2026-07-16\n',
     'utf8'
   );
 
