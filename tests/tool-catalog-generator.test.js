@@ -32,7 +32,7 @@ function sha256(content) {
 function makeExportFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-tool-catalog-export-'));
   fs.mkdirSync(path.join(root, 'cli'), { recursive: true });
-  for (const relativePath of ['package.json', 'CHANGELOG.md', 'cli/zeus.js']) {
+  for (const relativePath of ['.gitattributes', 'package.json', 'CHANGELOG.md', 'cli/zeus.js']) {
     fs.copyFileSync(path.join(projectRoot, relativePath), path.join(root, relativePath));
   }
   return root;
@@ -176,6 +176,13 @@ test('generation works in an exported tree without Git metadata', () => {
     const model = buildCatalogModel({ repoRoot: root, env: {} });
     assert.equal(model.generatedAt, '2026-07-12T00:00:00.000Z');
     assert.equal(model.commandRows.length, COMMAND_ORDER.length);
+    const attributes = new Set(
+      fs.readFileSync(path.join(root, '.gitattributes'), 'utf8').split(/\r?\n/).filter(Boolean)
+    );
+    assert.ok(attributes.has('docs/tool-catalog.md text eol=lf'));
+    assert.ok(attributes.has('docs/tool-catalog.json text eol=lf'));
+    assert.doesNotMatch(renderMarkdown(model), /\r/);
+    assert.doesNotMatch(renderJson(model), /\r/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
