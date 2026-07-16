@@ -5,8 +5,11 @@ const os = require('os');
 const path = require('path');
 
 const { analyze, listRuns, readKnowledge, runWorkflow, zeus } = require('../src/api/zeusApi');
+const { REPRODUCIBLE_TIMESTAMP } = require('../src/reproducibility/reproducibility');
 
 const fixtureRoot = path.join(__dirname, 'fixtures', 'v1-smoke', 'src');
+const KNOWN_FACTS_UPDATED_AT = '1999-12-16T00:00:00.000Z';
+const KNOWN_FACTS_EXPIRES_AT = '2000-01-15T00:00:00.000Z';
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -57,8 +60,8 @@ test('zeusApi exposes reusable analyze and workflow entry points', async () => {
         profile: 'local',
         versionMarker: {
           toolVersion: '0.1.0',
-          updatedAt: '2026-06-16T10:00:00.000Z',
-          expiresAt: '2026-07-16T10:00:00.000Z',
+          updatedAt: KNOWN_FACTS_UPDATED_AT,
+          expiresAt: KNOWN_FACTS_EXPIRES_AT,
           ttlDays: 30,
         },
         facts: [
@@ -81,11 +84,13 @@ test('zeusApi exposes reusable analyze and workflow entry points', async () => {
       member: 'ORDERPGM',
       mode: 'documentation',
       'with-known-facts': true,
+      reproducible: true,
       runtime: {
         cwd: tempRoot,
         env: {},
       },
     });
+    assert.equal(analyzeResult.reproducibility.stableTimestamp, REPRODUCIBLE_TIMESTAMP);
     assert.equal(analyzeResult.program, 'ORDERPGM');
     assert.equal(fs.existsSync(path.join(analyzeResult.outputProgramDir, 'context.json')), true);
     assert.equal(
