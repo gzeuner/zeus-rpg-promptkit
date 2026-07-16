@@ -14,6 +14,7 @@ module.exports = {
       'tests/fetch-readability-contract.test.js',
       'tests/schema-registry.test.js',
       'tests/task-oriented-analysis-index.test.js',
+      'tests/tool-catalog-generator.test.js',
       'tests/workflow-presets.test.js',
     ],
     smoke: [

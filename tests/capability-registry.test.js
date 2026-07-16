@@ -89,6 +89,23 @@ test('capability registry supports filtering', () => {
   assert.ok(listed.length >= 1);
 });
 
+test('investigation capability declares its local writes and actual public surfaces', () => {
+  const { capabilities } = require('../src/api/zeusApi');
+  const searchSource = capabilities.resolve('investigation.search-source');
+  assert.ok(searchSource);
+  assert.equal(searchSource.safety.level, 'S0');
+  assert.deepEqual(searchSource.safety.sideEffects, ['local-read']);
+  assert.equal(searchSource.availability.mcp, true);
+
+  const capability = capabilities.resolve('investigation.investigate');
+  assert.ok(capability);
+  assert.equal(capability.safety.level, 'S1');
+  assert.deepEqual(capability.safety.sideEffects, ['local-artifact-write']);
+  assert.equal(capability.availability.cli, true);
+  assert.equal(capability.availability.api, true);
+  assert.equal(capability.availability.mcp, false);
+});
+
 test('capability registry can be sealed', () => {
   const reg = createCapabilityRegistry();
   reg.seal();

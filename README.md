@@ -393,7 +393,7 @@ Der automatisch erzeugte [`docs/tool-catalog.md`](docs/tool-catalog.md) ist die 
 
 | Aufgabe              | Befehle                                                              |                Safety |
 | -------------------- | -------------------------------------------------------------------- | --------------------: |
-| Setup & Profile      | `doctor`, `profiles`, `resources`, `secret`                          |                  `S0` |
+| Setup & Profile      | `doctor`, `profiles`, `resources`, `secret`                          |               `S0/S1` |
 | Discovery            | `discover-environment`, `resolve-object`, `inspect-object`, `joblog` |               `S0/S2` |
 | Quellen              | `fetch`, `fetch-member`, `copy-to-workspace`, `diff`                 |               `S1/S2` |
 | Analyse              | `analyze`, `investigate`, `workflow`, `workflow run`                 |               `S0/S1` |
@@ -962,7 +962,7 @@ The generated [`docs/tool-catalog.md`](docs/tool-catalog.md) is the **authoritat
 
 | Task                     | Commands                                                             |           Safety |
 | ------------------------ | -------------------------------------------------------------------- | ---------------: |
-| Setup and profiles       | `doctor`, `profiles`, `resources`, `secret`                          |             `S0` |
+| Setup and profiles       | `doctor`, `profiles`, `resources`, `secret`                          |          `S0/S1` |
 | Discovery                | `discover-environment`, `resolve-object`, `inspect-object`, `joblog` |          `S0/S2` |
 | Sources                  | `fetch`, `fetch-member`, `copy-to-workspace`, `diff`                 |          `S1/S2` |
 | Analysis                 | `analyze`, `investigate`, `workflow`, `workflow run`                 |          `S0/S1` |
