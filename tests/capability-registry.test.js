@@ -94,7 +94,7 @@ test('investigation capability declares its local writes and actual public surfa
   const searchSource = capabilities.resolve('investigation.search-source');
   assert.ok(searchSource);
   assert.equal(searchSource.safety.level, 'S0');
-  assert.deepEqual(searchSource.safety.sideEffects, []);
+  assert.deepEqual(searchSource.safety.sideEffects, ['local-read']);
   assert.equal(searchSource.availability.mcp, true);
 
   const capability = capabilities.resolve('investigation.investigate');

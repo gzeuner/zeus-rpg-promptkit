@@ -67,6 +67,31 @@ test('catalog model is deterministic and preserves the public command contracts'
   }
 });
 
+test('catalog capability projections exactly match runtime descriptors', () => {
+  const { capabilities } = require('../src/api/zeusApi');
+  const model = buildCatalogModel({ repoRoot: projectRoot, env: {} });
+
+  for (const row of model.commandRows.filter(entry => entry.capabilityId !== null)) {
+    const descriptor = capabilities.resolve(row.capabilityId);
+    assert.ok(descriptor, `missing runtime capability ${row.capabilityId}`);
+    assert.equal(descriptor.safety.level, row.safety, `${row.command} safety mismatch`);
+    assert.deepEqual(
+      descriptor.safety.sideEffects,
+      row.sideEffects,
+      `${row.command} side-effects mismatch`
+    );
+    assert.deepEqual(
+      {
+        cli: descriptor.availability.cli,
+        api: descriptor.availability.api,
+        mcp: descriptor.availability.mcp,
+      },
+      row.availability,
+      `${row.command} availability mismatch`
+    );
+  }
+});
+
 test('SOURCE_DATE_EPOCH is strict, deterministic, and independent from the local clock', () => {
   assert.equal(
     resolveGeneratedAt(projectRoot, { SOURCE_DATE_EPOCH: '0' }),

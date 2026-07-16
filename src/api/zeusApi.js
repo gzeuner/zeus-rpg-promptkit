@@ -216,7 +216,11 @@ try {
     description:
       'Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.',
     category: 'configure',
-    safety: { level: 'S0', sideEffects: [], requiresExplicitApproval: false },
+    safety: {
+      level: 'S2',
+      sideEffects: ['remote-read'],
+      requiresExplicitApproval: false,
+    },
     aliases: ['discover-environment'],
     inputContract: null,
     outputContract: null,
@@ -548,7 +552,11 @@ try {
       title: 'Search Source',
       description: 'Searches local source files for term/member/table matches (read-only).',
       category: 'investigation',
-      safety: { level: 'S0', sideEffects: [], requiresExplicitApproval: false },
+      safety: {
+        level: 'S0',
+        sideEffects: ['local-read'],
+        requiresExplicitApproval: false,
+      },
       aliases: ['search-source'],
       inputContract: null,
       outputContract: null,
@@ -567,7 +575,11 @@ try {
       title: 'Field Search',
       description: 'Find field/table usage in local sources and or remote members.',
       category: 'investigation',
-      safety: { level: 'S0', sideEffects: [], requiresExplicitApproval: false },
+      safety: {
+        level: 'S2',
+        sideEffects: ['local-read', 'remote-read'],
+        requiresExplicitApproval: false,
+      },
       aliases: ['field-search'],
       inputContract: null,
       outputContract: null,
@@ -589,11 +601,15 @@ try {
       title: 'Trace Lineage',
       description: 'Trace data/value lineage across programs and tables.',
       category: 'investigation',
-      safety: { level: 'S0', sideEffects: [], requiresExplicitApproval: false },
+      safety: {
+        level: 'S2',
+        sideEffects: ['local-read', 'remote-read'],
+        requiresExplicitApproval: false,
+      },
       aliases: ['trace'],
       inputContract: null,
       outputContract: null,
-      availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
+      availability: { cli: true, mcp: false, api: true, viewer: false, vscode: true },
       docs: { examples: ['zeus trace --value 123 --start-table ORDERS'], notes: [] },
       execute: (context, input) => {
         const args = { ...(context && context.args ? context.args : {}), ...input, _cap: true };
@@ -608,11 +624,15 @@ try {
       title: 'Cross Reference',
       description: 'Fast who-calls / who-uses cross-reference.',
       category: 'investigation',
-      safety: { level: 'S0', sideEffects: [], requiresExplicitApproval: false },
+      safety: {
+        level: 'S2',
+        sideEffects: ['local-read', 'remote-read'],
+        requiresExplicitApproval: false,
+      },
       aliases: ['xref'],
       inputContract: null,
       outputContract: null,
-      availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
+      availability: { cli: true, mcp: false, api: true, viewer: false, vscode: true },
       docs: { examples: ['zeus xref --program MYPROG'], notes: [] },
       execute: (context, input) => {
         const args = { ...(context && context.args ? context.args : {}), ...input, _cap: true };
