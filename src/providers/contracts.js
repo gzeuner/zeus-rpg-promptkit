@@ -518,9 +518,7 @@ function validateConfigProvenance(value) {
     errors.push(error('/configuredKeys', 'configuredKeys must be a bounded array'));
   } else {
     for (let index = 0; index < value.configuredKeys.length; index += 1) {
-      if (
-        !CONFIGURED_KEY_PATTERN.test(value.configuredKeys[index])
-      ) {
+      if (!CONFIGURED_KEY_PATTERN.test(value.configuredKeys[index])) {
         errors.push(error(`/configuredKeys/${index}`, 'safe configuration key name is required'));
       }
     }

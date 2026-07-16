@@ -714,7 +714,9 @@ test('proxy-backed request or response payloads are rejected before crossing the
   });
   const requestResult = await requestRegistry.invoke(
     'test.model',
-    requestFor('test.model', { input: { classification: 'public-metadata', content: requestProxy } }),
+    requestFor('test.model', {
+      input: { classification: 'public-metadata', content: requestProxy },
+    }),
     { policy: allow() }
   );
   assert.equal(requestResult.error.code, 'REQUEST_INVALID');
