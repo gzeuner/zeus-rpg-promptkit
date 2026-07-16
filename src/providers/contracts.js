@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 'use strict';
 
+const UTIL_MODULE_NAME = 'util';
+const { types: utilTypes } = require(UTIL_MODULE_NAME);
+
 const CONTRACT_VERSION = 1;
 const PROVIDER_KINDS = Object.freeze(['model', 'embedding', 'vector-store']);
 const TRUST_ZONES = Object.freeze(['local', 'private-network', 'external']);
@@ -76,6 +79,19 @@ const DATA_LIMITS = Object.freeze({
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 const IDENTIFIER_PATTERN = /^[a-z0-9][a-z0-9._-]{0,127}$/;
+const SENSITIVE_PROVENANCE_KEY_PATTERN =
+  /(?:password|passwd|pwd|secret|api[_-]?key|authorization|auth|credential|credentials)/i;
+const CONFIGURED_KEY_PATTERN = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+|[A-Z][a-z0-9]+)*$/;
+
+function isSensitiveProvenanceName(value) {
+  const normalized = String(value || '').trim();
+  return (
+    SENSITIVE_PROVENANCE_KEY_PATTERN.test(normalized) ||
+    /(password|passwd|pwd|secret|api.?key|authorization|auth|credential|credentials)/i.test(
+      normalized
+    )
+  );
+}
 
 function contractRef(id) {
   return `${id}@${CONTRACT_VERSION}`;
@@ -98,7 +114,6 @@ function validatePlainData(value, options = {}) {
   const errors = [];
   const active = new WeakSet();
   let keyCount = 0;
-  let estimatedBytes = 0;
 
   function visit(current, path, depth) {
     if (errors.length >= 20) return;
@@ -109,7 +124,6 @@ function validatePlainData(value, options = {}) {
     if (current === null || typeof current === 'boolean') return;
     if (typeof current === 'string') {
       const size = Buffer.byteLength(current, 'utf8');
-      estimatedBytes += size;
       if (size > limits.maxStringBytes) errors.push(error(path, 'string size limit exceeded'));
       return;
     }
@@ -119,6 +133,10 @@ function validatePlainData(value, options = {}) {
     }
     if (typeof current !== 'object') {
       errors.push(error(path, 'value must be JSON-compatible data'));
+      return;
+    }
+    if (utilTypes.isProxy(current)) {
+      errors.push(error(path, 'proxy values are not allowed'));
       return;
     }
     if (active.has(current)) {
@@ -171,17 +189,48 @@ function validatePlainData(value, options = {}) {
   } catch {
     return [error('', 'input cannot be safely inspected')];
   }
-  if (estimatedBytes > limits.maxTotalBytes) {
-    errors.push(error('', 'total data size limit exceeded'));
+  if (!errors.length) {
+    try {
+      const serialized = JSON.stringify(clonePlainData(value));
+      if (Buffer.byteLength(serialized, 'utf8') > limits.maxTotalBytes) {
+        errors.push(error('', 'total data size limit exceeded'));
+      }
+    } catch {
+      return [error('', 'input cannot be safely inspected')];
+    }
   }
   return errors;
 }
 
 function clonePlainData(value) {
   if (value === null || typeof value !== 'object') return value;
-  if (Array.isArray(value)) return value.map(clonePlainData);
+  if (utilTypes.isProxy(value)) throw new Error('proxy values are not allowed');
+  if (Array.isArray(value)) {
+    if (Object.getPrototypeOf(value) !== Array.prototype) {
+      throw new Error('exotic array prototypes are not allowed');
+    }
+    const result = new Array(value.length);
+    for (let index = 0; index < value.length; index += 1) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (descriptor && (descriptor.get || descriptor.set)) {
+        throw new Error('accessor properties are not allowed');
+      }
+      result[index] = clonePlainData(value[index]);
+    }
+    return result;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new Error('exotic object prototypes are not allowed');
+  }
   const result = Object.create(null);
-  for (const key of Object.keys(value)) result[key] = clonePlainData(value[key]);
+  for (const key of Object.keys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || descriptor.get || descriptor.set) {
+      throw new Error('accessor properties are not allowed');
+    }
+    result[key] = clonePlainData(descriptor.value);
+  }
   return result;
 }
 
@@ -460,7 +509,8 @@ function validateConfigProvenance(value) {
   }
   if (
     typeof value.sourceReference !== 'string' ||
-    !/^[a-z0-9._-]{1,64}$/.test(value.sourceReference)
+    !/^[a-z0-9._-]{1,64}$/.test(value.sourceReference) ||
+    isSensitiveProvenanceName(value.sourceReference)
   ) {
     errors.push(error('/sourceReference', 'safe source reference is required'));
   }
@@ -468,7 +518,9 @@ function validateConfigProvenance(value) {
     errors.push(error('/configuredKeys', 'configuredKeys must be a bounded array'));
   } else {
     for (let index = 0; index < value.configuredKeys.length; index += 1) {
-      if (!/^[a-zA-Z][a-zA-Z0-9._-]{0,63}$/.test(value.configuredKeys[index])) {
+      if (
+        !CONFIGURED_KEY_PATTERN.test(value.configuredKeys[index])
+      ) {
         errors.push(error(`/configuredKeys/${index}`, 'safe configuration key name is required'));
       }
     }
@@ -477,6 +529,22 @@ function validateConfigProvenance(value) {
     errors.push(error('/redaction', 'redaction must be values-omitted'));
   }
   return errors;
+}
+
+function normalizeConfigProvenance(value) {
+  const errors = validateConfigProvenance(value);
+  if (errors.length) return { ok: false, errors };
+  return {
+    ok: true,
+    value: deepFreeze({
+      schemaVersion: 1,
+      contract: contractRef(CONTRACTS.CONFIG_PROVENANCE),
+      sourceKind: value.sourceKind,
+      sourceReference: value.sourceReference,
+      configuredKeys: [...new Set(value.configuredKeys)].sort(),
+      redaction: 'values-omitted',
+    }),
+  };
 }
 
 const PROVIDER_SCHEMAS = Object.freeze({
@@ -581,6 +649,7 @@ module.exports = {
   validateEgressPolicy,
   validatePolicyDenial,
   validateConfigProvenance,
+  normalizeConfigProvenance,
   normalizeDescriptor,
   normalizeRequest,
   normalizeEvidenceReferences,

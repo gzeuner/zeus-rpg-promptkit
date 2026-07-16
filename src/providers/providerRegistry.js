@@ -7,6 +7,9 @@ You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2
 */
 'use strict';
 
+const UTIL_MODULE_NAME = 'util';
+const { types: utilTypes } = require(UTIL_MODULE_NAME);
+
 const {
   CONTRACTS,
   KIND_CONTRACTS,
@@ -15,9 +18,9 @@ const {
   clonePlainData,
   deepFreeze,
   normalizeDescriptor,
+  normalizeConfigProvenance,
   normalizeRequest,
   normalizeEvidenceReferences,
-  validateConfigProvenance,
   validatePlainData,
   validateResponse,
 } = require('./contracts');
@@ -78,6 +81,7 @@ function removeAbortListener(signal, listener) {
 function projectInvocationOptions(options) {
   try {
     if (!options || typeof options !== 'object' || Array.isArray(options)) return null;
+    if (utilTypes.isProxy(options)) return null;
     const prototype = Object.getPrototypeOf(options);
     if (prototype !== Object.prototype && prototype !== null) return null;
     const projected = { policy: undefined, timeoutMs: 5000, signal: null };
@@ -109,6 +113,9 @@ function projectInvocationOptions(options) {
 
 function validateRegistrationEnvelope(registration) {
   if (!registration || typeof registration !== 'object' || Array.isArray(registration)) {
+    throwRegistration('PROVIDER_REGISTRATION_INVALID');
+  }
+  if (utilTypes.isProxy(registration)) {
     throwRegistration('PROVIDER_REGISTRATION_INVALID');
   }
   const prototype = Object.getPrototypeOf(registration);
@@ -222,14 +229,11 @@ function createProviderRegistry() {
 
     let provenance = null;
     if (registration.configProvenance !== undefined) {
-      if (validateConfigProvenance(registration.configProvenance).length) {
+      const normalizedProvenance = normalizeConfigProvenance(registration.configProvenance);
+      if (!normalizedProvenance.ok) {
         throwRegistration('PROVIDER_CONFIG_PROVENANCE_INVALID');
       }
-      try {
-        provenance = cloneFrozen(registration.configProvenance);
-      } catch {
-        throwRegistration('PROVIDER_CONFIG_PROVENANCE_INVALID');
-      }
+      provenance = normalizedProvenance.value;
     }
 
     const entry = {

@@ -240,9 +240,58 @@ test('redacted provenance rejects paths and accepts names without values', () =>
   const provenance = createConfigProvenance({
     sourceKind: 'api',
     sourceReference: 'trusted-registration',
-    configuredKeys: ['modelId'],
+    configuredKeys: ['modelId', 'apiToken'],
   });
+  assert.deepEqual(provenance.configuredKeys, ['apiToken', 'modelId']);
   assert.equal(provenance.redaction, 'values-omitted');
+});
+
+test('config provenance rejects secret-like source references and non-key configured values', () => {
+  assert.throws(
+    () =>
+      createConfigProvenance({
+        sourceKind: 'environment',
+        sourceReference: 'hunter2secret',
+        configuredKeys: ['apiToken'],
+      }),
+    error => error.code === 'PROVIDER_CONFIG_PROVENANCE_INVALID'
+  );
+  assert.throws(
+    () =>
+      createConfigProvenance({
+        sourceKind: 'environment',
+        sourceReference: 'provider-env',
+        configuredKeys: ['ActualSecretValue'],
+      }),
+    error => error.code === 'PROVIDER_CONFIG_PROVENANCE_INVALID'
+  );
+});
+
+test('registry stores only normalized provenance contract fields and drops additive secrets', () => {
+  const registry = createProviderRegistry();
+  registry.register({
+    descriptor: descriptor('model', 'test.secret-provenance'),
+    invoke: async () => ({}),
+    configProvenance: {
+      schemaVersion: 1,
+      contract: contractRef(CONTRACTS.CONFIG_PROVENANCE),
+      sourceKind: 'environment',
+      sourceReference: 'provider-env',
+      configuredKeys: ['apiToken', 'endpoint'],
+      redaction: 'values-omitted',
+      secretValue: 'TOP_SECRET_SHOULD_NOT_LEAK',
+    },
+  });
+  const stored = registry.get('test.secret-provenance');
+  assert.equal(stored.configProvenance.secretValue, undefined);
+  assert.deepEqual(Object.keys(stored.configProvenance).sort(), [
+    'configuredKeys',
+    'contract',
+    'redaction',
+    'schemaVersion',
+    'sourceKind',
+    'sourceReference',
+  ]);
 });
 
 test('all payload classifications and trust zones require exact explicit allow rules', () => {
@@ -642,6 +691,96 @@ test('oversized, cyclic, and non-finite provider outputs are rejected', async ()
     assert.equal(result.ok, false);
     assert.ok(['PROVIDER_RESPONSE_INVALID', 'OUTPUT_LIMIT_EXCEEDED'].includes(result.error.code));
   }
+});
+
+test('proxy-backed request or response payloads are rejected before crossing the provider boundary', async () => {
+  let calls = 0;
+  const requestProxy = new Proxy(
+    { safe: 'value' },
+    {
+      get(target, key, receiver) {
+        if (key === 'safe') throw new Error('request proxy should not be read');
+        return Reflect.get(target, key, receiver);
+      },
+    }
+  );
+  const requestRegistry = createProviderRegistry();
+  requestRegistry.register({
+    descriptor: descriptor('model'),
+    invoke: async (_context, request) => {
+      calls += 1;
+      return responseFor(request);
+    },
+  });
+  const requestResult = await requestRegistry.invoke(
+    'test.model',
+    requestFor('test.model', { input: { classification: 'public-metadata', content: requestProxy } }),
+    { policy: allow() }
+  );
+  assert.equal(requestResult.error.code, 'REQUEST_INVALID');
+  assert.equal(calls, 0);
+
+  const responseProxy = new Proxy(
+    { safe: 'value' },
+    {
+      get(target, key, receiver) {
+        if (key === 'safe') throw new Error('response proxy should not be read');
+        return Reflect.get(target, key, receiver);
+      },
+    }
+  );
+  const responseRegistry = createProviderRegistry();
+  responseRegistry.register({
+    descriptor: descriptor('model'),
+    invoke: async (_context, request) => responseFor(request, { output: responseProxy }),
+  });
+  const responseResult = await responseRegistry.invoke('test.model', requestFor('test.model'), {
+    policy: allow(),
+  });
+  assert.equal(responseResult.error.code, 'PROVIDER_RESPONSE_INVALID');
+});
+
+test('proxy-backed registration envelopes and invocation options are rejected fail-closed', async () => {
+  const registry = createProviderRegistry();
+  assert.throws(
+    () =>
+      registry.register(
+        new Proxy(
+          {
+            descriptor: descriptor('model', 'test.proxy-registration'),
+            invoke: async () => ({}),
+          },
+          {}
+        )
+      ),
+    error => error.code === 'PROVIDER_REGISTRATION_INVALID'
+  );
+
+  registry.register({
+    descriptor: descriptor('model'),
+    invoke: async (_context, request) => responseFor(request),
+  });
+  const result = await registry.invoke(
+    'test.model',
+    requestFor('test.model'),
+    new Proxy({ policy: allow() }, {})
+  );
+  assert.equal(result.error.code, 'INVOCATION_OPTIONS_INVALID');
+});
+
+test('output byte limits count key material and reject oversized structured envelopes', async () => {
+  const output = { ['k'.repeat(1024)]: true };
+  const registry = createProviderRegistry();
+  registry.register({
+    descriptor: descriptor('model'),
+    invoke: async (_context, request) => responseFor(request, { output }),
+  });
+  const result = await registry.invoke(
+    'test.model',
+    requestFor('test.model', { maxOutputBytes: 64 }),
+    { policy: allow() }
+  );
+  assert.equal(result.error.code, 'OUTPUT_LIMIT_EXCEEDED');
 });
 
 test('timeouts and pre-cancelled invocations are bounded and do not expose exceptions', async () => {
