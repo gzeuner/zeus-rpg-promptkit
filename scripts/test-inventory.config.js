@@ -16,6 +16,7 @@ module.exports = {
       'tests/task-oriented-analysis-index.test.js',
       'tests/tool-catalog-generator.test.js',
       'tests/provider-contracts.test.js',
+      'tests/provider-local-adapters.test.js',
       'tests/workflow-presets.test.js',
     ],
     smoke: [

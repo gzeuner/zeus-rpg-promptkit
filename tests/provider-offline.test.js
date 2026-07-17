@@ -77,6 +77,8 @@ test('Zeus API starts with an empty optional provider registry and no automatic 
   assert.deepEqual(zeus.providers.registry.list(), []);
   assert.equal(typeof zeus.analyze, 'function');
   assert.equal(typeof zeus.capabilities.list, 'function');
+  assert.equal(typeof providers.adapters.createOllamaModelAdapter, 'function');
+  assert.equal(typeof providers.adapters.createOpenAICompatibleModelAdapter, 'function');
 });
 
 test('offline provider subtree has no transport, process, clock, random, filesystem, or dynamic import', () => {

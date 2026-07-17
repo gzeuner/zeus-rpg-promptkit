@@ -20,6 +20,7 @@ const { createProviderRegistry } = require('../providers/providerRegistry');
 const providerPolicy = require('../providers/egressPolicy');
 const providerRedaction = require('../providers/redaction');
 const providerTesting = require('../providers/testing');
+const providerAdapters = require('../providers/adapters');
 const { executeQueryTable } = require('../core/queryService');
 const {
   executeListRuns,
@@ -117,6 +118,7 @@ function createProviderNamespace() {
     policy: providerPolicy,
     redaction: providerRedaction,
     testing: providerTesting,
+    adapters: providerAdapters,
   });
 }
 const providers = createProviderNamespace();
