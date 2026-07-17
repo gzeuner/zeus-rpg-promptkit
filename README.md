@@ -67,6 +67,12 @@ Damit beantwortet Zeus Fragen wie:
 
 Zeus ist KI-anbieterneutral. Die erzeugten Artefakte können in klassischen Reviews oder mit ChatGPT, GitHub Copilot, Claude, lokalen Modellen und anderen Werkzeugen verwendet werden.
 
+Die Programmatic API enthält zusätzlich opt-in Adapter für lokale/private Modell-Endpunkte
+(derzeit Ollama sowie OpenAI-kompatible private/vLLM-artige HTTP-Endpunkte). Sie bleiben
+außerhalb des Standardpfads deaktiviert, verwenden keine automatische Probe/Fallback-Logik und
+erzwingen Ziel-Guardrails wie Credential-Verbot in URLs, SSRF-Schutz, Redirect-Neuvalidierung,
+Timeout/Cancellation sowie standardmäßige Sperre für Public Internet.
+
 ## 🧱 Wie Zeus arbeitet
 
 ```mermaid
@@ -510,10 +516,12 @@ const policy = providers.policy.createEgressPolicy([
 
 Ohne Registrierung arbeitet Zeus unverändert weiter. Jede Verarbeitung – auch lokal – benötigt
 eine genaue Klassifikations-/Trust-Zone-Regel; `secret` wird immer abgelehnt. Providerantworten sind
-nur beratend und niemals Evidenz oder Source of Truth. Diese Version enthält keine reale Modell-
-oder Netzwerk-Integration, keine automatische Auswahl oder Prüfung und keine kommerzielle
-Providerverwaltung. `providers.testing` enthält ausschließlich deterministische Offline-Doubles
-für Vertrags- und Integrationstests. Architektur und API-Grenzen: [`ADR-007`](docs/architecture/adr-007-provider-neutral-contracts.md).
+nur beratend und niemals Evidenz oder Source of Truth. Reale lokale/private HTTP-Adapter stehen
+zusätzlich unter `providers.adapters` opt-in bereit; sie verbinden sich nur bei expliziter
+Registrierung und Invocation, nie automatisch. Es gibt weiterhin keine automatische Auswahl,
+keine automatische Probe/Fallback-Logik und keine kommerzielle Providerverwaltung.
+`providers.testing` enthält ausschließlich deterministische Offline-Doubles für Vertrags- und
+Integrationstests. Architektur und API-Grenzen: [`ADR-007`](docs/architecture/adr-007-provider-neutral-contracts.md).
 
 Die Knowledge API bleibt absichtlich deaktiviert, bis ein finaler, projektneutraler Katalog alle Privacy-Gates bestanden hat.
 
@@ -1100,10 +1108,11 @@ const policy = providers.policy.createEgressPolicy([
 
 Zeus continues to work unchanged without registration. Every processing operation, including local
 processing, needs an exact classification/trust-zone rule; `secret` is always denied. Provider
-responses are advisory only and are never evidence or a source of truth. This version includes no
-real model or network integration, automatic selection or probing, or commercial provider
-management. `providers.testing` contains deterministic offline doubles exclusively for contract and
-integration tests. Architecture and API boundary: [`ADR-007`](docs/architecture/adr-007-provider-neutral-contracts.md).
+responses are advisory only and are never evidence or a source of truth. Real local/private HTTP
+adapters are additionally exposed under `providers.adapters`, but they remain strictly opt-in:
+no automatic registration, selection, probing, fallback, or commercial provider management.
+`providers.testing` contains deterministic offline doubles exclusively for contract and integration
+tests. Architecture and API boundary: [`ADR-007`](docs/architecture/adr-007-provider-neutral-contracts.md).
 
 The Knowledge API intentionally remains disabled until a final project-neutral catalog has passed all privacy gates.
 

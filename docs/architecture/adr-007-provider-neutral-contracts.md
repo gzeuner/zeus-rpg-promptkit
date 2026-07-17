@@ -1,7 +1,7 @@
 ---
 Title: ADR-007 Provider-Neutral AI Contracts
 Description: Versioned offline provider contracts, explicit trusted registration, private-by-default egress policy, redaction, and optional test doubles.
-Last Updated: 2026-07-16
+Last Updated: 2026-07-17
 ---
 
 # ADR-007: Provider-Neutral AI Contracts
@@ -129,9 +129,27 @@ functionality under Apache-2.0. No commercial provider management, central organ
 Fleet Health, audit/team workflow, generation assurance, repair, model comparison, Db2 Test
 Intelligence, entitlement, deployment, telemetry, or hidden premium implementation is included.
 
+## Opt-in local/private adapters
+
+Version 1 may include additive opt-in adapters above the existing registry and contracts as long as
+they preserve the same public invocation boundary. Local/private HTTP adapters are registration-time
+helpers only; they do not widen the provider request contract, egress-policy contract, or registry
+API shape. Destination policy remains trusted adapter/transport configuration rather than
+user-supplied invocation data.
+
+Allowed adapter behavior:
+
+- explicit registration only; never automatic discovery, probing, fallback, download, or polling;
+- explicit health/capability checks only, never run automatically, and never send source/evidence;
+- private-by-default network transport with URL credential rejection, auth redaction, DNS/IP
+  validation, SSRF guards for metadata/link-local/disallowed targets, redirect revalidation,
+  bounded response size, timeout/cancellation support, and normal TLS verification;
+- public internet denied by default; loopback or private-network destinations require explicit
+  adapter policy opt-in.
+
 ## Non-goals
 
-- no Ollama, vLLM, OpenAI-compatible, cloud, or internet adapter;
+- no cloud SDKs or public-internet-by-default adapters;
 - no model discovery, download, automatic selection, fallback, or polling;
 - no required embedding or vector retrieval path;
 - no AI-generated code change or repair loop;

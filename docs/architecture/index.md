@@ -36,7 +36,7 @@ All subsequent implementation and agent guidance must be consistent with these d
 - External modules and capabilities must follow the open-core ownership, explicit registration,
   compatibility, failure-isolation, and artifact-portability rules in ADR-006.
 - Optional AI adapters must follow the versioned contracts, explicit provider identity,
-  private-by-default policy, redaction, and evidence-separation rules in ADR-007.
+  private-by-default transport policy, redaction, and evidence-separation rules in ADR-007.
 
 ## Regenerating Supporting Artifacts
 
