@@ -31,6 +31,48 @@ function allow(zone = 'local') {
   ]);
 }
 
+function createDeferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+function withWatchdog(promise, ms, message) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const error = new Error(message);
+      error.code = 'TEST_WATCHDOG';
+      reject(error);
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+async function waitForCondition(check, ms, message) {
+  const started = Date.now();
+  while (Date.now() - started < ms) {
+    if (check()) return true;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  const error = new Error(message);
+  error.code = 'TEST_WATCHDOG';
+  throw error;
+}
+
+function lateChatCompletionBody() {
+  return {
+    choices: [{ message: { content: 'late' }, finish_reason: 'stop' }],
+    usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+  };
+}
+
 async function withServer(routes, run) {
   const calls = [];
   const server = http.createServer(async (req, res) => {
@@ -46,11 +88,14 @@ async function withServer(routes, run) {
     });
     const handler = routes[`${req.method} ${req.url}`];
     if (!handler) {
+      if (res.destroyed || res.writableEnded) return;
       res.writeHead(404, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ error: 'missing route' }));
       return;
     }
-    const response = await handler({ req, body, calls });
+    const response = await handler({ req, res, body, calls });
+    // Client abort/timeout may close the socket before the route releases.
+    if (res.destroyed || res.writableEnded) return;
     res.writeHead(
       response.statusCode || 200,
       response.headers || { 'content-type': 'application/json' }
@@ -306,61 +351,197 @@ test('redirects are revalidated and oversized responses fail closed', async () =
   );
 });
 
-test('registry timeout/cancellation propagate through adapter transport without auto-retries', async () => {
-  await withServer(
-    {
-      'POST /v1/chat/completions': async () => {
-        await new Promise(resolve => setTimeout(resolve, 50));
-        return {
-          body: {
-            choices: [{ message: { content: 'late' }, finish_reason: 'stop' }],
-            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
-          },
-        };
-      },
-    },
-    async ({ baseUrl, calls }) => {
-      const adapter = providers.adapters.createOpenAICompatibleModelAdapter({
-        endpoint: baseUrl,
-        models: ['private-vllm'],
-        destinationPolicy: { allowLoopback: true },
-      });
-      const registry = providers.createRegistry();
-      registry.register(adapter.registration);
-      const timedOut = await registry.invoke(
-        adapter.descriptor.id,
-        request(adapter.descriptor.id, 'private-vllm'),
-        { policy: allow('local'), timeoutMs: 5 }
-      );
-      assert.equal(timedOut.error.code, 'PROVIDER_TIMEOUT');
-      assert.equal(calls.length, 1);
-    }
-  );
-});
+test(
+  'registry timeout propagates through adapter transport without auto-retries',
+  { timeout: 15000 },
+  async () => {
+    const requestStarted = createDeferred();
+    const responseRelease = createDeferred();
+    let transportClosed = false;
 
-test('explicit health checks are bounded by transport timeout and do not auto-retry', async () => {
-  await withServer(
-    {
-      'GET /api/tags': async () => {
-        await new Promise(resolve => setTimeout(resolve, 50));
-        return { body: { models: [{ model: 'llama3.1' }] } };
+    await withServer(
+      {
+        'POST /v1/chat/completions': async ({ req, res }) => {
+          const markClosed = () => {
+            transportClosed = true;
+          };
+          // Observe only abort-related signals (not IncomingMessage 'close' = body complete).
+          req.on('aborted', markClosed);
+          res.on('close', markClosed);
+          if (req.socket) req.socket.on('close', markClosed);
+          requestStarted.resolve();
+          await responseRelease.promise;
+          return { body: lateChatCompletionBody() };
+        },
       },
-    },
-    async ({ baseUrl, calls }) => {
-      const adapter = providers.adapters.createOllamaModelAdapter({
-        endpoint: baseUrl,
-        modelId: 'llama3.1',
-        destinationPolicy: { allowLoopback: true },
-        timeoutMs: 5,
-      });
-      await assert.rejects(
-        () => adapter.checkHealth(),
-        error => {
-          assert.equal(error.code, 'TRANSPORT_TIMEOUT');
-          return true;
+      async ({ baseUrl, calls }) => {
+        try {
+          const adapter = providers.adapters.createOpenAICompatibleModelAdapter({
+            endpoint: baseUrl,
+            models: ['private-vllm'],
+            destinationPolicy: { allowLoopback: true },
+          });
+          const registry = providers.createRegistry();
+          registry.register(adapter.registration);
+
+          const invokePromise = registry.invoke(
+            adapter.descriptor.id,
+            request(adapter.descriptor.id, 'private-vllm'),
+            { policy: allow('local'), timeoutMs: 500 }
+          );
+
+          await withWatchdog(
+            requestStarted.promise,
+            5000,
+            'timeout case: request never reached the local server'
+          );
+          assert.equal(
+            transportClosed,
+            false,
+            'timeout case: transport must still be open at request-started'
+          );
+          const timedOut = await withWatchdog(
+            invokePromise,
+            5000,
+            'timeout case: registry invoke hung after request start'
+          );
+
+          assert.equal(timedOut.ok, false);
+          assert.equal(timedOut.error.code, 'PROVIDER_TIMEOUT');
+          assert.equal(calls.length, 1, 'timeout must not auto-retry');
+
+          await waitForCondition(
+            () => transportClosed,
+            2000,
+            'timeout case: transport abort/closure was not observed'
+          );
+          assert.equal(transportClosed, true);
+          assert.equal(calls.length, 1);
+        } finally {
+          responseRelease.resolve();
         }
-      );
-      assert.equal(calls.length, 1);
-    }
-  );
-});
+      }
+    );
+  }
+);
+
+test(
+  'registry external cancellation propagates through adapter transport without auto-retries',
+  { timeout: 15000 },
+  async () => {
+    const requestStarted = createDeferred();
+    const responseRelease = createDeferred();
+    let transportClosed = false;
+
+    await withServer(
+      {
+        'POST /v1/chat/completions': async ({ req, res }) => {
+          const markClosed = () => {
+            transportClosed = true;
+          };
+          req.on('aborted', markClosed);
+          res.on('close', markClosed);
+          if (req.socket) req.socket.on('close', markClosed);
+          requestStarted.resolve();
+          await responseRelease.promise;
+          return { body: lateChatCompletionBody() };
+        },
+      },
+      async ({ baseUrl, calls }) => {
+        try {
+          const adapter = providers.adapters.createOpenAICompatibleModelAdapter({
+            endpoint: baseUrl,
+            models: ['private-vllm'],
+            destinationPolicy: { allowLoopback: true },
+          });
+          const registry = providers.createRegistry();
+          registry.register(adapter.registration);
+          const controller = new AbortController();
+
+          const invokePromise = registry.invoke(
+            adapter.descriptor.id,
+            request(adapter.descriptor.id, 'private-vllm'),
+            { policy: allow('local'), timeoutMs: 10000, signal: controller.signal }
+          );
+
+          await withWatchdog(
+            requestStarted.promise,
+            5000,
+            'cancel case: request never reached the local server'
+          );
+          assert.equal(
+            transportClosed,
+            false,
+            'cancel case: transport must still be open at request-started'
+          );
+          controller.abort();
+
+          const cancelled = await withWatchdog(
+            invokePromise,
+            5000,
+            'cancel case: registry invoke hung after external abort'
+          );
+
+          assert.equal(cancelled.ok, false);
+          assert.equal(cancelled.error.code, 'PROVIDER_CANCELLED');
+          assert.equal(calls.length, 1, 'cancel must not auto-retry');
+
+          await waitForCondition(
+            () => transportClosed,
+            2000,
+            'cancel case: transport abort/closure was not observed'
+          );
+          assert.equal(transportClosed, true);
+          assert.equal(calls.length, 1);
+        } finally {
+          responseRelease.resolve();
+        }
+      }
+    );
+  }
+);
+
+test(
+  'explicit health checks are bounded by transport timeout and do not auto-retry',
+  { timeout: 15000 },
+  async () => {
+    const requestStarted = createDeferred();
+    const responseRelease = createDeferred();
+
+    await withServer(
+      {
+        'GET /api/tags': async () => {
+          requestStarted.resolve();
+          await responseRelease.promise;
+          return { body: { models: [{ model: 'llama3.1' }] } };
+        },
+      },
+      async ({ baseUrl, calls }) => {
+        try {
+          const adapter = providers.adapters.createOllamaModelAdapter({
+            endpoint: baseUrl,
+            modelId: 'llama3.1',
+            destinationPolicy: { allowLoopback: true },
+            timeoutMs: 200,
+          });
+          const healthPromise = adapter.checkHealth();
+          await withWatchdog(
+            requestStarted.promise,
+            5000,
+            'health timeout case: request never reached the local server'
+          );
+          await assert.rejects(
+            () => withWatchdog(healthPromise, 5000, 'health timeout case: checkHealth hung'),
+            error => {
+              assert.equal(error.code, 'TRANSPORT_TIMEOUT');
+              return true;
+            }
+          );
+          assert.equal(calls.length, 1);
+        } finally {
+          responseRelease.resolve();
+        }
+      }
+    );
+  }
+);
