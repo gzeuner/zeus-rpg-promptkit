@@ -8,6 +8,8 @@ const {
   SAFETY_LEVELS,
 } = require('./constants');
 const { parseVersion } = require('./semverRange');
+const { CAPABILITY_SIDE_EFFECTS } = require('../core/safetyMetadata');
+const CAPABILITY_SIDE_EFFECT_SET = new Set(CAPABILITY_SIDE_EFFECTS);
 
 function isPlainObject(value) {
   return value != null && typeof value === 'object' && !Array.isArray(value);
@@ -107,6 +109,23 @@ function normalizeModuleDescriptor(raw) {
         path: '/safety/sideEffects',
         message: 'safety.sideEffects must be a non-empty array',
       });
+    } else {
+      const seenSideEffects = new Set();
+      raw.safety.sideEffects.forEach((sideEffect, i) => {
+        const normalized = typeof sideEffect === 'string' ? sideEffect.trim() : '';
+        if (!CAPABILITY_SIDE_EFFECT_SET.has(normalized)) {
+          errors.push({
+            path: `/safety/sideEffects/${i}`,
+            message: `side effect must be one of: ${CAPABILITY_SIDE_EFFECTS.join(', ')}`,
+          });
+        } else if (seenSideEffects.has(normalized)) {
+          errors.push({
+            path: `/safety/sideEffects/${i}`,
+            message: `duplicate side effect: ${normalized}`,
+          });
+        }
+        seenSideEffects.add(normalized);
+      });
     }
   }
 
@@ -180,7 +199,7 @@ function normalizeModuleDescriptor(raw) {
     capabilities,
     safety: {
       level: String(raw.safety.level),
-      sideEffects: [...raw.safety.sideEffects].map(String).sort(),
+      sideEffects: [...raw.safety.sideEffects].map(value => String(value).trim()).sort(),
     },
     runtime: {
       requiredFeatures: [...raw.runtime.requiredFeatures].map(String).sort(),

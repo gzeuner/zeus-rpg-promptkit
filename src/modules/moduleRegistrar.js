@@ -13,6 +13,24 @@ const { satisfies } = require('./semverRange');
 const { createCapabilityRegistry } = require('../core/capabilityRegistry');
 // normalizeModuleDescriptor used by atomic pre-checks
 
+const REASON_CODE_SET = new Set(Object.values(REASON_CODES));
+const MODULE_REPORTED_REASON_CODE_SET = new Set([
+  REASON_CODES.AVAILABLE,
+  REASON_CODES.RUNTIME_UNAVAILABLE,
+  REASON_CODES.POLICY_DENIED,
+  REASON_CODES.ENTITLEMENT_REQUIRED,
+  REASON_CODES.ENTITLEMENT_EXPIRED,
+  REASON_CODES.ENTITLEMENT_INVALID,
+  REASON_CODES.ENTITLEMENT_UNAVAILABLE,
+  REASON_CODES.MODULE_POLICY_DENIED,
+  REASON_CODES.MODULE_DISABLED,
+  REASON_CODES.MODULE_UNAVAILABLE,
+]);
+
+function normalizeReasonCode(reasonCode) {
+  return REASON_CODE_SET.has(reasonCode) ? reasonCode : REASON_CODES.MODULE_UNAVAILABLE;
+}
+
 function fixedStatus({
   moduleId = null,
   lifecycle,
@@ -28,7 +46,7 @@ function fixedStatus({
     moduleId,
     lifecycle,
     availability,
-    reasonCode,
+    reasonCode: normalizeReasonCode(reasonCode),
     message: message ? redactSecrets(message) : null,
     edition,
     entitlementMode,
@@ -46,7 +64,7 @@ function fixedStatus({
  * Host must already import the module package; this API never scans paths or
  * dynamically requires untrusted names.
  */
-function createModuleRegistrar(options = {}) {
+function createStagingModuleRegistrar(options = {}) {
   const coreModuleApiVersion = String(options.coreModuleApiVersion || MODULE_API_VERSION);
   const hostFeatures = new Set(
     Array.isArray(options.hostFeatures) && options.hostFeatures.length
@@ -163,6 +181,10 @@ function createModuleRegistrar(options = {}) {
     }
 
     const descriptor = normalized.descriptor;
+    const declaredCapabilities = new Map(
+      descriptor.capabilities.map(capability => [capability.id, capability])
+    );
+    const declaredSideEffects = new Set(descriptor.safety.sideEffects);
     if (modules.has(descriptor.id)) {
       return {
         ok: false,
@@ -221,11 +243,19 @@ function createModuleRegistrar(options = {}) {
           if (!before.has(id)) stagedIds.push(id);
         }
         // Enforce module capability list membership
-        const declared = new Set(descriptor.capabilities.map(c => c.id));
-        if (!declared.has(registered.id)) {
+        const declared = declaredCapabilities.get(registered.id);
+        if (!declared) {
           throw Object.assign(new Error(`Capability ${registered.id} is not declared by module`), {
             code: 'CAPABILITY_NOT_DECLARED',
           });
+        }
+        if (registered.version !== declared.version) {
+          throw Object.assign(
+            new Error(
+              `Capability ${registered.id} version ${registered.version} does not match declared version ${declared.version}`
+            ),
+            { code: 'CAPABILITY_VERSION_MISMATCH' }
+          );
         }
         // Capability safety must not be weaker than module safety
         const moduleRank = SAFETY_RANK[descriptor.safety.level];
@@ -235,6 +265,14 @@ function createModuleRegistrar(options = {}) {
             new Error('Capability safety level cannot be weaker than module safety'),
             { code: 'SAFETY_WEAKER' }
           );
+        }
+        for (const sideEffect of registered.safety.sideEffects) {
+          if (!declaredSideEffects.has(sideEffect)) {
+            throw Object.assign(
+              new Error(`Capability side effect is not declared by module: ${sideEffect}`),
+              { code: 'SIDE_EFFECT_NOT_DECLARED' }
+            );
+          }
         }
         return registered;
       },
@@ -251,8 +289,14 @@ function createModuleRegistrar(options = {}) {
       });
 
       // Ensure every declared capability was contributed
+      if (stagedIds.length !== descriptor.capabilities.length) {
+        throw Object.assign(new Error('Registered capability set does not match descriptor'), {
+          code: 'CAPABILITY_SET_MISMATCH',
+        });
+      }
+      const registeredIds = new Set(stagedIds);
       for (const cap of descriptor.capabilities) {
-        if (!capabilityRegistry.get(cap.id)) {
+        if (!registeredIds.has(cap.id)) {
           throw Object.assign(new Error(`Declared capability not registered: ${cap.id}`), {
             code: 'CAPABILITY_MISSING',
           });
@@ -265,13 +309,30 @@ function createModuleRegistrar(options = {}) {
       let message = null;
       if (input.status && typeof input.status === 'object') {
         if (typeof input.status.reasonCode === 'string' && input.status.reasonCode.trim()) {
-          reasonCode = String(input.status.reasonCode).trim();
+          const suppliedReasonCode = String(input.status.reasonCode).trim();
+          if (!MODULE_REPORTED_REASON_CODE_SET.has(suppliedReasonCode)) {
+            throw Object.assign(new Error('Module status reason code is not permitted'), {
+              code: 'STATUS_REASON_INVALID',
+            });
+          }
+          reasonCode = suppliedReasonCode;
         }
         if (typeof input.status.availability === 'string') {
           const a = input.status.availability.toLowerCase();
-          if (Object.values(AVAILABILITY).includes(a)) availability = a;
+          if (!Object.values(AVAILABILITY).includes(a)) {
+            throw Object.assign(new Error('Module status availability is not recognized'), {
+              code: 'STATUS_AVAILABILITY_INVALID',
+            });
+          }
+          availability = a;
         }
-        if (input.status.message) message = redactSecrets(input.status.message);
+        if ((reasonCode === REASON_CODES.AVAILABLE) !== (availability === AVAILABILITY.AVAILABLE)) {
+          throw Object.assign(new Error('Module status availability and reason code conflict'), {
+            code: 'STATUS_INCOHERENT',
+          });
+        }
+        // Public status is code-driven. Do not copy module-supplied free-form diagnostics.
+        if (input.status.message) message = 'Module reported status.';
         // Reject secret-like status payloads
         const statusJson = JSON.stringify(input.status);
         if (
@@ -320,6 +381,10 @@ function createModuleRegistrar(options = {}) {
         reasonCode = REASON_CODES.CAPABILITY_CONFLICT;
       }
       if (code === 'STATUS_SECRET') reasonCode = REASON_CODES.POLICY_DENIED;
+      if (code === 'STATUS_REASON_INVALID') reasonCode = REASON_CODES.MODULE_UNAVAILABLE;
+      if (code === 'STATUS_AVAILABILITY_INVALID' || code === 'STATUS_INCOHERENT') {
+        reasonCode = REASON_CODES.MODULE_UNAVAILABLE;
+      }
 
       return {
         ok: false,
@@ -361,10 +426,23 @@ const SAFETY_RANK = Object.freeze({ S0: 0, S1: 1, S2: 2, S3: 3, S4: 4 });
  */
 function createAtomicModuleRegistrar(options = {}) {
   const hostCapabilityRegistry = options.capabilityRegistry || createCapabilityRegistry();
+  if (typeof hostCapabilityRegistry.registerBatch !== 'function') {
+    throw new Error('atomic module registration requires a capability registry with registerBatch');
+  }
+  if (typeof hostCapabilityRegistry.isSealed === 'function' && hostCapabilityRegistry.isSealed()) {
+    throw new Error('capability registry is sealed; cannot create module registrar against it');
+  }
   const coreModuleApiVersion = String(options.coreModuleApiVersion || MODULE_API_VERSION);
   const hostFeatures = options.hostFeatures;
   const modules = new Map();
+  const pendingModules = new Set();
   let sealed = false;
+
+  function hostRegistryIsSealed() {
+    return (
+      typeof hostCapabilityRegistry.isSealed === 'function' && hostCapabilityRegistry.isSealed()
+    );
+  }
 
   async function registerModule(input) {
     if (sealed) {
@@ -378,10 +456,21 @@ function createAtomicModuleRegistrar(options = {}) {
         }),
       };
     }
+    if (hostRegistryIsSealed()) {
+      return {
+        ok: false,
+        status: fixedStatus({
+          lifecycle: LIFECYCLE.REJECTED,
+          availability: AVAILABILITY.UNAVAILABLE,
+          reasonCode: REASON_CODES.REGISTRATION_FAILED,
+          message: 'Capability registry is sealed.',
+        }),
+      };
+    }
 
     // Pre-check module id against committed modules (before ephemeral registration).
     const pre = normalizeModuleDescriptor(input && input.descriptor);
-    if (pre.ok && modules.has(pre.descriptor.id)) {
+    if (pre.ok && (modules.has(pre.descriptor.id) || pendingModules.has(pre.descriptor.id))) {
       return {
         ok: false,
         status: fixedStatus({
@@ -395,59 +484,65 @@ function createAtomicModuleRegistrar(options = {}) {
         }),
       };
     }
-
-    // Use ephemeral registrar for validation + callback
-    const ephemeralCaps = createCapabilityRegistry();
-    const ephemeral = createModuleRegistrar({
-      capabilityRegistry: ephemeralCaps,
-      coreModuleApiVersion,
-      hostFeatures,
-    });
-    const result = await ephemeral.registerModule(input);
-    if (!result.ok) return result;
-
-    // Commit capabilities into host registry atomically; rollback on conflict
-    const committed = [];
+    if (pre.ok) pendingModules.add(pre.descriptor.id);
     try {
-      for (const capId of result.descriptor.capabilities.map(c => c.id)) {
-        const staged = ephemeralCaps.get(capId);
-        if (!staged) throw new Error(`missing staged capability ${capId}`);
-        // Re-register full descriptor with execute handler
-        hostCapabilityRegistry.register({
-          id: staged.id,
-          version: staged.version,
-          title: staged.title,
-          description: staged.description,
-          category: staged.category,
-          safety: staged.safety,
-          aliases: staged.aliases,
-          inputContract: staged.inputContract,
-          outputContract: staged.outputContract,
-          availability: staged.availability,
-          docs: staged.docs,
-          execute: staged.execute,
-        });
-        committed.push(staged.id);
-      }
-      modules.set(result.descriptor.id, {
-        descriptor: result.descriptor,
-        status: result.status,
+      // Use an internal isolated registrar for validation + callback.
+      const ephemeralCaps = createCapabilityRegistry();
+      const ephemeral = createStagingModuleRegistrar({
+        capabilityRegistry: ephemeralCaps,
+        coreModuleApiVersion,
+        hostFeatures,
       });
-      return result;
-    } catch (error) {
-      void error;
-      return {
-        ok: false,
-        status: fixedStatus({
-          moduleId: result.descriptor.id,
-          lifecycle: LIFECYCLE.REJECTED,
-          availability: AVAILABILITY.UNAVAILABLE,
-          reasonCode: REASON_CODES.CAPABILITY_CONFLICT,
-          message: 'Capability commit failed; no partial module registration retained.',
-          edition: result.descriptor.edition,
-          entitlementMode: result.descriptor.entitlement.mode,
-        }),
-      };
+      const result = await ephemeral.registerModule(input);
+      if (!result.ok) return result;
+
+      // Commit the fully validated capability set through one host-registry transaction.
+      try {
+        const batch = result.descriptor.capabilities.map(({ id: capId }) => {
+          const staged = ephemeralCaps.get(capId);
+          if (!staged) throw new Error(`missing staged capability ${capId}`);
+          return {
+            id: staged.id,
+            version: staged.version,
+            title: staged.title,
+            description: staged.description,
+            category: staged.category,
+            safety: staged.safety,
+            aliases: staged.aliases,
+            inputContract: staged.inputContract,
+            outputContract: staged.outputContract,
+            availability: staged.availability,
+            docs: staged.docs,
+            execute: staged.execute,
+          };
+        });
+        hostCapabilityRegistry.registerBatch(batch);
+        modules.set(result.descriptor.id, {
+          descriptor: result.descriptor,
+          status: result.status,
+        });
+        return result;
+      } catch (error) {
+        const registrySealed = /registry is sealed/i.test(String(error && error.message));
+        return {
+          ok: false,
+          status: fixedStatus({
+            moduleId: result.descriptor.id,
+            lifecycle: LIFECYCLE.REJECTED,
+            availability: AVAILABILITY.UNAVAILABLE,
+            reasonCode: registrySealed
+              ? REASON_CODES.REGISTRATION_FAILED
+              : REASON_CODES.CAPABILITY_CONFLICT,
+            message: registrySealed
+              ? 'Capability registry was sealed before commit.'
+              : 'Capability commit failed; no partial module registration retained.',
+            edition: result.descriptor.edition,
+            entitlementMode: result.descriptor.entitlement.mode,
+          }),
+        };
+      }
+    } finally {
+      if (pre.ok) pendingModules.delete(pre.descriptor.id);
     }
   }
 
@@ -473,6 +568,11 @@ function createAtomicModuleRegistrar(options = {}) {
     coreModuleApiVersion,
     capabilityRegistry: hostCapabilityRegistry,
   };
+}
+
+/** Compatibility alias: the public registrar now always uses atomic staging and batch commit. */
+function createModuleRegistrar(options = {}) {
+  return createAtomicModuleRegistrar(options);
 }
 
 module.exports = {

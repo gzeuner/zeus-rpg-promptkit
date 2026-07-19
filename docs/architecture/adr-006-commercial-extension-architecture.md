@@ -1,12 +1,12 @@
 ---
 Title: ADR-006 Commercial Extension Architecture
 Description: Open-core ownership, versioned module descriptors, explicit registration, compatibility, availability, and artifact portability boundaries.
-Last Updated: 2026-07-16
+Last Updated: 2026-07-19
 ---
 
 # ADR-006: Commercial Extension Architecture
 
-**Status:** Accepted specification; executable module registrar and commercial modules are future work
+**Status:** Accepted; public executable module contracts and atomic registrar implemented
 
 ## Context
 
@@ -20,9 +20,11 @@ Those are trusted embedding mechanisms, not a package loader, sandbox, compatibi
 transaction, marketplace, or entitlement boundary. JavaScript executes as soon as an imported
 package is evaluated, before any Zeus registration validation can protect the host.
 
-This ADR specifies the boundary that a future narrow module registrar and SDK must implement. It
-does not claim that such a registrar, commercial package, or entitlement system is currently
-shipped.
+This decision originated in Iteration 26 as a documentation-only specification. Iteration 30
+subsequently delivered the public descriptor/status contracts, explicit trusted registrar and
+external contract test kit. This update records that delivered state without changing the
+historical ownership decision. Commercial behavior and entitlement enforcement remain outside the
+public core.
 
 ## Decision
 
@@ -99,9 +101,11 @@ The required fields and rules are:
 - `docs`: non-secret title and stable reference metadata.
 
 Missing or unknown required classification, compatibility, safety, side-effect, or runtime policy
-is rejection. Unknown additive fields are tolerated within v1 and retained only where a future
-normalizer explicitly permits them. Persisted descriptors have deterministic field order and
-values and contain no registration timestamps or raw runtime errors.
+is rejection. Capability IDs and versions must exactly match the descriptor. Capability side
+effects must use the public provider-neutral vocabulary and be a subset of the module's aggregate
+declaration. Unknown additive fields are tolerated within v1 and retained only where a normalizer
+explicitly permits them. Persisted descriptors have deterministic field order and values and
+contain no registration timestamps or raw runtime errors.
 
 Mutable health is not part of the immutable descriptor. A normalized runtime record may pair the
 descriptor with:
@@ -114,8 +118,10 @@ descriptor with:
 }
 ```
 
-`availability` is `available`, `degraded`, or `unavailable`. Public status exposes only one fixed,
-redacted reason code:
+`availability` is `available`, `degraded`, or `unavailable`. Public status exposes only a value
+from the closed `REASON_CODES` vocabulary. Unknown module-supplied values fail registration and
+are reduced to the neutral `MODULE_UNAVAILABLE` code without echoing the supplied value. The
+vocabulary includes:
 
 - `DESCRIPTOR_INVALID`
 - `MODULE_API_INCOMPATIBLE`
@@ -128,6 +134,11 @@ redacted reason code:
 - `MODULE_DISABLED`
 - `MODULE_UNAVAILABLE` for any unclassified failure
 
+Modules may report only availability outcomes: `AVAILABLE`, runtime or policy unavailability,
+entitlement outcomes, `MODULE_DISABLED`, or `MODULE_UNAVAILABLE`. Registration provenance stays
+with core: modules cannot report descriptor/API failures, duplicate IDs, capability conflicts,
+initialization failures, or `NOT_INSTALLED` as their own registered status.
+
 Raw exceptions, secrets, license material, customer or organization IDs, local paths, and private
 endpoints never enter descriptors or public module-status diagnostics. Secrets are never
 transmissible. Source, usage, and customer identifiers do not leave the trust zone or get sent for
@@ -135,10 +146,10 @@ entitlement or availability validation.
 
 ### Explicit registration and trust boundary
 
-The future host composition root explicitly imports an installed, operator-trusted package and
+The host composition root explicitly imports an installed, operator-trusted package and
 passes its descriptor and registration callback to a narrow public registrar. The conceptual API
-is `registerModule({ descriptor, register })`; this is a specification name, not a current package
-export.
+is the implemented `registerModule({ descriptor, register })` surface exposed through
+`createZeus().modules`.
 
 The core never scans directories, package manifests, environment-provided paths, or marketplaces,
 and never dynamically `require`s, imports, or evaluates an untrusted name. Explicit import does not
@@ -147,7 +158,7 @@ sandbox a package: the operator and package manager remain responsible for trust
 ```mermaid
 flowchart LR
     H[Trusted host composition root] -->|explicit import| P[Installed module package]
-    H -->|descriptor + callback| R[Future narrow module registrar]
+    H -->|descriptor + callback| R[Public narrow module registrar]
     R -->|validate and stage atomically| C[Core Capability Registry]
     C --> A[Thin CLI / API / MCP projections]
 
@@ -165,11 +176,13 @@ flowchart LR
     P -.->|unavailable: only its capabilities disabled| C
 ```
 
-Before invoking contributed behavior, the registrar must validate descriptor completeness,
-descriptor major, module API compatibility, runtime feature names, module ID uniqueness,
-capability ID and alias ownership, and safety classification. All registrations from one module
-are staged and committed atomically. Any conflict or incompatibility rejects the entire module
-without partially mutating the Capability Registry.
+Before invoking contributed behavior, the registrar validates descriptor completeness, descriptor
+major, module API compatibility, runtime feature names, module ID uniqueness, exact capability ID
+and version, alias ownership, safety classification and side-effect coverage. All registrations
+from one module are staged in an isolated registry. The Capability Registry validates the complete
+ID/alias batch against snapshot maps and publishes it synchronously only after full validation.
+Any conflict or incompatibility rejects the entire module without partially mutating the host
+registry, module list or module status.
 
 Module contributions use only the canonical Capability Registry. CLI and MCP remain projections
 of registered capability metadata and do not gain module-specific or product-specific branches.
@@ -219,8 +232,9 @@ persisted format.
 - Community remains a complete, useful baseline and the extension contract is Apache-2.0.
 - External packages can contribute capability metadata without changes to CLI or MCP adapters.
 - Paid behavior and entitlement enforcement remain separable from core orchestration.
-- Future registrar work must add executable validation, atomic staging, deterministic status, and
-  contract tests; the existing broad `registerPlugin` hook does not satisfy this specification.
+- The public registrar now supplies executable validation, transactional batch registration,
+  deterministic closed status and an external contract test kit; the existing broad
+  `registerPlugin` hook still does not satisfy this specification.
 - Module failure is isolated, while malformed or incompatible registration fails closed.
 
 ## Alternatives considered
@@ -241,9 +255,15 @@ persisted format.
 - **Put entitlement checks in core or lock user artifacts.** Rejected because a paid capability
   failure must not disable core or deny users their data.
 
-## Follow-up boundary
+## Implemented and remaining boundary
 
-This iteration introduces documentation only. A later iteration may add the executable descriptor,
-registrar, and SDK after architecture and commercial re-review. That work must test descriptor
-completeness, atomic duplicate rejection, incompatibility before callback execution, deterministic
-listing, fixed redaction, and core startup with zero or unavailable modules.
+Implemented in the public core: descriptor and status contracts, explicit trusted registration,
+module-API/runtime compatibility checks, exact capability matching, closed reason codes,
+transactional multi-capability registration, failure isolation, deterministic listing and the
+external contract test kit.
+
+Not implemented in the public core: package discovery, arbitrary dynamic loading, sandboxing, hot
+reload/unload, marketplace behavior, entitlement validation, license parsing, paid capabilities,
+online activation, telemetry or artifact locking. A trusted imported package still runs with the
+host process's full rights before and during registration; the registrar is a contract boundary,
+not a security sandbox.

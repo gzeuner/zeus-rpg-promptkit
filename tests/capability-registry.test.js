@@ -33,6 +33,51 @@ test('capability registry rejects duplicate alias', () => {
   }, /duplicate alias/);
 });
 
+test('capability registry publishes a batch only after every id and alias validates', () => {
+  const reg = createCapabilityRegistry();
+  reg.register(TINY_VERSION_CAPABILITY);
+  const before = reg.list().map(capability => capability.id);
+  assert.throws(
+    () =>
+      reg.registerBatch([
+        { ...TINY_VERSION_CAPABILITY, id: 'test.first', aliases: ['first'] },
+        { ...TINY_VERSION_CAPABILITY, id: 'test.second', aliases: ['version'] },
+      ]),
+    /duplicate alias/
+  );
+  assert.deepEqual(
+    reg.list().map(capability => capability.id),
+    before
+  );
+  assert.equal(reg.get('test.first'), null);
+  assert.equal(reg.get('first'), null);
+});
+
+test('capability id cannot overwrite an existing alias', () => {
+  const reg = createCapabilityRegistry();
+  reg.register(TINY_VERSION_CAPABILITY);
+  assert.throws(
+    () => reg.register({ ...TINY_VERSION_CAPABILITY, id: 'version', aliases: [] }),
+    /conflicts with existing id or alias/
+  );
+  assert.equal(reg.get('version').id, 'system.version');
+});
+
+test('capability registry rejects unknown side effects', () => {
+  const reg = createCapabilityRegistry();
+  assert.throws(
+    () =>
+      reg.register({
+        ...TINY_VERSION_CAPABILITY,
+        id: 'test.unknown-side-effect',
+        aliases: [],
+        safety: { level: 'S1', sideEffects: ['unknown-effect'] },
+      }),
+    /unknown capability side effect/
+  );
+  assert.equal(reg.get('test.unknown-side-effect'), null);
+});
+
 test('capability registry execute returns structured result', async () => {
   const reg = createCapabilityRegistry();
   reg.register(TINY_VERSION_CAPABILITY);
@@ -110,4 +155,5 @@ test('capability registry can be sealed', () => {
   const reg = createCapabilityRegistry();
   reg.seal();
   assert.throws(() => reg.register(TINY_VERSION_CAPABILITY), /sealed/);
+  assert.throws(() => reg.registerBatch([TINY_VERSION_CAPABILITY]), /sealed/);
 });

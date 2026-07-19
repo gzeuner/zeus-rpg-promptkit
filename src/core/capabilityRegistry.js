@@ -28,6 +28,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
 const { createSchemaRegistry } = require('./contracts');
+const { CAPABILITY_SIDE_EFFECTS } = require('./safetyMetadata');
+const CAPABILITY_SIDE_EFFECT_SET = new Set(CAPABILITY_SIDE_EFFECTS);
 
 function validateSafety(safety) {
   if (!safety || typeof safety !== 'object') {
@@ -40,9 +42,15 @@ function validateSafety(safety) {
   if (!Array.isArray(safety.sideEffects)) {
     throw new Error('safety.sideEffects must be an array');
   }
+  const sideEffects = [...new Set(safety.sideEffects.map(value => String(value).trim()))];
+  for (const sideEffect of sideEffects) {
+    if (!CAPABILITY_SIDE_EFFECT_SET.has(sideEffect)) {
+      throw new Error(`unknown capability side effect: ${sideEffect || '<empty>'}`);
+    }
+  }
   return {
     level,
-    sideEffects: [...safety.sideEffects],
+    sideEffects: sideEffects.sort(),
     requiresExplicitApproval: !!safety.requiresExplicitApproval,
   };
 }
@@ -105,33 +113,52 @@ function normalizeDescriptor(raw) {
 }
 
 function createCapabilityRegistry() {
-  const byId = new Map();
-  const aliasToId = new Map();
+  let byId = new Map();
+  let aliasToId = new Map();
   let sealed = false;
 
-  function register(rawDescriptor) {
+  function registerBatch(rawDescriptors) {
     if (sealed) {
       throw new Error('capability registry is sealed; registration after seal is not allowed');
     }
-    const desc = normalizeDescriptor(rawDescriptor);
-
-    if (byId.has(desc.id)) {
-      throw new Error(`duplicate capability id: ${desc.id}`);
+    if (!Array.isArray(rawDescriptors) || rawDescriptors.length === 0) {
+      throw new Error('capability registration batch must be a non-empty array');
     }
 
-    for (const alias of desc.aliases) {
-      if (aliasToId.has(alias)) {
-        throw new Error(`duplicate alias "${alias}" (already maps to ${aliasToId.get(alias)})`);
+    const normalized = rawDescriptors.map(normalizeDescriptor);
+    const nextById = new Map(byId);
+    const nextAliasToId = new Map(aliasToId);
+
+    for (const desc of normalized) {
+      if (nextById.has(desc.id)) {
+        throw new Error(`duplicate capability id: ${desc.id}`);
+      }
+      if (nextAliasToId.has(desc.id)) {
+        throw new Error(
+          `capability id "${desc.id}" conflicts with existing id or alias for ${nextAliasToId.get(desc.id)}`
+        );
+      }
+      nextById.set(desc.id, desc);
+      nextAliasToId.set(desc.id, desc.id);
+
+      for (const alias of desc.aliases) {
+        if (nextAliasToId.has(alias)) {
+          throw new Error(
+            `duplicate alias "${alias}" (already maps to ${nextAliasToId.get(alias)})`
+          );
+        }
+        nextAliasToId.set(alias, desc.id);
       }
     }
 
-    byId.set(desc.id, desc);
-    aliasToId.set(desc.id, desc.id);
-    for (const alias of desc.aliases) {
-      aliasToId.set(alias, desc.id);
-    }
+    // One synchronous reference swap publishes the fully validated batch.
+    byId = nextById;
+    aliasToId = nextAliasToId;
+    return normalized;
+  }
 
-    return desc;
+  function register(rawDescriptor) {
+    return registerBatch([rawDescriptor])[0];
   }
 
   function get(idOrAlias) {
@@ -219,6 +246,7 @@ function createCapabilityRegistry() {
 
   return {
     register,
+    registerBatch,
     get,
     list,
     resolve,
@@ -268,6 +296,7 @@ const TINY_VERSION_CAPABILITY = {
 };
 
 module.exports = {
+  CAPABILITY_SIDE_EFFECTS,
   createCapabilityRegistry,
   TINY_VERSION_CAPABILITY,
 };

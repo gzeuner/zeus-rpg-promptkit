@@ -271,6 +271,7 @@ const safetyPolicySchema = value => {
 const { PROVIDER_SCHEMAS } = require('../../providers/contracts');
 const { GENERATION_SCHEMAS } = require('../../generationValidation/contracts');
 const { moduleDescriptorSchema } = require('../../modules/descriptor');
+const { REASON_CODES, LIFECYCLE, AVAILABILITY } = require('../../modules/constants');
 
 function moduleStatusSchema(value) {
   const errors = basicHeaderValidator(1)(value);
@@ -278,14 +279,17 @@ function moduleStatusSchema(value) {
   if (value.kind != null && value.kind !== 'module-status') {
     errors.push({ path: '/kind', message: 'kind must be "module-status" when present' });
   }
-  if (typeof value.lifecycle !== 'string' || !value.lifecycle) {
-    errors.push({ path: '/lifecycle', message: 'lifecycle is required' });
+  if (!Object.values(LIFECYCLE).includes(value.lifecycle)) {
+    errors.push({ path: '/lifecycle', message: 'lifecycle must be a defined module lifecycle' });
   }
-  if (typeof value.availability !== 'string' || !value.availability) {
-    errors.push({ path: '/availability', message: 'availability is required' });
+  if (!Object.values(AVAILABILITY).includes(value.availability)) {
+    errors.push({ path: '/availability', message: 'availability must be a defined module state' });
   }
-  if (typeof value.reasonCode !== 'string' || !value.reasonCode) {
-    errors.push({ path: '/reasonCode', message: 'reasonCode is required' });
+  if (!Object.values(REASON_CODES).includes(value.reasonCode)) {
+    errors.push({
+      path: '/reasonCode',
+      message: 'reasonCode must be a defined public reason code',
+    });
   }
   if (value.coreEnforcesEntitlement !== false && value.coreEnforcesEntitlement != null) {
     errors.push({
