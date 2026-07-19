@@ -37,4 +37,7 @@ module.exports = Object.freeze({
   EGRESS_POLICY: 'zeus.egress-policy',
   PROVIDER_POLICY_DENIAL: 'zeus.provider-policy-denial',
   PROVIDER_CONFIG_PROVENANCE: 'zeus.provider-config-provenance',
+  GENERATION_CANDIDATE: 'zeus.generation-candidate',
+  GENERATION_VALIDATION_REPORT: 'zeus.generation-validation-report',
+  EXTERNAL_LINTER_ADAPTER: 'zeus.external-linter-adapter',
 });

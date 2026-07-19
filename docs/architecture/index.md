@@ -21,6 +21,7 @@ All subsequent implementation and agent guidance must be consistent with these d
 | [005](adr-005-safety-trust-zones.md)                | Safety Trust Zones                | Accepted               |
 | [006](adr-006-commercial-extension-architecture.md) | Commercial Extension Architecture | Accepted specification |
 | [007](adr-007-provider-neutral-contracts.md)        | Provider-Neutral AI Contracts     | Accepted               |
+| [008](adr-008-generation-validation-foundation.md)  | Generation Validation Foundation  | Accepted               |
 
 ## Related Reviews
 
@@ -37,6 +38,8 @@ All subsequent implementation and agent guidance must be consistent with these d
   compatibility, failure-isolation, and artifact-portability rules in ADR-006.
 - Optional AI adapters must follow the versioned contracts, explicit provider identity,
   private-by-default transport policy, redaction, and evidence-separation rules in ADR-007.
+- Structured generation candidates must follow the offline validation, path/scope safety,
+  evidence-reference, and non-mutation rules in ADR-008. `review-ready` is never compile readiness.
 
 ## Regenerating Supporting Artifacts
 
