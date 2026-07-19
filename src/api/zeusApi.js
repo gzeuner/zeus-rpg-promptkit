@@ -21,6 +21,7 @@ const providerPolicy = require('../providers/egressPolicy');
 const providerRedaction = require('../providers/redaction');
 const providerTesting = require('../providers/testing');
 const providerAdapters = require('../providers/adapters');
+const generationValidation = require('../generationValidation');
 const { executeQueryTable } = require('../core/queryService');
 const {
   executeListRuns,
@@ -855,6 +856,9 @@ const zeus = {
   // Provider-neutral Community contracts. Empty by default; registration is
   // explicit and restricted to trusted, already-imported in-process adapters.
   providers,
+  // Generation Validation Foundation (Iteration 29): offline candidate validation.
+  // Never mutates the analyzed source workspace. review-ready is not compile readiness.
+  generationValidation,
   components: new ComponentRegistry(),
   analyzeStages: analyzeStageRegistry,
 
@@ -928,6 +932,13 @@ module.exports = {
   providers,
   createProviderRegistry,
 
+  // Generation Validation Foundation (Community safety baseline)
+  generationValidation,
+
   zeus,
-  createZeus: () => ({ ...zeus, providers: createProviderNamespace() }),
+  createZeus: () => ({
+    ...zeus,
+    providers: createProviderNamespace(),
+    generationValidation,
+  }),
 };

@@ -17,6 +17,7 @@ const { SchemaValidationError, normalizeValidationErrors } = require('./errors')
 const artifactReference = require('./artifactReference');
 const runManifest = require('./runManifest');
 const providerContracts = require('../../providers/contracts');
+const generationValidation = require('../../generationValidation');
 
 module.exports = {
   createSchemaRegistry,
@@ -25,4 +26,5 @@ module.exports = {
   artifactReference,
   runManifest,
   providerContracts,
+  generationValidation,
 };

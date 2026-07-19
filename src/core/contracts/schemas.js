@@ -269,6 +269,7 @@ const safetyPolicySchema = value => {
 };
 
 const { PROVIDER_SCHEMAS } = require('../../providers/contracts');
+const { GENERATION_SCHEMAS } = require('../../generationValidation/contracts');
 
 const INITIAL_SCHEMAS = Object.freeze({
   [CONTRACT_IDS.EVIDENCE_MODEL]: { version: 1, schema: evidenceModelSchema },
@@ -279,6 +280,7 @@ const INITIAL_SCHEMAS = Object.freeze({
   [CONTRACT_IDS.INVESTIGATION_SESSION]: { version: 1, schema: investigationSessionSchema },
   [CONTRACT_IDS.SAFETY_POLICY]: { version: 1, schema: safetyPolicySchema },
   ...PROVIDER_SCHEMAS,
+  ...GENERATION_SCHEMAS,
 });
 
 module.exports = {
