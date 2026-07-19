@@ -17,6 +17,7 @@ module.exports = {
       'tests/tool-catalog-generator.test.js',
       'tests/provider-contracts.test.js',
       'tests/provider-local-adapters.test.js',
+      'tests/module-sdk.test.js',
       'tests/workflow-presets.test.js',
     ],
     smoke: [
@@ -28,7 +29,11 @@ module.exports = {
     corpus: ['tests/scanner-corpus.test.js'],
     benchmark: ['tests/analyze-benchmark.test.js'],
     quality: ['tests/golden-quality.test.js'],
-    unit: ['tests/test-inventory.test.js', 'tests/typecheck-scope.test.js'],
+    unit: [
+      'tests/capability-registry.test.js',
+      'tests/test-inventory.test.js',
+      'tests/typecheck-scope.test.js',
+    ],
   },
   exclusions: [],
 };

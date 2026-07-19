@@ -1,5 +1,7 @@
 'use strict';
 
+const { CAPABILITY_SIDE_EFFECTS } = require('../core/safetyMetadata');
+
 const DESCRIPTOR_VERSION = 'zeus.module-descriptor/v1';
 const MODULE_API_VERSION = '1.0.0';
 const MODULE_STATUS_KIND = 'module-status';
@@ -68,4 +70,5 @@ module.exports = {
   LIFECYCLE,
   RUNTIME_FEATURE_ALLOWLIST,
   SAFETY_LEVELS,
+  CAPABILITY_SIDE_EFFECTS,
 };

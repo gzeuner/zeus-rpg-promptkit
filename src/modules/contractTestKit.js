@@ -12,6 +12,7 @@ const {
   MODULE_API_VERSION,
   REASON_CODES,
   AVAILABILITY,
+  CAPABILITY_SIDE_EFFECTS,
 } = require('./constants');
 const { normalizeModuleDescriptor } = require('./descriptor');
 const { createAtomicModuleRegistrar } = require('./moduleRegistrar');
@@ -102,6 +103,32 @@ async function runModuleContractTests(options = {}) {
     assert.ok(registrar.capabilityRegistry.get('example.inspect'));
   });
 
+  await check('late capability conflict leaves no partial host registration', async () => {
+    const caps = createCapabilityRegistry();
+    const baseCapability = {
+      version: 1,
+      safety: { level: 'S1', sideEffects: ['local-read'], requiresExplicitApproval: false },
+      execute: async () => ({}),
+    };
+    caps.register({ ...baseCapability, id: 'example.second' });
+    const registrar = createAtomicModuleRegistrar({ capabilityRegistry: caps });
+    const result = await registrar.registerModule({
+      descriptor: buildValidDescriptor({
+        capabilities: [
+          { id: 'example.first', version: 1 },
+          { id: 'example.second', version: 1 },
+        ],
+      }),
+      register({ capabilityRegistry }) {
+        capabilityRegistry.register({ ...baseCapability, id: 'example.first' });
+        capabilityRegistry.register({ ...baseCapability, id: 'example.second' });
+      },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(caps.get('example.first'), null);
+    assert.equal(registrar.listModules().length, 0);
+  });
+
   await check('duplicate module id is rejected', async () => {
     const registrar = createAtomicModuleRegistrar({
       capabilityRegistry: createCapabilityRegistry(),
@@ -180,6 +207,52 @@ async function runModuleContractTests(options = {}) {
     assert.equal(result.status.coreEnforcesEntitlement, false);
   });
 
+  await check('unknown module reason code fails closed', async () => {
+    const registrar = createAtomicModuleRegistrar();
+    const result = await registrar.registerModule({
+      descriptor: buildValidDescriptor(),
+      register: createMockRegister(),
+      status: { availability: 'available', reasonCode: 'VENDOR_INTERNAL_DETAIL' },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.status.reasonCode, REASON_CODES.MODULE_UNAVAILABLE);
+    assert.equal(registrar.capabilityRegistry.get('example.inspect'), null);
+  });
+
+  await check('capability version must match descriptor version', async () => {
+    const registrar = createAtomicModuleRegistrar();
+    const result = await registrar.registerModule({
+      descriptor: buildValidDescriptor(),
+      register({ capabilityRegistry }) {
+        capabilityRegistry.register({
+          id: 'example.inspect',
+          version: 2,
+          safety: { level: 'S1', sideEffects: ['local-read'] },
+          execute: async () => ({}),
+        });
+      },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(registrar.capabilityRegistry.get('example.inspect'), null);
+  });
+
+  await check('capability side effects must be covered by module declaration', async () => {
+    const registrar = createAtomicModuleRegistrar();
+    const result = await registrar.registerModule({
+      descriptor: buildValidDescriptor(),
+      register({ capabilityRegistry }) {
+        capabilityRegistry.register({
+          id: 'example.inspect',
+          version: 1,
+          safety: { level: 'S1', sideEffects: ['remote-write'] },
+          execute: async () => ({}),
+        });
+      },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(registrar.capabilityRegistry.get('example.inspect'), null);
+  });
+
   if (options.returnResults) return results;
   return { ok: true, coreModuleApiVersion: MODULE_API_VERSION, results };
 }
@@ -189,6 +262,7 @@ module.exports = {
   MODULE_API_VERSION,
   REASON_CODES,
   AVAILABILITY,
+  CAPABILITY_SIDE_EFFECTS,
   buildValidDescriptor,
   createMockRegister,
   normalizeModuleDescriptor,
