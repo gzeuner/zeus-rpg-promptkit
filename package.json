@@ -6,6 +6,7 @@
   "exports": {
     ".": "./cli/zeus.js",
     "./api": "./src/api/zeusApi.js",
+    "./module-contract-test": "./src/modules/contractTestKit.js",
     "./package.json": "./package.json"
   },
   "bin": {

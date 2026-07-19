@@ -270,6 +270,31 @@ const safetyPolicySchema = value => {
 
 const { PROVIDER_SCHEMAS } = require('../../providers/contracts');
 const { GENERATION_SCHEMAS } = require('../../generationValidation/contracts');
+const { moduleDescriptorSchema } = require('../../modules/descriptor');
+
+function moduleStatusSchema(value) {
+  const errors = basicHeaderValidator(1)(value);
+  if (!value || typeof value !== 'object') return errors;
+  if (value.kind != null && value.kind !== 'module-status') {
+    errors.push({ path: '/kind', message: 'kind must be "module-status" when present' });
+  }
+  if (typeof value.lifecycle !== 'string' || !value.lifecycle) {
+    errors.push({ path: '/lifecycle', message: 'lifecycle is required' });
+  }
+  if (typeof value.availability !== 'string' || !value.availability) {
+    errors.push({ path: '/availability', message: 'availability is required' });
+  }
+  if (typeof value.reasonCode !== 'string' || !value.reasonCode) {
+    errors.push({ path: '/reasonCode', message: 'reasonCode is required' });
+  }
+  if (value.coreEnforcesEntitlement !== false && value.coreEnforcesEntitlement != null) {
+    errors.push({
+      path: '/coreEnforcesEntitlement',
+      message: 'coreEnforcesEntitlement must be false when present',
+    });
+  }
+  return errors;
+}
 
 const INITIAL_SCHEMAS = Object.freeze({
   [CONTRACT_IDS.EVIDENCE_MODEL]: { version: 1, schema: evidenceModelSchema },
@@ -281,6 +306,8 @@ const INITIAL_SCHEMAS = Object.freeze({
   [CONTRACT_IDS.SAFETY_POLICY]: { version: 1, schema: safetyPolicySchema },
   ...PROVIDER_SCHEMAS,
   ...GENERATION_SCHEMAS,
+  [CONTRACT_IDS.MODULE_DESCRIPTOR]: { version: 1, schema: moduleDescriptorSchema },
+  [CONTRACT_IDS.MODULE_STATUS]: { version: 1, schema: moduleStatusSchema },
 });
 
 module.exports = {

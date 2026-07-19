@@ -40,6 +40,9 @@ All subsequent implementation and agent guidance must be consistent with these d
   private-by-default transport policy, redaction, and evidence-separation rules in ADR-007.
 - Structured generation candidates must follow the offline validation, path/scope safety,
   evidence-reference, and non-mutation rules in ADR-008. `review-ready` is never compile readiness.
+- External modules must use the trusted in-process registrar and module descriptor contracts
+  (ADR-006 executable subset; see `docs/modules/authoring-external-module-registration.md`).
+  The core never enforces commercial licenses.
 
 ## Regenerating Supporting Artifacts
 
