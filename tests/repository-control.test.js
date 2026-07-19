@@ -182,18 +182,78 @@ test('absolute paths outside repository and temporary directory are rejected', (
   );
 });
 
-test('symlink escape is rejected for output and configuration paths', () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-control-links-'));
+/**
+ * Test-only classifier for Windows symlink fixture privilege failures.
+ * Only win32 + EPERM may skip; all other errors must fail the test.
+ * @param {unknown} error
+ * @param {string} [platform=process.platform]
+ */
+function isWindowsSymlinkPrivilegeError(error, platform = process.platform) {
+  return Boolean(error && error.code === 'EPERM' && platform === 'win32');
+}
+
+test('symlink privilege classifier is narrowly scoped to win32 EPERM', () => {
+  const eperm = Object.assign(new Error('denied'), { code: 'EPERM' });
+  const eacces = Object.assign(new Error('denied'), { code: 'EACCES' });
+  const enosys = Object.assign(new Error('denied'), { code: 'ENOSYS' });
+  const einval = Object.assign(new Error('denied'), { code: 'EINVAL' });
+
+  assert.equal(isWindowsSymlinkPrivilegeError(eperm, 'win32'), true);
+  assert.equal(isWindowsSymlinkPrivilegeError(eperm, 'linux'), false);
+  assert.equal(isWindowsSymlinkPrivilegeError(eacces, 'win32'), false);
+  assert.equal(isWindowsSymlinkPrivilegeError(enosys, 'win32'), false);
+  assert.equal(isWindowsSymlinkPrivilegeError(einval, 'win32'), false);
+  assert.equal(isWindowsSymlinkPrivilegeError(null, 'win32'), false);
+  assert.equal(isWindowsSymlinkPrivilegeError(new Error('no code'), 'win32'), false);
+});
+
+test('output directory-component symlink escape is rejected by resolveSafePath', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-control-out-link-'));
   const work = path.join(directory, 'work');
   const outside = path.join(directory, 'outside');
-  fs.mkdirSync(work);
-  fs.mkdirSync(outside);
-  fs.symlinkSync(outside, path.join(work, 'link'));
-  assert.throws(() => resolveSafePath(path.join(work, 'link', 'report.json')), /symbolic links/);
-  const linkedConfig = path.join(work, 'config.json');
-  fs.symlinkSync(CONFIG_PATH, linkedConfig);
-  assert.throws(() => loadConfig(linkedConfig), /symbolic links/);
-  fs.rmSync(directory, { recursive: true, force: true });
+  try {
+    fs.mkdirSync(work);
+    fs.mkdirSync(outside);
+
+    const linkPath = path.join(work, 'link');
+    try {
+      fs.symlinkSync(outside, linkPath);
+    } catch (error) {
+      if (isWindowsSymlinkPrivilegeError(error)) {
+        t.skip(
+          `Windows symlink fixture creation denied (${error.code}); real symlink escape proof runs on Linux CI`
+        );
+        return;
+      }
+      throw error;
+    }
+
+    assert.throws(() => resolveSafePath(path.join(work, 'link', 'report.json')), /symbolic links/);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('configuration file symlink escape is rejected by loadConfig', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-control-cfg-link-'));
+  try {
+    const linkedConfig = path.join(directory, 'config.json');
+    try {
+      fs.symlinkSync(CONFIG_PATH, linkedConfig);
+    } catch (error) {
+      if (isWindowsSymlinkPrivilegeError(error)) {
+        t.skip(
+          `Windows symlink fixture creation denied (${error.code}); real symlink escape proof runs on Linux CI`
+        );
+        return;
+      }
+      throw error;
+    }
+
+    assert.throws(() => loadConfig(linkedConfig), /symbolic links/);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('read-only allowlist rejects mutating gh commands and GraphQL mutations', () => {
@@ -549,6 +609,43 @@ test('workflow propagates both PR and main gate exit codes with read-only permis
     'pull-requests: read',
   ])
     assert.match(workflow, new RegExp(permission));
+
+  assert.match(workflow, /test-windows-22:/);
+  assert.match(workflow, /name:\s*Test Node 22 \(windows\)/);
+  const windows22Section = workflow.slice(
+    workflow.indexOf('test-windows-22:'),
+    workflow.indexOf('package-smoke:')
+  );
+  assert.match(windows22Section, /runs-on:\s*windows-latest/);
+  assert.match(windows22Section, /node-version:\s*22\b/);
+  assert.match(windows22Section, /npm ci/);
+  assert.match(windows22Section, /npm run test:discovery/);
+  assert.match(windows22Section, /npm test\b/);
+  assert.match(
+    windows22Section,
+    /npm run test:repository-control|node --test tests\/repository-control\.test\.js/
+  );
+  assert.match(windows22Section, /npm audit --omit=dev --audit-level=high/);
+  assert.match(windows22Section, /npm run package:smoke/);
+  assert.doesNotMatch(windows22Section, /continue-on-error/);
+  assert.doesNotMatch(windows22Section, /\|\|\s*true/);
+
+  const prNeeds = workflow.match(/repository-control:[\s\S]*?needs:\s*\[([^\]]+)\]/);
+  const mainNeeds = workflow.match(/repository-control-main:[\s\S]*?needs:\s*\[([^\]]+)\]/);
+  assert.ok(prNeeds, 'repository-control needs list present');
+  assert.ok(mainNeeds, 'repository-control-main needs list present');
+  assert.match(prNeeds[1], /test-windows-22/);
+  assert.match(mainNeeds[1], /test-windows-22/);
+  assert.doesNotMatch(workflow, /test-windows-22:[\s\S]{0,400}continue-on-error/);
+});
+
+test('required checks include mandatory Windows Node 22 success-only gate', () => {
+  const cfg = config();
+  const name = 'Test Node 22 (windows)';
+  assert.ok(cfg.requiredChecks.pullRequest.includes(name));
+  assert.ok(cfg.requiredChecks.main.includes(name));
+  assert.deepEqual(cfg.checkConclusions.pullRequest[name], ['success']);
+  assert.deepEqual(cfg.checkConclusions.main[name], ['success']);
 });
 
 test('repository-control tests contain no live GitHub invocation', () => {
