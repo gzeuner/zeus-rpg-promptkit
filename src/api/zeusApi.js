@@ -22,6 +22,8 @@ const providerRedaction = require('../providers/redaction');
 const providerTesting = require('../providers/testing');
 const providerAdapters = require('../providers/adapters');
 const generationValidation = require('../generationValidation');
+const modulesApi = require('../modules');
+const { createAtomicModuleRegistrar } = require('../modules/moduleRegistrar');
 const { executeQueryTable } = require('../core/queryService');
 const {
   executeListRuns,
@@ -859,6 +861,12 @@ const zeus = {
   // Generation Validation Foundation (Iteration 29): offline candidate validation.
   // Never mutates the analyzed source workspace. review-ready is not compile readiness.
   generationValidation,
+  // External module contracts (Iteration 30): trusted in-process registration only.
+  // Core does not parse licenses or enforce commercial entitlement.
+  modules: createAtomicModuleRegistrar({
+    capabilityRegistry,
+  }),
+  moduleContracts: modulesApi,
   components: new ComponentRegistry(),
   analyzeStages: analyzeStageRegistry,
 
@@ -935,10 +943,22 @@ module.exports = {
   // Generation Validation Foundation (Community safety baseline)
   generationValidation,
 
+  // Module descriptor / registrar contracts (Community; no license enforcement)
+  modules: zeus.modules,
+  moduleContracts: modulesApi,
+  createAtomicModuleRegistrar,
+
   zeus,
-  createZeus: () => ({
-    ...zeus,
-    providers: createProviderNamespace(),
-    generationValidation,
-  }),
+  createZeus: () => {
+    const { createCapabilityRegistry: createCaps } = require('../core/capabilityRegistry');
+    const caps = createCaps();
+    return {
+      ...zeus,
+      providers: createProviderNamespace(),
+      generationValidation,
+      capabilities: caps,
+      modules: createAtomicModuleRegistrar({ capabilityRegistry: caps }),
+      moduleContracts: modulesApi,
+    };
+  },
 };
