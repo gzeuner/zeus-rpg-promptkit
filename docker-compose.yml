@@ -6,7 +6,7 @@ services:
     image: zeus-rpg-promptkit:community
     profiles: [zeus]
     command:
-      ['serve', '--host', '127.0.0.1', '--port', '4782', '--source-output-root', '/data/artifacts']
+      ['serve', '--host', '0.0.0.0', '--port', '4782', '--source-output-root', '/data/artifacts']
     ports:
       - '127.0.0.1:4782:4782'
     read_only: true
@@ -26,7 +26,7 @@ services:
     image: zeus-rpg-promptkit:community
     profiles: [local-provider]
     command:
-      ['serve', '--host', '127.0.0.1', '--port', '4782', '--source-output-root', '/data/artifacts']
+      ['serve', '--host', '0.0.0.0', '--port', '4782', '--source-output-root', '/data/artifacts']
     ports:
       - '127.0.0.1:4782:4782'
     environment:
