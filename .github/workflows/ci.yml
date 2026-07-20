@@ -134,12 +134,36 @@ jobs:
       - name: Validate Compose model
         run: ZEUS_PROVIDER_ENDPOINT=http://127.0.0.1:11434 ZEUS_PROVIDER_MODEL=ci-synthetic docker compose --profile zeus config --quiet
       - name: Build community image
-        run: docker build --pull --tag zeus-rpg-promptkit:community-ci .
+        run: docker build --pull --tag zeus-rpg-promptkit:community .
+      - name: Start and reach community Compose service
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ZEUS_PROVIDER_ENDPOINT=http://127.0.0.1:11434
+          export ZEUS_PROVIDER_MODEL=ci-synthetic
+          project="zeus-community-ci-${GITHUB_RUN_ID}"
+          cleanup() {
+            docker compose -p "$project" --profile zeus down --volumes --remove-orphans
+          }
+          trap cleanup EXIT
+          docker compose -p "$project" --profile zeus up -d
+          for attempt in $(seq 1 30); do
+            if response=$(curl --fail --silent --show-error --max-time 2 \
+              http://127.0.0.1:4782/api/health); then
+              node -e 'const body = JSON.parse(process.argv[1]); if (body.ok !== true) process.exit(1);' "$response"
+              exit 0
+            fi
+            sleep 1
+          done
+          docker compose -p "$project" --profile zeus ps
+          docker compose -p "$project" --profile zeus logs --no-color
+          echo 'Community Compose service did not become reachable within 30 seconds.' >&2
+          exit 1
       - name: Run offline non-root help smoke
         run: >-
           docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m
           --mount type=tmpfs,destination=/data/artifacts
-          zeus-rpg-promptkit:community-ci --help
+          zeus-rpg-promptkit:community --help
   # Boundary guards run in parallel via their own workflows (distinct security value).
   # See demo-safety-check.yml, public-knowledge-claims.yml, runtime-config-boundary.yml
 

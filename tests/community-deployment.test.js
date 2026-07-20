@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { startLocalUiServer } = require('../src/ui/localUiServer');
 
 const ROOT = path.resolve(__dirname, '..');
 const dockerfile = fs.readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8');
@@ -31,8 +32,20 @@ test('compose profiles keep local access and writable artifacts bounded', () => 
   assert.match(compose, /ZEUS_PROVIDER_ENDPOINT/);
   assert.match(compose, /ZEUS_PROVIDER_MODEL/);
   assert.doesNotMatch(compose, /privileged:\s*true|network_mode:\s*host|pid:\s*host/i);
-  assert.doesNotMatch(compose, /0\.0\.0\.0|hostPath:|docker\.sock/i);
+  assert.equal((compose.match(/'--host', '0\.0\.0\.0'/g) || []).length, 2);
+  assert.doesNotMatch(compose, /0\.0\.0\.0:4782:4782|hostPath:|docker\.sock/i);
   assert.doesNotMatch(compose, /(password|token|secret|private[_-]?key)\s*[:=]\s*[^$\s}]+/i);
+});
+
+test('container listener bind is explicitly supported without changing the local default', async () => {
+  const started = await startLocalUiServer({ outputRoot: ROOT, host: '0.0.0.0', port: 0 });
+  try {
+    const response = await fetch(`http://127.0.0.1:${started.port}/api/health`);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).ok, true);
+  } finally {
+    await new Promise(resolve => started.server.close(resolve));
+  }
 });
 
 test('community docs state reference limitations and secret/model boundaries', () => {
@@ -57,6 +70,11 @@ test('CI provides real container evidence without suppressing failures', () => {
   assert.match(section, /docker build --pull/);
   assert.match(section, /docker run --rm --read-only/);
   assert.match(section, /--mount type=tmpfs,destination=\/data\/artifacts/);
+  assert.match(section, /docker compose .* up -d/);
+  assert.match(section, /127\.0\.0\.1:4782\/api\/health/);
+  assert.match(section, /docker compose .* down .*--volumes/);
+  assert.match(section, /curl .*--fail/);
+  assert.match(section, /trap cleanup EXIT/);
   assert.doesNotMatch(section, /continue-on-error|\|\|\s*true/);
 });
 test('local CLI help smoke is offline and does not require a provider', () => {

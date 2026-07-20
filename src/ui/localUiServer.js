@@ -45,10 +45,10 @@ function normalizeHost(host) {
   if (!normalized || normalized === 'localhost') {
     return DEFAULT_UI_HOST;
   }
-  if (normalized === '127.0.0.1' || normalized === '::1') {
+  if (normalized === '127.0.0.1' || normalized === '::1' || normalized === '0.0.0.0') {
     return normalized;
   }
-  throw new Error('Local UI server only supports localhost/loopback binding');
+  throw new Error('Local UI server only supports localhost/loopback or explicit container binding');
 }
 
 function parsePositiveInteger(value, fallback) {

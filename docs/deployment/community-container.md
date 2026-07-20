@@ -11,7 +11,9 @@ deployment.
   the non-root `node` user.
 - Compose enables a read-only root filesystem, drops Linux capabilities,
   disallows privilege escalation, and exposes the viewer only on
-  `127.0.0.1:4782`.
+  `127.0.0.1:4782`. Inside the container, Zeus listens on the container
+  interface (`0.0.0.0`); Docker's host publishing remains explicitly bound to
+  host loopback.
 - Only `/data/artifacts` is writable. `/tmp` is an ephemeral, bounded tmpfs.
 - No model is downloaded and no IBM i or Db2 connection is attempted by the
   default help/demo path.
@@ -32,7 +34,8 @@ docker compose --profile zeus up --build
 Open `http://127.0.0.1:4782` locally. The named `zeus-artifacts` volume is the
 only persistent writable location. The image's default command is `zeus
 --help`, which is useful for a build/package smoke test without IBM i or model
-access.
+access. The default reachability check uses the existing read-only
+`GET /api/health` route; it needs no provider, IBM i, or Db2 access.
 
 ## Local-provider profile
 
