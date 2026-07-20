@@ -1,0 +1,12 @@
+.git
+.github
+.local
+node_modules
+*.tgz
+config/local-only
+examples/*/output*
+tests
+docs/maintainers
+*.env
+*.env.*
+!.env.example
