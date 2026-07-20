@@ -59,6 +59,17 @@ test('community docs state reference limitations and secret/model boundaries', (
   assert.doesNotMatch(docs, /production-ready|certified for production/i);
 });
 
+test('community docs provide a synthetic external secret-injection example', () => {
+  assert.match(docs, /Synthetic secret-injection example/);
+  assert.match(docs, /\.env\.zeus\.local/);
+  assert.match(docs, /ZEUS_FETCH_PASSWORD=synthetic-placeholder-only/);
+  assert.match(docs, /--env-file \.env\.zeus\.local/);
+  assert.match(docs, /--env ZEUS_FETCH_PASSWORD/);
+  assert.match(docs, /outside the image/i);
+  assert.match(docs, /outside source control/i);
+  assert.doesNotMatch(docs, /AKIA[0-9A-Z]{16}|BEGIN (RSA|OPENSSH|PRIVATE) KEY/i);
+});
+
 test('CI provides real container evidence without suppressing failures', () => {
   const section = workflow.slice(
     workflow.indexOf('community-container:'),
