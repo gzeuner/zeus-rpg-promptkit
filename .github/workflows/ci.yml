@@ -132,7 +132,7 @@ jobs:
       - run: npm ci
       - run: npm run test:deployment:community
       - name: Validate Compose model
-        run: docker compose --profile zeus config --quiet
+        run: ZEUS_PROVIDER_ENDPOINT=http://127.0.0.1:11434 ZEUS_PROVIDER_MODEL=ci-synthetic docker compose --profile zeus config --quiet
       - name: Build community image
         run: docker build --pull --tag zeus-rpg-promptkit:community-ci .
       - name: Run offline non-root help smoke
