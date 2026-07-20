@@ -1,0 +1,46 @@
+services:
+  zeus:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zeus-rpg-promptkit:community
+    profiles: [zeus]
+    command:
+      ['serve', '--host', '127.0.0.1', '--port', '4782', '--source-output-root', '/data/artifacts']
+    ports:
+      - '127.0.0.1:4782:4782'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    volumes:
+      - zeus-artifacts:/data/artifacts
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    restart: 'no'
+
+  local-provider:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zeus-rpg-promptkit:community
+    profiles: [local-provider]
+    command:
+      ['serve', '--host', '127.0.0.1', '--port', '4782', '--source-output-root', '/data/artifacts']
+    ports:
+      - '127.0.0.1:4782:4782'
+    environment:
+      ZEUS_PROVIDER_ENDPOINT: '${ZEUS_PROVIDER_ENDPOINT:?Set ZEUS_PROVIDER_ENDPOINT to an operator-approved private endpoint}'
+      ZEUS_PROVIDER_MODEL: '${ZEUS_PROVIDER_MODEL:?Set ZEUS_PROVIDER_MODEL to an operator-approved model name}'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    volumes:
+      - zeus-artifacts:/data/artifacts
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    restart: 'no'
+
+volumes:
+  zeus-artifacts:

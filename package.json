@@ -46,6 +46,7 @@
     "sbom:validate": "node scripts/validate-sbom.js",
     "repo:control": "node scripts/repository-control.js",
     "test:repository-control": "node --test tests/repository-control.test.js",
+    "test:deployment:community": "node --test tests/community-deployment.test.js",
     "test:release-integrity": "node --test tests/release-integrity.test.js",
     "test:cli-help": "node --test tests/cli-help.test.js && npm run package:smoke"
   },

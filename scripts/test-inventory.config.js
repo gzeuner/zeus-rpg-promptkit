@@ -19,6 +19,7 @@ module.exports = {
       'tests/provider-local-adapters.test.js',
       'tests/module-sdk.test.js',
       'tests/workflow-presets.test.js',
+      'tests/community-deployment.test.js',
     ],
     smoke: [
       'tests/reproducible-output.test.js',
