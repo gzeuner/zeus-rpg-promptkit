@@ -53,6 +53,34 @@ They are not credentials and are not embedded in the image. Provider access
 still requires the application's explicit provider configuration and policy;
 starting this reference profile alone does not authorize remote access.
 
+## Synthetic secret-injection example
+
+The following is a copyable **synthetic-only** example of supplying an existing
+runtime secret from outside the image. The value is intentionally fake and is
+not used by the local help/health smoke path; it only demonstrates the
+operator-to-container boundary for an existing environment-backed setting.
+
+```bash
+# Synthetic placeholder only; never use a real credential in this file.
+cat > .env.zeus.local <<'EOF'
+ZEUS_FETCH_PASSWORD=synthetic-placeholder-only
+EOF
+
+# --env-file reads the local operator file; --env passes that variable into
+# this one-shot container. The image and repository remain unchanged.
+docker compose --env-file .env.zeus.local --profile zeus run --rm \
+  --env ZEUS_FETCH_PASSWORD zeus --help
+
+# Remove the local-only file after the smoke.
+rm -f .env.zeus.local
+```
+
+Keep `.env.zeus.local` outside source control and replace the synthetic value
+only in the operator's private environment. Do not add it to the image,
+Compose YAML, logs, artifacts, or this repository. This example does not
+configure a provider, authorize remote access, or claim Kubernetes/Enterprise
+secret management.
+
 ## Validation
 
 Run the repository's local checks first:
