@@ -65,19 +65,19 @@ never depend on Commercial code, entitlements, or proprietary store formats.
 
 ### Capability and artifact matrix
 
-| Area | Community | Commercial |
-| ---- | --------- | ---------- |
-| Contracts and schemas | owns | may consume and extend only through public versioned contracts |
-| SQLite metadata store | owns default implementation | may use through public interfaces only |
-| Content-addressed evidence store | owns default implementation | may use through public interfaces only |
-| Lucene lexical retrieval | owns default implementation | may add registered ranking or policy layers |
-| Full rebuild | owns | may orchestrate or invoke through public capability surfaces |
-| Incremental refresh | baseline invalidation rules and contracts | advanced planning and execution |
-| Context assembly | owns default offline bounded policy | may register advanced policy packs |
-| Artifact readers and validators | owns | may add entitlement-free readers for private artifact contracts |
-| CLI/MCP surface | thin neutral projections | paid capabilities appear only when registered |
-| Entitlement enforcement | forbidden | owns |
-| Proprietary diagnostics or policy data | forbidden | owns |
+| Area                                   | Community                                 | Commercial                                                      |
+| -------------------------------------- | ----------------------------------------- | --------------------------------------------------------------- |
+| Contracts and schemas                  | owns                                      | may consume and extend only through public versioned contracts  |
+| SQLite metadata store                  | owns default implementation               | may use through public interfaces only                          |
+| Content-addressed evidence store       | owns default implementation               | may use through public interfaces only                          |
+| Lucene lexical retrieval               | owns default implementation               | may add registered ranking or policy layers                     |
+| Full rebuild                           | owns                                      | may orchestrate or invoke through public capability surfaces    |
+| Incremental refresh                    | baseline invalidation rules and contracts | advanced planning and execution                                 |
+| Context assembly                       | owns default offline bounded policy       | may register advanced policy packs                              |
+| Artifact readers and validators        | owns                                      | may add entitlement-free readers for private artifact contracts |
+| CLI/MCP surface                        | thin neutral projections                  | paid capabilities appear only when registered                   |
+| Entitlement enforcement                | forbidden                                 | owns                                                            |
+| Proprietary diagnostics or policy data | forbidden                                 | owns                                                            |
 
 ### Non-negotiable boundary rules
 

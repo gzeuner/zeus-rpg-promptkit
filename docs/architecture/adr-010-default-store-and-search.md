@@ -36,11 +36,11 @@ embedding service, or mandatory daemon is required.
 
 ### Backend roles
 
-| Backend | Role |
-| ------- | ---- |
-| SQLite | canonical derived metadata, indexes of record, lifecycle state, migrations, current pointer |
-| Content-addressed files | immutable evidence blobs and preserved source payloads |
-| Lucene | lexical retrieval over published snapshot content and metadata |
+| Backend                 | Role                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------- |
+| SQLite                  | canonical derived metadata, indexes of record, lifecycle state, migrations, current pointer |
+| Content-addressed files | immutable evidence blobs and preserved source payloads                                      |
+| Lucene                  | lexical retrieval over published snapshot content and metadata                              |
 
 ### Determinism requirements
 

@@ -10,9 +10,9 @@ This document records the ZPI-01 licensing baseline. It is not legal advice.
 
 ## Repository baseline
 
-| Repository | Current status |
-| ---------- | -------------- |
-| Community `zeus-rpg-promptkit` | Apache-2.0 |
+| Repository                                 | Current status                       |
+| ------------------------------------------ | ------------------------------------ |
+| Community `zeus-rpg-promptkit`             | Apache-2.0                           |
 | Commercial `zeus-rpg-promptkit-commercial` | `UNLICENSED` proprietary placeholder |
 
 Commercial depends on the public Community repository pinned to commit
@@ -20,10 +20,10 @@ Commercial depends on the public Community repository pinned to commit
 
 ## Planned default engines
 
-| Planned engine | Expected role | Licensing baseline | ZPI-01 note |
-| -------------- | ------------- | ------------------ | ----------- |
-| SQLite | local metadata store | upstream SQLite is commonly distributed as public domain | exact runtime binding still undecided; binding license must be reviewed separately |
-| Apache Lucene | lexical retrieval index | Apache-2.0 | exact runtime binding still undecided; transitive dependencies must be reviewed separately |
+| Planned engine | Expected role           | Licensing baseline                                       | ZPI-01 note                                                                                |
+| -------------- | ----------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| SQLite         | local metadata store    | upstream SQLite is commonly distributed as public domain | exact runtime binding still undecided; binding license must be reviewed separately         |
+| Apache Lucene  | lexical retrieval index | Apache-2.0                                               | exact runtime binding still undecided; transitive dependencies must be reviewed separately |
 
 ## Governance rules for later implementation packages
 

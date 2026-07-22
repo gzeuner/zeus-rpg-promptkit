@@ -37,13 +37,13 @@ Protected assets:
 
 ## Trust boundaries
 
-| Boundary | Notes |
-| -------- | ----- |
-| Trusted local roots | only explicitly authorized source roots may be inventoried |
-| Local project-intelligence store | sensitive local state; not safe-sharing by default |
-| Thin CLI/API/MCP projection | read-mostly projection of approved capability surfaces only |
-| Commercial extension boundary | entitlement-gated, separately distributed, never required for Community-owned readers |
-| External sharing or model egress | deny by default unless a future policy explicitly allows it |
+| Boundary                         | Notes                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------- |
+| Trusted local roots              | only explicitly authorized source roots may be inventoried                            |
+| Local project-intelligence store | sensitive local state; not safe-sharing by default                                    |
+| Thin CLI/API/MCP projection      | read-mostly projection of approved capability surfaces only                           |
+| Commercial extension boundary    | entitlement-gated, separately distributed, never required for Community-owned readers |
+| External sharing or model egress | deny by default unless a future policy explicitly allows it                           |
 
 ## Primary threats
 

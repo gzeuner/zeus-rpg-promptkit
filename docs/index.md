@@ -27,33 +27,33 @@ Question -> Analyze -> Investigate (search/trace/xref) -> Impact/Risk -> Generat
 
 ## Documentation Domains
 
-| Domain | Purpose | Primary Entry | Typical Audience |
-| ------ | ------- | ------------- | ---------------- |
-| `ai/` | AI contracts, session patterns, validation | [`ai/session-prompt.md`](ai/session-prompt.md) | AI agents, prompt engineers |
-| `cli/` | Reference and practical command examples | [`cli/reference.md`](cli/reference.md) | Developers, operators |
-| `quickstart/` | Canonical evidence-investigation golden path plus credential and onboarding guides | [`quickstart/5-minutes.md`](quickstart/5-minutes.md), [`quickstart/secrets-and-overrides.md`](quickstart/secrets-and-overrides.md), [`quickstart/onboarding-new-ibm-i.md`](quickstart/onboarding-new-ibm-i.md) | All roles |
-| `architecture/` | Architecture baseline, ADRs, runtime config, dependency rules, capability model, safety trust zones, and ZPI contracts | [`architecture/index.md`](architecture/index.md) | Maintainers, tooling engineers, architects |
-| `knowledgebase/` | Project-neutral knowledge reset, ZPI threat model, license inventory, and test strategy | [`knowledgebase/README.md`](knowledgebase/README.md) | Architects, security, maintainers |
-| `mcp/` | Local MCP operation, policy boundaries, troubleshooting | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Operators, AI integrators |
-| `maintainers/` | Release-integrity policy and historical exception record | [`maintainers/release-integrity.md`](maintainers/release-integrity.md) | Maintainers, release reviewers |
-| `safety/` | Safety guidance, governance, sharing | [`safety/best-practice-guide.md`](safety/best-practice-guide.md) | Reviewers, security, leads |
-| `viewer/` | Optional local artifact viewer and experimental UI shell | [`viewer/local-ui-shell.md`](viewer/local-ui-shell.md) | Tooling engineers |
-| `sql/` | Reproducible IBM i and DB2 discovery SQL | [`sql/index.md`](sql/index.md) | Analysts, DB2 engineers |
+| Domain           | Purpose                                                                                                                | Primary Entry                                                                                                                                                                                                  | Typical Audience                           |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `ai/`            | AI contracts, session patterns, validation                                                                             | [`ai/session-prompt.md`](ai/session-prompt.md)                                                                                                                                                                 | AI agents, prompt engineers                |
+| `cli/`           | Reference and practical command examples                                                                               | [`cli/reference.md`](cli/reference.md)                                                                                                                                                                         | Developers, operators                      |
+| `quickstart/`    | Canonical evidence-investigation golden path plus credential and onboarding guides                                     | [`quickstart/5-minutes.md`](quickstart/5-minutes.md), [`quickstart/secrets-and-overrides.md`](quickstart/secrets-and-overrides.md), [`quickstart/onboarding-new-ibm-i.md`](quickstart/onboarding-new-ibm-i.md) | All roles                                  |
+| `architecture/`  | Architecture baseline, ADRs, runtime config, dependency rules, capability model, safety trust zones, and ZPI contracts | [`architecture/index.md`](architecture/index.md)                                                                                                                                                               | Maintainers, tooling engineers, architects |
+| `knowledgebase/` | Project-neutral knowledge reset, ZPI threat model, license inventory, and test strategy                                | [`knowledgebase/README.md`](knowledgebase/README.md)                                                                                                                                                           | Architects, security, maintainers          |
+| `mcp/`           | Local MCP operation, policy boundaries, troubleshooting                                                                | [`mcp/operator-guide.md`](mcp/operator-guide.md)                                                                                                                                                               | Operators, AI integrators                  |
+| `maintainers/`   | Release-integrity policy and historical exception record                                                               | [`maintainers/release-integrity.md`](maintainers/release-integrity.md)                                                                                                                                         | Maintainers, release reviewers             |
+| `safety/`        | Safety guidance, governance, sharing                                                                                   | [`safety/best-practice-guide.md`](safety/best-practice-guide.md)                                                                                                                                               | Reviewers, security, leads                 |
+| `viewer/`        | Optional local artifact viewer and experimental UI shell                                                               | [`viewer/local-ui-shell.md`](viewer/local-ui-shell.md)                                                                                                                                                         | Tooling engineers                          |
+| `sql/`           | Reproducible IBM i and DB2 discovery SQL                                                                               | [`sql/index.md`](sql/index.md)                                                                                                                                                                                 | Analysts, DB2 engineers                    |
 
 ## Quick Links For AI Assistants
 
-| Need | Go To | Why |
-| ---- | ----- | --- |
-| Authoritative command behavior | [`tool-catalog.md`](tool-catalog.md) | Single source of truth for commands, safety, and examples |
-| Session bootstrap | [`ai/session-prompt.md`](ai/session-prompt.md) | Standardized workflow with safety gates |
-| MCP operator setup | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Start, policy, and audit reference for local MCP operation |
-| Prompt schema and constraints | [`ai/prompt-contracts.md`](ai/prompt-contracts.md) | Prevents inconsistent prompt outputs |
-| Architecture decisions and baseline | [`architecture/index.md`](architecture/index.md) | ADRs for kernel, dependencies, contracts, registry, and ZPI |
-| Open-core module boundary | [`architecture/adr-006-commercial-extension-architecture.md`](architecture/adr-006-commercial-extension-architecture.md) | Public and private ownership, registration, and portability |
-| ZPI security and rollout gates | [`knowledgebase/zpi-threat-model.md`](knowledgebase/zpi-threat-model.md), [`knowledgebase/zpi-test-strategy.md`](knowledgebase/zpi-test-strategy.md) | Freeze the pre-implementation threat and acceptance baseline |
-| Safe sharing guidance | [`safety/safe-sharing.md`](safety/safe-sharing.md) | Reduction and sanitization rules for external use |
-| CLI examples | [`cli/examples.md`](cli/examples.md) | Fast reproducible command patterns |
-| DB2 discovery SQL | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql) | Standardized discovery queries for system and ticket context |
+| Need                                | Go To                                                                                                                                                | Why                                                          |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Authoritative command behavior      | [`tool-catalog.md`](tool-catalog.md)                                                                                                                 | Single source of truth for commands, safety, and examples    |
+| Session bootstrap                   | [`ai/session-prompt.md`](ai/session-prompt.md)                                                                                                       | Standardized workflow with safety gates                      |
+| MCP operator setup                  | [`mcp/operator-guide.md`](mcp/operator-guide.md)                                                                                                     | Start, policy, and audit reference for local MCP operation   |
+| Prompt schema and constraints       | [`ai/prompt-contracts.md`](ai/prompt-contracts.md)                                                                                                   | Prevents inconsistent prompt outputs                         |
+| Architecture decisions and baseline | [`architecture/index.md`](architecture/index.md)                                                                                                     | ADRs for kernel, dependencies, contracts, registry, and ZPI  |
+| Open-core module boundary           | [`architecture/adr-006-commercial-extension-architecture.md`](architecture/adr-006-commercial-extension-architecture.md)                             | Public and private ownership, registration, and portability  |
+| ZPI security and rollout gates      | [`knowledgebase/zpi-threat-model.md`](knowledgebase/zpi-threat-model.md), [`knowledgebase/zpi-test-strategy.md`](knowledgebase/zpi-test-strategy.md) | Freeze the pre-implementation threat and acceptance baseline |
+| Safe sharing guidance               | [`safety/safe-sharing.md`](safety/safe-sharing.md)                                                                                                   | Reduction and sanitization rules for external use            |
+| CLI examples                        | [`cli/examples.md`](cli/examples.md)                                                                                                                 | Fast reproducible command patterns                           |
+| DB2 discovery SQL                   | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql)                                                                       | Standardized discovery queries for system and ticket context |
 
 ## Governance Notes
 
