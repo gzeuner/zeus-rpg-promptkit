@@ -25,6 +25,7 @@ out/
 .idea/
 *.iml
 .vscode/
+*.code-workspace
 
 # -----------------------------
 # Node
