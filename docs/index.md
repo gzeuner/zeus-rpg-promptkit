@@ -1,94 +1,68 @@
 ---
-Title: Zeus RPG PromptKit Documentation Hub (v2.1)
-Description: Zentrale, KI-freundliche Navigation über alle Dokumentationsdomänen inklusive Safety-First-Einstieg, Open-Core-Grenzen und schnellen Referenzpfaden.
-Last Updated: 2026-07-16
+Title: Zeus RPG PromptKit Documentation Hub (v2.2)
+Description: Central, AI-friendly navigation across documentation domains including safety-first onboarding, open-core boundaries, and the ZPI architecture baseline.
+Last Updated: 2026-07-22
 ---
 
-# Zeus RPG PromptKit Documentation Hub (v2.1)
+# Zeus RPG PromptKit Documentation Hub (v2.2)
 
-Diese Seite ist der zentrale Einstiegspunkt für Menschen und KI-Assistenten.
+This page is the central entry point for humans and AI assistants.
 
 ## The Product Golden Path (Canonical Journey)
 
 The primary user journey is documented in [`quickstart/5-minutes.md`](quickstart/5-minutes.md):
-Question → Analyze → Investigate (search/trace/xref) → Impact/Risk → Generate (tests/checklist/QA) → Bundle (safe & reproducible) → Verify → (optional MCP) → Human review.
+Question -> Analyze -> Investigate (search/trace/xref) -> Impact/Risk -> Generate (tests/checklist/QA) -> Bundle (safe and reproducible) -> Verify -> (optional MCP) -> Human review.
 
-See the lifecycle diagram and "What Zeus is / is not" there.
-
-**What Zeus is:** Evidence & investigation platform. Produces reproducible, reviewable artifacts. Humans decide. Local control.
+**What Zeus is:** Evidence and investigation platform. Produces reproducible, reviewable artifacts. Humans decide. Local control.
 
 **What Zeus is not:** Autonomous generator, correctness guarantee, production mutator, hosted service.
 
 ## Start Sequence (CLI/MCP-First)
 
-1. Lade die Umgebung explizit in der Shell (`config/load-env.sh` oder `config/load-env.ps1`).
-2. Fuehre `doctor` aus, bevor du weitere Aktionen planst.
-3. Nutze [`tool-catalog.md`](tool-catalog.md) als verbindliche Command-, Safety- und Scope-Referenz.
-4. Starte AI-Sessions mit [`ai/session-prompt.md`](ai/session-prompt.md).
-5. Arbeite evidence-first ueber CLI oder MCP und nutze erzeugte Artefakte als Belege.
+1. Load the environment explicitly in the shell (`config/load-env.sh` or `config/load-env.ps1`).
+2. Run `doctor` before planning further actions.
+3. Use [`tool-catalog.md`](tool-catalog.md) as the authoritative command, safety, and scope reference.
+4. Start AI sessions with [`ai/session-prompt.md`](ai/session-prompt.md).
+5. Work evidence-first through CLI or MCP and use generated artifacts as proof.
 
 ## Documentation Domains
 
-| Domain          | Purpose                                                                                                 | Primary Entry                                                                                                                                                                                                                            | Typical Audience                          |
-| --------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `ai/`           | KI-Verträge, Session-Patterns, Validierung                                                              | [`ai/session-prompt.md`](ai/session-prompt.md)                                                                                                                                                                                           | AI Agents, Prompt Engineers               |
-| `cli/`          | Referenz und praxisnahe Kommando-Beispiele                                                              | [`cli/reference.md`](cli/reference.md)                                                                                                                                                                                                   | Entwickler:innen, Operatoren              |
-| `quickstart/`   | **Canonical Evidence Investigation Golden Path** + credential how-to + onboarding                       | [`quickstart/5-minutes.md`](quickstart/5-minutes.md) (the product golden path), [`quickstart/secrets-and-overrides.md`](quickstart/secrets-and-overrides.md), [`quickstart/onboarding-new-ibm-i.md`](quickstart/onboarding-new-ibm-i.md) | Alle Rollen – start here                  |
-| `architecture/` | Architecture baseline, ADRs, runtime config, dependency rules, capability model, and safety trust zones | [`architecture/index.md`](architecture/index.md)                                                                                                                                                                                         | Maintainer, Tooling Engineers, Architects |
-| `mcp/`          | Lokaler MCP-Betrieb, Policy-Grenzen und Troubleshooting                                                 | [`mcp/operator-guide.md`](mcp/operator-guide.md)                                                                                                                                                                                         | Operatoren, AI-Integratoren               |
-| `maintainers/`  | Release-integrity policy and historical exception record                                                | [`maintainers/release-integrity.md`](maintainers/release-integrity.md)                                                                                                                                                                   | Maintainers, Release Reviewers            |
-| `workflows/`    | Geführte Analyse- und Agenten-Workflows                                                                 | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md)                                                                                                                                                           | Analysten, Architekten                    |
-| `safety/`       | Safety-Guidance, Governance, Sharing                                                                    | [`safety/best-practice-guide.md`](safety/best-practice-guide.md)                                                                                                                                                                         | Reviewer, Security, Leads                 |
-| `viewer/`       | Optionaler lokaler Artefakt-Viewer und experimentelle UI-Shell                                          | [`viewer/local-ui-shell.md`](viewer/local-ui-shell.md)                                                                                                                                                                                   | Tooling Engineers                         |
-| `sql/`          | Reproduzierbare SQL-Discovery-Skripte fuer IBM i/DB2                                                    | [`sql/index.md`](sql/index.md)                                                                                                                                                                                                           | Analysts, DB2 Engineers                   |
+| Domain | Purpose | Primary Entry | Typical Audience |
+| ------ | ------- | ------------- | ---------------- |
+| `ai/` | AI contracts, session patterns, validation | [`ai/session-prompt.md`](ai/session-prompt.md) | AI agents, prompt engineers |
+| `cli/` | Reference and practical command examples | [`cli/reference.md`](cli/reference.md) | Developers, operators |
+| `quickstart/` | Canonical evidence-investigation golden path plus credential and onboarding guides | [`quickstart/5-minutes.md`](quickstart/5-minutes.md), [`quickstart/secrets-and-overrides.md`](quickstart/secrets-and-overrides.md), [`quickstart/onboarding-new-ibm-i.md`](quickstart/onboarding-new-ibm-i.md) | All roles |
+| `architecture/` | Architecture baseline, ADRs, runtime config, dependency rules, capability model, safety trust zones, and ZPI contracts | [`architecture/index.md`](architecture/index.md) | Maintainers, tooling engineers, architects |
+| `knowledgebase/` | Project-neutral knowledge reset, ZPI threat model, license inventory, and test strategy | [`knowledgebase/README.md`](knowledgebase/README.md) | Architects, security, maintainers |
+| `mcp/` | Local MCP operation, policy boundaries, troubleshooting | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Operators, AI integrators |
+| `maintainers/` | Release-integrity policy and historical exception record | [`maintainers/release-integrity.md`](maintainers/release-integrity.md) | Maintainers, release reviewers |
+| `safety/` | Safety guidance, governance, sharing | [`safety/best-practice-guide.md`](safety/best-practice-guide.md) | Reviewers, security, leads |
+| `viewer/` | Optional local artifact viewer and experimental UI shell | [`viewer/local-ui-shell.md`](viewer/local-ui-shell.md) | Tooling engineers |
+| `sql/` | Reproducible IBM i and DB2 discovery SQL | [`sql/index.md`](sql/index.md) | Analysts, DB2 engineers |
 
 ## Quick Links For AI Assistants
 
-| Need                              | Go To                                                                                                                    | Why                                                                                      |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| Authoritative command behavior    | [`tool-catalog.md`](tool-catalog.md)                                                                                     | Single source of truth für Commands, Safety und Beispiele                                |
-| Session bootstrap                 | [`ai/session-prompt.md`](ai/session-prompt.md)                                                                           | Standardisierte Arbeitsweise mit Safety-Gates                                            |
-| MCP operator setup                | [`mcp/operator-guide.md`](mcp/operator-guide.md)                                                                         | Start-/Policy-/Audit-Referenz fuer lokalen MCP-Betrieb                                   |
-| Prompt schema and constraints     | [`ai/prompt-contracts.md`](ai/prompt-contracts.md)                                                                       | Verhindert inkonsistente Prompt-Ausgaben                                                 |
-| Workflow options                  | [`workflows/investigation-workflows.md`](workflows/investigation-workflows.md)                                           | Zeigt Opt-in Vertiefungsfeatures                                                         |
-| Architecture decisions & baseline | [`architecture/index.md`](architecture/index.md)                                                                         | ADRs for kernel, dependencies, contracts, registry, and safety zones                     |
-| Open-core module boundary         | [`architecture/adr-006-commercial-extension-architecture.md`](architecture/adr-006-commercial-extension-architecture.md) | Public/private ownership, explicit registration, compatibility, and artifact portability |
-| Optional provider contracts       | [`architecture/adr-007-provider-neutral-contracts.md`](architecture/adr-007-provider-neutral-contracts.md)               | Private-by-default provider API, egress policy, redaction, and offline test doubles      |
-| Safe sharing guidance             | [`safety/safe-sharing.md`](safety/safe-sharing.md)                                                                       | Reduktions-/Sanitization-Regeln für externe Nutzung                                      |
-| CLI examples                      | [`cli/examples.md`](cli/examples.md)                                                                                     | Schnell nutzbare, reproduzierbare Befehlsmuster                                          |
-| DB2 discovery SQL                 | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql)                                           | Standardisierte Discovery-Queries fuer System- und Ticketkontext                         |
-
-## Visual Map
-
-```mermaid
-flowchart TD
-    A[docs/index.md\nDocumentation Hub] --> B[docs/tool-catalog.md\nAuthoritative Command Reference]
-    A --> C[docs/ai/session-prompt.md\nAI Session Bootstrap]
-    A --> D[docs/quickstart/5-minutes.md\nFast Start]
-
-    A --> E[docs/ai]
-    A --> F[docs/cli]
-    A --> G[docs/quickstart]
-    A --> G2[docs/architecture]
-    A --> H[docs/mcp]
-    A --> I[docs/workflows]
-    A --> J[docs/safety]
-    A --> K[docs/viewer]
-    A --> L[docs/internal]
-    A --> M[docs/sql]
-
-    H --> B
-    C --> B
-    F --> B
-    I --> B
-```
+| Need | Go To | Why |
+| ---- | ----- | --- |
+| Authoritative command behavior | [`tool-catalog.md`](tool-catalog.md) | Single source of truth for commands, safety, and examples |
+| Session bootstrap | [`ai/session-prompt.md`](ai/session-prompt.md) | Standardized workflow with safety gates |
+| MCP operator setup | [`mcp/operator-guide.md`](mcp/operator-guide.md) | Start, policy, and audit reference for local MCP operation |
+| Prompt schema and constraints | [`ai/prompt-contracts.md`](ai/prompt-contracts.md) | Prevents inconsistent prompt outputs |
+| Architecture decisions and baseline | [`architecture/index.md`](architecture/index.md) | ADRs for kernel, dependencies, contracts, registry, and ZPI |
+| Open-core module boundary | [`architecture/adr-006-commercial-extension-architecture.md`](architecture/adr-006-commercial-extension-architecture.md) | Public and private ownership, registration, and portability |
+| ZPI security and rollout gates | [`knowledgebase/zpi-threat-model.md`](knowledgebase/zpi-threat-model.md), [`knowledgebase/zpi-test-strategy.md`](knowledgebase/zpi-test-strategy.md) | Freeze the pre-implementation threat and acceptance baseline |
+| Safe sharing guidance | [`safety/safe-sharing.md`](safety/safe-sharing.md) | Reduction and sanitization rules for external use |
+| CLI examples | [`cli/examples.md`](cli/examples.md) | Fast reproducible command patterns |
+| DB2 discovery SQL | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql) | Standardized discovery queries for system and ticket context |
 
 ## Governance Notes
 
-- `docs/tool-catalog.md` bleibt die verbindliche Referenz für KI-Assistenten.
-- `docs/architecture/index.md` (und die ADRs darin) sind die autoritative Quelle für Produkt-Kernel, Abhängigkeitsrichtung, versionierte Verträge, Capability-Registry, Safety-Trust-Zones und Open-Core-Modulgrenzen.
-- CLI und MCP bleiben der unterstützte Produktpfad; der lokale Viewer ist optional und experimentell.
-- Dokumentänderungen sollen Safety-Level und Scope-Terminologie konsistent halten (`S0` bis `S4`).
-- Regenerierung funktioniert direkt ueber `zeus docs:generate-catalog` oder `zeus docs generate-catalog` und haelt den Tool-Katalog aktuell.
-- Optional maschinenlesbar: `zeus docs:generate-catalog --json-output docs/tool-catalog.json`.
-- Tool catalog is auto-generated from code (see `zeus docs:generate-catalog`).
+- `docs/tool-catalog.md` remains the authoritative command reference for AI assistants.
+- `docs/architecture/index.md` and its ADRs are the authoritative source for product kernel,
+  dependency direction, versioned contracts, capability registry, safety trust zones, open-core
+  module boundaries, and the ZPI architecture baseline.
+- `docs/knowledgebase/README.md` and the ZPI documents beneath it define the documentation-only
+  security, licensing, and test baseline for project-intelligence implementation packages.
+- CLI and MCP remain the supported product path; the local viewer is optional and experimental.
+- Documentation changes should keep safety levels and scope terminology consistent (`S0` to `S4`).
+- The tool catalog is generated from code via `zeus docs:generate-catalog`.

@@ -1,14 +1,19 @@
 ---
 Title: Knowledgebase Reset
-Description: Reset notice and safety rules for future knowledgebase work.
-Last Updated: 2026-05-24
+Description: Reset notice, ZPI architecture references, and safety rules for future knowledgebase work.
+Last Updated: 2026-07-22
 ---
 
 # Knowledgebase Reset
 
 The previous source-derived persistent knowledge path was removed/reset.
 
-Future knowledgebase work must follow [project-neutral-knowledgebase-architecture.md](./project-neutral-knowledgebase-architecture.md).
+Future knowledgebase work must follow:
+
+- [project-neutral-knowledgebase-architecture.md](./project-neutral-knowledgebase-architecture.md)
+- [zpi-threat-model.md](./zpi-threat-model.md)
+- [zpi-license-inventory.md](./zpi-license-inventory.md)
+- [zpi-test-strategy.md](./zpi-test-strategy.md)
 
 Non-negotiable rules:
 
