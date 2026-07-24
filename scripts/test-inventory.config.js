@@ -25,6 +25,7 @@ module.exports = {
       'tests/project-intelligence-content.test.js',
       'tests/project-intelligence-search.test.js',
       'tests/project-intelligence-engine.test.js',
+      'tests/project-intelligence-rpg-analyzer.test.js',
     ],
     smoke: [
       'tests/reproducible-output.test.js',

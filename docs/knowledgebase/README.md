@@ -37,8 +37,10 @@ Current implementation status:
 - **ZPI-05 (search):** `src/projectIntelligence/search/` Search SPI + Community pure-JS lexical
   provider under the standard `lucene/` layout
 - **ZPI-06 (snapshots):** `src/projectIntelligence/engine/` inventory, diff planner, invalidation,
-  baseline analyzer, atomic publish + current pointer / incremental update — still no full RPG
-  extractors (ZPI-07), CLI, or MCP adapters
+  atomic publish + current pointer / incremental update
+- **ZPI-07 (RPG analyzer):** `src/projectIntelligence/analyzers/` RPG/CL parser adapters over
+  Community scanners, source spans, unresolved reference model, default engine analyzer —
+  still no retrieval/context assembly (ZPI-08), CLI, or MCP adapters
 
 Local risk handling:
 

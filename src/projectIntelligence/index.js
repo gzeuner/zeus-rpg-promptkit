@@ -8,8 +8,9 @@
  * ZPI-04: content-addressed store, trusted roots, path controls (GC design-only).
  * ZPI-05: Search SPI + Community lexical provider (Lucene layout/schema).
  * ZPI-06: Snapshot + incremental update engine (diff, invalidation, atomic publish).
+ * ZPI-07: RPG/IBM i analyzer baseline (parser adapters, spans, unresolved model).
  *
- * Not included yet: full RPG analyzer extractors (ZPI-07), CLI/MCP.
+ * Not included yet: retrieval/context assembly (ZPI-08), CLI/MCP.
  */
 
 const constants = require('./constants');
@@ -23,6 +24,7 @@ const store = require('./store');
 const content = require('./content');
 const search = require('./search');
 const engine = require('./engine');
+const analyzers = require('./analyzers');
 
 module.exports = {
   // Vocabulary
@@ -88,4 +90,8 @@ module.exports = {
   planInventoryDiff: engine.planInventoryDiff,
   planInvalidation: engine.planInvalidation,
   buildSourceInventory: engine.buildSourceInventory,
+
+  // RPG/IBM i analyzer (ZPI-07)
+  analyzers,
+  createRpgAnalyzer: analyzers.createRpgAnalyzer,
 };

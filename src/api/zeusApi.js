@@ -862,8 +862,8 @@ const zeus = {
   // Generation Validation Foundation (Iteration 29): offline candidate validation.
   // Never mutates the analyzed source workspace. review-ready is not compile readiness.
   generationValidation,
-  // Project Intelligence (ZPI-02..06: contracts, store, content, search, snapshots).
-  // Full RPG extractors (ZPI-07) and CLI/MCP adapters remain later.
+  // Project Intelligence (ZPI-02..07: contracts through RPG analyzer baseline).
+  // Retrieval/context assembly (ZPI-08) and CLI/MCP adapters remain later.
   projectIntelligence,
   // External module contracts (Iteration 30): trusted in-process registration only.
   // Core does not parse licenses or enforce commercial entitlement.
