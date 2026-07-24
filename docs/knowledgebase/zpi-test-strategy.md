@@ -1,13 +1,14 @@
 ---
 Title: ZPI Test Strategy Baseline
 Description: Minimum deterministic acceptance matrix for later Zeus Project Intelligence implementation packages.
-Last Updated: 2026-07-22
+Last Updated: 2026-07-24
 ---
 
 # ZPI Test Strategy Baseline
 
-ZPI-01 froze the acceptance matrix. ZPI-02 implements Community contract validators and the closed
-reason-code catalog only — still no store, search, or analyzer runtime coverage claims.
+ZPI-01 froze the acceptance matrix. ZPI-02..12 implemented Community contracts through engines,
+retrieval, thin CLI/MCP adapters, plus Commercial registration/ops. ZPI-12 adds benchmark and
+hardening suites as automated evidence.
 
 ## Principles
 

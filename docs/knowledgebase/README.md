@@ -45,6 +45,8 @@ Current implementation status:
 - **ZPI-11 (CLI/MCP adapters):** `src/projectIntelligence/adapters/` thin Community CLI/MCP surface
   (`zeus project-knowledge`, `zeus.project-knowledge.*` tools, discovery resource). Operations execute
   only when commercial capabilities are registered; absent path fails closed with no paid code in Community
+- **ZPI-12 (hardening/closure):** benchmarks (evidence), hardening tests, closure status document,
+  repository gate evidence — see [zpi-closure-status.md](./zpi-closure-status.md)
 
 Local risk handling:
 
