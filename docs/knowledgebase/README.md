@@ -31,8 +31,10 @@ Current implementation status:
 - **ZPI-02 (contracts):** `src/projectIntelligence/` versioned project-knowledge contracts, closed
   reason codes, validators, fixtures, and a contract test kit
 - **ZPI-03 (store):** `src/projectIntelligence/store/` KnowledgeStore SPI + SQLite metadata provider
-  (`node:sqlite`), writer locks, migrations, integrity checks — still no content store, Lucene,
-  analyzer runtime, CLI, or MCP adapters
+  (`node:sqlite`), writer locks, migrations, integrity checks
+- **ZPI-04 (content):** `src/projectIntelligence/content/` content-addressed object store (sha256),
+  trusted-root path controls, text canonicalization, atomic write/dedupe; GC is design-only —
+  still no Lucene, analyzer runtime, CLI, or MCP adapters
 
 Local risk handling:
 

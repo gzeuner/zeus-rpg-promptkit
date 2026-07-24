@@ -9,8 +9,9 @@ This directory is the home for versioned domain contract documentation.
 - Module descriptor contracts: `src/modules/`.
 - **Project Intelligence contracts (ZPI-02):** `src/projectIntelligence/`.
 
-ZPI-03 adds the SQLite metadata store under `src/projectIntelligence/store/` (no Lucene/content
-store yet). Search and analyzer packages remain later.
+ZPI-03 adds the SQLite metadata store under `src/projectIntelligence/store/`.
+ZPI-04 adds the content-addressed blob store under `src/projectIntelligence/content/`.
+Search (Lucene) and analyzer packages remain later.
 
 ## Contract IDs (stable)
 
