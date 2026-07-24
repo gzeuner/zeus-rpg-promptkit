@@ -14,7 +14,8 @@ ZPI-04 adds the content-addressed blob store under `src/projectIntelligence/cont
 ZPI-05 adds the search SPI and Community lexical provider under `src/projectIntelligence/search/`.
 ZPI-06 adds the snapshot/incremental engine under `src/projectIntelligence/engine/`.
 ZPI-07 adds the RPG/IBM i analyzer baseline under `src/projectIntelligence/analyzers/`.
-Retrieval/context assembly and CLI/MCP packages remain later.
+ZPI-08 adds retrieval and context assembly under `src/projectIntelligence/retrieval/`.
+Commercial registration and CLI/MCP packages remain later.
 
 ## Contract IDs (stable)
 

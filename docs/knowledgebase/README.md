@@ -39,8 +39,10 @@ Current implementation status:
 - **ZPI-06 (snapshots):** `src/projectIntelligence/engine/` inventory, diff planner, invalidation,
   atomic publish + current pointer / incremental update
 - **ZPI-07 (RPG analyzer):** `src/projectIntelligence/analyzers/` RPG/CL parser adapters over
-  Community scanners, source spans, unresolved reference model, default engine analyzer —
-  still no retrieval/context assembly (ZPI-08), CLI, or MCP adapters
+  Community scanners, source spans, unresolved reference model, default engine analyzer
+- **ZPI-08 (retrieval/context):** `src/projectIntelligence/retrieval/` hybrid lexical/graph
+  retrieval, token budgets, source verification, context package assembly with omission reporting —
+  still no commercial module (ZPI-09) or CLI/MCP adapters (ZPI-11)
 
 Local risk handling:
 

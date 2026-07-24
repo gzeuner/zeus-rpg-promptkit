@@ -9,8 +9,9 @@
  * ZPI-05: Search SPI + Community lexical provider (Lucene layout/schema).
  * ZPI-06: Snapshot + incremental update engine (diff, invalidation, atomic publish).
  * ZPI-07: RPG/IBM i analyzer baseline (parser adapters, spans, unresolved model).
+ * ZPI-08: Retrieval + context assembly (hybrid lexical/graph, token budgets).
  *
- * Not included yet: retrieval/context assembly (ZPI-08), CLI/MCP.
+ * Not included yet: commercial module registration (ZPI-09), CLI/MCP (ZPI-11).
  */
 
 const constants = require('./constants');
@@ -25,6 +26,7 @@ const content = require('./content');
 const search = require('./search');
 const engine = require('./engine');
 const analyzers = require('./analyzers');
+const retrieval = require('./retrieval');
 
 module.exports = {
   // Vocabulary
@@ -94,4 +96,13 @@ module.exports = {
   // RPG/IBM i analyzer (ZPI-07)
   analyzers,
   createRpgAnalyzer: analyzers.createRpgAnalyzer,
+
+  // Retrieval / context (ZPI-08)
+  retrieval,
+  createProjectRetriever: retrieval.createProjectRetriever,
+  assembleContextPackage: retrieval.assembleContextPackage,
+  expandNeighborhood: retrieval.expandNeighborhood,
+  seedIdsFromHits: retrieval.seedIdsFromHits,
+  allocateBudgetSlices: retrieval.allocateBudgetSlices,
+  packBucket: retrieval.packBucket,
 };
