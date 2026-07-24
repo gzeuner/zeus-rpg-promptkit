@@ -6,8 +6,8 @@ Last Updated: 2026-07-22
 
 # ZPI Test Strategy Baseline
 
-ZPI-01 is documentation-only. Its job is to freeze the acceptance matrix for later implementation
-packages, not to claim runtime coverage.
+ZPI-01 froze the acceptance matrix. ZPI-02 implements Community contract validators and the closed
+reason-code catalog only — still no store, search, or analyzer runtime coverage claims.
 
 ## Principles
 

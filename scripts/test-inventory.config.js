@@ -20,6 +20,7 @@ module.exports = {
       'tests/module-sdk.test.js',
       'tests/workflow-presets.test.js',
       'tests/community-deployment.test.js',
+      'tests/project-intelligence-contracts.test.js',
     ],
     smoke: [
       'tests/reproducible-output.test.js',

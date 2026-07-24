@@ -270,6 +270,7 @@ const safetyPolicySchema = value => {
 
 const { PROVIDER_SCHEMAS } = require('../../providers/contracts');
 const { GENERATION_SCHEMAS } = require('../../generationValidation/contracts');
+const { PROJECT_INTELLIGENCE_SCHEMAS } = require('../../projectIntelligence/contracts');
 const { moduleDescriptorSchema } = require('../../modules/descriptor');
 const { REASON_CODES, LIFECYCLE, AVAILABILITY } = require('../../modules/constants');
 
@@ -310,6 +311,7 @@ const INITIAL_SCHEMAS = Object.freeze({
   [CONTRACT_IDS.SAFETY_POLICY]: { version: 1, schema: safetyPolicySchema },
   ...PROVIDER_SCHEMAS,
   ...GENERATION_SCHEMAS,
+  ...PROJECT_INTELLIGENCE_SCHEMAS,
   [CONTRACT_IDS.MODULE_DESCRIPTOR]: { version: 1, schema: moduleDescriptorSchema },
   [CONTRACT_IDS.MODULE_STATUS]: { version: 1, schema: moduleStatusSchema },
 });
