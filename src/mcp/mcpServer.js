@@ -165,6 +165,9 @@ function createMcpServer(runtime = {}) {
   const context = {
     cwd: runtime.cwd || process.cwd(),
     env: runtime.env || process.env,
+    // Optional host-injected capability registry (e.g. after commercial module load)
+    capabilities: runtime.capabilities || undefined,
+    zeus: runtime.zeus || undefined,
     assessRiskRunner:
       typeof runtime.assessRiskRunner === 'function' ? runtime.assessRiskRunner : undefined,
     analysesRunner:

@@ -969,4 +969,8 @@ module.exports = {
       moduleContracts: modulesApi,
     };
   },
+  // Explicit commercial host wiring (optional; no paid handlers in Community)
+  createHostZeus: (...args) => require('../modules/commercialModuleLoader').createHostZeus(...args),
+  registerCommercialModules: (...args) =>
+    require('../modules/commercialModuleLoader').registerCommercialModules(...args),
 };

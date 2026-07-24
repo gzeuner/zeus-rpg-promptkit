@@ -41,6 +41,7 @@ module.exports = {
     quality: ['tests/golden-quality.test.js'],
     unit: [
       'tests/capability-registry.test.js',
+      'tests/commercial-module-loader.test.js',
       'tests/test-inventory.test.js',
       'tests/typecheck-scope.test.js',
     ],

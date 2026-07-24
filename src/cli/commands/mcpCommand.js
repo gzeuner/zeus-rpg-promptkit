@@ -66,7 +66,9 @@ function parseAllowlistedTools(value, knownToolNames = null) {
 
 function printMcpHelp() {
   console.log('MCP commands:');
-  console.log('  zeus mcp serve [--stdio true|false] [--allow-tools <name1,name2>] [--verbose]');
+  console.log(
+    '  zeus mcp serve [--stdio true|false] [--allow-tools <name1,name2>] [--commercial-module <pkg-or-path>] [--verbose]'
+  );
   console.log('');
   console.log('Notes:');
   console.log(
@@ -74,6 +76,12 @@ function printMcpHelp() {
   );
   console.log(
     '  - Use --allow-tools to further restrict or customize (e.g. for minimal agent exposure). Dangerous tools (write-sql, bridge) are never in defaults.'
+  );
+  console.log(
+    '  - Optional commercial module: --commercial-module or ZEUS_COMMERCIAL_MODULE (explicit package/path only; no auto-discovery).'
+  );
+  console.log(
+    '  - Entitlement files for commercial packages: ZEUS_LICENSE_DOCUMENT_PATH and ZEUS_LICENSE_PUBLIC_KEY_PATH.'
   );
   console.log('  - Runs local-only over stdio transport.');
   console.log('  - Local path inputs are workspace-bounded, including absolute paths.');
@@ -110,8 +118,33 @@ async function runMcp(args = {}, dependencies = {}) {
       );
     }
     const verbose = parseBoolean(args.verbose, false);
+
+    // Optional explicit commercial module load for project-knowledge MCP tools
+    let capabilities;
+    let zeus;
+    let commercial = { ok: true, loaded: false };
+    if (dependencies.capabilities) {
+      capabilities = dependencies.capabilities;
+      zeus = dependencies.zeus;
+      commercial = dependencies.commercial || commercial;
+    } else {
+      const { createHostZeus } = require('../../modules/commercialModuleLoader');
+      const host = await (dependencies.createHostZeus || createHostZeus)({
+        args,
+        env: dependencies.env || process.env,
+      });
+      zeus = host.zeus;
+      capabilities = host.zeus.capabilities;
+      commercial = host.commercial;
+      if (commercial && commercial.ok === false && commercial.loaded) {
+        throw new Error(commercial.message || 'Commercial module registration failed');
+      }
+    }
+
     const server = createServer({
       cwd,
+      capabilities,
+      zeus,
       ...(Array.isArray(allowlistedTools) ? { allowlistedTools } : {}),
     });
     server.startStdio();
@@ -120,6 +153,11 @@ async function runMcp(args = {}, dependencies = {}) {
       console.error('[mcp] zeus MCP server started (stdio mode)');
       if (Array.isArray(allowlistedTools)) {
         console.error(`[mcp] allowlisted tools: ${allowlistedTools.join(', ')}`);
+      }
+      if (commercial && commercial.loaded) {
+        console.error(
+          `[mcp] commercial module: ${commercial.ok ? 'registered' : 'failed'} (${commercial.reasonCode || 'ok'})`
+        );
       }
     }
   } catch (error) {
