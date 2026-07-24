@@ -21,6 +21,7 @@ module.exports = {
       'tests/workflow-presets.test.js',
       'tests/community-deployment.test.js',
       'tests/project-intelligence-contracts.test.js',
+      'tests/project-intelligence-store.test.js',
     ],
     smoke: [
       'tests/reproducible-output.test.js',
