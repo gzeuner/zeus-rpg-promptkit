@@ -55,12 +55,20 @@ ZPI implementation packages must preserve or establish:
 - Commercial policy modules do not relicense the Community pin.
 - Raw user project data portability is separate from dependency attribution obligations.
 
+## Resolved in ZPI-03 (SQLite binding)
+
+| Decision            | Choice                                                           | Notes                                                                             |
+| ------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| SQLite runtime      | Node.js built-in `node:sqlite` (`DatabaseSync`)                  | No extra npm dependency; SQLite public-domain engine via Node                     |
+| Native npm binding  | Not selected                                                     | Avoids better-sqlite3 native compile / prebuild SBOM surface                      |
+| Pure-JS sql.js      | Not selected for default                                         | Reserved as future fallback if engines must stay on Node 20 without `node:sqlite` |
+| Runtime requirement | Store operations require a Node build that exposes `node:sqlite` | Probe via `probeNodeSqlite()`; fail closed with `ZPI.STORE_UNAVAILABLE`           |
+
 ## Unresolved decisions
 
-- exact SQLite runtime package or binding
 - exact Lucene runtime package, bridge, or hosting strategy
-- whether any selected binding adds native compilation or bundled binaries
-- what Community `NOTICE` or third-party attribution process will be used once concrete packages are
+- whether Lucene binding adds native compilation or bundled binaries
+- what Community `NOTICE` or third-party attribution process will be used once Lucene packages are
   chosen
 - whether future optional embedding or vector packages introduce new redistribution or model-license
   constraints

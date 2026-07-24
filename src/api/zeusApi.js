@@ -862,8 +862,8 @@ const zeus = {
   // Generation Validation Foundation (Iteration 29): offline candidate validation.
   // Never mutates the analyzed source workspace. review-ready is not compile readiness.
   generationValidation,
-  // Project Intelligence contract kit (ZPI-02): validators and reason codes only.
-  // No store/search/analyzer runtime, CLI, or MCP adapters in this package.
+  // Project Intelligence (ZPI-02 contracts + ZPI-03 SQLite store SPI).
+  // No Lucene/content-store/analyzer/CLI/MCP adapters yet.
   projectIntelligence,
   // External module contracts (Iteration 30): trusted in-process registration only.
   // Core does not parse licenses or enforce commercial entitlement.

@@ -28,9 +28,11 @@ Current implementation status:
 - `src/knowledge/` now contains a skeleton with `raw/`, `sanitized/`, `final/`, and `privacy/` boundaries
 - no runtime extractor or persistence is implemented yet
 - the privacy gate is fail-closed and rejects malformed or suspicious final-catalog candidates
-- **ZPI-02 (contracts only):** `src/projectIntelligence/` provides versioned project-knowledge
-  contracts, closed reason codes, validators, fixtures, and a contract test kit — still no
-  store, search, analyzer runtime, CLI, or MCP adapters
+- **ZPI-02 (contracts):** `src/projectIntelligence/` versioned project-knowledge contracts, closed
+  reason codes, validators, fixtures, and a contract test kit
+- **ZPI-03 (store):** `src/projectIntelligence/store/` KnowledgeStore SPI + SQLite metadata provider
+  (`node:sqlite`), writer locks, migrations, integrity checks — still no content store, Lucene,
+  analyzer runtime, CLI, or MCP adapters
 
 Local risk handling:
 
