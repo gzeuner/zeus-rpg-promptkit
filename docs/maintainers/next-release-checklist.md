@@ -6,9 +6,6 @@ Last Updated: 2026-07-24
 
 # Next release checklist (Community)
 
-For full program context (ZPI, commercial loader, pins, next tracks), see
-[`HANDOVER-NEXT-ITERATION.md`](./HANDOVER-NEXT-ITERATION.md).
-
 Current package version on `main`: **0.2.0-beta.2** (historical attestation exception documented in
 [`release-integrity.md`](./release-integrity.md)).
 
