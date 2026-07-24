@@ -33,8 +33,10 @@ Current implementation status:
 - **ZPI-03 (store):** `src/projectIntelligence/store/` KnowledgeStore SPI + SQLite metadata provider
   (`node:sqlite`), writer locks, migrations, integrity checks
 - **ZPI-04 (content):** `src/projectIntelligence/content/` content-addressed object store (sha256),
-  trusted-root path controls, text canonicalization, atomic write/dedupe; GC is design-only —
-  still no Lucene, analyzer runtime, CLI, or MCP adapters
+  trusted-root path controls, text canonicalization, atomic write/dedupe; GC is design-only
+- **ZPI-05 (search):** `src/projectIntelligence/search/` Search SPI + Community pure-JS lexical
+  provider under the standard `lucene/` layout (Lucene-compatible document schema; Apache Lucene
+  Java binding still optional/future) — still no RPG analyzer runtime, CLI, or MCP adapters
 
 Local risk handling:
 

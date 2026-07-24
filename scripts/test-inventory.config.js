@@ -23,6 +23,7 @@ module.exports = {
       'tests/project-intelligence-contracts.test.js',
       'tests/project-intelligence-store.test.js',
       'tests/project-intelligence-content.test.js',
+      'tests/project-intelligence-search.test.js',
     ],
     smoke: [
       'tests/reproducible-output.test.js',

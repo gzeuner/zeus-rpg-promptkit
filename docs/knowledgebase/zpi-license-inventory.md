@@ -64,11 +64,19 @@ ZPI implementation packages must preserve or establish:
 | Pure-JS sql.js      | Not selected for default                                         | Reserved as future fallback if engines must stay on Node 20 without `node:sqlite` |
 | Runtime requirement | Store operations require a Node build that exposes `node:sqlite` | Probe via `probeNodeSqlite()`; fail closed with `ZPI.STORE_UNAVAILABLE`           |
 
+## Resolved in ZPI-05 (search / lexical engine)
+
+| Decision                   | Choice                                                  | Notes                                                                                        |
+| -------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Search SPI                 | Community-owned under `src/projectIntelligence/search/` | Full-text, filters, ranking, rebuild, vector-ready schema                                    |
+| Default Community engine   | Pure-JS inverted index `zeus.community-lexical`         | No extra npm dependency; deterministic ranking; index under `lucene/` layout                 |
+| Apache Lucene Java binding | Deferred                                                | Architectural target remains Lucene (ADR-010); Node-safe binding is a later governance event |
+| Vector search              | Schema-ready only                                       | Optional `vector` field on documents; not used for ranking in v1                             |
+
 ## Unresolved decisions
 
-- exact Lucene runtime package, bridge, or hosting strategy
-- whether Lucene binding adds native compilation or bundled binaries
-- what Community `NOTICE` or third-party attribution process will be used once Lucene packages are
-  chosen
+- exact Apache Lucene runtime package, bridge, or hosting strategy for a future swap-in
+- whether a Lucene binding adds native compilation, JARs, or bundled binaries
+- what Community `NOTICE` attribution will be required once a Lucene package is chosen
 - whether future optional embedding or vector packages introduce new redistribution or model-license
   constraints
