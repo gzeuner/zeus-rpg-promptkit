@@ -5822,6 +5822,33 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     });
   }
 
+  // ZPI-11: thin Project Intelligence adapters (capability present/absent)
+  {
+    const {
+      isProjectKnowledgeMcpTool,
+      executeProjectKnowledgeMcpTool,
+    } = require('../projectIntelligence/adapters');
+    if (isProjectKnowledgeMcpTool(name)) {
+      try {
+        const api = require('../api/zeusApi');
+        const capabilities =
+          (context && context.capabilities) ||
+          api.capabilities ||
+          (api.zeus && api.zeus.capabilities) ||
+          null;
+        const payload = await executeProjectKnowledgeMcpTool(name, args || {}, {
+          ...(context || {}),
+          capabilities,
+        });
+        return normalizeMcpResult(name, payload);
+      } catch (e) {
+        const err = new Error(e && e.message ? e.message : `project-knowledge tool ${name} failed`);
+        err.code = (e && e.code) || 'TOOL_EXECUTION_ERROR';
+        throw err;
+      }
+    }
+  }
+
   // Package 09: delegate capability-backed tools to the registry (authoritative handler)
   const capId = MCP_TOOL_TO_CAPABILITY[name];
   if (capId) {
@@ -8242,13 +8269,20 @@ module.exports = {
   },
 };
 
-// Support dynamic tools (original) + capability generation available via getMcpToolsFromCapabilities (pkg 09)
+// Support dynamic tools + ZPI-11 project-knowledge thin adapters + capability generation
 const _origListMcpTools = listMcpTools;
 module.exports.listMcpTools = function () {
   const base = _origListMcpTools() || [];
   const dyn = Array.from(dynamicMcpTools.values());
+  let pi = [];
+  try {
+    pi = require('../projectIntelligence/adapters').listProjectKnowledgeMcpTools() || [];
+  } catch {
+    pi = [];
+  }
   const map = new Map();
   base.forEach(t => map.set(t.name, t));
+  pi.forEach(t => map.set(t.name, t));
   dyn.forEach(t => map.set(t.name, t));
   return Array.from(map.values());
 };

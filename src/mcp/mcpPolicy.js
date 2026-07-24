@@ -36,6 +36,9 @@ const DEFAULT_MCP_SAFE_TOOL_NAMES = Object.freeze([
   'zeus.docs-generate-catalog',
   'zeus.serve',
   'zeus.test-run',
+  // ZPI-11: discovery + status only in safe defaults (write/index ops require explicit allow-tools)
+  'zeus.project-knowledge.discover',
+  'zeus.project-knowledge.status',
 ]);
 
 module.exports = {

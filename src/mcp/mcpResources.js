@@ -106,6 +106,14 @@ const RESOURCE_DEFINITIONS = Object.freeze([
     mimeType: 'application/json',
     generator: buildOnboardingChecklistResource,
   }),
+  Object.freeze({
+    uri: 'zeus://metadata/project-intelligence.json',
+    name: 'Project Intelligence Capability Discovery',
+    description:
+      'Thin Community catalog of commercial Project Intelligence operations with present/absent status (no paid code).',
+    mimeType: 'application/json',
+    generator: buildProjectIntelligenceDiscoveryResource,
+  }),
 ]);
 
 function listMcpResources(cwd = process.cwd()) {
@@ -198,6 +206,42 @@ function buildPromptContractsResource() {
       preferredOutputShape: contract.preferredOutputShape,
       budget: contract.budget,
     })),
+  };
+}
+
+function buildProjectIntelligenceDiscoveryResource(context = {}) {
+  const {
+    discoverProjectIntelligenceCapabilities,
+    PUBLIC_OPERATIONS,
+    MODULE_ID,
+  } = require('../projectIntelligence/adapters');
+  let capabilities = null;
+  try {
+    const api = require('../api/zeusApi');
+    capabilities =
+      (context && context.capabilities) ||
+      api.capabilities ||
+      (api.zeus && api.zeus.capabilities) ||
+      null;
+  } catch {
+    capabilities = (context && context.capabilities) || null;
+  }
+  const discovery = discoverProjectIntelligenceCapabilities(capabilities);
+  return {
+    moduleId: MODULE_ID,
+    catalogVersion: 1,
+    publicOperations: PUBLIC_OPERATIONS.map(op => ({
+      operation: op.operation,
+      capabilityId: op.capabilityId,
+      mcpTool: op.mcpTool,
+      sideEffects: [...op.sideEffects],
+    })),
+    discovery,
+    notes: [
+      'Community owns thin CLI/MCP adapters only.',
+      'Commercial handlers appear only after explicit entitled module registration.',
+      'Default MCP allowlist exposes discover + status; index/write ops require explicit --allow-tools.',
+    ],
   };
 }
 
