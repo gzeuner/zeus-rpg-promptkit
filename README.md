@@ -14,7 +14,7 @@
   <img alt="Active development" src="https://img.shields.io/badge/Status-active%20development-lightgrey">
 </p>
 
-> **Evidence first. AI second. Humans approve.**  
+> **Evidenz zuerst. KI danach. Menschen entscheiden.**  
 > Analyse- und Kontext-Toolkit für IBM i RPG, CL und DDS – mit reproduzierbaren Artefakten, kontrollierten KI-Workflows und einem klaren Safety-Modell.
 
 **Schwerpunkte:** `IBM i` · `AS/400` · `RPG` · `CL` · `DDS` · `Db2` · `Static Analysis` · `Impact Analysis` · `AI Context` · `Modernization` · `MCP`
@@ -152,62 +152,6 @@ node cli/zeus.js serve \
 
 Danach im Browser öffnen:
 
-### Development
-
-```bash
-npm install
-npm run format:check
-npm run lint
-npm run typecheck
-npm test
-npm run package:smoke
-npm run demo:run
-```
-
-See `package.json` scripts, `CONTRIBUTING.md`, `CHANGELOG.md`, and `.github/workflows/release.yml` for release process.
-
-**Beta status (0.2.0-beta.2):** This is a prerelease. Core contracts are stabilizing, but some surfaces remain experimental. See the GitHub release notes and CHANGELOG for compatibility details. Always use the golden path tutorial and run `npm run docs:check` / `npm run package:smoke` locally before production use of artifacts.
-
-Beta.2's checksum, SBOM, and clean installation are verified, but it has no valid public artifact
-attestation because its immutable tag and the published artifact source differ. The accepted
-historical exception and the stricter policy for every future release are documented in
-[`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
-
-### Golden Corpus & Quality Metrics (package 11)
-
-- `npm run test:corpus` validates scanner patterns.
-- `npm run test:quality` runs golden evaluator (precision/recall proxy via match rate, unresolved, reproducibility with `--reproducible`, safe-sharing leakage with synthetic secrets).
-- Baseline in test expectations. Regressions fail deterministically.
-- Add only synthetic/redistributable cases + labeled expectations. Document any unsupported behavior explicitly.
-
-See tests/golden-quality.test.js and tests/fixtures/sanitized-corpus/.
-
-````
-
-## English version (excerpt)
-
-### Install and run
-
-```bash
-git clone https://github.com/gzeuner/zeus-rpg-promptkit.git
-cd zeus-rpg-promptkit
-npm install
-npm run demo:run
-````
-
-### Development
-
-```bash
-npm install
-npm run format:check
-npm run lint
-npm run typecheck
-npm test
-npm run package:smoke
-```
-
-See `package.json` scripts.
-
 ```text
 http://127.0.0.1:4782
 ```
@@ -219,6 +163,43 @@ npm run demo:prompt
 ```
 
 Mehr Details: [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)
+
+### Entwicklung
+
+```bash
+npm install
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run package:smoke
+npm run demo:run
+```
+
+Scripts und Release-Prozess: `package.json`, `CONTRIBUTING.md`, `CHANGELOG.md` und
+`.github/workflows/release.yml`.
+
+**Beta-Status (0.2.0-beta.2):** Vorabversion. Kernverträge stabilisieren sich, einzelne Oberflächen
+bleiben experimentell. Details in den GitHub-Release-Notes und im CHANGELOG. Vor produktiver Nutzung
+von Artefakten lokal `npm run docs:check` und `npm run package:smoke` ausführen sowie den Golden-Path
+beachten.
+
+Bei Beta.2 sind Checksumme, SBOM und saubere Installation verifiziert, aber es gibt keine gültige
+öffentliche Artifact-Attestation, weil unveränderlicher Tag und veröffentlichte Artefaktquelle
+voneinander abweichen. Die dokumentierte historische Ausnahme und die strengere Policy für künftige
+Releases stehen in
+[`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
+
+### Golden Corpus und Qualitätsmetriken
+
+- `npm run test:corpus` prüft Scanner-Muster.
+- `npm run test:quality` führt den Golden Evaluator aus (Precision/Recall-Proxy über Match-Rate,
+  unresolved, Reproduzierbarkeit mit `--reproducible`, Safe-Sharing-Leakage mit synthetischen Secrets).
+- Baseline liegt in den Testerwartungen; Regressionen schlagen deterministisch fehl.
+- Nur synthetische/redistribuierbare Fälle mit gelabelten Erwartungen ergänzen. Nicht unterstütztes
+  Verhalten explizit dokumentieren.
+
+Siehe `tests/golden-quality.test.js` und `tests/fixtures/sanitized-corpus/`.
 
 ## 🔎 Eigene lokale Quellen analysieren
 
@@ -486,10 +467,11 @@ zeus.registerPlugin(myPlugin);
 
 Diese Hooks sind ausschließlich für explizit importierten, vertrauenswürdigen In-Process-Code
 bestimmt. `registerPlugin` ist kein dynamischer Modul-Loader, keine Sandbox, kein Marketplace und
-keine Lizenz- oder Kompatibilitätsgrenze. Die spezifizierte zukünftige Modulgrenze sowie die
-Trennung von öffentlichem Core und separaten kommerziellen Implementierungen beschreibt
-[`ADR-006`](docs/architecture/adr-006-commercial-extension-architecture.md); eine ausführbare
-Modul-Registry oder kommerzielle Funktion wird damit noch nicht bereitgestellt.
+keine Lizenzgrenze. Die Open-Core-Modulgrenze beschreibt
+[`ADR-006`](docs/architecture/adr-006-commercial-extension-architecture.md): Der Community-Core
+stellt versionierte Moduldeskriptoren und einen atomaren Registrar bereit; **Entitlement-Prüfung und
+bezahlte Handler** liegen in separat verteilten kommerziellen Paketen und gehören nicht in den
+Apache-2.0-Core.
 
 Zentrale Erweiterungspunkte:
 
@@ -497,6 +479,8 @@ Zentrale Erweiterungspunkte:
 - Analyze Stage Registry
 - MCP Tool Registry
 - Plugin-Registrierung
+- Modul-Registrar und Capability Registry (`zeus.modules` / `zeus.capabilities`)
+- Project-Intelligence-Verträge und Community-Engines (`zeus.projectIntelligence`)
 - Workflow-, Fetch-, Query- und Run-Explorer-Services
 - persistente lokale Investigation Sessions
 
@@ -536,6 +520,28 @@ Unter `src/knowledge/` existieren bewusst getrennte Vertragsgrenzen:
 
 Source-abgeleitete Projektdaten werden nicht automatisch zu wiederverwendbarem Toolkit-Wissen. Lokale Known Facts liegen unter `config/local-only/known-facts/<profile>.json`, werden nur mit `--with-known-facts` geladen und bleiben getrennt von der projektneutralen Pipeline.
 
+## 🗂️ Projektwissen / Project Intelligence (Community, ZPI)
+
+Zeus Project Intelligence liefert im **Community-Core** die neutrale Projektwissen-Basis
+(Verträge, SQLite-Store, Content-CAS, lexikalische Suche, Snapshot-/Incremental-Engine, RPG-Analyzer,
+Retrieval und Context-Pakete). Öffentlicher Export:
+
+```js
+const zpi = require('zeus-rpg-promptkit/project-intelligence-contracts');
+// oder: createZeus().projectIntelligence
+```
+
+**CLI/MCP (dünne Adapter):** `zeus project-knowledge` und `zeus.project-knowledge.*` melden
+Capability-Präsenz und rufen nur ausgeführte Handler auf, wenn ein berechtigtes kommerzielles Modul
+registriert ist. Ohne Modul schlagen Ops fail-closed mit stabilen Reason Codes fehl; Community-Engines
+bleiben über die API nutzbar.
+
+**Nicht-Claims:** keine Source of Truth, kein Live-IBM-i-Compile/Deploy, kein implizites Workspace-
+Harvesting ohne explizite Trusted Roots, keine Paid-Handler im Community-Code.
+
+Status und Non-Claims: [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md).  
+Architektur: ADRs 009–013 unter [`docs/architecture/`](docs/architecture/).
+
 ## 🧑‍💻 VS-Code-Integration (in Entwicklung)
 
 Unter `vscode-extension/` liegt eine experimentelle Extension-Grundlage. Sie:
@@ -564,17 +570,19 @@ Die Extension ist derzeit ein Entwicklungsartefakt und noch nicht der primäre P
 
 ## 📚 Dokumentation
 
-| Einstieg                                                                             | Zweck                                               |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------- |
-| [`docs/index.md`](docs/index.md)                                                     | zentraler Dokumentations-Hub                        |
-| [`docs/tool-catalog.md`](docs/tool-catalog.md)                                       | verbindliche Command-, Safety- und Scope-Referenz   |
-| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)                             | Bootstrap für Evidence-first-KI-Sessions            |
-| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)                       | schnellster lokaler Einstieg                        |
-| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md) | vollständiges IBM-i-Onboarding                      |
-| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md)                           | MCP-Betrieb, Policy und Troubleshooting             |
-| [`docs/safety/`](docs/safety/)                                                       | Governance, sichere Weitergabe und Workspace-Regeln |
-| [`docs/workflows/`](docs/workflows/)                                                 | geführte Analyse- und Agenten-Workflows             |
-| [`docs/sql/`](docs/sql/)                                                             | reproduzierbare Discovery-Abfragen für Db2 for i    |
+| Einstieg                                                                                                                     | Zweck                                               |
+| ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| [`docs/index.md`](docs/index.md)                                                                                             | zentraler Dokumentations-Hub                        |
+| [`docs/tool-catalog.md`](docs/tool-catalog.md)                                                                               | verbindliche Command-, Safety- und Scope-Referenz   |
+| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)                                                                     | Bootstrap für Evidence-first-KI-Sessions            |
+| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)                                                               | schnellster lokaler Einstieg                        |
+| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)                                         | vollständiges IBM-i-Onboarding                      |
+| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md)                                                                   | MCP-Betrieb, Policy und Troubleshooting             |
+| [`docs/safety/`](docs/safety/)                                                                                               | Governance, sichere Weitergabe und Workspace-Regeln |
+| [`docs/workflows/`](docs/workflows/)                                                                                         | geführte Analyse- und Agenten-Workflows             |
+| [`docs/sql/`](docs/sql/)                                                                                                     | reproduzierbare Discovery-Abfragen für Db2 for i    |
+| [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md)                                       | Project Intelligence: Lieferstand und Non-Claims    |
+| [`docs/architecture/adr-009-project-intelligence-ownership.md`](docs/architecture/adr-009-project-intelligence-ownership.md) | ZPI-Ownership und Open-Core-Grenze                  |
 
 Tool-Katalog nach Änderungen an der CLI neu erzeugen:
 
@@ -600,7 +608,9 @@ node cli/zeus.js docs:generate-catalog --json-output docs/tool-catalog.json
 | `src/report/`, `src/prompt/`, `src/bundle/`             | Reports, Prompts und Review-Bundles                         |
 | `src/security/`, `src/sharing/`, `src/reproducibility/` | Secrets, Redaction, Safe Sharing und stabile Outputs        |
 | `src/mcp/`                                              | lokaler MCP-Server, Policy, Ressourcen, Prompts und Audit   |
-| `src/api/`                                              | Programmatic API und Registries                             |
+| `src/api/`                                              | Programmierschnittstelle und Registries                     |
+| `src/modules/`                                          | Moduldeskriptor-Verträge und atomarer Registrar             |
+| `src/projectIntelligence/`                              | Projektwissen-Verträge, Store, Suche, Engine, Retrieval     |
 | `src/viewer/`, `src/ui/`, `src/pui/`                    | optionale lokale Ansichten und experimentelle UI-Funktionen |
 | `vscode-extension/`                                     | experimentelle Editor-Integration                           |
 | `tests/`                                                | Unit-, Contract-, Smoke-, Corpus- und Benchmark-Tests       |
@@ -1077,11 +1087,11 @@ zeus.registerPlugin(myPlugin);
 ```
 
 These hooks are only for explicitly imported, trusted in-process code. `registerPlugin` is not a
-dynamic module loader, sandbox, marketplace, license gate, or compatibility boundary. The
-specified future module boundary and the separation between public core contracts and separately
-distributed commercial implementations are defined in
-[`ADR-006`](docs/architecture/adr-006-commercial-extension-architecture.md); this does not yet ship
-an executable module registrar or commercial capability.
+dynamic module loader, sandbox, marketplace, or license gate. The open-core module boundary is
+defined in [`ADR-006`](docs/architecture/adr-006-commercial-extension-architecture.md): the
+Community core ships versioned module descriptors and an atomic registrar; **entitlement checks and
+paid handlers** live in separately distributed commercial packages and are not part of the
+Apache-2.0 core.
 
 Primary extension points:
 
@@ -1089,6 +1099,8 @@ Primary extension points:
 - Analyze Stage Registry
 - MCP Tool Registry
 - plugin registration
+- module registrar and capability registry (`zeus.modules` / `zeus.capabilities`)
+- Project Intelligence contracts and Community engines (`zeus.projectIntelligence`)
 - workflow, fetch, query, and run-explorer services
 - persistent local investigation sessions
 
@@ -1127,6 +1139,28 @@ The Knowledge API intentionally remains disabled until a final project-neutral c
 
 Source-derived project data is not automatically treated as reusable toolkit knowledge. Local known facts live under `config/local-only/known-facts/<profile>.json`, are loaded only with `--with-known-facts`, and remain separate from the project-neutral pipeline.
 
+## 🗂️ Project Intelligence (Community, ZPI)
+
+Zeus Project Intelligence ships the neutral project-knowledge baseline in the **Community core**
+(contracts, SQLite store, content CAS, lexical search, snapshot/incremental engine, RPG analyzer,
+retrieval, and context packages). Public export:
+
+```js
+const zpi = require('zeus-rpg-promptkit/project-intelligence-contracts');
+// or: createZeus().projectIntelligence
+```
+
+**CLI/MCP (thin adapters):** `zeus project-knowledge` and `zeus.project-knowledge.*` report
+capability presence and dispatch only when an entitled commercial module is registered. Without
+that module, operations fail closed with stable reason codes; Community engines remain usable via
+the API.
+
+**Non-claims:** not source of truth; not live IBM i compile/deploy; no implicit workspace harvest
+without explicit trusted roots; no paid handlers in Community code.
+
+Status and non-claims: [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md).  
+Architecture: ADRs 009–013 under [`docs/architecture/`](docs/architecture/).
+
 ## 🧑‍💻 VS Code integration (in development)
 
 An experimental extension foundation lives under `vscode-extension/`. It:
@@ -1155,17 +1189,19 @@ The extension is currently a development artifact and not the primary product pa
 
 ## 📚 Documentation
 
-| Entry point                                                                          | Purpose                                            |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------- |
-| [`docs/index.md`](docs/index.md)                                                     | central documentation hub                          |
-| [`docs/tool-catalog.md`](docs/tool-catalog.md)                                       | authoritative command, safety, and scope reference |
-| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)                             | bootstrap for evidence-first AI sessions           |
-| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)                       | fastest local entry point                          |
-| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md) | complete IBM i onboarding                          |
-| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md)                           | MCP operation, policy, and troubleshooting         |
-| [`docs/safety/`](docs/safety/)                                                       | governance, safe sharing, and workspace policies   |
-| [`docs/workflows/`](docs/workflows/)                                                 | guided analysis and agent workflows                |
-| [`docs/sql/`](docs/sql/)                                                             | reproducible discovery queries for Db2 for i       |
+| Entry point                                                                                                                  | Purpose                                             |
+| ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| [`docs/index.md`](docs/index.md)                                                                                             | central documentation hub                           |
+| [`docs/tool-catalog.md`](docs/tool-catalog.md)                                                                               | authoritative command, safety, and scope reference  |
+| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)                                                                     | bootstrap for evidence-first AI sessions            |
+| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)                                                               | fastest local entry point                           |
+| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)                                         | complete IBM i onboarding                           |
+| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md)                                                                   | MCP operation, policy, and troubleshooting          |
+| [`docs/safety/`](docs/safety/)                                                                                               | governance, safe sharing, and workspace policies    |
+| [`docs/workflows/`](docs/workflows/)                                                                                         | guided analysis and agent workflows                 |
+| [`docs/sql/`](docs/sql/)                                                                                                     | reproducible discovery queries for Db2 for i        |
+| [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md)                                       | Project Intelligence delivery status and non-claims |
+| [`docs/architecture/adr-009-project-intelligence-ownership.md`](docs/architecture/adr-009-project-intelligence-ownership.md) | ZPI ownership and open-core boundary                |
 
 Regenerate the tool catalog after CLI changes:
 
@@ -1194,20 +1230,22 @@ type-safety claim; the scope guard prevents these declared files from silently d
 
 ## 🏗️ Architecture overview
 
-| Area                                                    | Responsibility                                          |
-| ------------------------------------------------------- | ------------------------------------------------------- |
-| `cli/`                                                  | executable CLI and catalog generator                    |
-| `src/collector/`, `src/fetch/`, `src/source/`           | source discovery and acquisition                        |
-| `src/scanner/`, `src/dependency/`                       | scanners, relationships, and cross-references           |
-| `src/context/`, `src/analyze/`, `src/investigation/`    | canonical model, pipeline, and focused investigation    |
-| `src/db2/`, `src/java/`                                 | Db2/JT400-adjacent runtime functions                    |
-| `src/report/`, `src/prompt/`, `src/bundle/`             | reports, prompts, and review bundles                    |
-| `src/security/`, `src/sharing/`, `src/reproducibility/` | secrets, redaction, safe sharing, and stable output     |
-| `src/mcp/`                                              | local MCP server, policy, resources, prompts, and audit |
-| `src/api/`                                              | programmatic API and registries                         |
-| `src/viewer/`, `src/ui/`, `src/pui/`                    | optional local views and experimental UI features       |
-| `vscode-extension/`                                     | experimental editor integration                         |
-| `tests/`                                                | unit, contract, smoke, corpus, and benchmark tests      |
+| Area                                                    | Responsibility                                                |
+| ------------------------------------------------------- | ------------------------------------------------------------- |
+| `cli/`                                                  | executable CLI and catalog generator                          |
+| `src/collector/`, `src/fetch/`, `src/source/`           | source discovery and acquisition                              |
+| `src/scanner/`, `src/dependency/`                       | scanners, relationships, and cross-references                 |
+| `src/context/`, `src/analyze/`, `src/investigation/`    | canonical model, pipeline, and focused investigation          |
+| `src/db2/`, `src/java/`                                 | Db2/JT400-adjacent runtime functions                          |
+| `src/report/`, `src/prompt/`, `src/bundle/`             | reports, prompts, and review bundles                          |
+| `src/security/`, `src/sharing/`, `src/reproducibility/` | secrets, redaction, safe sharing, and stable output           |
+| `src/mcp/`                                              | local MCP server, policy, resources, prompts, and audit       |
+| `src/api/`                                              | programmatic API and registries                               |
+| `src/modules/`                                          | module descriptor contracts and atomic registrar              |
+| `src/projectIntelligence/`                              | project-knowledge contracts, store, search, engine, retrieval |
+| `src/viewer/`, `src/ui/`, `src/pui/`                    | optional local views and experimental UI features             |
+| `vscode-extension/`                                     | experimental editor integration                               |
+| `tests/`                                                | unit, contract, smoke, corpus, and benchmark tests            |
 
 ## ✅ Tests
 
