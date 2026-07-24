@@ -18,6 +18,7 @@ const artifactReference = require('./artifactReference');
 const runManifest = require('./runManifest');
 const providerContracts = require('../../providers/contracts');
 const generationValidation = require('../../generationValidation');
+const projectIntelligence = require('../../projectIntelligence');
 
 module.exports = {
   createSchemaRegistry,
@@ -27,4 +28,5 @@ module.exports = {
   runManifest,
   providerContracts,
   generationValidation,
+  projectIntelligence,
 };

@@ -22,6 +22,7 @@ const providerRedaction = require('../providers/redaction');
 const providerTesting = require('../providers/testing');
 const providerAdapters = require('../providers/adapters');
 const generationValidation = require('../generationValidation');
+const projectIntelligence = require('../projectIntelligence');
 const modulesApi = require('../modules');
 const { createAtomicModuleRegistrar } = require('../modules/moduleRegistrar');
 const { executeQueryTable } = require('../core/queryService');
@@ -861,6 +862,9 @@ const zeus = {
   // Generation Validation Foundation (Iteration 29): offline candidate validation.
   // Never mutates the analyzed source workspace. review-ready is not compile readiness.
   generationValidation,
+  // Project Intelligence contract kit (ZPI-02): validators and reason codes only.
+  // No store/search/analyzer runtime, CLI, or MCP adapters in this package.
+  projectIntelligence,
   // External module contracts (Iteration 30): trusted in-process registration only.
   // Core does not parse licenses or enforce commercial entitlement.
   modules: createAtomicModuleRegistrar({
@@ -943,6 +947,9 @@ module.exports = {
   // Generation Validation Foundation (Community safety baseline)
   generationValidation,
 
+  // Project Intelligence Community contract kit (ZPI-02; no persistence runtime)
+  projectIntelligence,
+
   // Module descriptor / registrar contracts (Community; no license enforcement)
   modules: zeus.modules,
   moduleContracts: modulesApi,
@@ -956,6 +963,7 @@ module.exports = {
       ...zeus,
       providers: createProviderNamespace(),
       generationValidation,
+      projectIntelligence,
       capabilities: caps,
       modules: createAtomicModuleRegistrar({ capabilityRegistry: caps }),
       moduleContracts: modulesApi,

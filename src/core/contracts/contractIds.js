@@ -42,4 +42,17 @@ module.exports = Object.freeze({
   EXTERNAL_LINTER_ADAPTER: 'zeus.external-linter-adapter',
   MODULE_DESCRIPTOR: 'zeus.module-descriptor',
   MODULE_STATUS: 'zeus.module-status',
+  // Zeus Project Intelligence (ZPI-02) knowledge contracts
+  PROJECT_KNOWLEDGE_PROJECT: 'zeus.project-knowledge-project',
+  PROJECT_KNOWLEDGE_SNAPSHOT: 'zeus.project-knowledge-snapshot',
+  PROJECT_KNOWLEDGE_SOURCE_UNIT: 'zeus.project-knowledge-source-unit',
+  PROJECT_KNOWLEDGE_SOURCE_SPAN: 'zeus.project-knowledge-source-span',
+  PROJECT_KNOWLEDGE_SYMBOL: 'zeus.project-knowledge-symbol',
+  PROJECT_KNOWLEDGE_RELATIONSHIP: 'zeus.project-knowledge-relationship',
+  PROJECT_KNOWLEDGE_ANALYZER_RUN: 'zeus.project-knowledge-analyzer-run',
+  PROJECT_KNOWLEDGE_EVIDENCE: 'zeus.project-knowledge-evidence',
+  PROJECT_KNOWLEDGE_SUMMARY: 'zeus.project-knowledge-summary',
+  PROJECT_KNOWLEDGE_DIAGNOSTIC: 'zeus.project-knowledge-diagnostic',
+  PROJECT_KNOWLEDGE_CONTEXT_PACKAGE: 'zeus.project-knowledge-context-package',
+  PROJECT_KNOWLEDGE_OPERATION_RESULT: 'zeus.project-knowledge-operation-result',
 });
