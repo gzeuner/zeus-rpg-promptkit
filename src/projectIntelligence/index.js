@@ -7,8 +7,9 @@
  * ZPI-03: KnowledgeStore SPI + SQLite metadata provider, locks, migrations.
  * ZPI-04: content-addressed store, trusted roots, path controls (GC design-only).
  * ZPI-05: Search SPI + Community lexical provider (Lucene layout/schema).
+ * ZPI-06: Snapshot + incremental update engine (diff, invalidation, atomic publish).
  *
- * Not included yet: RPG analyzer runtime, CLI/MCP.
+ * Not included yet: full RPG analyzer extractors (ZPI-07), CLI/MCP.
  */
 
 const constants = require('./constants');
@@ -21,6 +22,7 @@ const { runProjectIntelligenceContractTests } = require('./contractTestKit');
 const store = require('./store');
 const content = require('./content');
 const search = require('./search');
+const engine = require('./engine');
 
 module.exports = {
   // Vocabulary
@@ -77,4 +79,13 @@ module.exports = {
   search,
   createSearchProvider: search.createSearchProvider,
   openSearchProvider: search.openSearchProvider,
+
+  // Snapshot engine (ZPI-06)
+  engine,
+  createSnapshotEngine: engine.createSnapshotEngine,
+  openSnapshotEngine: engine.openSnapshotEngine,
+  createBaselineAnalyzer: engine.createBaselineAnalyzer,
+  planInventoryDiff: engine.planInventoryDiff,
+  planInvalidation: engine.planInvalidation,
+  buildSourceInventory: engine.buildSourceInventory,
 };

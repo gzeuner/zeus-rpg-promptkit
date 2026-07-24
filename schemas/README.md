@@ -12,7 +12,8 @@ This directory is the home for versioned domain contract documentation.
 ZPI-03 adds the SQLite metadata store under `src/projectIntelligence/store/`.
 ZPI-04 adds the content-addressed blob store under `src/projectIntelligence/content/`.
 ZPI-05 adds the search SPI and Community lexical provider under `src/projectIntelligence/search/`.
-Analyzer runtime and CLI/MCP packages remain later.
+ZPI-06 adds the snapshot/incremental engine under `src/projectIntelligence/engine/`.
+Full RPG analyzer extractors and CLI/MCP packages remain later.
 
 ## Contract IDs (stable)
 
