@@ -1,13 +1,13 @@
 ---
 Title: ZPI Threat Model
 Description: Documentation baseline threat model for Zeus Project Intelligence before runtime implementation.
-Last Updated: 2026-07-22
+Last Updated: 2026-07-24
 ---
 
 # ZPI Threat Model
 
-This document records the security baseline for ZPI-01. It is a documentation artifact, not a
-runtime security claim.
+This document records the security baseline for ZPI (updated through ZPI-12 hardening). It is a
+documentation artifact, not a runtime security claim or product certification.
 
 ## Scope
 
@@ -41,9 +41,24 @@ Protected assets:
 | -------------------------------- | ------------------------------------------------------------------------------------- |
 | Trusted local roots              | only explicitly authorized source roots may be inventoried                            |
 | Local project-intelligence store | sensitive local state; not safe-sharing by default                                    |
-| Thin CLI/API/MCP projection      | read-mostly projection of approved capability surfaces only                           |
+| Thin CLI/API/MCP projection      | Community thin adapters only; commercial handlers appear only after registration      |
 | Commercial extension boundary    | entitlement-gated, separately distributed, never required for Community-owned readers |
 | External sharing or model egress | deny by default unless a future policy explicitly allows it                           |
+
+### CLI/MCP adapter surface (ZPI-11/12)
+
+Threats:
+
+- exposing paid handlers without entitlement
+- absolute host-path leakage through adapter/MCP error payloads
+- default MCP allowlist exposing write/index tools
+
+Required mitigations (implemented):
+
+- capability present/absent discovery without loading commercial packages
+- fail-closed `CAPABILITY_UNAVAILABLE` when unregistered
+- path redaction helpers on commercial op results
+- MCP safe defaults limited to discover + status; write/index require explicit allow-tools
 
 ## Primary threats
 

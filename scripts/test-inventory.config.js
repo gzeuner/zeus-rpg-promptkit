@@ -28,6 +28,7 @@ module.exports = {
       'tests/project-intelligence-rpg-analyzer.test.js',
       'tests/project-intelligence-retrieval.test.js',
       'tests/project-intelligence-adapters.test.js',
+      'tests/project-intelligence-hardening.test.js',
     ],
     smoke: [
       'tests/reproducible-output.test.js',
@@ -36,7 +37,7 @@ module.exports = {
       'tests/provider-offline.test.js',
     ],
     corpus: ['tests/scanner-corpus.test.js'],
-    benchmark: ['tests/analyze-benchmark.test.js'],
+    benchmark: ['tests/analyze-benchmark.test.js', 'tests/project-intelligence-benchmark.test.js'],
     quality: ['tests/golden-quality.test.js'],
     unit: [
       'tests/capability-registry.test.js',
