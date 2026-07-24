@@ -11,7 +11,7 @@
  * ZPI-07: RPG/IBM i analyzer baseline (parser adapters, spans, unresolved model).
  * ZPI-08: Retrieval + context assembly (hybrid lexical/graph, token budgets).
  *
- * Not included yet: commercial module registration (ZPI-09), CLI/MCP (ZPI-11).
+ * Commercial module registration is external (ZPI-09/10). CLI/MCP thin adapters: ZPI-11.
  */
 
 const constants = require('./constants');
@@ -27,6 +27,7 @@ const search = require('./search');
 const engine = require('./engine');
 const analyzers = require('./analyzers');
 const retrieval = require('./retrieval');
+const adapters = require('./adapters');
 
 module.exports = {
   // Vocabulary
@@ -105,4 +106,12 @@ module.exports = {
   seedIdsFromHits: retrieval.seedIdsFromHits,
   allocateBudgetSlices: retrieval.allocateBudgetSlices,
   packBucket: retrieval.packBucket,
+
+  // CLI/MCP thin adapters (ZPI-11) — capability present/absent only
+  adapters,
+  discoverProjectIntelligenceCapabilities: adapters.discoverProjectIntelligenceCapabilities,
+  executeProjectIntelligenceOperation: adapters.executeProjectIntelligenceOperation,
+  listProjectKnowledgeMcpTools: adapters.listProjectKnowledgeMcpTools,
+  COMMERCIAL_CAPABILITY_IDS: adapters.COMMERCIAL_CAPABILITY_IDS,
+  PUBLIC_OPERATIONS: adapters.PUBLIC_OPERATIONS,
 };

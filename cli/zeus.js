@@ -57,6 +57,7 @@ const { runValidateRpgSql } = require('../src/cli/commands/validateRpgSqlCommand
 const { runOnboarding } = require('../src/cli/commands/onboardingCommand');
 const { runSecret } = require('../src/cli/commands/secretCommand');
 const { runInvestigate } = require('../src/cli/commands/investigateCommand');
+const { runProjectKnowledge } = require('../src/cli/commands/projectKnowledgeCommand');
 const path = require('path');
 const { autoLoadEnvFiles } = require('../src/config/envFileLoader');
 const { detectPlaintextSecrets } = require('../src/security/plaintextSecretDetector');
@@ -214,6 +215,9 @@ function printHelp() {
     '  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]'
   );
   console.log('  zeus [--config <path>] mcp <serve|help> [--stdio true|false] [--verbose]');
+  console.log(
+    '  zeus project-knowledge <discover|status|create-project|full-index|query|...> [options] [--json]  # thin PI adapter; commercial ops when registered'
+  );
 }
 
 function parseArgs(argv) {
@@ -741,6 +745,11 @@ async function main() {
 
   if (command === 'investigate' || command === 'investigation') {
     runInvestigate(args);
+    return;
+  }
+
+  if (command === 'project-knowledge' || command === 'project-intelligence') {
+    await runProjectKnowledge(args);
     return;
   }
 

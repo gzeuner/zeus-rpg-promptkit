@@ -313,7 +313,15 @@ const COMMAND_METADATA = Object.freeze({
     purpose:
       'Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.',
     example:
-      'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run',
+      'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status',
+  }),
+  'project-knowledge': Object.freeze({
+    safety: 'S1',
+    scope: 'Local',
+    purpose:
+      'Thin Community adapter for Project Intelligence: discover commercial capability presence and dispatch create/index/query/impact/context/inspect/verify only when the entitled commercial module is registered. No paid implementation in Community; fails closed when capabilities are absent.',
+    example:
+      'node cli/zeus.js project-knowledge discover --json && node cli/zeus.js project-knowledge query --knowledge-root ./pk --project-id demo --trusted-roots "[{\\"rootId\\":\\"src\\",\\"path\\":\\"./src\\"}]" --query ORDERPGM --json',
   }),
 });
 
@@ -643,6 +651,14 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: ['local-process-stdio'],
     capabilityId: null,
   }),
+  'project-knowledge': catalogContract({
+    aliases: ['project-intelligence'],
+    status: 'stable',
+    // capabilityId null: commercial PI capabilities are dynamic (present only when registered)
+    availability: ALL_PUBLIC_SURFACES,
+    sideEffects: ['local-read', 'local-artifact-write'],
+    capabilityId: null,
+  }),
 });
 
 const COMMAND_ORDER = Object.freeze([
@@ -690,6 +706,7 @@ const COMMAND_ORDER = Object.freeze([
   'pui-inspect',
   'docs:generate-catalog',
   'mcp',
+  'project-knowledge',
 ]);
 
 const SAFETY_LEVELS = Object.freeze([

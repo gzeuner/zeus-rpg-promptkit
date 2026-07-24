@@ -41,8 +41,10 @@ Current implementation status:
 - **ZPI-07 (RPG analyzer):** `src/projectIntelligence/analyzers/` RPG/CL parser adapters over
   Community scanners, source spans, unresolved reference model, default engine analyzer
 - **ZPI-08 (retrieval/context):** `src/projectIntelligence/retrieval/` hybrid lexical/graph
-  retrieval, token budgets, source verification, context package assembly with omission reporting —
-  still no commercial module (ZPI-09) or CLI/MCP adapters (ZPI-11)
+  retrieval, token budgets, source verification, context package assembly with omission reporting
+- **ZPI-11 (CLI/MCP adapters):** `src/projectIntelligence/adapters/` thin Community CLI/MCP surface
+  (`zeus project-knowledge`, `zeus.project-knowledge.*` tools, discovery resource). Operations execute
+  only when commercial capabilities are registered; absent path fails closed with no paid code in Community
 
 Local risk handling:
 
