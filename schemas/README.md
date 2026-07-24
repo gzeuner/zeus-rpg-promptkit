@@ -15,7 +15,10 @@ ZPI-05 adds the search SPI and Community lexical provider under `src/projectInte
 ZPI-06 adds the snapshot/incremental engine under `src/projectIntelligence/engine/`.
 ZPI-07 adds the RPG/IBM i analyzer baseline under `src/projectIntelligence/analyzers/`.
 ZPI-08 adds retrieval and context assembly under `src/projectIntelligence/retrieval/`.
-Commercial registration and CLI/MCP packages remain later.
+ZPI-11 adds thin Community CLI/MCP adapters under `src/projectIntelligence/adapters/`
+(`zeus project-knowledge`, `zeus.project-knowledge.*`; ops dispatch only when commercial
+capabilities are registered). Commercial entitled registration/ops ship in the private package
+(ZPI-09/10). Program closure: `docs/knowledgebase/zpi-closure-status.md`.
 
 ## Contract IDs (stable)
 
