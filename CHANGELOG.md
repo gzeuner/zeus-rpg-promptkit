@@ -5,6 +5,31 @@ All notable changes to Zeus RPG PromptKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Release prep notes for the next public cut after ZPI delivery. Version number is **not** bumped
+until owner decision (see [`docs/maintainers/next-release-checklist.md`](docs/maintainers/next-release-checklist.md)).
+
+### Added
+
+- Project Intelligence Community baseline (contracts, SQLite store, content CAS, lexical search,
+  snapshot/incremental engine, RPG analyzer, retrieval/context assembly);
+- thin CLI/MCP Project Intelligence adapters (`zeus project-knowledge`, `zeus.project-knowledge.*`)
+  with commercial capability present/absent behavior;
+- explicit commercial module host loader (`createHostZeus` / `registerCommercialModules`) for
+  operator-configured package path or name — no auto-discovery and no paid handlers in Community;
+- ZPI hardening and benchmark evidence suites; public closure status documentation.
+
+### Changed
+
+- README German/English sections aligned with shipped module registrar and ZPI delivery status;
+- architecture ADR index status notes for delivered ZPI surfaces.
+
+### Security
+
+- commercial loader fails closed on missing path/entry; absolute paths redacted in loader results;
+- Project Intelligence non-claims and trusted-root policy remain fail-closed.
+
 ## [0.2.0-beta.2] - 2026-07-12
 
 Hardened beta with complete MCP test coverage, deterministic recursive test discovery, and Node-24-based CI actions.

@@ -1,7 +1,7 @@
 ---
 Title: External Module Registration
 Description: How trusted in-process modules register against Zeus Community Core without core license enforcement.
-Last Updated: 2026-07-19
+Last Updated: 2026-07-24
 ---
 
 # External Module Registration (Community Core)
@@ -14,8 +14,9 @@ It implements the executable subset of [ADR-006](../architecture/adr-006-commerc
 - Zeus Community Core remains fully useful **without** any external module.
 - Registration is **explicit and trusted**: the host imports an installed package and calls
   `registerModule({ descriptor, register })`.
-- The core **never** scans directories, environment paths, or marketplaces, and never
-  dynamically loads untrusted module names.
+- The core **never** scans directories for modules, never consults marketplaces, and never
+  auto-loads packages by product ID. Optional CLI/MCP host wiring may load **one operator-specified**
+  package name or filesystem path (see [Commercial host loader](#commercial-host-loader-optional)).
 - `edition` and `entitlement.mode` are **display/classification metadata only**. The core does
   **not** parse license keys, validate signatures, or unlock paid features.
 - Entitlement enforcement belongs in the external module (for commercial packages).
@@ -114,3 +115,43 @@ If a module is missing, incompatible, or fails registration:
 - Community commands, evidence, and artifacts remain available;
 - only the module's capabilities are absent;
 - diagnostics are redacted (no secrets, license keys, customer IDs, or local paths).
+
+## Commercial host loader (optional)
+
+For CLI/MCP hosts that want operator-driven commercial wiring without embedding paid code in
+Community, use the explicit loader:
+
+```js
+const { createHostZeus } = require('zeus-rpg-promptkit/api');
+
+const { zeus, commercial } = await createHostZeus({
+  modulePath: process.env.ZEUS_COMMERCIAL_MODULE, // package name OR filesystem path (required to load)
+  // entitlement material is passed through to the commercial package (module-managed):
+  // licenseDocument / publicKeyPem, or paths via ZEUS_LICENSE_DOCUMENT_PATH + ZEUS_LICENSE_PUBLIC_KEY_PATH
+});
+```
+
+CLI / env surface:
+
+| Input                                | Meaning                                                         |
+| ------------------------------------ | --------------------------------------------------------------- |
+| `--commercial-module <name-or-path>` | explicit commercial package (also `ZEUS_COMMERCIAL_MODULE`)     |
+| `ZEUS_LICENSE_DOCUMENT_PATH`         | path to signed offline license JSON (commercial package)        |
+| `ZEUS_LICENSE_PUBLIC_KEY_PATH`       | path to verification public key PEM                             |
+| `ZEUS_COMMERCIAL_MODULES`            | optional comma list of commercial module keys (package-defined) |
+
+The commercial package must export:
+
+```js
+async function registerWithZeus(zeus, options) {
+  /* register entitled modules */ return { ok: true };
+}
+module.exports = { registerWithZeus /* ... */ };
+```
+
+Rules:
+
+- No load when the flag/env is unset (Community-only behavior).
+- No directory crawl and no marketplace resolution.
+- Absolute paths are redacted in loader diagnostics.
+- Entitlement verification remains **inside** the commercial package.

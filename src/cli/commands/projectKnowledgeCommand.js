@@ -46,6 +46,12 @@ function printHelp() {
     '  - Thin Community adapter: operations execute only when the commercial module is registered.'
   );
   console.log(
+    '  - Optional commercial load: --commercial-module <package-or-path> (or ZEUS_COMMERCIAL_MODULE).'
+  );
+  console.log(
+    '  - Entitlement files (commercial package): ZEUS_LICENSE_DOCUMENT_PATH + ZEUS_LICENSE_PUBLIC_KEY_PATH.'
+  );
+  console.log(
     '  - --trusted-roots is JSON array of {rootId, path} with absolute directory paths only.'
   );
   console.log(
@@ -104,13 +110,24 @@ function buildInputFromArgs(args) {
   return input;
 }
 
-function resolveCapabilities(dependencies = {}) {
-  if (dependencies.capabilities) return dependencies.capabilities;
-  if (dependencies.zeus && dependencies.zeus.capabilities) return dependencies.zeus.capabilities;
-  // Default: fresh Community Zeus instance (commercial absent unless host registered modules)
-  const { createZeus } = require('../../api/zeusApi');
-  const zeus = createZeus();
-  return zeus.capabilities;
+async function resolveHost(args = {}, dependencies = {}) {
+  if (dependencies.capabilities || (dependencies.zeus && dependencies.zeus.capabilities)) {
+    return {
+      capabilities: dependencies.capabilities || dependencies.zeus.capabilities,
+      zeus: dependencies.zeus || null,
+      commercial: dependencies.commercial || { ok: true, loaded: false },
+    };
+  }
+  if (dependencies.createHostZeus) {
+    return dependencies.createHostZeus({ args, env: dependencies.env });
+  }
+  const { createHostZeus } = require('../../modules/commercialModuleLoader');
+  const host = await createHostZeus({ args, env: dependencies.env || process.env });
+  return {
+    capabilities: host.zeus.capabilities,
+    zeus: host.zeus,
+    commercial: host.commercial,
+  };
 }
 
 function printHuman(outcome) {
@@ -148,11 +165,22 @@ async function runProjectKnowledge(args = {}, dependencies = {}) {
   }
 
   const json = createJsonOutput(args);
-  const capabilities = resolveCapabilities(dependencies);
+  const host = await resolveHost(args, dependencies);
+  const capabilities = host.capabilities;
 
   if (operation === 'discover' || operation === 'list') {
     const discovery = discoverProjectIntelligenceCapabilities(capabilities);
-    const outcome = { ok: true, operation: 'discover', commercial: true, result: discovery };
+    const outcome = {
+      ok: true,
+      operation: 'discover',
+      commercial: true,
+      result: discovery,
+      commercialLoader: {
+        loaded: Boolean(host.commercial && host.commercial.loaded),
+        ok: host.commercial ? host.commercial.ok !== false : true,
+        reasonCode: (host.commercial && host.commercial.reasonCode) || null,
+      },
+    };
     if (json.isJsonMode) {
       json.print(outcome);
     } else {
@@ -214,4 +242,5 @@ module.exports = {
   printHelp,
   buildInputFromArgs,
   parseTrustedRoots,
+  resolveHost,
 };
