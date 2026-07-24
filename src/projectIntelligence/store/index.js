@@ -4,7 +4,7 @@
  * Project Intelligence Knowledge Store (ZPI-03).
  *
  * Community SPI + SQLite metadata provider.
- * No Lucene, no content-addressed blob store, no CLI/MCP.
+ * Content blobs live in ../content (ZPI-04). No Lucene/CLI/MCP.
  */
 
 const constants = require('./constants');

@@ -1,12 +1,13 @@
 'use strict';
 
 /**
- * Zeus Project Intelligence — Community contracts (ZPI-02) and store (ZPI-03).
+ * Zeus Project Intelligence — Community contracts, store, and content (ZPI-02..04).
  *
  * ZPI-02: contracts, reason codes, validators, fixtures, contract test kit.
  * ZPI-03: KnowledgeStore SPI + SQLite metadata provider, locks, migrations.
+ * ZPI-04: content-addressed store, trusted roots, path controls (GC design-only).
  *
- * Not included yet: content store, Lucene, analyzers, CLI/MCP.
+ * Not included yet: Lucene, analyzers, CLI/MCP.
  */
 
 const constants = require('./constants');
@@ -17,6 +18,7 @@ const fixtures = require('./fixtures');
 const validate = require('./validate');
 const { runProjectIntelligenceContractTests } = require('./contractTestKit');
 const store = require('./store');
+const content = require('./content');
 
 module.exports = {
   // Vocabulary
@@ -59,4 +61,13 @@ module.exports = {
   openProjectKnowledgeStore: store.openProjectKnowledgeStore,
   KnowledgeStoreError: store.KnowledgeStoreError,
   probeNodeSqlite: store.probeNodeSqlite,
+
+  // Content store (ZPI-04)
+  content,
+  createContentStore: content.createContentStore,
+  openContentStoreFromKnowledgeRoot: content.openContentStoreFromKnowledgeRoot,
+  canonicalizeContent: content.canonicalizeContent,
+  sha256Hex: content.sha256Hex,
+  describeContentGarbageCollection: content.describeContentGarbageCollection,
+  runContentGarbageCollection: content.runContentGarbageCollection,
 };
