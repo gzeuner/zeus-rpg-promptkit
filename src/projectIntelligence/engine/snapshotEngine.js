@@ -13,7 +13,7 @@ const { probeNodeSqlite } = require('../store/sqliteDriver');
 const { buildSourceInventory } = require('./inventory');
 const { planInventoryDiff } = require('./diffPlanner');
 const { planInvalidation } = require('./invalidation');
-const { createBaselineAnalyzer } = require('./baselineAnalyzer');
+const { createRpgAnalyzer } = require('../analyzers');
 
 const ARTIFACT_SCHEMA_VERSION = 1;
 
@@ -78,7 +78,7 @@ function createSnapshotEngine(options = {}) {
     knowledgeRoot,
     projectId,
     trustedRoots,
-    analyzer: analyzer || createBaselineAnalyzer(),
+    analyzer: analyzer || createRpgAnalyzer(),
     readOnly: false,
   });
 }
@@ -108,7 +108,7 @@ function openSnapshotEngine(options = {}) {
     knowledgeRoot,
     projectId: project.projectId,
     trustedRoots: trustedRoots || [],
-    analyzer: analyzer || createBaselineAnalyzer(),
+    analyzer: analyzer || createRpgAnalyzer(),
     readOnly,
   });
 }
