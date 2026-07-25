@@ -13,6 +13,7 @@ const ranking = require('./ranking');
 const invertedIndex = require('./invertedIndex');
 const fileIndexStore = require('./fileIndexStore');
 const searchProvider = require('./searchProvider');
+const embeddingPolicy = require('./embeddingPolicy');
 
 module.exports = {
   ...constants,
@@ -26,4 +27,10 @@ module.exports = {
   resolveIndexDir: fileIndexStore.resolveIndexDir,
   createSearchProvider: searchProvider.createSearchProvider,
   openSearchProvider: searchProvider.openSearchProvider,
+  // Track C — embeddings default off
+  EMBEDDINGS_DEFAULT_ENABLED: embeddingPolicy.EMBEDDINGS_DEFAULT_ENABLED,
+  EMBEDDING_POLICY_REASON: embeddingPolicy.EMBEDDING_POLICY_REASON,
+  resolveEmbeddingPolicy: embeddingPolicy.resolveEmbeddingPolicy,
+  shouldRetainVectorField: embeddingPolicy.shouldRetainVectorField,
+  rankingUsesEmbeddings: embeddingPolicy.rankingUsesEmbeddings,
 };

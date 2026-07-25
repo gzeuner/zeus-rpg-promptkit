@@ -18,12 +18,14 @@ const {
   indexPaths,
 } = require('./fileIndexStore');
 const { fail, REASON_CODES, KnowledgeStoreError } = require('../store/errors');
+const { resolveEmbeddingPolicy } = require('./embeddingPolicy');
 
 /**
  * Create a Community lexical search provider (ZPI-05).
  *
  * Lucene-compatible SPI surface under the project `lucene/` layout.
  * Engine is pure-JS inverted index with deterministic ranking.
+ * Embeddings default off (Track C / ADR-010).
  */
 function createSearchProvider(options = {}) {
   const readOnly = Boolean(options.readOnly);
@@ -32,8 +34,9 @@ function createSearchProvider(options = {}) {
   let snapshotId = options.snapshotId || null;
   let generation = 1;
   let closed = false;
+  const embeddingPolicy = resolveEmbeddingPolicy(options);
 
-  const index = createInvertedIndex();
+  const index = createInvertedIndex({ embeddingPolicy, ...options });
 
   // Load existing if present
   if (exists(indexDir)) {
@@ -225,6 +228,11 @@ function createSearchProvider(options = {}) {
       engineVersion: ENGINE_VERSION,
       analyzer: analyzerIdentity(),
       searchSchemaVersion: SEARCH_SCHEMA_VERSION,
+      embeddingPolicy: {
+        enabled: embeddingPolicy.enabled,
+        useForRanking: embeddingPolicy.useForRanking,
+        reasonCode: embeddingPolicy.reasonCode,
+      },
       closed,
     };
   }
@@ -244,6 +252,7 @@ function createSearchProvider(options = {}) {
     recoverFromCorrupt,
     getStatus,
     close,
+    embeddingPolicy,
     // identity helpers
     ENGINE_ID,
     SEARCH_SCHEMA_VERSION,
