@@ -42,8 +42,8 @@ test('catalog model is deterministic and preserves the public command contracts'
   const first = buildCatalogModel({ repoRoot: projectRoot, env: {} });
   const second = buildCatalogModel({ repoRoot: projectRoot, env: {} });
   assert.deepEqual(first, second);
-  assert.equal(first.generatedAt, '2026-07-12T00:00:00.000Z');
-  assert.deepEqual(first.package, { name: 'zeus-rpg-promptkit', version: '0.2.0-beta.2' });
+  assert.equal(first.generatedAt, '2026-07-25T00:00:00.000Z');
+  assert.deepEqual(first.package, { name: 'zeus-rpg-promptkit', version: '0.2.0-beta.3' });
 
   const investigate = first.commandRows.find(entry => entry.command === 'investigate');
   assert.deepEqual(investigate.aliases, ['investigation']);
@@ -114,7 +114,7 @@ test('release-date fallback rejects calendar dates that JavaScript would normali
   try {
     fs.writeFileSync(
       path.join(root, 'CHANGELOG.md'),
-      '# Changelog\n\n## [0.2.0-beta.2] - 2026-02-30\n',
+      '# Changelog\n\n## [0.2.0-beta.3] - 2026-02-30\n',
       'utf8'
     );
     assert.throws(() => resolveGeneratedAt(root, {}), /invalid release date/);
@@ -199,7 +199,7 @@ test('generation works in an exported tree without Git metadata', () => {
   try {
     assert.equal(fs.existsSync(path.join(root, '.git')), false);
     const model = buildCatalogModel({ repoRoot: root, env: {} });
-    assert.equal(model.generatedAt, '2026-07-12T00:00:00.000Z');
+    assert.equal(model.generatedAt, '2026-07-25T00:00:00.000Z');
     assert.equal(model.commandRows.length, COMMAND_ORDER.length);
     const attributes = new Set(
       fs.readFileSync(path.join(root, '.gitattributes'), 'utf8').split(/\r?\n/).filter(Boolean)

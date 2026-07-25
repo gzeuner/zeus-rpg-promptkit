@@ -1,13 +1,12 @@
 ---
 Title: Next Release Checklist
-Description: Maintainer checklist for the next public Community release after 0.2.0-beta.2 and ZPI delivery.
-Last Updated: 2026-07-24
+Description: Maintainer checklist for Community releases after 0.2.0-beta.3.
+Last Updated: 2026-07-25
 ---
 
 # Next release checklist (Community)
 
-Current package version on `main`: **0.2.0-beta.2** (historical attestation exception documented in
-[`release-integrity.md`](./release-integrity.md)).
+Current package version on `main` after this cut lands: **0.2.0-beta.3**.
 
 This checklist prepares a **future** release. It does **not** create tags, publish npm packages, or
 bypass owner approval.
@@ -16,7 +15,7 @@ bypass owner approval.
 
 | Candidate      | When                                                        |
 | -------------- | ----------------------------------------------------------- |
-| `0.2.0-beta.3` | Incremental public beta after ZPI + commercial host loader  |
+| `0.2.0-beta.4` | Incremental public beta if more surface lands before freeze |
 | `0.2.0`        | Only after owner decision that beta surface is freeze-ready |
 
 ## Preflight (local)
@@ -42,26 +41,26 @@ When the version is bumped and CHANGELOG / release notes exist:
 npm run release:preflight -- --version <target-version>
 ```
 
-## Content checklist
+## Content checklist (0.2.0-beta.3)
 
-- [ ] `package.json` / `package-lock.json` version match target
-- [ ] `CHANGELOG.md` has exactly one `## [<version>] - YYYY-MM-DD` section for the target
-- [ ] `.github/RELEASE_NOTES_v<version>.md` exists
-- [ ] Tool catalog regenerated if CLI surface changed (`zeus docs:generate-catalog`)
-- [ ] Public claims guard still green
-- [ ] No accidental commercial/paid code in Community tree
-- [ ] Release workflow builds **one** artifact and attests that artifact (no historical exception)
+- [x] `package.json` / `package-lock.json` version match target
+- [x] `CHANGELOG.md` has exactly one `## [0.2.0-beta.3] - YYYY-MM-DD` section
+- [x] `.github/RELEASE_NOTES_v0.2.0-beta.3.md` exists
+- [x] Tool catalog regenerated for package version (`zeus docs:generate-catalog`)
+- [x] Public claims guard still green (run before merge)
+- [x] No accidental commercial/paid code in Community tree
+- [x] Release workflow builds **one** artifact and attests that artifact (no historical exception)
 
-## Notable delivered since beta.2 (document in next CHANGELOG)
+## Owner gates (not automated)
+
+- [ ] Tag + publish authorization for `v0.2.0-beta.3` via `workflow_dispatch` on `main`
+- [ ] Commercial pin bump to the released Community SHA after the release commit is on `main`
+- [ ] Confirm beta.2 historical attestation exception is **not** reused
+
+## Notable delivered in 0.2.0-beta.3
 
 - Project Intelligence Community baseline (ZPI-02…08 engines)
 - Thin CLI/MCP adapters + capability present/absent behavior (ZPI-11)
 - Hardening/benchmarks/closure status (ZPI-12)
 - Explicit commercial module host loader (`registerCommercialModules` / `createHostZeus`)
-- Docs alignment (DE/EN README, architecture index)
-
-## Owner gates (not automated)
-
-- [ ] Version number decision (beta.3 vs 0.2.0)
-- [ ] Tag + publish authorization
-- [ ] Commercial pin bump to the released Community SHA after merge
+- Docs alignment (DE/EN README, architecture index, ZPI closure status)

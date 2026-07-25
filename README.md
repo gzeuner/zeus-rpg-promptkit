@@ -179,15 +179,14 @@ npm run demo:run
 Scripts und Release-Prozess: `package.json`, `CONTRIBUTING.md`, `CHANGELOG.md` und
 `.github/workflows/release.yml`.
 
-**Beta-Status (0.2.0-beta.2):** Vorabversion. Kernverträge stabilisieren sich, einzelne Oberflächen
-bleiben experimentell. Details in den GitHub-Release-Notes und im CHANGELOG. Vor produktiver Nutzung
-von Artefakten lokal `npm run docs:check` und `npm run package:smoke` ausführen sowie den Golden-Path
-beachten.
+**Beta-Status (0.2.0-beta.3):** Vorabversion nach Project-Intelligence-Lieferung und Commercial Host
+Loader. Kernverträge stabilisieren sich, einzelne Oberflächen bleiben experimentell. Details in den
+GitHub-Release-Notes und im CHANGELOG. Vor produktiver Nutzung von Artefakten lokal
+`npm run docs:check` und `npm run package:smoke` ausführen sowie den Golden-Path beachten.
 
-Bei Beta.2 sind Checksumme, SBOM und saubere Installation verifiziert, aber es gibt keine gültige
-öffentliche Artifact-Attestation, weil unveränderlicher Tag und veröffentlichte Artefaktquelle
-voneinander abweichen. Die dokumentierte historische Ausnahme und die strengere Policy für künftige
-Releases stehen in
+Beta.3 nutzt den gehärteten Single-Artifact-Release-Workflow (Checksumme, SBOM und
+Build-Provenance-Attestation). Die historische Attestations-Ausnahme von Beta.2 gilt **nicht** für
+dieses Release. Policy:
 [`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
 
 ### Golden Corpus und Qualitätsmetriken
