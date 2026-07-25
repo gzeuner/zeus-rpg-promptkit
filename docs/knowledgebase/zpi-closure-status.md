@@ -114,10 +114,17 @@ npm run package:smoke
 
 ## Remaining optional work (out of ZPI-12)
 
-- larger multi-repo corpora and CI-hosted perf dashboards
-- optional vector embeddings (disabled by default per ADR)
-- portable snapshot export packaging beyond current contracts
+- larger multi-repo corpora and CI-hosted perf dashboards (beyond Track C mini corpus)
+- optional vector **ranking** engines (storage opt-in exists; Community ranking stays lexical)
 - host-app auto-registration of commercial modules into CLI process (explicit load remains host-owned)
+
+### Track C (optional depth) — shipped on Community main after beta.3
+
+| Item                               | Location                                                                                           |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Portable snapshot export packaging | `src/projectIntelligence/export/` — `exportPortableSnapshotPackage`, `openPortableSnapshotPackage` |
+| Offline corpora fixtures           | `src/projectIntelligence/corpora/` — `mini-multi-program-rpg`                                      |
+| Embeddings default off             | `src/projectIntelligence/search/embeddingPolicy.js` — ranking never uses vectors in Community v1   |
 
 ## Final state statement
 

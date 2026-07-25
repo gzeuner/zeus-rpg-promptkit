@@ -5,15 +5,19 @@ const { scoreDocument, compareHits } = require('./ranking');
 const { normalizeSearchDocument } = require('./documentSchema');
 const { DEFAULT_LIMIT, MAX_LIMIT } = require('./constants');
 const { fail, REASON_CODES } = require('../store/errors');
+const { resolveEmbeddingPolicy, shouldRetainVectorField } = require('./embeddingPolicy');
 
 /**
  * In-memory inverted index (serializable).
+ * @param {object} [options]
+ * @param {object} [options.embeddingPolicy] resolved embedding policy (default: disabled)
  */
-function createInvertedIndex() {
+function createInvertedIndex(options = {}) {
   /** @type {Map<string, object>} */
   const docs = new Map();
   /** @type {Map<string, Map<string, number>>} term -> docId -> tf */
   const postings = new Map();
+  const embeddingPolicy = options.embeddingPolicy || resolveEmbeddingPolicy(options);
 
   function clear() {
     docs.clear();
@@ -22,6 +26,11 @@ function createInvertedIndex() {
 
   function addDocument(rawDoc) {
     const doc = normalizeSearchDocument(rawDoc);
+    // Embeddings default off: strip vector payloads unless storage is explicitly enabled.
+    // Community ranking remains lexical-only even when vectors are retained (ADR-010).
+    if (!shouldRetainVectorField(embeddingPolicy)) {
+      delete doc.vector;
+    }
     // Replace existing
     if (docs.has(doc.docId)) {
       removeDocument(doc.docId);

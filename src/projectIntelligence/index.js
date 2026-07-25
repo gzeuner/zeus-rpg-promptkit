@@ -10,6 +10,7 @@
  * ZPI-06: Snapshot + incremental update engine (diff, invalidation, atomic publish).
  * ZPI-07: RPG/IBM i analyzer baseline (parser adapters, spans, unresolved model).
  * ZPI-08: Retrieval + context assembly (hybrid lexical/graph, token budgets).
+ * Track C: portable snapshot export packaging, offline corpora, embeddings default off.
  *
  * Commercial module registration is external (ZPI-09/10). CLI/MCP thin adapters: ZPI-11.
  */
@@ -28,6 +29,8 @@ const engine = require('./engine');
 const analyzers = require('./analyzers');
 const retrieval = require('./retrieval');
 const adapters = require('./adapters');
+const portableExport = require('./export');
+const corpora = require('./corpora');
 
 module.exports = {
   // Vocabulary
@@ -114,4 +117,21 @@ module.exports = {
   listProjectKnowledgeMcpTools: adapters.listProjectKnowledgeMcpTools,
   COMMERCIAL_CAPABILITY_IDS: adapters.COMMERCIAL_CAPABILITY_IDS,
   PUBLIC_OPERATIONS: adapters.PUBLIC_OPERATIONS,
+
+  // Track C — portable export packaging
+  export: portableExport,
+  PORTABLE_PACKAGE_SCHEMA: portableExport.PORTABLE_PACKAGE_SCHEMA,
+  PORTABLE_PACKAGE_KIND: portableExport.PORTABLE_PACKAGE_KIND,
+  exportPortableSnapshotPackage: portableExport.exportPortableSnapshotPackage,
+  openPortableSnapshotPackage: portableExport.openPortableSnapshotPackage,
+
+  // Track C — offline corpora fixtures
+  corpora,
+  listCorpora: corpora.listCorpora,
+  getCorpus: corpora.getCorpus,
+  materializeCorpus: corpora.materializeCorpus,
+
+  // Track C — embeddings policy (default off)
+  EMBEDDINGS_DEFAULT_ENABLED: search.EMBEDDINGS_DEFAULT_ENABLED,
+  resolveEmbeddingPolicy: search.resolveEmbeddingPolicy,
 };

@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`module`, `modules`, `licenseDocumentPath`, `publicKeyPath`) with precedence
   CLI → env → profile; no marketplace or auto-discovery (`createHostZeus` /
   `registerCommercialModules`, `zeus profiles` display, config UI metadata).
+- Project Intelligence depth (Track C): portable snapshot export package
+  (`exportPortableSnapshotPackage` / `openPortableSnapshotPackage`), offline
+  multi-program corpora fixtures (`listCorpora` / `materializeCorpus`), and
+  explicit embeddings policy default **off** (storage opt-in only; Community
+  ranking remains lexical-only per ADR-010).
 
 ### Changed
 

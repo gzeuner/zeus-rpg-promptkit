@@ -29,6 +29,7 @@ module.exports = {
       'tests/project-intelligence-retrieval.test.js',
       'tests/project-intelligence-adapters.test.js',
       'tests/project-intelligence-hardening.test.js',
+      'tests/project-intelligence-export-corpora.test.js',
     ],
     smoke: [
       'tests/reproducible-output.test.js',
