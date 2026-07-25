@@ -131,14 +131,39 @@ const { zeus, commercial } = await createHostZeus({
 });
 ```
 
-CLI / env surface:
+CLI / env / profile surface (explicit only; highest precedence first):
 
-| Input                                | Meaning                                                         |
-| ------------------------------------ | --------------------------------------------------------------- |
-| `--commercial-module <name-or-path>` | explicit commercial package (also `ZEUS_COMMERCIAL_MODULE`)     |
-| `ZEUS_LICENSE_DOCUMENT_PATH`         | path to signed offline license JSON (commercial package)        |
-| `ZEUS_LICENSE_PUBLIC_KEY_PATH`       | path to verification public key PEM                             |
-| `ZEUS_COMMERCIAL_MODULES`            | optional comma list of commercial module keys (package-defined) |
+| Input                                   | Meaning                                                         |
+| --------------------------------------- | --------------------------------------------------------------- |
+| `--commercial-module <name-or-path>`    | explicit commercial package (also `ZEUS_COMMERCIAL_MODULE`)     |
+| `ZEUS_LICENSE_DOCUMENT_PATH`            | path to signed offline license JSON (commercial package)        |
+| `ZEUS_LICENSE_PUBLIC_KEY_PATH`          | path to verification public key PEM                             |
+| `ZEUS_COMMERCIAL_MODULES`               | optional comma list of commercial module keys (package-defined) |
+| `profile.commercial` (with `--profile`) | explicit profile object — same fields, lowest precedence        |
+
+Profile example (private `profiles.json` only; use env placeholders for secrets/paths):
+
+```json
+{
+  "dev": {
+    "commercial": {
+      "module": "${env:ZEUS_COMMERCIAL_MODULE}",
+      "modules": ["project-intelligence"],
+      "licenseDocumentPath": "${env:ZEUS_LICENSE_DOCUMENT_PATH}",
+      "publicKeyPath": "${env:ZEUS_LICENSE_PUBLIC_KEY_PATH}"
+    }
+  }
+}
+```
+
+Then:
+
+```bash
+zeus project-knowledge discover --profile dev --json
+```
+
+Precedence: **CLI / API options → environment variables → `profile.commercial`**.  
+There is no marketplace, product-id auto-load, or directory crawl.
 
 The commercial package must export:
 
@@ -151,7 +176,8 @@ module.exports = { registerWithZeus /* ... */ };
 
 Rules:
 
-- No load when the flag/env is unset (Community-only behavior).
+- No load when CLI, env, **and** `profile.commercial.module` are all unset (Community-only behavior).
 - No directory crawl and no marketplace resolution.
-- Absolute paths are redacted in loader diagnostics.
+- Profile commercial fields are explicit operator config only (validated; unknown keys rejected).
+- Absolute paths are redacted in loader diagnostics and `zeus profiles` output.
 - Entitlement verification remains **inside** the commercial package.

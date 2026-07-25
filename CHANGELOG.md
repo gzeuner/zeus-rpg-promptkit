@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- commercial host loader operator UX: explicit `profile.commercial` fields
+  (`module`, `modules`, `licenseDocumentPath`, `publicKeyPath`) with precedence
+  CLI → env → profile; no marketplace or auto-discovery (`createHostZeus` /
+  `registerCommercialModules`, `zeus profiles` display, config UI metadata).
+
 ### Changed
 
 ### Fixed

@@ -46,10 +46,10 @@ function printHelp() {
     '  - Thin Community adapter: operations execute only when the commercial module is registered.'
   );
   console.log(
-    '  - Optional commercial load: --commercial-module <package-or-path> (or ZEUS_COMMERCIAL_MODULE).'
+    '  - Optional commercial load (explicit only, highest wins): --commercial-module | ZEUS_COMMERCIAL_MODULE | profile.commercial.module with --profile.'
   );
   console.log(
-    '  - Entitlement files (commercial package): ZEUS_LICENSE_DOCUMENT_PATH + ZEUS_LICENSE_PUBLIC_KEY_PATH.'
+    '  - Entitlement files (commercial package): ZEUS_LICENSE_* env or profile.commercial.licenseDocumentPath / publicKeyPath.'
   );
   console.log(
     '  - --trusted-roots is JSON array of {rootId, path} with absolute directory paths only.'

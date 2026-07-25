@@ -7,6 +7,11 @@
  * name or filesystem path; this loader requires that package and calls its
  * public `registerWithZeus(zeus, options)` entry if present.
  *
+ * Operator sources (highest precedence first):
+ * 1. CLI / API options (`--commercial-module`, modulePath, …)
+ * 2. process env (`ZEUS_COMMERCIAL_MODULE`, license path envs)
+ * 3. explicit profile field `profile.commercial` when `--profile` is set
+ *
  * Not a marketplace, directory scan, or automatic discovery surface.
  */
 
@@ -20,6 +25,14 @@ const LOADER_REASON_CODES = Object.freeze({
   ENTRY_MISSING: 'COMMERCIAL_MODULE_REGISTER_ENTRY_MISSING',
   REGISTER_FAILED: 'COMMERCIAL_MODULE_REGISTER_FAILED',
   ZEUS_REQUIRED: 'COMMERCIAL_MODULE_ZEUS_REQUIRED',
+  PROFILE_INVALID: 'COMMERCIAL_MODULE_PROFILE_INVALID',
+});
+
+const COMMERCIAL_CONFIG_SOURCES = Object.freeze({
+  OPTIONS: 'options',
+  ENV: 'env',
+  PROFILE: 'profile',
+  NONE: 'none',
 });
 
 function redactMessage(value) {
@@ -55,10 +68,149 @@ function readJsonFile(filePath, label) {
   }
 }
 
+function normalizeModulesList(modulesRaw) {
+  if (Array.isArray(modulesRaw)) {
+    return modulesRaw
+      .map(String)
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+  if (typeof modulesRaw === 'string' && modulesRaw.trim()) {
+    return modulesRaw
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+  return undefined;
+}
+
 /**
- * Build entitlement options from explicit CLI/env paths (no secret defaults).
+ * Extract explicit commercial wiring from a resolved profile object.
+ * Only the dedicated `commercial` object is read — no discovery.
+ *
+ * @param {object|null|undefined} profile
+ * @returns {{ module: string|null, modules: string[]|undefined, licenseDocumentPath: string|null, publicKeyPath: string|null }}
  */
-function buildEntitlementOptions(options = {}, env = process.env) {
+function extractCommercialFromProfile(profile) {
+  const empty = {
+    module: null,
+    modules: undefined,
+    licenseDocumentPath: null,
+    publicKeyPath: null,
+  };
+  if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+    return empty;
+  }
+  const commercial = profile.commercial;
+  if (commercial == null) return empty;
+  if (typeof commercial !== 'object' || Array.isArray(commercial)) {
+    const error = new Error(
+      'profile.commercial must be an object with explicit module / path fields (no auto-discovery).'
+    );
+    error.code = LOADER_REASON_CODES.PROFILE_INVALID;
+    throw error;
+  }
+
+  const moduleRaw =
+    commercial.module != null
+      ? commercial.module
+      : commercial.modulePath != null
+        ? commercial.modulePath
+        : commercial.package != null
+          ? commercial.package
+          : null;
+  const module =
+    moduleRaw != null && moduleRaw !== true && String(moduleRaw).trim()
+      ? String(moduleRaw).trim()
+      : null;
+
+  const licenseDocumentPath =
+    commercial.licenseDocumentPath != null && String(commercial.licenseDocumentPath).trim()
+      ? String(commercial.licenseDocumentPath).trim()
+      : commercial.licensePath != null && String(commercial.licensePath).trim()
+        ? String(commercial.licensePath).trim()
+        : null;
+  const publicKeyPath =
+    commercial.publicKeyPath != null && String(commercial.publicKeyPath).trim()
+      ? String(commercial.publicKeyPath).trim()
+      : commercial.publicKeyPemPath != null && String(commercial.publicKeyPemPath).trim()
+        ? String(commercial.publicKeyPemPath).trim()
+        : null;
+
+  return {
+    module,
+    modules: normalizeModulesList(commercial.modules),
+    licenseDocumentPath,
+    publicKeyPath,
+  };
+}
+
+/**
+ * Load and resolve a named profile for commercial fields only.
+ * Failures are returned as soft data so Community-only commands still work
+ * when commercial is not required; callers that need hard fail use the code.
+ */
+function loadProfileCommercialConfig(options = {}, env = process.env) {
+  if (options.profile && typeof options.profile === 'object' && !Array.isArray(options.profile)) {
+    return {
+      ok: true,
+      source: COMMERCIAL_CONFIG_SOURCES.PROFILE,
+      commercial: extractCommercialFromProfile(options.profile),
+      profileName: options.profileName || null,
+    };
+  }
+
+  const profileNameRaw =
+    options.profileName || (options.args && (options.args.profile || options.args.p)) || null;
+  if (profileNameRaw == null || profileNameRaw === true) {
+    return {
+      ok: true,
+      source: COMMERCIAL_CONFIG_SOURCES.NONE,
+      commercial: null,
+      profileName: null,
+    };
+  }
+  const profileName = String(profileNameRaw).trim();
+  if (!profileName) {
+    return {
+      ok: true,
+      source: COMMERCIAL_CONFIG_SOURCES.NONE,
+      commercial: null,
+      profileName: null,
+    };
+  }
+
+  try {
+    const runtimeConfig = options.loadProfiles
+      ? { loadProfiles: options.loadProfiles, resolveProfile: options.resolveProfile }
+      : require('../config/runtimeConfig');
+    const loadProfiles = options.loadProfiles || runtimeConfig.loadProfiles;
+    const resolveProfile = options.resolveProfile || runtimeConfig.resolveProfile;
+    const cwd = options.cwd || process.cwd();
+    const profiles = loadProfiles({ cwd, env, args: options.args || {} });
+    const profile = resolveProfile(profiles, profileName, { env });
+    return {
+      ok: true,
+      source: COMMERCIAL_CONFIG_SOURCES.PROFILE,
+      commercial: extractCommercialFromProfile(profile),
+      profileName,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      source: COMMERCIAL_CONFIG_SOURCES.PROFILE,
+      commercial: null,
+      profileName,
+      reasonCode: err && err.code ? err.code : LOADER_REASON_CODES.PROFILE_INVALID,
+      message: redactMessage((err && err.message) || 'Failed to resolve profile commercial config'),
+    };
+  }
+}
+
+/**
+ * Build entitlement options from explicit CLI/env/profile paths (no secret defaults).
+ */
+function buildEntitlementOptions(options = {}, env = process.env, profileCommercial = null) {
   const entitlement = {
     ...(options.entitlement && typeof options.entitlement === 'object' ? options.entitlement : {}),
   };
@@ -69,7 +221,9 @@ function buildEntitlementOptions(options = {}, env = process.env) {
     const licPath =
       options.licenseDocumentPath ||
       env.ZEUS_LICENSE_DOCUMENT_PATH ||
-      env.ZEUS_COMMERCIAL_LICENSE_PATH;
+      env.ZEUS_COMMERCIAL_LICENSE_PATH ||
+      (profileCommercial && profileCommercial.licenseDocumentPath) ||
+      null;
     if (licPath) {
       entitlement.licenseDocument = readJsonFile(String(licPath), 'license document');
     }
@@ -81,7 +235,9 @@ function buildEntitlementOptions(options = {}, env = process.env) {
     const keyPath =
       options.publicKeyPath ||
       env.ZEUS_LICENSE_PUBLIC_KEY_PATH ||
-      env.ZEUS_COMMERCIAL_PUBLIC_KEY_PATH;
+      env.ZEUS_COMMERCIAL_PUBLIC_KEY_PATH ||
+      (profileCommercial && profileCommercial.publicKeyPath) ||
+      null;
     if (keyPath) {
       entitlement.publicKeyPem = fs.readFileSync(path.resolve(String(keyPath)), 'utf8');
     }
@@ -103,7 +259,7 @@ function requireCommercialPackage(spec, _options = {}) {
       loaded: false,
       reasonCode: LOADER_REASON_CODES.NOT_CONFIGURED,
       message:
-        'No commercial module configured. Set --commercial-module or ZEUS_COMMERCIAL_MODULE to an explicit package name or path.',
+        'No commercial module configured. Set --commercial-module, ZEUS_COMMERCIAL_MODULE, or profile.commercial.module to an explicit package name or path.',
     };
   }
 
@@ -148,32 +304,51 @@ function requireCommercialPackage(spec, _options = {}) {
 }
 
 /**
- * Resolve commercial module spec from options / args / env (explicit only).
+ * Resolve commercial module spec from options / args / env / profile (explicit only).
+ *
+ * Precedence: CLI/API options → env → profile.commercial
  */
 function resolveCommercialModuleConfig(options = {}, env = process.env) {
+  const profileLoad = loadProfileCommercialConfig(options, env);
+  const profileCommercial =
+    profileLoad.ok && profileLoad.commercial ? profileLoad.commercial : null;
+
   const fromOptions =
     options.modulePath ||
     options.module ||
     options.commercialModule ||
     (options.args && (options.args['commercial-module'] || options.args.commercialModule));
   const fromEnv = env.ZEUS_COMMERCIAL_MODULE || env.ZEUS_COMMERCIAL_MODULE_PATH;
-  const spec = fromOptions != null && fromOptions !== true ? String(fromOptions) : fromEnv;
+  const fromProfile = profileCommercial && profileCommercial.module;
+
+  let spec = null;
+  let specSource = COMMERCIAL_CONFIG_SOURCES.NONE;
+  if (fromOptions != null && fromOptions !== true && String(fromOptions).trim()) {
+    spec = String(fromOptions).trim();
+    specSource = COMMERCIAL_CONFIG_SOURCES.OPTIONS;
+  } else if (fromEnv != null && String(fromEnv).trim()) {
+    spec = String(fromEnv).trim();
+    specSource = COMMERCIAL_CONFIG_SOURCES.ENV;
+  } else if (fromProfile) {
+    spec = fromProfile;
+    specSource = COMMERCIAL_CONFIG_SOURCES.PROFILE;
+  }
+
   const modulesRaw =
     options.modules ||
     (options.args && options.args['commercial-modules']) ||
-    env.ZEUS_COMMERCIAL_MODULES;
-  let modules;
-  if (Array.isArray(modulesRaw)) {
-    modules = modulesRaw.map(String);
-  } else if (typeof modulesRaw === 'string' && modulesRaw.trim()) {
-    modules = modulesRaw
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean);
-  }
+    env.ZEUS_COMMERCIAL_MODULES ||
+    (profileCommercial && profileCommercial.modules);
+  const modules = normalizeModulesList(modulesRaw);
+
   return {
     spec: spec && String(spec).trim() ? String(spec).trim() : null,
     modules,
+    specSource,
+    profileName: profileLoad.profileName || null,
+    profileCommercial,
+    profileLoadOk: profileLoad.ok !== false,
+    profileLoadError: profileLoad.ok === false ? profileLoad : null,
   };
 }
 
@@ -195,20 +370,42 @@ async function registerCommercialModules(zeus, options = {}) {
   }
 
   const env = options.env || process.env;
-  const { spec, modules } = resolveCommercialModuleConfig(options, env);
+  const resolved = resolveCommercialModuleConfig(options, env);
+  const { spec, modules, specSource, profileName, profileCommercial, profileLoadError } = resolved;
+
+  // Profile was requested but failed to resolve, and no higher-precedence module was set.
+  if (!spec && profileLoadError) {
+    return {
+      ok: false,
+      loaded: false,
+      reasonCode: profileLoadError.reasonCode || LOADER_REASON_CODES.PROFILE_INVALID,
+      message: profileLoadError.message || 'Failed to resolve profile commercial config',
+      profileName: profileLoadError.profileName || profileName,
+      configSource: COMMERCIAL_CONFIG_SOURCES.PROFILE,
+    };
+  }
+
   if (!spec) {
     return {
       ok: true,
       loaded: false,
       reasonCode: LOADER_REASON_CODES.NOT_CONFIGURED,
       message:
-        'Commercial module not configured (optional). Community engines and capabilities remain available.',
+        'Commercial module not configured (optional). Set --commercial-module, ZEUS_COMMERCIAL_MODULE, or profile.commercial.module. Community engines and capabilities remain available.',
       modules: [],
+      configSource: COMMERCIAL_CONFIG_SOURCES.NONE,
+      profileName,
     };
   }
 
   const loaded = requireCommercialPackage(spec, options);
-  if (!loaded.ok) return loaded;
+  if (!loaded.ok) {
+    return {
+      ...loaded,
+      configSource: specSource,
+      profileName,
+    };
+  }
 
   const commercial = loaded.module;
   if (typeof commercial.registerWithZeus !== 'function') {
@@ -219,11 +416,13 @@ async function registerCommercialModules(zeus, options = {}) {
       message:
         'Commercial package must export registerWithZeus(zeus, options). No paid handlers are loaded from Community.',
       resolved: loaded.resolved,
+      configSource: specSource,
+      profileName,
     };
   }
 
   try {
-    const entitlement = buildEntitlementOptions(options, env);
+    const entitlement = buildEntitlementOptions(options, env, profileCommercial);
     const registration = await commercial.registerWithZeus(zeus, {
       ...entitlement,
       modules,
@@ -241,6 +440,8 @@ async function registerCommercialModules(zeus, options = {}) {
           ),
       resolved: loaded.resolved,
       registration,
+      configSource: specSource,
+      profileName,
     };
   } catch (err) {
     return {
@@ -249,6 +450,8 @@ async function registerCommercialModules(zeus, options = {}) {
       reasonCode: LOADER_REASON_CODES.REGISTER_FAILED,
       message: redactMessage((err && err.message) || 'Commercial module registration threw'),
       resolved: loaded.resolved,
+      configSource: specSource,
+      profileName,
     };
   }
 }
@@ -266,8 +469,11 @@ async function createHostZeus(options = {}) {
 
 module.exports = {
   LOADER_REASON_CODES,
+  COMMERCIAL_CONFIG_SOURCES,
   resolveModuleSpec,
   resolveCommercialModuleConfig,
+  extractCommercialFromProfile,
+  loadProfileCommercialConfig,
   buildEntitlementOptions,
   requireCommercialPackage,
   registerCommercialModules,
