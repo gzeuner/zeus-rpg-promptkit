@@ -6777,24 +6777,27 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       const safeDefaults = [...DEFAULT_MCP_SAFE_TOOL_NAMES];
       helpData = {
         overview:
-          'Zeus RPG PromptKit MCP default safe surface (S0/S1 local only). Use for evidence gathering and AI context preparation without remote access.',
+          'Zeus RPG PromptKit MCP default safe surface (see defaultTools). Includes S0/S1 local tools plus selected S2 remote-read tools (query/inspect/joblog/etc.) that are already on the default allowlist. S3/S4 writes, bridge mutations, and project-knowledge index/write ops are NOT on the default allowlist.',
         defaultTools: safeDefaults,
         safetyReminder:
-          'Always prefer S0. Use S1 only for local artifact generation inside workspace. Never S2+ without explicit operator allowlist and approval.',
+          'Prefer S0, then S1 local artifact generation. Default-allowlisted S2 tools are remote-read only — still explain why you call them. Never use S3/S4, write-sql apply, or bridge mutation without explicit operator --allow-tools and human approval. Project-knowledge: only discover + status by default.',
         recommendedSequence: [
+          'zeus.help (overview — do not invent tool names)',
           'zeus.doctor (check readiness)',
           'zeus.profiles (discover config)',
-          'zeus.onboarding (guided first-time IBM i setup)',
-          'zeus.search-source or zeus.field-search (local code exploration)',
+          'zeus.project-knowledge.discover (commercial PI present/absent; fail-closed)',
+          'zeus.onboarding (guided first-time IBM i setup) or zeus.resources / zeus.discover-environment',
+          'zeus.search-source, zeus.field-search, or zeus.investigation.* (local exploration)',
           'zeus.analyze (with source) or zeus.workflow --preset X (full local evidence)',
           'zeus.impact / zeus.assess-risk / zeus.generate-test / zeus.generate-checklist / zeus.qa / zeus.validate-rpg-sql',
+          'Optional default-allowlisted remote-read: zeus.query-table / zeus.query-sql / zeus.inspect-object / zeus.joblog',
           'zeus.bundle (package for review)',
           'Read generated artifacts + AI prompts via zeus://runs/... resources',
         ],
         howToGetMore:
-          'Call zeus.help with a command name for details. Use resources like zeus://docs/tool-catalog.md , zeus://docs/quickstart/onboarding-new-ibm-i.md , zeus://onboarding/checklist.json and zeus://metadata/* for full catalog + onboarding guidance.',
+          'Live tool names: tools/list and this overview defaultTools. Call zeus.help with a command name for details. Docs/resources (zeus://docs/tool-catalog.md, onboarding, metadata/*) are secondary — prefer tools/list + zeus.help first.',
         aiTip:
-          'Start new IBM i systems with zeus.onboarding or read zeus://docs/quickstart/onboarding-new-ibm-i.md + zeus://onboarding/checklist.json . After analysis, use resources/read on run URIs or specific ai_prompt_*.md artifacts to load evidence into your context.',
+          'Do not invent tool names. Start with tools/list or zeus.help overview. New IBM i: zeus.onboarding or zeus://docs/quickstart/onboarding-new-ibm-i.md. After analysis, resources/read run URIs or ai_prompt_*.md. If project-knowledge ops other than discover/status fail, commercial module is absent or not allowlisted — use analyze/search-source/impact instead.',
       };
     } else {
       const meta = COMMAND_METADATA[cmd] || COMMAND_METADATA[cmd.replace(':', '')] || null;

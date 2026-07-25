@@ -1,25 +1,27 @@
 ---
 Title: MCP Operator Guide
 Description: Local-first MCP startup, policy boundaries, and troubleshooting for Zeus RPG PromptKit.
-Last Updated: 2026-07-09
+Last Updated: 2026-07-25
 ---
 
 # MCP Operator Guide
 
 ## Purpose
 
-Expose a safe, local-only subset of Zeus capabilities over MCP stdio for AI clients and automation.
+Expose a safe, policy-gated subset of Zeus capabilities over MCP stdio for AI clients and automation.
 
 ## Security Posture
 
 - Transport: stdio only (local process boundary)
-- Default behavior: safe expanded default surface (health, doctor, profiles, help, onboarding, analyze, workflow, searches, queries, review/planning tools, etc. — see mcpPolicy.js)
-- Policy: explicit allowlist gate (`--allow-tools`) for any broader tool surface
+- Default behavior: safe expanded default surface from `src/mcp/mcpPolicy.js` (`DEFAULT_MCP_SAFE_TOOL_NAMES`) — S0/S1 local tools **plus** selected S2 remote-read tools; **not** S3/S4 writes or project-knowledge index/write
+- Policy: `--allow-tools` **replaces** the allowlist (does not merge/extend). Omit it to use the full default safe list; pass a smaller list to restrict further
 - Curated discovery surfaces: first-class MCP `resources/*` and `prompts/*` for safe docs/metadata/prompt access
 - Redaction: response/error masking for common secret patterns
 - Audit: append-only local JSONL audit trail for `tools/call`
 - Runtime guardrails: per-tool timeout and maximum response-size limits with deterministic `-32000` failures
 - Local path policy: local path inputs for local source-root tools must resolve inside the current workspace root, including absolute paths
+
+**Live tool names for agents:** prefer MCP `tools/list` and `zeus.help` (overview) over hunting markdown. Catalog docs remain authoritative for purpose/safety levels but are secondary for “what is available right now.”
 
 Out of scope for MVP:
 
@@ -33,18 +35,20 @@ Out of scope for MVP:
 node cli/zeus.js mcp serve --stdio true --verbose
 ```
 
-Without `--allow-tools`, MCP exposes the safe default surface (see above). Use `--allow-tools` to provide a custom (usually smaller) list.
+Without `--allow-tools`, MCP exposes the full default safe surface (`DEFAULT_MCP_SAFE_TOOL_NAMES` in `src/mcp/mcpPolicy.js`).
 
-Restrict exposed tools explicitly for real workflows (recommended):
+### Recommended default allowlist (must match runtime)
+
+This CSV is the **same set** as the code default. Use it when you want an explicit, reproducible allowlist (equivalent to omitting `--allow-tools`). You may pass a **smaller** subset to restrict the agent.
 
 ```bash
 node cli/zeus.js mcp serve --verbose \
-  --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run
+  --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.resources,zeus.discover-environment,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.investigation.start,zeus.investigation.focus,zeus.investigation.search,zeus.investigation.generate-prompt,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status
 ```
 
-(This is the single recommended list for most agentic coding + legacy IBM i / RPG work. You can always use a smaller subset.)
+**Note:** `--allow-tools` replaces the default list. If you paste an incomplete CSV, tools such as `zeus.resources`, `zeus.investigation.*`, and `zeus.project-knowledge.*` disappear even though they are on the code default.
 
-See also the new onboarding guide: `docs/quickstart/onboarding-new-ibm-i.md` (covers connection, source location, PGM/Table objects, metadata & data discovery).
+See also: `docs/quickstart/onboarding-new-ibm-i.md` (connection, source location, PGM/table objects, metadata & data discovery).
 
 ## Supported MCP Methods (Current)
 
@@ -62,42 +66,43 @@ Curated prompts expose the standard Zeus session bootstrap prompt plus prompt-te
 
 ## Supported MCP Tools (Current)
 
-The safe default surface (when running without `--allow-tools`) is defined in `src/mcp/mcpPolicy.js` (includes health, doctor, profiles, analyze, searches, queries, review tools, etc.).
+Source of truth for the default safe surface: `src/mcp/mcpPolicy.js` (`DEFAULT_MCP_SAFE_TOOL_NAMES` / `formatDefaultMcpAllowToolsCsv()`).
 
-For reproducibility and explicit control, we recommend always passing this single list:
+Includes among others:
 
-```bash
-node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run
-```
-
-Use a smaller subset via `--allow-tools` when you want to restrict the agent more tightly.
+- health / version / profiles / doctor / help / onboarding / resources / discover-environment
+- analyze / workflow / bundle / searches / investigation.\*
+- selected remote-read: resolve-object, inspect-object, query-table, query-sql, fetch-member, diff, joblog, test-run
+- project-knowledge: **discover + status only** (index/query/write need explicit allow-tools + commercial module)
 
 Example with a profile (recommended for real-target agent sessions):
 
 ```bash
 source ./config/load-env.sh myenv
 node cli/zeus.js doctor --profile my-profile
-# MCP server with safe local surface + some read
+# MCP server with default safe surface (omit --allow-tools) or paste the full CSV above
 ./.local/mcp/start-zeus-mcp-myenv.sh
 # or
-node cli/zeus.js mcp serve --stdio true --allow-tools [paste the recommended list above]
+node cli/zeus.js mcp serve --stdio true --verbose
 ```
 
 ## Perfect AI Agent Interaction Pattern (Example)
 
-An AI can bootstrap and operate fully via MCP without prior hard-coded knowledge beyond the protocol:
+An AI can bootstrap and operate via MCP **without inventing tool names** and without multi-doc hunting:
 
 1. `initialize`
-2. `resources/list` then `resources/read` for `zeus://docs/ai/session-prompt.md`, `zeus://docs/tool-catalog.json`, `zeus://metadata/mcp-tools.json`, `zeus://metadata/workflow-presets.json`
-3. `prompts/get` `zeus.session.start` with goal describing the task (e.g. "Perform local analysis of the RPG sources in this workspace and prepare a modernization review bundle")
+2. `tools/list` (live allowlisted surface) **or** `tools/call` `zeus.help` (overview + `defaultTools` + recommended sequence)
+3. Optional: `prompts/get` `zeus.session.start` with the user goal (secondary; help is enough for local analysis)
 4. `tools/call` `zeus.doctor` + `zeus.profiles`
-5. `tools/call` `zeus.help` (for self-service guidance) or `zeus.search-source`
-6. `tools/call` `zeus.analyze` with `source` pointing to local sources + `program`
-7. Use `resources/list` / `resources/read` `zeus://runs/PROGRAM/...` to fetch manifests, reports and generated `ai_prompt_*.md` files
-8. `tools/call` `zeus.bundle` or `zeus.impact` etc.
-9. `tools/call` `zeus.help` "bundle" for usage.
+5. `tools/call` `zeus.project-knowledge.discover` (present/absent; do not thrash commercial-only ops)
+6. `tools/call` `zeus.analyze` with `source` + `program` (or `zeus.workflow` with a preset)
+7. Optional deepen: `zeus.search-source`, `zeus.investigation.*`, allowlisted remote-read tools if needed
+8. `tools/call` `zeus.bundle` or `zeus.impact` as needed
+9. Optional: `resources/read` `zeus://runs/PROGRAM/...` for manifests and `ai_prompt_*.md`
 
-All via stdio, all outputs structured + enveloped, all bounded to workspace, secrets redacted. Use the default allowlist for pure local evidence work.
+Docs/resources (`zeus://docs/tool-catalog.json`, session-prompt, onboarding) remain available but are **secondary** after `tools/list` / `zeus.help`.
+
+All via stdio, outputs structured + enveloped, workspace-bounded, secrets redacted.
 
 ````
 
