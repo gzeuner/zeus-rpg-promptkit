@@ -1,12 +1,12 @@
 ---
 Title: ADR-009 Project Intelligence Ownership Split
 Description: Community and Commercial ownership boundaries for Zeus Project Intelligence contracts, default backends, and entitlement-gated operations.
-Last Updated: 2026-07-22
+Last Updated: 2026-07-25
 ---
 
 # ADR-009: Project Intelligence Ownership Split
 
-**Status:** Accepted for ZPI-01 documentation baseline
+**Status:** Accepted; Community baseline delivered (ZPI-02…12); Commercial entitled ops shipped privately
 
 ## Context
 
@@ -24,7 +24,8 @@ Without an explicit ownership split, two failure modes become likely:
 ZPI must remain local-first, offline by default, and compatible with the existing capability
 registry, safety model, and thin CLI/MCP projection strategy.
 
-Package 09 is closed. ZPI-01 must not reopen Package 09 or introduce new live IBM i behavior.
+Package 09 is closed. Project Intelligence must not reopen Package 09 or introduce new live IBM i
+behavior as a default product path.
 
 ## Decision
 
@@ -41,6 +42,8 @@ Community owns the neutral, Apache-2.0 project-intelligence baseline:
 - deterministic bounded context-package contracts and default offline policy
 - artifact readers, validators, contract tests, and fail-closed reason-code catalogs
 - thin CLI, API, and MCP-neutral capability contracts and adapters
+- optional depth engines that remain Community-owned (portable snapshot export packaging, offline
+  corpora fixtures, embeddings policy default **off** — Track C)
 
 Community must remain complete and useful without any Commercial module. A user must be able to:
 
@@ -87,15 +90,29 @@ never depend on Commercial code, entitlements, or proprietary store formats.
 - Any persisted format needed to read Community-owned project knowledge must remain documented and
   readable without Commercial code.
 - Retrieval hits, rankings, and context packages are derived aids, not canonical source evidence.
-- Package 09 remains closed. ZPI does not add live IBM i compile, execute, or differential flows.
+- Package 09 remains closed. ZPI does not add live IBM i compile, execute, or differential flows as
+  a default product path.
+
+## Delivery
+
+| Layer                                     | Location / status                                                                  |
+| ----------------------------------------- | ---------------------------------------------------------------------------------- |
+| Contracts, reason codes, fixtures         | `src/projectIntelligence/` (ZPI-02) — shipped                                      |
+| SQLite store, content CAS, lexical search | Community engines (ZPI-03…05) — shipped                                            |
+| Snapshot / incremental engine             | ZPI-06 — shipped                                                                   |
+| RPG analyzer baseline                     | ZPI-07 — shipped                                                                   |
+| Retrieval / context                       | ZPI-08 — shipped                                                                   |
+| Thin CLI/MCP adapters                     | ZPI-11 — shipped                                                                   |
+| Entitled commercial PI ops                | private commercial package (ZPI-09…10) — shipped                                   |
+| Public closure / non-claims               | [`../knowledgebase/zpi-closure-status.md`](../knowledgebase/zpi-closure-status.md) |
 
 ## Consequences
 
-- ZPI can evolve as an open-core system without making Community a stub.
-- Commercial features can add value through registration and policy without redefining core data
+- Community is a complete local project-knowledge platform, not a stub.
+- Commercial features add value through registration and policy without redefining core data
   ownership.
-- Later implementation packages must treat Community full rebuild and artifact readers as the
-  reference behavior that Commercial extensions may optimize but not replace.
+- Community full rebuild, readers, and portable export remain the reference behavior that Commercial
+  may orchestrate but must not replace or hide.
 
 ## Alternatives considered
 
@@ -105,5 +122,6 @@ never depend on Commercial code, entitlements, or proprietary store formats.
   testing, and artifact portability.
 - **Put entitlement checks into Community adapters.** Rejected because ADR-006 keeps entitlement out
   of the core.
-- **Reopen Package 09 for project-intelligence runtime hooks.** Rejected because ZPI-01 is a docs
-  package and Package 09 is explicitly closed.
+- **Reopen Package 09 for project-intelligence runtime hooks.** Rejected because Package 09 remains
+  closed as a default product path; owner-gated offline IBM i validation stays Enterprise-scoped and
+  live-off-by-default.

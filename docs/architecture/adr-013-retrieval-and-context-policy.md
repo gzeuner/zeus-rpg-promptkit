@@ -1,12 +1,12 @@
 ---
 Title: ADR-013 Retrieval and Context Policy
 Description: Deterministic Community retrieval and context-package policy with optional Commercial extensions.
-Last Updated: 2026-07-22
+Last Updated: 2026-07-25
 ---
 
 # ADR-013: Retrieval and Context Policy
 
-**Status:** Accepted for ZPI-01 documentation baseline
+**Status:** Accepted; retrieval and context assembly delivered (ZPI-08)
 
 ## Context
 
@@ -28,6 +28,7 @@ Community owns a complete default retrieval and context-assembly policy that is:
 - deterministic for a pinned snapshot, query, and engine version
 - evidence-first, with explicit omission reporting
 - compatible with thin CLI, API, and MCP-neutral capability contracts
+- lexical-first for Community ranking (embeddings storage optional; ranking default off per ADR-010)
 
 The Community default policy must be able to:
 
@@ -46,7 +47,7 @@ resource governance, but they must not:
 - weaken safety levels or trust-zone declarations
 - change thin adapter discovery semantics without a contract revision
 - make Community-owned artifacts unreadable without proprietary code
-- reopen Package 09 or add live IBM i execution behavior
+- reopen Package 09 or add live IBM i execution behavior as a default product path
 
 ### Context-package rules
 
@@ -61,17 +62,25 @@ Every context package must:
 A token budget constrains size, not sensitivity. Export or egress controls remain separate safety
 concerns and must fail closed when the destination policy does not permit disclosure.
 
+## Delivery
+
+| Concern                          | Community location                                   |
+| -------------------------------- | ---------------------------------------------------- |
+| Hybrid lexical + graph retrieval | `src/projectIntelligence/retrieval/`                 |
+| Context assembly + omissions     | `retrieval/contextAssembler.js`                      |
+| Token budgets                    | `retrieval/tokenBudget.js`                           |
+| Thin commercial dispatch surface | adapters + commercial entitled ops (private package) |
+
 ## Consequences
 
-- Community remains able to build useful local context packages without paid policy modules.
-- Commercial modules gain a clear extension surface that does not fork CLI/MCP adapter behavior.
-- Later implementation packages can test deterministic retrieval and omission behavior against one
-  documented baseline.
+- Community can build useful local context packages without paid policy modules.
+- Commercial modules have a clear extension surface that does not fork CLI/MCP adapter behavior.
+- Deterministic retrieval and omission behavior is testable against one documented baseline.
 
 ## Alternatives considered
 
 - **Commercial-only context assembly.** Rejected because Community would cease to be a complete
   local evidence platform.
 - **Treat context packages as canonical evidence.** Rejected because assembly output is a derived aid.
-- **Use retrieval or context policy to reopen Package 09 behaviors.** Rejected because ZPI-01 is
-  documentation-only and Package 09 remains closed.
+- **Use retrieval or context policy to reopen Package 09 behaviors.** Rejected because Package 09
+  remains closed as a default product path.

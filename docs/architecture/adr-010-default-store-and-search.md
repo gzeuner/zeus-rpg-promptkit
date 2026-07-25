@@ -1,12 +1,12 @@
 ---
 Title: ADR-010 Default Store and Search Architecture
-Description: SQLite metadata, content-addressed evidence storage, and Lucene lexical retrieval as the Community default project-intelligence backends.
-Last Updated: 2026-07-22
+Description: SQLite metadata, content-addressed evidence storage, and Lucene-layout lexical retrieval as the Community default project-intelligence backends.
+Last Updated: 2026-07-25
 ---
 
 # ADR-010: Default Store and Search Architecture
 
-**Status:** Accepted for ZPI-01 documentation baseline
+**Status:** Accepted; Community backends delivered (ZPI-03…05); embeddings default off (Track C)
 
 ## Context
 
@@ -27,9 +27,10 @@ The default backend must support:
 Community adopts this default backend architecture:
 
 - SQLite for canonical project, snapshot, source-unit, symbol, relationship, and migration
-  metadata
+  metadata (`node:sqlite` / DatabaseSync where available)
 - content-addressed local files for preserved evidence payloads and large immutable source content
-- Apache Lucene for lexical retrieval over published Community snapshots
+- Lucene-**layout** lexical retrieval over published Community snapshots (pure-JS inverted index under
+  the project `lucene/` layout; architecture target remains Apache Lucene-compatible SPI)
 
 This baseline is local-first and offline by default. No external database, search service,
 embedding service, or mandatory daemon is required.
@@ -40,7 +41,7 @@ embedding service, or mandatory daemon is required.
 | ----------------------- | ------------------------------------------------------------------------------------------- |
 | SQLite                  | canonical derived metadata, indexes of record, lifecycle state, migrations, current pointer |
 | Content-addressed files | immutable evidence blobs and preserved source payloads                                      |
-| Lucene                  | lexical retrieval over published snapshot content and metadata                              |
+| Lucene layout / lexical | lexical retrieval over published snapshot content and metadata                              |
 
 ### Determinism requirements
 
@@ -74,16 +75,27 @@ The Community default backend does not require:
 - commercial policy modules
 - a second proprietary registry for retrieval or search behavior
 
-Vector-ready schema fields may be added later only as optional extensions. Lexical retrieval remains
-the mandatory Community baseline.
+Vector-ready schema fields exist as **optional storage**. Embeddings remain **disabled by default**
+(`resolveEmbeddingPolicy`); Community ranking is lexical-only and does not consume vectors until a
+future approved ranking engine is explicitly adopted. Lexical retrieval remains the mandatory
+Community baseline.
+
+## Delivery
+
+| Backend                               | Community location                 | Notes                 |
+| ------------------------------------- | ---------------------------------- | --------------------- |
+| SQLite KnowledgeStore                 | `src/projectIntelligence/store/`   | ZPI-03                |
+| Content CAS                           | `src/projectIntelligence/content/` | ZPI-04                |
+| Lexical search SPI + pure-JS provider | `src/projectIntelligence/search/`  | ZPI-05; Lucene layout |
+| Embedding policy (default off)        | `search/embeddingPolicy.js`        | Track C               |
 
 ## Consequences
 
-- Community implementation packages can target a clear local baseline before advanced policy work.
+- Community has a shipped local baseline for persistence and lexical search.
 - Commercial modules can add orchestration or advanced ranking through public contracts without
   replacing the default storage and search foundations.
-- Dependency selection for actual SQLite and Lucene bindings becomes a governance event that must
-  preserve Apache-2.0 compatibility and offline operation.
+- Any future Lucene native binding or embedding ranking engine is a governance event that must
+  preserve Apache-2.0 compatibility, offline defaults, and fail-closed semantics.
 
 ## Alternatives considered
 
@@ -94,3 +106,5 @@ the mandatory Community baseline.
 - **SQLite full-text only.** Rejected because ZPI needs a stronger lexical retrieval baseline and a
   clear path to bounded search-specific schema evolution.
 - **Commercial-only default backends.** Rejected because Community must remain complete and useful.
+- **Embeddings-on ranking by default.** Rejected because ADR-010 keeps optional vectors storage-only
+  until an explicit, reviewed ranking engine is adopted.

@@ -1,12 +1,12 @@
 ---
 Title: ADR-011 Evidence and Provenance Model
 Description: Canonical evidence, derivation lineage, and export-disclosure provenance rules for Zeus Project Intelligence.
-Last Updated: 2026-07-22
+Last Updated: 2026-07-25
 ---
 
 # ADR-011: Evidence and Provenance Model
 
-**Status:** Accepted for ZPI-01 documentation baseline
+**Status:** Accepted; enforced in Community PI contracts and portable export packaging
 
 ## Context
 
@@ -59,6 +59,9 @@ normalizes:
 - non-claims such as `sourceOfTruth: false` for summaries, ranks, and context packages
 - disclosure-safe placeholders for local paths or sensitive roots when applicable
 
+Portable snapshot packages (Track C) are export-disclosure surfaces: they must redact absolute host
+paths, refuse path leakage, and remain explicitly non-canonical.
+
 ### Canonical evidence rules
 
 - Canonical evidence is always anchored to source evidence provenance.
@@ -69,12 +72,21 @@ normalizes:
 - Proprietary modules may add private artifacts, but they must not redefine Community provenance
   meanings.
 
+## Delivery
+
+| Concern                           | Enforcement                                                     |
+| --------------------------------- | --------------------------------------------------------------- |
+| Contract schemas and non-claims   | `src/projectIntelligence/contracts.js`, validators, fixtures    |
+| Reason codes for export/redaction | `REASON_CODES.EXPORT_DENIED`, `REDACTION_REQUIRED`, …           |
+| Portable package non-claims       | `exportPortableSnapshotPackage` / `openPortableSnapshotPackage` |
+| Contract tests                    | `runProjectIntelligenceContractTests`                           |
+
 ## Consequences
 
-- Later implementation packages can separate auditability from privacy and export concerns.
+- Auditability, privacy, and export disclosure remain separable threat models.
 - Security and testing work can target provenance spoofing, stale serving, and export leakage as
   distinct failure modes.
-- Community contract tests can enforce that derived retrieval or context layers never masquerade as
+- Community contract tests enforce that derived retrieval or context layers never masquerade as
   source evidence.
 
 ## Alternatives considered
