@@ -1,27 +1,28 @@
 ---
 Title: Next Release Checklist
-Description: Maintainer checklist for Community releases after the published 0.2.0-beta.3 cut and Track F freeze readiness.
+Description: Maintainer checklist for Community releases after the published 0.2.0-beta.4 cut. Full 0.2.0 remains owner-gated.
 Last Updated: 2026-07-25
 ---
 
 # Next release checklist (Community)
 
-Current package version on `main` (this prep cut): **0.2.0-beta.4**.
+Current package version on `main`: **0.2.0-beta.4** (published).
 
-Last closed prerelease before this prep: [`v0.2.0-beta.3`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.3)
-@ `f1b6f29…`. After beta.4 publishes, update the closed-cut table below.
+Last published prerelease: [`v0.2.0-beta.4`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4)
+@ `6a4789a…`. **Do not re-tag** beta.4.
 
 This checklist prepares Community releases. Tag/publish still require the Release
 `workflow_dispatch` after merge to `main`.
 
 **Track F freeze package:** [`freeze-readiness-0.2.0.md`](./freeze-readiness-0.2.0.md)  
-(preflight for freeze assessment; next non-beta cut remains owner-gated).
+(beta.4 shipped; next non-beta cut remains owner-gated).
 
 ## Recommended next version (after beta.4)
 
 | Candidate | When                                                        |
 | --------- | ----------------------------------------------------------- |
 | `0.2.0`   | Only after owner decision that beta surface is freeze-ready |
+| Hold      | Owner wants more soak or product work before non-beta       |
 
 ## Preflight (local)
 
@@ -62,10 +63,31 @@ npm run release:preflight -- --version <target-version>
 
 ## Owner gates (not automated)
 
-- [ ] Version number decision (beta.4 vs 0.2.0)
+- [ ] Version number decision (`0.2.0` vs hold)
 - [ ] Tag + publish authorization via `workflow_dispatch` Release on `main`
 - [ ] Commercial pin bump to the released Community SHA after the release commit is on `main`
 - [ ] Confirm beta.2 historical attestation exception is **not** reused
+- [ ] Confirm existing published tags (including beta.4) are **not** re-tagged
+
+## Closed cut: 0.2.0-beta.4 (2026-07-25)
+
+| Gate                    | Result                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------- |
+| Prep PR                 | [#258](https://github.com/gzeuner/zeus-rpg-promptkit/pull/258)                              |
+| Tool-catalog fix        | [#259](https://github.com/gzeuner/zeus-rpg-promptkit/pull/259)                              |
+| Tag / assets            | [`v0.2.0-beta.4`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4) |
+| Source SHA              | `6a4789a41e827bd82d97b54bb3346e3b4228b152`                                                  |
+| Assets                  | tarball + SBOM + SHA256SUMS + attestation                                                   |
+| Commercial pin          | commercial PR pins `6a4789a…`; `overrides.brace-expansion=5.0.8`                            |
+| beta.2 exception reused | **no**                                                                                      |
+
+### Notable delivered in 0.2.0-beta.4 (relative to beta.3)
+
+- Commercial host loader UX: `profile.commercial` (#254)
+- PI depth: portable snapshot export, corpora fixtures, embeddings default off (#255)
+- ADR-009…013 body hygiene (#256)
+- Freeze-readiness package + published status docs
+- Tool catalog regenerated for beta.4; version-agnostic catalog tests (#259)
 
 ## Closed cut: 0.2.0-beta.3 (2026-07-25)
 
@@ -75,7 +97,7 @@ npm run release:preflight -- --version <target-version>
 | Attestation verify fix  | [#252](https://github.com/gzeuner/zeus-rpg-promptkit/pull/252) (`--signer-workflow` only)   |
 | Tag / assets            | [`v0.2.0-beta.3`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.3) |
 | Source SHA              | `f1b6f29b73e59089c2873146f65f277663e38a4b`                                                  |
-| Commercial pin          | commercial main pins the same SHA; `overrides.brace-expansion=5.0.8`                        |
+| Commercial pin          | commercial main pinned that SHA; `overrides.brace-expansion=5.0.8`                          |
 | beta.2 exception reused | **no**                                                                                      |
 
 ### Notable delivered in 0.2.0-beta.3
@@ -86,16 +108,3 @@ npm run release:preflight -- --version <target-version>
 - Explicit commercial module host loader (`registerCommercialModules` / `createHostZeus`)
 - Docs alignment (DE/EN README, architecture index, ZPI closure status)
 - Hardened single-artifact release with checksum, SBOM, and build-provenance attestation
-
-### Closed cut: 0.2.0-beta.4 (2026-07-25) — fill after publish
-
-| Gate                    | Result                      |
-| ----------------------- | --------------------------- |
-| Prep PR                 | (this release prep PR)      |
-| Tag / assets            | pending `workflow_dispatch` |
-| Source SHA              | set after tag               |
-| Commercial pin          | re-pin after publish        |
-| beta.2 exception reused | **no**                      |
-
-Included relative to beta.3: #254 loader UX, #255 PI export/corpora/embeddings-off, #256 ADR hygiene,
-#253 status docs, freeze-readiness package.
