@@ -1,7 +1,7 @@
 ---
 Title: ZPI Closure Status
 Description: Final Zeus Project Intelligence delivery status, non-claims, pins, and gate evidence after ZPI-12.
-Last Updated: 2026-07-24
+Last Updated: 2026-07-25
 ---
 
 # Zeus Project Intelligence — Closure Status
@@ -9,6 +9,10 @@ Last Updated: 2026-07-24
 This document is the public Community closure status for the ZPI program (ZPI-01 through ZPI-12).
 It records delivered surfaces, explicit non-claims, and verification posture. It is **not** a
 product SLA, production certification, or live IBM i validation claim.
+
+**Shipped in public prerelease:** Community package **0.2.0-beta.3**
+([`v0.2.0-beta.3`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.3),
+source `f1b6f29b73e59089c2873146f65f277663e38a4b`).
 
 ## Program map
 
@@ -36,8 +40,12 @@ product SLA, production certification, or live IBM i validation claim.
 
 ## Commercial pin discipline
 
-Commercial pins an exact Community SHA. After ZPI-12 community merge, commercial must re-pin and
-re-run its full test suite before claiming compatibility.
+Commercial pins an exact Community SHA. After each Community merge that commercial depends on,
+commercial must re-pin **all** hardcoded pin locations (not only `package.json`), re-run its full
+test suite, and keep `npm run audit:prod` green before claiming compatibility.
+
+Current public beta.3 baseline pin used by the commercial package at release time:
+`f1b6f29b73e59089c2873146f65f277663e38a4b`.
 
 ## Non-claims (closed)
 
