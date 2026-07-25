@@ -128,7 +128,8 @@ test('attestation subject is the exact captured tarball', () => {
 test('canonical verification binds the expected repository', () => {
   assert.match(job('attest'), /gh attestation verify "\$TARBALL"/);
   assert.match(job('attest'), /--repo "\$GITHUB_REPOSITORY"/);
-  assert.match(job('attest'), /--signer-repo "\$GITHUB_REPOSITORY"/);
+  // signer-repo and signer-workflow are mutually exclusive in current gh CLI.
+  assert.doesNotMatch(job('attest'), /--signer-repo /);
 });
 
 test('canonical verification binds the expected signer workflow', () => {

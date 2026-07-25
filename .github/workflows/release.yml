@@ -344,9 +344,10 @@ jobs:
             RESULT_FILE=$(mktemp)
             ERROR_FILE=$(mktemp)
             set +e
+            # signer-repo and signer-workflow are mutually exclusive in current gh CLI.
+            # Prefer signer-workflow: it binds both repository and workflow path.
             gh attestation verify "$TARBALL" \
               --repo "$GITHUB_REPOSITORY" \
-              --signer-repo "$GITHUB_REPOSITORY" \
               --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
               --source-digest "$SOURCE_SHA" \
               --format json >"$RESULT_FILE" 2>"$ERROR_FILE"
