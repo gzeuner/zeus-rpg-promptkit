@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- architecture ADR-009…013 bodies aligned from “ZPI-01 documentation baseline” language to
+  **accepted + delivered** status, with delivery pointers and Track C notes (embeddings default off,
+  portable export); architecture index status table refreshed.
+
 ### Fixed
 
 ### Security

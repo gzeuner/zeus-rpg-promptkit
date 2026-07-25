@@ -1,20 +1,20 @@
 ---
 Title: ADR-012 Snapshots and Migrations
 Description: Immutable publication, current-pointer semantics, and Community-owned migration rules for Zeus Project Intelligence.
-Last Updated: 2026-07-22
+Last Updated: 2026-07-25
 ---
 
 # ADR-012: Snapshots and Migrations
 
-**Status:** Accepted for ZPI-01 documentation baseline
+**Status:** Accepted; snapshot / incremental engine delivered (ZPI-06)
 
 ## Context
 
 Zeus already uses manifests, reproducible artifacts, and versioned contracts. ZPI adds longer-lived
 project state that must survive rebuilds, reopen safely, and reject torn or stale generations.
 
-The term `snapshot` is already overloaded across Zeus. ZPI needs a tighter glossary and publication
-model before persistence code lands.
+The term `snapshot` is already overloaded across Zeus. ZPI needs a tight glossary and publication
+model so persistence code and commercial orchestration share one state machine.
 
 ## Decision
 
@@ -61,12 +61,26 @@ If source deletion, rename, corruption, or migration mismatch means a published 
 longer be treated as current, ZPI must surface that state explicitly through closed reason codes and
 lineage classes such as `STALE` or `INVALIDATED`.
 
+### Portable snapshot packaging
+
+A **portable snapshot package** (Track C) is a redacted offline export of a **published** snapshot
+for transfer or archive. It is not a second current pointer, not a mutable workspace, and not
+source of truth. Import/open validates schema and integrity and must fail closed on path leakage.
+
+## Delivery
+
+| Concern                           | Community location                                 |
+| --------------------------------- | -------------------------------------------------- |
+| Full rebuild / incremental update | `src/projectIntelligence/engine/snapshotEngine.js` |
+| Diff / invalidation planning      | `engine/diffPlanner.js`, `engine/invalidation.js`  |
+| Store migrations                  | `store/migrations.js`                              |
+| Portable export                   | `export/portableSnapshotPackage.js`                |
+
 ## Consequences
 
-- ZPI can support deterministic reopen, rebuild, and validation behavior without hiding torn state.
-- Later implementation packages have a clear separation between canonical published state and
-  transient build state.
-- Commercial incremental refresh work must converge on the same published-snapshot model rather than
+- Deterministic reopen, rebuild, and validation behavior does not hide torn state.
+- Canonical published state stays separate from transient build state.
+- Commercial incremental refresh must converge on the same published-snapshot model rather than
   inventing a parallel state machine.
 
 ## Alternatives considered
