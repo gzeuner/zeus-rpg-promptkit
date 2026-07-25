@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Security
+
+## [0.2.0-beta.4] - 2026-07-25
+
+Public Community beta after Tracks B–E on top of the beta.3 ZPI baseline.
+
+### Added
+
 - commercial host loader operator UX: explicit `profile.commercial` fields
   (`module`, `modules`, `licenseDocumentPath`, `publicKeyPath`) with precedence
   CLI → env → profile; no marketplace or auto-discovery (`createHostZeus` /
@@ -18,18 +30,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   multi-program corpora fixtures (`listCorpora` / `materializeCorpus`), and
   explicit embeddings policy default **off** (storage opt-in only; Community
   ranking remains lexical-only per ADR-010).
+- maintainer freeze-readiness package for a future `0.2.0` cut
+  (`docs/maintainers/freeze-readiness-0.2.0.md`).
 
 ### Changed
 
 - architecture ADR-009…013 bodies aligned from “ZPI-01 documentation baseline” language to
   **accepted + delivered** status, with delivery pointers and Track C notes (embeddings default off,
   portable export); architecture index status table refreshed.
-- maintainer freeze package for Track F: `docs/maintainers/freeze-readiness-0.2.0.md` + next-release
-  checklist pointer (preflight green; version/tag still owner-gated).
+- next-release checklist updated for post-beta.3 landings and freeze prep.
 
 ### Fixed
 
 ### Security
+
+- no Package 09 reopen; live IBM i remains out of Community product path
+- portable export continues to redact host paths and refuse path leakage
+- embeddings remain disabled by default (ADR-010)
+
+### Known Limitations (Beta)
+
+- type checking currently covers the declared core contract subset, not the complete JavaScript
+  repository;
+- some legacy `no-unused-vars` exceptions remain outside the hardened paths;
+- selected remote IBM i and Db2 behavior still requires environment-specific validation;
+- experimental surfaces remain experimental as documented;
+- Project Knowledge is not source of truth and does not compile, deploy, or execute live IBM i;
+- this prerelease is **not** a production certification of `0.2.0`.
 
 ## [0.2.0-beta.3] - 2026-07-25
 
