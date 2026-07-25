@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - architecture ADR-009…013 bodies aligned from “ZPI-01 documentation baseline” language to
   **accepted + delivered** status, with delivery pointers and Track C notes (embeddings default off,
   portable export); architecture index status table refreshed.
+- maintainer freeze package for Track F: `docs/maintainers/freeze-readiness-0.2.0.md` + next-release
+  checklist pointer (preflight green; version/tag still owner-gated).
 
 ### Fixed
 
