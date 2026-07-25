@@ -10,9 +10,11 @@ This document is the public Community closure status for the ZPI program (ZPI-01
 It records delivered surfaces, explicit non-claims, and verification posture. It is **not** a
 product SLA, production certification, or live IBM i validation claim.
 
-**Shipped in public prerelease:** Community package **0.2.0-beta.3**
-([`v0.2.0-beta.3`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.3),
-source `f1b6f29b73e59089c2873146f65f277663e38a4b`).
+**Shipped in public prerelease:** Community package **0.2.0-beta.4**
+([`v0.2.0-beta.4`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4)).
+ZPI Community baseline first shipped in
+[`v0.2.0-beta.3`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.3)
+(source `f1b6f29b73e59089c2873146f65f277663e38a4b`).
 
 ## Program map
 

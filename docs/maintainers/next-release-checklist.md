@@ -6,25 +6,22 @@ Last Updated: 2026-07-25
 
 # Next release checklist (Community)
 
-Current package version on `main`: **0.2.0-beta.3** (published as GitHub prerelease
-[`v0.2.0-beta.3`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.3),
-source tag target `f1b6f29b73e59089c2873146f65f277663e38a4b`).
+Current package version on `main` (this prep cut): **0.2.0-beta.4**.
 
-`main` tip (post-beta.3 Tracks B–E): verify with `git rev-parse HEAD` (assessed **2026-07-25** as
-`0e3c86b6a9a4124199bff6df5f3ba50ba983da34`).
+Last closed prerelease before this prep: [`v0.2.0-beta.3`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.3)
+@ `f1b6f29…`. After beta.4 publishes, update the closed-cut table below.
 
-This checklist prepares a **future** release. It does **not** create tags, publish npm packages, or
-bypass owner approval.
+This checklist prepares Community releases. Tag/publish still require the Release
+`workflow_dispatch` after merge to `main`.
 
 **Track F freeze package:** [`freeze-readiness-0.2.0.md`](./freeze-readiness-0.2.0.md)  
-(preflight green; version + tag still owner-gated).
+(preflight for freeze assessment; next non-beta cut remains owner-gated).
 
-## Recommended next version
+## Recommended next version (after beta.4)
 
-| Candidate      | When                                                        |
-| -------------- | ----------------------------------------------------------- |
-| `0.2.0-beta.4` | Incremental public beta if more surface lands before freeze |
-| `0.2.0`        | Only after owner decision that beta surface is freeze-ready |
+| Candidate | When                                                        |
+| --------- | ----------------------------------------------------------- |
+| `0.2.0`   | Only after owner decision that beta surface is freeze-ready |
 
 ## Preflight (local)
 
@@ -90,9 +87,15 @@ npm run release:preflight -- --version <target-version>
 - Docs alignment (DE/EN README, architecture index, ZPI closure status)
 - Hardened single-artifact release with checksum, SBOM, and build-provenance attestation
 
-### Landed on `main` after beta.3 (not yet in a release cut)
+### Closed cut: 0.2.0-beta.4 (2026-07-25) — fill after publish
 
-- #254 — `profile.commercial` loader operator UX
-- #255 — PI portable export, corpora, embeddings default off
-- #256 — ADR-009…013 delivered-status hygiene
-- #253 — published beta.3 status docs (already post-tag on main)
+| Gate                    | Result                      |
+| ----------------------- | --------------------------- |
+| Prep PR                 | (this release prep PR)      |
+| Tag / assets            | pending `workflow_dispatch` |
+| Source SHA              | set after tag               |
+| Commercial pin          | re-pin after publish        |
+| beta.2 exception reused | **no**                      |
+
+Included relative to beta.3: #254 loader UX, #255 PI export/corpora/embeddings-off, #256 ADR hygiene,
+#253 status docs, freeze-readiness package.
