@@ -7,8 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Release prep notes for the next public cut after ZPI delivery. Version number is **not** bumped
-until owner decision (see [`docs/maintainers/next-release-checklist.md`](docs/maintainers/next-release-checklist.md)).
+### Added
+
+### Changed
+
+### Fixed
+
+### Security
+
+## [0.2.0-beta.3] - 2026-07-25
+
+Public Community beta after Zeus Project Intelligence (ZPI) delivery and the commercial host loader.
 
 ### Added
 
@@ -18,7 +27,9 @@ until owner decision (see [`docs/maintainers/next-release-checklist.md`](docs/ma
   with commercial capability present/absent behavior;
 - explicit commercial module host loader (`createHostZeus` / `registerCommercialModules`) for
   operator-configured package path or name — no auto-discovery and no paid handlers in Community;
-- ZPI hardening and benchmark evidence suites; public closure status documentation.
+- ZPI hardening and benchmark evidence suites; public closure status documentation
+  (`docs/knowledgebase/zpi-closure-status.md`);
+- maintainer next-release checklist after beta.2.
 
 ### Changed
 
@@ -28,7 +39,20 @@ until owner decision (see [`docs/maintainers/next-release-checklist.md`](docs/ma
 ### Security
 
 - commercial loader fails closed on missing path/entry; absolute paths redacted in loader results;
-- Project Intelligence non-claims and trusted-root policy remain fail-closed.
+- Project Intelligence non-claims and trusted-root policy remain fail-closed;
+- future releases continue to require single-artifact build, checksum, SBOM, and build-provenance
+  attestation (beta.2 historical attestation exception is **not** reused);
+- production dependency tree pins `brace-expansion@5.0.8` (GHSA-mh99-v99m-4gvg; DoS via unbounded
+  expansion).
+
+### Known Limitations (Beta)
+
+- type checking currently covers the declared core contract subset, not the complete JavaScript
+  repository;
+- some legacy `no-unused-vars` exceptions remain outside the hardened paths;
+- selected remote IBM i and Db2 behavior still requires environment-specific validation;
+- experimental surfaces remain experimental as documented;
+- Project Knowledge is not source of truth and does not compile, deploy, or execute live IBM i.
 
 ## [0.2.0-beta.2] - 2026-07-12
 
