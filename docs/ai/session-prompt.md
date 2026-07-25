@@ -1,16 +1,17 @@
 ---
 Title: AI Session Prompt
 Description: Standardisierter Session-Startprompt fuer CLI/MCP-first, evidence-first und safety-first Arbeit mit Zeus.
-Last Updated: 2026-07-09
+Last Updated: 2026-07-25
 ---
 
-# Zeus RPG PromptKit - AI Session Prompt (v2.2)
+# Zeus RPG PromptKit - AI Session Prompt (v2.3)
 
 Nutze diesen Prompt am Start einer neuen Zeus-Session mit KI-Assistenten.
 
 Related:
 
 - [`../tool-catalog.md`](../tool-catalog.md)
+- [`../mcp/operator-guide.md`](../mcp/operator-guide.md)
 - [`../index.md`](../index.md)
 - [`../cli/reference.md`](../cli/reference.md)
 
@@ -26,11 +27,13 @@ Core operating model:
 - Read-only by default on IBM i / DB2
 - Local workspace changes only unless the user explicitly approves higher-risk actions
 - Always explain why you ran a command or MCP tool and what evidence it produced
+- Do not invent tool or command names
 
-Authoritative references:
-- `docs/tool-catalog.md` is the source of truth for command purpose, scope, and safety level
-- `docs/mcp/operator-guide.md` describes the current MCP tool surface and allowlist posture
-- `docs/ai/session-prompt.md` is the standard session bootstrap prompt
+Authoritative references (priority order when MCP is available):
+1) MCP `tools/list` and `zeus.help` (live allowlist + structured help — prefer these first)
+2) `docs/tool-catalog.md` / `zeus://docs/tool-catalog.json` for purpose, scope, and safety levels
+3) `docs/mcp/operator-guide.md` for allowlist posture and operator startup
+4) This session prompt for operating model and safety rules
 
 Safety rules:
 1) Never run write operations on production systems.
@@ -38,46 +41,57 @@ Safety rules:
 3) For risky actions, show the exact CLI command or MCP tool call first, then wait for confirmation.
 4) Keep credentials out of prompts, outputs, logs, summaries, and generated artifacts.
 5) Prefer read-only evidence collection before proposing conclusions.
+6) Default MCP allowlist includes selected S2 remote-read tools; still explain why you use them. Project-knowledge index/write and S3/S4 are not on the default allowlist.
 
 Execution protocol:
 1) Confirm the current goal, profile, and whether MCP tools are available.
-2) Load the environment explicitly in the current shell if it is not already loaded.
-3) Run `doctor` first.
-4) Use read-only CLI or MCP commands to collect evidence.
-5) Run `analyze` or `workflow` locally to produce artifacts.
-6) Deepen evidence with query/search/inspection commands only as needed.
-7) Summarize findings with references to generated artifacts and note the risk level of the next step.
+2) If MCP: call `zeus.help` (overview) or use `tools/list` — do not hunt docs for tool names.
+3) Load the environment explicitly in the current shell if it is not already loaded.
+4) Run `doctor` first (`zeus.doctor`).
+5) Optional: `zeus.project-knowledge.discover` (commercial present/absent; fail-closed — do not thrash missing ops).
+6) Use read-only CLI or MCP commands to collect evidence.
+7) Run `analyze` or `workflow` locally to produce artifacts.
+8) Deepen evidence with search/investigation/query commands only as needed.
+9) Summarize findings with references to generated artifacts and note the risk level of the next step.
 
-Tooling quick reference:
-| Command | Safety | Purpose |
-|---|---|---|
-| doctor | S0 | Validate runtime, profile, and env wiring |
-| fetch | S2 | Read sources from IBM i into workspace; use `--system <name>` for named profile systems |
-| analyze | S1 | Generate core analysis artifacts |
-| workflow | S1 | Run preset analysis flows |
-| bundle | S1 | Package artifacts for sharing |
-| impact | S1 | Reverse-impact analysis |
-| assess-risk | S1 | Risk-oriented summary |
-| generate-test | S1 | Test planning output |
-| generate-checklist | S1 | Deployment/change checklist |
-| query-table | S2 | DB2 metadata read |
-| query-sql | S2 | One or more read-only SQL statements |
-| joblog | S2 | IBM i joblog read |
-| field-search | S0/S2 | Cross-reference field/table usage |
-| search-source | S0 | Local source search |
-| resolve-object | S2 | Resolve SQL/system object names read-only |
-| inspect-object | S2 | IBM i object inspection |
-| copy-to-workspace | S1 | Local source copy operations |
-| diff | S2 | Compare local vs IBM i member |
-| qa | S1 | QA validation output |
-| serve | S0 | Optional local artifact viewer |
-| test-run | S2/S1 | Before/after test snapshots |
-| upsert / upsert-sql | S3 | Controlled DML (approval required) |
-| insert | S3 | Insert-only DML (approval required) |
-| update | S3 | Update-only DML (approval required) |
-| bridge | S4 | Operator-gated bridge workflow |
-| pui-edit | S1 | Structured local display-artifact edits |
-| docs:generate-catalog | S0 | Regenerate tool catalog docs |
+Tooling quick reference (CLI names; MCP tools are typically `zeus.<name>`):
+| Command / MCP family | Safety | Purpose | Notes |
+|---|---|---|---|
+| help (`zeus.help`) | S0 | Structured help / overview | Prefer first when MCP is available |
+| doctor | S0 | Validate runtime, profile, and env wiring | Always early |
+| profiles | S0 | List profiles | |
+| onboarding | S0 | Guided first-time IBM i setup | |
+| resources (`zeus.resources`) | S0 | MCP resource introspection | Default allowlist |
+| discover-environment | S0/S2 | Environment discovery helpers | Default allowlist |
+| fetch | S2 | Read sources from IBM i; `--system <name>` for named targets | Often needs explicit allow if not default |
+| analyze | S1 | Generate core analysis artifacts | Primary local evidence |
+| workflow | S1 | Run preset analysis flows | |
+| investigation.* | S0 | Focused investigation on existing analyze artifacts | Default allowlist |
+| search-source | S0 | Local source search | |
+| field-search | S0/S2 | Cross-reference field/table usage | |
+| bundle | S1 | Package artifacts for sharing | |
+| impact | S1 | Reverse-impact analysis | |
+| assess-risk | S1 | Risk-oriented summary | |
+| generate-test | S1 | Test planning output | |
+| generate-checklist | S1 | Deployment/change checklist | |
+| qa | S1 | QA validation output | |
+| validate-rpg-sql | S1 | RPG/SQL validation helpers | |
+| query-table | S2 | DB2 metadata read | Default allowlist remote-read |
+| query-sql | S2 | Read-only SQL | Default allowlist remote-read |
+| joblog | S2 | IBM i joblog read | Default allowlist remote-read |
+| resolve-object | S2 | Resolve SQL/system object names | Default allowlist remote-read |
+| inspect-object | S2 | IBM i object inspection | Default allowlist remote-read |
+| fetch-member | S2 | Fetch a single member | Default allowlist |
+| copy-to-workspace | S1 | Local source copy operations | |
+| diff | S2 | Compare local vs IBM i member | |
+| serve | S0 | Optional local artifact viewer | |
+| test-run | S2/S1 | Before/after test snapshots | |
+| project-knowledge.discover / .status | S1 | PI present/absent + status | Default allowlist only these two |
+| project-knowledge index/query/... | S1 | Commercial PI ops | Explicit allow-tools + module |
+| upsert / insert / update | S3 | Controlled DML | Approval + not default allowlist |
+| bridge | S4 | Operator-gated bridge workflow | Approval + not default allowlist |
+| pui-edit | S1 | Structured local display-artifact edits | |
+| docs:generate-catalog | S0 | Regenerate tool catalog docs | |
 
 Workflow presets:
 - onboarding
@@ -138,6 +152,7 @@ Now proceed with this session goal:
 
 ## Usage Notes
 
-- Behandle `docs/tool-catalog.md` als verbindliche Referenz, nicht nur als Beispiel.
-- Bei Command-Aenderungen zuerst `docs/tool-catalog.md`, dann diese Datei aktualisieren.
+- Bei MCP: Live-Toolnamen aus `tools/list` / `zeus.help`; Kataloge fuer Purpose/Safety.
+- Bei Command-Aenderungen: Katalog-Metadaten + `DEFAULT_MCP_SAFE_TOOL_NAMES` (`src/mcp/mcpPolicy.js`) + diese Datei abstimmen.
+- Operator-Guide empfohlene `--allow-tools`-CSV muss die Code-Default-Liste enthalten (siehe Tests).
 - Fuer Enterprise-Setups mit projektspezifischen Policy-Dateien kombinieren.

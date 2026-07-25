@@ -41,6 +41,16 @@ const DEFAULT_MCP_SAFE_TOOL_NAMES = Object.freeze([
   'zeus.project-knowledge.status',
 ]);
 
+/**
+ * Comma-separated default safe tool list for docs and operator examples.
+ * Keep operator-guide recommended --allow-tools in sync with this (see tests).
+ * @returns {string}
+ */
+function formatDefaultMcpAllowToolsCsv() {
+  return DEFAULT_MCP_SAFE_TOOL_NAMES.join(',');
+}
+
 module.exports = {
   DEFAULT_MCP_SAFE_TOOL_NAMES,
+  formatDefaultMcpAllowToolsCsv,
 };
