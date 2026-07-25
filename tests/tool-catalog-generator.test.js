@@ -24,6 +24,7 @@ const {
 } = require('../src/docs/toolCatalogMetadata');
 
 const projectRoot = path.resolve(__dirname, '..');
+const packageIdentity = require(path.join(projectRoot, 'package.json'));
 
 function sha256(content) {
   return crypto.createHash('sha256').update(content).digest('hex');
@@ -43,7 +44,10 @@ test('catalog model is deterministic and preserves the public command contracts'
   const second = buildCatalogModel({ repoRoot: projectRoot, env: {} });
   assert.deepEqual(first, second);
   assert.equal(first.generatedAt, '2026-07-25T00:00:00.000Z');
-  assert.deepEqual(first.package, { name: 'zeus-rpg-promptkit', version: '0.2.0-beta.3' });
+  assert.deepEqual(first.package, {
+    name: 'zeus-rpg-promptkit',
+    version: packageIdentity.version,
+  });
 
   const investigate = first.commandRows.find(entry => entry.command === 'investigate');
   assert.deepEqual(investigate.aliases, ['investigation']);
@@ -114,7 +118,7 @@ test('release-date fallback rejects calendar dates that JavaScript would normali
   try {
     fs.writeFileSync(
       path.join(root, 'CHANGELOG.md'),
-      '# Changelog\n\n## [0.2.0-beta.3] - 2026-02-30\n',
+      `# Changelog\n\n## [${packageIdentity.version}] - 2026-02-30\n`,
       'utf8'
     );
     assert.throws(() => resolveGeneratedAt(root, {}), /invalid release date/);
