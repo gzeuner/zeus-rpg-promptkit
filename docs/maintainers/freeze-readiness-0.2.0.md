@@ -16,19 +16,19 @@ version, or dispatch the Release workflow. Those remain **owner gates**.
 
 ## Status after beta.4
 
-| Item | State |
-| ---- | ----- |
-| `v0.2.0-beta.4` | **Published** (prerelease; tarball + SBOM + SHA256SUMS + attestation) |
-| Tag / tip SHA | `6a4789a41e827bd82d97b54bb3346e3b4228b152` — **do not re-tag** |
-| Commercial pin | re-pin PR targets this SHA (commercial repo) |
-| Full non-beta `0.2.0` | **still owner-gated** |
+| Item                  | State                                                                 |
+| --------------------- | --------------------------------------------------------------------- |
+| `v0.2.0-beta.4`       | **Published** (prerelease; tarball + SBOM + SHA256SUMS + attestation) |
+| Tag / tip SHA         | `6a4789a41e827bd82d97b54bb3346e3b4228b152` — **do not re-tag**        |
+| Commercial pin        | re-pin PR targets this SHA (commercial repo)                          |
+| Full non-beta `0.2.0` | **still owner-gated**                                                 |
 
 ## Recommendation (next cut)
 
-| Option | When |
-| ------ | ---- |
-| **Cut `0.2.0`** | Owner accepts post-beta.4 surface as freeze-ready |
-| **Hold** | Owner wants more product work or soak before non-beta |
+| Option          | When                                                  |
+| --------------- | ----------------------------------------------------- |
+| **Cut `0.2.0`** | Owner accepts post-beta.4 surface as freeze-ready     |
+| **Hold**        | Owner wants more product work or soak before non-beta |
 
 **Agent assessment:** beta.4 is shipped. Product freeze for non-beta `0.2.0` remains an **owner**
 decision (scope, messaging, support expectations). `0.2.0` is still not “production certification”
@@ -36,33 +36,33 @@ unless the owner separately asserts that bar.
 
 ## Delta since `v0.2.0-beta.3` (included in beta.4)
 
-| Area | PRs / commits | Notes |
-| ---- | ------------- | ----- |
-| Published status docs | #253 | README / checklist after beta.3 |
-| Commercial host loader UX | #254 | `profile.commercial` (CLI → env → profile) |
-| PI depth (Track C) | #255 | portable snapshot export, corpora, embeddings default off |
-| ADR hygiene (Track E) | #256 | ADR-009…013 accepted + delivered language |
-| Release prep beta.4 | #258 | version / CHANGELOG / release notes |
-| Tool catalog fix | #259 | catalog regenerated; version-agnostic tests |
+| Area                      | PRs / commits | Notes                                                     |
+| ------------------------- | ------------- | --------------------------------------------------------- |
+| Published status docs     | #253          | README / checklist after beta.3                           |
+| Commercial host loader UX | #254          | `profile.commercial` (CLI → env → profile)                |
+| PI depth (Track C)        | #255          | portable snapshot export, corpora, embeddings default off |
+| ADR hygiene (Track E)     | #256          | ADR-009…013 accepted + delivered language                 |
+| Release prep beta.4       | #258          | version / CHANGELOG / release notes                       |
+| Tool catalog fix          | #259          | catalog regenerated; version-agnostic tests               |
 
 No Package 09 reopen. No paid code in Community. No live IBM i default path.
 
 ## Preflight results (2026-07-25, local — pre beta.4 cut)
 
-| Gate | Result |
-| ---- | ------ |
-| `npm run format:check` | pass |
-| `npm run lint` | pass |
-| `npm run typecheck` | pass |
-| `npm run test:discovery` | pass (145 files classified) |
-| `npm test` | pass |
-| `npm run test:benchmark` | pass (evidence only) |
-| `npm run check:public-knowledge-claims` | pass |
-| `npm run docs:check` | pass |
-| `npm run check:repo-portability` | pass |
-| `npm run test:release-integrity` | pass |
-| `npm run package:smoke` | pass |
-| `npm audit --omit=dev --audit-level=high` | 0 vulnerabilities |
+| Gate                                      | Result                      |
+| ----------------------------------------- | --------------------------- |
+| `npm run format:check`                    | pass                        |
+| `npm run lint`                            | pass                        |
+| `npm run typecheck`                       | pass                        |
+| `npm run test:discovery`                  | pass (145 files classified) |
+| `npm test`                                | pass                        |
+| `npm run test:benchmark`                  | pass (evidence only)        |
+| `npm run check:public-knowledge-claims`   | pass                        |
+| `npm run docs:check`                      | pass                        |
+| `npm run check:repo-portability`          | pass                        |
+| `npm run test:release-integrity`          | pass                        |
+| `npm run package:smoke`                   | pass                        |
+| `npm audit --omit=dev --audit-level=high` | 0 vulnerabilities           |
 
 Re-run the full gate set on `main` before any future cut.
 
