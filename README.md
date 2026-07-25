@@ -184,10 +184,17 @@ Loader. Kernverträge stabilisieren sich, einzelne Oberflächen bleiben experime
 GitHub-Release-Notes und im CHANGELOG. Vor produktiver Nutzung von Artefakten lokal
 `npm run docs:check` und `npm run package:smoke` ausführen sowie den Golden-Path beachten.
 
-Beta.3 nutzt den gehärteten Single-Artifact-Release-Workflow (Checksumme, SBOM und
-Build-Provenance-Attestation). Die historische Attestations-Ausnahme von Beta.2 gilt **nicht** für
-dieses Release. Policy:
+Veröffentlichte Prerelease-Assets: [`v0.2.0-beta.3`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.3)
+(Tarball, SBOM, SHA256SUMS, Build-Provenance-Attestation). Beta.3 nutzt den gehärteten
+Single-Artifact-Release-Workflow. Die historische Attestations-Ausnahme von Beta.2 gilt **nicht**
+für dieses Release. Policy:
 [`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
+
+Empfohlene Installation vom GitHub-Release-Tarball:
+
+```bash
+npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.2.0-beta.3/zeus-rpg-promptkit-0.2.0-beta.3.tgz
+```
 
 ### Golden Corpus und Qualitätsmetriken
 
@@ -783,6 +790,25 @@ Key guardrails:
 - optional: IBM i access for fetch, discovery, or Db2 workflows
 
 ### Install and run
+
+**Beta status (0.2.0-beta.3):** prerelease after Project Intelligence delivery and the commercial host
+loader. Core contracts are stabilizing; some surfaces remain experimental. Details:
+[release notes](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.3) and
+`CHANGELOG.md`. Before relying on artifacts locally, run `npm run docs:check` and
+`npm run package:smoke` and follow the golden path.
+
+Published prerelease assets (tarball, SBOM, SHA256SUMS, build-provenance attestation):
+[`v0.2.0-beta.3`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.3).
+The beta.2 historical attestation exception does **not** apply. Policy:
+[`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
+
+Recommended install from the GitHub release tarball:
+
+```bash
+npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.2.0-beta.3/zeus-rpg-promptkit-0.2.0-beta.3.tgz
+```
+
+From a source checkout:
 
 ```bash
 git clone https://github.com/gzeuner/zeus-rpg-promptkit.git

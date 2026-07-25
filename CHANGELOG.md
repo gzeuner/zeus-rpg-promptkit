@@ -36,12 +36,17 @@ Public Community beta after Zeus Project Intelligence (ZPI) delivery and the com
 - README German/English sections aligned with shipped module registrar and ZPI delivery status;
 - architecture ADR index status notes for delivered ZPI surfaces.
 
+### Fixed
+
+- release workflow attestation verification uses only `--signer-workflow` (current `gh attestation
+verify` rejects combining it with `--signer-repo`).
+
 ### Security
 
 - commercial loader fails closed on missing path/entry; absolute paths redacted in loader results;
 - Project Intelligence non-claims and trusted-root policy remain fail-closed;
-- future releases continue to require single-artifact build, checksum, SBOM, and build-provenance
-  attestation (beta.2 historical attestation exception is **not** reused);
+- published under the hardened single-artifact release workflow with checksum, SBOM, and
+  build-provenance attestation (beta.2 historical attestation exception is **not** reused);
 - production dependency tree pins `brace-expansion@5.0.8` (GHSA-mh99-v99m-4gvg; DoS via unbounded
   expansion).
 
