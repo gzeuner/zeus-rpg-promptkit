@@ -7,12 +7,15 @@ const os = require('os');
 const path = require('path');
 const {
   LOADER_REASON_CODES,
+  COMMERCIAL_CONFIG_SOURCES,
   resolveCommercialModuleConfig,
+  extractCommercialFromProfile,
   registerCommercialModules,
   createHostZeus,
   requireCommercialPackage,
 } = require('../src/modules/commercialModuleLoader');
 const { createZeus } = require('../src/api/zeusApi');
+const { validateProfiles } = require('../src/config/runtimeConfig');
 
 test('not configured returns ok without loading', async () => {
   const zeus = createZeus();
@@ -131,4 +134,111 @@ test('requireCommercialPackage redacts absolute paths on failure', () => {
   const result = requireCommercialPackage(path.join(os.tmpdir(), 'nope-module'));
   assert.equal(result.ok, false);
   assert.equal(result.resolved, '<redacted-path>');
+});
+
+test('extractCommercialFromProfile reads explicit commercial fields only', () => {
+  const extracted = extractCommercialFromProfile({
+    commercial: {
+      module: './vendor/comm',
+      modules: ['project-intelligence', 'reference'],
+      licenseDocumentPath: './.local/license.json',
+      publicKeyPath: './.local/public.pem',
+    },
+  });
+  assert.equal(extracted.module, './vendor/comm');
+  assert.deepEqual(extracted.modules, ['project-intelligence', 'reference']);
+  assert.equal(extracted.licenseDocumentPath, './.local/license.json');
+  assert.equal(extracted.publicKeyPath, './.local/public.pem');
+});
+
+test('resolveCommercialModuleConfig precedence: options > env > profile', () => {
+  const profile = {
+    commercial: {
+      module: 'from-profile',
+      modules: ['profile-mod'],
+    },
+  };
+  const fromProfile = resolveCommercialModuleConfig({ profile, env: {} }, {});
+  assert.equal(fromProfile.spec, 'from-profile');
+  assert.equal(fromProfile.specSource, COMMERCIAL_CONFIG_SOURCES.PROFILE);
+  assert.deepEqual(fromProfile.modules, ['profile-mod']);
+
+  const fromEnv = resolveCommercialModuleConfig(
+    { profile },
+    { ZEUS_COMMERCIAL_MODULE: 'from-env', ZEUS_COMMERCIAL_MODULES: 'env-mod' }
+  );
+  assert.equal(fromEnv.spec, 'from-env');
+  assert.equal(fromEnv.specSource, COMMERCIAL_CONFIG_SOURCES.ENV);
+  assert.deepEqual(fromEnv.modules, ['env-mod']);
+
+  const fromOptions = resolveCommercialModuleConfig(
+    {
+      profile,
+      args: { 'commercial-module': 'from-cli' },
+    },
+    { ZEUS_COMMERCIAL_MODULE: 'from-env' }
+  );
+  assert.equal(fromOptions.spec, 'from-cli');
+  assert.equal(fromOptions.specSource, COMMERCIAL_CONFIG_SOURCES.OPTIONS);
+});
+
+test('registerCommercialModules loads from profile.commercial.module', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-comm-profile-'));
+  const pkgDir = path.join(root, 'pkg');
+  fs.mkdirSync(pkgDir);
+  fs.writeFileSync(
+    path.join(pkgDir, 'package.json'),
+    JSON.stringify({ name: 'fake-mod-profile', main: 'index.js' })
+  );
+  fs.writeFileSync(
+    path.join(pkgDir, 'index.js'),
+    `'use strict';
+async function registerWithZeus(zeus) {
+  return { ok: true, modules: ['from-profile'] };
+}
+module.exports = { registerWithZeus };
+`
+  );
+
+  const zeus = createZeus();
+  const result = await registerCommercialModules(zeus, {
+    profile: { commercial: { module: pkgDir, modules: ['from-profile'] } },
+    env: {},
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.loaded, true);
+  assert.equal(result.configSource, COMMERCIAL_CONFIG_SOURCES.PROFILE);
+  assert.equal(result.registration.modules[0], 'from-profile');
+  assert.equal(/[A-Za-z]:\\/.test(JSON.stringify(result)), false);
+
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('validateProfiles rejects discovery-like commercial keys', () => {
+  assert.throws(
+    () =>
+      validateProfiles({
+        demo: {
+          commercial: { module: 'x', marketplaceUrl: 'https://evil' },
+        },
+      }),
+    /not allowed/
+  );
+});
+
+test('validateProfiles accepts profile.commercial block', () => {
+  assert.doesNotThrow(() =>
+    validateProfiles({
+      demo: {
+        outputRoot: 'analysis',
+        commercial: {
+          module: 'some-package',
+          modules: ['project-intelligence'],
+          licenseDocumentPath: '${env:ZEUS_LICENSE_DOCUMENT_PATH}',
+          publicKeyPath: '${env:ZEUS_LICENSE_PUBLIC_KEY_PATH}',
+          _comment: 'ok',
+        },
+      },
+    })
+  );
 });

@@ -83,6 +83,27 @@ function describeProfileEntry(name, profile) {
     const sourceLib = fetch.sourceLib || fetch.sourceLibrary || '(keine Source-Library)';
     lines.push(`    Fetch:       ${describeConnectionTarget(fetch)}  SourceLib=${sourceLib}`);
   }
+  const commercial = profile.commercial;
+  if (commercial && typeof commercial === 'object') {
+    const moduleSpec =
+      commercial.module || commercial.modulePath || commercial.package || '(nicht gesetzt)';
+    const looksLikePath =
+      typeof moduleSpec === 'string' &&
+      (moduleSpec.includes('/') || moduleSpec.includes('\\') || /^[A-Za-z]:/.test(moduleSpec));
+    const moduleDisplay =
+      looksLikePath && !String(moduleSpec).startsWith('${env:')
+        ? '<redacted-path>'
+        : String(moduleSpec);
+    const modules = Array.isArray(commercial.modules)
+      ? commercial.modules.join(',')
+      : commercial.modules || '(default)';
+    const hasLicense = Boolean(
+      commercial.licenseDocumentPath || commercial.licensePath || commercial.publicKeyPath
+    );
+    lines.push(
+      `    Commercial:  module=${moduleDisplay}  modules=${modules}  licensePaths=${hasLicense ? 'configured' : 'none'}`
+    );
+  }
   return lines.join('\n');
 }
 

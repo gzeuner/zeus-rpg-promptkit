@@ -68,6 +68,13 @@
     "analysesRegistryPath": "${env:ZEUS_ANALYSES_REGISTRY}",
     "defaultWorkspaceRoot": "${env:ZEUS_ANALYSES_ROOT}",
     "extensions": [".rpgle", ".sqlrpgle", ".clle", ".clp", ".dds", ".pf", ".lf", ".bnd", ".cpy"],
+    "commercial": {
+      "_comment": "Optional explicit commercial host loader (ADR-006). No auto-discovery. Unset = Community-only. Prefer env placeholders; never commit real license files. CLI --commercial-module and ZEUS_COMMERCIAL_MODULE override this block.",
+      "module": "${env:ZEUS_COMMERCIAL_MODULE}",
+      "modules": ["project-intelligence"],
+      "licenseDocumentPath": "${env:ZEUS_LICENSE_DOCUMENT_PATH}",
+      "publicKeyPath": "${env:ZEUS_LICENSE_PUBLIC_KEY_PATH}"
+    },
     "db": {
       "host": "${env:ZEUS_DB_HOST}",
       "url": "${env:ZEUS_DB_URL}",

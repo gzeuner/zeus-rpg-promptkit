@@ -78,10 +78,10 @@ function printMcpHelp() {
     '  - Use --allow-tools to further restrict or customize (e.g. for minimal agent exposure). Dangerous tools (write-sql, bridge) are never in defaults.'
   );
   console.log(
-    '  - Optional commercial module: --commercial-module or ZEUS_COMMERCIAL_MODULE (explicit package/path only; no auto-discovery).'
+    '  - Optional commercial module (explicit only): --commercial-module | ZEUS_COMMERCIAL_MODULE | profile.commercial.module with --profile (no auto-discovery).'
   );
   console.log(
-    '  - Entitlement files for commercial packages: ZEUS_LICENSE_DOCUMENT_PATH and ZEUS_LICENSE_PUBLIC_KEY_PATH.'
+    '  - Entitlement files: ZEUS_LICENSE_* env or profile.commercial.licenseDocumentPath / publicKeyPath.'
   );
   console.log('  - Runs local-only over stdio transport.');
   console.log('  - Local path inputs are workspace-bounded, including absolute paths.');

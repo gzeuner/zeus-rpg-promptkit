@@ -219,7 +219,7 @@ function printHelp() {
     '  zeus project-knowledge <discover|status|create-project|full-index|query|...> [options] [--json]  # thin PI adapter; commercial ops when registered'
   );
   console.log(
-    '  Global commercial wiring (optional, explicit only): --commercial-module <package-or-path>  # or ZEUS_COMMERCIAL_MODULE'
+    '  Global commercial wiring (optional, explicit only): --commercial-module <package-or-path>  # or ZEUS_COMMERCIAL_MODULE or profile.commercial.module with --profile'
   );
   console.log(
     '    Entitlement files for commercial packages: ZEUS_LICENSE_DOCUMENT_PATH + ZEUS_LICENSE_PUBLIC_KEY_PATH'

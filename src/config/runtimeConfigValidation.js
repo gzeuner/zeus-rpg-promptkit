@@ -505,6 +505,48 @@ function validateRuntimeContextConfig(value, label) {
   }
 }
 
+/**
+ * Explicit commercial host loader wiring on a profile (ADR-006).
+ * Only operator-supplied package/path fields — no marketplace or discovery keys.
+ */
+function validateCommercialProfile(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+  const allowed = new Set([
+    'module',
+    'modulePath',
+    'package',
+    'modules',
+    'licenseDocumentPath',
+    'licensePath',
+    'publicKeyPath',
+    'publicKeyPemPath',
+    '_comment',
+  ]);
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) {
+      failValidation(
+        `${label}.${key} is not allowed (explicit commercial fields only: module, modules, licenseDocumentPath, publicKeyPath)`
+      );
+    }
+  }
+  assertOptionalString(value.module, `${label}.module`);
+  assertOptionalString(value.modulePath, `${label}.modulePath`);
+  assertOptionalString(value.package, `${label}.package`);
+  if (value.modules !== undefined) {
+    if (typeof value.modules === 'string') {
+      // comma-separated list accepted; resolved by commercial loader
+    } else {
+      assertStringArray(value.modules, `${label}.modules`);
+    }
+  }
+  assertOptionalString(value.licenseDocumentPath, `${label}.licenseDocumentPath`);
+  assertOptionalString(value.licensePath, `${label}.licensePath`);
+  assertOptionalString(value.publicKeyPath, `${label}.publicKeyPath`);
+  assertOptionalString(value.publicKeyPemPath, `${label}.publicKeyPemPath`);
+}
+
 function validateNamedProfile(profile, label) {
   if (!isPlainObject(profile)) {
     failValidation(`${label} must be an object`);
@@ -556,6 +598,9 @@ function validateNamedProfile(profile, label) {
   }
   if (profile.runtimeContext !== undefined) {
     validateRuntimeContextConfig(profile.runtimeContext, `${label}.runtimeContext`);
+  }
+  if (profile.commercial !== undefined) {
+    validateCommercialProfile(profile.commercial, `${label}.commercial`);
   }
   if (profile.productionSystem !== undefined && typeof profile.productionSystem !== 'boolean') {
     failValidation(`${label}.productionSystem must be a boolean`);
@@ -647,6 +692,7 @@ function validateBundleConfig(config) {
 module.exports = {
   validateAnalyzeConfig,
   validateBundleConfig,
+  validateCommercialProfile,
   validateFetchConfig,
   validateProfiles,
   validateResourcesConfig,
