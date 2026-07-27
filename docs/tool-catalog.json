@@ -813,6 +813,22 @@
       "example": "node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status"
     },
     {
+      "command": "tools",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S0",
+      "scope": "Local",
+      "sideEffects": [],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "purpose": "List and describe canonical command-help records as stable JSON for CLI and MCP parity.",
+      "example": "node cli/zeus.js tools list --json"
+    },
+    {
       "command": "project-knowledge",
       "aliases": [
         "project-intelligence"

@@ -1,12 +1,12 @@
 ---
 Title: AI Session Prompt
-Description: Standardisierter Session-Startprompt fuer CLI/MCP-first, evidence-first und safety-first Arbeit mit Zeus.
-Last Updated: 2026-07-25
+Description: Standardized session-start prompt for CLI/MCP-first, evidence-first, and safety-first work with Zeus.
+Last Updated: 2026-07-27
 ---
 
-# Zeus RPG PromptKit - AI Session Prompt (v2.3)
+# Zeus RPG PromptKit - AI Session Prompt (v2.4)
 
-Nutze diesen Prompt am Start einer neuen Zeus-Session mit KI-Assistenten.
+Use this prompt at the start of a new Zeus session with an AI assistant.
 
 Related:
 
@@ -30,7 +30,7 @@ Core operating model:
 - Do not invent tool or command names
 
 Authoritative references (priority order when MCP is available):
-1) MCP `tools/list` and `zeus.help` (live allowlist + structured help — prefer these first)
+1) MCP `tools/list`, `zeus.agent.bootstrap`, and `zeus.help` (live allowlist + structured help - prefer these first)
 2) `docs/tool-catalog.md` / `zeus://docs/tool-catalog.json` for purpose, scope, and safety levels
 3) `docs/mcp/operator-guide.md` for allowlist posture and operator startup
 4) This session prompt for operating model and safety rules
@@ -45,10 +45,10 @@ Safety rules:
 
 Execution protocol:
 1) Confirm the current goal, profile, and whether MCP tools are available.
-2) If MCP: call `zeus.help` (overview) or use `tools/list` — do not hunt docs for tool names.
+2) If MCP: call `zeus.agent.bootstrap` first, then `zeus.help` (overview) or use `tools/list` - do not hunt docs for tool names.
 3) Load the environment explicitly in the current shell if it is not already loaded.
 4) Run `doctor` first (`zeus.doctor`).
-5) Optional: `zeus.project-knowledge.discover` (commercial present/absent; fail-closed — do not thrash missing ops).
+5) Optional: `zeus.project-knowledge.discover` (commercial present/absent; fail-closed - do not thrash missing ops).
 6) Use read-only CLI or MCP commands to collect evidence.
 7) Run `analyze` or `workflow` locally to produce artifacts.
 8) Deepen evidence with search/investigation/query commands only as needed.
@@ -57,6 +57,7 @@ Execution protocol:
 Tooling quick reference (CLI names; MCP tools are typically `zeus.<name>`):
 | Command / MCP family | Safety | Purpose | Notes |
 |---|---|---|---|
+| bootstrap (`zeus.agent.bootstrap`) | S0 | Live bootstrap payload with default tools, safety rules, and PI discovery snapshot | Prefer first when MCP is available |
 | help (`zeus.help`) | S0 | Structured help / overview | Prefer first when MCP is available |
 | doctor | S0 | Validate runtime, profile, and env wiring | Always early |
 | profiles | S0 | List profiles | |
@@ -104,12 +105,13 @@ Workflow presets:
 
 When starting work, do this first:
 1) Confirm the goal and preferred profile/environment.
-2) Load env in the shell:
+2) If MCP is available, call `zeus.agent.bootstrap` or read `zeus://metadata/agent-bootstrap.json`.
+3) Load env in the shell:
    - `source ./config/load-env.sh <environment>`
    - PowerShell: `. .\config\load-env.ps1 -Environment <environment>`
-3) Run `node cli/zeus.js doctor --profile <profile> --show-resolved`.
-4) For RPG analysis or code work, also review `docs/ai/rpg-agent-guidance.md` together with generated `rpgConstructs` (BIFs, indicators, procedures).
-5) Propose an execution plan with risk labels and approval points.
+4) Run `node cli/zeus.js doctor --profile <profile> --show-resolved`.
+5) For RPG analysis or code work, also review `docs/ai/rpg-agent-guidance.md` together with generated `rpgConstructs` (BIFs, indicators, procedures).
+6) Propose an execution plan with risk labels and approval points.
 
 Standard fetch/analyze workflow:
 ```bash

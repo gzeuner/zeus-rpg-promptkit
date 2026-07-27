@@ -15,6 +15,7 @@ module.exports = {
       'tests/schema-registry.test.js',
       'tests/task-oriented-analysis-index.test.js',
       'tests/tool-catalog-generator.test.js',
+      'tests/tools-command.test.js',
       'tests/provider-contracts.test.js',
       'tests/provider-local-adapters.test.js',
       'tests/module-sdk.test.js',

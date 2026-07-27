@@ -53,6 +53,7 @@ const { runMcp } = require('../src/cli/commands/mcpCommand');
 const { runProfiles } = require('../src/cli/commands/profilesCommand');
 const { runResources } = require('../src/cli/commands/resourcesCommand');
 const { runDiscoverEnvironment } = require('../src/cli/commands/discoverEnvironmentCommand');
+const { runTools } = require('../src/cli/commands/toolsCommand');
 const { runValidateRpgSql } = require('../src/cli/commands/validateRpgSqlCommand');
 const { runOnboarding } = require('../src/cli/commands/onboardingCommand');
 const { runSecret } = require('../src/cli/commands/secretCommand');
@@ -122,7 +123,7 @@ function printHelp() {
     '  zeus secret <init-key|status|encrypt|decrypt|check|migrate> [--value <text>] [--force] [--windows] [--dry-run] [--no-backup]'
   );
   console.log(
-    '    # Passwörter verschlüsselt ablegen (enc:v1:...). "check" prüft Hygiene (Exit 1). --windows für DPAPI. migrate: --no-backup verhindert Klartext-Backup.'
+    '    # PasswÃ¶rter verschlÃ¼sselt ablegen (enc:v1:...). "check" prÃ¼ft Hygiene (Exit 1). --windows fÃ¼r DPAPI. migrate: --no-backup verhindert Klartext-Backup.'
   );
   console.log(
     '  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query'
@@ -133,6 +134,7 @@ function printHelp() {
   console.log(
     '  zeus [--config <path>] discover-environment --profile <name> [--libraries L1,L2] [--schemas S1,S2] [--include-members] [--no-tables] [--role metadata|data] [--system <name>] [--json] [--out <path>]  # Read-only Auto-Discovery von Bibliotheken/Source-Files/Members/Tabellen + Resource-Vorschlag'
   );
+  console.log('  zeus [--config <path>] tools <list|describe> [name] [--json]');
   console.log(
     '  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--library <name>] [--filter <pattern>] [--save <datei.csv|datei.json>] [--json]'
   );
@@ -309,7 +311,7 @@ function splitCommandArgs(argv) {
   };
 }
 
-// Befehle die DB2 oder IBM i Verbindung brauchen â€” Env-Check wird nur fÃ¼r diese ausgefÃ¼hrt
+// Befehle die DB2 oder IBM i Verbindung brauchen Ã¢â‚¬â€ Env-Check wird nur fÃƒÂ¼r diese ausgefÃƒÂ¼hrt
 const COMMANDS_NEEDING_ENV = new Set([
   'query-sql',
   'query-table',
@@ -739,6 +741,10 @@ async function main() {
     }
   }
 
+  if (command === 'tools') {
+    await runTools(args);
+    return;
+  }
   if (command === 'mcp') {
     await runMcp(args);
     return;

@@ -37,10 +37,12 @@ describe('Track G0: default MCP allowlist docs sync', () => {
     const text = fs.readFileSync(SESSION_PROMPT, 'utf8');
     const requiredSnippets = [
       'zeus.help',
+      'zeus.agent.bootstrap',
       'tools/list',
       'investigation',
       'discover-environment',
       'project-knowledge.discover',
+      'zeus://metadata/agent-bootstrap.json',
       'Do not invent tool',
     ];
     for (const snippet of requiredSnippets) {

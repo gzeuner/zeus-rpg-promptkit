@@ -5,6 +5,7 @@ const path = require('path');
 const { COMMAND_METADATA, COMMAND_ORDER } = require('../docs/toolCatalogMetadata');
 const { listMcpTools } = require('./mcpTools');
 const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
+const { buildAgentBootstrapPayload } = require('./agentBootstrap');
 const { listWorkflowPresets } = require('../workflow/workflowPresetRegistry');
 const { listPromptContracts } = require('../prompt/promptRegistry');
 const { listAnalysisRuns, readAnalysisRun, readArtifactContent } = require('../ui/localUiDataApi');
@@ -75,6 +76,13 @@ const RESOURCE_DEFINITIONS = Object.freeze([
     description: 'Structured CLI command metadata with safety levels and examples.',
     mimeType: 'application/json',
     generator: buildCommandCatalogResource,
+  }),
+  Object.freeze({
+    uri: 'zeus://metadata/agent-bootstrap.json',
+    name: 'Agent Bootstrap',
+    description: 'Structured bootstrap payload for AI agents.',
+    mimeType: 'application/json',
+    generator: buildAgentBootstrapPayload,
   }),
   Object.freeze({
     uri: 'zeus://metadata/mcp-tools.json',

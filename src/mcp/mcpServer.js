@@ -301,7 +301,13 @@ function createMcpServer(runtime = {}) {
         throw new RpcError(-32602, 'Invalid params: resources/read requires params.uri');
       }
       try {
-        return respond(readMcpResource(uri, { cwd: context.cwd }));
+        return respond(
+          readMcpResource(uri, {
+            cwd: context.cwd,
+            capabilities: context.capabilities,
+            env: context.env,
+          })
+        );
       } catch (error) {
         if (error && error.code === 'RESOURCE_INVALID_ARGUMENTS') {
           throw new RpcError(-32602, error.message);
