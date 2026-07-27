@@ -28,6 +28,35 @@ test('listMcpTools exposes zeus.resources and zeus.discover-environment', () => 
   assert.deepEqual(discover.inputSchema.properties.role.enum, ['metadata', 'data']);
 });
 
+test('mcp resources include agent bootstrap metadata', async () => {
+  const server = createTestServer({ cwd: process.cwd() });
+  const listResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 400,
+    method: 'resources/list',
+    params: {},
+  });
+
+  const uris = listResponse.result.resources.map(resource => resource.uri);
+  assert.ok(uris.includes('zeus://metadata/agent-bootstrap.json'));
+
+  const readResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 401,
+    method: 'resources/read',
+    params: {
+      uri: 'zeus://metadata/agent-bootstrap.json',
+    },
+  });
+
+  assert.equal(readResponse.result.contents[0].mimeType, 'application/json');
+  const bootstrap = JSON.parse(readResponse.result.contents[0].text);
+  assert.equal(bootstrap.schemaVersion, 1);
+  assert.equal(bootstrap.next, 'help');
+  assert.ok(bootstrap.defaultTools.includes('zeus.agent.bootstrap'));
+  assert.equal(bootstrap.piDiscoverySnapshot.present, false);
+});
+
 test('mcp tools call zeus.resources returns sanitized resource model', async () => {
   const server = createTestServer({
     resourcesRunner: () => ({
@@ -52,7 +81,7 @@ test('mcp tools call zeus.resources returns sanitized resource model', async () 
 
   const response = await server.handleRequest({
     jsonrpc: '2.0',
-    id: 401,
+    id: 402,
     method: 'tools/call',
     params: {
       name: 'zeus.resources',
@@ -75,7 +104,7 @@ test('mcp tools call zeus.resources without profile raises invalid arguments', a
   await assert.rejects(
     server.handleRequest({
       jsonrpc: '2.0',
-      id: 402,
+      id: 403,
       method: 'tools/call',
       params: {
         name: 'zeus.resources',
@@ -120,7 +149,7 @@ test('mcp tools call zeus.discover-environment returns report and suggested reso
 
   const response = await server.handleRequest({
     jsonrpc: '2.0',
-    id: 403,
+    id: 404,
     method: 'tools/call',
     params: {
       name: 'zeus.discover-environment',
@@ -151,7 +180,7 @@ test('mcp tools call zeus.discover-environment surfaces incomplete config as inv
   await assert.rejects(
     server.handleRequest({
       jsonrpc: '2.0',
-      id: 404,
+      id: 405,
       method: 'tools/call',
       params: {
         name: 'zeus.discover-environment',

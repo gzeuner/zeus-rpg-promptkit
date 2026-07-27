@@ -1,7 +1,7 @@
----
+﻿---
 Title: MCP Operator Guide
 Description: Local-first MCP startup, policy boundaries, and troubleshooting for Zeus RPG PromptKit.
-Last Updated: 2026-07-25
+Last Updated: 2026-07-27
 ---
 
 # MCP Operator Guide
@@ -13,7 +13,7 @@ Expose a safe, policy-gated subset of Zeus capabilities over MCP stdio for AI cl
 ## Security Posture
 
 - Transport: stdio only (local process boundary)
-- Default behavior: safe expanded default surface from `src/mcp/mcpPolicy.js` (`DEFAULT_MCP_SAFE_TOOL_NAMES`) — S0/S1 local tools **plus** selected S2 remote-read tools; **not** S3/S4 writes or project-knowledge index/write
+- Default behavior: safe expanded default surface from `src/mcp/mcpPolicy.js` (`DEFAULT_MCP_SAFE_TOOL_NAMES`) â€” S0/S1 local tools **plus** selected S2 remote-read tools; start with `zeus.agent.bootstrap` when you want a live bootstrap payload; **not** S3/S4 writes or project-knowledge index/write
 - Policy: `--allow-tools` **replaces** the allowlist (does not merge/extend). Omit it to use the full default safe list; pass a smaller list to restrict further
 - Curated discovery surfaces: first-class MCP `resources/*` and `prompts/*` for safe docs/metadata/prompt access
 - Redaction: response/error masking for common secret patterns
@@ -21,7 +21,7 @@ Expose a safe, policy-gated subset of Zeus capabilities over MCP stdio for AI cl
 - Runtime guardrails: per-tool timeout and maximum response-size limits with deterministic `-32000` failures
 - Local path policy: local path inputs for local source-root tools must resolve inside the current workspace root, including absolute paths
 
-**Live tool names for agents:** prefer MCP `tools/list` and `zeus.help` (overview) over hunting markdown. Catalog docs remain authoritative for purpose/safety levels but are secondary for “what is available right now.”
+**Live tool names for agents:** prefer MCP `tools/list`, `zeus.agent.bootstrap`, and `zeus.help` (overview) over hunting markdown. Catalog docs remain authoritative for purpose/safety levels but are secondary for â€œwhat is available right now.â€
 
 Out of scope for MVP:
 
@@ -43,7 +43,7 @@ This CSV is the **same set** as the code default. Use it when you want an explic
 
 ```bash
 node cli/zeus.js mcp serve --verbose \
-  --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.resources,zeus.discover-environment,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.investigation.start,zeus.investigation.focus,zeus.investigation.search,zeus.investigation.generate-prompt,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status
+  --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.agent.bootstrap,zeus.onboarding,zeus.resources,zeus.discover-environment,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.investigation.start,zeus.investigation.focus,zeus.investigation.search,zeus.investigation.generate-prompt,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status
 ```
 
 **Note:** `--allow-tools` replaces the default list. If you paste an incomplete CSV, tools such as `zeus.resources`, `zeus.investigation.*`, and `zeus.project-knowledge.*` disappear even though they are on the code default.
@@ -70,7 +70,7 @@ Source of truth for the default safe surface: `src/mcp/mcpPolicy.js` (`DEFAULT_M
 
 Includes among others:
 
-- health / version / profiles / doctor / help / onboarding / resources / discover-environment
+- health / version / profiles / doctor / help / bootstrap / onboarding / resources / discover-environment
 - analyze / workflow / bundle / searches / investigation.\*
 - selected remote-read: resolve-object, inspect-object, query-table, query-sql, fetch-member, diff, joblog, test-run
 - project-knowledge: **discover + status only** (index/query/write need explicit allow-tools + commercial module)
@@ -91,7 +91,7 @@ node cli/zeus.js mcp serve --stdio true --verbose
 An AI can bootstrap and operate via MCP **without inventing tool names** and without multi-doc hunting:
 
 1. `initialize`
-2. `tools/list` (live allowlisted surface) **or** `tools/call` `zeus.help` (overview + `defaultTools` + recommended sequence)
+2. `tools/call` `zeus.agent.bootstrap` (live bootstrap payload) **or** `tools/list` / `tools/call` `zeus.help` (overview + `defaultTools` + recommended sequence)
 3. Optional: `prompts/get` `zeus.session.start` with the user goal (secondary; help is enough for local analysis)
 4. `tools/call` `zeus.doctor` + `zeus.profiles`
 5. `tools/call` `zeus.project-knowledge.discover` (present/absent; do not thrash commercial-only ops)
@@ -108,11 +108,11 @@ All via stdio, outputs structured + enveloped, workspace-bounded, secrets redact
 
 Curated resources currently include:
 
-- authoritative docs such as `tool-catalog.md`, `tool-catalog.json`, `cli/reference.md`, `ai/session-prompt.md`, `mcp/operator-guide.md`
+- authoritative docs such as `tool-catalog.md`, `tool-catalog.json`, `cli/reference.md`, `ai/session-prompt.md`, `mcp/operator-guide.md`, `zeus://metadata/agent-bootstrap.json`
 - `quickstart/onboarding-new-ibm-i.md` (step-by-step for new IBM i systems: connection, source search, PGM/table objects, metadata & data)
 - `ai/rpg-agent-guidance.md` (RPG/ILE patterns for agents)
 - `sql/system-environment-discovery.sql` (catalog queries)
-- structured metadata for command catalog, MCP tool inventory, workflow presets, prompt contracts, and `onboarding/checklist.json` (agent-friendly onboarding steps + recommended resources)
+- structured metadata for command catalog, agent bootstrap, MCP tool inventory, workflow presets, prompt contracts, and `onboarding/checklist.json` (agent-friendly onboarding steps + recommended resources)
 - dynamic run artifacts under `zeus://runs/...` (summaries, views, reports, ai_prompt_*.md)
 
 Curated prompts currently include:

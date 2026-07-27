@@ -315,6 +315,13 @@ const COMMAND_METADATA = Object.freeze({
     example:
       'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status',
   }),
+  tools: Object.freeze({
+    safety: 'S0',
+    scope: 'Local',
+    purpose:
+      'List and describe canonical command-help records as stable JSON for CLI and MCP parity.',
+    example: 'node cli/zeus.js tools list --json',
+  }),
   'project-knowledge': Object.freeze({
     safety: 'S1',
     scope: 'Local',
@@ -651,6 +658,13 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: ['local-process-stdio'],
     capabilityId: null,
   }),
+  tools: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: [],
+    capabilityId: null,
+  }),
   'project-knowledge': catalogContract({
     aliases: ['project-intelligence'],
     status: 'stable',
@@ -706,6 +720,7 @@ const COMMAND_ORDER = Object.freeze([
   'pui-inspect',
   'docs:generate-catalog',
   'mcp',
+  'tools',
   'project-knowledge',
 ]);
 

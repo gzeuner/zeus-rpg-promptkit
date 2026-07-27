@@ -38,6 +38,34 @@ test('mcp initialize returns protocol and capabilities', async () => {
   assert.equal(response.result.capabilities.tools.listChanged, false);
 });
 
+test('mcp tools call zeus.agent.bootstrap returns the bootstrap payload', async () => {
+  const server = createTestServer({ cwd: process.cwd() });
+
+  const response = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 2,
+    method: 'tools/call',
+    params: {
+      name: 'zeus.agent.bootstrap',
+      arguments: {},
+    },
+  });
+
+  assert.equal(response.result.isError, false);
+  const payload = response.result.structuredContent;
+  assert.equal(payload.ok, true);
+  assert.equal(payload.schemaVersion, 1);
+  assert.equal(payload.packageVersion, require('../package.json').version);
+  assert.equal(payload.next, 'help');
+  assert.ok(Array.isArray(payload.defaultTools));
+  assert.ok(payload.defaultTools.includes('zeus.agent.bootstrap'));
+  assert.ok(Array.isArray(payload.recommendedSequence));
+  assert.equal(payload.recommendedSequence[0], 'zeus.agent.bootstrap');
+  assert.equal(payload.recommendedSequence[1], 'zeus.help');
+  assert.equal(payload.piDiscoverySnapshot.moduleId, 'zeus-pro.project-intelligence');
+  assert.equal(payload.piDiscoverySnapshot.present, false);
+});
+
 test('mcp resources list returns curated docs and metadata resources', async () => {
   const server = createTestServer({ cwd: process.cwd() });
   const response = await server.handleRequest({

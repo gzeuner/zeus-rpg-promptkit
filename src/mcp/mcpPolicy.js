@@ -6,6 +6,7 @@ const DEFAULT_MCP_SAFE_TOOL_NAMES = Object.freeze([
   'zeus.profiles',
   'zeus.doctor',
   'zeus.help',
+  'zeus.agent.bootstrap',
   'zeus.onboarding',
   'zeus.resources',
   'zeus.discover-environment',

@@ -106,7 +106,9 @@ const {
 const { generateToolCatalog } = require('../docs/toolCatalogGenerator');
 const { COMMAND_METADATA, COMMAND_ORDER } = require('../docs/toolCatalogMetadata');
 const { listCommandUiMetadata } = require('../cli/commandMetadata');
+const { buildCommandHelpEntry } = require('../cli/commandHelp');
 const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
+const { buildAgentBootstrapPayload } = require('./agentBootstrap');
 
 // Pluggable support: dynamic tool registry (for zeus API extensibility)
 const dynamicMcpTools = new Map();
@@ -665,6 +667,16 @@ let listMcpTools = function listMcpTools() {
             description: 'Optional system key used to annotate the suggested resources skeleton.',
           },
         },
+      },
+    },
+    {
+      name: 'zeus.agent.bootstrap',
+      description:
+        'Returns a compact, live bootstrap payload for agents: default tools, safety rules, Project Intelligence discovery snapshot, community fallbacks, and the next recommended step.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {},
       },
     },
     {
@@ -6744,6 +6756,15 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     );
   }
 
+  if (name === 'zeus.agent.bootstrap') {
+    const bootstrapPayload = buildAgentBootstrapPayload({
+      cwd: context.cwd || process.cwd(),
+      capabilities: context.capabilities,
+    });
+
+    return normalizeMcpResult('zeus.agent.bootstrap', bootstrapPayload);
+  }
+
   if (name === 'zeus.onboarding') {
     const profile = args && typeof args.profile === 'string' ? args.profile.trim() : 'default';
     return normalizeMcpResult(
@@ -6777,16 +6798,17 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       const safeDefaults = [...DEFAULT_MCP_SAFE_TOOL_NAMES];
       helpData = {
         overview:
-          'Zeus RPG PromptKit MCP default safe surface (see defaultTools). Includes S0/S1 local tools plus selected S2 remote-read tools (query/inspect/joblog/etc.) that are already on the default allowlist. S3/S4 writes, bridge mutations, and project-knowledge index/write ops are NOT on the default allowlist.',
+          'Zeus RPG PromptKit MCP default safe surface (see defaultTools). Start with zeus.agent.bootstrap, then use S0/S1 local tools plus selected S2 remote-read tools (query/inspect/joblog/etc.) that are already on the default allowlist. S3/S4 writes, bridge mutations, and project-knowledge index/write ops are NOT on the default allowlist.',
         defaultTools: safeDefaults,
         safetyReminder:
-          'Prefer S0, then S1 local artifact generation. Default-allowlisted S2 tools are remote-read only — still explain why you call them. Never use S3/S4, write-sql apply, or bridge mutation without explicit operator --allow-tools and human approval. Project-knowledge: only discover + status by default.',
+          'Prefer zeus.agent.bootstrap first, then S0 and S1 local artifact generation. Default-allowlisted S2 tools are remote-read only - still explain why you call them. Never use S3/S4, write-sql apply, or bridge mutation without explicit operator --allow-tools and human approval. Project-knowledge: only discover + status by default.',
         recommendedSequence: [
-          'zeus.help (overview — do not invent tool names)',
+          'zeus.agent.bootstrap (live bootstrap payload)',
+          'zeus.help (overview - do not invent tool names)',
           'zeus.doctor (check readiness)',
           'zeus.profiles (discover config)',
           'zeus.project-knowledge.discover (commercial PI present/absent; fail-closed)',
-          'zeus.onboarding (guided first-time IBM i setup) or zeus.resources / zeus.discover-environment',
+          'zeus.resources or zeus.discover-environment (guided setup)',
           'zeus.search-source, zeus.field-search, or zeus.investigation.* (local exploration)',
           'zeus.analyze (with source) or zeus.workflow --preset X (full local evidence)',
           'zeus.impact / zeus.assess-risk / zeus.generate-test / zeus.generate-checklist / zeus.qa / zeus.validate-rpg-sql',
@@ -6795,16 +6817,16 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
           'Read generated artifacts + AI prompts via zeus://runs/... resources',
         ],
         howToGetMore:
-          'Live tool names: tools/list and this overview defaultTools. Call zeus.help with a command name for details. Docs/resources (zeus://docs/tool-catalog.md, onboarding, metadata/*) are secondary — prefer tools/list + zeus.help first.',
+          'Live tool names: tools/list, zeus.help, and zeus.agent.bootstrap are the startup path. For CLI parity, use zeus tools list --json or zeus tools describe <name> --json. Docs/resources (zeus://docs/tool-catalog.md, onboarding, metadata/*) are secondary - prefer live MCP surfaces first.',
         aiTip:
-          'Do not invent tool names. Start with tools/list or zeus.help overview. New IBM i: zeus.onboarding or zeus://docs/quickstart/onboarding-new-ibm-i.md. After analysis, resources/read run URIs or ai_prompt_*.md. If project-knowledge ops other than discover/status fail, commercial module is absent or not allowlisted — use analyze/search-source/impact instead.',
+          'Do not invent tool names. Start with zeus.agent.bootstrap, tools/list, or zeus.help overview. Use zeus tools list --json when you need stable command-help JSON from the CLI. New IBM i: zeus.onboarding or zeus://docs/quickstart/onboarding-new-ibm-i.md. After analysis, resources/read run URIs or ai_prompt_*.md. If project-knowledge ops other than discover/status fail, commercial module is absent or not allowlisted - use analyze/search-source/impact instead.',
       };
     } else {
-      const meta = COMMAND_METADATA[cmd] || COMMAND_METADATA[cmd.replace(':', '')] || null;
-      const uiMeta =
-        listCommandUiMetadata().find(c => c.name === cmd || c.name === cmd.replace(':', ' ')) ||
-        null;
-      if (!meta && !uiMeta) {
+      const helpCard = buildCommandHelpEntry(cmd);
+      const uiMeta = helpCard
+        ? listCommandUiMetadata().find(c => c.name === helpCard.command) || null
+        : null;
+      if (!helpCard) {
         const error = new Error(
           `Invalid arguments for zeus.help: unknown command "${cmd}". Use without command for overview or valid name from tool catalog.`
         );
@@ -6812,17 +6834,13 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         throw error;
       }
       helpData = {
-        command: cmd,
-        safety: meta ? meta.safety : uiMeta ? 'see catalog' : null,
-        scope: meta ? meta.scope : null,
-        purpose: meta ? meta.purpose : uiMeta ? uiMeta.summary : null,
-        example: meta ? meta.example : null,
+        ...helpCard,
         usage: uiMeta ? uiMeta.commonOptions : [],
         aiGuidance:
-          meta && meta.safety && (meta.safety.startsWith('S0') || meta.safety.startsWith('S1'))
+          helpCard.safety && (helpCard.safety.startsWith('S0') || helpCard.safety.startsWith('S1'))
             ? 'Safe for direct MCP use by agents when in default allowlist.'
             : 'Requires explicit --allow-tools and human review for risk.',
-        nextSteps: uiMeta && uiMeta.recommendedNextCommands ? uiMeta.recommendedNextCommands : [],
+        nextSteps: helpCard.recommendedNextCommands ? [...helpCard.recommendedNextCommands] : [],
       };
     }
 
