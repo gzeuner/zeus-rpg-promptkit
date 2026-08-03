@@ -197,3 +197,37 @@ test('CLI fails closed for absent full-index without loading commercial code', a
     process.exitCode = previousExit;
   }
 });
+
+test('MCP PI tools expose required input schemas and reject unknown fields', () => {
+  const tools = new Map(listProjectKnowledgeMcpTools().map(tool => [tool.name, tool]));
+  assert.deepEqual(tools.get('zeus.project-knowledge.query').inputSchema.required, [
+    'knowledgeRoot',
+    'projectId',
+    'trustedRoots',
+    'query',
+  ]);
+  assert.equal(tools.get('zeus.project-knowledge.query').inputSchema.additionalProperties, false);
+  assert.deepEqual(tools.get('zeus.project-knowledge.status').inputSchema.required, []);
+});
+
+test('MCP PI absent capability result provides Community fallback tool names', async () => {
+  const result = await executeProjectKnowledgeMcpTool(
+    'zeus.project-knowledge.query',
+    {
+      knowledgeRoot: ROOT,
+      projectId: 'demo',
+      trustedRoots: [{ rootId: 'r', path: ROOT }],
+      query: 'ORDERPGM',
+    },
+    { capabilities: createZeus().capabilities }
+  );
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.suggestedTools, [
+    'zeus.help',
+    'zeus.analyze',
+    'zeus.search-source',
+    'zeus.field-search',
+    'zeus.impact',
+  ]);
+  assert.match(result.suggestionReason, /Community analysis tools/i);
+});
