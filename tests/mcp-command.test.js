@@ -150,3 +150,65 @@ test('runMcp exits with code 2 for unknown allow-tools names', async () => {
     console.error = originalError;
   }
 });
+
+test('resolveMcpToolPack returns bounded named surfaces', () => {
+  const { resolveMcpToolPack } = require('../src/mcp/mcpPolicy');
+  const known = require('../src/mcp/mcpTools')
+    .listMcpTools()
+    .map(tool => tool.name);
+  const local = resolveMcpToolPack('local-evidence', known);
+  const pi = resolveMcpToolPack('pi-status', known);
+  assert.ok(local.includes('zeus.analyze'));
+  assert.equal(local.includes('zeus.query-sql'), false);
+  assert.deepEqual(pi, [
+    'zeus.health',
+    'zeus.version',
+    'zeus.doctor',
+    'zeus.help',
+    'zeus.agent.bootstrap',
+    'zeus.project-knowledge.discover',
+    'zeus.project-knowledge.status',
+  ]);
+  assert.throws(() => resolveMcpToolPack('unknown', known), /unknown pack/i);
+});
+
+test('runMcp resolves a named tool pack and rejects ambiguous policy flags', async () => {
+  let capturedRuntime = null;
+  await runMcp(
+    { _: ['serve'], stdio: true, 'tool-pack': 'pi-status' },
+    {
+      cwd: '/tmp/mcp-test-pack',
+      createMcpServer: runtime => {
+        capturedRuntime = runtime;
+        return { startStdio() {} };
+      },
+    }
+  );
+  assert.deepEqual(capturedRuntime.allowlistedTools, [
+    'zeus.health',
+    'zeus.version',
+    'zeus.doctor',
+    'zeus.help',
+    'zeus.agent.bootstrap',
+    'zeus.project-knowledge.discover',
+    'zeus.project-knowledge.status',
+  ]);
+  const originalExit = process.exit;
+  const originalError = console.error;
+  let exitCode = null;
+  process.exit = code => {
+    exitCode = code;
+    throw new Error(`__EXIT__${code}`);
+  };
+  console.error = () => {};
+  try {
+    await assert.rejects(
+      () => runMcp({ _: ['serve'], 'tool-pack': 'pi-status', 'allow-tools': 'zeus.health' }),
+      /__EXIT__2/
+    );
+    assert.equal(exitCode, 2);
+  } finally {
+    process.exit = originalExit;
+    console.error = originalError;
+  }
+});
