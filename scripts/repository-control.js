@@ -156,6 +156,17 @@ async function main() {
     process.exit(EXIT_CODES.INVALID_USAGE);
   }
 
+  let releaseCandidate = null;
+  const releaseCandidatePath = path.join(process.cwd(), '.github', 'release-candidate.json');
+  if (scope !== 'pr' && fs.existsSync(releaseCandidatePath)) {
+    try {
+      releaseCandidate = JSON.parse(fs.readFileSync(releaseCandidatePath, 'utf8'));
+    } catch (error) {
+      console.error('Invalid release candidate metadata:', error.message);
+      process.exit(EXIT_CODES.INVALID_USAGE);
+    }
+  }
+
   const report = {
     schemaVersion: 'repository-control-report/v1',
     repository: {
@@ -194,9 +205,25 @@ async function main() {
         config,
       });
     } else if (scope === 'main') {
-      await evaluateMain({ report, wait, timeoutSeconds, pollSeconds, strict, config });
+      await evaluateMain({
+        report,
+        wait,
+        timeoutSeconds,
+        pollSeconds,
+        strict,
+        config,
+        releaseCandidate,
+      });
     } else {
-      await evaluateOverview({ report, wait, timeoutSeconds, pollSeconds, strict, config });
+      await evaluateOverview({
+        report,
+        wait,
+        timeoutSeconds,
+        pollSeconds,
+        strict,
+        config,
+        releaseCandidate,
+      });
     }
 
     finalizeDecision(report, scope, strict);
