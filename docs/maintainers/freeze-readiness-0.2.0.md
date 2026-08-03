@@ -1,26 +1,26 @@
 ---
 Title: Freeze readiness toward 0.2.0 (Track F)
-Description: Owner-facing freeze package after beta.4. Full 0.2.0 remains owner-gated. Does not tag or publish.
-Last Updated: 2026-07-25
+Description: Owner-facing freeze package after published beta.5. Full 0.2.0 remains owner-gated. Does not tag or publish.
+Last Updated: 2026-08-03
 ---
 
 # Freeze readiness toward Community `0.2.0` (Track F)
 
 **Classification:** maintainer / owner  
-**Date assessed:** 2026-07-25  
-**Community tip assessed:** `6a4789a41e827bd82d97b54bb3346e3b4228b152` (`main`)  
-**Last published prerelease:** [`v0.2.0-beta.4`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4) @ `6a4789a…`
+**Date assessed:** 2026-08-03
+**Community tip assessed:** `487cca7b06d287b7d5cb53024ca54747500dd584` (`main`)
+**Last published prerelease:** [`v0.2.0-beta.5`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.5) @ `487cca7…`
 
 This document is the Track **F** freeze package. It does **not** create tags, bump the package
 version, or dispatch the Release workflow. Those remain **owner gates**.
 
-## Status after beta.4
+## Status after beta.5
 
 | Item                  | State                                                                 |
 | --------------------- | --------------------------------------------------------------------- |
-| `v0.2.0-beta.4`       | **Published** (prerelease; tarball + SBOM + SHA256SUMS + attestation) |
-| Tag / tip SHA         | `6a4789a41e827bd82d97b54bb3346e3b4228b152` — **do not re-tag**        |
-| Commercial pin        | re-pin PR targets this SHA (commercial repo)                          |
+| `v0.2.0-beta.5`       | **Published** (prerelease; tarball + SBOM + SHA256SUMS + attestation; fresh-download verification green) |
+| Tag / tip SHA         | `487cca7b06d287b7d5cb53024ca54747500dd584` — **do not re-tag**        |
+| Commercial pin        | Commercial PR #33 merged; pinned to this SHA; gates green            |
 | Full non-beta `0.2.0` | **still owner-gated**                                                 |
 
 ## Recommendation (next cut)
@@ -84,7 +84,7 @@ Use after the owner chooses non-beta `0.2.0` (or a later beta):
 
 - [ ] Version decision: `0.2.0` vs hold (or a later beta if re-opened)
 - [ ] Explicit authorization to open prep PR + run `workflow_dispatch` Release on `main`
-- [ ] After publish: commercial re-pin to the **released** Community SHA in **all** pin locations
+- [x] After publish: commercial re-pin to the **released** Community SHA in **all** pin locations
 - [ ] Confirm messaging: prerelease vs freeze; no accidental “production certified” claim
 
 ## Non-claims (must survive freeze messaging)
