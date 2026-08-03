@@ -1,6 +1,6 @@
 {
   "schemaVersion": "release-candidate/v1",
-  "sourceSha": "b5f1cbcaa31bdca9b6d3ffa2d2c0c6888afd684f",
+  "sourceSha": "52e33e02bcf070f18e3b6424badaf88fd7aa9821",
   "version": "0.2.0-beta.5",
   "status": "authorized",
   "purpose": "Beta.5 release publication is pending on the next exact main merge commit."
