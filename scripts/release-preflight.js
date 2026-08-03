@@ -12,6 +12,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const EXPECTED_NAME = 'zeus-rpg-promptkit';
+const NPM_COMMAND = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 function run(file, args, options = {}) {
   return spawnSync(file, args, {
@@ -65,7 +66,11 @@ if (!changelog.includes(`## [${requestedVersion}]`)) {
 const releaseNotes = path.join(ROOT, '.github', `RELEASE_NOTES_v${requestedVersion}.md`);
 if (!fs.existsSync(releaseNotes)) fail('versioned release notes are missing');
 
-const packDry = run('npm', ['pack', '--dry-run', '--json']);
+const packDry = run(
+  NPM_COMMAND,
+  ['pack', '--dry-run', '--json'],
+  process.platform === 'win32' ? { shell: true } : {}
+);
 if (packDry.status !== 0) fail('npm pack dry run failed');
 let packResult;
 try {

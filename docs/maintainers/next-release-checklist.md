@@ -1,12 +1,12 @@
 ---
 Title: Next Release Checklist
-Description: Maintainer checklist for Community releases after the published 0.2.0-beta.4 cut. Full 0.2.0 remains owner-gated.
-Last Updated: 2026-07-25
+Description: Maintainer checklist for Community releases after the published 0.2.0-beta.5 cut. Full 0.2.0 remains owner-gated.
+Last Updated: 2026-08-03
 ---
 
 # Next release checklist (Community)
 
-Current package version on `main`: **0.2.0-beta.4** (published).
+Current package version on main: **0.2.0-beta.5** (release in progress).
 
 Last published prerelease: [`v0.2.0-beta.4`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4)
 @ `6a4789a…`. **Do not re-tag** beta.4.
@@ -15,9 +15,9 @@ This checklist prepares Community releases. Tag/publish still require the Releas
 `workflow_dispatch` after merge to `main`.
 
 **Track F freeze package:** [`freeze-readiness-0.2.0.md`](./freeze-readiness-0.2.0.md)  
-(beta.4 shipped; next non-beta cut remains owner-gated).
+(beta.5 contains the agent-surface tracks; next non-beta cut remains owner-gated).
 
-## Recommended next version (after beta.4)
+## Recommended next version (after beta.5)
 
 | Candidate | When                                                        |
 | --------- | ----------------------------------------------------------- |
@@ -49,6 +49,12 @@ When the version is bumped and CHANGELOG / release notes exist:
 ```bash
 npm run release:preflight -- --version <target-version>
 ```
+
+## Beta.5 cut (2026-08-03)
+
+This cut contains Tracks G0-G5 and H0, plus dependency/security maintenance. The source SHA,
+tag, assets, attestation, and Commercial pin are recorded here after the Release workflow and
+Commercial re-pin complete.
 
 ## Content checklist (template for the next cut)
 
