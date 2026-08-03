@@ -46,7 +46,16 @@ node cli/zeus.js mcp serve --verbose \
   --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.agent.bootstrap,zeus.workflow.suggest,zeus.onboarding,zeus.resources,zeus.discover-environment,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.investigation.start,zeus.investigation.focus,zeus.investigation.search,zeus.investigation.generate-prompt,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status
 ```
 
-**Note:** `--allow-tools` replaces the default list. If you paste an incomplete CSV, tools such as `zeus.resources`, `zeus.investigation.*`, and `zeus.project-knowledge.*` disappear even though they are on the code default.
+### Named tool packs (G4)
+
+Use exactly one named pack when a bounded standard surface is preferred:
+
+- `default` — the full safe default surface
+- `local-evidence` — local discovery, analysis, review, and bundle tools
+- `remote-read` — bounded remote-read and Project Intelligence status tools
+- `pi-status` — Project Intelligence discovery/status only
+
+`--tool-pack` and `--allow-tools` are mutually exclusive. Both select the complete allowlist for the MCP process; neither enables write/index tools implicitly.**Note:** `--allow-tools` replaces the default list. If you paste an incomplete CSV, tools such as `zeus.resources`, `zeus.investigation.*`, and `zeus.project-knowledge.*` disappear even though they are on the code default.
 
 See also: `docs/quickstart/onboarding-new-ibm-i.md` (connection, source location, PGM/table objects, metadata & data discovery).
 

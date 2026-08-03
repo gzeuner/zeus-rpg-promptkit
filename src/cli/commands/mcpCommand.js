@@ -15,6 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const { createMcpServer } = require('../../mcp/mcpServer');
 const { listMcpTools } = require('../../mcp/mcpTools');
+const { resolveMcpToolPack } = require('../../mcp/mcpPolicy');
 
 function parseBoolean(value, fallback = false) {
   if (value === undefined || value === null) {
@@ -67,7 +68,7 @@ function parseAllowlistedTools(value, knownToolNames = null) {
 function printMcpHelp() {
   console.log('MCP commands:');
   console.log(
-    '  zeus mcp serve [--stdio true|false] [--allow-tools <name1,name2>] [--commercial-module <pkg-or-path>] [--verbose]'
+    '  zeus mcp serve [--stdio true|false] [--tool-pack <default|local-evidence|remote-read|pi-status>] [--allow-tools <name1,name2>] [--commercial-module <pkg-or-path>] [--verbose]'
   );
   console.log('');
   console.log('Notes:');
@@ -77,6 +78,10 @@ function printMcpHelp() {
   console.log(
     '  - Use --allow-tools to further restrict or customize (e.g. for minimal agent exposure). Dangerous tools (write-sql, bridge) are never in defaults.'
   );
+  console.log(
+    '  - Use --tool-pack for named bounded surfaces; --allow-tools remains the explicit custom replacement.'
+  );
+  console.log('  - --tool-pack and --allow-tools are mutually exclusive.');
   console.log(
     '  - Optional commercial module (explicit only): --commercial-module | ZEUS_COMMERCIAL_MODULE | profile.commercial.module with --profile (no auto-discovery).'
   );
@@ -111,7 +116,13 @@ async function runMcp(args = {}, dependencies = {}) {
     }
 
     const knownToolNames = listMcpTools().map(tool => tool.name);
-    const allowlistedTools = parseAllowlistedTools(args['allow-tools'], knownToolNames);
+    if (args['tool-pack'] !== undefined && args['allow-tools'] !== undefined) {
+      throw new Error('Invalid MCP policy: use either --tool-pack or --allow-tools, not both.');
+    }
+    const allowlistedTools =
+      args['tool-pack'] !== undefined
+        ? resolveMcpToolPack(args['tool-pack'], knownToolNames)
+        : parseAllowlistedTools(args['allow-tools'], knownToolNames);
     if (Object.prototype.hasOwnProperty.call(args, 'legacy-cursor-fallback')) {
       throw new Error(
         'The --legacy-cursor-fallback option was removed. Numeric cursors are no longer supported; use opaque cursor tokens.'
@@ -169,5 +180,6 @@ async function runMcp(args = {}, dependencies = {}) {
 module.exports = {
   parseAllowlistedTools,
   printMcpHelp,
+  resolveMcpToolPack,
   runMcp,
 };
