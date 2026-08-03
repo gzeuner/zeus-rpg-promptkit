@@ -76,6 +76,7 @@ function buildAgentBootstrapPayload(context = {}) {
     recommendedSequence: [
       'zeus.agent.bootstrap',
       'zeus.help',
+      'zeus.workflow.suggest',
       'zeus.doctor',
       'zeus.profiles',
       'zeus.project-knowledge.discover',
