@@ -15,6 +15,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.2.0-beta.5] - 2026-08-03
+
+Agent-oriented Community beta after Tracks G and H0, with the zero-search MCP path,
+capability-surface parity, and dependency security maintenance completed.
+
+### Added
+
+- live zeus.agent.bootstrap MCP tool and zeus://metadata/agent-bootstrap.json resource;
+- stable CLI help JSON via zeus tools list --json and zeus tools describe name --json;
+- goal-based zeus.workflow.suggest plans with real tool names and safety metadata;
+- bounded MCP tool packs (default, local-evidence, remote-read, pi-status);
+- PI agent fallback guidance and zeus://metadata/surface-parity.json.
+
+### Changed
+
+- synchronized agent-facing MCP/operator documentation and tool-catalog projections;
+- upgraded pinned GitHub Actions used by the Community CI and release workflow.
+
+### Fixed
+
+- resolved the high-severity brace-expansion production dependency audit finding;
+- preserved default MCP safety boundaries: no write, index, or live Package 09 expansion.
+
+### Security
+
+- production audit is clean with brace-expansion@5.0.9;
+- release remains a prerelease and is not production certification of 0.2.0.
+
 ## [0.2.0-beta.4] - 2026-07-25
 
 Public Community beta after Tracks B–E on top of the beta.3 ZPI baseline.
