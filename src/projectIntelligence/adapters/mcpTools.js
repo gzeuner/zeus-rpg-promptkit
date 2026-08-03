@@ -8,6 +8,27 @@ const {
 const { executeProjectIntelligenceOperation } = require('./execute');
 const { discoverProjectIntelligenceCapabilities } = require('./discovery');
 
+const COMMUNITY_FALLBACK_TOOLS = Object.freeze([
+  'zeus.help',
+  'zeus.analyze',
+  'zeus.search-source',
+  'zeus.field-search',
+  'zeus.impact',
+]);
+
+const REQUIRED_INPUTS = Object.freeze({
+  status: [],
+  'inspect-policy': ['knowledgeRoot', 'projectId', 'trustedRoots'],
+  'create-project': ['knowledgeRoot', 'projectId', 'trustedRoots'],
+  'full-index': ['knowledgeRoot', 'projectId', 'trustedRoots'],
+  'incremental-update': ['knowledgeRoot', 'projectId', 'trustedRoots'],
+  query: ['knowledgeRoot', 'projectId', 'trustedRoots', 'query'],
+  'impact-analysis': ['knowledgeRoot', 'projectId', 'trustedRoots', 'query'],
+  'build-context-package': ['knowledgeRoot', 'projectId', 'trustedRoots', 'query'],
+  'inspect-snapshot': ['knowledgeRoot', 'projectId', 'trustedRoots'],
+  'verify-integrity': ['knowledgeRoot', 'projectId', 'trustedRoots'],
+});
+
 const COMMON_INPUT_PROPS = Object.freeze({
   knowledgeRoot: {
     type: 'string',
@@ -60,10 +81,11 @@ function listProjectKnowledgeMcpTools() {
   for (const op of PUBLIC_OPERATIONS) {
     tools.push({
       name: op.mcpTool,
-      description: `Project Intelligence ${op.operation} (commercial capability ${op.capabilityId}). Fails closed when module is not registered.`,
+      description: `Project Intelligence ${op.operation} via ${op.capabilityId}; side effects: ${op.sideEffects.join(', ')}. Fails closed when the entitled commercial module is absent. Use zeus.project-knowledge.discover first.`,
       inputSchema: {
         type: 'object',
-        additionalProperties: true,
+        additionalProperties: false,
+        required: REQUIRED_INPUTS[op.operation] || [],
         properties: { ...COMMON_INPUT_PROPS },
       },
       _capabilityId: op.capabilityId,
@@ -114,6 +136,13 @@ async function executeProjectKnowledgeMcpTool(name, args = {}, context = {}) {
   return {
     tool: name,
     ...outcome,
+    ...(!outcome.ok
+      ? {
+          suggestedTools: [...COMMUNITY_FALLBACK_TOOLS],
+          suggestionReason:
+            'Commercial Project Intelligence is unavailable; continue with Community analysis tools.',
+        }
+      : {}),
   };
 }
 
@@ -128,4 +157,6 @@ module.exports = {
   isProjectKnowledgeMcpTool,
   executeProjectKnowledgeMcpTool,
   PROJECT_KNOWLEDGE_SAFE_MCP_TOOLS,
+  COMMUNITY_FALLBACK_TOOLS,
+  REQUIRED_INPUTS,
 };
