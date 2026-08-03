@@ -3,7 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 const { COMMAND_METADATA, COMMAND_ORDER } = require('../docs/toolCatalogMetadata');
-const { listMcpTools } = require('./mcpTools');
+const { buildCommandHelpEntry } = require('../cli/commandHelp');
+const { listMcpTools, MCP_TOOL_TO_CAPABILITY } = require('./mcpTools');
 const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
 const { buildAgentBootstrapPayload } = require('./agentBootstrap');
 const { listWorkflowPresets } = require('../workflow/workflowPresetRegistry');
@@ -83,6 +84,13 @@ const RESOURCE_DEFINITIONS = Object.freeze([
     description: 'Structured bootstrap payload for AI agents.',
     mimeType: 'application/json',
     generator: buildAgentBootstrapPayload,
+  }),
+  Object.freeze({
+    uri: 'zeus://metadata/surface-parity.json',
+    name: 'Surface Parity',
+    description: 'Versioned CLI/MCP/capability surface parity projection for agents and guards.',
+    mimeType: 'application/json',
+    generator: buildSurfaceParityResource,
   }),
   Object.freeze({
     uri: 'zeus://metadata/mcp-tools.json',
@@ -175,6 +183,32 @@ function buildCommandCatalogResource() {
       command: name,
       ...COMMAND_METADATA[name],
     })),
+  };
+}
+
+function buildSurfaceParityResource() {
+  const tools = listMcpTools();
+  const commands = COMMAND_ORDER.map(name => buildCommandHelpEntry(name)).filter(Boolean);
+  return {
+    schemaVersion: 1,
+    defaultAllowlist: [...DEFAULT_MCP_SAFE_TOOL_NAMES],
+    mcpTools: tools.map(tool => ({
+      name: tool.name,
+      defaultAllowlisted: DEFAULT_MCP_SAFE_TOOL_NAMES.includes(tool.name),
+    })),
+    cliCommands: commands.map(command => ({
+      command: command.command,
+      mcpNames: [...command.mcpNames],
+    })),
+    capabilityMappings: Object.entries(MCP_TOOL_TO_CAPABILITY).map(([mcpName, capabilityId]) => ({
+      mcpName,
+      capabilityId,
+    })),
+    parityRules: [
+      'Every defaultAllowlist entry must be present in mcpTools.',
+      'CLI mcpNames are live catalog names; do not invent names from documentation.',
+      'Capability mappings are compatibility mappings, not entitlement claims.',
+    ],
   };
 }
 
