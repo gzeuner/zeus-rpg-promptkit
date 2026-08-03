@@ -335,7 +335,9 @@ async function evaluateMain({
       ) {
         const candidateComparison = await probes.fetchCompare(releaseCandidate.sourceSha, sha);
         releaseCandidateAuthorized =
-          candidateComparison.behind_by === 0 && candidateComparison.ahead_by === 1;
+          candidateComparison.behind_by === 0 &&
+          candidateComparison.ahead_by === 2 &&
+          candidateComparison.total_commits === 2;
       }
       if (tagVersion !== packageVersion && !releaseCandidateAuthorized)
         applyPolicy(

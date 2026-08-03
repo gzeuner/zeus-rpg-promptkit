@@ -3,5 +3,5 @@
   "sourceSha": "71d4eb4183b8268571c509da882499d2e7061b2c",
   "version": "0.2.0-beta.5",
   "status": "authorized",
-  "purpose": "Beta.5 release publication is pending on the next exact main commit."
+  "purpose": "Beta.5 release publication is pending on the next exact main merge commit."
 }

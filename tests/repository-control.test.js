@@ -537,7 +537,7 @@ test('main uses commit-to-PR association and release policy', async () => {
   assert.ok(value.warnings.some(item => item.code === 'RELEASE_VERSION_MISMATCH'));
 });
 
-test('main accepts an explicitly authorized one-commit release candidate', async () => {
+test('main accepts an explicitly authorized release-candidate merge', async () => {
   const cfg = config();
   const value = report('main');
   await evaluateMain({
@@ -548,7 +548,7 @@ test('main accepts an explicitly authorized one-commit release candidate', async
     config: cfg,
     probes: mainProbes(cfg, {
       fetchReleases: async () => [{ tag_name: 'v0.2.0-beta.4' }],
-      fetchCompare: async () => ({ ahead_by: 1, behind_by: 0 }),
+      fetchCompare: async () => ({ ahead_by: 2, behind_by: 0, total_commits: 2 }),
     }),
     packageVersion: '0.2.0-beta.5',
     releaseCandidate: {
