@@ -232,6 +232,7 @@ async function evaluateMain({
   config,
   probes = defaultProbes,
   packageVersion = require('../../package.json').version,
+  releaseCandidate = null,
 }) {
   let sha;
   try {
@@ -324,7 +325,19 @@ async function evaluateMain({
     report.release = releases[0] || null;
     if (report.release) {
       const tagVersion = String(report.release.tag_name || '').replace(/^v/, '');
-      if (tagVersion !== packageVersion)
+      let releaseCandidateAuthorized = false;
+      if (
+        releaseCandidate &&
+        releaseCandidate.schemaVersion === 'release-candidate/v1' &&
+        releaseCandidate.status === 'authorized' &&
+        releaseCandidate.version === packageVersion &&
+        /^[0-9a-f]{40}$/i.test(String(releaseCandidate.sourceSha))
+      ) {
+        const candidateComparison = await probes.fetchCompare(releaseCandidate.sourceSha, sha);
+        releaseCandidateAuthorized =
+          candidateComparison.behind_by === 0 && candidateComparison.ahead_by === 1;
+      }
+      if (tagVersion !== packageVersion && !releaseCandidateAuthorized)
         applyPolicy(
           report,
           config.policies.releaseVersionMismatch,
@@ -370,6 +383,7 @@ async function evaluateOverview({
   config,
   probes = defaultProbes,
   packageVersion,
+  releaseCandidate = null,
 }) {
   await evaluateMain({
     report,
@@ -379,6 +393,7 @@ async function evaluateOverview({
     config,
     probes,
     ...(packageVersion ? { packageVersion } : {}),
+    ...(releaseCandidate ? { releaseCandidate } : {}),
   });
   try {
     report.pullRequests = await probes.fetchOpenPrs();

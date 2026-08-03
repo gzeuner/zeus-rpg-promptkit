@@ -537,6 +537,32 @@ test('main uses commit-to-PR association and release policy', async () => {
   assert.ok(value.warnings.some(item => item.code === 'RELEASE_VERSION_MISMATCH'));
 });
 
+test('main accepts an explicitly authorized one-commit release candidate', async () => {
+  const cfg = config();
+  const value = report('main');
+  await evaluateMain({
+    report: value,
+    wait: true,
+    timeoutSeconds: 20,
+    pollSeconds: 5,
+    config: cfg,
+    probes: mainProbes(cfg, {
+      fetchReleases: async () => [{ tag_name: 'v0.2.0-beta.4' }],
+      fetchCompare: async () => ({ ahead_by: 1, behind_by: 0 }),
+    }),
+    packageVersion: '0.2.0-beta.5',
+    releaseCandidate: {
+      schemaVersion: 'release-candidate/v1',
+      sourceSha: SHA_B,
+      version: '0.2.0-beta.5',
+      status: 'authorized',
+    },
+  });
+  assert.equal(
+    value.warnings.some(item => item.code === 'RELEASE_VERSION_MISMATCH'),
+    false
+  );
+});
 test('main SHA changes are not reported healthy', async () => {
   const cfg = config();
   const value = report('main');
