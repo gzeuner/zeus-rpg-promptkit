@@ -194,3 +194,30 @@ test('mcp tools call zeus.discover-environment surfaces incomplete config as inv
     }
   );
 });
+
+test('H0 surface parity resource exposes guarded CLI/MCP/capability mappings', async () => {
+  const server = createTestServer({ cwd: process.cwd() });
+  const listResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 406,
+    method: 'resources/list',
+    params: {},
+  });
+  assert.ok(
+    listResponse.result.resources.some(
+      resource => resource.uri === 'zeus://metadata/surface-parity.json'
+    )
+  );
+  const response = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 407,
+    method: 'resources/read',
+    params: { uri: 'zeus://metadata/surface-parity.json' },
+  });
+  const parity = JSON.parse(response.result.contents[0].text);
+  const mcpNames = new Set(parity.mcpTools.map(tool => tool.name));
+  assert.equal(parity.schemaVersion, 1);
+  assert.ok(parity.cliCommands.some(command => command.command === 'doctor'));
+  assert.ok(parity.capabilityMappings.some(mapping => mapping.mcpName === 'zeus.analyze'));
+  for (const name of parity.defaultAllowlist) assert.ok(mcpNames.has(name), name);
+});
