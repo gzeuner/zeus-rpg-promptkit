@@ -6,7 +6,7 @@ Last Updated: 2026-08-03
 
 # Next release checklist (Community)
 
-Current package version on main: **0.2.0-beta.5** (release in progress).
+Current package version on main: **0.2.0-beta.5** (published and verified).
 
 Last published prerelease: [`v0.2.0-beta.4`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4)
 @ `6a4789a…`. **Do not re-tag** beta.4.
@@ -56,6 +56,16 @@ This cut contains Tracks G0-G5 and H0, plus dependency/security maintenance. The
 tag, assets, attestation, and Commercial pin are recorded here after the Release workflow and
 Commercial re-pin complete.
 
+## Closed cut: 0.2.0-beta.5 (2026-08-03)
+
+| Gate                  | Result                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| Tag / assets          | [`v0.2.0-beta.5`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.5) |
+| Source SHA            | `487cca7b06d287b7d5cb53024ca54747500dd584`                                                  |
+| Assets                | tarball + SBOM + SHA256SUMS + attestation; fresh-download verification green                |
+| Commercial pin        | Commercial PR #33; `487cca7…`; `overrides.brace-expansion=5.0.9`; gates green               |
+| Full non-beta `0.2.0` | owner-gated                                                                                 |
+
 ## Content checklist (template for the next cut)
 
 - [ ] `package.json` / `package-lock.json` version match target
@@ -70,10 +80,10 @@ Commercial re-pin complete.
 ## Owner gates (not automated)
 
 - [ ] Version number decision (`0.2.0` vs hold)
-- [ ] Tag + publish authorization via `workflow_dispatch` Release on `main`
-- [ ] Commercial pin bump to the released Community SHA after the release commit is on `main`
-- [ ] Confirm beta.2 historical attestation exception is **not** reused
-- [ ] Confirm existing published tags (including beta.4) are **not** re-tagged
+- [x] Tag + publish authorization via `workflow_dispatch` Release on `main` (Beta.5)
+- [x] Commercial pin bump to the released Community SHA after the release commit is on `main` (Commercial PR #33)
+- [x] Confirm beta.2 historical attestation exception is **not** reused
+- [x] Confirm existing published tags (including beta.4) are **not** re-tagged
 
 ## Closed cut: 0.2.0-beta.4 (2026-07-25)
 
