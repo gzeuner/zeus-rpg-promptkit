@@ -109,6 +109,7 @@ const { listCommandUiMetadata } = require('../cli/commandMetadata');
 const { buildCommandHelpEntry } = require('../cli/commandHelp');
 const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
 const { buildAgentBootstrapPayload } = require('./agentBootstrap');
+const { buildWorkflowSuggestion } = require('./workflowSuggest');
 
 // Pluggable support: dynamic tool registry (for zeus API extensibility)
 const dynamicMcpTools = new Map();
@@ -677,6 +678,28 @@ let listMcpTools = function listMcpTools() {
         type: 'object',
         additionalProperties: false,
         properties: {},
+      },
+    },
+    {
+      name: 'zeus.workflow.suggest',
+      description:
+        'Suggests an ordered, read-only workflow from a goal using real MCP tool names, safety levels, and approval flags; it never executes the plan.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['goal'],
+        properties: {
+          goal: {
+            type: 'string',
+            minLength: 1,
+            description: 'Human goal to turn into an ordered tool plan.',
+          },
+          profile: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional runtime profile to carry into the plan.',
+          },
+        },
       },
     },
     {
@@ -6763,6 +6786,13 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     });
 
     return normalizeMcpResult('zeus.agent.bootstrap', bootstrapPayload);
+  }
+
+  if (name === 'zeus.workflow.suggest') {
+    return normalizeMcpResult(
+      'zeus.workflow.suggest',
+      buildWorkflowSuggestion({ goal: args && args.goal, profile: args && args.profile })
+    );
   }
 
   if (name === 'zeus.onboarding') {
