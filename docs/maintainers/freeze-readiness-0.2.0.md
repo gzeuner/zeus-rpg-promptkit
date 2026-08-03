@@ -16,12 +16,12 @@ version, or dispatch the Release workflow. Those remain **owner gates**.
 
 ## Status after beta.5
 
-| Item                  | State                                                                 |
-| --------------------- | --------------------------------------------------------------------- |
+| Item                  | State                                                                                                    |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
 | `v0.2.0-beta.5`       | **Published** (prerelease; tarball + SBOM + SHA256SUMS + attestation; fresh-download verification green) |
-| Tag / tip SHA         | `487cca7b06d287b7d5cb53024ca54747500dd584` — **do not re-tag**        |
-| Commercial pin        | Commercial PR #33 merged; pinned to this SHA; gates green            |
-| Full non-beta `0.2.0` | **still owner-gated**                                                 |
+| Tag / tip SHA         | `487cca7b06d287b7d5cb53024ca54747500dd584` — **do not re-tag**                                           |
+| Commercial pin        | Commercial PR #33 merged; pinned to this SHA; gates green                                                |
+| Full non-beta `0.2.0` | **still owner-gated**                                                                                    |
 
 ## Recommendation (next cut)
 

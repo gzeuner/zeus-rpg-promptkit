@@ -58,13 +58,13 @@ Commercial re-pin complete.
 
 ## Closed cut: 0.2.0-beta.5 (2026-08-03)
 
-| Gate | Result |
-| ---- | ------ |
-| Tag / assets | [`v0.2.0-beta.5`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.5) |
-| Source SHA | `487cca7b06d287b7d5cb53024ca54747500dd584` |
-| Assets | tarball + SBOM + SHA256SUMS + attestation; fresh-download verification green |
-| Commercial pin | Commercial PR #33; `487cca7…`; `overrides.brace-expansion=5.0.9`; gates green |
-| Full non-beta `0.2.0` | owner-gated |
+| Gate                  | Result                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| Tag / assets          | [`v0.2.0-beta.5`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.5) |
+| Source SHA            | `487cca7b06d287b7d5cb53024ca54747500dd584`                                                  |
+| Assets                | tarball + SBOM + SHA256SUMS + attestation; fresh-download verification green                |
+| Commercial pin        | Commercial PR #33; `487cca7…`; `overrides.brace-expansion=5.0.9`; gates green               |
+| Full non-beta `0.2.0` | owner-gated                                                                                 |
 
 ## Content checklist (template for the next cut)
 
