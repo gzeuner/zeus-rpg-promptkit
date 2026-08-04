@@ -57,6 +57,8 @@ Use a pinned synthetic corpus only. Required integration themes:
 - full rebuild versus incremental semantic equivalence
 - deterministic retrieval hit ordering for a pinned snapshot and query
 - golden-query recall and context-package recall across bounded token budgets
+- cross-program recall over the pinned `mini-multi-program-rpg` corpus, including RPG-to-SQL
+  and program-to-program relationships
 - relevant-source omissions carry stable token-budget reason codes
 - bounded context-package assembly with explicit omission reasons
 - Community-only operation when no Commercial module is registered
