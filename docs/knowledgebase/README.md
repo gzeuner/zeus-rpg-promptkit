@@ -25,8 +25,8 @@ Non-negotiable rules:
 
 Current implementation status:
 
-- `src/knowledge/` now contains a skeleton with `raw/`, `sanitized/`, `final/`, and `privacy/` boundaries
-- no runtime extractor or persistence is implemented yet
+- `src/knowledge/` contains the `raw/`, `sanitized/`, `final/`, and `privacy/` boundaries
+- the neutral PUI structural extractor, final-catalog persistence, validation, and read-only inspection are implemented
 - the privacy gate is fail-closed and rejects malformed or suspicious final-catalog candidates
 - **ZPI-02 (contracts):** `src/projectIntelligence/` versioned project-knowledge contracts, closed
   reason codes, validators, fixtures, and a contract test kit

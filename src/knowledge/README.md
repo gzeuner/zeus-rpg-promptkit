@@ -1,11 +1,11 @@
-# Knowledge Skeleton
+# Project-Neutral Knowledge Pipeline
 
-This directory contains a minimal skeleton for a future project-neutral knowledge pipeline.
+This directory contains the privacy-gated project-neutral knowledge pipeline.
 
 Current status:
 
-- skeleton contracts only
-- no extractor implementation
+- raw, sanitized, and final catalog contracts with a fail-closed privacy gate
+- a neutral PUI structural extractor with synthetic test coverage
 - final catalog persistence is available through `knowledgePipeline.js`
 - no MCP/API exposure
 - local profile-scoped known facts stay separate from this project-neutral pipeline
