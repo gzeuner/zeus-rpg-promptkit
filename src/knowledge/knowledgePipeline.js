@@ -40,6 +40,70 @@ function writeJsonAtomically(targetPath, value) {
   }
 }
 
+function resolveFinalCatalogPath({ catalogPath, outputRoot, runId } = {}) {
+  if (typeof catalogPath === 'string' && catalogPath.trim()) {
+    const resolved = path.resolve(catalogPath.trim());
+    if (path.basename(resolved) !== 'project-neutral-knowledge.json') {
+      throw new Error('catalogPath must point to project-neutral-knowledge.json');
+    }
+    return resolved;
+  }
+  if (typeof outputRoot === 'string' && outputRoot.trim() && runId !== undefined) {
+    return path.resolve(finalCatalogPath(outputRoot.trim(), runId));
+  }
+  return null;
+}
+
+function readFinalKnowledgeCatalog(options = {}) {
+  const targetPath = resolveFinalCatalogPath(options);
+  if (!targetPath) {
+    return {
+      available: false,
+      status: 'disabled',
+      reason: 'Knowledge access requires an explicit privacy-gated project-neutral catalog path.',
+    };
+  }
+
+  if (!fs.existsSync(targetPath)) {
+    return {
+      available: false,
+      status: 'missing',
+      path: targetPath,
+      reason: 'Final project-neutral knowledge catalog was not found.',
+    };
+  }
+
+  let catalog;
+  try {
+    catalog = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
+  } catch {
+    return {
+      available: false,
+      status: 'failed',
+      path: targetPath,
+      reason: 'Final project-neutral knowledge catalog is not valid JSON.',
+    };
+  }
+
+  const privacy = evaluateFinalCatalogPrivacy(catalog);
+  if (!privacy.passed) {
+    return {
+      available: false,
+      status: 'failed',
+      path: targetPath,
+      reason: 'Final project-neutral knowledge catalog failed schema or privacy validation.',
+      reasons: privacy.reasons.map(reason => reason.code),
+    };
+  }
+
+  return {
+    available: true,
+    status: 'ready',
+    path: targetPath,
+    catalog,
+  };
+}
+
 function persistFinalKnowledgeCatalog({ outputRoot, runId, catalog }) {
   if (!outputRoot || typeof outputRoot !== 'string') throw new Error('outputRoot is required');
   const validation = validateFinalKnowledgeCatalog(catalog);
@@ -58,4 +122,9 @@ function persistFinalKnowledgeCatalog({ outputRoot, runId, catalog }) {
   return { path: targetPath, catalog };
 }
 
-module.exports = { finalCatalogPath, persistFinalKnowledgeCatalog };
+module.exports = {
+  finalCatalogPath,
+  persistFinalKnowledgeCatalog,
+  readFinalKnowledgeCatalog,
+  resolveFinalCatalogPath,
+};

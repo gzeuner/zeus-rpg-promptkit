@@ -34,6 +34,7 @@ const {
 } = require('../core/runExplorerService');
 
 const { createAnalyzeStageRegistry } = require('../analyze/stageRegistry');
+const { readFinalKnowledgeCatalog } = require('../knowledge/knowledgePipeline');
 const analyzeStageRegistry = createAnalyzeStageRegistry();
 
 // @ts-ignore - provided by node types / d.ts in scoped check
@@ -831,11 +832,7 @@ function readArtifact(profile, program, artifactPath, options = {}) {
 }
 
 function readKnowledge(options = {}) {
-  return {
-    available: false,
-    status: 'disabled',
-    reason: 'Knowledge API is disabled until a final privacy-gated project-neutral catalog exists.',
-  };
+  return readFinalKnowledgeCatalog(options);
 }
 
 // Central Zeus API object
