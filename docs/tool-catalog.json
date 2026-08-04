@@ -775,6 +775,25 @@
       "example": "node cli/zeus.js pui-inspect --file ./display/DSPFILE.MBR --json"
     },
     {
+      "command": "knowledge",
+      "aliases": [],
+      "status": "experimental",
+      "safety": "S1",
+      "scope": "Local",
+      "sideEffects": [
+        "local-artifact-write",
+        "local-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "purpose": "Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local PUI structure.",
+      "example": "node cli/zeus.js knowledge extract --mode ui-patterns --file ./display/DSPFILE.MBR --out ./output --run-id run-001"
+    },
+    {
       "command": "docs:generate-catalog",
       "aliases": [
         "docs generate-catalog"
