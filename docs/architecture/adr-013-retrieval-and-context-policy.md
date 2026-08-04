@@ -36,6 +36,7 @@ The Community default policy must be able to:
 - apply documented metadata and snapshot-safety filters
 - assemble bounded context packages with explicit evidence references
 - emit non-claims for summaries, rankings, and omitted material
+- preserve expected source recall under documented token budgets, with deterministic omission reasons
 
 ### Commercial extensions
 
