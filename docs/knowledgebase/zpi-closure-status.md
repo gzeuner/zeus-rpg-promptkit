@@ -1,7 +1,7 @@
 ---
 Title: ZPI Closure Status
 Description: Final Zeus Project Intelligence delivery status, non-claims, pins, and gate evidence after ZPI-12.
-Last Updated: 2026-07-25
+Last Updated: 2026-08-04
 ---
 
 # Zeus Project Intelligence — Closure Status
@@ -10,11 +10,11 @@ This document is the public Community closure status for the ZPI program (ZPI-01
 It records delivered surfaces, explicit non-claims, and verification posture. It is **not** a
 product SLA, production certification, or live IBM i validation claim.
 
-**Shipped in public prerelease:** Community package **0.2.0-beta.4**
-([`v0.2.0-beta.4`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4)).
+**Shipped in public prerelease:** Community package **0.2.0-beta.5**
+([`v0.2.0-beta.5`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.5)).
 ZPI Community baseline first shipped in
 [`v0.2.0-beta.3`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.3)
-(source `f1b6f29b73e59089c2873146f65f277663e38a4b`).
+(source `487cca7b06d287b7d5cb53024ca54747500dd584`).
 
 ## Program map
 
@@ -46,8 +46,8 @@ Commercial pins an exact Community SHA. After each Community merge that commerci
 commercial must re-pin **all** hardcoded pin locations (not only `package.json`), re-run its full
 test suite, and keep `npm run audit:prod` green before claiming compatibility.
 
-Current public beta.3 baseline pin used by the commercial package at release time:
-`f1b6f29b73e59089c2873146f65f277663e38a4b`.
+Current public beta.5 baseline pin used by the commercial package at release time:
+`487cca7b06d287b7d5cb53024ca54747500dd584`.
 
 ## Non-claims (closed)
 
@@ -80,6 +80,7 @@ See also: [zpi-threat-model.md](./zpi-threat-model.md), [zpi-license-inventory.m
 - full rebuild duration
 - incremental update duration
 - query / context assembly duration
+- estimated full-source versus context-package token usage and bounded savings on the synthetic corpus
 - approximate store / search / content footprint
 - full-vs-incremental equality of project views
 

@@ -16,6 +16,7 @@ const {
   createProjectRetriever,
   probeNodeSqlite,
 } = require('../src/projectIntelligence');
+const { estimateTokens } = require('../src/ai/tokenEstimator');
 
 const HAS_SQLITE = probeNodeSqlite().available;
 const FILE_COUNT = 40;
@@ -82,6 +83,9 @@ test(
       searchBytes: null,
       contentBytes: null,
       totalMatched: null,
+      fullSourceTokens: null,
+      contextUsedTokens: null,
+      estimatedTokenSavingsPercent: null,
       fullVsIncrementalEqual: false,
     };
 
@@ -165,6 +169,14 @@ test(
         readOnly: true,
       });
       try {
+        const fullSourceText = fs
+          .readdirSync(src)
+          .filter(name => name.endsWith('.rpgle'))
+          .sort()
+          .map(name => fs.readFileSync(path.join(src, name), 'utf8'))
+          .join('\n');
+        metrics.fullSourceTokens = estimateTokens(fullSourceText);
+
         const tq = Date.now();
         const hits = retriever.retrieve({ query: 'ROOTPGM', limit: 20 });
         metrics.queryMs = Date.now() - tq;
@@ -189,6 +201,19 @@ test(
         });
         metrics.contextMs = Date.now() - tc;
         assert.ok(ctx.contextPackage);
+        metrics.contextUsedTokens = ctx.metrics.usedTokens;
+        metrics.estimatedTokenSavingsPercent =
+          metrics.fullSourceTokens > 0
+            ? Math.round((1 - metrics.contextUsedTokens / metrics.fullSourceTokens) * 1000) / 10
+            : 0;
+        assert.ok(
+          metrics.contextUsedTokens <= 2000,
+          `context package exceeded token budget: ${metrics.contextUsedTokens}`
+        );
+        assert.ok(
+          metrics.contextUsedTokens < metrics.fullSourceTokens,
+          `context package did not reduce the synthetic source context: ${metrics.contextUsedTokens} >= ${metrics.fullSourceTokens}`
+        );
         assert.ok(metrics.contextMs < 15_000, `context assembly too slow: ${metrics.contextMs}ms`);
       } finally {
         retriever.close();
@@ -203,6 +228,9 @@ test(
       assert.ok(Number.isFinite(metrics.fullRebuildMs));
       assert.ok(Number.isFinite(metrics.incrementalMs));
       assert.ok(Number.isFinite(metrics.queryMs));
+      assert.ok(Number.isFinite(metrics.fullSourceTokens));
+      assert.ok(Number.isFinite(metrics.contextUsedTokens));
+      assert.ok(Number.isFinite(metrics.estimatedTokenSavingsPercent));
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
