@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright 2026 gzeuner - tiny-tool.de
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
+const { readFinalKnowledgeCatalog } = require('../knowledge/knowledgePipeline');
 
 const AI_KNOWLEDGE_PROJECTION_SCHEMA_VERSION = 1;
 
@@ -446,12 +447,20 @@ function projectKnownFacts(context) {
   };
 }
 
-function projectUiPatternKnowledge({ cwd = process.cwd(), env = process.env } = {}) {
-  return {
+function projectUiPatternKnowledge({
+  catalogPath = null,
+  knowledgeOutputRoot = null,
+  knowledgeRunId = null,
+} = {}) {
+  const loaded = readFinalKnowledgeCatalog({
+    catalogPath,
+    outputRoot: knowledgeOutputRoot,
+    runId: knowledgeRunId,
+  });
+  const disabled = {
     enabled: false,
-    status: 'disabled',
-    reason:
-      'Project-neutral knowledge catalog is not implemented yet. Source-derived local knowledge paths were removed during the privacy reset.',
+    status: loaded.status || 'disabled',
+    reason: loaded.reason || 'No explicit privacy-gated project-neutral catalog supplied.',
     libraryId: null,
     knowledgeBaseId: null,
     generatedAt: null,
@@ -476,13 +485,64 @@ function projectUiPatternKnowledge({ cwd = process.cwd(), env = process.env } = 
     retrieval: {
       strategy: 'disabled',
       availableCardTypes: [],
-      notes: [
-        'MCP/API knowledge surfaces remain disabled until a privacy-gated final catalog exists.',
-      ],
+      notes: ['Only an explicit privacy-gated final catalog can enable knowledge projection.'],
+    },
+  };
+  if (!loaded.available) return disabled;
+
+  const patterns = loaded.catalog.patterns || [];
+  const kinds = [...new Set(patterns.map(pattern => pattern.kind))].sort();
+  const elementRoles = new Set(
+    patterns.flatMap(pattern => (pattern.elements || []).map(element => element.role))
+  );
+  const runtimePatterns = patterns.map(pattern => ({
+    id: pattern.id,
+    kind: pattern.kind,
+    domain: pattern.domain,
+    technology: pattern.technology,
+    features: pattern.features,
+    elements: pattern.elements,
+    confidence: pattern.confidence,
+    evidenceSummary: pattern.evidenceSummary,
+    limitations: pattern.limitations,
+  }));
+
+  return {
+    enabled: true,
+    status: 'ready',
+    mode: 'privacy-gated-final-catalog',
+    reason: null,
+    libraryId: null,
+    knowledgeBaseId: null,
+    generatedAt: loaded.catalog.generatedAt,
+    summary: {
+      elementTypeCount: elementRoles.size,
+      elementFamilyCount: kinds.length,
+      runtimePatternCount: patterns.length,
+      transitionCount: patterns.filter(pattern => pattern.kind === 'ui.navigation').length,
+      dddlTemplateCount: 0,
+      dddlTemplateCardCount: 0,
+    },
+    domains: {
+      familiesTop: kinds.map(kind => ({
+        kind,
+        count: patterns.filter(pattern => pattern.kind === kind).length,
+      })),
+      runtimePatterns,
+      responseSignals: [],
+      backendActions: [],
+      flowPatterns: [],
+      subfileControls: [],
+      gridCapabilities: [...new Set(patterns.flatMap(pattern => pattern.technology || []))].sort(),
+      stateTransitions: [],
+    },
+    retrieval: {
+      strategy: 'catalog-patterns',
+      availableCardTypes: kinds,
+      notes: ['Only privacy-gated project-neutral patterns are available to AI projection.'],
     },
   };
 }
-
 function projectBinding(context, canonicalAnalysis, evidenceIndex) {
   const bindingAnalysis = (context && context.bindingAnalysis) || {};
   const moduleEntities = new Map(
@@ -913,6 +973,9 @@ function buildAiKnowledgeProjection({
   sourceTextByRelativePath = null,
   cwd = process.cwd(),
   env = process.env,
+  knowledgeCatalogPath = null,
+  knowledgeOutputRoot = null,
+  knowledgeRunId = null,
 }) {
   if (!canonicalAnalysis || canonicalAnalysis.kind !== 'canonical-analysis') {
     throw new Error('AI knowledge projection requires canonical analysis input.');
@@ -961,7 +1024,11 @@ function buildAiKnowledgeProjection({
       diagnosticPacks: projectDiagnosticPacks(context),
       uiPatterns: projectUiPatterns(context),
       knownFacts: projectKnownFacts(context),
-      uiPatternKnowledge: projectUiPatternKnowledge({ cwd, env }),
+      uiPatternKnowledge: projectUiPatternKnowledge({
+        catalogPath: knowledgeCatalogPath,
+        knowledgeOutputRoot,
+        knowledgeRunId,
+      }),
       binding: projectBinding(context, canonicalAnalysis, evidenceIndex),
       modules: asArray(canonicalAnalysis.entities && canonicalAnalysis.entities.modules).map(
         entry => ({

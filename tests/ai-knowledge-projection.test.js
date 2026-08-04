@@ -1,4 +1,4 @@
-const test = require('node:test');
+﻿const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
@@ -13,6 +13,8 @@ const {
   buildAiKnowledgeProjection,
 } = require('../src/ai/knowledgeProjection');
 const { buildPrompt } = require('../src/prompt/promptBuilder');
+const { createFinalKnowledgeCatalog } = require('../src/knowledge/final/finalKnowledgeCatalog');
+const { persistFinalKnowledgeCatalog } = require('../src/knowledge/knowledgePipeline');
 const {
   buildCompactDb2TableLink,
   buildCompactTestDataLink,
@@ -254,6 +256,66 @@ test('buildAiKnowledgeProjection carries DB2 metadata and test data links into w
   }
 });
 
+test('buildAiKnowledgeProjection accepts only an explicit privacy-gated final catalog', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-ai-final-catalog-'));
+  const workspaceRoot = path.join(tempRoot, 'workspace');
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+  const canonicalAnalysis = buildCanonicalAnalysisModel({
+    program: 'ORDERPGM',
+    sourceRoot: workspaceRoot,
+    sourceFiles: [],
+    dependencies: {},
+    notes: [],
+  });
+  const context = buildContext({ canonicalAnalysis });
+  const catalog = createFinalKnowledgeCatalog({
+    generatedAt: '2026-08-04T12:00:00.000Z',
+    patterns: [
+      {
+        id: 'ui-grid-1',
+        kind: 'ui.grid',
+        domain: 'data-entry',
+        technology: ['dds'],
+        features: ['selection'],
+        elements: [{ role: 'grid', intent: 'browse records', layoutHints: [], behaviorHints: [] }],
+        confidence: { level: 'high', score: 0.9 },
+        evidenceSummary: { sourceCount: 1 },
+        privacyAssessment: { status: 'passed' },
+        limitations: [],
+      },
+    ],
+  });
+  try {
+    const written = persistFinalKnowledgeCatalog({
+      outputRoot: tempRoot,
+      runId: 'ai-test',
+      catalog,
+    });
+    const projection = buildAiKnowledgeProjection({
+      canonicalAnalysis,
+      context,
+      knowledgeCatalogPath: written.path,
+    });
+    assert.equal(projection.entities.uiPatternKnowledge.enabled, true);
+    assert.equal(projection.entities.uiPatternKnowledge.status, 'ready');
+    assert.equal(projection.entities.uiPatternKnowledge.summary.runtimePatternCount, 1);
+    assert.equal(
+      projection.entities.uiPatternKnowledge.domains.runtimePatterns[0].id,
+      catalog.patterns[0].id
+    );
+    assert.equal(projection.entities.uiPatternKnowledge.domains.runtimePatterns[0].kind, 'ui.grid');
+    assert.equal(
+      projection.entities.uiPatternKnowledge.domains.runtimePatterns[0].technology[0],
+      'dds'
+    );
+    assert.equal(
+      'privacyAssessment' in projection.entities.uiPatternKnowledge.domains.runtimePatterns[0],
+      false
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
 test('buildAiKnowledgeProjection keeps uiPatternKnowledge disabled after knowledge reset', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-ai-projection-cwd-'));
   const workspaceRoot = path.join(tempRoot, 'workspace');
@@ -282,7 +344,7 @@ test('buildAiKnowledgeProjection keeps uiPatternKnowledge disabled after knowled
       });
       assert.equal(projection.entities.uiPatternKnowledge.enabled, false);
       assert.equal(projection.entities.uiPatternKnowledge.status, 'disabled');
-      assert.match(projection.entities.uiPatternKnowledge.reason, /privacy reset/i);
+      assert.match(projection.entities.uiPatternKnowledge.reason, /explicit.*catalog/i);
     } finally {
       process.chdir(previousCwd);
     }
