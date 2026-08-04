@@ -6,7 +6,7 @@ Current status:
 
 - skeleton contracts only
 - no extractor implementation
-- no catalog persistence
+- final catalog persistence is available through `knowledgePipeline.js`
 - no MCP/API exposure
 - local profile-scoped known facts stay separate from this project-neutral pipeline
 
@@ -23,6 +23,8 @@ Safety rules:
 - raw evidence is sensitive and must never be treated as final knowledge
 - sanitized does not mean safe and must still pass privacy validation
 - final catalog candidates must pass `privacy/privacyGate.js` before any downstream use
+- `knowledgePipeline.js` writes only privacy-gated final catalogs to
+  `output/knowledge/<run-id>/project-neutral-knowledge.json`
 - tests and examples in this area must stay synthetic
 - old `.zeus/knowledge/*`, `.local` audit/session-note records, and raw export artifacts must not be migrated
 - DDDL remains local raw interchange only and is not project-neutral toolkit knowledge
