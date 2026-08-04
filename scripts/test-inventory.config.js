@@ -41,7 +41,10 @@ module.exports = {
     ],
     corpus: ['tests/scanner-corpus.test.js'],
     benchmark: ['tests/analyze-benchmark.test.js', 'tests/project-intelligence-benchmark.test.js'],
-    quality: ['tests/golden-quality.test.js'],
+    quality: [
+      'tests/golden-quality.test.js',
+      'tests/project-intelligence-retrieval-quality.test.js',
+    ],
     unit: [
       'tests/capability-registry.test.js',
       'tests/commercial-module-loader.test.js',

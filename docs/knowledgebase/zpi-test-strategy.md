@@ -1,7 +1,7 @@
 ---
 Title: ZPI Test Strategy Baseline
 Description: Minimum deterministic acceptance matrix for later Zeus Project Intelligence implementation packages.
-Last Updated: 2026-07-24
+Last Updated: 2026-08-04
 ---
 
 # ZPI Test Strategy Baseline
@@ -56,6 +56,8 @@ Use a pinned synthetic corpus only. Required integration themes:
 - corrupt or partially published search state refusal or documented rebuild path
 - full rebuild versus incremental semantic equivalence
 - deterministic retrieval hit ordering for a pinned snapshot and query
+- golden-query recall and context-package recall across bounded token budgets
+- relevant-source omissions carry stable token-budget reason codes
 - bounded context-package assembly with explicit omission reasons
 - Community-only operation when no Commercial module is registered
 
