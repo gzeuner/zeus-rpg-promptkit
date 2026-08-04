@@ -33,7 +33,8 @@ Authoritative references (priority order when MCP is available):
 1) MCP `tools/list`, `zeus.agent.bootstrap`, and `zeus.help` (live allowlist + structured help - prefer these first)
 2) `docs/tool-catalog.md` / `zeus://docs/tool-catalog.json` for purpose, scope, and safety levels
 3) `docs/mcp/operator-guide.md` for allowlist posture and operator startup
-4) This session prompt for operating model and safety rules
+4) Agent failure playbook (`zeus://metadata/agent-failure-playbook.json` / `docs/ai/agent-failure-playbook.md`) for recovery codes
+5) This session prompt for operating model and safety rules
 
 Safety rules:
 1) Never run write operations on production systems.

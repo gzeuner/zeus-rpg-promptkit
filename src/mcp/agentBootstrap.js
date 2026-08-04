@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
 const { discoverProjectIntelligenceCapabilities } = require('../projectIntelligence/adapters');
+const { buildAgentFailurePlaybook } = require('./agentFailurePlaybook');
 
 const PACKAGE_JSON_PATH = path.resolve(__dirname, '..', '..', 'package.json');
 
@@ -57,6 +58,7 @@ function buildProjectIntelligenceSnapshot(context = {}) {
 
 function buildAgentBootstrapPayload(context = {}) {
   const projectIntelligenceSnapshot = buildProjectIntelligenceSnapshot(context);
+  const failurePlaybook = buildAgentFailurePlaybook({ compact: true });
 
   return {
     ok: true,
@@ -86,15 +88,18 @@ function buildAgentBootstrapPayload(context = {}) {
       'zeus.workflow',
     ],
     piDiscoverySnapshot: projectIntelligenceSnapshot,
+    failurePlaybook,
     communityFallbacks: [
       'If commercial Project Intelligence is absent, use analyze, search-source, field-search, impact, bundle, and other Community tools instead.',
       'If you do not know a tool name, use tools/list or zeus.help; do not guess.',
       'If a project-knowledge operation other than discover/status fails, the commercial module is absent or not allowlisted.',
+      'On failure, match the situation to failurePlaybook codes and follow the recovery nextTools; do not invent results.',
     ],
     parityHints: [
       'zeus.agent.bootstrap and zeus://metadata/agent-bootstrap.json must stay in sync.',
       'tools/list is the live source of truth for allowlisted MCP tools; docs are secondary.',
       'The default allowlist CSV in docs/mcp/operator-guide.md must match DEFAULT_MCP_SAFE_TOOL_NAMES.',
+      'failurePlaybook codes are stable; full entries live at zeus://metadata/agent-failure-playbook.json.',
     ],
     next: 'help',
   };

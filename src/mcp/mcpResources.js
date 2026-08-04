@@ -7,6 +7,7 @@ const { buildCommandHelpEntry } = require('../cli/commandHelp');
 const { listMcpTools, MCP_TOOL_TO_CAPABILITY } = require('./mcpTools');
 const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
 const { buildAgentBootstrapPayload } = require('./agentBootstrap');
+const { buildAgentFailurePlaybook } = require('./agentFailurePlaybook');
 const { listWorkflowPresets } = require('../workflow/workflowPresetRegistry');
 const { listPromptContracts } = require('../prompt/promptRegistry');
 const { listAnalysisRuns, readAnalysisRun, readArtifactContent } = require('../ui/localUiDataApi');
@@ -14,8 +15,8 @@ const { listAnalysisRuns, readAnalysisRun, readArtifactContent } = require('../u
 const RESOURCE_DEFINITIONS = Object.freeze([
   Object.freeze({
     uri: 'zeus://docs/tool-catalog.md',
-    name: 'Tool Catalog (Markdown)',
-    description: 'Authoritative CLI safety and command catalog.',
+    name: 'Tool Catalog',
+    description: 'Human-oriented catalog of CLI commands, MCP tools and capabilities.',
     mimeType: 'text/markdown',
     filePath: 'docs/tool-catalog.md',
   }),
@@ -28,22 +29,22 @@ const RESOURCE_DEFINITIONS = Object.freeze([
   }),
   Object.freeze({
     uri: 'zeus://docs/cli/reference.md',
-    name: 'CLI Reference Alias',
-    description: 'Stable CLI/MCP-first entrypoint documentation.',
+    name: 'CLI Reference',
+    description: 'CLI command reference documentation.',
     mimeType: 'text/markdown',
     filePath: 'docs/cli/reference.md',
   }),
   Object.freeze({
     uri: 'zeus://docs/ai/session-prompt.md',
     name: 'AI Session Prompt',
-    description: 'Standard CLI/MCP-first session bootstrap prompt.',
+    description: 'Default session prompt template for AI agents working with Zeus.',
     mimeType: 'text/markdown',
     filePath: 'docs/ai/session-prompt.md',
   }),
   Object.freeze({
     uri: 'zeus://docs/mcp/operator-guide.md',
     name: 'MCP Operator Guide',
-    description: 'Current MCP posture, allowlist policy, and troubleshooting guide.',
+    description: 'Operator guide for running and hardening the MCP server.',
     mimeType: 'text/markdown',
     filePath: 'docs/mcp/operator-guide.md',
   }),
@@ -84,6 +85,22 @@ const RESOURCE_DEFINITIONS = Object.freeze([
     description: 'Structured bootstrap payload for AI agents.',
     mimeType: 'application/json',
     generator: buildAgentBootstrapPayload,
+  }),
+  Object.freeze({
+    uri: 'zeus://metadata/agent-failure-playbook.json',
+    name: 'Agent Failure Playbook',
+    description:
+      "Stable failure reason codes with Do / Don't / nextTools recovery guidance for AI agents.",
+    mimeType: 'application/json',
+    generator: () => buildAgentFailurePlaybook({ compact: false }),
+  }),
+  Object.freeze({
+    uri: 'zeus://docs/ai/agent-failure-playbook.md',
+    name: 'Agent Failure Playbook (Markdown)',
+    description:
+      'Human-readable agent failure recovery playbook covering policy refusal, missing profile, unresolved refs, and related codes.',
+    mimeType: 'text/markdown',
+    filePath: 'docs/ai/agent-failure-playbook.md',
   }),
   Object.freeze({
     uri: 'zeus://metadata/surface-parity.json',
