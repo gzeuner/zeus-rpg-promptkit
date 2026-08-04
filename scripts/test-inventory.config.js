@@ -44,6 +44,7 @@ module.exports = {
     quality: [
       'tests/golden-quality.test.js',
       'tests/project-intelligence-retrieval-quality.test.js',
+      'tests/project-intelligence-multi-program-recall.test.js',
     ],
     unit: [
       'tests/capability-registry.test.js',
