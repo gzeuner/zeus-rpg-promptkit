@@ -293,6 +293,14 @@ const COMMAND_METADATA = Object.freeze({
     example:
       'node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json',
   }),
+  knowledge: Object.freeze({
+    safety: 'S1',
+    scope: 'Local',
+    purpose:
+      'Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local PUI structure.',
+    example:
+      'node cli/zeus.js knowledge extract --mode ui-patterns --file ./display/DSPFILE.MBR --out ./output --run-id run-001',
+  }),
   'pui-inspect': Object.freeze({
     safety: 'S0',
     scope: 'Local',
@@ -637,6 +645,13 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: ['local-artifact-write'],
     capabilityId: null,
   }),
+  knowledge: catalogContract({
+    aliases: [],
+    status: 'experimental',
+    availability: CLI_ONLY,
+    sideEffects: ['local-artifact-write', 'local-read'],
+    capabilityId: null,
+  }),
   'pui-inspect': catalogContract({
     aliases: [],
     status: 'experimental',
@@ -718,6 +733,7 @@ const COMMAND_ORDER = Object.freeze([
   'bridge',
   'pui-edit',
   'pui-inspect',
+  'knowledge',
   'docs:generate-catalog',
   'mcp',
   'tools',

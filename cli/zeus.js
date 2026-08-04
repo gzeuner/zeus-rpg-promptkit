@@ -59,6 +59,7 @@ const { runOnboarding } = require('../src/cli/commands/onboardingCommand');
 const { runSecret } = require('../src/cli/commands/secretCommand');
 const { runInvestigate } = require('../src/cli/commands/investigateCommand');
 const { runProjectKnowledge } = require('../src/cli/commands/projectKnowledgeCommand');
+const { run: runKnowledge } = require('../src/cli/commands/knowledgeCommand');
 const path = require('path');
 const { autoLoadEnvFiles } = require('../src/config/envFileLoader');
 const { detectPlaintextSecrets } = require('../src/security/plaintextSecretDetector');
@@ -123,7 +124,7 @@ function printHelp() {
     '  zeus secret <init-key|status|encrypt|decrypt|check|migrate> [--value <text>] [--force] [--windows] [--dry-run] [--no-backup]'
   );
   console.log(
-    '    # PasswÃ¶rter verschlÃ¼sselt ablegen (enc:v1:...). "check" prÃ¼ft Hygiene (Exit 1). --windows fÃ¼r DPAPI. migrate: --no-backup verhindert Klartext-Backup.'
+    '    # PasswÃƒÆ’Ã‚Â¶rter verschlÃƒÆ’Ã‚Â¼sselt ablegen (enc:v1:...). "check" prÃƒÆ’Ã‚Â¼ft Hygiene (Exit 1). --windows fÃƒÆ’Ã‚Â¼r DPAPI. migrate: --no-backup verhindert Klartext-Backup.'
   );
   console.log(
     '  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query'
@@ -212,6 +213,9 @@ function printHelp() {
   );
   console.log(
     '  zeus [--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]'
+  );
+  console.log(
+    '  zeus knowledge <extract|validate|inspect> [options] [--json]  # LOKAL: privacy-gated project-neutral catalog'
   );
   console.log(
     '  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]'
@@ -311,7 +315,7 @@ function splitCommandArgs(argv) {
   };
 }
 
-// Befehle die DB2 oder IBM i Verbindung brauchen Ã¢â‚¬â€ Env-Check wird nur fÃƒÂ¼r diese ausgefÃƒÂ¼hrt
+// Befehle die DB2 oder IBM i Verbindung brauchen ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Env-Check wird nur fÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼r diese ausgefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼hrt
 const COMMANDS_NEEDING_ENV = new Set([
   'query-sql',
   'query-table',
@@ -724,6 +728,11 @@ async function main() {
 
   if (command === 'pui-inspect') {
     await runPuiInspect(args);
+    return;
+  }
+
+  if (command === 'knowledge') {
+    await runKnowledge(args);
     return;
   }
 
