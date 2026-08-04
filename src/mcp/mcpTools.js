@@ -608,6 +608,7 @@ let listMcpTools = function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Runtime profile name used for doctor checks.',
+            examples: ['local'],
           },
         },
       },
@@ -683,7 +684,7 @@ let listMcpTools = function listMcpTools() {
     {
       name: 'zeus.workflow.suggest',
       description:
-        'Suggests an ordered, read-only workflow from a goal using real MCP tool names, safety levels, and approval flags; it never executes the plan.',
+        'Suggests an ordered, read-only workflow from a goal using real MCP tool names, safety levels, checkpoints, and approval flags; it never executes the plan.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -693,6 +694,10 @@ let listMcpTools = function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Human goal to turn into an ordered tool plan.',
+            examples: [
+              'Trace the impact of changing ORDERPGM customer status',
+              'Prepare a read-only onboarding workflow',
+            ],
           },
           profile: {
             type: 'string',
@@ -856,6 +861,7 @@ let listMcpTools = function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Local source root path to scan.',
+            examples: ['./examples/demo-rpg-mini-system/rpg_sources'],
           },
           field: {
             type: 'string',
@@ -1615,6 +1621,7 @@ let listMcpTools = function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Program/output directory name.',
+            examples: ['ORDERPGM'],
           },
           profile: {
             type: 'string',
@@ -1672,6 +1679,7 @@ let listMcpTools = function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Target node identifier (program/table/field) used for impact analysis.',
+            examples: ['CUSTOMER_ID'],
           },
           program: {
             type: 'string',
@@ -1979,7 +1987,7 @@ let listMcpTools = function listMcpTools() {
         additionalProperties: false,
         required: ['program'],
         properties: {
-          program: { type: 'string', minLength: 1 },
+          program: { type: 'string', minLength: 1, examples: ['ORDERPGM'] },
           profile: { type: 'string' },
           goal: { type: 'string' },
           session: { type: 'string' },
@@ -2040,6 +2048,7 @@ let listMcpTools = function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Local source root path to scan.',
+            examples: ['./examples/demo-rpg-mini-system/rpg_sources'],
           },
           searchTerm: {
             type: 'string',
