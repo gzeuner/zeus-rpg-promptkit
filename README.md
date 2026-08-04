@@ -162,7 +162,9 @@ KI-Session-Prompt aus den Demo-Artefakten erzeugen:
 npm run demo:prompt
 ```
 
-Mehr Details: [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)
+Mehr Details: [docs/quickstart/5-minutes.md](docs/quickstart/5-minutes.md)
+
+Community + Commercial: [`docs/quickstart/community-commercial.md`](docs/quickstart/community-commercial.md)
 
 ### Entwicklung
 
@@ -179,13 +181,13 @@ npm run demo:run
 Scripts und Release-Prozess: `package.json`, `CONTRIBUTING.md`, `CHANGELOG.md` und
 `.github/workflows/release.yml`.
 
-**Beta-Status (0.2.0-beta.4):** Vorabversion nach Tracks B–E (Loader-Profile-UX, PI-Export/Corpora,
+**Beta-Status (0.2.0-beta.5):** Vorabversion nach Tracks B–E (Loader-Profile-UX, PI-Export/Corpora,
 Embeddings default off, ADR-Hygiene) auf der PI-Baseline von Beta.3. Kernverträge stabilisieren sich,
 einzelne Oberflächen bleiben experimentell. Details in den GitHub-Release-Notes und im CHANGELOG.
 Vor produktiver Nutzung von Artefakten lokal `npm run docs:check` und `npm run package:smoke`
 ausführen sowie den Golden-Path beachten.
 
-Veröffentlichte Prerelease-Assets: [`v0.2.0-beta.4`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4)
+Veröffentlichte Prerelease-Assets: [`v0.2.0-beta.5`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.5)
 (Tarball, SBOM, SHA256SUMS, Build-Provenance-Attestation). Nutzt den gehärteten
 Single-Artifact-Release-Workflow. Die historische Attestations-Ausnahme von Beta.2 gilt **nicht**.
 Policy: [`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
@@ -193,7 +195,7 @@ Policy: [`docs/maintainers/release-integrity.md`](docs/maintainers/release-integ
 Empfohlene Installation vom GitHub-Release-Tarball:
 
 ```bash
-npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.2.0-beta.4/zeus-rpg-promptkit-0.2.0-beta.4.tgz
+npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.2.0-beta.5/zeus-rpg-promptkit-0.2.0-beta.5.tgz
 ```
 
 ### Golden Corpus und Qualitätsmetriken
@@ -791,22 +793,22 @@ Key guardrails:
 
 ### Install and run
 
-**Beta status (0.2.0-beta.4):** prerelease after Tracks B–E (loader profile UX, PI export/corpora,
+**Beta status (0.2.0-beta.5):** prerelease after Tracks B–E (loader profile UX, PI export/corpora,
 embeddings default off, ADR hygiene) on the beta.3 Project Intelligence baseline. Core contracts
 are stabilizing; some surfaces remain experimental. Details:
-[release notes](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4) and
+[release notes](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.5) and
 `CHANGELOG.md`. Before relying on artifacts locally, run `npm run docs:check` and
 `npm run package:smoke` and follow the golden path.
 
 Published prerelease assets (tarball, SBOM, SHA256SUMS, build-provenance attestation):
-[`v0.2.0-beta.4`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4).
+[`v0.2.0-beta.5`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.5).
 The beta.2 historical attestation exception does **not** apply. Policy:
 [`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
 
 Recommended install from the GitHub release tarball:
 
 ```bash
-npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.2.0-beta.4/zeus-rpg-promptkit-0.2.0-beta.4.tgz
+npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.2.0-beta.5/zeus-rpg-promptkit-0.2.0-beta.5.tgz
 ```
 
 From a source checkout:
@@ -847,6 +849,8 @@ npm run demo:prompt
 ```
 
 See [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md) for details.
+
+Community + Commercial: [docs/quickstart/community-commercial.md](docs/quickstart/community-commercial.md)
 
 ## 🔎 Analyze your own local sources
 
