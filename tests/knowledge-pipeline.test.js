@@ -8,6 +8,7 @@ const { createFinalKnowledgeCatalog } = require('../src/knowledge/final/finalKno
 const {
   finalCatalogPath,
   persistFinalKnowledgeCatalog,
+  readFinalKnowledgeCatalog,
 } = require('../src/knowledge/knowledgePipeline');
 
 function genericCatalog() {
@@ -67,5 +68,46 @@ test('pipeline rejects path traversal in run identifiers', () => {
   assert.throws(
     () => finalCatalogPath(os.tmpdir(), '../unsafe'),
     /runId must contain only letters/
+  );
+});
+
+test('read-only catalog loader returns a validated final catalog', () => {
+  const outputRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-knowledge-reader-'));
+  try {
+    const written = persistFinalKnowledgeCatalog({
+      outputRoot,
+      runId: 'synthetic-read-001',
+      catalog: genericCatalog(),
+    });
+    const result = readFinalKnowledgeCatalog({ catalogPath: written.path });
+    assert.equal(result.available, true);
+    assert.equal(result.status, 'ready');
+    assert.deepEqual(result.catalog, written.catalog);
+  } finally {
+    fs.rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test('read-only catalog loader fails closed for privacy-invalid JSON', () => {
+  const outputRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-knowledge-reader-'));
+  const targetPath = finalCatalogPath(outputRoot, 'synthetic-read-002');
+  try {
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    const catalog = genericCatalog();
+    catalog.patterns[0].features.push('APPDATA.ORDERHDR');
+    fs.writeFileSync(targetPath, JSON.stringify(catalog), 'utf8');
+    const result = readFinalKnowledgeCatalog({ catalogPath: targetPath });
+    assert.equal(result.available, false);
+    assert.equal(result.status, 'failed');
+    assert.ok(result.reasons.includes('SQL_OBJECT_NAME'));
+  } finally {
+    fs.rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test('read-only catalog loader requires the final artifact filename', () => {
+  assert.throws(
+    () => readFinalKnowledgeCatalog({ catalogPath: path.join(os.tmpdir(), 'catalog.json') }),
+    /catalogPath must point to project-neutral-knowledge.json/
   );
 });

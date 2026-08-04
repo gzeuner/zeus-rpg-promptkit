@@ -229,3 +229,34 @@ test('zeus rich API exposes investigation sessions (Prio 1)', () => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
+
+test('zeusApi reads only an explicitly supplied privacy-gated final catalog', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-api-knowledge-'));
+  const catalogPath = path.join(
+    tempRoot,
+    'knowledge',
+    'synthetic-api-001',
+    'project-neutral-knowledge.json'
+  );
+  try {
+    fs.mkdirSync(path.dirname(catalogPath), { recursive: true });
+    fs.writeFileSync(
+      catalogPath,
+      JSON.stringify({
+        schemaVersion: '1.0.0',
+        generatedAt: '2026-08-04T12:00:00.000Z',
+        generator: { name: 'synthetic-test', version: '1.0.0' },
+        privacyMode: 'strict',
+        taxonomyVersion: 'draft-1',
+        patterns: [],
+      }),
+      'utf8'
+    );
+    const knowledge = readKnowledge({ catalogPath });
+    assert.equal(knowledge.available, true);
+    assert.equal(knowledge.status, 'ready');
+    assert.deepEqual(knowledge.catalog.patterns, []);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
