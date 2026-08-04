@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 module.exports = {
   categories: {
@@ -45,6 +45,7 @@ module.exports = {
     unit: [
       'tests/capability-registry.test.js',
       'tests/commercial-module-loader.test.js',
+      'tests/knowledge-neutral-pui.test.js',
       'tests/knowledge-pipeline.test.js',
       'tests/test-inventory.test.js',
       'tests/typecheck-scope.test.js',
