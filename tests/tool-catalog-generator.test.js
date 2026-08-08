@@ -43,7 +43,7 @@ test('catalog model is deterministic and preserves the public command contracts'
   const first = buildCatalogModel({ repoRoot: projectRoot, env: {} });
   const second = buildCatalogModel({ repoRoot: projectRoot, env: {} });
   assert.deepEqual(first, second);
-  assert.equal(first.generatedAt, '2026-08-03T00:00:00.000Z');
+  assert.equal(first.generatedAt, '2026-08-08T00:00:00.000Z');
   assert.deepEqual(first.package, {
     name: 'zeus-rpg-promptkit',
     version: packageIdentity.version,
@@ -203,7 +203,7 @@ test('generation works in an exported tree without Git metadata', () => {
   try {
     assert.equal(fs.existsSync(path.join(root, '.git')), false);
     const model = buildCatalogModel({ repoRoot: root, env: {} });
-    assert.equal(model.generatedAt, '2026-08-03T00:00:00.000Z');
+    assert.equal(model.generatedAt, '2026-08-08T00:00:00.000Z');
     assert.equal(model.commandRows.length, COMMAND_ORDER.length);
     const attributes = new Set(
       fs.readFileSync(path.join(root, '.gitattributes'), 'utf8').split(/\r?\n/).filter(Boolean)

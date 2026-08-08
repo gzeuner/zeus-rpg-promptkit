@@ -1,18 +1,18 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-08-03T00:00:00.000Z
+Last generated: 2026-08-08T00:00:00.000Z
 -->
 
 ---
 Title: Zeus RPG PromptKit Tool Catalog
 Description: Verbindlicher, sicherheitsklassifizierter Katalog aller CLI-Befehle und Workflow-Presets fuer Menschen und KI-Assistenten.
-Last Updated: 2026-08-03
+Last Updated: 2026-08-08
 ---
 
 # Zeus RPG PromptKit Tool Catalog
 
-Package: `zeus-rpg-promptkit@0.2.0-beta.5`
+Package: `zeus-rpg-promptkit@0.2.0`
 
 This document is the authoritative tool reference for Zeus RPG PromptKit.
 All AI assistants (GPT, Claude, Grok, Copilot, local agents) should treat this file as the single source of truth for command purpose, risk level, and usage.
