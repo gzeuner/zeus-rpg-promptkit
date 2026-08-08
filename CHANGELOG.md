@@ -15,6 +15,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [0.2.0] - 2026-08-08
+
+First non-beta Community release after the beta.5 freeze.
+
+### Added
+
+- documented Windows company-pilot workflow for Community and explicitly registered Commercial modules;
+- documented safe transfer of signed licenses: only `license.json` and the matching public key leave the licensing environment.
+
+### Changed
+
+- promoted the reviewed `0.2.0-beta.5` Community baseline to the stable `0.2.0` package version.
+
+### Security
+
+- internal issuer scripts remain under ignored `.local/` paths and are excluded from the published package;
+- no private signing keys, licenses, customer data, or internal paths are included in the Community release.
+
 ## [0.2.0-beta.5] - 2026-08-03
 
 Agent-oriented Community beta after Tracks G and H0, with the zero-search MCP path,
