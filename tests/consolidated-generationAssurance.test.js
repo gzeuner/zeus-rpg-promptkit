@@ -137,6 +137,15 @@ function createTempPair() {
   return { workspaceRoot, reviewRoot };
 }
 
+function canonicalPath(input) {
+  const absolute = path.resolve(input);
+  try {
+    return fs.realpathSync.native ? fs.realpathSync.native(absolute) : fs.realpathSync(absolute);
+  } catch {
+    return absolute;
+  }
+}
+
 function cleanupPair(pair) {
   fs.rmSync(pair.workspaceRoot, { recursive: true, force: true });
   fs.rmSync(pair.reviewRoot, { recursive: true, force: true });
@@ -1191,7 +1200,7 @@ test('review artifacts are written outside the workspace', async () => {
     for (const file of result.artifacts.files) {
       const rel = path.relative(pair.workspaceRoot, file);
       assert.ok(rel.startsWith('..') || path.isAbsolute(rel));
-      assert.ok(file.startsWith(pair.reviewRoot));
+      assert.ok(file.startsWith(canonicalPath(pair.reviewRoot)));
     }
     assert.ok(fs.existsSync(path.join(result.artifacts.directory, 'attempt-history.json')));
   } finally {
@@ -2013,7 +2022,7 @@ test('runId "." and ".." never escape review root', async () => {
         },
       });
       if (result.artifacts.written) {
-        assert.ok(result.artifacts.directory.startsWith(path.resolve(pair.reviewRoot)));
+        assert.ok(result.artifacts.directory.startsWith(canonicalPath(pair.reviewRoot)));
         assert.ok(!result.artifacts.directory.endsWith(`${path.sep}.`));
         assert.ok(!result.artifacts.directory.endsWith(`${path.sep}..`));
         const rel = path.relative(pair.workspaceRoot, result.artifacts.directory);
@@ -2591,7 +2600,7 @@ test('registered capability writes review artifacts only with trusted outside-wo
     assert.equal(execution.result.artifacts.written, true);
     assert.ok(execution.result.artifacts.files.length > 0);
     assert.equal(
-      path.resolve(execution.result.artifacts.directory).startsWith(path.resolve(pair.reviewRoot)),
+      path.resolve(execution.result.artifacts.directory).startsWith(canonicalPath(pair.reviewRoot)),
       true
     );
   } finally {

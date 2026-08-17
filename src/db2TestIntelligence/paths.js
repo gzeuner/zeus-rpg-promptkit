@@ -10,7 +10,22 @@ function resolveReal(p) {
     if (fs.realpathSync.native) return fs.realpathSync.native(abs);
     return fs.realpathSync(abs);
   } catch {
-    return abs;
+    const suffix = [];
+    let current = abs;
+    while (!fs.existsSync(current)) {
+      const parent = path.dirname(current);
+      if (parent === current) return abs;
+      suffix.unshift(path.basename(current));
+      current = parent;
+    }
+    try {
+      const realParent = fs.realpathSync.native
+        ? fs.realpathSync.native(current)
+        : fs.realpathSync(current);
+      return path.join(realParent, ...suffix);
+    } catch {
+      return abs;
+    }
   }
 }
 

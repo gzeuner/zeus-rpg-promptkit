@@ -1055,7 +1055,9 @@ test('path traversal, absolute, UNC run ids fail reader; writer sanitizes', () =
     assert.equal(result.artifacts.written, true);
     // Sanitized run id must not escape
     assert.equal(result.artifacts.runId.includes('..'), false);
-    assert.ok(result.artifacts.directory.startsWith(path.resolve(artifacts)));
+    assert.ok(
+      result.artifacts.directory.startsWith(fs.realpathSync.native(path.resolve(artifacts)))
+    );
     // Exact canonical form required by reader
     assert.equal(result.artifacts.runId, sanitizeRunId('../escape'));
     assert.equal(db2tiPublic.readArtifacts(artifacts, result.artifacts.runId).ok, true);
