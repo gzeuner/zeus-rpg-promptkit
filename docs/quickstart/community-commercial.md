@@ -1,21 +1,25 @@
 ---
-title: Community und Commercial gemeinsam betreiben
-description: Verifizierter Installations- und Betriebsweg für den öffentlichen Community-Core und das private Commercial-Modul.
-lastUpdated: 2026-08-04
+title: Einheitliche Module und externe Erweiterungen
+description: Öffentlicher Betriebsweg für das einheitliche Apache-2.0-Paket und bewusst explizite externe Erweiterungen.
+lastUpdated: 2026-08-17
 ---
 
-# Community und Commercial gemeinsam betreiben
+# Einheitliche Module und externe Erweiterungen
 
-Zeus besteht aus zwei bewusst getrennten Paketen:
+`zeus-rpg-promptkit` ist die einzige aktive Codebasis und steht vollständig unter Apache-2.0.
+Die früher getrennten Professional-/Enterprise-Implementierungen sind – soweit technisch und
+rechtlich freigegeben – als integrierte Module im öffentlichen Paket enthalten:
 
-- **Community:** öffentliches Apache-2.0-Paket `zeus-rpg-promptkit`. Es funktioniert vollständig ohne Commercial-Modul und stellt CLI, API, MCP, Analyse, Project-Knowledge-Engines und die neutralen Modulverträge bereit.
-- **Commercial:** privates, separat verteiltes Paket `@zeus-pro/module-sdk-reference` aus dem Repository `zeus-rpg-promptkit-commercial`. Es enthält lizenzpflichtige Professional-/Enterprise-Module. Zugriff, Lizenzdokument und Public Key kommen vom Betreiber bzw. Anbieter; sie gehören nicht ins Community-Repository.
+- `project-intelligence`
+- `generation-assurance`
+- `db2-test-intelligence`
+- `ibmi-validation`
 
-Der Community-Core lädt Commercial niemals automatisch. Das Commercial-Paket wird ausschließlich über einen expliziten Paketnamen oder Pfad registriert.
+Die Entitlement-Prüfung bleibt eine Laufzeit-Produktpolicy. Sie ändert nicht die Projektlizenz.
+Das Paket bleibt ohne gültige Lizenz oder ohne optionale Modulregistrierung benutzbar; geschützte
+Fähigkeiten verweigern den Zugriff fail-closed.
 
-## 1. Community-only
-
-Für lokale Analyse und die Community-Project-Knowledge-Engines:
+## Basispaket
 
 ```bash
 git clone https://github.com/gzeuner/zeus-rpg-promptkit.git
@@ -25,106 +29,77 @@ npm run demo:run
 node cli/zeus.js project-knowledge discover --json
 ```
 
-In diesem Modus ist `commercialLoader.loaded` `false`. Die Community-Engines bleiben nutzbar; Commercial-only-Operationen melden einen stabilen `ZPI.CAPABILITY_UNAVAILABLE`-Fehler und verändern keine Artefakte.
+Die neutralen Engines, CLI, API und MCP-Grundflächen funktionieren ohne Lizenzdokument und ohne
+externe Module.
 
-Für eine veröffentlichte Community-Version sollte ein Release-Tarball verwendet werden:
+## Integrierte Module explizit aktivieren
 
-```bash
-npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.2.0-beta.5/zeus-rpg-promptkit-0.2.0-beta.5.tgz
-```
-
-## 2. Commercial installieren
-
-Das Commercial-Repository ist privat und nicht als öffentliches npm-Paket veröffentlicht. Nach erteilter Repository- und Lizenzfreigabe wird es in der Host-Anwendung installiert, zum Beispiel:
+Die Registrierung ist absichtlich explizit. Für die professionelle Standardauswahl:
 
 ```bash
-npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.2.0-beta.5/zeus-rpg-promptkit-0.2.0-beta.5.tgz
-npm install git+ssh://git@github.com/gzeuner/zeus-rpg-promptkit-commercial.git
+node cli/zeus.js project-knowledge discover \
+  --built-in-modules professional \
+  --json
 ```
 
-Alternativ kann während der Entwicklung ein lokaler Pfad verwendet werden. Der Host muss das Paket mit seinem Export `registerWithZeus(zeus, options)` erreichen können. Das Laden eines Pakets führt JavaScript im selben Prozess aus und ist deshalb eine Vertrauensentscheidung, keine Sandbox.
-
-## 3. Lizenz und explizite Registrierung
-
-Lizenzdatei und Public Key werden lokal außerhalb des Repositories abgelegt. Niemals echte Lizenzen, Kundendaten oder private Schlüssel committen.
-
-PowerShell:
-
-```powershell
-$env:ZEUS_COMMERCIAL_MODULE='@zeus-pro/module-sdk-reference'
-$env:ZEUS_LICENSE_DOCUMENT_PATH='C:\secure\zeus\license.json'
-$env:ZEUS_LICENSE_PUBLIC_KEY_PATH='C:\secure\zeus\public.pem'
-$env:ZEUS_COMMERCIAL_MODULES='project-intelligence'
-```
-
-Bash:
+Oder mit einzelnen Modulen:
 
 ```bash
-export ZEUS_COMMERCIAL_MODULE='@zeus-pro/module-sdk-reference'
-export ZEUS_LICENSE_DOCUMENT_PATH='/secure/zeus/license.json'
-export ZEUS_LICENSE_PUBLIC_KEY_PATH='/secure/zeus/public.pem'
-export ZEUS_COMMERCIAL_MODULES='project-intelligence'
+node cli/zeus.js project-knowledge discover \
+  --built-in-modules project-intelligence,generation-assurance,db2-test-intelligence \
+  --json
 ```
 
-Die Auflösungsreihenfolge ist: CLI/API-Optionen, dann Umgebungsvariablen, dann `profile.commercial`.
-
-Mit Profil:
-
-```json
-{
-  "dev": {
-    "commercial": {
-      "module": "${env:ZEUS_COMMERCIAL_MODULE}",
-      "modules": ["project-intelligence"],
-      "licenseDocumentPath": "${env:ZEUS_LICENSE_DOCUMENT_PATH}",
-      "publicKeyPath": "${env:ZEUS_LICENSE_PUBLIC_KEY_PATH}"
-    }
-  }
-}
-```
-
-Dann den Status prüfen:
+Für die Enterprise-Oberfläche kommt die owner-gated IBM-i-Validierung hinzu:
 
 ```bash
-zeus project-knowledge discover --profile dev --json
-zeus project-knowledge status --profile dev --json
+node cli/zeus.js project-knowledge discover \
+  --built-in-modules enterprise \
+  --json
 ```
 
-Ein erfolgreicher Lauf weist das Commercial-Modul als geladen aus und meldet die registrierten Fähigkeiten. Fehlt die Lizenz, ist sie abgelaufen oder ungültig, wird nur das Commercial-Modul deaktiviert; der Community-Core bleibt nutzbar.
+License-Dokument und Public Key bleiben lokale Konfiguration. Niemals echte Lizenzen, private
+Schlüssel, Kundendaten oder interne Pfade committen. Die API akzeptiert dafür die Optionen
+`builtInModules`, `surface`, `licenseDocument`, `publicKeyPem` und die zugehörigen Trusted-Root-
+Optionen.
 
-## 4. Project Intelligence verwenden
+## Project Intelligence verwenden
 
-Commercial-Operationen benötigen weiterhin einen absoluten, explizit erlaubten Trusted Root. Es gibt keinen impliziten Workspace-Scan:
+Index-, Query- und Kontextoperationen benötigen explizite absolute Trusted Roots:
 
 ```bash
-zeus project-knowledge full-index \
-  --profile dev \
+node cli/zeus.js project-knowledge full-index \
+  --built-in-modules professional \
   --knowledge-root /data/zeus-knowledge \
   --project-id demo \
   --trusted-roots '[{"rootId":"source","path":"/data/ibmi-sources"}]' \
   --json
 ```
 
-Die verfügbaren Operationen sind `create-project`, `full-index`, `incremental-update`, `query`, `impact-analysis`, `build-context-package`, `inspect-snapshot` und `verify-integrity`. Community-Artefakte bleiben auch ohne Commercial lesbar.
+Es gibt keinen impliziten Workspace-Scan. `review-ready` ist keine Compile- oder Deployment-
+Freigabe; Live-IBM-i-Zugriffe bleiben standardmäßig deaktiviert und owner-gated.
 
-## 5. MCP
+## Externe Erweiterungen
 
-Für MCP muss das Modul ebenfalls explizit geladen werden. `discover` und `status` sind die sicheren Standardflächen; Index-/Query-/Write-nahe Operationen benötigen zusätzlich eine enge `--allow-tools`-Liste:
+Der frühere `commercialModuleLoader` bleibt als Kompatibilitäts- und Erweiterungspunkt erhalten.
+Er lädt nur einen vom Host ausdrücklich angegebenen Paketnamen oder Pfad und führt diesen Code im
+selben Prozess aus. Es gibt keine automatische Discovery, kein Fallback und keine Sandbox. Für
+neue Produktfunktionalität ist die integrierte Built-in-Registrierung der maßgebliche Weg.
 
-```bash
-zeus mcp serve \
-  --profile dev \
-  --commercial-module @zeus-pro/module-sdk-reference \
-  --allow-tools zeus.project-knowledge.discover,zeus.project-knowledge.status
+```js
+const { createHostZeus } = require('zeus-rpg-promptkit/api');
+
+const host = await createHostZeus({
+  builtInModules: 'professional',
+  licenseDocument,
+  publicKeyPem,
+});
 ```
 
-Weitere MCP-Tools nur einzeln und nach Prüfung freigeben. Siehe [`docs/mcp/operator-guide.md`](../mcp/operator-guide.md).
+Externe Erweiterungen verwenden weiterhin `--commercial-module` beziehungsweise die bestehende
+API-Kompatibilität. Sie sind nicht erforderlich, um das öffentliche Produkt zu betreiben.
 
-## 6. Versionierung und Verifikation
-
-Das Commercial-Paket pinnt absichtlich einen veröffentlichten Community-Release und nicht automatisch den neuesten `main`-Snapshot. Der aktuell dokumentierte Beta-5-Pin ist `487cca7b06d287b7d5cb53024ca54747500dd584`. Für Produktion müssen Community-Release, Commercial-Pin und Lizenzfreigabe zusammenpassen. Nach jedem neuen Community-Release muss Commercial alle Pin-Stellen aktualisieren und seine eigenen Gates erneut ausführen.
-
-Community-Verifikation:
+## Verifikation
 
 ```bash
 npm run format:check
@@ -132,15 +107,10 @@ npm run lint
 npm run typecheck
 npm test
 npm run package:smoke
+npm run docs:check
+npm run demo:run
+git diff --check
 ```
 
-Commercial-Verifikation im privaten Repository:
-
-```bash
-npm run test:discovery
-npm test
-npm run package:smoke
-npm run audit:prod
-```
-
-Die beiden Pakete sind damit getrennt installierbar und über die öffentliche Modulregistrierung integrierbar. Die Community-Abhängigkeit bleibt ohne Commercial funktionsfähig; Commercial-only-Fähigkeiten erscheinen erst nach expliziter Registrierung und erfolgreicher Entitlement-Prüfung.
+Architektur und Ownership stehen in
+[`docs/architecture/adr-014-unified-capability-consolidation.md`](../architecture/adr-014-unified-capability-consolidation.md).

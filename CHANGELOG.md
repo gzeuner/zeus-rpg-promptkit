@@ -9,7 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- integrated Generation Assurance, Db2 Test Intelligence, IBM i Validation, entitlement, and
+  entitled Project Intelligence under one public Apache-2.0 package;
+- explicit `--built-in-modules` / `ZEUS_BUILT_IN_MODULES` selection and unified package smoke coverage;
+- ADR-014 and a consolidated migration quickstart.
+
 ### Changed
+
+- the public repository is now the only active codebase; the former external loader remains only
+  as an explicit compatibility hook for separately supplied extensions;
+- package exports, CLI help, product-surface metadata, tests, and docs now describe the unified tree.
 
 ### Fixed
 

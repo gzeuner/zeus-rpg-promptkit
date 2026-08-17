@@ -676,7 +676,7 @@ const CONFIG_UI_FIELDS = Object.freeze([
   }),
   Object.freeze({
     key: 'profile.commercial.module',
-    label: 'Commercial Module',
+    label: 'External Module Extension',
     description:
       'Explicit commercial package name or filesystem path for host loader (ADR-006). No auto-discovery.',
     section: 'commercial',
@@ -685,7 +685,7 @@ const CONFIG_UI_FIELDS = Object.freeze([
     sensitive: false,
     safeToDisplay: true,
     placeholder: '${env:ZEUS_COMMERCIAL_MODULE}',
-    example: '@zeus-pro/module-sdk-reference',
+    example: './vendor/zeus-extension',
     envVar: 'ZEUS_COMMERCIAL_MODULE',
     profilePath: 'commercial.module',
     validation: Object.freeze({ explicitOnly: true }),
@@ -694,7 +694,7 @@ const CONFIG_UI_FIELDS = Object.freeze([
   }),
   Object.freeze({
     key: 'profile.commercial.modules',
-    label: 'Commercial Module Keys',
+    label: 'External Module Keys',
     description:
       'Optional package-defined module keys to register (e.g. project-intelligence). Explicit list only.',
     section: 'commercial',

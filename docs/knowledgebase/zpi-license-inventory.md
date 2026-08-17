@@ -1,22 +1,23 @@
 ---
 Title: ZPI License Inventory and Dependency Governance
-Description: ZPI-01 licensing baseline, planned engine compatibility notes, and unresolved dependency decisions.
-Last Updated: 2026-07-22
+Description: Consolidated Apache-2.0 licensing baseline, dependency compatibility notes, and remaining dependency decisions.
+Last Updated: 2026-08-17
 ---
 
 # ZPI License Inventory and Dependency Governance
 
-This document records the ZPI-01 licensing baseline. It is not legal advice.
+This document records the current consolidated licensing baseline. It is not legal advice.
 
 ## Repository baseline
 
-| Repository                                 | Current status                       |
-| ------------------------------------------ | ------------------------------------ |
-| Community `zeus-rpg-promptkit`             | Apache-2.0                           |
-| Commercial `zeus-rpg-promptkit-commercial` | `UNLICENSED` proprietary placeholder |
+| Repository / codebase | Current status |
+| --------------------- | -------------- |
+| `zeus-rpg-promptkit`  | Apache-2.0     |
 
-Commercial depends on the public Community repository pinned to commit
-`3a6586dca648e41dbd74ef48e0848e9830cfc113`.
+The public repository is the only active codebase. The former private implementation was reviewed
+and its authorized, compatible product code was integrated into this tree; no private repository
+is required at runtime. The former private repository is not deleted automatically and remains a
+separate archival concern.
 
 ## Planned default engines
 
@@ -28,8 +29,8 @@ Commercial depends on the public Community repository pinned to commit
 ## Governance rules for later implementation packages
 
 - Community defaults must remain redistributable under the Community Apache-2.0 release model.
-- Commercial code may depend on Community public exports, but Community must not depend on
-  proprietary code or entitlements.
+- Integrated modules may use the public contracts and runtime entitlement policy, but no module
+  may introduce an incompatible source license or proprietary dependency into the package.
 - Exact dependency selection for SQLite and Lucene bindings is a governance event and must document:
   runtime vs dev/test role, native vs pure-JS footprint, transitive licenses, SBOM impact, and
   offline-install behavior.
@@ -50,9 +51,10 @@ ZPI implementation packages must preserve or establish:
 
 ## Resolved baseline statements
 
-- The ownership split is license-compatible if Community owns the default engines and Commercial
-  remains separately distributed.
-- Commercial policy modules do not relicense the Community pin.
+- The consolidated tree is distributed under Apache-2.0 because the authorized source review
+  confirmed project ownership or compatible redistribution for the integrated files.
+- Runtime entitlement and Professional/Enterprise surface labels are product-policy metadata and
+  do not create a second source license.
 - Raw user project data portability is separate from dependency attribution obligations.
 
 ## Resolved in ZPI-03 (SQLite binding)

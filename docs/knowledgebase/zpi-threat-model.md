@@ -1,20 +1,20 @@
 ---
 Title: ZPI Threat Model
-Description: Documentation baseline threat model for Zeus Project Intelligence before runtime implementation.
-Last Updated: 2026-07-24
+Description: Current security baseline for the integrated Zeus Project Intelligence surface.
+Last Updated: 2026-08-17
 ---
 
 # ZPI Threat Model
 
-This document records the security baseline for ZPI (updated through ZPI-12 hardening). It is a
-documentation artifact, not a runtime security claim or product certification.
+This document records the security baseline for the integrated Project Intelligence surface. It is
+a design and test artifact, not a runtime security claim or product certification.
 
 ## Scope
 
 In scope:
 
-- Community project-intelligence contracts and default backend boundaries
-- Commercial extension boundaries that must not bleed into Community
+- public Project Intelligence contracts and local backend boundaries
+- integrated built-in modules and explicit external extension boundaries
 - local trusted roots, preserved evidence, published snapshots, retrieval, and context packages
 - thin CLI/API/MCP-neutral capability exposure
 
@@ -22,7 +22,7 @@ Out of scope:
 
 - live IBM i runtime operations
 - Package 09 reopen or new S4 execution paths
-- production entitlement infrastructure details
+- production entitlement infrastructure outside the package contract
 
 ## Assets
 
@@ -37,13 +37,14 @@ Protected assets:
 
 ## Trust boundaries
 
-| Boundary                         | Notes                                                                                 |
-| -------------------------------- | ------------------------------------------------------------------------------------- |
-| Trusted local roots              | only explicitly authorized source roots may be inventoried                            |
-| Local project-intelligence store | sensitive local state; not safe-sharing by default                                    |
-| Thin CLI/API/MCP projection      | Community thin adapters only; commercial handlers appear only after registration      |
-| Commercial extension boundary    | entitlement-gated, separately distributed, never required for Community-owned readers |
-| External sharing or model egress | deny by default unless a future policy explicitly allows it                           |
+| Boundary                         | Notes                                                                 |
+| -------------------------------- | --------------------------------------------------------------------- |
+| Trusted local roots              | only explicitly authorized source roots may be inventoried            |
+| Local project-intelligence store | sensitive local state; not safe-sharing by default                    |
+| Thin CLI/API/MCP projection      | registered capabilities only; unavailable operations fail closed      |
+| Built-in module boundary         | explicit registration and runtime entitlement; no automatic discovery |
+| External extension boundary      | operator-supplied in-process code is trusted code, not a sandbox      |
+| External sharing or model egress | deny by default unless a future policy explicitly allows it           |
 
 ### CLI/MCP adapter surface (ZPI-11/12)
 
@@ -55,9 +56,9 @@ Threats:
 
 Required mitigations (implemented):
 
-- capability present/absent discovery without loading commercial packages
+- capability present/absent discovery without implicit module loading
 - fail-closed `CAPABILITY_UNAVAILABLE` when unregistered
-- path redaction helpers on commercial op results
+- path redaction helpers on integrated operation results
 - MCP safe defaults limited to discover + status; write/index require explicit allow-tools
 
 ## Primary threats
@@ -123,19 +124,19 @@ Required mitigations:
 - closed reason codes for forbidden source classes and disclosure denial
 - explicit non-claims on derived packages and rankings
 
-### Entitlement bleed and open-core boundary erosion
+### Entitlement and registration bleed
 
 Threats:
 
-- Community adapters that only function when Commercial is present
-- paid capability discovery leaking as always-available in Community
-- proprietary formats becoming required to read Community-owned project knowledge
+- adapters that only function when a capability is implicitly present
+- protected capability discovery leaking as always-available
+- proprietary formats becoming required to read public project knowledge
 
 Required mitigations:
 
-- Community complete offline baseline
-- entitlement enforcement only in Commercial modules
-- Community-owned readers and migrations remain Community-owned
+- complete offline public baseline
+- entitlement enforcement at the runtime module policy boundary
+- public readers and migrations remain usable without external extensions
 - capability discovery reflects actual registered state only
 
 ## Mandatory negative-test themes
@@ -147,7 +148,7 @@ The later runtime packages must include negative tests for at least:
 - oversized project refusal without partial publish
 - provenance mismatch and stale current-pointer refusal
 - snippet or path leakage through diagnostics, search, MCP, or exports
-- Community-only operation with Commercial capability absence or entitlement denial
+- public-only operation with built-in capability absence or entitlement denial
 - context-package disclosure denial even when token budget would allow more content
 
 ## Owner decisions still required

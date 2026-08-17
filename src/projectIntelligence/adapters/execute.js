@@ -18,7 +18,7 @@ function resolveCapabilityId(operation) {
 
 /**
  * Execute a Project Intelligence operation via capability registry (thin adapter).
- * Fail closed when capability is absent — no commercial code is loaded here.
+ * Fail closed when capability is absent — no external code is loaded here.
  *
  * @param {object} options
  * @param {object} options.capabilities capability registry
@@ -36,6 +36,7 @@ async function executeProjectIntelligenceOperation(options = {}) {
     return {
       ok: true,
       operation: 'discover',
+      builtIn: true,
       commercial: true,
       result: discoverProjectIntelligenceCapabilities(capabilities),
     };
@@ -46,6 +47,7 @@ async function executeProjectIntelligenceOperation(options = {}) {
     return {
       ok: false,
       operation: operation || null,
+      builtIn: true,
       commercial: true,
       reasonCode: REASON_CODES.OPERATION_UNAVAILABLE,
       message: `Unknown project-knowledge operation: ${operation || '(empty)'}. Use discover/list for available operations.`,
@@ -58,10 +60,11 @@ async function executeProjectIntelligenceOperation(options = {}) {
       ok: false,
       operation,
       capabilityId,
+      builtIn: true,
       commercial: true,
       reasonCode: REASON_CODES.CAPABILITY_UNAVAILABLE,
       message:
-        'No capability registry provided. Commercial Project Intelligence module is not registered.',
+        'No capability registry provided. Integrated Project Intelligence is not registered.',
     };
   }
 
@@ -71,9 +74,10 @@ async function executeProjectIntelligenceOperation(options = {}) {
       ok: false,
       operation,
       capabilityId,
+      builtIn: true,
       commercial: true,
       reasonCode: REASON_CODES.CAPABILITY_UNAVAILABLE,
-      message: `Capability ${capabilityId} is not registered. Install and register the commercial Project Intelligence module with a valid entitlement.`,
+      message: `Capability ${capabilityId} is not registered. Explicitly register the integrated module with a valid entitlement.`,
     };
   }
 
@@ -82,6 +86,7 @@ async function executeProjectIntelligenceOperation(options = {}) {
       ok: false,
       operation,
       capabilityId,
+      builtIn: true,
       commercial: true,
       reasonCode: REASON_CODES.CAPABILITY_UNAVAILABLE,
       message: 'Capability registry does not support execute.',
@@ -94,6 +99,7 @@ async function executeProjectIntelligenceOperation(options = {}) {
       ok: false,
       operation,
       capabilityId,
+      builtIn: true,
       commercial: true,
       reasonCode: (exec && exec.error && exec.error.code) || REASON_CODES.OPERATION_UNAVAILABLE,
       message:
@@ -109,9 +115,10 @@ async function executeProjectIntelligenceOperation(options = {}) {
       ok: false,
       operation,
       capabilityId,
+      builtIn: true,
       commercial: true,
       reasonCode: payload.reasonCode || REASON_CODES.ENTITLEMENT_REQUIRED,
-      message: payload.message || 'Operation denied by commercial capability handler',
+      message: payload.message || 'Operation denied by integrated capability handler',
       result: payload,
     };
   }
@@ -120,6 +127,7 @@ async function executeProjectIntelligenceOperation(options = {}) {
     ok: true,
     operation,
     capabilityId,
+    builtIn: true,
     commercial: true,
     result: payload,
   };

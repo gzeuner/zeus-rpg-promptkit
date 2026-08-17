@@ -1,17 +1,17 @@
 ---
 Title: Next Release Checklist
-Description: Maintainer checklist for Community releases after the published 0.2.0-beta.5 cut. Full 0.2.0 remains owner-gated.
-Last Updated: 2026-08-03
+Description: Maintainer checklist for releases after the unified Apache-2.0 consolidation. Historical beta cut records remain below for provenance.
+Last Updated: 2026-08-17
 ---
 
-# Next release checklist (Community)
+# Next release checklist (unified public package)
 
-Current package version on main: **0.2.0-beta.5** (published and verified).
+Current package version on main: **0.2.0** (published baseline; consolidation changes are unreleased).
 
 Last published prerelease: [`v0.2.0-beta.4`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4)
 @ `6a4789a…`. **Do not re-tag** beta.4.
 
-This checklist prepares Community releases. Tag/publish still require the Release
+This checklist prepares public releases. Tag/publish still require the Release
 `workflow_dispatch` after merge to `main`.
 
 **Track F freeze package:** [`freeze-readiness-0.2.0.md`](./freeze-readiness-0.2.0.md)  
@@ -38,6 +38,8 @@ npm run docs:check
 npm run check:repo-portability
 npm run test:release-integrity
 npm run package:smoke
+npm run check:consolidated-hygiene
+npm run demo:run
 npm audit --omit=dev --audit-level=high
 ```
 
@@ -73,7 +75,7 @@ Commercial re-pin complete.
 - [ ] `.github/RELEASE_NOTES_v<version>.md` exists
 - [ ] Tool catalog regenerated if CLI surface or package version changed (`zeus docs:generate-catalog`)
 - [ ] Public claims guard still green
-- [ ] No accidental commercial/paid code in Community tree
+- [ ] No private paths, secrets, customer data, or unapproved external-only code in the public tree
 - [ ] Release workflow builds **one** artifact and attests that artifact (no historical exception)
 - [ ] `gh attestation verify` uses only one of `--signer-workflow` / `--signer-repo` (mutually exclusive)
 

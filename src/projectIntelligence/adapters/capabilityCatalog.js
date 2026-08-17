@@ -3,17 +3,17 @@
 /**
  * Public Project Intelligence adapter vocabulary (ZPI-11).
  * Capability IDs are stable public contracts (ADR-009 / Decision 6).
- * Community owns thin adapters only; commercial modules register handlers.
- * No paid implementation lives in this file.
+ * The public package owns the thin adapters; integrated modules register handlers.
+ * No module implementation is loaded by this catalog.
  */
 
 const MODULE_ID = 'zeus-pro.project-intelligence';
 
 /**
- * Commercial capability IDs (public identifiers only).
- * Present only when an entitled commercial module registers them.
+ * Built-in capability IDs (public identifiers only).
+ * Present only when an entitled integrated module registers them.
  */
-const COMMERCIAL_CAPABILITY_IDS = Object.freeze({
+const BUILT_IN_CAPABILITY_IDS = Object.freeze({
   STATUS: 'zeus-pro.project-intelligence.status',
   INSPECT_POLICY: 'zeus-pro.project-intelligence.inspect-policy',
   CREATE_PROJECT: 'zeus-pro.project-intelligence.create-project',
@@ -25,6 +25,9 @@ const COMMERCIAL_CAPABILITY_IDS = Object.freeze({
   INSPECT_SNAPSHOT: 'zeus-pro.project-intelligence.inspect-snapshot',
   VERIFY_INTEGRITY: 'zeus-pro.project-intelligence.verify-integrity',
 });
+
+// Compatibility alias for hosts and adapters released before consolidation.
+const COMMERCIAL_CAPABILITY_IDS = BUILT_IN_CAPABILITY_IDS;
 
 /** CLI/MCP operation keys → commercial capability ids */
 const OPERATION_CAPABILITY_MAP = Object.freeze({
@@ -119,6 +122,7 @@ const DISCOVER_MCP_TOOL = 'zeus.project-knowledge.discover';
 
 module.exports = {
   MODULE_ID,
+  BUILT_IN_CAPABILITY_IDS,
   COMMERCIAL_CAPABILITY_IDS,
   OPERATION_CAPABILITY_MAP,
   PUBLIC_OPERATIONS,

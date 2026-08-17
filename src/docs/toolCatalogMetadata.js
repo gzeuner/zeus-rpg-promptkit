@@ -334,7 +334,7 @@ const COMMAND_METADATA = Object.freeze({
     safety: 'S1',
     scope: 'Local',
     purpose:
-      'Thin Community adapter for Project Intelligence: discover commercial capability presence and dispatch create/index/query/impact/context/inspect/verify only when the entitled commercial module is registered. No paid implementation in Community; fails closed when capabilities are absent.',
+      'Thin public adapter for Project Intelligence: discover integrated capability presence and dispatch create/index/query/impact/context/inspect/verify only when an entitled built-in module or explicitly supplied external extension is registered. Fails closed when capabilities are absent.',
     example:
       'node cli/zeus.js project-knowledge discover --json && node cli/zeus.js project-knowledge query --knowledge-root ./pk --project-id demo --trusted-roots "[{\\"rootId\\":\\"src\\",\\"path\\":\\"./src\\"}]" --query ORDERPGM --json',
   }),
