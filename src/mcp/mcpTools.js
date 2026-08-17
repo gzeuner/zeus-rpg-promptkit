@@ -110,6 +110,11 @@ const { buildCommandHelpEntry } = require('../cli/commandHelp');
 const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
 const { buildAgentBootstrapPayload } = require('./agentBootstrap');
 const { buildWorkflowSuggestion } = require('./workflowSuggest');
+const {
+  applyWorkingContextDefaults,
+  buildWorkingContextView,
+  setWorkingContext,
+} = require('../context/workingContext');
 
 // Pluggable support: dynamic tool registry (for zeus API extensibility)
 const dynamicMcpTools = new Map();
@@ -626,6 +631,74 @@ let listMcpTools = function listMcpTools() {
             type: 'string',
             minLength: 1,
             description: 'Runtime profile name whose resource model should be resolved.',
+          },
+        },
+      },
+    },
+    {
+      name: 'zeus.context.get',
+      description:
+        'Returns the current workspace-local working context: selected system, library/source file/member, metadata and data scope. Never includes credentials.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {},
+      },
+    },
+    {
+      name: 'zeus.context.set',
+      description:
+        'Updates the workspace-local working context without changing profiles or contacting IBM i. Explicit tool arguments still override it.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          activeKind: { type: 'string', enum: ['sourceCode', 'objects', 'metadata', 'data'] },
+          profile: { type: 'string', minLength: 1 },
+          sourceCode: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              profile: { type: 'string', minLength: 1 },
+              system: { type: 'string', minLength: 1 },
+              library: { type: 'string', minLength: 1 },
+              sourceFile: { type: 'string', minLength: 1 },
+              member: { type: 'string', minLength: 1 },
+              localRoot: { type: 'string', minLength: 1 },
+              path: { type: 'string', minLength: 1 },
+              ifsPath: { type: 'string', minLength: 1 },
+            },
+          },
+          objects: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              profile: { type: 'string', minLength: 1 },
+              system: { type: 'string', minLength: 1 },
+              library: { type: 'string', minLength: 1 },
+              objectType: { type: 'string', minLength: 1 },
+              objectName: { type: 'string', minLength: 1 },
+            },
+          },
+          metadata: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              profile: { type: 'string', minLength: 1 },
+              system: { type: 'string', minLength: 1 },
+              schema: { type: 'string', minLength: 1 },
+              table: { type: 'string', minLength: 1 },
+            },
+          },
+          data: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              profile: { type: 'string', minLength: 1 },
+              system: { type: 'string', minLength: 1 },
+              schema: { type: 'string', minLength: 1 },
+              table: { type: 'string', minLength: 1 },
+            },
           },
         },
       },
@@ -1186,7 +1259,7 @@ let listMcpTools = function listMcpTools() {
       inputSchema: {
         type: 'object',
         additionalProperties: false,
-        required: ['profile', 'member'],
+        required: [],
         properties: {
           profile: {
             type: 'string',
@@ -1615,7 +1688,7 @@ let listMcpTools = function listMcpTools() {
       inputSchema: {
         type: 'object',
         additionalProperties: false,
-        required: ['program'],
+        required: [],
         properties: {
           program: {
             type: 'string',
@@ -1769,7 +1842,7 @@ let listMcpTools = function listMcpTools() {
       inputSchema: {
         type: 'object',
         additionalProperties: false,
-        required: ['profile', 'table'],
+        required: [],
         properties: {
           profile: {
             type: 'string',
@@ -1801,7 +1874,7 @@ let listMcpTools = function listMcpTools() {
       inputSchema: {
         type: 'object',
         additionalProperties: false,
-        required: ['profile', 'sql'],
+        required: ['sql'],
         properties: {
           profile: {
             type: 'string',
@@ -5843,6 +5916,25 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     validateMcpToolArgs(name, args, toolDef.inputSchema);
   }
 
+  const contextCommand =
+    name === 'zeus.analyze'
+      ? 'analyze'
+      : name === 'zeus.fetch'
+        ? 'fetch'
+        : name === 'zeus.fetch-member'
+          ? 'fetch-member'
+          : name === 'zeus.query-table'
+            ? 'query-table'
+            : name === 'zeus.query-sql'
+              ? 'query-sql'
+              : '';
+  if (contextCommand) {
+    args = applyWorkingContextDefaults(args, {
+      cwd: context.cwd || process.cwd(),
+      command: contextCommand,
+    }).args;
+  }
+
   // Support dynamically registered tools (from zeus.mcpTools.registerTool)
   const dynDef = dynamicMcpTools.get(name);
   if (dynDef) {
@@ -5981,6 +6073,40 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
             fetch: profile && profile.fetch ? profile.fetch : null,
           }))
         : [],
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  if (name === 'zeus.context.get') {
+    return normalizeMcpResult('zeus.context.get', {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      context: buildWorkingContextView({ cwd: context.cwd || process.cwd() }),
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  if (name === 'zeus.context.set') {
+    const patch = {};
+    if (args && args.activeKind !== undefined) patch.activeKind = args.activeKind;
+    if (args && args.profile !== undefined) patch.profile = args.profile;
+    if (args && args.resources && typeof args.resources === 'object') {
+      patch.resources = args.resources;
+    } else if (args) {
+      patch.resources = {};
+      for (const kind of ['sourceCode', 'objects', 'metadata', 'data']) {
+        if (args[kind] && typeof args[kind] === 'object') patch.resources[kind] = args[kind];
+      }
+    }
+    setWorkingContext({
+      cwd: context.cwd || process.cwd(),
+      patch,
+      actor: 'mcp',
+    });
+    return normalizeMcpResult('zeus.context.set', {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      context: buildWorkingContextView({ cwd: context.cwd || process.cwd() }),
       timestamp: new Date().toISOString(),
     });
   }
@@ -6195,6 +6321,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       sourceLib: execution && execution.sourceLib ? String(execution.sourceLib) : null,
       sourceFile: execution && execution.sourceFile ? String(execution.sourceFile) : null,
       outDir: execution && execution.outDir ? String(execution.outDir) : null,
+      workingContext: buildWorkingContextView({ cwd: context.cwd || process.cwd() }),
       memberCount: Number(execution && execution.memberCount ? execution.memberCount : 0),
       fetchedCount: Array.isArray(execution && execution.fetched) ? execution.fetched.length : 0,
       failureCount: Array.isArray(execution && execution.failures) ? execution.failures.length : 0,
@@ -6728,6 +6855,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         programCount: Number(graph.programCount || 0),
         tableCount: Number(graph.tableCount || 0),
       },
+      workingContext: buildWorkingContextView({ cwd: context.cwd || process.cwd() }),
       timestamp: new Date().toISOString(),
     };
 
@@ -6844,6 +6972,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         recommendedSequence: [
           'zeus.agent.bootstrap (live bootstrap payload)',
           'zeus.help (overview - do not invent tool names)',
+          'zeus.context.get (confirm system/library/source-file/member and metadata/data scope)',
           'zeus.doctor (check readiness)',
           'zeus.profiles (discover config)',
           'zeus.project-knowledge.discover (commercial PI present/absent; fail-closed)',
@@ -6858,7 +6987,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         howToGetMore:
           'Live tool names: tools/list, zeus.help, and zeus.agent.bootstrap are the startup path. For CLI parity, use zeus tools list --json or zeus tools describe <name> --json. Docs/resources (zeus://docs/tool-catalog.md, onboarding, metadata/*) are secondary - prefer live MCP surfaces first.',
         aiTip:
-          'Do not invent tool names. Start with zeus.agent.bootstrap, tools/list, or zeus.help overview. Use zeus tools list --json when you need stable command-help JSON from the CLI. New IBM i: zeus.onboarding or zeus://docs/quickstart/onboarding-new-ibm-i.md. After analysis, resources/read run URIs or ai_prompt_*.md. If project-knowledge ops other than discover/status fail, commercial module is absent or not allowlisted - use analyze/search-source/impact instead.',
+          'Do not invent tool names. Start with zeus.agent.bootstrap, tools/list, or zeus.help overview, then call zeus.context.get. Use zeus.context.set when the working location is wrong or unset. Use zeus tools list --json when you need stable command-help JSON from the CLI. New IBM i: zeus.onboarding or zeus://docs/quickstart/onboarding-new-ibm-i.md. After analysis, resources/read run URIs or ai_prompt_*.md. If project-knowledge ops other than discover/status fail, commercial module is absent or not allowlisted - use analyze/search-source/impact instead.',
       };
     } else {
       const helpCard = buildCommandHelpEntry(cmd);
@@ -6951,6 +7080,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       profile,
       defaultSchema: execution.defaultSchema || null,
       libraryList: Array.isArray(execution.libraryList) ? execution.libraryList : [],
+      workingContext: buildWorkingContextView({ cwd: context.cwd || process.cwd() }),
       columns: Array.isArray(execution.columns) ? execution.columns : [],
       rows: Array.isArray(execution.rows) ? execution.rows : [],
       rowCount: Number(execution.rowCount || 0),
@@ -7215,6 +7345,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         execution && execution.discoveredSchema ? String(execution.discoveredSchema) : '',
       tableInfo: tableInfoRows,
       columns: columnRows,
+      workingContext: buildWorkingContextView({ cwd: context.cwd || process.cwd() }),
       tableCount: tableInfoRows.length,
       columnCount: columnRows.length,
       timestamp: new Date().toISOString(),
@@ -7574,6 +7705,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         execution && execution.summary && typeof execution.summary === 'object'
           ? execution.summary
           : null,
+      workingContext: buildWorkingContextView({ cwd: context.cwd || process.cwd() }),
       cursor:
         execution && typeof execution.cursor === 'string' && execution.cursor
           ? execution.cursor

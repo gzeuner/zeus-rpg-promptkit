@@ -32,8 +32,10 @@ const {
 const { splitSqlStatements } = require('../../db2/sqlBatch');
 const { createJsonOutput } = require('../helpers/jsonOutput');
 const readline = require('readline');
+const { applyWorkingContextDefaults } = require('../../context/workingContext');
 
 async function runQuerySql(args) {
+  args = applyWorkingContextDefaults(args, { cwd: process.cwd(), command: 'query-sql' }).args;
   const watchSec = args.watch ? parseInt(String(args.watch), 10) : 0;
 
   // REPL / interactive mode (new for Phase 2)

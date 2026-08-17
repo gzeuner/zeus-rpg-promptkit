@@ -61,6 +61,28 @@ const COMMAND_UI_METADATA = Object.freeze([
     recommendedNextCommands: Object.freeze(['doctor']),
   }),
   Object.freeze({
+    name: 'context',
+    title: 'Working Context',
+    summary:
+      'Show or change the explicit workspace-local system/library/source/metadata/data scope.',
+    category: 'configure',
+    primaryUseCase:
+      'Make the exact IBM i system, library, source file, member, metadata schema, and data scope visible and controllable for humans and AI agents.',
+    requiredCapabilities: Object.freeze(['workspace']),
+    commonOptions: Object.freeze(['--active', '--system', '--profile']),
+    advancedOptions: Object.freeze([
+      '--source-library',
+      '--source-file',
+      '--member',
+      '--source-root',
+      '--metadata-schema',
+      '--data-schema',
+      '--json',
+    ]),
+    outputArtifacts: Object.freeze(['.zeus/working-context.json']),
+    recommendedNextCommands: Object.freeze(['resources', 'doctor', 'fetch-member', 'analyze']),
+  }),
+  Object.freeze({
     name: 'discover-environment',
     title: 'Discover Environment',
     summary:

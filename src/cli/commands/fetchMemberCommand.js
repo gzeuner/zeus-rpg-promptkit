@@ -17,11 +17,13 @@ const fs = require('fs');
 const path = require('path');
 const { resolveFetchConfig } = require('../../config/runtimeConfig');
 const { exportSourceMemberViaJdbc } = require('../../fetch/jt400CommandRunner');
+const { applyWorkingContextDefaults } = require('../../context/workingContext');
 
 const DEFAULT_SOURCE_FILE = 'QRPGLESRC';
 const DEFAULT_STREAM_FILE_CCSID = 1208;
 
 async function runFetchMember(args) {
+  args = applyWorkingContextDefaults(args, { cwd: process.cwd(), command: 'fetch-member' }).args;
   const verbose = Boolean(args.verbose);
 
   const memberArg = String(args.member || args.m || '').trim();

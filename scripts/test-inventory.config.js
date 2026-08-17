@@ -61,6 +61,7 @@ module.exports = {
       'tests/consolidated-ibmiValidation.test.js',
       'tests/consolidated-projectIntelligence.test.js',
       'tests/consolidated-productSurface.test.js',
+      'tests/working-context.test.js',
     ],
   },
   exclusions: [],

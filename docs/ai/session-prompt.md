@@ -1,10 +1,10 @@
 ---
 Title: AI Session Prompt
 Description: Standardized session-start prompt for CLI/MCP-first, evidence-first, and safety-first work with Zeus.
-Last Updated: 2026-07-27
+Last Updated: 2026-08-17
 ---
 
-# Zeus RPG PromptKit - AI Session Prompt (v2.4)
+# Zeus RPG PromptKit - AI Session Prompt (v2.5)
 
 Use this prompt at the start of a new Zeus session with an AI assistant.
 
@@ -28,13 +28,15 @@ Core operating model:
 - Local workspace changes only unless the user explicitly approves higher-risk actions
 - Always explain why you ran a command or MCP tool and what evidence it produced
 - Do not invent tool or command names
+- Always inspect the current working context before reading source or metadata; state the system, library/schema, source file, and member explicitly.
 
 Authoritative references (priority order when MCP is available):
 1) MCP `tools/list`, `zeus.agent.bootstrap`, and `zeus.help` (live allowlist + structured help - prefer these first)
-2) `docs/tool-catalog.md` / `zeus://docs/tool-catalog.json` for purpose, scope, and safety levels
-3) `docs/mcp/operator-guide.md` for allowlist posture and operator startup
-4) Agent failure playbook (`zeus://metadata/agent-failure-playbook.json` / `docs/ai/agent-failure-playbook.md`) for recovery codes
-5) This session prompt for operating model and safety rules
+2) `zeus.context.get` and `zeus://metadata/agent-bootstrap.json` for the current working location
+3) `docs/tool-catalog.md` / `zeus://docs/tool-catalog.json` for purpose, scope, and safety levels
+4) `docs/mcp/operator-guide.md` for allowlist posture and operator startup
+5) Agent failure playbook (`zeus://metadata/agent-failure-playbook.json` / `docs/ai/agent-failure-playbook.md`) for recovery codes
+6) This session prompt for operating model and safety rules
 
 Safety rules:
 1) Never run write operations on production systems.
@@ -43,17 +45,19 @@ Safety rules:
 4) Keep credentials out of prompts, outputs, logs, summaries, and generated artifacts.
 5) Prefer read-only evidence collection before proposing conclusions.
 6) Default MCP allowlist includes selected S2 remote-read tools; still explain why you use them. Project-knowledge index/write and S3/S4 are not on the default allowlist.
+7) `zeus.context.set` changes only local, credential-free routing state. Explicit fetch/query/analyze arguments override it.
 
 Execution protocol:
 1) Confirm the current goal, profile, and whether MCP tools are available.
 2) If MCP: call `zeus.agent.bootstrap` first, then `zeus.help` (overview) or use `tools/list` - do not hunt docs for tool names.
-3) Load the environment explicitly in the current shell if it is not already loaded.
-4) Run `doctor` first (`zeus.doctor`).
-5) Optional: `zeus.project-knowledge.discover` (commercial present/absent; fail-closed - do not thrash missing ops).
-6) Use read-only CLI or MCP commands to collect evidence.
-7) Run `analyze` or `workflow` locally to produce artifacts.
-8) Deepen evidence with search/investigation/query commands only as needed.
-9) Summarize findings with references to generated artifacts and note the risk level of the next step.
+3) Call `zeus.context.get`; if the system/library/file/member is wrong or unset, use `zeus.context.set` and report the change.
+4) Load the environment explicitly in the current shell if it is not already loaded.
+5) Run `doctor` first (`zeus.doctor`).
+6) Optional: `zeus.project-knowledge.discover` (commercial present/absent; fail-closed - do not thrash missing ops).
+7) Use read-only CLI or MCP commands to collect evidence.
+8) Run `analyze` or `workflow` locally to produce artifacts.
+9) Deepen evidence with search/investigation/query commands only as needed.
+10) Summarize findings with references to generated artifacts and note the risk level of the next step.
 
 Tooling quick reference (CLI names; MCP tools are typically `zeus.<name>`):
 | Command / MCP family | Safety | Purpose | Notes |
@@ -64,6 +68,7 @@ Tooling quick reference (CLI names; MCP tools are typically `zeus.<name>`):
 | profiles | S0 | List profiles | |
 | onboarding | S0 | Guided first-time IBM i setup | |
 | resources (`zeus.resources`) | S0 | MCP resource introspection | Default allowlist |
+| context (`zeus.context.get` / `zeus.context.set`) | S0/S1 | Show or change the local system/library/source/metadata/data scope | Credential-free; explicit tool args win |
 | discover-environment | S0/S2 | Environment discovery helpers | Default allowlist |
 | fetch | S2 | Read sources from IBM i; `--system <name>` for named targets | Often needs explicit allow if not default |
 | analyze | S1 | Generate core analysis artifacts | Primary local evidence |
@@ -125,18 +130,21 @@ source ./config/load-env.sh <environment>
 # 2. Validate environment and routing
 node cli/zeus.js doctor --profile <profile> --probe --show-resolved
 
-# 3. Fetch only when needed and approved
+# 3. Make the exact working location explicit
+node cli/zeus.js context show
+
+# 4. Fetch only when needed and approved
 node cli/zeus.js fetch --profile <profile>
 # For multi-system profiles, select a named target without editing the profile:
 # node cli/zeus.js fetch --profile <profile> --system <system-name>
 
-# 4. Copy fetched members into the local workspace if required
+# 5. Copy fetched members into the local workspace if required
 node cli/zeus.js copy-to-workspace --profile <profile>
 
-# 5. Analyze locally and generate artifacts
+# 6. Analyze locally and generate artifacts
 node cli/zeus.js analyze --profile <profile> --program <PROGRAM> --out ./output --optimize-context --dense full   # use --dense lite|full|ultra as needed
 
-# 6. Optional: package or locally review the artifacts
+# 7. Optional: package or locally review the artifacts
 node cli/zeus.js bundle --program <PROGRAM> --source-output-root ./output --include-md --include-json
 node cli/zeus.js serve --source-output-root ./output
 ```
@@ -145,6 +153,7 @@ Important notes:
 - Treat the local UI as optional and local-only; it is not required for CLI or MCP workflows.
 - The local UI does not replace shell env loading, `doctor`, or remote-read CLI/MCP commands.
 - `fetch --system <name>` can switch between named profile systems by key, `systemName`, or alias when an operator requests source from another target.
+- The working context (`zeus.context.get` / `context show`) is the visible routing checkpoint for each session; use `zeus.context.set` / `context set` to change it deliberately.
 - `query-sql` accepts semicolon-separated read-only batches; guarded DML commands accept semicolon-separated DML batches with validation and safety checks per statement.
 - Use generated artifacts such as `report.md`, `architecture-report.md`, `canonical-analysis.json`, and bundle output as evidence.
 - If MCP is available, use the corresponding `zeus.*` tools that map to the same guarded command surface.

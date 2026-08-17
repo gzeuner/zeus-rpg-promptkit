@@ -319,6 +319,31 @@ node cli/zeus.js analyze \
 
 Profile können mehrere benannte `systems` mit `displayName`, `systemName` und `aliases` enthalten. `doctor --probe --show-resolved` zeigt die aufgelöste Zuordnung; `fetch --system <name>` wählt ein System zur Laufzeit aus, ohne das Profil zu verändern.
 
+### Aktuellen Arbeitsort explizit machen
+
+Damit Mensch und KI jederzeit erkennen, wo gearbeitet wird, führt Zeus einen lokalen, geheimnisfreien Working Context. Er enthält den aktiven Systembezug sowie – getrennt nach Source, Metadaten und Daten – Bibliothek/Schema, Source-File (z. B. `QRPGLESRC`), Member, Tabellen und lokalen Source-Root. Er ändert kein Profil und kontaktiert beim Setzen kein IBM i.
+
+```bash
+# Aktuellen Arbeitsort anzeigen
+node cli/zeus.js context show
+
+# Arbeitsort festlegen; Zustand liegt lokal in .zeus/working-context.json
+node cli/zeus.js context set \
+  --profile dev \
+  --active sourceCode \
+  --system test \
+  --source-library APPLIB \
+  --source-file QRPGLESRC \
+  --member ORDERPGM \
+  --source-root ./rpg_sources
+
+# Metadata- und Datenziel separat festlegen
+node cli/zeus.js context set --active metadata --metadata-system test --metadata-schema APPDATA
+node cli/zeus.js context set --active data --data-system test --data-schema APPDATA --data-table ORDERS
+```
+
+`analyze`, `fetch`, `fetch-member`, `query-table` und `query-sql` verwenden den Working Context nur als Fallback. Explizite Kommandoargumente haben immer Vorrang. Mit `context clear` wird der lokale Zustand zurückgesetzt. Bei MCP zuerst `zeus.context.get` lesen; mit `zeus.context.set` kann die KI den vom Operator kontrollierten Arbeitsort gezielt anpassen. Für jede Analyse und jeden Fetch sollen System, Library/Schema, Source-File und Member im Ergebnis bzw. in der Begründung wiederholt werden.
+
 Vollständiges Onboarding: [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)
 
 ## 🔐 Credentials und Secret Vault
@@ -656,6 +681,7 @@ npm run demo:safety-check
 - Db2-Metadaten einbeziehen, wenn Constraints, Trigger oder dynamisches SQL relevant sind.
 - Unaufgelöste Referenzen sichtbar lassen und nicht „weginterpretieren“.
 - KI-Antworten gegen Reports, `canonical-analysis.json` und Db2-Metadaten prüfen.
+- Vor jedem Lesen `context show` bzw. `zeus.context.get` prüfen; System, Library/Schema, Source-File und Member nicht aus Dateinamen erraten.
 - MCP-Tools so eng wie möglich allowlisten.
 - `.local/`, `output/`, `.zeus/` und Audit-Dateien als potenziell sensibel behandeln.
 - Für externe Weitergabe `--safe-sharing` verwenden.
@@ -666,7 +692,6 @@ Zeus ersetzt weder Fachwissen noch Code-Review, Tests, Freigaben oder einen vera
 
 - schreibt Zeus nicht autonom Business-Code auf IBM i,
 - führt Zeus keine ungeprüften Produktionsänderungen aus,
-- garantiert Zeus keine vollständige Analyse bei unvollständigen Quellen,
 - werden KI-Ausgaben nicht automatisch zu verlässlichen Entscheidungen,
 - ist Zeus kein offizielles IBM-Produkt und nicht mit IBM verbunden.
 
@@ -966,6 +991,31 @@ node cli/zeus.js analyze \
 ```
 
 Profiles may define multiple named `systems` with `displayName`, `systemName`, and `aliases`. `doctor --probe --show-resolved` shows the resolved routing, while `fetch --system <name>` selects a system at runtime without modifying the profile.
+
+### Make the working location explicit
+
+To keep the current working location visible to both humans and AI agents, Zeus maintains a local, credential-free working context. It records the active system and – separately for source, metadata, and data – the library/schema, source file (for example `QRPGLESRC`), member, tables, and local source root. Setting it does not change a profile or contact IBM i.
+
+```bash
+# Show the current working location
+node cli/zeus.js context show
+
+# Set the working location; state is local in .zeus/working-context.json
+node cli/zeus.js context set \
+  --profile dev \
+  --active sourceCode \
+  --system test \
+  --source-library APPLIB \
+  --source-file QRPGLESRC \
+  --member ORDERPGM \
+  --source-root ./rpg_sources
+
+# Set metadata and data targets independently
+node cli/zeus.js context set --active metadata --metadata-system test --metadata-schema APPDATA
+node cli/zeus.js context set --active data --data-system test --data-schema APPDATA --data-table ORDERS
+```
+
+`analyze`, `fetch`, `fetch-member`, `query-table`, and `query-sql` use the working context only as a fallback. Explicit command arguments always win. Use `context clear` to reset the local state. With MCP, call `zeus.context.get` first; `zeus.context.set` lets the AI adjust the operator-controlled working location deliberately. Every analysis and fetch should repeat the system, library/schema, source file, and member in its result or rationale.
 
 Full onboarding guide: [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)
 
@@ -1314,6 +1364,7 @@ npm run demo:safety-check
 - Include Db2 metadata when constraints, triggers, or dynamic SQL matter.
 - Keep unresolved references visible instead of hand-waving them away.
 - Validate AI answers against reports, `canonical-analysis.json`, and Db2 metadata.
+- Before reading, inspect `context show` or `zeus.context.get`; never infer system, library/schema, source file, or member from a filename.
 - Allowlist only the MCP tools required for the task.
 - Treat `.local/`, `output/`, `.zeus/`, and audit files as potentially sensitive.
 - Use `--safe-sharing` for external review.
@@ -1324,7 +1375,6 @@ Zeus does not replace domain knowledge, code review, testing, approvals, or resp
 
 - Zeus does not autonomously write business code to IBM i.
 - Zeus does not perform unreviewed production changes.
-- Zeus cannot guarantee complete analysis when sources are incomplete.
 - AI output does not automatically become a reliable decision.
 - Zeus is not an official IBM product and is not affiliated with IBM.
 

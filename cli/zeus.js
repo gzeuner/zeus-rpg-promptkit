@@ -52,6 +52,7 @@ const { run: runAnalyses } = require('../src/cli/commands/analysesCommand');
 const { runMcp } = require('../src/cli/commands/mcpCommand');
 const { runProfiles } = require('../src/cli/commands/profilesCommand');
 const { runResources } = require('../src/cli/commands/resourcesCommand');
+const { runContext } = require('../src/cli/commands/contextCommand');
 const { runDiscoverEnvironment } = require('../src/cli/commands/discoverEnvironmentCommand');
 const { runTools } = require('../src/cli/commands/toolsCommand');
 const { runValidateRpgSql } = require('../src/cli/commands/validateRpgSqlCommand');
@@ -131,6 +132,9 @@ function printHelp() {
   );
   console.log(
     '  zeus [--config <path>] resources --profile <name> [--json]  # Zeigt das aufgeloeste Resource-Modell (Source/Objects/Metadata/Data) pro System'
+  );
+  console.log(
+    '  zeus [--config <path>] context <show|set|clear> [--profile <name>] [--active sourceCode|objects|metadata|data] [--system <name>] [--source-library <library>] [--source-file <QRPGLESRC>] [--member <name>] [--source-root <path>] [--metadata-system <name>] [--metadata-schema <schema>] [--data-system <name>] [--data-schema <schema>] [--json]  # Aktuellen Arbeitsort anzeigen/steuern'
   );
   console.log(
     '  zeus [--config <path>] discover-environment --profile <name> [--libraries L1,L2] [--schemas S1,S2] [--include-members] [--no-tables] [--role metadata|data] [--system <name>] [--json] [--out <path>]  # Read-only Auto-Discovery von Bibliotheken/Source-Files/Members/Tabellen + Resource-Vorschlag'
@@ -584,6 +588,11 @@ async function main() {
     else if (command === 'profiles') await runProfiles(args);
     else if (command === 'resources') await runResources(args);
     else if (command === 'discover-environment') await runDiscoverEnvironment(args);
+    return;
+  }
+
+  if (command === 'context') {
+    await runContext(args);
     return;
   }
 

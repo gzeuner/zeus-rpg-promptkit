@@ -20,6 +20,7 @@ const { createJsonOutput } = require('../helpers/jsonOutput');
 const { resolvePromptTemplates } = require('../../prompt/promptBuilder');
 const { listDiagnosticPacks } = require('../../investigation/diagnosticPackRegistry');
 const { executeAnalyze } = require('../../core/analyzeService');
+const { applyWorkingContextDefaults } = require('../../context/workingContext');
 
 function printWorkflowModes() {
   console.log('Supported analyze workflow modes:');
@@ -51,6 +52,7 @@ function printDiagnosticPacks() {
 }
 
 async function runAnalyze(args) {
+  args = applyWorkingContextDefaults(args, { cwd: process.cwd(), command: 'analyze' }).args;
   if (args['list-modes']) {
     printWorkflowModes();
     return;

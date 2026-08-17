@@ -5,6 +5,7 @@ const path = require('path');
 const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
 const { discoverProjectIntelligenceCapabilities } = require('../projectIntelligence/adapters');
 const { buildAgentFailurePlaybook } = require('./agentFailurePlaybook');
+const { buildWorkingContextView } = require('../context/workingContext');
 
 const PACKAGE_JSON_PATH = path.resolve(__dirname, '..', '..', 'package.json');
 
@@ -73,11 +74,14 @@ function buildAgentBootstrapPayload(context = {}) {
       'Do not invent tool or command names.',
       'Prefer tools/list or zeus.help before markdown docs when you need live tool names.',
       'Project-knowledge index/query/write ops are not on the default allowlist; discover/status only are default.',
+      'Always inspect zeus.context.get before reading sources or metadata; never infer the active IBM i system, library, source file, or member from a filename alone.',
+      'Use zeus.context.set to change the operator-controlled working location. Explicit tool arguments override the context and must be echoed in the next result.',
     ],
     defaultTools: [...DEFAULT_MCP_SAFE_TOOL_NAMES],
     recommendedSequence: [
       'zeus.agent.bootstrap',
       'zeus.help',
+      'zeus.context.get',
       'zeus.workflow.suggest',
       'zeus.doctor',
       'zeus.profiles',
@@ -88,6 +92,7 @@ function buildAgentBootstrapPayload(context = {}) {
       'zeus.workflow',
     ],
     piDiscoverySnapshot: projectIntelligenceSnapshot,
+    workingContext: buildWorkingContextView({ cwd: context.cwd || process.cwd() }),
     failurePlaybook,
     communityFallbacks: [
       'If integrated Project Intelligence is absent, use analyze, search-source, field-search, impact, bundle, and other neutral tools instead.',
@@ -100,6 +105,7 @@ function buildAgentBootstrapPayload(context = {}) {
       'tools/list is the live source of truth for allowlisted MCP tools; docs are secondary.',
       'The default allowlist CSV in docs/mcp/operator-guide.md must match DEFAULT_MCP_SAFE_TOOL_NAMES.',
       'failurePlaybook codes are stable; full entries live at zeus://metadata/agent-failure-playbook.json.',
+      'The working context is local, credential-free state in .zeus/working-context.json; explicit command/tool arguments always win.',
     ],
     next: 'help',
   };

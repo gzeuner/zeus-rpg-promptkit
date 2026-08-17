@@ -15,6 +15,7 @@ const path = require('path');
 const { executeFetch } = require('../../core/fetchService');
 const { resolveFetchConfig } = require('../../config/runtimeConfig');
 const { runClCommand } = require('../../fetch/jt400CommandRunner');
+const { applyWorkingContextDefaults } = require('../../context/workingContext');
 
 /**
  * --clean-remote: löscht das IFS-Arbeitsverzeichnis auf IBM i vor dem Fetch.
@@ -65,6 +66,7 @@ async function cleanRemoteIfsDir(args, verbose) {
 }
 
 async function runFetch(args) {
+  args = applyWorkingContextDefaults(args, { cwd: process.cwd(), command: 'fetch' }).args;
   const verbose = Boolean(args.verbose);
 
   if (args['clean-remote']) {
