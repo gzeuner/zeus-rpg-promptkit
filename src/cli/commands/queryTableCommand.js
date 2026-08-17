@@ -23,8 +23,10 @@ const {
 } = require('../../core/queryService');
 const { printDbRuntimeConflictWarnings } = require('../helpers/runtimeConfigWarnings');
 const { createJsonOutput } = require('../helpers/jsonOutput');
+const { applyWorkingContextDefaults } = require('../../context/workingContext');
 
 async function runQueryTable(args) {
+  args = applyWorkingContextDefaults(args, { cwd: process.cwd(), command: 'query-table' }).args;
   let execution;
   try {
     const config = resolveAnalyzeConfig(args, { cwd: process.cwd(), env: process.env });

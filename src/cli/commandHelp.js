@@ -25,6 +25,7 @@ const SERVICE_NAME = 'zeus-rpg-promptkit';
 const SCHEMA_VERSION = 1;
 
 const FAMILY_MCP_NAMES = Object.freeze({
+  context: Object.freeze(['zeus.context.get', 'zeus.context.set']),
   investigate: Object.freeze([
     'zeus.investigation.start',
     'zeus.investigation.focus',

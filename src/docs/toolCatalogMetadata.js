@@ -39,6 +39,14 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Show resolved resource model (Source/Objects/Metadata/Data) per system.',
     example: 'node cli/zeus.js resources --profile dev --json',
   }),
+  context: Object.freeze({
+    safety: 'S1',
+    scope: 'Local workspace state',
+    purpose:
+      'Show or update the credential-free working context for the active system, source library/file/member, metadata schema, and data scope. Explicit command arguments always override it.',
+    example:
+      'node cli/zeus.js context set --profile dev --active sourceCode --system test --source-library APPLIB --source-file QRPGLESRC --member ORDERPGM --source-root ./rpg_sources',
+  }),
   'discover-environment': Object.freeze({
     safety: 'S2',
     scope: 'IBM i read',
@@ -386,6 +394,13 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: [],
     capabilityId: 'configure.resources',
   }),
+  context: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['local-context-write'],
+    capabilityId: null,
+  }),
   'discover-environment': catalogContract({
     aliases: [],
     status: 'stable',
@@ -695,6 +710,7 @@ const COMMAND_ORDER = Object.freeze([
   'secret',
   'profiles',
   'resources',
+  'context',
   'discover-environment',
   'fetch',
   'fetch-member',

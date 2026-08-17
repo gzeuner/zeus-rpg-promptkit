@@ -74,6 +74,24 @@
       "example": "node cli/zeus.js resources --profile dev --json"
     },
     {
+      "command": "context",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local workspace state",
+      "sideEffects": [
+        "local-context-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": true
+      },
+      "capabilityId": null,
+      "purpose": "Show or update the credential-free working context for the active system, source library/file/member, metadata schema, and data scope. Explicit command arguments always override it.",
+      "example": "node cli/zeus.js context set --profile dev --active sourceCode --system test --source-library APPLIB --source-file QRPGLESRC --member ORDERPGM --source-root ./rpg_sources"
+    },
+    {
       "command": "discover-environment",
       "aliases": [],
       "status": "stable",

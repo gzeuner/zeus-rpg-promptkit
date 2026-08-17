@@ -43,7 +43,7 @@ This CSV is the **same set** as the code default. Use it when you want an explic
 
 ```bash
 node cli/zeus.js mcp serve --verbose \
-  --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.agent.bootstrap,zeus.workflow.suggest,zeus.onboarding,zeus.resources,zeus.discover-environment,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.investigation.start,zeus.investigation.focus,zeus.investigation.search,zeus.investigation.generate-prompt,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status
+  --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.agent.bootstrap,zeus.context.get,zeus.context.set,zeus.workflow.suggest,zeus.onboarding,zeus.resources,zeus.discover-environment,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.investigation.start,zeus.investigation.focus,zeus.investigation.search,zeus.investigation.generate-prompt,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status
 ```
 
 ### Named tool packs (G4)
@@ -79,7 +79,7 @@ Source of truth for the default safe surface: `src/mcp/mcpPolicy.js` (`DEFAULT_M
 
 Includes among others:
 
-- health / version / profiles / doctor / help / bootstrap / onboarding / resources / discover-environment
+- health / version / profiles / doctor / help / bootstrap / context.get / context.set / onboarding / resources / discover-environment
 - analyze / workflow / bundle / searches / investigation.\*
 - selected remote-read: resolve-object, inspect-object, query-table, query-sql, fetch-member, diff, joblog, test-run
 - project-knowledge: **discover + status only by default** (index/query/write need explicit allow-tools + an entitled built-in module or explicitly supplied external extension)
@@ -101,13 +101,14 @@ An AI can bootstrap and operate via MCP **without inventing tool names** and wit
 
 1. `initialize`
 2. `tools/call` `zeus.agent.bootstrap` (live bootstrap payload) **or** `tools/list` / `tools/call` `zeus.help` (overview + `defaultTools` + recommended sequence)
-3. Optional: `prompts/get` `zeus.session.start` with the user goal (secondary; help is enough for local analysis)
-4. `tools/call` `zeus.doctor` + `zeus.profiles`
-5. `tools/call` `zeus.project-knowledge.discover` (present/absent; do not thrash commercial-only ops)
-6. `tools/call` `zeus.analyze` with `source` + `program` (or `zeus.workflow` with a preset)
-7. Optional deepen: `zeus.search-source`, `zeus.investigation.*`, allowlisted remote-read tools if needed
-8. `tools/call` `zeus.bundle` or `zeus.impact` as needed
-9. Optional: `resources/read` `zeus://runs/PROGRAM/...` for manifests and `ai_prompt_*.md`
+3. `tools/call` `zeus.context.get`; if routing is wrong or unset, call `zeus.context.set` and report the selected system/library/source-file/member and metadata/data scope
+4. Optional: `prompts/get` `zeus.session.start` with the user goal (secondary; help is enough for local analysis)
+5. `tools/call` `zeus.doctor` + `zeus.profiles`
+6. `tools/call` `zeus.project-knowledge.discover` (present/absent; do not thrash commercial-only ops)
+7. `tools/call` `zeus.analyze` with `source` + `program` (or `zeus.workflow` with a preset)
+8. Optional deepen: `zeus.search-source`, `zeus.investigation.*`, allowlisted remote-read tools if needed
+9. `tools/call` `zeus.bundle` or `zeus.impact` as needed
+10. Optional: `resources/read` `zeus://runs/PROGRAM/...` for manifests and `ai_prompt_*.md`
 
 Docs/resources (`zeus://docs/tool-catalog.json`, session-prompt, onboarding) remain available but are **secondary** after `tools/list` / `zeus.help`.
 
