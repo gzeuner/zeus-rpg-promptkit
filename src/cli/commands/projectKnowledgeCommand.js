@@ -43,10 +43,10 @@ function printHelp() {
   console.log('');
   console.log('Notes:');
   console.log(
-    '  - Thin Community adapter: operations execute only when the commercial module is registered.'
+    '  - Thin Community adapter: operations execute only when the integrated module is explicitly registered.'
   );
   console.log(
-    '  - Optional commercial load (explicit only, highest wins): --commercial-module | ZEUS_COMMERCIAL_MODULE | profile.commercial.module with --profile.'
+    '  - Module load is explicit: --built-in-modules <list|professional|enterprise> uses the unified package; --commercial-module remains an external extension hook.'
   );
   console.log(
     '  - Entitlement files (commercial package): ZEUS_LICENSE_* env or profile.commercial.licenseDocumentPath / publicKeyPath.'

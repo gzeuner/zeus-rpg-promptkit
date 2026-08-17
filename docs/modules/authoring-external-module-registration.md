@@ -1,22 +1,23 @@
 ---
 Title: External Module Registration
-Description: How trusted in-process modules register against Zeus Community Core without core license enforcement.
-Last Updated: 2026-07-24
+Description: How trusted in-process modules register against the public core without core license enforcement.
+Last Updated: 2026-08-17
 ---
 
-# External Module Registration (Community Core)
+# External Module Registration (Public Core)
 
 This guide describes the **public neutral module boundary** introduced in Iteration 30.
 It implements the executable subset of [ADR-006](../architecture/adr-006-commercial-extension-architecture.md).
 
 ## Core principles
 
-- Zeus Community Core remains fully useful **without** any external module.
+- The public core remains fully useful **without** any external module. Integrated built-in modules
+  are the primary product path; this guide covers separately supplied extensions.
 - Registration is **explicit and trusted**: the host imports an installed package and calls
   `registerModule({ descriptor, register })`.
 - The core **never** scans directories for modules, never consults marketplaces, and never
   auto-loads packages by product ID. Optional CLI/MCP host wiring may load **one operator-specified**
-  package name or filesystem path (see [Commercial host loader](#commercial-host-loader-optional)).
+  package name or filesystem path (see [External host loader](#external-host-loader-optional)).
 - `edition` and `entitlement.mode` are **display/classification metadata only**. The core does
   **not** parse license keys, validate signatures, or unlock paid features.
 - Entitlement enforcement belongs in the external module (for commercial packages).
@@ -116,10 +117,10 @@ If a module is missing, incompatible, or fails registration:
 - only the module's capabilities are absent;
 - diagnostics are redacted (no secrets, license keys, customer IDs, or local paths).
 
-## Commercial host loader (optional)
+## External host loader (optional)
 
-For CLI/MCP hosts that want operator-driven commercial wiring without embedding paid code in
-Community, use the explicit loader:
+For CLI/MCP hosts that need separately supplied entitlement-managed wiring, use the explicit loader.
+The integrated built-in registration path remains the recommended public-product path:
 
 ```js
 const { createHostZeus } = require('zeus-rpg-promptkit/api');

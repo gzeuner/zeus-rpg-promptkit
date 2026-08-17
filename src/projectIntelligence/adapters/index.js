@@ -1,9 +1,9 @@
 'use strict';
 
 /**
- * Community thin adapters for Project Intelligence (ZPI-11).
- * CLI/MCP surface with commercial capability present/absent behavior.
- * No paid implementation is loaded from these adapters.
+ * Public thin adapters for Project Intelligence (ZPI-11).
+ * CLI/MCP surface with integrated capability present/absent behavior.
+ * No external implementation is loaded from these adapters.
  */
 
 const capabilityCatalog = require('./capabilityCatalog');
@@ -14,6 +14,7 @@ const mcpTools = require('./mcpTools');
 module.exports = {
   MODULE_ID: capabilityCatalog.MODULE_ID,
   COMMERCIAL_CAPABILITY_IDS: capabilityCatalog.COMMERCIAL_CAPABILITY_IDS,
+  BUILT_IN_CAPABILITY_IDS: capabilityCatalog.BUILT_IN_CAPABILITY_IDS,
   OPERATION_CAPABILITY_MAP: capabilityCatalog.OPERATION_CAPABILITY_MAP,
   PUBLIC_OPERATIONS: capabilityCatalog.PUBLIC_OPERATIONS,
   MCP_TOOL_TO_OPERATION: capabilityCatalog.MCP_TOOL_TO_OPERATION,

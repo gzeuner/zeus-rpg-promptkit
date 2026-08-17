@@ -1,7 +1,7 @@
 ---
 Title: Zeus RPG PromptKit Architecture Documentation
 Description: Accepted architecture decisions, kernel definition, dependency rules, contracts, capability model, safety trust zones, open-core module boundaries, and delivered ZPI contracts.
-Last Updated: 2026-07-25
+Last Updated: 2026-08-17
 ---
 
 # Architecture Documentation
@@ -27,6 +27,7 @@ All subsequent implementation and agent guidance must be consistent with these d
 | [011](adr-011-evidence-and-provenance.md)           | Evidence and Provenance Model         | Accepted; enforced in Community PI contracts + portable export |
 | [012](adr-012-snapshots-and-migrations.md)          | Snapshots and Migrations              | Accepted; snapshot engine delivered                            |
 | [013](adr-013-retrieval-and-context-policy.md)      | Retrieval and Context Policy          | Accepted; retrieval/context delivered                          |
+| [014](adr-014-unified-capability-consolidation.md)  | Unified Capability Consolidation      | Accepted                                                       |
 
 ## Related Reviews
 
@@ -48,9 +49,9 @@ All subsequent implementation and agent guidance must be consistent with these d
 - ZPI work must follow the ownership, default-backend, provenance, snapshot, and retrieval-policy
   rules captured in ADR-009 through ADR-013. Delivery status and non-claims:
   [`../knowledgebase/zpi-closure-status.md`](../knowledgebase/zpi-closure-status.md).
-- External modules must use the trusted in-process registrar and module descriptor contracts
-  (ADR-006 executable subset; see `docs/modules/authoring-external-module-registration.md`).
-  The core never enforces commercial licenses.
+- Built-in and external modules must use the trusted in-process registrar and module descriptor
+  contracts (ADR-006 executable subset; see `docs/modules/authoring-external-module-registration.md`).
+  Runtime entitlement is a product policy, not a source-license boundary (ADR-014).
 
 ## Regenerating Supporting Artifacts
 
@@ -62,7 +63,7 @@ The tool catalog (`../tool-catalog.md`) is the published surface of the capabili
 
 ## Governance
 
-ADRs 001–008 establish the product kernel, contracts, capability model, safety, open-core modules,
+ADRs 001–008 establish the product kernel, contracts, capability model, safety, external modules,
 providers, and generation validation. ADRs 009–013 originally froze the ZPI documentation baseline
 (package ZPI-01) and are now **accepted with delivered Community implementations** (ZPI-02…12) plus
 optional Track C depth (portable export, corpora fixtures, embeddings default off). Delivery and

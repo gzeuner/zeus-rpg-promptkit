@@ -90,9 +90,9 @@ function buildAgentBootstrapPayload(context = {}) {
     piDiscoverySnapshot: projectIntelligenceSnapshot,
     failurePlaybook,
     communityFallbacks: [
-      'If commercial Project Intelligence is absent, use analyze, search-source, field-search, impact, bundle, and other Community tools instead.',
+      'If integrated Project Intelligence is absent, use analyze, search-source, field-search, impact, bundle, and other neutral tools instead.',
       'If you do not know a tool name, use tools/list or zeus.help; do not guess.',
-      'If a project-knowledge operation other than discover/status fails, the commercial module is absent or not allowlisted.',
+      'If a project-knowledge operation other than discover/status fails, the integrated module is absent or not allowlisted.',
       'On failure, match the situation to failurePlaybook codes and follow the recovery nextTools; do not invent results.',
     ],
     parityHints: [

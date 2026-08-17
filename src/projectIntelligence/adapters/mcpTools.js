@@ -69,7 +69,7 @@ function listProjectKnowledgeMcpTools() {
     {
       name: DISCOVER_MCP_TOOL,
       description:
-        'Discover commercial Project Intelligence capability presence (absent/present). Thin Community adapter; no paid code.',
+        'Discover integrated Project Intelligence capability presence (absent/present). Thin public adapter; no external code.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -81,7 +81,7 @@ function listProjectKnowledgeMcpTools() {
   for (const op of PUBLIC_OPERATIONS) {
     tools.push({
       name: op.mcpTool,
-      description: `Project Intelligence ${op.operation} via ${op.capabilityId}; side effects: ${op.sideEffects.join(', ')}. Fails closed when the entitled commercial module is absent. Use zeus.project-knowledge.discover first.`,
+      description: `Project Intelligence ${op.operation} via ${op.capabilityId}; side effects: ${op.sideEffects.join(', ')}. Fails closed when the entitled integrated module is absent. Use zeus.project-knowledge.discover first.`,
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -114,6 +114,7 @@ async function executeProjectKnowledgeMcpTool(name, args = {}, context = {}) {
     return {
       ok: true,
       tool: name,
+      builtIn: true,
       commercial: true,
       discovery: discoverProjectIntelligenceCapabilities(capabilities),
     };
@@ -140,7 +141,7 @@ async function executeProjectKnowledgeMcpTool(name, args = {}, context = {}) {
       ? {
           suggestedTools: [...COMMUNITY_FALLBACK_TOOLS],
           suggestionReason:
-            'Commercial Project Intelligence is unavailable; continue with Community analysis tools.',
+            'Integrated Project Intelligence is unavailable; continue with neutral Community analysis tools.',
         }
       : {}),
   };

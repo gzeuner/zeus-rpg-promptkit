@@ -8,6 +8,14 @@
     "./api": "./src/api/zeusApi.js",
     "./module-contract-test": "./src/modules/contractTestKit.js",
     "./project-intelligence-contracts": "./src/projectIntelligence/index.js",
+    "./project-intelligence": "./src/projectIntelligence/index.js",
+    "./generation-assurance": "./src/generationAssurance/index.js",
+    "./db2-test-intelligence": "./src/db2TestIntelligence/index.js",
+    "./ibmi-validation": "./src/ibmiValidation/index.js",
+    "./entitlement": "./src/entitlement/index.js",
+    "./built-in-modules": "./src/modules/builtInModules.js",
+    "./product-surface": "./src/modules/productSurface.js",
+    "./built-in": "./src/index.js",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -42,6 +50,7 @@
     "demo:prompt": "node ./examples/demo-rpg-mini-system/scripts/build-ai-session-prompt.mjs",
     "demo:safety-check": "node ./examples/demo-rpg-mini-system/scripts/safety-check.mjs",
     "docs:check": "node scripts/docs-check.js",
+    "check:consolidated-hygiene": "node scripts/check-consolidated-hygiene.js",
     "check:repo-portability": "node scripts/check-repo-portability.js",
     "release:preflight": "node scripts/release-preflight.js",
     "sbom:validate": "node scripts/validate-sbom.js",
@@ -49,7 +58,8 @@
     "test:repository-control": "node --test tests/repository-control.test.js",
     "test:deployment:community": "node --test tests/community-deployment.test.js",
     "test:release-integrity": "node --test tests/release-integrity.test.js",
-    "test:cli-help": "node --test tests/cli-help.test.js && npm run package:smoke"
+    "test:cli-help": "node --test tests/cli-help.test.js && npm run package:smoke",
+    "test:built-in": "node --test tests/consolidated-entitlement.test.js tests/consolidated-registration.test.js tests/consolidated-generationAssurance.test.js tests/consolidated-db2TestIntelligence.test.js tests/consolidated-ibmiValidation.test.js tests/consolidated-projectIntelligence.test.js tests/consolidated-productSurface.test.js"
   },
   "dependencies": {
     "adm-zip": "^0.6.0",

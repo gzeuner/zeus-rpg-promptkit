@@ -12,7 +12,7 @@
  * ZPI-08: Retrieval + context assembly (hybrid lexical/graph, token budgets).
  * Track C: portable snapshot export packaging, offline corpora, embeddings default off.
  *
- * Commercial module registration is external (ZPI-09/10). CLI/MCP thin adapters: ZPI-11.
+ * Entitled operations are integrated through the same public registrar. CLI/MCP thin adapters: ZPI-11.
  */
 
 const constants = require('./constants');
@@ -31,6 +31,7 @@ const retrieval = require('./retrieval');
 const adapters = require('./adapters');
 const portableExport = require('./export');
 const corpora = require('./corpora');
+const entitled = require('./entitled');
 
 module.exports = {
   // Vocabulary
@@ -134,4 +135,29 @@ module.exports = {
   // Track C — embeddings policy (default off)
   EMBEDDINGS_DEFAULT_ENABLED: search.EMBEDDINGS_DEFAULT_ENABLED,
   resolveEmbeddingPolicy: search.resolveEmbeddingPolicy,
+
+  // Unified optional operations. These reuse the Community engines above and
+  // add explicit entitlement/resource-policy checks without replacing the
+  // Community contract and storage APIs.
+  entitled,
+  entitledProjectIntelligence: entitled,
+  registerProjectIntelligenceModule: entitled.registerProjectIntelligenceModule,
+  buildDescriptor: entitled.buildDescriptor,
+  createProjectKnowledge: entitled.createProjectKnowledge,
+  fullIndex: entitled.fullIndex,
+  incrementalUpdate: entitled.incrementalUpdate,
+  queryKnowledge: entitled.queryKnowledge,
+  impactAnalysis: entitled.impactAnalysis,
+  buildContextPackage: entitled.buildContextPackage,
+  inspectSnapshot: entitled.inspectSnapshot,
+  verifyIntegrity: entitled.verifyIntegrity,
+  validateTrustedRoots: entitled.validateTrustedRoots,
+  evaluateResourcePolicy: entitled.evaluateResourcePolicy,
+  cloneDefaultResourcePolicy: entitled.cloneDefaultResourcePolicy,
+  ENTITLED_MODULE_ID: entitled.MODULE_ID,
+  ENTITLED_MODULE_VERSION: entitled.MODULE_VERSION,
+  ENTITLED_CAPABILITY_IDS: entitled.CAPABILITY_IDS,
+  ENTITLED_NON_CLAIMS: entitled.NON_CLAIMS,
+  ENTITLED_NON_CLAIM_MESSAGES: entitled.NON_CLAIM_MESSAGES,
+  ENTITLED_DEFAULT_RESOURCE_POLICY: entitled.DEFAULT_RESOURCE_POLICY,
 };

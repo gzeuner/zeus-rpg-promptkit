@@ -12,6 +12,8 @@ const {
   extractCommercialFromProfile,
   registerCommercialModules,
   createHostZeus,
+  resolveBuiltInModuleRequest,
+  registerBuiltInModules,
   requireCommercialPackage,
 } = require('../src/modules/commercialModuleLoader');
 const { createZeus } = require('../src/api/zeusApi');
@@ -23,6 +25,22 @@ test('not configured returns ok without loading', async () => {
   assert.equal(result.ok, true);
   assert.equal(result.loaded, false);
   assert.equal(result.reasonCode, LOADER_REASON_CODES.NOT_CONFIGURED);
+});
+
+test('built-in module selection uses the public package without external loading', async () => {
+  assert.deepEqual(resolveBuiltInModuleRequest({ args: { 'built-in-modules': 'professional' } }), {
+    value: 'professional',
+    source: 'args-or-env',
+  });
+  const zeus = createZeus();
+  const result = await registerBuiltInModules(zeus, {
+    builtInModules: 'professional',
+    env: {},
+  });
+  assert.equal(result.builtIn, true);
+  assert.equal(result.loaded, true);
+  assert.equal(result.registration.selected.length, 3);
+  assert.equal(result.registration.modules['project-intelligence'].ok, false);
 });
 
 test('resolveCommercialModuleConfig prefers args over env', () => {

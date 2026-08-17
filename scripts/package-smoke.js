@@ -73,6 +73,9 @@ try {
   sh(
     "node -e \"const p=require('zeus-rpg-promptkit/package.json');" +
       `if(p.version!=='${EXPECTED_VERSION}') process.exit(1);` +
+      "const b=require('zeus-rpg-promptkit/built-in');" +
+      "if(typeof b.registerBuiltInModules!=='function') process.exit(1);" +
+      "if(require('zeus-rpg-promptkit/package.json').license!=='Apache-2.0') process.exit(1);" +
       "require('zeus-rpg-promptkit/api')\"",
     inst
   );

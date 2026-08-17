@@ -164,7 +164,7 @@ npm run demo:prompt
 
 Mehr Details: [docs/quickstart/5-minutes.md](docs/quickstart/5-minutes.md)
 
-Community + Commercial: [`docs/quickstart/community-commercial.md`](docs/quickstart/community-commercial.md)
+Einheitliche Module und externe Erweiterungen: [`docs/quickstart/community-commercial.md`](docs/quickstart/community-commercial.md)
 
 ### Entwicklung
 
@@ -475,11 +475,14 @@ zeus.registerPlugin(myPlugin);
 
 Diese Hooks sind ausschließlich für explizit importierten, vertrauenswürdigen In-Process-Code
 bestimmt. `registerPlugin` ist kein dynamischer Modul-Loader, keine Sandbox, kein Marketplace und
-keine Lizenzgrenze. Die Open-Core-Modulgrenze beschreibt
-[`ADR-006`](docs/architecture/adr-006-commercial-extension-architecture.md): Der Community-Core
+keine Lizenzgrenze. Das öffentliche Paket liefert Generation Assurance, Db2 Test Intelligence,
+IBM i Validation, Entitlement und Project Intelligence gemeinsam unter Apache-2.0. Entitlement
+bleibt eine Laufzeit-Produktpolicy und keine Einschränkung der Quelllizenz. Der externe Modul-Loader
+bleibt nur als expliziter Hook für separat gelieferte Erweiterungen erhalten. Die Modulgrenze beschreibt
+[`ADR-006`](docs/architecture/adr-006-commercial-extension-architecture.md): Das öffentliche Paket
 stellt versionierte Moduldeskriptoren und einen atomaren Registrar bereit; **Entitlement-Prüfung und
-bezahlte Handler** liegen in separat verteilten kommerziellen Paketen und gehören nicht in den
-Apache-2.0-Core.
+geschützte Handler** bleiben durch die Laufzeit-Entitlement-Policy kontrolliert und gehören zum
+gemeinsamen Apache-2.0-Paket.
 
 Zentrale Erweiterungspunkte:
 
@@ -488,7 +491,7 @@ Zentrale Erweiterungspunkte:
 - MCP Tool Registry
 - Plugin-Registrierung
 - Modul-Registrar und Capability Registry (`zeus.modules` / `zeus.capabilities`)
-- Project-Intelligence-Verträge und Community-Engines (`zeus.projectIntelligence`)
+- Project-Intelligence-Verträge, Engines und integrierte Operationen (`zeus.projectIntelligence`)
 - Workflow-, Fetch-, Query- und Run-Explorer-Services
 - persistente lokale Investigation Sessions
 
@@ -528,11 +531,12 @@ Unter `src/knowledge/` existieren bewusst getrennte Vertragsgrenzen:
 
 Source-abgeleitete Projektdaten werden nicht automatisch zu wiederverwendbarem Toolkit-Wissen. Lokale Known Facts liegen unter `config/local-only/known-facts/<profile>.json`, werden nur mit `--with-known-facts` geladen und bleiben getrennt von der projektneutralen Pipeline.
 
-## 🗂️ Projektwissen / Project Intelligence (Community, ZPI)
+## 🗂️ Projektwissen / Project Intelligence (integriert, ZPI)
 
-Zeus Project Intelligence liefert im **Community-Core** die neutrale Projektwissen-Basis
-(Verträge, SQLite-Store, Content-CAS, lexikalische Suche, Snapshot-/Incremental-Engine, RPG-Analyzer,
-Retrieval und Context-Pakete). Öffentlicher Export:
+Zeus Project Intelligence liefert die neutrale Projektwissen-Basis und die integrierten,
+entitled Operationen im öffentlichen Paket (Verträge, SQLite-Store, Content-CAS, lexikalische Suche,
+Snapshot-/Incremental-Engine, RPG-Analyzer, Retrieval, Context-Pakete und explizite Laufzeit-Policy).
+Öffentlicher Export:
 
 ```js
 const zpi = require('zeus-rpg-promptkit/project-intelligence-contracts');
@@ -540,15 +544,16 @@ const zpi = require('zeus-rpg-promptkit/project-intelligence-contracts');
 ```
 
 **CLI/MCP (dünne Adapter):** `zeus project-knowledge` und `zeus.project-knowledge.*` melden
-Capability-Präsenz und rufen nur ausgeführte Handler auf, wenn ein berechtigtes kommerzielles Modul
-registriert ist. Ohne Modul schlagen Ops fail-closed mit stabilen Reason Codes fehl; Community-Engines
-bleiben über die API nutzbar.
+Capability-Präsenz und dispatchen nur, wenn ein integriertes Modul ausdrücklich registriert und
+entitled ist. Ohne Registrierung schlagen Ops mit stabilen Reason Codes fail-closed fehl; die
+neutralen Engines bleiben über die API nutzbar.
 
 **Nicht-Claims:** keine Source of Truth, kein Live-IBM-i-Compile/Deploy, kein implizites Workspace-
-Harvesting ohne explizite Trusted Roots, keine Paid-Handler im Community-Code.
+Harvesting ohne explizite Trusted Roots; Live-IBM-i-Zugriff bleibt owner-gated und standardmäßig
+deaktiviert.
 
 Status und Non-Claims: [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md).  
-Architektur: ADRs 009–013 unter [`docs/architecture/`](docs/architecture/).
+Architektur: ADRs 009–014 unter [`docs/architecture/`](docs/architecture/).
 
 ## 🧑‍💻 VS-Code-Integration (in Entwicklung)
 
@@ -850,7 +855,7 @@ npm run demo:prompt
 
 See [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md) for details.
 
-Community + Commercial: [docs/quickstart/community-commercial.md](docs/quickstart/community-commercial.md)
+Unified modules and external extensions: [docs/quickstart/community-commercial.md](docs/quickstart/community-commercial.md)
 
 ## 🔎 Analyze your own local sources
 
@@ -1117,11 +1122,14 @@ zeus.registerPlugin(myPlugin);
 ```
 
 These hooks are only for explicitly imported, trusted in-process code. `registerPlugin` is not a
-dynamic module loader, sandbox, marketplace, or license gate. The open-core module boundary is
+dynamic module loader, sandbox, marketplace, or license gate. The public package ships Generation
+Assurance, Db2 Test Intelligence, IBM i Validation, entitlement, and Project Intelligence together
+under Apache-2.0. Entitlement remains a runtime product policy, not a source-license restriction.
+The former external module loader is retained only as an explicit hook for separately supplied
+extensions. The external module boundary is
 defined in [`ADR-006`](docs/architecture/adr-006-commercial-extension-architecture.md): the
-Community core ships versioned module descriptors and an atomic registrar; **entitlement checks and
-paid handlers** live in separately distributed commercial packages and are not part of the
-Apache-2.0 core.
+public package ships versioned module descriptors and an atomic registrar; **entitlement checks and
+protected handlers** are governed by runtime entitlement policy within the unified Apache-2.0 package.
 
 Primary extension points:
 
@@ -1130,7 +1138,7 @@ Primary extension points:
 - MCP Tool Registry
 - plugin registration
 - module registrar and capability registry (`zeus.modules` / `zeus.capabilities`)
-- Project Intelligence contracts and Community engines (`zeus.projectIntelligence`)
+- Project Intelligence contracts, engines, and integrated operations (`zeus.projectIntelligence`)
 - workflow, fetch, query, and run-explorer services
 - persistent local investigation sessions
 
@@ -1169,11 +1177,12 @@ The Knowledge API intentionally remains disabled until a final project-neutral c
 
 Source-derived project data is not automatically treated as reusable toolkit knowledge. Local known facts live under `config/local-only/known-facts/<profile>.json`, are loaded only with `--with-known-facts`, and remain separate from the project-neutral pipeline.
 
-## 🗂️ Project Intelligence (Community, ZPI)
+## 🗂️ Project Intelligence (integrated, ZPI)
 
-Zeus Project Intelligence ships the neutral project-knowledge baseline in the **Community core**
-(contracts, SQLite store, content CAS, lexical search, snapshot/incremental engine, RPG analyzer,
-retrieval, and context packages). Public export:
+Zeus Project Intelligence ships the neutral project-knowledge baseline and the integrated entitled
+operations in the public package (contracts, SQLite store, content CAS, lexical search,
+snapshot/incremental engine, RPG analyzer, retrieval, context packages, and explicit runtime policy).
+Public export:
 
 ```js
 const zpi = require('zeus-rpg-promptkit/project-intelligence-contracts');
@@ -1181,12 +1190,12 @@ const zpi = require('zeus-rpg-promptkit/project-intelligence-contracts');
 ```
 
 **CLI/MCP (thin adapters):** `zeus project-knowledge` and `zeus.project-knowledge.*` report
-capability presence and dispatch only when an entitled commercial module is registered. Without
-that module, operations fail closed with stable reason codes; Community engines remain usable via
-the API.
+capability presence and dispatch only when an integrated module is explicitly registered and
+entitled. Without that registration, operations fail closed with stable reason codes; the neutral
+engines remain usable via the API.
 
 **Non-claims:** not source of truth; not live IBM i compile/deploy; no implicit workspace harvest
-without explicit trusted roots; no paid handlers in Community code.
+without explicit trusted roots; live IBM i access remains owner-gated and off by default.
 
 Status and non-claims: [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md).  
 Architecture: ADRs 009–013 under [`docs/architecture/`](docs/architecture/).

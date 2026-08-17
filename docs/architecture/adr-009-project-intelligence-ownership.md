@@ -1,12 +1,16 @@
 ---
 Title: ADR-009 Project Intelligence Ownership Split
-Description: Community and Commercial ownership boundaries for Zeus Project Intelligence contracts, default backends, and entitlement-gated operations.
-Last Updated: 2026-07-25
+Description: Historical Project Intelligence ownership boundaries; source ownership is superseded by ADR-014.
+Last Updated: 2026-08-17
 ---
 
 # ADR-009: Project Intelligence Ownership Split
 
-**Status:** Accepted; Community baseline delivered (ZPI-02…12); Commercial entitled ops shipped privately
+**Status:** Accepted historically; source ownership superseded by ADR-014; public baseline and entitled ops are now integrated
+
+> Historical note: the Community/Commercial ownership split below describes the pre-consolidation
+> delivery plan. ADR-014 supersedes that source split. The public package now ships the useful
+> implementations; only explicit external extensions remain outside the built-in product path.
 
 ## Context
 

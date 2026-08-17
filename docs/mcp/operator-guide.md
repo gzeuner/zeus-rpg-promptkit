@@ -1,7 +1,7 @@
 ﻿---
 Title: MCP Operator Guide
 Description: Local-first MCP startup, policy boundaries, and troubleshooting for Zeus RPG PromptKit.
-Last Updated: 2026-07-27
+Last Updated: 2026-08-17
 ---
 
 # MCP Operator Guide
@@ -82,7 +82,7 @@ Includes among others:
 - health / version / profiles / doctor / help / bootstrap / onboarding / resources / discover-environment
 - analyze / workflow / bundle / searches / investigation.\*
 - selected remote-read: resolve-object, inspect-object, query-table, query-sql, fetch-member, diff, joblog, test-run
-- project-knowledge: **discover + status only** (index/query/write need explicit allow-tools + commercial module)
+- project-knowledge: **discover + status only by default** (index/query/write need explicit allow-tools + an entitled built-in module or explicitly supplied external extension)
 
 Example with a profile (recommended for real-target agent sessions):
 

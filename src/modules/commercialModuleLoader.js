@@ -456,6 +456,68 @@ async function registerCommercialModules(zeus, options = {}) {
   }
 }
 
+function resolveBuiltInModuleRequest(options = {}) {
+  const args = options.args && typeof options.args === 'object' ? options.args : {};
+  const env = options.env || process.env;
+  const value =
+    options.builtInModules ??
+    options.builtIn ??
+    args['built-in-modules'] ??
+    args['builtin-modules'] ??
+    args['product-surface'] ??
+    args.surface ??
+    env.ZEUS_BUILT_IN_MODULES ??
+    env.ZEUS_PRODUCT_SURFACE;
+  if (value == null || value === false || String(value).trim() === '') return null;
+  return { value, source: options.builtInModules != null ? 'options' : 'args-or-env' };
+}
+
+/**
+ * Register the integrated public modules without loading a second package.
+ * This is explicit so a Community-only host remains unchanged by default.
+ */
+async function registerBuiltInModules(zeus, options = {}) {
+  if (!zeus || typeof zeus !== 'object' || !zeus.modules) {
+    return {
+      ok: false,
+      loaded: false,
+      reasonCode: LOADER_REASON_CODES.ZEUS_REQUIRED,
+      message: 'createZeus() instance with modules registrar is required.',
+    };
+  }
+  try {
+    const { registerWithZeus } = require('./builtInModules');
+    const request = resolveBuiltInModuleRequest(options);
+    const registrationOptions = { ...options };
+    if (request && typeof request.value === 'string') {
+      const value = request.value.trim();
+      if (value === 'professional' || value === 'enterprise') {
+        registrationOptions.surface = value;
+      } else if (value !== 'true') {
+        registrationOptions.modules = value;
+      }
+    }
+    const registration = await registerWithZeus(zeus, registrationOptions);
+    const ok = registration == null || registration.ok !== false;
+    return {
+      ok,
+      loaded: true,
+      builtIn: true,
+      reasonCode: ok ? null : LOADER_REASON_CODES.REGISTER_FAILED,
+      message: registration && registration.message,
+      registration,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      loaded: true,
+      builtIn: true,
+      reasonCode: LOADER_REASON_CODES.REGISTER_FAILED,
+      message: redactMessage((err && err.message) || 'Built-in module registration threw'),
+    };
+  }
+}
+
 /**
  * Create a Zeus host instance and optionally register commercial modules.
  */
@@ -463,6 +525,10 @@ async function createHostZeus(options = {}) {
   const { createZeus } = require('../api/zeusApi');
   const create = options.createZeus || createZeus;
   const zeus = create();
+  if (resolveBuiltInModuleRequest(options)) {
+    const builtIn = await registerBuiltInModules(zeus, options);
+    return { zeus, builtIn, commercial: builtIn };
+  }
   const commercial = await registerCommercialModules(zeus, options);
   return { zeus, commercial };
 }
@@ -477,6 +543,8 @@ module.exports = {
   buildEntitlementOptions,
   requireCommercialPackage,
   registerCommercialModules,
+  resolveBuiltInModuleRequest,
+  registerBuiltInModules,
   createHostZeus,
   redactMessage,
 };

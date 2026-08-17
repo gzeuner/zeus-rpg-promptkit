@@ -859,11 +859,12 @@ const zeus = {
   // Generation Validation Foundation (Iteration 29): offline candidate validation.
   // Never mutates the analyzed source workspace. review-ready is not compile readiness.
   generationValidation,
-  // Project Intelligence (ZPI-02..08 engines + ZPI-11 thin CLI/MCP adapters).
-  // Commercial registration/ops remain in the private package (ZPI-09/10).
+  // Project Intelligence (Community engines plus the explicit entitled
+  // operations integrated into this public package).
   projectIntelligence,
   // External module contracts (Iteration 30): trusted in-process registration only.
-  // Core does not parse licenses or enforce commercial entitlement.
+  // External modules remain explicit; built-in modules enforce their own
+  // entitlement checks.
   modules: createAtomicModuleRegistrar({
     capabilityRegistry,
   }),
@@ -951,6 +952,11 @@ module.exports = {
   modules: zeus.modules,
   moduleContracts: modulesApi,
   createAtomicModuleRegistrar,
+  registerBuiltInModules: (...args) =>
+    require('../modules/builtInModules').registerWithZeus(...args),
+  resolveBuiltInModules: (...args) =>
+    require('../modules/builtInModules').resolveSelectedModules(...args),
+  productSurface: require('../modules/productSurface'),
 
   zeus,
   createZeus: () => {
@@ -970,4 +976,6 @@ module.exports = {
   createHostZeus: (...args) => require('../modules/commercialModuleLoader').createHostZeus(...args),
   registerCommercialModules: (...args) =>
     require('../modules/commercialModuleLoader').registerCommercialModules(...args),
+  registerBuiltInModulesFromHost: (...args) =>
+    require('../modules/commercialModuleLoader').registerBuiltInModules(...args),
 };

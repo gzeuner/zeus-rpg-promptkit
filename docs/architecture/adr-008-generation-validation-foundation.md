@@ -62,14 +62,15 @@ that is not inside the source workspace.
 Iteration 29 exposes a programmatic API under `zeus.generationValidation` / package
 `generationValidation`. CLI and MCP remain thin and are not required for this foundation.
 
-### Commercial boundary
+### Extension boundary
 
-Reserved for commercial modules: AI repair loops, advanced RPG/CL/DDS validator packs, ranking,
-organization policy/approval, comparative quality reports, compiler validation, and differential
-execution. The public core must not contain dormant paid implementations.
+The public package owns the delivered Generation Assurance foundation. Future AI repair loops,
+advanced validator packs, ranking, organization policy/approval, comparative quality reports,
+compiler validation, and differential execution remain explicit, owner-gated extension areas. They
+must use the public contracts and must not be loaded implicitly.
 
 ## Consequences
 
 - Offline mock validation is fully testable without providers or IBM i.
-- Later commercial Generation Assurance can attach to the same candidate/report contracts without
-  rewriting the Community safety baseline.
+- Later built-in or external Generation Assurance extensions can attach to the same candidate/report
+  contracts without rewriting the public safety baseline.

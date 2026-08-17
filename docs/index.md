@@ -1,7 +1,7 @@
 ---
 Title: Zeus RPG PromptKit Documentation Hub (v2.2)
-Description: Central, AI-friendly navigation across documentation domains including safety-first onboarding, open-core boundaries, and the ZPI architecture baseline.
-Last Updated: 2026-07-24
+Description: Central, AI-friendly navigation across documentation domains including safety-first onboarding, external extension boundaries, and the ZPI architecture baseline.
+Last Updated: 2026-08-17
 ---
 
 # Zeus RPG PromptKit Documentation Hub (v2.2)
@@ -42,28 +42,28 @@ Question -> Analyze -> Investigate (search/trace/xref) -> Impact/Risk -> Generat
 
 ## Quick Links For AI Assistants
 
-| Need                                | Go To                                                                                                                                                                                                                              | Why                                                                |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Authoritative command behavior      | [`tool-catalog.md`](tool-catalog.md)                                                                                                                                                                                               | Single source of truth for commands, safety, and examples          |
-| Session bootstrap                   | [`ai/session-prompt.md`](ai/session-prompt.md)                                                                                                                                                                                     | Standardized workflow with safety gates                            |
-| MCP operator setup                  | [`mcp/operator-guide.md`](mcp/operator-guide.md)                                                                                                                                                                                   | Start, policy, and audit reference for local MCP operation         |
-| Prompt schema and constraints       | [`ai/prompt-contracts.md`](ai/prompt-contracts.md)                                                                                                                                                                                 | Prevents inconsistent prompt outputs                               |
-| Architecture decisions and baseline | [`architecture/index.md`](architecture/index.md)                                                                                                                                                                                   | ADRs for kernel, dependencies, contracts, registry, and ZPI        |
-| Open-core module boundary           | [`architecture/adr-006-commercial-extension-architecture.md`](architecture/adr-006-commercial-extension-architecture.md)                                                                                                           | Public and private ownership, registration, and portability        |
-| ZPI security and closure status     | [`knowledgebase/zpi-threat-model.md`](knowledgebase/zpi-threat-model.md), [`knowledgebase/zpi-closure-status.md`](knowledgebase/zpi-closure-status.md), [`knowledgebase/zpi-test-strategy.md`](knowledgebase/zpi-test-strategy.md) | Threat model, delivered surface, non-claims, and acceptance matrix |
-| Safe sharing guidance               | [`safety/safe-sharing.md`](safety/safe-sharing.md)                                                                                                                                                                                 | Reduction and sanitization rules for external use                  |
-| CLI examples                        | [`cli/examples.md`](cli/examples.md)                                                                                                                                                                                               | Fast reproducible command patterns                                 |
-| DB2 discovery SQL                   | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql)                                                                                                                                                     | Standardized discovery queries for system and ticket context       |
+| Need                                | Go To                                                                                                                                                                                                                              | Why                                                                   |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Authoritative command behavior      | [`tool-catalog.md`](tool-catalog.md)                                                                                                                                                                                               | Single source of truth for commands, safety, and examples             |
+| Session bootstrap                   | [`ai/session-prompt.md`](ai/session-prompt.md)                                                                                                                                                                                     | Standardized workflow with safety gates                               |
+| MCP operator setup                  | [`mcp/operator-guide.md`](mcp/operator-guide.md)                                                                                                                                                                                   | Start, policy, and audit reference for local MCP operation            |
+| Prompt schema and constraints       | [`ai/prompt-contracts.md`](ai/prompt-contracts.md)                                                                                                                                                                                 | Prevents inconsistent prompt outputs                                  |
+| Architecture decisions and baseline | [`architecture/index.md`](architecture/index.md)                                                                                                                                                                                   | ADRs for kernel, dependencies, contracts, registry, and ZPI           |
+| Unified capability architecture     | [`architecture/adr-014-unified-capability-consolidation.md`](architecture/adr-014-unified-capability-consolidation.md)                                                                                                             | Single public codebase, built-in modules, and explicit external hooks |
+| ZPI security and closure status     | [`knowledgebase/zpi-threat-model.md`](knowledgebase/zpi-threat-model.md), [`knowledgebase/zpi-closure-status.md`](knowledgebase/zpi-closure-status.md), [`knowledgebase/zpi-test-strategy.md`](knowledgebase/zpi-test-strategy.md) | Threat model, delivered surface, non-claims, and acceptance matrix    |
+| Safe sharing guidance               | [`safety/safe-sharing.md`](safety/safe-sharing.md)                                                                                                                                                                                 | Reduction and sanitization rules for external use                     |
+| CLI examples                        | [`cli/examples.md`](cli/examples.md)                                                                                                                                                                                               | Fast reproducible command patterns                                    |
+| DB2 discovery SQL                   | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql)                                                                                                                                                     | Standardized discovery queries for system and ticket context          |
 
 ## Governance Notes
 
 - `docs/tool-catalog.md` remains the authoritative command reference for AI assistants.
 - `docs/architecture/index.md` and its ADRs are the authoritative source for product kernel,
-  dependency direction, versioned contracts, capability registry, safety trust zones, open-core
-  module boundaries, and the ZPI architecture baseline.
+  dependency direction, versioned contracts, capability registry, safety trust zones, external
+  extension boundaries, and the ZPI architecture baseline.
 - `docs/knowledgebase/README.md` and the ZPI documents beneath it define the security, licensing,
-  test strategy, and **closure status** for Project Intelligence (Community engines + thin adapters;
-  commercial registration/ops in the private package).
+  test strategy, and **closure status** for Project Intelligence (integrated engines, operations,
+  and thin adapters in the public package).
 - CLI and MCP remain the supported product path; the local viewer is optional and experimental.
 - Documentation changes should keep safety levels and scope terminology consistent (`S0` to `S4`).
 - The tool catalog is generated from code via `zeus docs:generate-catalog`.

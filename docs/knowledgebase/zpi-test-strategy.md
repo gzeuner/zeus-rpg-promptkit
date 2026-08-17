@@ -1,14 +1,14 @@
 ---
 Title: ZPI Test Strategy Baseline
-Description: Minimum deterministic acceptance matrix for later Zeus Project Intelligence implementation packages.
-Last Updated: 2026-08-04
+Description: Deterministic acceptance matrix for the integrated Zeus Project Intelligence surface.
+Last Updated: 2026-08-17
 ---
 
 # ZPI Test Strategy Baseline
 
-ZPI-01 froze the acceptance matrix. ZPI-02..12 implemented Community contracts through engines,
-retrieval, thin CLI/MCP adapters, plus Commercial registration/ops. ZPI-12 adds benchmark and
-hardening suites as automated evidence.
+The Project Intelligence acceptance matrix is implemented in the public Apache-2.0 package. Tests
+cover neutral engines, integrated entitled operations, explicit external-module compatibility, and
+the CLI/MCP adapters.
 
 ## Principles
 
@@ -36,21 +36,21 @@ Required unit coverage before runtime rollout:
 
 ### Contract tests
 
-Community-owned contract tests must later cover:
+Contract tests cover:
 
 - exact schema validation and explicit unknown-version failure
 - snapshot publish semantics and current-pointer behavior
 - migration-open refusal on unknown future required versions
 - retrieval result envelopes, bounds, and ordering rules
 - context-package evidence references, non-claims, and omission reporting
-- absence or denial behavior for optional Commercial capabilities
-- public-claims consistency so docs do not imply Package 09 reopen or live IBM i support
+- absence or denial behavior for optional built-in capabilities
+- public-claims consistency so docs do not imply live IBM i compile/deploy support
 
 ### Integration tests
 
 Use a pinned synthetic corpus only. Required integration themes:
 
-- create, publish, reopen, and query a Community-owned snapshot
+- create, publish, reopen, and query a public snapshot
 - atomic publish and rollback behavior for interrupted writes
 - path traversal and symlink or junction escape refusal under trusted roots
 - corrupt or partially published search state refusal or documented rebuild path
@@ -61,7 +61,7 @@ Use a pinned synthetic corpus only. Required integration themes:
   and program-to-program relationships
 - relevant-source omissions carry stable token-budget reason codes
 - bounded context-package assembly with explicit omission reasons
-- Community-only operation when no Commercial module is registered
+- public-only operation when no built-in or external module is registered
 
 ### Adversarial tests
 
@@ -75,7 +75,7 @@ High-severity adversarial themes that must become release gates:
 - entitlement denial mid-operation with no partial capability success
 - token-budget compliance without unsafe disclosure fallback
 
-## Acceptance criteria for later packages
+## Acceptance criteria for releases
 
 ZPI implementation packages must not advance without:
 
