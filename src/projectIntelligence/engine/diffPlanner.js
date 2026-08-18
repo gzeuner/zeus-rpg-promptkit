@@ -5,7 +5,7 @@ const { inventoryUnitKey, hashInventory } = require('./inventory');
 /**
  * Classify source units as added / changed / deleted / unchanged.
  * Identity key: trustedRootId + relativePath.
- * Change detection: contentHash inequality.
+ * Content changes and provenance/observation changes are tracked separately.
  *
  * @param {Array<object>} previousUnits from last published snapshot (no _canonicalBytes needed)
  * @param {Array<object>} nextUnits from current inventory scan
@@ -29,8 +29,18 @@ function planInventoryDiff(previousUnits = [], nextUnits = []) {
     const prev = prevMap.get(key);
     if (!prev) {
       added.push(next);
-    } else if (prev.contentHash !== next.contentHash) {
-      changed.push({ previous: prev, next });
+    } else if (
+      prev.contentHash !== next.contentHash ||
+      prev.provenanceHash !== next.provenanceHash ||
+      prev.importObservationHash !== next.importObservationHash
+    ) {
+      changed.push({
+        previous: prev,
+        next,
+        contentChanged: prev.contentHash !== next.contentHash,
+        provenanceChanged: prev.provenanceHash !== next.provenanceHash,
+        importObservationChanged: prev.importObservationHash !== next.importObservationHash,
+      });
     } else {
       unchanged.push({ previous: prev, next });
     }

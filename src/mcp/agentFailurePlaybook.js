@@ -66,9 +66,9 @@ const FAILURE_ENTRIES = Object.freeze([
     code: 'PI_ABSENT',
     summary: 'Commercial Project Intelligence module is not present or not allowlisted.',
     do: [
-      'Call zeus.project-knowledge.discover / status once to confirm absence.',
-      'Fall back to Community tools: analyze, search-source, field-search, impact, bundle.',
-      'Do not thrash missing project-knowledge index/query/write ops.',
+      'Call zeus.project-knowledge.check when a local knowledge root and trusted roots are known.',
+      'Fall back to Community tools: zeus.project-knowledge.lookup for a fresh snapshot, or analyze, search-source, field-search, impact, bundle for a new evidence run.',
+      'Do not thrash missing optional project-knowledge index/query/write ops or serve stale/unknown Knowledge First results.',
     ],
     dont: [
       'Do not retry project-knowledge query/index/write in a loop when absent.',
@@ -76,6 +76,8 @@ const FAILURE_ENTRIES = Object.freeze([
     ],
     nextTools: [
       'zeus.project-knowledge.discover',
+      'zeus.project-knowledge.check',
+      'zeus.project-knowledge.lookup',
       'zeus.analyze',
       'zeus.search-source',
       'zeus.impact',

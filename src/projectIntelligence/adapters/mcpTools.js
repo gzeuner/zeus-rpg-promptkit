@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+
 const {
   PUBLIC_OPERATIONS,
   MCP_TOOL_TO_OPERATION,
@@ -7,6 +9,15 @@ const {
 } = require('./capabilityCatalog');
 const { executeProjectIntelligenceOperation } = require('./execute');
 const { discoverProjectIntelligenceCapabilities } = require('./discovery');
+const { createKnowledgeFirstService } = require('../knowledgeFirst');
+const { realpathSafe, isInsideRoot } = require('../content/trustedRoots');
+const { KnowledgeStoreError, REASON_CODES } = require('../store/errors');
+
+const KNOWLEDGE_FIRST_MCP_TOOLS = Object.freeze({
+  check: 'zeus.project-knowledge.check',
+  sync: 'zeus.project-knowledge.sync',
+  lookup: 'zeus.project-knowledge.lookup',
+});
 
 const COMMUNITY_FALLBACK_TOOLS = Object.freeze([
   'zeus.help',
@@ -47,6 +58,7 @@ const COMMON_INPUT_PROPS = Object.freeze({
       properties: {
         rootId: { type: 'string' },
         path: { type: 'string' },
+        systemAlias: { type: 'string' },
       },
       required: ['rootId', 'path'],
       additionalProperties: false,
@@ -64,6 +76,31 @@ const COMMON_INPUT_PROPS = Object.freeze({
   displayName: { type: 'string', description: 'Optional display name for create-project.' },
 });
 
+function assertKnowledgeFirstMcpPaths(input = {}, context = {}) {
+  const workspaceRoot = realpathSafe(path.resolve(context.cwd || process.cwd()));
+  const candidates = [input.knowledgeRoot]
+    .concat(
+      Array.isArray(input.trustedRoots) ? input.trustedRoots.map(root => root && root.path) : []
+    )
+    .filter(value => typeof value === 'string' && value.trim());
+
+  for (const candidate of candidates) {
+    if (!path.isAbsolute(candidate)) {
+      throw new KnowledgeStoreError(
+        REASON_CODES.PATH_UNSAFE,
+        'Knowledge-First MCP paths must be absolute'
+      );
+    }
+    const resolved = realpathSafe(path.resolve(candidate));
+    if (!isInsideRoot(workspaceRoot, resolved)) {
+      throw new KnowledgeStoreError(
+        REASON_CODES.PATH_ESCAPE,
+        'Knowledge-First MCP path is outside the workspace'
+      );
+    }
+  }
+}
+
 function listProjectKnowledgeMcpTools() {
   const tools = [
     {
@@ -77,6 +114,48 @@ function listProjectKnowledgeMcpTools() {
       },
     },
   ];
+
+  tools.push(
+    {
+      name: KNOWLEDGE_FIRST_MCP_TOOLS.check,
+      description:
+        'Community-neutral read-only Knowledge First freshness check. The published source-backed snapshot is authoritative evidence; unknown/stale state is never served as current knowledge.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['knowledgeRoot', 'projectId'],
+        properties: { ...COMMON_INPUT_PROPS },
+      },
+      _communityKnowledgeFirst: true,
+    },
+    {
+      name: KNOWLEDGE_FIRST_MCP_TOOLS.sync,
+      description:
+        'Explicit Community-local Knowledge First sync. Writes the SQLite-backed snapshot using the initial full-build or existing incremental path; never default-allowlisted.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['knowledgeRoot', 'projectId', 'trustedRoots'],
+        properties: {
+          ...COMMON_INPUT_PROPS,
+          mode: { type: 'string', enum: ['full', 'incremental'] },
+        },
+      },
+      _communityKnowledgeFirst: true,
+    },
+    {
+      name: KNOWLEDGE_FIRST_MCP_TOOLS.lookup,
+      description:
+        'Community-neutral read-only Knowledge First lookup. Checks freshness before retrieval and returns source locations, evidence/provenance, relationships, and explicit snapshot authority metadata.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['knowledgeRoot', 'projectId', 'query'],
+        properties: { ...COMMON_INPUT_PROPS },
+      },
+      _communityKnowledgeFirst: true,
+    }
+  );
 
   for (const op of PUBLIC_OPERATIONS) {
     tools.push({
@@ -97,7 +176,9 @@ function listProjectKnowledgeMcpTools() {
 
 function isProjectKnowledgeMcpTool(name) {
   return (
-    name === DISCOVER_MCP_TOOL || Object.prototype.hasOwnProperty.call(MCP_TOOL_TO_OPERATION, name)
+    name === DISCOVER_MCP_TOOL ||
+    Object.values(KNOWLEDGE_FIRST_MCP_TOOLS).includes(name) ||
+    Object.prototype.hasOwnProperty.call(MCP_TOOL_TO_OPERATION, name)
   );
 }
 
@@ -118,6 +199,33 @@ async function executeProjectKnowledgeMcpTool(name, args = {}, context = {}) {
       commercial: true,
       discovery: discoverProjectIntelligenceCapabilities(capabilities),
     };
+  }
+
+  const knowledgeFirstOperation = Object.entries(KNOWLEDGE_FIRST_MCP_TOOLS).find(
+    ([, toolName]) => toolName === name
+  );
+  if (knowledgeFirstOperation) {
+    try {
+      assertKnowledgeFirstMcpPaths(args || {}, context || {});
+      const service = createKnowledgeFirstService(args || {});
+      const [operation] = knowledgeFirstOperation;
+      const result =
+        operation === 'check'
+          ? service.check()
+          : operation === 'sync'
+            ? service.sync({ mode: args && args.mode })
+            : service.lookup({ query: args && args.query, limit: args && args.limit });
+      return { tool: name, ...result };
+    } catch (err) {
+      return {
+        tool: name,
+        ok: false,
+        operation: knowledgeFirstOperation[0],
+        service: 'zeus.community.knowledge-first',
+        reasonCode: (err && err.reasonCode) || 'ZPI.INTERNAL_ERROR',
+        message: 'Knowledge-First operation failed',
+      };
+    }
   }
 
   const operation = MCP_TOOL_TO_OPERATION[name];
@@ -151,6 +259,8 @@ async function executeProjectKnowledgeMcpTool(name, args = {}, context = {}) {
 const PROJECT_KNOWLEDGE_SAFE_MCP_TOOLS = Object.freeze([
   DISCOVER_MCP_TOOL,
   'zeus.project-knowledge.status',
+  KNOWLEDGE_FIRST_MCP_TOOLS.check,
+  KNOWLEDGE_FIRST_MCP_TOOLS.lookup,
 ]);
 
 module.exports = {
@@ -160,4 +270,6 @@ module.exports = {
   PROJECT_KNOWLEDGE_SAFE_MCP_TOOLS,
   COMMUNITY_FALLBACK_TOOLS,
   REQUIRED_INPUTS,
+  KNOWLEDGE_FIRST_MCP_TOOLS,
+  assertKnowledgeFirstMcpPaths,
 };

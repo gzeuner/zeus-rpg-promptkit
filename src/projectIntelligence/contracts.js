@@ -77,6 +77,16 @@ function projectSchema(value) {
     const base = `/trustedRoots/${i}`;
     if (!h.requireObject(errors, root, base)) return;
     h.requireNonEmptyString(errors, root.rootId, `${base}/rootId`);
+    if (root.systemAlias != null) {
+      h.optionalString(errors, root.systemAlias, `${base}/systemAlias`, { maxChars: 128 });
+      if (typeof root.systemAlias === 'string' && /[\\/\u0000-\u001f]/.test(root.systemAlias)) {
+        h.push(
+          errors,
+          `${base}/systemAlias`,
+          'systemAlias must not contain a path or control character'
+        );
+      }
+    }
     // Local-only stores may keep host paths; export contracts must redact separately.
     if (root.canonicalPath != null) {
       h.optionalString(errors, root.canonicalPath, `${base}/canonicalPath`, {
@@ -162,6 +172,82 @@ function sourceUnitSchema(value) {
   h.optionalString(errors, value.mediaType, '/mediaType', { maxChars: 128 });
   h.optionalNonNegativeInteger(errors, value.sizeBytes, '/sizeBytes');
   h.requireHashAlgorithm(errors, value.hashAlgorithm, '/hashAlgorithm');
+  if (value.rawBytesHash != null) h.requireContentHash(errors, value.rawBytesHash, '/rawBytesHash');
+  if (value.provenanceHash != null)
+    h.requireContentHash(errors, value.provenanceHash, '/provenanceHash');
+  if (value.importObservationHash != null) {
+    h.requireContentHash(errors, value.importObservationHash, '/importObservationHash');
+  }
+  if (value.origin != null && h.requireObject(errors, value.origin, '/origin')) {
+    const allowedOriginKeys = new Set([
+      'systemAlias',
+      'sourceLib',
+      'sourceFile',
+      'member',
+      'memberPath',
+      'fetchedAt',
+      'sourceType',
+    ]);
+    for (const key of Object.keys(value.origin)) {
+      if (!allowedOriginKeys.has(key)) {
+        h.push(errors, `/origin/${key}`, 'origin contains an unsupported or sensitive field');
+      }
+    }
+    for (const key of ['systemAlias', 'sourceLib', 'sourceFile', 'member', 'sourceType']) {
+      h.optionalString(errors, value.origin[key], `/origin/${key}`, { maxChars: 128 });
+      if (
+        typeof value.origin[key] === 'string' &&
+        value.origin[key] &&
+        !/^[A-Za-z0-9_$#@.\-]+$/.test(value.origin[key])
+      ) {
+        h.push(errors, `/origin/${key}`, `${key} contains unsupported characters`);
+      }
+    }
+    h.optionalString(errors, value.origin.memberPath, '/origin/memberPath', { maxChars: 512 });
+    if (
+      typeof value.origin.memberPath === 'string' &&
+      value.origin.memberPath &&
+      !/^\/QSYS\.LIB\/[A-Z0-9_$#@.\-]+\.LIB\/[A-Z0-9_$#@.\-]+\.FILE\/[A-Z0-9_$#@.\-]+\.MBR$/.test(
+        value.origin.memberPath
+      )
+    ) {
+      h.push(errors, '/origin/memberPath', 'memberPath must be a canonical IBM i member path');
+    }
+    h.optionalString(errors, value.origin.fetchedAt, '/origin/fetchedAt', { maxChars: 64 });
+    if (
+      typeof value.origin.fetchedAt === 'string' &&
+      value.origin.fetchedAt &&
+      Number.isNaN(Date.parse(value.origin.fetchedAt))
+    ) {
+      h.push(errors, '/origin/fetchedAt', 'fetchedAt must be an ISO timestamp');
+    }
+  }
+  if (value.importedCopyIntegrity != null) {
+    if (h.requireObject(errors, value.importedCopyIntegrity, '/importedCopyIntegrity')) {
+      for (const key of Object.keys(value.importedCopyIntegrity)) {
+        if (!['status', 'reason'].includes(key)) {
+          h.push(
+            errors,
+            `/importedCopyIntegrity/${key}`,
+            'importedCopyIntegrity contains an unsupported field'
+          );
+        }
+      }
+      h.requireClosedEnum(
+        errors,
+        value.importedCopyIntegrity.status,
+        '/importedCopyIntegrity/status',
+        ['fresh', 'stale', 'unknown'],
+        'importedCopyIntegrity.status'
+      );
+      h.optionalString(
+        errors,
+        value.importedCopyIntegrity.reason,
+        '/importedCopyIntegrity/reason',
+        { maxChars: 128 }
+      );
+    }
+  }
   return errors;
 }
 

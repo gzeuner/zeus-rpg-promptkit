@@ -28,6 +28,7 @@ const search = require('./search');
 const engine = require('./engine');
 const analyzers = require('./analyzers');
 const retrieval = require('./retrieval');
+const knowledgeFirst = require('./knowledgeFirst');
 const adapters = require('./adapters');
 const portableExport = require('./export');
 const corpora = require('./corpora');
@@ -110,6 +111,13 @@ module.exports = {
   seedIdsFromHits: retrieval.seedIdsFromHits,
   allocateBudgetSlices: retrieval.allocateBudgetSlices,
   packBucket: retrieval.packBucket,
+
+  // Community-neutral first point to check for source-backed legacy knowledge.
+  knowledgeFirst,
+  createKnowledgeFirstService: knowledgeFirst.createKnowledgeFirstService,
+  inspectKnowledgeFirst: knowledgeFirst.inspectKnowledgeFirst,
+  syncKnowledgeFirst: knowledgeFirst.syncKnowledgeFirst,
+  lookupKnowledgeFirst: knowledgeFirst.lookupKnowledgeFirst,
 
   // CLI/MCP thin adapters (ZPI-11) — capability present/absent only
   adapters,

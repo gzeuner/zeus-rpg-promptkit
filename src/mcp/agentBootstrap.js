@@ -73,7 +73,7 @@ function buildAgentBootstrapPayload(context = {}) {
       'Require explicit approval before any S3 or S4 action, mutation, or bridge/apply style operation.',
       'Do not invent tool or command names.',
       'Prefer tools/list or zeus.help before markdown docs when you need live tool names.',
-      'Project-knowledge index/query/write ops are not on the default allowlist; discover/status only are default.',
+      'Knowledge First check/lookup are read-only and default-allowlisted; Knowledge First sync and older Project-knowledge index/query/write ops require explicit allowlisting or approval.',
       'Always inspect zeus.context.get before reading sources or metadata; never infer the active IBM i system, library, source file, or member from a filename alone.',
       'Use zeus.context.set to change the operator-controlled working location. Explicit tool arguments override the context and must be echoed in the next result.',
     ],
@@ -82,6 +82,7 @@ function buildAgentBootstrapPayload(context = {}) {
       'zeus.agent.bootstrap',
       'zeus.help',
       'zeus.context.get',
+      'zeus.project-knowledge.check (first point to check when a local knowledge root is known)',
       'zeus.workflow.suggest',
       'zeus.doctor',
       'zeus.profiles',
@@ -95,9 +96,9 @@ function buildAgentBootstrapPayload(context = {}) {
     workingContext: buildWorkingContextView({ cwd: context.cwd || process.cwd() }),
     failurePlaybook,
     communityFallbacks: [
-      'If integrated Project Intelligence is absent, use analyze, search-source, field-search, impact, bundle, and other neutral tools instead.',
+      'If integrated Project Intelligence is absent, use Knowledge First check/lookup for an existing local snapshot, or analyze, search-source, field-search, impact, and bundle for a new evidence run.',
       'If you do not know a tool name, use tools/list or zeus.help; do not guess.',
-      'If a project-knowledge operation other than discover/status fails, the integrated module is absent or not allowlisted.',
+      'If Knowledge First reports stale or unknown, do not serve its retrieval; repair trusted roots or request explicit sync. Older project-knowledge operations may still require the integrated module.',
       'On failure, match the situation to failurePlaybook codes and follow the recovery nextTools; do not invent results.',
     ],
     parityHints: [

@@ -6,6 +6,7 @@ const {
   discoverProjectIntelligenceCapabilities,
   PUBLIC_OPERATIONS,
 } = require('../../projectIntelligence/adapters');
+const { createKnowledgeFirstService } = require('../../projectIntelligence/knowledgeFirst');
 
 function printHelp() {
   console.log('Project Knowledge (Project Intelligence) commands:');
@@ -39,6 +40,15 @@ function printHelp() {
   );
   console.log(
     '  zeus project-knowledge verify-integrity --knowledge-root <abs> --project-id <id> --trusted-roots <json> [--json]'
+  );
+  console.log(
+    '  zeus project-knowledge check --knowledge-root <abs> --project-id <id> [--trusted-roots <json>] [--json]  # Community-neutral, read-only'
+  );
+  console.log(
+    '  zeus project-knowledge sync --knowledge-root <abs> --project-id <id> --trusted-roots <json> [--mode full|incremental] [--json]  # explicit write'
+  );
+  console.log(
+    '  zeus project-knowledge lookup --knowledge-root <abs> --project-id <id> --query <text> [--trusted-roots <json>] [--limit <n>] [--json]  # Community-neutral, read-only'
   );
   console.log('');
   console.log('Notes:');
@@ -97,6 +107,7 @@ function buildInputFromArgs(args) {
   if (args['snapshot-id'] != null && args['snapshot-id'] !== true) {
     input.snapshotId = String(args['snapshot-id']);
   }
+  if (args.mode != null && args.mode !== true) input.mode = String(args.mode);
   if (args['expand-hops'] != null && args['expand-hops'] !== true) {
     input.expandHops = Number(args['expand-hops']);
   }
@@ -165,6 +176,37 @@ async function runProjectKnowledge(args = {}, dependencies = {}) {
   }
 
   const json = createJsonOutput(args);
+
+  if (operation === 'check' || operation === 'sync' || operation === 'lookup') {
+    let input;
+    try {
+      input = buildInputFromArgs(args);
+      const service = createKnowledgeFirstService(input);
+      const outcome =
+        operation === 'check'
+          ? service.check()
+          : operation === 'sync'
+            ? service.sync({ mode: input.mode })
+            : service.lookup({ query: input.query, limit: input.limit });
+      if (json.isJsonMode) json.print(outcome);
+      else printHuman(outcome);
+      if (!outcome.ok) process.exitCode = 2;
+      return outcome;
+    } catch (err) {
+      const outcome = {
+        ok: false,
+        operation,
+        service: 'zeus.community.knowledge-first',
+        reasonCode: (err && err.reasonCode) || 'ZPI.INTERNAL_ERROR',
+        message: 'Knowledge-First operation failed',
+      };
+      if (json.isJsonMode) json.print(outcome);
+      else printHuman(outcome);
+      process.exitCode = 2;
+      return outcome;
+    }
+  }
+
   const host = await resolveHost(args, dependencies);
   const capabilities = host.capabilities;
 

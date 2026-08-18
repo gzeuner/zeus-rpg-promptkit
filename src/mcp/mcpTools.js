@@ -6968,13 +6968,14 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
           'Zeus RPG PromptKit MCP default safe surface (see defaultTools). Start with zeus.agent.bootstrap, then use S0/S1 local tools plus selected S2 remote-read tools (query/inspect/joblog/etc.) that are already on the default allowlist. S3/S4 writes, bridge mutations, and project-knowledge index/write ops are NOT on the default allowlist.',
         defaultTools: safeDefaults,
         safetyReminder:
-          'Prefer zeus.agent.bootstrap first, then S0 and S1 local artifact generation. Default-allowlisted S2 tools are remote-read only - still explain why you call them. Never use S3/S4, write-sql apply, or bridge mutation without explicit operator --allow-tools and human approval. Project-knowledge: only discover + status by default.',
+          'Prefer zeus.agent.bootstrap first, then S0 and S1 local artifact generation. Default-allowlisted S2 tools are remote-read only - still explain why you call them. Never use S3/S4, write-sql apply, or bridge mutation without explicit operator --allow-tools and human approval. Knowledge First check/lookup are read-only defaults; sync requires explicit allowlisting and approval.',
         recommendedSequence: [
           'zeus.agent.bootstrap (live bootstrap payload)',
           'zeus.help (overview - do not invent tool names)',
           'zeus.context.get (confirm system/library/source-file/member and metadata/data scope)',
           'zeus.doctor (check readiness)',
           'zeus.profiles (discover config)',
+          'zeus.project-knowledge.check (first point to check when a local knowledge root is known; lookup only when fresh)',
           'zeus.project-knowledge.discover (commercial PI present/absent; fail-closed)',
           'zeus.resources or zeus.discover-environment (guided setup)',
           'zeus.search-source, zeus.field-search, or zeus.investigation.* (local exploration)',
@@ -6987,7 +6988,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         howToGetMore:
           'Live tool names: tools/list, zeus.help, and zeus.agent.bootstrap are the startup path. For CLI parity, use zeus tools list --json or zeus tools describe <name> --json. Docs/resources (zeus://docs/tool-catalog.md, onboarding, metadata/*) are secondary - prefer live MCP surfaces first.',
         aiTip:
-          'Do not invent tool names. Start with zeus.agent.bootstrap, tools/list, or zeus.help overview, then call zeus.context.get. Use zeus.context.set when the working location is wrong or unset. Use zeus tools list --json when you need stable command-help JSON from the CLI. New IBM i: zeus.onboarding or zeus://docs/quickstart/onboarding-new-ibm-i.md. After analysis, resources/read run URIs or ai_prompt_*.md. If project-knowledge ops other than discover/status fail, commercial module is absent or not allowlisted - use analyze/search-source/impact instead.',
+          'Do not invent tool names. Start with zeus.agent.bootstrap, tools/list, or zeus.help overview, then call zeus.context.get. Use zeus.context.set when the working location is wrong or unset. Use zeus tools list --json when you need stable command-help JSON from the CLI. New IBM i: zeus.onboarding or zeus://docs/quickstart/onboarding-new-ibm-i.md. When a local knowledge root is known, check Knowledge First and use lookup only when fresh. Sync and older index/write operations require explicit allowlisting; if unavailable, use analyze/search-source/impact instead.',
       };
     } else {
       const helpCard = buildCommandHelpEntry(cmd);

@@ -27,4 +27,5 @@ module.exports = {
   isProjectKnowledgeMcpTool: mcpTools.isProjectKnowledgeMcpTool,
   executeProjectKnowledgeMcpTool: mcpTools.executeProjectKnowledgeMcpTool,
   PROJECT_KNOWLEDGE_SAFE_MCP_TOOLS: mcpTools.PROJECT_KNOWLEDGE_SAFE_MCP_TOOLS,
+  KNOWLEDGE_FIRST_MCP_TOOLS: mcpTools.KNOWLEDGE_FIRST_MCP_TOOLS,
 };

@@ -43,8 +43,9 @@ Current implementation status:
 - **ZPI-08 (retrieval/context):** `src/projectIntelligence/retrieval/` hybrid lexical/graph
   retrieval, token budgets, source verification, context package assembly with omission reporting
 - **ZPI-11 (CLI/MCP adapters):** `src/projectIntelligence/adapters/` thin Community CLI/MCP surface
-  (`zeus project-knowledge`, `zeus.project-knowledge.*` tools, discovery resource). Operations execute
-  only when commercial capabilities are registered; absent path fails closed with no paid code in Community
+  (`zeus project-knowledge`, `zeus.project-knowledge.*` tools, discovery resource). The neutral
+  Knowledge First check/lookup/sync path is entitlement-free; the older optional operations still
+  fail closed when commercial capabilities are absent
 - **ZPI-12 (hardening/closure):** benchmarks (evidence), hardening tests, closure status document,
   repository gate evidence — see [zpi-closure-status.md](./zpi-closure-status.md)
 
