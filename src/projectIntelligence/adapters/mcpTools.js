@@ -17,6 +17,7 @@ const KNOWLEDGE_FIRST_MCP_TOOLS = Object.freeze({
   check: 'zeus.project-knowledge.check',
   sync: 'zeus.project-knowledge.sync',
   lookup: 'zeus.project-knowledge.lookup',
+  locate: 'zeus.project-knowledge.locate',
 });
 
 const COMMUNITY_FALLBACK_TOOLS = Object.freeze([
@@ -65,6 +66,15 @@ const COMMON_INPUT_PROPS = Object.freeze({
     },
   },
   query: { type: 'string', description: 'Lexical/query string for query/impact/context ops.' },
+  sourceUnitId: { type: 'string', description: 'Exact source unit identity.' },
+  trustedRootId: { type: 'string', description: 'Exact trusted-root identity.' },
+  relativePath: { type: 'string', description: 'Canonical relative source path.' },
+  systemAlias: { type: 'string', description: 'IBM i system alias from sanitized provenance.' },
+  sourceLib: { type: 'string', description: 'IBM i source library name.' },
+  sourceFile: { type: 'string', description: 'IBM i source file/library object name.' },
+  member: { type: 'string', description: 'IBM i source member name.' },
+  memberPath: { type: 'string', description: 'Canonical IBM i member path.' },
+  sourceType: { type: 'string', description: 'Source type from sanitized provenance.' },
   limit: { type: 'integer', minimum: 1, description: 'Retrieval hit limit.' },
   tokenBudget: { type: 'integer', minimum: 1, description: 'Context package token budget.' },
   snapshotId: { type: 'string', description: 'Optional snapshot id (defaults to current).' },
@@ -154,6 +164,18 @@ function listProjectKnowledgeMcpTools() {
         properties: { ...COMMON_INPUT_PROPS },
       },
       _communityKnowledgeFirst: true,
+    },
+    {
+      name: KNOWLEDGE_FIRST_MCP_TOOLS.locate,
+      description:
+        'Community-neutral read-only Knowledge First source locator. Requires at least one canonical selector and returns a single selected location only when the match is fresh and unambiguous.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['knowledgeRoot', 'projectId'],
+        properties: { ...COMMON_INPUT_PROPS },
+      },
+      _communityKnowledgeFirst: true,
     }
   );
 
@@ -214,7 +236,9 @@ async function executeProjectKnowledgeMcpTool(name, args = {}, context = {}) {
           ? service.check()
           : operation === 'sync'
             ? service.sync({ mode: args && args.mode })
-            : service.lookup({ query: args && args.query, limit: args && args.limit });
+            : operation === 'lookup'
+              ? service.lookup({ query: args && args.query, limit: args && args.limit })
+              : service.locate(args || {});
       return { tool: name, ...result };
     } catch (err) {
       return {
@@ -261,6 +285,7 @@ const PROJECT_KNOWLEDGE_SAFE_MCP_TOOLS = Object.freeze([
   'zeus.project-knowledge.status',
   KNOWLEDGE_FIRST_MCP_TOOLS.check,
   KNOWLEDGE_FIRST_MCP_TOOLS.lookup,
+  KNOWLEDGE_FIRST_MCP_TOOLS.locate,
 ]);
 
 module.exports = {

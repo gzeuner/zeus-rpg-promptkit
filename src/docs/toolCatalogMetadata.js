@@ -329,7 +329,7 @@ const COMMAND_METADATA = Object.freeze({
     purpose:
       'Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.',
     example:
-      'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status,zeus.project-knowledge.check,zeus.project-knowledge.lookup',
+      'node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status,zeus.project-knowledge.check,zeus.project-knowledge.locate,zeus.project-knowledge.lookup',
   }),
   tools: Object.freeze({
     safety: 'S0',
@@ -342,9 +342,9 @@ const COMMAND_METADATA = Object.freeze({
     safety: 'S1',
     scope: 'Local',
     purpose:
-      'Community-neutral Knowledge First check/lookup/sync over the SQLite-backed source snapshot, plus the backwards-compatible optional Project Intelligence adapter operations. Read-only lookup checks freshness before retrieval; sync is explicit and writes locally.',
+      'Community-neutral Knowledge First check/locate/lookup/sync over the SQLite-backed source snapshot, plus the backwards-compatible optional Project Intelligence adapter operations. Read-only locate and lookup check freshness before retrieval; locate returns a selected source only when the selector is fresh and unambiguous; sync is explicit and writes locally.',
     example:
-      'node cli/zeus.js project-knowledge check --knowledge-root $KNOWLEDGE_ROOT --project-id demo --trusted-roots "[{\\"rootId\\":\\"src\\",\\"path\\":\\"$LEGACY_ROOT\\"}]" --json',
+      'node cli/zeus.js project-knowledge locate --knowledge-root $KNOWLEDGE_ROOT --project-id demo --relative-path QRPGLESRC/ORDER.rpgle --json',
   }),
 });
 

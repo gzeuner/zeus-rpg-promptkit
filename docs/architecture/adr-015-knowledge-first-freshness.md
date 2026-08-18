@@ -11,7 +11,8 @@ Last Updated: 2026-08-18
 
 The public first point to check for known legacy relationships is the
 `zeus.community.knowledge-first` service, exposed through
-`project-knowledge check`, `project-knowledge lookup`, and the matching MCP tools.
+`project-knowledge check`, `project-knowledge locate`, `project-knowledge lookup`, and
+the matching MCP tools.
 It reuses the existing SQLite KnowledgeStore, content-addressed store, search index,
 symbols, relationships, and evidence model. No graph database or parallel knowledge
 store is introduced.
@@ -42,6 +43,11 @@ absolute roots because those invocations are outside the automatic MCP allowlist
 4. Call `zeus.project-knowledge.lookup` only after `fresh`. Start with the returned
    location and evidence hash, then follow the returned relationships and verify the
    source-backed evidence before making a claim.
+5. Use `zeus.project-knowledge.locate` when the exact working place is known or can be
+   narrowed by system, library, source file, member, or relative path. Treat `selected`
+   as the working location only when `found` is true and `ambiguous` is false. An
+   ambiguous result is a control signal to add selectors; it never chooses a source
+   implicitly.
 
 The stable minimum location identity is `trustedRootId + relativePath + contentHash`;
 inventory freshness also includes `provenanceHash` and `importObservationHash` so a
@@ -65,6 +71,13 @@ Inventory identity includes `provenanceHash` and `importObservationHash` in addi
 canonical `contentHash`. A provenance-only change publishes a new snapshot and preserves
 derived facts; it does not trigger code re-analysis. Local snapshot freshness remains the only
 lookup-serving gate. Remote freshness remains `unknown` with reason `remote-not-checked`.
+
+The locator is read-only and fresh-only. It resolves against published source units and
+returns a redacted canonical location containing both the local relative identity and,
+when present, the sanitized IBM i origin (`systemAlias`, `sourceLib`, `sourceFile`,
+`member`, and `memberPath`). It does not fetch source or metadata and does not alter the
+current working context. A later fetch or context-setting operation must consume the
+selected locator explicitly.
 
 ## Consequences
 

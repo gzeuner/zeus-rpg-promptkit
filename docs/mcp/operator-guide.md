@@ -43,7 +43,7 @@ This CSV is the **same set** as the code default. Use it when you want an explic
 
 ```bash
 node cli/zeus.js mcp serve --verbose \
-  --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.agent.bootstrap,zeus.context.get,zeus.context.set,zeus.workflow.suggest,zeus.onboarding,zeus.resources,zeus.discover-environment,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.investigation.start,zeus.investigation.focus,zeus.investigation.search,zeus.investigation.generate-prompt,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status,zeus.project-knowledge.check,zeus.project-knowledge.lookup
+  --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.agent.bootstrap,zeus.context.get,zeus.context.set,zeus.workflow.suggest,zeus.onboarding,zeus.resources,zeus.discover-environment,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.investigation.start,zeus.investigation.focus,zeus.investigation.search,zeus.investigation.generate-prompt,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status,zeus.project-knowledge.check,zeus.project-knowledge.locate,zeus.project-knowledge.lookup
 ```
 
 ### Named tool packs (G4)
@@ -104,7 +104,7 @@ An AI can bootstrap and operate via MCP **without inventing tool names** and wit
 3. `tools/call` `zeus.context.get`; if routing is wrong or unset, call `zeus.context.set` and report the selected system/library/source-file/member and metadata/data scope
 4. Optional: `prompts/get` `zeus.session.start` with the user goal (secondary; help is enough for local analysis)
 5. `tools/call` `zeus.doctor` + `zeus.profiles`
-6. When a local knowledge root is known, call `zeus.project-knowledge.check`; use `lookup` only for `fresh`. Request explicit authorization and allowlisting before `sync`.
+6. When a local knowledge root is known, call `zeus.project-knowledge.check`; use `locate` to resolve an exact system/library/source-file/member or relative path, and use `lookup` only for `fresh`. Request explicit authorization and allowlisting before `sync`.
 7. Optionally call `zeus.project-knowledge.discover` for the older integrated operations.
 8. `tools/call` `zeus.analyze` with `source` + `program` (or `zeus.workflow` with a preset) when no fresh snapshot exists or new evidence is needed.
 9. Optional deepen: `zeus.search-source`, `zeus.investigation.*`, allowlisted remote-read tools if needed.

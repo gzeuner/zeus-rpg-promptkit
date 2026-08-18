@@ -118,6 +118,7 @@ module.exports = {
   inspectKnowledgeFirst: knowledgeFirst.inspectKnowledgeFirst,
   syncKnowledgeFirst: knowledgeFirst.syncKnowledgeFirst,
   lookupKnowledgeFirst: knowledgeFirst.lookupKnowledgeFirst,
+  locateKnowledgeFirst: knowledgeFirst.locateKnowledgeFirst,
 
   // CLI/MCP thin adapters (ZPI-11) — capability present/absent only
   adapters,

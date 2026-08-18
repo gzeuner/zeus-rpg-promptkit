@@ -47,6 +47,7 @@ const FAMILY_RECOMMENDED_NEXT = Object.freeze({
   'project-knowledge': Object.freeze([
     'project-knowledge check',
     'project-knowledge lookup',
+    'project-knowledge locate',
     'project-knowledge sync',
     'project-knowledge discover',
     'project-knowledge status',

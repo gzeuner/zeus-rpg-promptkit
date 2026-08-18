@@ -93,7 +93,7 @@ Tooling quick reference (CLI names; MCP tools are typically `zeus.<name>`):
 | diff | S2 | Compare local vs IBM i member | |
 | serve | S0 | Optional local artifact viewer | |
 | test-run | S2/S1 | Before/after test snapshots | |
-| project-knowledge.check / .lookup | S1 | Community Knowledge First freshness + fresh-only retrieval | Default allowlist; local Trusted-Root freshness only |
+| project-knowledge.check / .locate / .lookup | S1 | Community Knowledge First freshness, exact source location + fresh-only retrieval | Default allowlist; local Trusted-Root freshness only |
 | project-knowledge.sync | S1 | Explicit local snapshot build/update | Explicit allow-tools + operator authorization |
 | project-knowledge.discover / .status | S1 | Optional integrated PI presence + status | Default allowlist |
 | project-knowledge index/query/... | S1 | Older optional PI operations | Explicit allow-tools; integrated module may be required |
