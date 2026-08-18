@@ -575,9 +575,11 @@ Knowledge-First-Operationen `check`, `lookup` und `sync` sind davon unabhängig;
 öffentlichen Engines direkt.
 
 **Knowledge First (Community-neutral):** Für bereits bekannte Legacy-Zusammenhänge ist
-`zeus project-knowledge check` der erste Prüfpunkt. `check` vergleicht — sofern lesbare
-`trustedRoots` angegeben sind — die Live-Inventur mit dem publizierten Snapshot. Nur `fresh`
-darf über `zeus project-knowledge lookup` ausgeliefert werden; `stale` und `unknown` werden
+`zeus project-knowledge check` der erste Prüfpunkt. Wenn der genaue Arbeitsort bekannt ist,
+ermittelt `zeus project-knowledge locate` anhand von System, Bibliothek, Source-Datei, Member
+oder relativem Pfad den kanonischen Quellort. `locate` liefert nur bei `fresh` und eindeutigem
+Treffer eine Auswahl. `check` vergleicht — sofern lesbare `trustedRoots` angegeben sind — die
+Live-Inventur mit dem publizierten Snapshot. Nur `fresh` darf über `zeus project-knowledge lookup` ausgeliefert werden; `stale` und `unknown` werden
 explizit und fail-closed zurückgegeben. Eine Aktualisierung erfolgt ausschließlich über den
 bewussten Schreibvorgang `zeus project-knowledge sync`. Der source-backed Snapshot ist der
 belegbare Wissensstand; Retrieval und Context sind abgeleitete Navigationshilfen und keine
@@ -1257,8 +1259,10 @@ only when an integrated module is explicitly registered and entitled. The neutra
 operations `check`, `lookup`, and `sync` are independent and call the public engines directly.
 
 **Knowledge First (Community-neutral):** For known legacy relationships, start with
-`zeus project-knowledge check`. When readable `trustedRoots` are available, it compares the live
-inventory with the published snapshot. Only `fresh` data may be served by
+`zeus project-knowledge check`. When the exact working place is known, use
+`zeus project-knowledge locate` with the system, library, source file, member, or relative path;
+it selects a source only when the snapshot is `fresh` and the match is unambiguous. When readable
+`trustedRoots` are available, `check` compares the live inventory with the published snapshot. Only `fresh` data may be served by
 `zeus project-knowledge lookup`; `stale` and `unknown` are explicit and fail closed. Refreshing
 is always an explicit write through `zeus project-knowledge sync`. The source-backed snapshot is
 the inspectable evidence checkpoint; retrieval and context are derived navigation aids, never

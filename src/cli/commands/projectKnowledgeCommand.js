@@ -50,6 +50,9 @@ function printHelp() {
   console.log(
     '  zeus project-knowledge lookup --knowledge-root <abs> --project-id <id> --query <text> [--trusted-roots <json>] [--limit <n>] [--json]  # Community-neutral, read-only'
   );
+  console.log(
+    '  zeus project-knowledge locate --knowledge-root <abs> --project-id <id> [--source-unit-id <id>] [--trusted-root-id <id>] [--relative-path <path>] [--system-alias <name>] [--source-lib <lib>] [--source-file <file>] [--member <member>] [--member-path <path>] [--json]  # Community-neutral, read-only'
+  );
   console.log('');
   console.log('Notes:');
   console.log(
@@ -110,6 +113,20 @@ function buildInputFromArgs(args) {
   if (args.mode != null && args.mode !== true) input.mode = String(args.mode);
   if (args['expand-hops'] != null && args['expand-hops'] !== true) {
     input.expandHops = Number(args['expand-hops']);
+  }
+  const locateArgs = Object.freeze({
+    'source-unit-id': 'sourceUnitId',
+    'trusted-root-id': 'trustedRootId',
+    'relative-path': 'relativePath',
+    'system-alias': 'systemAlias',
+    'source-lib': 'sourceLib',
+    'source-file': 'sourceFile',
+    member: 'member',
+    'member-path': 'memberPath',
+    'source-type': 'sourceType',
+  });
+  for (const [argument, property] of Object.entries(locateArgs)) {
+    if (args[argument] != null && args[argument] !== true) input[property] = String(args[argument]);
   }
   if (args['include-bodies'] != null) {
     input.includeBodies = !(
@@ -177,7 +194,12 @@ async function runProjectKnowledge(args = {}, dependencies = {}) {
 
   const json = createJsonOutput(args);
 
-  if (operation === 'check' || operation === 'sync' || operation === 'lookup') {
+  if (
+    operation === 'check' ||
+    operation === 'sync' ||
+    operation === 'lookup' ||
+    operation === 'locate'
+  ) {
     let input;
     try {
       input = buildInputFromArgs(args);
@@ -187,7 +209,9 @@ async function runProjectKnowledge(args = {}, dependencies = {}) {
           ? service.check()
           : operation === 'sync'
             ? service.sync({ mode: input.mode })
-            : service.lookup({ query: input.query, limit: input.limit });
+            : operation === 'lookup'
+              ? service.lookup({ query: input.query, limit: input.limit })
+              : service.locate(input);
       if (json.isJsonMode) json.print(outcome);
       else printHuman(outcome);
       if (!outcome.ok) process.exitCode = 2;

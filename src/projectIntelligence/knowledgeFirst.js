@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { createSnapshotEngine, openSnapshotEngine } = require('./engine');
 const { createProjectRetriever } = require('./retrieval');
+const { canonicalizeRelativePath } = require('./content/normalize');
 const { KnowledgeStoreError, REASON_CODES } = require('./store/errors');
 
 const KNOWLEDGE_FIRST_SCHEMA_VERSION = 1;
@@ -127,6 +128,90 @@ function sourceUnitIdFor(value) {
     (value && value._sourceUnitId) ||
     null
   );
+}
+
+const LOCATE_SELECTOR_KEYS = Object.freeze([
+  'sourceUnitId',
+  'trustedRootId',
+  'relativePath',
+  'systemAlias',
+  'sourceLib',
+  'sourceFile',
+  'member',
+  'memberPath',
+  'sourceType',
+]);
+
+function normalizeLocateSelector(input = {}) {
+  const candidate =
+    input && input.selector && typeof input.selector === 'object' ? input.selector : input;
+  const selector = {};
+  for (const key of LOCATE_SELECTOR_KEYS) {
+    if (candidate[key] === undefined || candidate[key] === null) continue;
+    if (typeof candidate[key] !== 'string' || !candidate[key].trim()) {
+      throw new KnowledgeStoreError(
+        REASON_CODES.SCHEMA_INVALID,
+        `${key} must be a non-empty string`
+      );
+    }
+    const value = candidate[key].trim();
+    if (key === 'relativePath') {
+      selector[key] = canonicalizeRelativePath(value);
+    } else if (key === 'memberPath') {
+      selector[key] = value.replace(/\\/g, '/').toUpperCase();
+      if (
+        !/^\/QSYS\.LIB\/[A-Z0-9_$#@.\-]+\.LIB\/[A-Z0-9_$#@.\-]+\.FILE\/[A-Z0-9_$#@.\-]+\.MBR$/.test(
+          selector[key]
+        )
+      ) {
+        throw new KnowledgeStoreError(
+          REASON_CODES.SCHEMA_INVALID,
+          'memberPath must be a canonical IBM i member path'
+        );
+      }
+    } else if (['systemAlias', 'sourceLib', 'sourceFile', 'member', 'sourceType'].includes(key)) {
+      selector[key] = value.toUpperCase();
+    } else {
+      selector[key] = value;
+    }
+  }
+  if (Object.keys(selector).length === 0) {
+    throw new KnowledgeStoreError(
+      REASON_CODES.SCHEMA_INVALID,
+      `locate requires one of: ${LOCATE_SELECTOR_KEYS.join(', ')}`
+    );
+  }
+  return selector;
+}
+
+function sourceLocator(unit) {
+  const origin = unit && unit.origin ? unit.origin : {};
+  return sanitizePublic({
+    sourceUnitId: unit && unit.sourceUnitId,
+    trustedRootId: unit && unit.trustedRootId,
+    systemAlias: origin.systemAlias || null,
+    relativePath: unit && unit.relativePath,
+    sourceLib: origin.sourceLib || null,
+    sourceFile: origin.sourceFile || null,
+    member: origin.member || null,
+    memberPath: origin.memberPath || null,
+    sourceType: origin.sourceType || null,
+    contentHash: unit && unit.contentHash,
+  });
+}
+
+function locateMatches(units, selector) {
+  return units.filter(unit => {
+    const origin = unit.origin || {};
+    for (const [key, expected] of Object.entries(selector)) {
+      const actual =
+        key === 'trustedRootId' || key === 'relativePath' || key === 'sourceUnitId'
+          ? unit[key]
+          : origin[key];
+      if (actual == null || actual !== expected) return false;
+    }
+    return true;
+  });
 }
 
 function publicFreshnessEnvelope(projectId, freshness, snapshot) {
@@ -355,11 +440,67 @@ function createKnowledgeFirstService(options = {}) {
     }
   }
 
+  function locate(input = {}) {
+    const selector = normalizeLocateSelector(input);
+    const limit = Math.max(1, Math.min(100, Number.isInteger(input.limit) ? input.limit : 25));
+    let engine;
+    try {
+      engine = openSnapshotEngine(engineOptions(true));
+      const snapshot = engine.getCurrentSnapshot();
+      const freshness = engine.inspectFreshness();
+      const base = publicFreshnessEnvelope(projectId, freshness, snapshot);
+      if (freshness.status !== 'fresh') {
+        return {
+          ok: false,
+          operation: 'locate',
+          ...base,
+          selector: sanitizePublic(selector),
+          reasonCode: freshness.reasonCode || REASON_CODES.SNAPSHOT_STALE,
+          message:
+            freshness.status === 'unknown'
+              ? 'Source location cannot be resolved because source freshness is unknown'
+              : 'Source location cannot be resolved because the published snapshot is stale',
+          servable: false,
+          found: false,
+          ambiguous: false,
+          selected: null,
+          candidates: [],
+        };
+      }
+
+      const units = engine._store.listSourceUnits(projectId, snapshot.snapshotId);
+      const matches = locateMatches(units, selector);
+      const candidates = matches.slice(0, limit).map(sourceLocator);
+      const ambiguous = matches.length > 1;
+      return {
+        ok: true,
+        operation: 'locate',
+        ...base,
+        selector: sanitizePublic(selector),
+        servable: true,
+        found: matches.length > 0,
+        ambiguous,
+        candidateCount: matches.length,
+        omitted: Math.max(0, matches.length - candidates.length),
+        selected: matches.length === 1 ? candidates[0] : null,
+        candidates,
+        reasonCode: !matches.length
+          ? REASON_CODES.SOURCE_NOT_FOUND
+          : ambiguous
+            ? REASON_CODES.SOURCE_AMBIGUOUS
+            : null,
+      };
+    } finally {
+      if (engine) engine.close();
+    }
+  }
+
   return {
     inspect,
     check: inspect,
     sync,
     lookup,
+    locate,
     query: lookup,
   };
 }
@@ -376,6 +517,10 @@ function lookupKnowledgeFirst(options, queryOptions) {
   return createKnowledgeFirstService(options).lookup(queryOptions);
 }
 
+function locateKnowledgeFirst(options, locateOptions) {
+  return createKnowledgeFirstService(options).locate(locateOptions);
+}
+
 module.exports = {
   KNOWLEDGE_FIRST_SCHEMA_VERSION,
   SERVICE_ID,
@@ -383,4 +528,5 @@ module.exports = {
   inspectKnowledgeFirst,
   syncKnowledgeFirst,
   lookupKnowledgeFirst,
+  locateKnowledgeFirst,
 };

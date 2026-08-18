@@ -6975,7 +6975,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
           'zeus.context.get (confirm system/library/source-file/member and metadata/data scope)',
           'zeus.doctor (check readiness)',
           'zeus.profiles (discover config)',
-          'zeus.project-knowledge.check (first point to check when a local knowledge root is known; lookup only when fresh)',
+          'zeus.project-knowledge.check (first point to check when a local knowledge root is known; locate exact source when needed; lookup only when fresh)',
           'zeus.project-knowledge.discover (commercial PI present/absent; fail-closed)',
           'zeus.resources or zeus.discover-environment (guided setup)',
           'zeus.search-source, zeus.field-search, or zeus.investigation.* (local exploration)',

@@ -146,6 +146,8 @@ const REASON_CODES = Object.freeze({
   CONTENT_NOT_FOUND: 'ZPI.CONTENT_NOT_FOUND',
   CONTENT_HASH_MISMATCH: 'ZPI.CONTENT_HASH_MISMATCH',
   CONTENT_CORRUPT: 'ZPI.CONTENT_CORRUPT',
+  SOURCE_NOT_FOUND: 'ZPI.SOURCE_NOT_FOUND',
+  SOURCE_AMBIGUOUS: 'ZPI.SOURCE_AMBIGUOUS',
 
   // Path / trust
   UNTRUSTED_ROOT: 'ZPI.UNTRUSTED_ROOT',
@@ -218,6 +220,8 @@ const REASON_CODE_MESSAGES = Object.freeze({
   [REASON_CODES.CONTENT_NOT_FOUND]: 'Content-addressed evidence was not found',
   [REASON_CODES.CONTENT_HASH_MISMATCH]: 'Content hash does not match stored payload',
   [REASON_CODES.CONTENT_CORRUPT]: 'Content store integrity check failed',
+  [REASON_CODES.SOURCE_NOT_FOUND]: 'No source unit matched the requested locator',
+  [REASON_CODES.SOURCE_AMBIGUOUS]: 'Multiple source units matched the requested locator',
   [REASON_CODES.UNTRUSTED_ROOT]: 'Path is outside trusted roots',
   [REASON_CODES.PATH_UNSAFE]: 'Path is unsafe for project knowledge storage',
   [REASON_CODES.PATH_TRAVERSAL]: 'Path traversal is not allowed',

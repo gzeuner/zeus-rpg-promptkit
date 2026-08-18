@@ -189,6 +189,93 @@ test('evidence hits retain their safe source location', { skip: !HAS_SQLITE }, (
   assert.equal(JSON.stringify(evidenceHit).includes(ctx.root), false);
 });
 
+test('locate resolves one fresh canonical source location', { skip: !HAS_SQLITE }, () => {
+  const ctx = setup();
+  const service = createKnowledgeFirstService({
+    knowledgeRoot: ctx.knowledgeRoot,
+    projectId: 'legacy-demo',
+    trustedRoots: ctx.trustedRoots,
+  });
+  service.sync();
+
+  const located = service.locate({ relativePath: 'QRPGLESRC\\A.rpgle' });
+  assert.equal(located.ok, true);
+  assert.equal(located.freshness.status, 'fresh');
+  assert.equal(located.found, true);
+  assert.equal(located.ambiguous, false);
+  assert.equal(located.candidateCount, 1);
+  assert.equal(located.selected.relativePath, 'QRPGLESRC/A.rpgle');
+  assert.equal(located.selected.sourceUnitId, 'su:legacy-src:QRPGLESRC/A.rpgle');
+  assert.equal(JSON.stringify(located).includes(ctx.root), false);
+});
+
+test('locate refuses ambiguity and supports IBM i origin selectors', { skip: !HAS_SQLITE }, () => {
+  const ctx = setup();
+  writeFiles(ctx.sourceRoot, {
+    'zeus-import-manifest.json': JSON.stringify({
+      fetchedAt: '2026-08-18T10:00:00.000Z',
+      files: [
+        {
+          localPath: 'QRPGLESRC/A.rpgle',
+          sourceLib: 'APPLIB',
+          sourceFile: 'QRPGLESRC',
+          member: 'A',
+          validation: {
+            sha256: crypto
+              .createHash('sha256')
+              .update(fs.readFileSync(path.join(ctx.sourceRoot, 'QRPGLESRC/A.rpgle')))
+              .digest('hex'),
+          },
+        },
+      ],
+    }),
+  });
+  const service = createKnowledgeFirstService({
+    knowledgeRoot: ctx.knowledgeRoot,
+    projectId: 'legacy-demo',
+    trustedRoots: [{ ...ctx.trustedRoots[0], systemAlias: 'DEV-I' }],
+  });
+  service.sync();
+
+  const ambiguous = service.locate({ trustedRootId: 'legacy-src' });
+  assert.equal(ambiguous.ok, true);
+  assert.equal(ambiguous.found, true);
+  assert.equal(ambiguous.ambiguous, true);
+  assert.equal(ambiguous.selected, null);
+  assert.equal(ambiguous.reasonCode, 'ZPI.SOURCE_AMBIGUOUS');
+
+  const byOrigin = service.locate({ systemAlias: 'dev-i', sourceLib: 'applib', member: 'a' });
+  assert.equal(byOrigin.ok, true);
+  assert.equal(byOrigin.found, true);
+  assert.equal(byOrigin.ambiguous, false);
+  assert.equal(byOrigin.selected.memberPath, '/QSYS.LIB/APPLIB.LIB/QRPGLESRC.FILE/A.MBR');
+});
+
+test(
+  'locate fails closed for stale snapshots and rejects unsafe member paths',
+  { skip: !HAS_SQLITE },
+  () => {
+    const ctx = setup();
+    const service = createKnowledgeFirstService({
+      knowledgeRoot: ctx.knowledgeRoot,
+      projectId: 'legacy-demo',
+      trustedRoots: ctx.trustedRoots,
+    });
+    service.sync();
+    fs.appendFileSync(path.join(ctx.sourceRoot, 'QRPGLESRC/A.rpgle'), '// changed\n', 'utf8');
+
+    const stale = service.locate({ relativePath: 'QRPGLESRC/A.rpgle' });
+    assert.equal(stale.ok, false);
+    assert.equal(stale.freshness.status, 'stale');
+    assert.equal(stale.selected, null);
+
+    assert.throws(
+      () => service.locate({ memberPath: '/QSYS.LIB/APPLIB.LIB/QRPGLESRC.FILE/../A.MBR' }),
+      error => error.reasonCode === 'ZPI.SCHEMA_INVALID'
+    );
+  }
+);
+
 test(
   'Knowledge First is exposed through neutral MCP and CLI contracts',
   { skip: !HAS_SQLITE },
@@ -203,6 +290,7 @@ test(
     assert.ok(mcpNames.has('zeus.project-knowledge.check'));
     assert.ok(mcpNames.has('zeus.project-knowledge.sync'));
     assert.ok(mcpNames.has('zeus.project-knowledge.lookup'));
+    assert.ok(mcpNames.has('zeus.project-knowledge.locate'));
 
     const sync = await executeProjectKnowledgeMcpTool(
       'zeus.project-knowledge.sync',
@@ -223,6 +311,16 @@ test(
     );
     assert.equal(lookup.ok, true);
     assert.equal(lookup.freshness.status, 'fresh');
+    const located = await executeProjectKnowledgeMcpTool(
+      'zeus.project-knowledge.locate',
+      {
+        ...args,
+        relativePath: 'QRPGLESRC/A.rpgle',
+      },
+      { cwd: ctx.root }
+    );
+    assert.equal(located.ok, true);
+    assert.equal(located.selected.relativePath, 'QRPGLESRC/A.rpgle');
 
     const previousExitCode = process.exitCode;
     process.exitCode = 0;
