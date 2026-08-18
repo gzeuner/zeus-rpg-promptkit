@@ -58,9 +58,9 @@ Symbols, bindings, or references could not be resolved from evidence.
 
 Commercial Project Intelligence module is not present or not allowlisted.
 
-- **Do:** Call `zeus.project-knowledge.discover` / `status` once; fall back to Community tools (analyze, search-source, impact, bundle).
-- **Don't:** Thrash missing project-knowledge index/query/write ops or claim commercial PI when discovery says absent.
-- **Next tools:** `zeus.project-knowledge.discover`, `zeus.analyze`, `zeus.search-source`, `zeus.impact`
+- **Do:** Call `zeus.project-knowledge.check` when a local knowledge root is known; use `lookup` only for a fresh snapshot. Otherwise fall back to Community tools (analyze, search-source, impact, bundle).
+- **Don't:** Serve stale/unknown Knowledge First results, thrash missing optional project-knowledge operations, or claim integrated PI when discovery says absent.
+- **Next tools:** `zeus.project-knowledge.check`, `zeus.project-knowledge.lookup`, `zeus.project-knowledge.discover`, `zeus.analyze`, `zeus.search-source`, `zeus.impact`
 
 ### INVALID_ARGS
 

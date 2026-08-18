@@ -847,7 +847,7 @@
       },
       "capabilityId": null,
       "purpose": "Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.",
-      "example": "node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status"
+      "example": "node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status,zeus.project-knowledge.check,zeus.project-knowledge.lookup"
     },
     {
       "command": "tools",
@@ -883,8 +883,8 @@
         "mcp": true
       },
       "capabilityId": null,
-      "purpose": "Thin public adapter for Project Intelligence: discover integrated capability presence and dispatch create/index/query/impact/context/inspect/verify only when an entitled built-in module or explicitly supplied external extension is registered. Fails closed when capabilities are absent.",
-      "example": "node cli/zeus.js project-knowledge discover --json && node cli/zeus.js project-knowledge query --knowledge-root ./pk --project-id demo --trusted-roots \"[{\\\"rootId\\\":\\\"src\\\",\\\"path\\\":\\\"./src\\\"}]\" --query ORDERPGM --json"
+      "purpose": "Community-neutral Knowledge First check/lookup/sync over the SQLite-backed source snapshot, plus the backwards-compatible optional Project Intelligence adapter operations. Read-only lookup checks freshness before retrieval; sync is explicit and writes locally.",
+      "example": "node cli/zeus.js project-knowledge check --knowledge-root $KNOWLEDGE_ROOT --project-id demo --trusted-roots \"[{\\\"rootId\\\":\\\"src\\\",\\\"path\\\":\\\"$LEGACY_ROOT\\\"}]\" --json"
     }
   ],
   "workflowPresets": [

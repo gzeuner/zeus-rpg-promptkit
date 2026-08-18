@@ -53,11 +53,11 @@ Execution protocol:
 3) Call `zeus.context.get`; if the system/library/file/member is wrong or unset, use `zeus.context.set` and report the change.
 4) Load the environment explicitly in the current shell if it is not already loaded.
 5) Run `doctor` first (`zeus.doctor`).
-6) Optional: `zeus.project-knowledge.discover` (commercial present/absent; fail-closed - do not thrash missing ops).
-7) Use read-only CLI or MCP commands to collect evidence.
-8) Run `analyze` or `workflow` locally to produce artifacts.
-9) Deepen evidence with search/investigation/query commands only as needed.
-10) Summarize findings with references to generated artifacts and note the risk level of the next step.
+6) If a local knowledge root is known, call `zeus.project-knowledge.check` first. Use `lookup` only when it reports `fresh`; `sync` requires explicit local-write authorization and allowlisting.
+7) Optional: call `zeus.project-knowledge.discover` for older integrated operations (fail-closed; do not thrash missing ops).
+8) Use read-only CLI or MCP commands to collect evidence.
+9) Run `analyze` or `workflow` locally when no fresh snapshot exists or new evidence is needed, then deepen only as needed.
+10) Summarize findings with snapshot/evidence references and note both freshness scope and the risk level of the next step.
 
 Tooling quick reference (CLI names; MCP tools are typically `zeus.<name>`):
 | Command / MCP family | Safety | Purpose | Notes |
@@ -93,8 +93,10 @@ Tooling quick reference (CLI names; MCP tools are typically `zeus.<name>`):
 | diff | S2 | Compare local vs IBM i member | |
 | serve | S0 | Optional local artifact viewer | |
 | test-run | S2/S1 | Before/after test snapshots | |
-| project-knowledge.discover / .status | S1 | PI present/absent + status | Default allowlist only these two |
-| project-knowledge index/query/... | S1 | Commercial PI ops | Explicit allow-tools + module |
+| project-knowledge.check / .lookup | S1 | Community Knowledge First freshness + fresh-only retrieval | Default allowlist; local Trusted-Root freshness only |
+| project-knowledge.sync | S1 | Explicit local snapshot build/update | Explicit allow-tools + operator authorization |
+| project-knowledge.discover / .status | S1 | Optional integrated PI presence + status | Default allowlist |
+| project-knowledge index/query/... | S1 | Older optional PI operations | Explicit allow-tools; integrated module may be required |
 | upsert / insert / update | S3 | Controlled DML | Approval + not default allowlist |
 | bridge | S4 | Operator-gated bridge workflow | Approval + not default allowlist |
 | pui-edit | S1 | Structured local display-artifact edits | |

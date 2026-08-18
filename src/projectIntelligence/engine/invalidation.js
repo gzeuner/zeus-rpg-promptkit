@@ -24,6 +24,7 @@ function planInvalidation(diff, previousFacts = {}) {
     invalidatedSourceUnitIds.add(u.sourceUnitId);
   }
   for (const entry of diff.changed || []) {
+    if (!entry.contentChanged) continue;
     invalidatedSourceUnitIds.add(entry.previous.sourceUnitId);
     // next id may differ only if path identity scheme changed; still invalidate previous
     if (entry.next && entry.next.sourceUnitId !== entry.previous.sourceUnitId) {
@@ -34,6 +35,9 @@ function planInvalidation(diff, previousFacts = {}) {
   const keptSourceUnitIds = new Set();
   for (const entry of diff.unchanged || []) {
     keptSourceUnitIds.add(entry.previous.sourceUnitId);
+  }
+  for (const entry of diff.changed || []) {
+    if (!entry.contentChanged) keptSourceUnitIds.add(entry.previous.sourceUnitId);
   }
 
   const prevSymbols = Array.isArray(previousFacts.symbols) ? previousFacts.symbols : [];

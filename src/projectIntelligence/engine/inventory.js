@@ -7,6 +7,8 @@ const { canonicalizeContent, canonicalizeRelativePath } = require('../content/no
 const { createTrustedRootRegistry, realpathSafe } = require('../content/trustedRoots');
 const { fail, REASON_CODES } = require('../store/errors');
 
+const IMPORT_MANIFEST_FILE = 'zeus-import-manifest.json';
+
 const DEFAULT_EXTENSIONS = Object.freeze([
   '.rpgle',
   '.sqlrpgle',
@@ -34,8 +36,125 @@ function guessLanguage(relativePath) {
 }
 
 function shouldInclude(relativePath, extensions) {
+  if (path.basename(relativePath).toLowerCase() === IMPORT_MANIFEST_FILE) return false;
   const ext = path.extname(relativePath).toLowerCase();
   return extensions.includes(ext);
+}
+
+function safeManifestPath(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const candidate = value.trim().replace(/\\/g, '/');
+  if (candidate.startsWith('/') || /^[A-Za-z]:/.test(candidate)) return null;
+  try {
+    return canonicalizeRelativePath(candidate);
+  } catch {
+    return null;
+  }
+}
+
+function safeOriginValue(value) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toUpperCase();
+  if (!normalized || normalized.length > 128 || /[\u0000-\u001f]/.test(normalized)) return null;
+  return /^[A-Z0-9_$#@.\-]+$/.test(normalized) ? normalized : null;
+}
+
+function safeTimestamp(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function buildSafeMemberPath(sourceLib, sourceFile, member) {
+  if (!sourceLib || !sourceFile || !member) return null;
+  return `/QSYS.LIB/${sourceLib}.LIB/${sourceFile}.FILE/${member}.MBR`;
+}
+
+function readImportObservation(root) {
+  const manifestPath = path.join(root.path, IMPORT_MANIFEST_FILE);
+  if (!fs.existsSync(manifestPath)) {
+    return { state: 'missing', entries: new Map() };
+  }
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  } catch {
+    return { state: 'malformed', entries: new Map() };
+  }
+  if (!manifest || typeof manifest !== 'object' || !Array.isArray(manifest.files)) {
+    return { state: 'malformed', entries: new Map() };
+  }
+  const entries = new Map();
+  for (const entry of manifest.files) {
+    if (!entry || typeof entry !== 'object') continue;
+    const origin = entry.origin && typeof entry.origin === 'object' ? entry.origin : entry;
+    const relativePath = safeManifestPath(entry.localPath || origin.localPath);
+    if (!relativePath) continue;
+    const validation =
+      entry.validation && typeof entry.validation === 'object' ? entry.validation : entry;
+    const sha256 =
+      typeof validation.sha256 === 'string' && /^[a-f0-9]{64}$/i.test(validation.sha256)
+        ? validation.sha256.toLowerCase()
+        : null;
+    if (entries.has(relativePath)) continue;
+    const sourceLib = safeOriginValue(origin.sourceLib);
+    const sourceFile = safeOriginValue(origin.sourceFile);
+    const member = safeOriginValue(origin.member);
+    entries.set(relativePath, {
+      origin: {
+        systemAlias:
+          safeOriginValue(root.systemAlias) || safeOriginValue(root.rootId) || 'trusted-root',
+        sourceLib,
+        sourceFile,
+        member,
+        memberPath: buildSafeMemberPath(sourceLib, sourceFile, member),
+        fetchedAt: safeTimestamp(entry.fetchedAt || manifest.fetchedAt),
+        sourceType: safeOriginValue(origin.sourceType),
+      },
+      sha256,
+    });
+  }
+  return { state: 'valid', entries };
+}
+
+function buildImportObservation(root, relativePath, rawBytesHash, contentHash, manifestState) {
+  const entry = manifestState.entries.get(relativePath);
+  const base = entry
+    ? entry.origin
+    : {
+        systemAlias:
+          safeOriginValue(root.systemAlias) || safeOriginValue(root.rootId) || 'trusted-root',
+        sourceLib: null,
+        sourceFile: null,
+        member: null,
+        memberPath: null,
+        fetchedAt: null,
+        sourceType: null,
+      };
+  let importedCopyIntegrity;
+  if (manifestState.state === 'missing') {
+    importedCopyIntegrity = { status: 'unknown', reason: 'manifest-missing' };
+  } else if (manifestState.state === 'malformed') {
+    importedCopyIntegrity = { status: 'unknown', reason: 'manifest-malformed' };
+  } else if (!entry || !entry.sha256) {
+    importedCopyIntegrity = { status: 'unknown', reason: 'manifest-entry-or-sha-missing' };
+  } else if (entry.sha256 === rawBytesHash) {
+    importedCopyIntegrity = { status: 'fresh', reason: 'validation-sha256-matches-raw-bytes' };
+  } else if (entry.sha256 === contentHash) {
+    importedCopyIntegrity = { status: 'unknown', reason: 'raw-vs-canonical-hash-ambiguous' };
+  } else {
+    importedCopyIntegrity = { status: 'stale', reason: 'validation-sha256-mismatch' };
+  }
+  const provenance = {
+    origin: base,
+    importedCopyIntegrity,
+  };
+  return {
+    origin: base,
+    importedCopyIntegrity,
+    provenanceHash: sha256Hex(Buffer.from(JSON.stringify(base), 'utf8')),
+    importObservationHash: sha256Hex(Buffer.from(JSON.stringify(provenance), 'utf8')),
+  };
 }
 
 function walkFiles(rootReal, baseRel, extensions, out) {
@@ -118,6 +237,7 @@ function buildSourceInventory({
   const units = [];
   for (const root of trustedRoots) {
     const rootReal = realpathSafe(root.path);
+    const manifestState = readImportObservation(root);
     const files = [];
     walkFiles(rootReal, '', extensions, files);
     for (const file of files) {
@@ -136,16 +256,26 @@ function buildSourceInventory({
         mode: hashMode === 'binary' ? 'binary' : 'text',
       });
       const contentHash = sha256Hex(bytes);
+      const rawBytesHash = sha256Hex(raw);
       const relativePath = file.relativePath;
+      const observation = buildImportObservation(
+        root,
+        relativePath,
+        rawBytesHash,
+        contentHash,
+        manifestState
+      );
       const sourceUnitId = `su:${root.rootId}:${relativePath}`;
       units.push({
         sourceUnitId,
         trustedRootId: root.rootId,
         relativePath,
         contentHash,
+        rawBytesHash,
         sizeBytes: bytes.length,
         language: guessLanguage(relativePath),
         hashAlgorithm: 'sha256',
+        ...observation,
         // raw bytes for content store put (canonical)
         _canonicalBytes: bytes,
       });
@@ -172,7 +302,8 @@ function buildSourceInventory({
  */
 function hashInventory(units) {
   const lines = units.map(
-    u => `${u.trustedRootId}\0${u.relativePath}\0${u.contentHash}\0${u.sizeBytes}`
+    u =>
+      `${u.trustedRootId}\0${u.relativePath}\0${u.contentHash}\0${u.sizeBytes}\0${u.provenanceHash || ''}\0${u.importObservationHash || ''}`
   );
   return sha256Hex(Buffer.from(`${lines.join('\n')}\n`, 'utf8'));
 }

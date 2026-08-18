@@ -19,7 +19,11 @@ const {
   COMMAND_ORDER,
 } = require('../docs/toolCatalogMetadata');
 const { getCommandUiMetadata } = require('./commandMetadata');
-const { DISCOVER_MCP_TOOL, PUBLIC_OPERATIONS } = require('../projectIntelligence/adapters');
+const {
+  DISCOVER_MCP_TOOL,
+  PUBLIC_OPERATIONS,
+  KNOWLEDGE_FIRST_MCP_TOOLS,
+} = require('../projectIntelligence/adapters');
 
 const SERVICE_NAME = 'zeus-rpg-promptkit';
 const SCHEMA_VERSION = 1;
@@ -34,12 +38,19 @@ const FAMILY_MCP_NAMES = Object.freeze({
   ]),
   'project-knowledge': Object.freeze([
     DISCOVER_MCP_TOOL,
+    ...Object.values(KNOWLEDGE_FIRST_MCP_TOOLS),
     ...PUBLIC_OPERATIONS.map(operation => operation.mcpTool),
   ]),
 });
 
 const FAMILY_RECOMMENDED_NEXT = Object.freeze({
-  'project-knowledge': Object.freeze(['project-knowledge discover', 'project-knowledge status']),
+  'project-knowledge': Object.freeze([
+    'project-knowledge check',
+    'project-knowledge lookup',
+    'project-knowledge sync',
+    'project-knowledge discover',
+    'project-knowledge status',
+  ]),
 });
 
 function normalizeCommandName(name) {

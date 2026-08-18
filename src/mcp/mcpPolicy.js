@@ -40,9 +40,11 @@ const DEFAULT_MCP_SAFE_TOOL_NAMES = Object.freeze([
   'zeus.docs-generate-catalog',
   'zeus.serve',
   'zeus.test-run',
-  // ZPI-11: discovery + status only in safe defaults (write/index ops require explicit allow-tools)
+  // Knowledge First check/lookup are safe read-only defaults; sync and older index/write ops require explicit allow-tools.
   'zeus.project-knowledge.discover',
   'zeus.project-knowledge.status',
+  'zeus.project-knowledge.check',
+  'zeus.project-knowledge.lookup',
 ]);
 
 /**
@@ -97,6 +99,8 @@ const MCP_TOOL_PACKS = Object.freeze({
     'zeus.joblog',
     'zeus.project-knowledge.discover',
     'zeus.project-knowledge.status',
+    'zeus.project-knowledge.check',
+    'zeus.project-knowledge.lookup',
   ]),
   'pi-status': Object.freeze([
     'zeus.health',

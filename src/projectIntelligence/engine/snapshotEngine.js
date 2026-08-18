@@ -32,6 +32,73 @@ function stripInternal(entity) {
   return copy;
 }
 
+function safeInventoryIdentity(unit) {
+  return {
+    trustedRootId: safeRootId(unit.trustedRootId),
+    relativePath: unit.relativePath,
+    sourceUnitId: unit.sourceUnitId,
+    contentHash: unit.contentHash,
+    rawBytesHash: unit.rawBytesHash || null,
+    provenanceHash: unit.provenanceHash || null,
+    importObservationHash: unit.importObservationHash || null,
+    origin: unit.origin || null,
+    importedCopyIntegrity: unit.importedCopyIntegrity || null,
+  };
+}
+
+function safeRootId(value) {
+  const rootId = String(value || '');
+  if (/^[A-Za-z]:[\\/]/.test(rootId) || rootId.includes('\\') || rootId.includes('/')) {
+    return '<redacted-root-id>';
+  }
+  return rootId;
+}
+
+function safeDiff(diff) {
+  return {
+    counts: { ...diff.counts },
+    added: diff.added.map(safeInventoryIdentity),
+    changed: diff.changed.map(entry => ({
+      previous: safeInventoryIdentity(entry.previous),
+      current: safeInventoryIdentity(entry.next),
+      contentChanged: Boolean(entry.contentChanged),
+      provenanceChanged: Boolean(entry.provenanceChanged),
+      importObservationChanged: Boolean(entry.importObservationChanged),
+    })),
+    deleted: diff.deleted.map(safeInventoryIdentity),
+  };
+}
+
+function summarizeImportObservations(units) {
+  const counts = { fresh: 0, stale: 0, unknown: 0 };
+  let lastObservedAt = null;
+  for (const unit of units) {
+    const status = unit.importedCopyIntegrity && unit.importedCopyIntegrity.status;
+    if (counts[status] != null) counts[status] += 1;
+    const observed = unit.origin && unit.origin.fetchedAt;
+    if (observed && (!lastObservedAt || observed > lastObservedAt)) lastObservedAt = observed;
+  }
+  const status =
+    units.length === 0
+      ? 'unknown'
+      : counts.stale > 0
+        ? 'stale'
+        : counts.unknown > 0
+          ? 'unknown'
+          : 'fresh';
+  return {
+    status,
+    counts,
+    lastObservedAt,
+    reason:
+      status === 'fresh'
+        ? null
+        : units.length === 0
+          ? 'no-source-units'
+          : 'manifest-observation-not-fully-verified',
+  };
+}
+
 function rewriteSnapshotIds(entities, projectId, snapshotId, mapFn) {
   return entities.map(e => {
     const next = mapFn ? mapFn({ ...e }) : { ...e };
@@ -168,6 +235,90 @@ function wrapEngine({ store, knowledgeRoot, projectId, trustedRoots, analyzer, r
     return { ok: true, current, inventoryHash: live.inventoryHash };
   }
 
+  /**
+   * Inspect whether the published snapshot can safely serve source-backed
+   * knowledge. This is deliberately a read-only, structured contract; it
+   * never returns absolute host paths.
+   */
+  function inspectFreshness() {
+    assertOpen();
+
+    let current;
+    try {
+      current = store.getCurrentSnapshot(projectId);
+    } catch (err) {
+      if (
+        err instanceof KnowledgeStoreError &&
+        (err.reasonCode === REASON_CODES.SNAPSHOT_NOT_CURRENT ||
+          err.reasonCode === REASON_CODES.CURRENT_POINTER_MISMATCH ||
+          err.reasonCode === REASON_CODES.SNAPSHOT_NOT_FOUND)
+      ) {
+        return {
+          status: 'unknown',
+          reasonCode: REASON_CODES.SNAPSHOT_NOT_FOUND,
+          snapshotId: null,
+          sourceInventoryHash: null,
+          liveSourceInventoryHash: null,
+          trustedRootIds: trustedRoots.map(root => safeRootId(root.rootId)).sort(),
+          diff: {
+            counts: { added: 0, changed: 0, deleted: 0, unchanged: 0, previous: 0, next: 0 },
+            added: [],
+            changed: [],
+            deleted: [],
+          },
+        };
+      }
+      throw err;
+    }
+
+    const trustedRootIds = trustedRoots.map(root => safeRootId(root.rootId)).sort();
+    if (trustedRoots.length === 0) {
+      return {
+        status: 'unknown',
+        reasonCode: REASON_CODES.UNTRUSTED_ROOT,
+        snapshotId: current.snapshotId,
+        sourceInventoryHash: current.sourceInventoryHash,
+        liveSourceInventoryHash: null,
+        trustedRootIds,
+        diff: null,
+      };
+    }
+
+    let live;
+    try {
+      live = buildSourceInventory({ trustedRoots });
+    } catch (err) {
+      return {
+        status: 'unknown',
+        reasonCode: (err && err.reasonCode) || REASON_CODES.UNTRUSTED_ROOT,
+        snapshotId: current.snapshotId,
+        sourceInventoryHash: current.sourceInventoryHash,
+        liveSourceInventoryHash: null,
+        trustedRootIds,
+        diff: null,
+      };
+    }
+
+    const previousUnits = store.listSourceUnits(projectId, current.snapshotId);
+    const diff = planInventoryDiff(previousUnits, live.units);
+    const importIntegrity = summarizeImportObservations(live.units);
+    return {
+      status: diff.isNoOp ? 'fresh' : 'stale',
+      reasonCode: diff.isNoOp ? null : REASON_CODES.SNAPSHOT_STALE,
+      snapshotId: current.snapshotId,
+      sourceInventoryHash: current.sourceInventoryHash,
+      liveSourceInventoryHash: live.inventoryHash,
+      trustedRootIds,
+      importedCopyIntegrity: importIntegrity,
+      remoteFreshness: {
+        status: 'unknown',
+        reason: 'remote-not-checked',
+        lastObservedAt: importIntegrity.lastObservedAt,
+      },
+      diff: safeDiff(diff),
+    };
+  }
+
   function loadPreviousFacts(snapshotId) {
     return {
       units: store.listSourceUnits(projectId, snapshotId),
@@ -258,9 +409,10 @@ function wrapEngine({ store, knowledgeRoot, projectId, trustedRoots, analyzer, r
     }
 
     const invalidation = planInvalidation(diff, previousFacts);
-    const unitsToAnalyze = [...diff.added, ...diff.changed.map(c => c.next)].sort((a, b) =>
-      a.sourceUnitId.localeCompare(b.sourceUnitId)
-    );
+    const unitsToAnalyze = [
+      ...diff.added,
+      ...diff.changed.filter(c => c.contentChanged).map(c => c.next),
+    ].sort((a, b) => a.sourceUnitId.localeCompare(b.sourceUnitId));
 
     return publishFromPlan({
       mode: 'incremental',
@@ -389,6 +541,11 @@ function wrapEngine({ store, knowledgeRoot, projectId, trustedRoots, analyzer, r
             sourceUnitId: unit.sourceUnitId,
             relativePath: unit.relativePath,
             contentHash: unit.contentHash,
+            rawBytesHash: unit.rawBytesHash || null,
+            provenanceHash: unit.provenanceHash || null,
+            importObservationHash: unit.importObservationHash || null,
+            origin: unit.origin || null,
+            importedCopyIntegrity: unit.importedCopyIntegrity || null,
             trustedRootId: unit.trustedRootId,
             language: unit.language,
             sizeBytes: unit.sizeBytes,
@@ -553,6 +710,7 @@ function wrapEngine({ store, knowledgeRoot, projectId, trustedRoots, analyzer, r
     incrementalUpdate,
     getCurrentSnapshot,
     assertCurrentNotStale,
+    inspectFreshness,
     projectEqualityView,
     getStatus,
     close,

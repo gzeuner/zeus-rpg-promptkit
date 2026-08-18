@@ -568,10 +568,22 @@ const zpi = require('zeus-rpg-promptkit/project-intelligence-contracts');
 // oder: createZeus().projectIntelligence
 ```
 
-**CLI/MCP (dünne Adapter):** `zeus project-knowledge` und `zeus.project-knowledge.*` melden
-Capability-Präsenz und dispatchen nur, wenn ein integriertes Modul ausdrücklich registriert und
-entitled ist. Ohne Registrierung schlagen Ops mit stabilen Reason Codes fail-closed fehl; die
-neutralen Engines bleiben über die API nutzbar.
+**CLI/MCP (dünne Adapter):** Die älteren erweiterten Project-Intelligence-Ops unter
+`zeus project-knowledge` und `zeus.project-knowledge.*` melden Capability-Präsenz und dispatchen
+nur, wenn ein integriertes Modul ausdrücklich registriert und entitled ist. Die neutralen
+Knowledge-First-Operationen `check`, `lookup` und `sync` sind davon unabhängig; sie nutzen die
+öffentlichen Engines direkt.
+
+**Knowledge First (Community-neutral):** Für bereits bekannte Legacy-Zusammenhänge ist
+`zeus project-knowledge check` der erste Prüfpunkt. `check` vergleicht — sofern lesbare
+`trustedRoots` angegeben sind — die Live-Inventur mit dem publizierten Snapshot. Nur `fresh`
+darf über `zeus project-knowledge lookup` ausgeliefert werden; `stale` und `unknown` werden
+explizit und fail-closed zurückgegeben. Eine Aktualisierung erfolgt ausschließlich über den
+bewussten Schreibvorgang `zeus project-knowledge sync`. Der source-backed Snapshot ist der
+belegbare Wissensstand; Retrieval und Context sind abgeleitete Navigationshilfen und keine
+absolute Wahrheit. Ein lokales `zeus-import-manifest.json` kann sichere Herkunft und die
+getrennte Raw-/Canonical-Hashprüfung liefern; Remote-Freshness bleibt dabei unbekannt.
+Details: [`ADR-015`](docs/architecture/adr-015-knowledge-first-freshness.md).
 
 **Nicht-Claims:** keine Source of Truth, kein Live-IBM-i-Compile/Deploy, kein implizites Workspace-
 Harvesting ohne explizite Trusted Roots; Live-IBM-i-Zugriff bleibt owner-gated und standardmäßig
@@ -1239,10 +1251,19 @@ const zpi = require('zeus-rpg-promptkit/project-intelligence-contracts');
 // or: createZeus().projectIntelligence
 ```
 
-**CLI/MCP (thin adapters):** `zeus project-knowledge` and `zeus.project-knowledge.*` report
-capability presence and dispatch only when an integrated module is explicitly registered and
-entitled. Without that registration, operations fail closed with stable reason codes; the neutral
-engines remain usable via the API.
+**CLI/MCP (thin adapters):** The older extended Project Intelligence operations under
+`zeus project-knowledge` and `zeus.project-knowledge.*` report capability presence and dispatch
+only when an integrated module is explicitly registered and entitled. The neutral Knowledge First
+operations `check`, `lookup`, and `sync` are independent and call the public engines directly.
+
+**Knowledge First (Community-neutral):** For known legacy relationships, start with
+`zeus project-knowledge check`. When readable `trustedRoots` are available, it compares the live
+inventory with the published snapshot. Only `fresh` data may be served by
+`zeus project-knowledge lookup`; `stale` and `unknown` are explicit and fail closed. Refreshing
+is always an explicit write through `zeus project-knowledge sync`. The source-backed snapshot is
+the inspectable evidence checkpoint; retrieval and context are derived navigation aids, never
+absolute truth. A local `zeus-import-manifest.json` may add sanitized origin and separate
+raw-versus-canonical hash evidence; remote freshness remains unknown. See [`ADR-015`](docs/architecture/adr-015-knowledge-first-freshness.md).
 
 **Non-claims:** not source of truth; not live IBM i compile/deploy; no implicit workspace harvest
 without explicit trusted roots; live IBM i access remains owner-gated and off by default.

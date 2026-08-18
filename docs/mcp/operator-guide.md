@@ -1,7 +1,7 @@
 ﻿---
 Title: MCP Operator Guide
 Description: Local-first MCP startup, policy boundaries, and troubleshooting for Zeus RPG PromptKit.
-Last Updated: 2026-08-17
+Last Updated: 2026-08-18
 ---
 
 # MCP Operator Guide
@@ -43,7 +43,7 @@ This CSV is the **same set** as the code default. Use it when you want an explic
 
 ```bash
 node cli/zeus.js mcp serve --verbose \
-  --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.agent.bootstrap,zeus.context.get,zeus.context.set,zeus.workflow.suggest,zeus.onboarding,zeus.resources,zeus.discover-environment,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.investigation.start,zeus.investigation.focus,zeus.investigation.search,zeus.investigation.generate-prompt,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status
+  --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.agent.bootstrap,zeus.context.get,zeus.context.set,zeus.workflow.suggest,zeus.onboarding,zeus.resources,zeus.discover-environment,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.investigation.start,zeus.investigation.focus,zeus.investigation.search,zeus.investigation.generate-prompt,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status,zeus.project-knowledge.check,zeus.project-knowledge.lookup
 ```
 
 ### Named tool packs (G4)
@@ -53,7 +53,7 @@ Use exactly one named pack when a bounded standard surface is preferred:
 - `default` — the full safe default surface
 - `local-evidence` — local discovery, analysis, review, and bundle tools
 - `remote-read` — bounded remote-read and Project Intelligence status tools
-- `pi-status` — Project Intelligence discovery/status only
+- `pi-status` — stable Project Intelligence discovery/status-only compatibility pack
 
 `--tool-pack` and `--allow-tools` are mutually exclusive. Both select the complete allowlist for the MCP process; neither enables write/index tools implicitly.**Note:** `--allow-tools` replaces the default list. If you paste an incomplete CSV, tools such as `zeus.resources`, `zeus.investigation.*`, and `zeus.project-knowledge.*` disappear even though they are on the code default.
 
@@ -82,7 +82,7 @@ Includes among others:
 - health / version / profiles / doctor / help / bootstrap / context.get / context.set / onboarding / resources / discover-environment
 - analyze / workflow / bundle / searches / investigation.\*
 - selected remote-read: resolve-object, inspect-object, query-table, query-sql, fetch-member, diff, joblog, test-run
-- project-knowledge: **discover + status only by default** (index/query/write need explicit allow-tools + an entitled built-in module or explicitly supplied external extension)
+- project-knowledge: **discover, status, Knowledge First check, and fresh-only lookup by default**; Knowledge First sync and older index/write operations require an explicit allowlist, and older optional operations may also require the integrated module
 
 Example with a profile (recommended for real-target agent sessions):
 
@@ -104,11 +104,11 @@ An AI can bootstrap and operate via MCP **without inventing tool names** and wit
 3. `tools/call` `zeus.context.get`; if routing is wrong or unset, call `zeus.context.set` and report the selected system/library/source-file/member and metadata/data scope
 4. Optional: `prompts/get` `zeus.session.start` with the user goal (secondary; help is enough for local analysis)
 5. `tools/call` `zeus.doctor` + `zeus.profiles`
-6. `tools/call` `zeus.project-knowledge.discover` (present/absent; do not thrash commercial-only ops)
-7. `tools/call` `zeus.analyze` with `source` + `program` (or `zeus.workflow` with a preset)
-8. Optional deepen: `zeus.search-source`, `zeus.investigation.*`, allowlisted remote-read tools if needed
-9. `tools/call` `zeus.bundle` or `zeus.impact` as needed
-10. Optional: `resources/read` `zeus://runs/PROGRAM/...` for manifests and `ai_prompt_*.md`
+6. When a local knowledge root is known, call `zeus.project-knowledge.check`; use `lookup` only for `fresh`. Request explicit authorization and allowlisting before `sync`.
+7. Optionally call `zeus.project-knowledge.discover` for the older integrated operations.
+8. `tools/call` `zeus.analyze` with `source` + `program` (or `zeus.workflow` with a preset) when no fresh snapshot exists or new evidence is needed.
+9. Optional deepen: `zeus.search-source`, `zeus.investigation.*`, allowlisted remote-read tools if needed.
+10. `tools/call` `zeus.bundle` or `zeus.impact` as needed; optionally read `zeus://runs/PROGRAM/...` resources.
 
 Docs/resources (`zeus://docs/tool-catalog.json`, session-prompt, onboarding) remain available but are **secondary** after `tools/list` / `zeus.help`.
 
