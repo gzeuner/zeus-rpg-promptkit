@@ -28,6 +28,7 @@ All subsequent implementation and agent guidance must be consistent with these d
 | [012](adr-012-snapshots-and-migrations.md)          | Snapshots and Migrations              | Accepted; snapshot engine delivered                            |
 | [013](adr-013-retrieval-and-context-policy.md)      | Retrieval and Context Policy          | Accepted; retrieval/context delivered                          |
 | [014](adr-014-unified-capability-consolidation.md)  | Unified Capability Consolidation      | Accepted                                                       |
+| [015](adr-015-optional-vscode-adapter-boundary.md)  | Optional VS Code Adapter Boundary     | Accepted                                                       |
 
 ## Related Reviews
 
@@ -52,6 +53,8 @@ All subsequent implementation and agent guidance must be consistent with these d
 - Built-in and external modules must use the trusted in-process registrar and module descriptor
   contracts (ADR-006 executable subset; see `docs/modules/authoring-external-module-registration.md`).
   Runtime entitlement is a product policy, not a source-license boundary (ADR-014).
+- The optional VS Code adapter must remain a thin, CLI-first editor boundary with explicit workspace roots and no
+  implicit remote reads (ADR-015).
 
 ## Regenerating Supporting Artifacts
 

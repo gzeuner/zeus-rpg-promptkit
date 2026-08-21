@@ -46,7 +46,7 @@
     "test:quality": "node scripts/run-tests.js --quality",
     "test:benchmark": "node scripts/run-tests.js --benchmark",
     "package:smoke": "node scripts/package-smoke.js",
-    "demo:run": "bash ./examples/demo-rpg-mini-system/scripts/run-demo.sh",
+    "demo:run": "node ./examples/demo-rpg-mini-system/scripts/run-demo.mjs",
     "demo:prompt": "node ./examples/demo-rpg-mini-system/scripts/build-ai-session-prompt.mjs",
     "demo:safety-check": "node ./examples/demo-rpg-mini-system/scripts/safety-check.mjs",
     "docs:check": "node scripts/docs-check.js",
