@@ -149,6 +149,38 @@ p{margin:0;color:var(--muted);line-height:1.45}
   gap:20px;
 }
 .hero-meta{justify-content:flex-end}
+.ai-workbench{
+  padding:18px 20px;
+  display:grid;
+  gap:14px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(43,183,163,.18), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,.98), rgba(222,244,248,.9));
+}
+.ai-workbench-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.ai-workbench-title{display:grid;gap:4px}
+.ai-workbench-title h3{color:var(--text);font-size:15px;letter-spacing:.06em}
+.ai-workbench-title p{font-size:13px}
+.ai-workbench-shortcut{font-family:"Cascadia Code",Consolas,monospace;font-size:11px;color:var(--brand-dark);white-space:nowrap}
+.ai-context{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.ai-context-token{display:grid;gap:3px;min-width:120px;padding:8px 11px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.78)}
+.ai-context-token strong{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.ai-context-token span{font-size:12px;overflow-wrap:anywhere}
+.ai-context-token.fresh{border-color:var(--brand-mint)}
+.ai-palette{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.ai-palette input{width:100%;padding:12px 14px;border:1px solid var(--accent);border-radius:13px;background:#fff;box-shadow:0 6px 18px rgba(15,142,168,.1)}
+.ai-palette input:focus{outline:3px solid rgba(15,142,168,.18);outline-offset:1px}
+.ai-roles{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ai-role{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.78);color:var(--accent);cursor:pointer;font-size:12px}
+.ai-role.active{background:var(--brand-dark);border-color:var(--brand-dark);color:#fff}
+.ai-role-description{font-size:12px;color:var(--muted);flex:1 1 260px}
+.ai-command-results{display:flex;gap:8px;flex-wrap:wrap}
+.ai-command{display:grid;gap:4px;min-width:190px;max-width:260px;text-align:left;padding:10px 12px}
+.ai-command strong{font-size:13px}
+.ai-command small{font-size:11px;color:var(--muted);line-height:1.35}
+.ai-command .token{justify-self:start;padding:4px 8px;font-size:10px}
+.ai-command[disabled]{cursor:not-allowed;opacity:.58}
+.ai-empty{font-size:12px;color:var(--muted);padding:8px 0}
 .list,.tabs,.chips,.tokens,.actions,.hero-meta{
   display:flex;
   flex-wrap:wrap;
@@ -502,6 +534,8 @@ input[type="search"]{
 }
 @media(max-width:640px){
   .metrics{grid-template-columns:1fr}
+  .ai-palette{grid-template-columns:1fr}
+  .ai-context-token{min-width:calc(50% - 4px)}
 }
 </style>
 </head>
@@ -536,6 +570,8 @@ input[type="search"]{
       <div id="chips" class="chips hero-meta"><div class="token">Runs: 0</div><div class="token">Setup first</div></div>
     </div>
 
+    <div id="ai-workbench-bar" class="panel ai-workbench"><div class="ai-empty">Loading AI Workbench metadata...</div></div>
+
     <div id="metrics" class="metrics"><div class="panel metric"><div>Primary Tab</div><strong>Setup</strong></div><div class="panel metric"><div>First Action</div><strong>Check Readiness</strong></div><div class="panel metric"><div>Reports</div><strong>After Output</strong></div><div class="panel metric"><div>Secrets</div><strong>Hidden</strong></div></div>
     <div id="tabs" class="panel tabs"><button class="tab active">Setup</button><button class="tab">Reports</button><button class="tab">Advanced / Tools</button></div>
 
@@ -559,6 +595,11 @@ const s={
     selectedConfigSection:'profile',
     selectedGuidedStep:'workspace',
     selectedGuidedIntent:'onboarding'
+  },
+  aiWorkbench:{
+    role:'developer',
+    query:'',
+    keyboardBound:false
   },
   uiActions:{
     doctor:{
@@ -983,6 +1024,133 @@ function aiSessionStarterMetadata(){
   return payload&&payload.aiSessionStarter&&typeof payload.aiSessionStarter==='object'
     ? payload.aiSessionStarter
     : null;
+}
+
+function aiWorkbenchMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.aiWorkbench&&typeof payload.aiWorkbench==='object'
+    ? payload.aiWorkbench
+    : null;
+}
+
+function aiWorkbenchRoles(){
+  const metadata=aiWorkbenchMetadata();
+  const roles=metadata&&Array.isArray(metadata.roles)?metadata.roles:[];
+  return roles;
+}
+
+function aiWorkbenchActions(){
+  const metadata=aiWorkbenchMetadata();
+  const actions=metadata&&Array.isArray(metadata.actions)?metadata.actions:[];
+  return actions;
+}
+
+function selectedAiWorkbenchRole(){
+  const roles=aiWorkbenchRoles();
+  return roles.find((role)=>role.id===s.aiWorkbench.role)||roles[0]||null;
+}
+
+function aiWorkbenchActionMatches(action,query){
+  const normalized=String(query||'').trim().toLowerCase();
+  if(!normalized) return true;
+  const haystack=[action.label,action.description].concat(Array.isArray(action.keywords)?action.keywords:[]).join(' ').toLowerCase();
+  return haystack.includes(normalized);
+}
+
+function aiWorkbenchContext(){
+  const detail=s.detail;
+  if(!detail){
+    return [
+      {label:'System',value:'not bound'},
+      {label:'Library',value:'not bound'},
+      {label:'Source / member',value:'not bound'},
+      {label:'Evidence',value:'not loaded'}
+    ];
+  }
+
+  const summary=detail.summary||{};
+  const manifest=detail.analyzeManifest||{};
+  const inputs=manifest.inputs||{};
+  const sourceRoot=inputs.sourceRoot||summary.sourceRoot||'profile-defined';
+  const source=[summary.program,inputs.member||inputs.sourceFile].filter(Boolean).join(' / ')||'run selected';
+  return [
+    {label:'System',value:'profile-defined'},
+    {label:'Library',value:sourceRoot},
+    {label:'Source / member',value:source},
+    {label:'Evidence',value:summary.completedAt?fmt(summary.completedAt):'run available',fresh:true}
+  ];
+}
+
+function renderAiWorkbenchBar(){
+  const root=q('ai-workbench-bar');
+  if(!root) return;
+  const metadata=aiWorkbenchMetadata();
+  if(!metadata){
+    root.innerHTML='<div class="ai-empty">AI Workbench metadata is unavailable. Use Setup or the CLI orientation guide.</div>';
+    return;
+  }
+
+  const roles=aiWorkbenchRoles();
+  const selectedRole=selectedAiWorkbenchRole();
+  const query=String(s.aiWorkbench.query||'').trim();
+  const preferred=selectedRole&&Array.isArray(selectedRole.preferredActions)?selectedRole.preferredActions:[];
+  const actions=aiWorkbenchActions()
+    .filter((action)=>aiWorkbenchActionMatches(action,query))
+    .sort((left,right)=>{
+      const leftRank=preferred.indexOf(left.id);
+      const rightRank=preferred.indexOf(right.id);
+      return (leftRank<0?999:leftRank)-(rightRank<0?999:rightRank);
+    })
+    .slice(0,query?8:5);
+
+  const context=aiWorkbenchContext();
+  root.innerHTML='<div class="ai-workbench-header"><div class="ai-workbench-title"><h3>'+esc(metadata.title||'AI Workbench')+'</h3><p>'+esc(metadata.summary||'Choose a task and keep the active scope visible.')+'</p></div><div class="ai-workbench-shortcut">'+esc(metadata.keyboardShortcut||'Ctrl/Cmd+K')+' focuses the palette</div></div>'+
+    '<div class="ai-context">'+context.map((entry)=>'<div class="ai-context-token'+(entry.fresh?' fresh':'')+'"><strong>'+esc(entry.label)+'</strong><span>'+esc(entry.value)+'</span></div>').join('')+'</div>'+
+    '<div class="ai-palette"><input id="aiCommandSearch" type="search" value="'+escAttr(query)+'" placeholder="What do you want to do? Search the Zeus toolset..." aria-label="Search Zeus actions"><div class="token">allowlisted UI actions</div></div>'+
+    '<div class="ai-roles"><span class="small">Role:</span>'+roles.map((role)=>'<button class="ai-role'+(selectedRole&&role.id===selectedRole.id?' active':'')+'" data-ai-role="'+escAttr(role.id)+'">'+esc(role.label)+'</button>').join('')+'<span class="ai-role-description">'+esc(selectedRole&&selectedRole.description||'Choose a role to prioritize useful actions.')+'</span></div>'+
+    '<div class="ai-command-results">'+(actions.length?actions.map((action)=>{
+      const disabled=Boolean(action.requiresRun&&!s.detail);
+      return '<button class="btn ai-command" data-ai-action="'+escAttr(action.target||'')+'"'+(disabled?' disabled':'')+'><strong>'+esc(action.label)+'</strong><small>'+esc(action.description||'')+'</small><span class="token">'+esc(action.safety||'S0')+(disabled?' • select a run':'')+'</span></button>';
+    }).join(''):'<div class="ai-empty">No matching action. Try “source”, “analyze”, “evidence”, or “journal”.</div>')+'</div>'+
+    '<div class="small">'+esc(metadata.safetyNote||'Actions are local and allowlisted.')+'</div>';
+
+  const search=root.querySelector('#aiCommandSearch');
+  if(search){
+    search.oninput=(event)=>{
+      s.aiWorkbench.query=String(event.target.value||'');
+      renderAiWorkbenchBar();
+      const next=q('aiCommandSearch');
+      if(next){next.focus();next.setSelectionRange(next.value.length,next.value.length);}
+    };
+  }
+  for(const button of root.querySelectorAll('[data-ai-role]')){
+    button.onclick=()=>{
+      s.aiWorkbench.role=button.dataset.aiRole||'developer';
+      renderAiWorkbenchBar();
+      const next=q('aiCommandSearch');
+      if(next) next.focus();
+    };
+  }
+  for(const button of root.querySelectorAll('[data-ai-action]')){
+    button.onclick=async ()=>{
+      await openHomeTarget(button.dataset.aiAction||'guide');
+    };
+  }
+
+  if(!s.aiWorkbench.keyboardBound){
+    document.addEventListener('keydown',(event)=>{
+      if((event.ctrlKey||event.metaKey)&&String(event.key).toLowerCase()==='k'){
+        event.preventDefault();
+        const input=q('aiCommandSearch');
+        if(input){input.focus();input.select();}
+      }
+      if(event.key==='Escape'&&document.activeElement&&document.activeElement.id==='aiCommandSearch'){
+        s.aiWorkbench.query='';
+        renderAiWorkbenchBar();
+      }
+    });
+    s.aiWorkbench.keyboardBound=true;
+  }
 }
 
 function fallbackProfileWizardSteps(){
@@ -3672,6 +3840,7 @@ async function selectTab(tab){
 
 async function render(){
   renderTabs();
+  renderAiWorkbenchBar();
   renderHome();
   renderConfigure();
   renderGraph();

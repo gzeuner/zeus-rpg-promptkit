@@ -107,6 +107,142 @@ const WORKFLOW_CARD_DEFINITIONS = Object.freeze([
   }),
 ]);
 
+const AI_WORKBENCH_ROLE_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    id: 'developer',
+    label: 'Developer',
+    description:
+      'Locate sources, understand dependencies, inspect evidence, and prepare safe changes.',
+    commands: ['context', 'search-source', 'fetch-member', 'analyze', 'diff', 'generate-test'],
+    preferredActions: ['locate-source', 'analyze-workspace', 'review-evidence'],
+  }),
+  Object.freeze({
+    id: 'architect',
+    label: 'Architect',
+    description:
+      'Build a system map, trace impact, and turn legacy relationships into reviewable evidence.',
+    commands: ['context', 'xref', 'trace', 'impact', 'assess-risk', 'bundle'],
+    preferredActions: ['review-evidence', 'trace-impact', 'bundle-context'],
+  }),
+  Object.freeze({
+    id: 'tester',
+    label: 'Tester',
+    description:
+      'Validate assumptions, compare journal evidence, and create reproducible test work.',
+    commands: [
+      'context',
+      'test-run',
+      'journal-row-diff',
+      'qa',
+      'generate-checklist',
+      'generate-test',
+    ],
+    preferredActions: ['refresh-evidence', 'journal-review', 'review-evidence'],
+  }),
+  Object.freeze({
+    id: 'product-owner',
+    label: 'Product Owner',
+    description:
+      'Ask outcome-focused questions and review impact, risk, and evidence in plain language.',
+    commands: ['context', 'investigate', 'impact', 'assess-risk', 'bundle'],
+    preferredActions: ['orient', 'trace-impact', 'bundle-context'],
+  }),
+]);
+
+const AI_WORKBENCH_ACTION_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    id: 'orient',
+    label: 'Orient me',
+    description: 'Show the current setup, available runs, and the safest next step.',
+    target: 'configure',
+    keywords: ['start', 'setup', 'doctor', 'orient', 'readiness'],
+    safety: 'S0',
+  }),
+  Object.freeze({
+    id: 'locate-source',
+    label: 'Locate a source',
+    description: 'Make the exact system, library, source file, and member scope explicit.',
+    target: 'configure',
+    keywords: ['source', 'member', 'library', 'file', 'locate', 'context'],
+    safety: 'S1',
+  }),
+  Object.freeze({
+    id: 'refresh-evidence',
+    label: 'Refresh evidence',
+    description: 'Open the local analysis path and review what is currently available.',
+    target: 'refresh',
+    keywords: ['refresh', 'fetch', 'update', 'freshness', 'evidence'],
+    safety: 'S1',
+  }),
+  Object.freeze({
+    id: 'analyze-workspace',
+    label: 'Analyze workspace',
+    description: 'Run the existing local-only analysis flow after the profile is ready.',
+    target: 'analyze-workspace',
+    keywords: ['analyze', 'understand', 'program', 'workspace'],
+    safety: 'S2',
+  }),
+  Object.freeze({
+    id: 'review-evidence',
+    label: 'Review evidence',
+    description: 'Inspect reports, artifacts, graph relationships, and prompt outputs.',
+    target: 'reports',
+    keywords: ['review', 'report', 'artifact', 'graph', 'evidence'],
+    safety: 'S0',
+    requiresRun: true,
+  }),
+  Object.freeze({
+    id: 'trace-impact',
+    label: 'Trace impact',
+    description: 'Open the evidence views used to follow program and data relationships.',
+    target: 'graph',
+    keywords: ['impact', 'trace', 'dependency', 'architecture', 'relationship'],
+    safety: 'S0',
+    requiresRun: true,
+  }),
+  Object.freeze({
+    id: 'journal-review',
+    label: 'Review journal evidence',
+    description: 'Open the read-only evidence area for journal and data-focused review.',
+    target: 'db2',
+    keywords: ['journal', 'row', 'data', 'test', 'diff'],
+    safety: 'S0',
+    requiresRun: true,
+  }),
+  Object.freeze({
+    id: 'bundle-context',
+    label: 'Prepare AI context',
+    description: 'Review the prompt and evidence area before creating a shareable context bundle.',
+    target: 'workbench',
+    keywords: ['context', 'prompt', 'bundle', 'share', 'ai'],
+    safety: 'S1',
+  }),
+]);
+
+function buildAiWorkbenchMetadata(commandEntries = listCommandUiMetadata()) {
+  const commandNames = new Set(commandEntries.map(entry => entry.name));
+  return {
+    schemaVersion: 1,
+    title: 'AI Workbench',
+    summary:
+      'A task-oriented cockpit for finding the right Zeus action while keeping system, source, evidence, and freshness visible.',
+    keyboardShortcut: 'Ctrl/Cmd+K',
+    safetyNote:
+      'The palette navigates to safe, allowlisted local UI actions. It never executes arbitrary browser commands.',
+    contextFields: [
+      { id: 'system', label: 'System', empty: 'not bound' },
+      { id: 'library', label: 'Library', empty: 'not bound' },
+      { id: 'source', label: 'Source / member', empty: 'not bound' },
+      { id: 'freshness', label: 'Evidence', empty: 'not loaded' },
+    ],
+    roles: AI_WORKBENCH_ROLE_DEFINITIONS.map(role => ({
+      ...role,
+      commands: role.commands.filter(command => commandNames.has(command)),
+    })),
+    actions: AI_WORKBENCH_ACTION_DEFINITIONS,
+  };
+}
+
 const PROFILE_WIZARD_METADATA = Object.freeze({
   schemaVersion: 1,
   mode: 'local-only-profile-wizard',
@@ -345,6 +481,7 @@ function buildUiMetadataPayload() {
       entries: commandEntries,
     },
     workflowCards: deriveWorkflowCards(commandEntries),
+    aiWorkbench: buildAiWorkbenchMetadata(commandEntries),
   };
 }
 
@@ -353,4 +490,5 @@ module.exports = {
   PROFILE_WIZARD_METADATA,
   buildUiMetadataPayload,
   deriveWorkflowCards,
+  buildAiWorkbenchMetadata,
 };
