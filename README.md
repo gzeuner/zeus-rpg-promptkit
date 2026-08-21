@@ -592,19 +592,21 @@ Harvesting ohne explizite Trusted Roots; Live-IBM-i-Zugriff bleibt owner-gated u
 deaktiviert.
 
 Status und Non-Claims: [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md).  
-Architektur: ADRs 009–014 unter [`docs/architecture/`](docs/architecture/).
+Architektur: ADRs 009–015 unter [`docs/architecture/`](docs/architecture/).
 
-## 🧑‍💻 VS-Code-Integration (in Entwicklung)
+## 🧑‍💻 Optionaler VS-Code-Adapter
 
-Unter `vscode-extension/` liegt eine experimentelle Extension-Grundlage. Sie:
+Unter `vscode-extension/` liegt ein optionaler VS-Code-Adapter. Er:
 
 - analysiert das aktuell geöffnete Programm oder Member,
 - zeigt lokale Analysen und Reports im Editor,
-- verwendet dieselbe erweiterbare Zeus API wie CLI und MCP,
+- verwendet ausschließlich den öffentlichen Zeus-CLI-Vertrag,
 - kann neben **Code for IBM i** arbeiten,
 - bleibt mit lokalem Fallback auch ohne aktive IBM-i-Verbindung nutzbar.
 
-Die Extension ist derzeit ein Entwicklungsartefakt und noch nicht der primäre Produktpfad.
+Die Extension ist nicht der primäre Produktpfad: CLI und MCP bleiben unabhängig von der
+Entwicklungsumgebung. Die Extension zeigt den Working Context vor jeder Analyse und hält
+Source-Root und Output-Root innerhalb des geöffneten Workspace.
 
 ## 📦 Analyseartefakte
 
@@ -1275,17 +1277,19 @@ without explicit trusted roots; live IBM i access remains owner-gated and off by
 Status and non-claims: [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md).  
 Architecture: ADRs 009–013 under [`docs/architecture/`](docs/architecture/).
 
-## 🧑‍💻 VS Code integration (in development)
+## 🧑‍💻 Optional VS Code adapter
 
-An experimental extension foundation lives under `vscode-extension/`. It:
+An optional VS Code adapter lives under `vscode-extension/`. It:
 
 - analyzes the current program or member,
 - displays local analyses and reports in the editor,
-- uses the same extensible Zeus API as CLI and MCP,
+- uses only the public Zeus CLI contract,
 - can work alongside **Code for IBM i**,
 - remains usable through a local fallback without an active IBM i connection.
 
-The extension is currently a development artifact and not the primary product path.
+The extension is not the primary product path: CLI and MCP remain independent of any IDE. The
+adapter shows the working context before each analysis and keeps source/output roots inside the
+opened workspace.
 
 ## 📦 Analysis artifacts
 
