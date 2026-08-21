@@ -160,6 +160,14 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Inspect IBM i joblog messages.',
     example: 'node cli/zeus.js joblog --profile default --severity ERROR --max-messages 100',
   }),
+  'journal-row-diff': Object.freeze({
+    safety: 'S2',
+    scope: 'DB2 read',
+    purpose:
+      'Compare journal before/after row images with an independent read-only audit query and report aggregate no-op versus content-change counts. Raw journal bytes and row values are never emitted.',
+    example:
+      'node cli/zeus.js journal-row-diff --profile default --journal-library APPDATA --journal-name APPJRN --layout "ID:P:3:0,STATUS:C:1:0" --key-columns ID --audit-query "SELECT ID, CHANGED_AT FROM APPDATA.AUDIT_LOG" --start 2026-08-21-10.00.00 --end 2026-08-21-11.00.00 --json',
+  }),
   'field-search': Object.freeze({
     safety: 'S2',
     scope: 'Local + IBM i read',
@@ -513,6 +521,13 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: ['remote-read'],
     capabilityId: null,
   }),
+  'journal-row-diff': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: ['remote-read'],
+    capabilityId: null,
+  }),
   'field-search': catalogContract({
     aliases: [],
     status: 'stable',
@@ -727,6 +742,7 @@ const COMMAND_ORDER = Object.freeze([
   'resolve-object',
   'query-sql',
   'joblog',
+  'journal-row-diff',
   'field-search',
   'trace',
   'xref',
