@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - integrated Generation Assurance, Db2 Test Intelligence, IBM i Validation, entitlement, and
   entitled Project Intelligence under one public Apache-2.0 package;
+- added the generic read-only `journal-row-diff` command with caller-defined row layouts,
+  independent audit-query validation, and aggregate-only results;
 - explicit `--built-in-modules` / `ZEUS_BUILT_IN_MODULES` selection and unified package smoke coverage;
 - ADR-014 and a consolidated migration quickstart.
 
