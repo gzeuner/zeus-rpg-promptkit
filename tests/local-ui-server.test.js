@@ -308,6 +308,9 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.ok(uiMetadata.aiWorkbench.roles.some(entry => entry.id === 'developer'));
     assert.ok(uiMetadata.aiWorkbench.roles.some(entry => entry.id === 'product-owner'));
     assert.ok(uiMetadata.aiWorkbench.actions.some(entry => entry.id === 'review-evidence'));
+    assert.equal(uiMetadata.guidedWorkflow.schemaVersion, 1);
+    assert.equal(uiMetadata.evidenceExplorer.readOnly, true);
+    assert.equal(uiMetadata.roleProfiles.profiles.length, 4);
     assert.equal(uiMetadata.workflowCards.length, 6);
     assert.equal(uiMetadata.workflowCards.find(entry => entry.id === 'configure').title, 'Setup');
     assert.equal(
@@ -809,6 +812,9 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.equal(detail.views.db2.metadataAvailable, true);
     assert.equal(detail.views.db2.testDataAvailable, true);
     assert.equal(detail.views.prompts.artifacts.length, 2);
+    assert.equal(detail.views.evidence.schemaVersion, 1);
+    assert.equal(detail.workflowRunCard.schemaVersion, 1);
+    assert.equal(detail.workflowRunCard.steps.length, 4);
     assert.ok(
       detail.views.graph.nodes.some(
         node => node.id === 'ORDERS' && node.relatedArtifactPaths.includes('test-data.json')

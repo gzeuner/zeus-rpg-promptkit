@@ -24,6 +24,7 @@ const {
   AI_SESSION_PROMPT_TEMPLATE_PATH,
 } = require('./aiSessionPromptService');
 const { buildGuidedConfigurationPayload } = require('./guidedConfigWizardModel');
+const { buildRoleProfileMetadata } = require('./guiWorkbenchContracts');
 
 const UI_METADATA_SCHEMA_VERSION = 1;
 
@@ -482,6 +483,24 @@ function buildUiMetadataPayload() {
     },
     workflowCards: deriveWorkflowCards(commandEntries),
     aiWorkbench: buildAiWorkbenchMetadata(commandEntries),
+    guidedWorkflow: {
+      schemaVersion: 1,
+      readOnly: true,
+      summary:
+        'Each selected run exposes scope, analysis, freshness, review, and one safe next action.',
+      stepIds: ['scope', 'analyze', 'evidence', 'review'],
+      safetyNote:
+        'Run cards navigate to existing local views; they do not execute arbitrary commands.',
+    },
+    evidenceExplorer: {
+      schemaVersion: 1,
+      readOnly: true,
+      statuses: ['fresh', 'changed', 'missing', 'unverified', 'empty'],
+      summary:
+        'Compare recorded source and artifact hashes with files currently available locally.',
+      route: '/api/runs/:program',
+    },
+    roleProfiles: buildRoleProfileMetadata(),
   };
 }
 

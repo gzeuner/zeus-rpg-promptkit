@@ -397,6 +397,28 @@ input[type="search"]{
 .workflow-card.disabled{
   background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(241,246,247,.94));
 }
+.workflow-steps{
+  display:grid;
+  gap:8px;
+  margin:14px 0;
+}
+.workflow-step{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--panel-soft);
+}
+.step-index{
+  min-width:76px;
+  color:var(--brand-dark);
+  font-size:11px;
+  font-weight:700;
+  text-transform:uppercase;
+}
+.guided-run-card{display:grid;gap:12px}
 .workflow-card h4{
   font-size:16px;
 }
@@ -580,6 +602,7 @@ input[type="search"]{
     <div id="graph" class="panel view two"></div>
     <div id="db2" class="panel view two"></div>
     <div id="prompts" class="panel view three"></div>
+    <div id="evidence" class="panel view two"></div>
     <div id="workbench" class="panel view two"></div>
     <div id="artifacts" class="panel view two"></div>
   </div>
@@ -587,7 +610,7 @@ input[type="search"]{
 
 <script>
 const s={
-  runs:[],detail:null,program:null,tab:'configure',homePanel:'guide',artifact:null,node:null,table:null,left:null,right:null,cache:new Map(),
+  runs:[],detail:null,program:null,tab:'configure',homePanel:'guide',artifact:null,node:null,table:null,evidenceEntry:null,left:null,right:null,cache:new Map(),
   uiMetadata:{
     loading:false,
     error:null,
@@ -666,6 +689,7 @@ const s={
     previewLoading:false,
     previewError:null,
     additionalRequirements:'',
+    roleId:'',
     templates:[],
     selectedTemplateId:null,
     templateName:'',
@@ -693,7 +717,8 @@ const reportViews=[
   ['artifacts','Overview'],
   ['graph','Graph'],
   ['db2','DB2 / Test Data'],
-  ['prompts','Prompt Compare']
+  ['prompts','Prompt Compare'],
+  ['evidence','Evidence Explorer']
 ];
 
 const WB_PREVIEW_DEBOUNCE_MS=220;
@@ -713,7 +738,7 @@ const statusToneClass=(value)=>{
   const normalized=String(value||'').trim().toLowerCase();
   if(!normalized) return '';
   if(/fail|error|unavailable|not found/.test(normalized)) return 'status-err';
-  if(/warn|warning|loading|refreshing|saving|deleting|importing|select |nothing to|no ai_prompt|empty|needs-|review|preview-ready|stale/.test(normalized)) return 'status-warn';
+  if(/warn|warning|loading|refreshing|saving|deleting|importing|select |nothing to|no ai_prompt|empty|needs-|review|preview-ready|stale|changed|missing|unverified|running|pending/.test(normalized)) return 'status-warn';
   return 'status-ok';
 };
 
@@ -825,7 +850,7 @@ function renderRuns(){
     root.innerHTML='<div class="empty">No analysis runs found yet. Finish Setup first, then generate output with the CLI and refresh this list.</div>';
     return;
   }
-  root.innerHTML=s.runs.map((r)=>'<button class="run'+(r.program===s.program?' active':'')+'" data-run="'+esc(r.program)+'"><strong>'+esc(r.program)+'</strong><div>'+esc(r.workflowPreset||r.workflowMode||'standard')+'</div><div>'+esc(fmt(r.completedAt))+'</div></button>').join('');
+  root.innerHTML=s.runs.map((r)=>'<button class="run'+(r.program===s.program?' active':'')+'" data-run="'+esc(r.program)+'"><strong>'+esc(r.program)+'</strong><div>'+esc(r.status||'unknown')+' • '+esc(r.workflowPreset||r.workflowMode||'standard')+'</div><div>'+esc(fmt(r.completedAt))+'</div></button>').join('');
   for(const b of root.querySelectorAll('[data-run]')) b.onclick=()=>selectRun(b.dataset.run);
 }
 
@@ -883,7 +908,7 @@ function renderTabs(){
 }
 
 function isReportsTab(tab){
-  return tab==='artifacts'||tab==='graph'||tab==='db2'||tab==='prompts';
+  return tab==='artifacts'||tab==='graph'||tab==='db2'||tab==='prompts'||tab==='evidence';
 }
 
 function renderReportsSubnav(activeTab){
@@ -1043,6 +1068,41 @@ function aiWorkbenchActions(){
   const metadata=aiWorkbenchMetadata();
   const actions=metadata&&Array.isArray(metadata.actions)?metadata.actions:[];
   return actions;
+}
+
+function roleProfiles(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  const metadata=payload&&payload.roleProfiles;
+  return metadata&&Array.isArray(metadata.profiles)?metadata.profiles:[];
+}
+
+function selectedRoleProfile(){
+  const profiles=roleProfiles();
+  return profiles.find((profile)=>profile.id===s.promptBuilder.roleId)||profiles[0]||null;
+}
+
+function applyRoleProfile(roleId){
+  const profile=roleProfiles().find((entry)=>entry.id===roleId);
+  if(!profile) return;
+  s.promptBuilder.roleId=profile.id;
+  if(profile.defaultUseCaseId&&s.promptBuilder.useCases.some((entry)=>entry.id===profile.defaultUseCaseId)){
+    s.promptBuilder.selectedUseCaseId=profile.defaultUseCaseId;
+  }
+  s.promptBuilder.fields={
+    ...(s.promptBuilder.fields||{}),
+    assistantRole:profile.assistantRole||'',
+    language:'German'
+  };
+  initializeWorkbenchForUseCase(selectedUseCase(),{reset:true});
+  s.promptBuilder.fields={
+    ...(s.promptBuilder.fields||{}),
+    assistantRole:profile.assistantRole||'',
+    language:'German'
+  };
+  s.promptBuilder.additionalRequirements=profile.promptGuidance||'';
+  s.promptBuilder.saveStatus='Role profile applied locally.';
+  renderWorkbench();
+  scheduleWorkbenchPreview();
 }
 
 function selectedAiWorkbenchRole(){
@@ -2307,7 +2367,7 @@ async function openHomeTarget(target,options){
     return;
   }
 
-  if((target==='graph'||target==='db2'||target==='prompts'||target==='artifacts')&&!s.detail&&s.runs.length>0){
+  if((target==='graph'||target==='db2'||target==='prompts'||target==='artifacts'||target==='evidence')&&!s.detail&&s.runs.length>0){
     await selectRun(s.runs[0].program);
   }
   s.tab=target;
@@ -2910,6 +2970,38 @@ async function renderPrompts(){
   await Promise.all([renderPromptPreview('leftPrev',s.left),renderPromptPreview('rightPrev',s.right)]);
 }
 
+function renderWorkflowRunCard(card){
+  if(!card) return '<div class="empty">No guided workflow card is available for this run.</div>';
+  const steps=Array.isArray(card.steps)?card.steps:[];
+  const next=card.nextBestAction||{};
+  return '<div class="workflow-card guided-run-card"><div class="stack"><div class="workflow-meta"><div class="token '+escAttr(statusToneClass(card.statusLabel))+'">'+esc(card.statusLabel||'Unknown')+'</div><div class="token">'+esc(card.repeatable?'repeatable run':'recorded run')+'</div><div class="token">Evidence: '+esc(card.evidenceStatus||'empty')+'</div></div><h3>Guided Run Card</h3><p>One clear path from scope to evidence review. The card only navigates existing local views.</p></div><div class="workflow-steps">'+steps.map((step)=>'<div class="workflow-step '+escAttr(statusToneClass(step.status))+'"><div class="step-index">'+esc(step.status||'pending')+'</div><div><strong>'+esc(step.title)+'</strong><p>'+esc(step.description)+'</p></div></div>').join('')+'</div><div class="workflow-meta"><div class="token">Program: '+esc(card.scope&&card.scope.program||'n/a')+'</div><div class="token">Source scope: '+esc(card.scope&&card.scope.sourceRoot||'not recorded')+'</div><div class="token">Artifacts: '+esc(String(card.scope&&card.scope.artifactCount||0))+'</div></div><div class="actions"><button class="btn primary" data-workflow-next="'+escAttr(next.target||'evidence')+'">'+esc(next.label||'Review evidence')+'</button><span class="small">'+esc(next.reason||'Choose the safest next review step.')+' ('+esc(next.safety||'S0')+')</span></div></div>';
+}
+
+function renderEvidence(){
+  const root=q('evidence');
+  root.classList.toggle('active',s.tab==='evidence');
+  if(s.tab!=='evidence') return;
+  if(!s.detail){
+    root.innerHTML='<div class="sub">'+renderReportsSubnav('evidence')+'<div class="empty">Select a run to inspect recorded evidence freshness.</div></div>';
+    bindReportsSubnav(root);
+    return;
+  }
+  const evidence=s.detail.views&&s.detail.views.evidence;
+  if(!evidence){
+    root.innerHTML='<div class="sub">'+renderReportsSubnav('evidence')+'<div class="empty">Evidence Explorer data is not available for this run.</div></div>';
+    bindReportsSubnav(root);
+    return;
+  }
+  const summary=evidence.summary||{};
+  const selected=evidence.entries.find((entry)=>entry.path===s.evidenceEntry)||evidence.entries[0]||null;
+  const statusClass=statusToneClass(evidence.overallStatus==='fresh'?'ok':evidence.overallStatus);
+  root.innerHTML='<div class="sub">'+renderReportsSubnav('evidence')+'<div class="stack"><h2>Evidence Explorer</h2><p>Start here when you need to know what Zeus knows, where it came from, and whether it is still current.</p></div><div class="tokens"><div class="token '+escAttr(statusClass)+'">'+esc(evidence.overallLabel||evidence.overallStatus)+'</div><div class="token">Fresh: '+esc(String(summary.fresh||0))+'</div><div class="token">Changed: '+esc(String(summary.changed||0))+'</div><div class="token">Missing: '+esc(String(summary.missing||0))+'</div><div class="token">Unverified: '+esc(String(summary.unverified||0))+'</div></div><p class="small">'+esc(evidence.refreshGuidance||'')+'</p><div class="item-list">'+(evidence.entries.length?evidence.entries.map((entry)=>'<button class="item '+(selected&&selected.path===entry.path?' active':'')+'" data-evidence-entry="'+escAttr(entry.path)+'"><strong>'+esc(entry.path)+'</strong><div>'+esc(entry.evidenceType)+' • '+esc(entry.hashStatus)+' • '+esc(String(entry.sizeBytes||0))+' bytes</div></button>').join(''):'<div class="empty">No source or artifact evidence was recorded.</div>')+'</div></div><div class="sub">'+(selected?'<h3>Why is this known?</h3><div class="tokens"><div class="token">'+esc(selected.evidenceType)+'</div><div class="token">'+esc(selected.hashStatus)+'</div><div class="token">present: '+esc(String(Boolean(selected.present)))+'</div></div><p class="small">The path is relative to the selected run or recorded source snapshot. Content is not copied into this view.</p><h3>Evidence sources</h3><div class="hint-list">'+(evidence.whyKnown||[]).map((entry)=>'<div class="hint-item"><strong>'+esc(entry.source)+'</strong><p>'+esc(entry.role)+'</p></div>').join('')+'</div>':'<div class="empty">Select an evidence item to inspect its provenance.</div>')+'</div><div class="sub"><h3>Evidence Timeline</h3><div class="item-list">'+(evidence.timeline||[]).map((entry)=>'<div class="item"><strong>'+esc(entry.label)+'</strong><div>'+esc(fmt(entry.at))+' • '+esc(entry.detail)+'</div></div>').join('')+'</div></div>';
+  for(const button of root.querySelectorAll('[data-evidence-entry]')){
+    button.onclick=()=>{s.evidenceEntry=button.dataset.evidenceEntry||null;renderEvidence();};
+  }
+  bindReportsSubnav(root);
+}
+
 function moduleTitleMap(){
   const map={};
   for(const module of s.promptBuilder.modules||[]){
@@ -3257,6 +3349,7 @@ function templatePayloadFromCanvas(useCase){
   return {
     name:String(s.promptBuilder.templateName||'').trim(),
     description:String(s.promptBuilder.templateDescription||'').trim(),
+    roleId:String(s.promptBuilder.roleId||'').trim(),
     useCaseId:useCase.id,
     moduleIds:[...(s.promptBuilder.moduleOrder||[])],
     fields:s.promptBuilder.fields||{},
@@ -3277,6 +3370,7 @@ async function saveWorkbenchTemplate(){
       ? await sendJson('PUT','/api/prompt-builder/templates/'+encodeURIComponent(templateId),payload)
       : await sendJson('POST','/api/prompt-builder/templates',payload);
     s.promptBuilder.selectedTemplateId=result.template.id;
+    s.promptBuilder.roleId=result.template.roleId||payload.roleId||'';
     s.promptBuilder.templateName=result.template.name||payload.name;
     s.promptBuilder.templateDescription=result.template.description||payload.description||'';
     s.promptBuilder.templateTags=tagsListToText(result.template.tags||payload.tags||[]);
@@ -3307,6 +3401,7 @@ async function deleteWorkbenchTemplate(){
 function applyTemplateToCanvas(template){
   if(!template||typeof template!=='object') return;
   s.promptBuilder.selectedUseCaseId=template.useCaseId||s.promptBuilder.selectedUseCaseId;
+  s.promptBuilder.roleId=String(template.roleId||'').trim();
   const useCase=selectedUseCase();
   if(!useCase) return;
   initializeWorkbenchForUseCase(useCase,{reset:true});
@@ -3531,6 +3626,18 @@ function renderWorkbench(){
     :'<div class="empty">Select a use case to start.</div>')+
     '</div>';
 
+  const useCasesHeading=root.querySelector('h3');
+  if(useCasesHeading&&roleProfiles().length){
+    const roleSection=document.createElement('section');
+    roleSection.className='role-profile-section';
+    roleSection.innerHTML='<h3>Role Profile</h3><p class="small">Choose a role to prefill a safe prompt stance and review guidance. Profiles contain no credentials.</p><div class="card-grid">'+roleProfiles().map((profile)=>'<button class="card'+(s.promptBuilder.roleId===profile.id?' active':'')+'" data-wb-role="'+esc(profile.id)+'"><h3>'+esc(profile.label)+'</h3><p>'+esc(profile.description)+'</p><div class="meta"><div class="token">Safety: '+esc(profile.safetyLevel||'S0')+'</div><div class="token">Use case: '+esc(profile.defaultUseCaseId||'n/a')+'</div></div></button>').join('')+'</div><p class="small">Active role: '+esc(selectedRoleProfile()&&selectedRoleProfile().label||'none')+' • '+esc(selectedRoleProfile()&&selectedRoleProfile().promptGuidance||'Choose a role profile to get started.')+'</p>';
+    useCasesHeading.before(roleSection);
+  }
+
+  for(const button of root.querySelectorAll('[data-wb-role]')){
+    button.onclick=()=>applyRoleProfile(button.dataset.wbRole);
+  }
+
   const filterInput=q('wbFilter');
   if(filterInput){
     filterInput.value=filter;
@@ -3719,6 +3826,8 @@ function renderArtifacts(){
   const db2Available=Boolean(views.db2&&(views.db2.metadataAvailable||views.db2.testDataAvailable||Number(db2Summary.tableCount||0)>0));
   const promptArtifacts=views.prompts&&Array.isArray(views.prompts.artifacts)?views.prompts.artifacts:[];
   const promptCompareAvailable=promptArtifacts.length>0;
+  const evidence=views.evidence&&typeof views.evidence==='object'?views.evidence:null;
+  const evidenceAvailable=Boolean(evidence&&evidence.summary&&evidence.summary.total>0);
   const artifactCount=Array.isArray(s.detail.artifacts)?s.detail.artifacts.length:0;
   const reportsCards=[
     {
@@ -3748,10 +3857,17 @@ function renderArtifacts(){
       target:'artifacts',
       available:artifactCount>0,
       detail:'artifacts: '+String(artifactCount),
+    },
+    {
+      title:'Evidence Explorer',
+      description:evidenceAvailable?'Check whether source and artifact files still match the recorded hashes.':'No hashable evidence is available for this run yet.',
+      target:'evidence',
+      available:evidenceAvailable,
+      detail:evidenceAvailable?'status: '+String(evidence.overallStatus):'read-only view unavailable',
     }
   ];
 
-  root.innerHTML='<div class="sub">'+renderReportsSubnav('artifacts')+'<div class="workflow-meta"><div class="token">selected run: '+esc(String(summary.program||s.program||''))+'</div><div class="token">runs found: '+esc(String(s.runs.length||0))+'</div><div class="token">artifacts: '+esc(String(artifactCount))+'</div><div class="token">safe local read</div></div><div class="hint-list"><div class="hint-item"><strong>After Setup</strong><p>Use the left sidebar to switch runs, then choose the report view that best matches what you want to inspect.</p></div><div class="hint-item"><strong>What is available here</strong><p>Overview, Graph, DB2/Test Data, Prompt Compare, and artifact previews are report views over existing output. They do not execute remote actions.</p></div></div><h3>Reports Overview</h3><div class="workflow-grid">'+reportsCards.map((card)=>'<div class="workflow-card'+(card.available?'':' disabled')+'"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description)+'</p><div class="workflow-meta"><div class="token">'+esc(card.available?'Available now':'Read-only unavailable')+'</div><div class="token">'+esc(card.detail)+'</div></div><div class="actions">'+(card.available&&card.target!=='artifacts'?'<button class="btn" data-reports-target="'+esc(card.target)+'">Open '+esc(card.title)+'</button>':'')+(card.target==='artifacts'?'<button class="btn'+(card.available?' primary':'')+'"'+(card.available?' data-reports-target="artifacts"':' disabled')+'>'+(card.available?'Browse Artifacts':'Artifacts unavailable')+'</button>':'')+(card.available?'<button class="btn" data-reports-target="refresh">Refresh Runs</button>':'')+'</div></div>').join('')+'</div><h3>Artifacts In This Run</h3>'+(artifactCount>0?'<div class="item-list">'+s.detail.artifacts.map((a)=>'<button class="item'+(a.path===s.artifact?' active':'')+'" data-aid="'+esc(a.path)+'"><strong>'+esc(a.path)+'</strong><div>'+esc(a.kind)+' • '+esc(String(a.sizeBytes))+' bytes</div></button>').join('')+'</div>':'<div class="empty">This run does not contain previewable artifacts yet.</div>')+'</div><div class="sub"><div class="stack"><h2 id="aTitle">Artifact Preview</h2><p id="aSub">Choose an artifact.</p></div><a id="aRaw" class="btn" target="_blank" rel="noreferrer" hidden>Open Raw</a><div id="aPrev" class="preview"><div class="empty">No artifact selected.</div></div></div>';
+  root.innerHTML='<div class="sub">'+renderReportsSubnav('artifacts')+renderWorkflowRunCard(s.detail.workflowRunCard)+'<div class="workflow-meta"><div class="token">selected run: '+esc(String(summary.program||s.program||''))+'</div><div class="token">runs found: '+esc(String(s.runs.length||0))+'</div><div class="token">artifacts: '+esc(String(artifactCount))+'</div><div class="token">safe local read</div></div><div class="hint-list"><div class="hint-item"><strong>After Setup</strong><p>Use the left sidebar to switch runs, then choose the report view that best matches what you want to inspect.</p></div><div class="hint-item"><strong>What is available here</strong><p>Overview, Graph, DB2/Test Data, Prompt Compare, Evidence Explorer, and artifact previews are report views over existing output. They do not execute remote actions.</p></div></div><h3>Reports Overview</h3><div class="workflow-grid">'+reportsCards.map((card)=>'<div class="workflow-card'+(card.available?'':' disabled')+'"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description)+'</p><div class="workflow-meta"><div class="token">'+esc(card.available?'Available now':'Read-only unavailable')+'</div><div class="token">'+esc(card.detail)+'</div></div><div class="actions">'+(card.available&&card.target!=='artifacts'?'<button class="btn" data-reports-target="'+esc(card.target)+'">Open '+esc(card.title)+'</button>':'')+(card.target==='artifacts'?'<button class="btn'+(card.available?' primary':'')+'"'+(card.available?' data-reports-target="artifacts"':' disabled')+'>'+(card.available?'Browse Artifacts':'Artifacts unavailable')+'</button>':'')+(card.available?'<button class="btn" data-reports-target="refresh">Refresh Runs</button>':'')+'</div></div>').join('')+'</div><h3>Artifacts In This Run</h3>'+(artifactCount>0?'<div class="item-list">'+s.detail.artifacts.map((a)=>'<button class="item'+(a.path===s.artifact?' active':'')+'" data-aid="'+esc(a.path)+'"><strong>'+esc(a.path)+'</strong><div>'+esc(a.kind)+' • '+esc(String(a.sizeBytes))+' bytes</div></button>').join('')+'</div>':'<div class="empty">This run does not contain previewable artifacts yet.</div>')+'</div><div class="sub"><div class="stack"><h2 id="aTitle">Artifact Preview</h2><p id="aSub">Choose an artifact.</p></div><a id="aRaw" class="btn" target="_blank" rel="noreferrer" hidden>Open Raw</a><div id="aPrev" class="preview"><div class="empty">No artifact selected.</div></div></div>';
 
   for(const b of root.querySelectorAll('[data-aid]')){
     b.onclick=()=>{
@@ -3763,6 +3879,9 @@ function renderArtifacts(){
   bindReportsSubnav(root);
   for(const button of root.querySelectorAll('[data-reports-target]')){
     button.onclick=()=>openHomeTarget(button.dataset.reportsTarget);
+  }
+  for(const button of root.querySelectorAll('[data-workflow-next]')){
+    button.onclick=()=>openHomeTarget(button.dataset.workflowNext||'evidence');
   }
 }
 
@@ -3846,6 +3965,7 @@ async function render(){
   renderGraph();
   renderDb2();
   await renderPrompts();
+  renderEvidence();
   renderWorkbench();
   renderArtifacts();
   await renderArtifactPreview();
@@ -3858,6 +3978,7 @@ async function selectRun(program){
 
   s.detail=await getJson('/api/runs/'+encodeURIComponent(program));
   s.artifact=runDefaultArtifact();
+  s.evidenceEntry=null;
   s.node=s.detail.views.graph.nodes[0]&&s.detail.views.graph.nodes[0].id||null;
   s.table=s.detail.views.db2.tables[0]&&s.detail.views.db2.tables[0].id||null;
 

@@ -48,6 +48,7 @@ module.exports = {
       'tests/project-intelligence-multi-program-recall.test.js',
     ],
     unit: [
+      'tests/gui-workbench-contracts.test.js',
       'tests/journal-row-diff.test.js',
       'tests/capability-registry.test.js',
       'tests/commercial-module-loader.test.js',
