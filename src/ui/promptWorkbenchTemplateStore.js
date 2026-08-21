@@ -116,6 +116,7 @@ function sanitizeTemplatePayload(input = {}) {
   return {
     name,
     description,
+    roleId: normalizeString(input.roleId),
     useCaseId,
     moduleIds,
     fields: normalizeFields(input.fields),
@@ -141,6 +142,7 @@ function summarizeTemplate(template) {
     name: template.name,
     description: template.description,
     useCaseId: template.useCaseId,
+    roleId: template.roleId || '',
     moduleIds: [...template.moduleIds],
     tags: [...(template.tags || [])],
     createdAt: template.createdAt,
@@ -177,6 +179,7 @@ function readTemplate(templateStorePath, templateId) {
     moduleIds: [...(entry.moduleIds || [])],
     fields: normalizeFields(entry.fields),
     tags: normalizeArray(entry.tags),
+    roleId: normalizeString(entry.roleId),
   };
 }
 

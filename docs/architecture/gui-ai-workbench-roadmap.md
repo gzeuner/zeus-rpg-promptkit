@@ -110,24 +110,67 @@ Bewusst nicht in dieser Iteration umgesetzt:
 - keine neuen Credential-, Profil- oder Shell-Ausführungspfade im Frontend
 - keine Änderungen an CLI, MCP, bestehenden Commands oder anderen Feature-Branches
 
-### Nächste sinnvolle Iteration
+### Iteration 2 — Workflow Run Cards und Guided Workflow Shell
 
-**Workflow Run Cards und Guided Workflow Shell**
+Status: umgesetzt am 2026-08-21; lokale Qualitätsprüfungen grün.
 
-- eine einheitliche Run-Karte für Start, Fortschritt, Ergebnis, Fehler, Evidence und Wiederholung
-- Workflow-Schritte aus den bestehenden Workflow-Metadaten darstellen
-- Scope vor jedem Schritt sichtbar bestätigen
-- „Next best action“ aus Workflow- und Command-Metadaten ableiten
-- read-only/reversible Aktionen zuerst, mutierende Aktionen weiterhin bewusst getrennt
+Umgesetzt:
+
+- eine einheitliche Run-Karte mit Status, Scope, Wiederholbarkeit, Evidence-Zustand und nächster Aktion
+- vier verständliche Schritte: Scope, Analyse, Evidence-Freshness und Review
+- „Next best action“ bleibt auf sichere, allowlistete lokale Navigation begrenzt
+- Runs-Seitenleiste zeigt Status und Workflow-Preset direkt an
+
+Bewusst nicht umgesetzt:
+
+- keine automatische Ausführung von Analyse, Fetch oder mutierenden Commands aus der Karte
+- keine eigene zweite Workflow-Engine; bestehende Run-Manifeste bleiben die Quelle
+
+Nächstes To-do nach Iteration 2: Evidence Explorer mit belastbarer Hash- und Änderungsanzeige.
+
+### Iteration 3 — Evidence Explorer und Freshness Detection
+
+Status: umgesetzt am 2026-08-21; lokale Qualitätsprüfungen grün.
+
+Umgesetzt:
+
+- read-only Vergleich von Artefakten und aufgezeichnetem Source-Snapshot mit SHA-256
+- klare Zustände `fresh`, `changed`, `missing`, `unverified` und `empty`
+- relative Pfade, Evidence-Timeline und „Why is this known?“-Quellenangaben
+- Aktualitätsprüfung bleibt lokal und kopiert weder Quellinhalte noch Secrets in die UI
+- Run-Karte verlinkt bei Änderungen direkt zur Evidence-Prüfung
+
+Bewusst nicht umgesetzt:
+
+- kein automatischer Re-Fetch und keine automatische Aktualisierung eines Manifests
+- keine externe Knowledge-Graph-Datenbank und keine Veröffentlichung von Source-Inhalten
+
+Nächstes To-do nach Iteration 3: Rollenprofile direkt mit sicheren Prompt-Templates verbinden.
+
+### Iteration 4 — Rollenprofile und Prompt-Templates
+
+Status: umgesetzt am 2026-08-21; lokale Qualitätsprüfungen grün.
+
+Umgesetzt:
+
+- vier lokale Rollenprofile: Developer, Architect, Tester und Product Owner
+- Profile wählen bevorzugte Use Cases, Prompt-Haltung, Ausgabeformat und Sicherheitsstufe vor
+- Prompt-Workbench kann ein Rollenprofil anwenden und role-aware Templates lokal speichern
+- neuer read-only Rollenvertrag unter `/api/prompt-builder/roles`
+- Profile enthalten ausschließlich Prompt-Guidance; Credentials und Schlüsselmaterial bleiben ausgeschlossen
+
+Bewusst nicht umgesetzt:
+
+- keine Credential- oder Key-Verwaltung im Rollenprofil
+- keine Änderung der bestehenden Prompt-Registry und keine doppelte Prompt-Engine
+
+Nächstes To-do nach Iteration 4: OS-gebundene Secret-Verwaltung als separater, explizit sichtbarer Profil-/Key-Wizard.
 
 ## Weitere geplante Iterationen
 
-1. Workflow Run Cards und Guided Workflow Shell
-2. Evidence Explorer mit Freshness- und Change-Detection-Anzeige
-3. Rollenprofile und Prompt-Templates als sichere lokale Konfiguration
-4. Profil-/Key-Wizard mit OS-gebundener Secret-Verwaltung
-5. Plugin-Verträge für Commands, Workflows, Rollen und Themes
-6. Accessibility, responsive Layouts, Telemetrie-freie lokale UX und visuelle Politur
+1. Profil-/Key-Wizard mit OS-gebundener Secret-Verwaltung
+2. Plugin-Verträge für Commands, Workflows, Rollen und Themes
+3. Accessibility, responsive Layouts, Telemetrie-freie lokale UX und visuelle Politur
 
 ## Update-Regel für jede Iteration
 

@@ -320,6 +320,15 @@ async function handlePromptBuilderRequest({
     return true;
   }
 
+  if (pathname === '/api/prompt-builder/roles') {
+    if (request.method !== 'GET') {
+      sendMethodNotAllowed(response, ['GET']);
+      return true;
+    }
+    send(200, promptWorkbenchService.listRoleProfiles());
+    return true;
+  }
+
   if (pathname === '/api/prompt-builder/preview') {
     if (request.method !== 'POST') {
       sendMethodNotAllowed(response, ['POST']);

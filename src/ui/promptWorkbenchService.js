@@ -29,6 +29,7 @@ const {
   updateTemplate,
 } = require('./promptWorkbenchTemplateStore');
 const { listAnalysisRuns, readAnalysisRun, readArtifactContent } = require('./localUiDataApi');
+const { buildRoleProfileMetadata, resolveRoleProfile } = require('./guiWorkbenchContracts');
 
 const CONTEXT_PROMPT_PATTERN = /(^|\/)ai_prompt_.*\.md$/i;
 
@@ -44,6 +45,11 @@ const PROMPT_WORKBENCH_CONTRACT = Object.freeze({
       path: '/api/prompt-builder/modules',
       method: 'GET',
       response: '{ modules: Module[] }',
+    }),
+    roles: Object.freeze({
+      path: '/api/prompt-builder/roles',
+      method: 'GET',
+      response: '{ profiles: RoleProfile[] }',
     }),
     preview: Object.freeze({
       path: '/api/prompt-builder/preview',
@@ -61,7 +67,7 @@ const PROMPT_WORKBENCH_CONTRACT = Object.freeze({
       path: '/api/prompt-builder/templates',
       method: 'POST',
       request:
-        '{ name: string, useCaseId: string, moduleIds: string[], description?: string, fields?: object, additionalRequirements?: string, tags?: string[] }',
+        '{ name: string, roleId?: string, useCaseId: string, moduleIds: string[], description?: string, fields?: object, additionalRequirements?: string, tags?: string[] }',
       response: '{ template: PromptTemplate }',
     }),
     templatesRead: Object.freeze({
@@ -73,7 +79,7 @@ const PROMPT_WORKBENCH_CONTRACT = Object.freeze({
       path: '/api/prompt-builder/templates/:templateId',
       method: 'PUT',
       request:
-        '{ name: string, useCaseId: string, moduleIds: string[], description?: string, fields?: object, additionalRequirements?: string, tags?: string[] }',
+        '{ name: string, roleId?: string, useCaseId: string, moduleIds: string[], description?: string, fields?: object, additionalRequirements?: string, tags?: string[] }',
       response: '{ template: PromptTemplate }',
     }),
     templatesDelete: Object.freeze({
@@ -139,10 +145,17 @@ function validateTemplatePayload(value) {
     throw new Error('Prompt template payload requires useCaseId.');
   }
   resolveUseCase(useCaseId);
+  const roleId = String(input.roleId || '')
+    .trim()
+    .toLowerCase();
+  if (roleId && !resolveRoleProfile(roleId)) {
+    throw new Error(`Prompt template roleId is not supported: ${roleId}`);
+  }
 
   return {
     name: input.name,
     description: input.description,
+    roleId,
     useCaseId,
     moduleIds: input.moduleIds,
     fields: input.fields,
@@ -222,6 +235,10 @@ function createPromptWorkbenchService(options = {}) {
       return {
         modules: listModules(),
       };
+    },
+
+    listRoleProfiles() {
+      return buildRoleProfileMetadata();
     },
 
     previewPrompt(payload) {
