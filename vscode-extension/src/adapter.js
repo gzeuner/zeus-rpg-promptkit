@@ -35,6 +35,28 @@ function pathParts(value) {
     .filter(Boolean);
 }
 
+function isWindowsPath(value) {
+  return /^(?:[A-Za-z]:[\\/]|\\\\|\/\/)/.test(String(value || ''));
+}
+
+function pathApiFor(...values) {
+  return values.some(isWindowsPath) ? path.win32 : path;
+}
+
+function resolvePathLike(root, candidate = '') {
+  const api = pathApiFor(root, candidate);
+  return api.resolve(String(root || ''), String(candidate || ''));
+}
+
+function joinPathLike(root, ...parts) {
+  const api = pathApiFor(root);
+  return api.join(String(root || ''), ...parts);
+}
+
+function extensionOfPath(value) {
+  return pathApiFor(value).extname(String(value || ''));
+}
+
 function basename(value) {
   const parts = pathParts(value);
   return parts.length > 0 ? parts[parts.length - 1] : '';
@@ -104,12 +126,13 @@ function computeLocalSourceRoot(target, workspaceFolders = [], fileExists = fs.e
 }
 
 function isPathWithin(root, candidate) {
-  const resolvedRoot = path.resolve(String(root || ''));
-  const resolvedCandidate = path.resolve(String(candidate || ''));
-  const relative = path.relative(resolvedRoot, resolvedCandidate);
+  const api = pathApiFor(root, candidate);
+  const resolvedRoot = resolvePathLike(root);
+  const resolvedCandidate = resolvePathLike(root, candidate);
+  const relative = api.relative(resolvedRoot, resolvedCandidate);
   return (
     relative === '' ||
-    (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
+    (!relative.startsWith(`..${api.sep}`) && relative !== '..' && !api.isAbsolute(relative))
   );
 }
 
@@ -173,18 +196,18 @@ function buildCliInvocation({
     const hasPath =
       configured.includes('/') || configured.includes('\\') || path.isAbsolute(configured);
     if (hasPath) {
-      const resolved = path.resolve(workspaceRoot, configured);
+      const resolved = resolvePathLike(workspaceRoot, configured);
       if (!isPathWithin(workspaceRoot, resolved)) {
         throw new Error('The configured Zeus CLI path must remain inside the workspace.');
       }
-      return path.extname(resolved).toLowerCase() === '.js'
+      return extensionOfPath(resolved).toLowerCase() === '.js'
         ? { command: process.execPath, args: [resolved, ...args] }
         : { command: resolved, args };
     }
     return { command: configured, args };
   }
 
-  const workspaceCli = path.join(workspaceRoot, 'cli', 'zeus.js');
+  const workspaceCli = joinPathLike(workspaceRoot, 'cli', 'zeus.js');
   if (fileExists(workspaceCli)) {
     return { command: process.execPath, args: [workspaceCli, ...args] };
   }
