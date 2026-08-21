@@ -20,6 +20,7 @@
         "mcp": true
       },
       "capabilityId": "configure.doctor",
+      "subcommands": [],
       "purpose": "Validate runtime, profiles, Java/runtime wiring, and env contracts.",
       "example": "node cli/zeus.js doctor --profile default --show-resolved"
     },
@@ -38,6 +39,14 @@
         "mcp": false
       },
       "capabilityId": null,
+      "subcommands": [
+        "init-key",
+        "status",
+        "encrypt",
+        "decrypt",
+        "check",
+        "migrate"
+      ],
       "purpose": "Manage encrypted credentials (Secret Vault). Create key (init-key [--windows] for DPAPI on Windows), encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. Supports migrate, check (with --warn-only), status.",
       "example": "node cli/zeus.js secret init-key --windows && node cli/zeus.js secret encrypt --value \"myDbPass\""
     },
@@ -54,6 +63,7 @@
         "mcp": true
       },
       "capabilityId": "configure.profiles",
+      "subcommands": [],
       "purpose": "List profiles and show masked runtime defaults and resolved routing hints.",
       "example": "node cli/zeus.js profiles --profile default --show-env"
     },
@@ -70,6 +80,7 @@
         "mcp": true
       },
       "capabilityId": "configure.resources",
+      "subcommands": [],
       "purpose": "Show resolved resource model (Source/Objects/Metadata/Data) per system.",
       "example": "node cli/zeus.js resources --profile dev --json"
     },
@@ -88,6 +99,11 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [
+        "show",
+        "set",
+        "clear"
+      ],
       "purpose": "Show or update the credential-free working context for the active system, source library/file/member, metadata schema, and data scope. Explicit command arguments always override it.",
       "example": "node cli/zeus.js context set --profile dev --active sourceCode --system test --source-library APPLIB --source-file QRPGLESRC --member ORDERPGM --source-root ./rpg_sources"
     },
@@ -106,6 +122,7 @@
         "mcp": true
       },
       "capabilityId": "configure.discover-environment",
+      "subcommands": [],
       "purpose": "Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion.",
       "example": "node cli/zeus.js discover-environment --profile dev --json"
     },
@@ -125,6 +142,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Fetch source members/IFS content into the local workspace. Supports --system <name> to select a named profile system at operator request without changing the loaded profile.",
       "example": "node cli/zeus.js fetch --profile combined-fetch-and-query --system dev"
     },
@@ -144,6 +162,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Fetch one or more specific source members into a local output directory.",
       "example": "node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM"
     },
@@ -162,6 +181,7 @@
         "mcp": true
       },
       "capabilityId": "analysis.analyze",
+      "subcommands": [],
       "purpose": "Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context, --dense [lite|full|ultra] (rank-aware token reduction + compaction), --prompt-max-tokens, --skip-db2-metadata, --reproducible for large programs and CI stability.",
       "example": "node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000"
     },
@@ -182,6 +202,7 @@
         "mcp": false
       },
       "capabilityId": "investigation.investigate",
+      "subcommands": [],
       "purpose": "Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state through the CLI and in-process API.",
       "example": "node cli/zeus.js investigate --program ORDERPGM --profile dev --goal \"Focus on error paths\" --focus \"error paths\" --search \"dynamic sql\" --generate-prompt"
     },
@@ -200,6 +221,9 @@
         "mcp": true
       },
       "capabilityId": "analysis.workflow",
+      "subcommands": [
+        "run"
+      ],
       "purpose": "Run preset-guided analyze and bundle flow. Supports --dense (forwarded to analyze steps).",
       "example": "node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output --dense ultra"
     },
@@ -218,6 +242,7 @@
         "mcp": false
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Run workflow definitions from profile/runtime configuration. --dense [lite|full|ultra] is supported and forwarded to inner analyze steps (rank-aware token reduction & compaction).",
       "example": "node cli/zeus.js workflow run --profile default --preset onboarding --out ./output --dense full"
     },
@@ -236,6 +261,7 @@
         "mcp": true
       },
       "capabilityId": "bundle.create",
+      "subcommands": [],
       "purpose": "Package analysis artifacts for sharing and review.",
       "example": "node cli/zeus.js bundle --program ORDERPGM --source-output-root ./output --include-md --include-json"
     },
@@ -254,6 +280,7 @@
         "mcp": true
       },
       "capabilityId": "investigation.impact",
+      "subcommands": [],
       "purpose": "Build reverse-impact analysis by target or field.",
       "example": "node cli/zeus.js impact --field RECORD_ID --program ORDERPGM --source ./rpg_sources --out ./output"
     },
@@ -272,6 +299,7 @@
         "mcp": true
       },
       "capabilityId": "investigation.assess-risk",
+      "subcommands": [],
       "purpose": "Produce a risk-oriented summary for a program.",
       "example": "node cli/zeus.js assess-risk --program ORDERPGM --out ./output"
     },
@@ -290,6 +318,7 @@
         "mcp": true
       },
       "capabilityId": "investigation.generate-test",
+      "subcommands": [],
       "purpose": "Generate test plan or test template artifacts.",
       "example": "node cli/zeus.js generate-test --program ORDERPGM --format markdown --out ./output"
     },
@@ -308,6 +337,7 @@
         "mcp": true
       },
       "capabilityId": "investigation.generate-checklist",
+      "subcommands": [],
       "purpose": "Generate deployment and change checklist artifacts.",
       "example": "node cli/zeus.js generate-checklist --program ORDERPGM --type BOTH --impact HIGH --out ./output"
     },
@@ -326,6 +356,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Query DB2 table metadata. Supports --json for machine readable output.",
       "example": "node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA --json"
     },
@@ -344,6 +375,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Resolve SQL/system object names and optionally verify required columns.",
       "example": "node cli/zeus.js resolve-object --profile default --table APP_TABLE_00 --require-column STATUS"
     },
@@ -364,6 +396,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Run one or more read-only SQL statements (SELECT/WITH). Semicolon-separated --sql and --file batches execute through one DB2 runner call.",
       "example": "node cli/zeus.js query-sql --profile default --sql \"SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY; SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1\""
     },
@@ -382,6 +415,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Inspect IBM i joblog messages.",
       "example": "node cli/zeus.js joblog --profile default --severity ERROR --max-messages 100"
     },
@@ -400,6 +434,7 @@
         "mcp": false
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Compare journal before/after row images with an independent read-only audit query and report aggregate no-op versus content-change counts. Raw journal bytes and row values are never emitted.",
       "example": "node cli/zeus.js journal-row-diff --profile default --journal-library APPDATA --journal-name APPJRN --layout \"ID:P:3:0,STATUS:C:1:0\" --key-columns ID --audit-query \"SELECT ID, CHANGED_AT FROM APPDATA.AUDIT_LOG\" --start 2026-08-21-10.00.00 --end 2026-08-21-11.00.00 --json"
     },
@@ -419,6 +454,7 @@
         "mcp": true
       },
       "capabilityId": "investigation.field-search",
+      "subcommands": [],
       "purpose": "Find field/table usage in local sources and or remote members.",
       "example": "node cli/zeus.js field-search --profile default --field FIELD_ALPHA --table APP_TABLE --source ./rpg_sources --mode all"
     },
@@ -438,6 +474,7 @@
         "mcp": false
       },
       "capabilityId": "investigation.trace",
+      "subcommands": [],
       "purpose": "Trace data and value lineage across programs and tables.",
       "example": "node cli/zeus.js trace --value 123 --start-table ORDERS --profile default"
     },
@@ -457,6 +494,7 @@
         "mcp": false
       },
       "capabilityId": "investigation.xref",
+      "subcommands": [],
       "purpose": "Build a who-calls or who-uses cross-reference for programs and tables.",
       "example": "node cli/zeus.js xref --program ORDERPGM --profile default"
     },
@@ -477,6 +515,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Validate embedded SQL in RPG sources for cursor/fetch mismatches, dynamic SQL patterns and host variable issues. Uses scanner + sqlRpgValidator.",
       "example": "node cli/zeus.js validate-rpg-sql --source ./rpg_sources --program ORDERPGM --format markdown --out ./output"
     },
@@ -500,6 +539,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Interactive zeus-onboarding-wizard. Guides through profile setup, doctor checks, source/object discovery, first fetch and analyze for a new IBM i system.",
       "example": "node cli/zeus.js onboarding"
     },
@@ -518,6 +558,7 @@
         "mcp": true
       },
       "capabilityId": "investigation.search-source",
+      "subcommands": [],
       "purpose": "Search the local source tree by term, member, or table.",
       "example": "node cli/zeus.js search-source --source-root ./rpg_sources --search-term \"CHAIN(\" --max-results 50"
     },
@@ -536,6 +577,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Copy fetched source members into the active workspace.",
       "example": "node cli/zeus.js copy-to-workspace --profile default --members ORDERPGM,INVOICEPGM"
     },
@@ -554,6 +596,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Compare local source members with IBM i members.",
       "example": "node cli/zeus.js diff --profile default --member ORDERPGM"
     },
@@ -572,6 +615,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Start the optional local artifact viewer and experimental UI shell.",
       "example": "node cli/zeus.js serve --source-output-root ./output --host 127.0.0.1 --port 4782"
     },
@@ -590,6 +634,7 @@
         "mcp": true
       },
       "capabilityId": "investigation.qa",
+      "subcommands": [],
       "purpose": "Render QA validations/checks to jira, markdown, or json.",
       "example": "node cli/zeus.js qa --input ./output/ORDERPGM --format markdown --strict STRICT"
     },
@@ -608,6 +653,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Read object metadata and journaling details.",
       "example": "node cli/zeus.js inspect-object --profile default --lib APPLIB --name APP_TABLE_00 --type *FILE --journal"
     },
@@ -627,6 +673,12 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [
+        "start",
+        "capture",
+        "show",
+        "rollback"
+      ],
       "purpose": "Capture before and after test snapshots plus rollback SQL text.",
       "example": "node cli/zeus.js test-run start --profile default --program ORDERPGM --table APPLIB.APP_TABLE_00 --key ID=1"
     },
@@ -645,6 +697,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Execute one or more guarded DML statements with confirmation, backup, and safety preflight options.",
       "example": "node cli/zeus.js write-sql --profile default --sql \"DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'\" --confirm --backup"
     },
@@ -663,6 +716,7 @@
         "mcp": false
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "DML wrapper for INSERT/UPDATE/DELETE/MERGE with guardrails.",
       "example": "node cli/zeus.js upsert --profile default --sql \"UPDATE APPDATA.APP_TABLE_00 SET STATUS='X' WHERE ID=1\""
     },
@@ -681,6 +735,7 @@
         "mcp": false
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Backward-compatible alias for the upsert flow.",
       "example": "node cli/zeus.js upsert-sql --profile default --sql \"INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)\""
     },
@@ -699,6 +754,7 @@
         "mcp": false
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Strict insert-only DML command.",
       "example": "node cli/zeus.js insert --profile default --sql \"INSERT INTO APPDATA.APP_TABLE_00 (ID) VALUES (1)\""
     },
@@ -717,6 +773,7 @@
         "mcp": false
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Strict update-only DML command.",
       "example": "node cli/zeus.js update --profile default --sql \"UPDATE APPDATA.APP_TABLE_00 SET STATUS='Y' WHERE ID=1\""
     },
@@ -735,6 +792,7 @@
         "mcp": false
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Strict delete-only DML command with the shared write-safety guardrails.",
       "example": "node cli/zeus.js delete --profile default --sql \"DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'\" --confirm --backup"
     },
@@ -753,6 +811,14 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [
+        "list",
+        "register",
+        "index",
+        "open",
+        "show",
+        "unregister"
+      ],
       "purpose": "List, register, inspect, and open locally tracked analysis artifacts.",
       "example": "node cli/zeus.js analyses list --profile default"
     },
@@ -771,6 +837,14 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [
+        "plan",
+        "stage",
+        "apply",
+        "compile-plan",
+        "compile-run",
+        "report"
+      ],
       "purpose": "Bridge planning/staging/apply/compile/report flow; never implicit.",
       "example": "node cli/zeus.js bridge plan --profile default --help"
     },
@@ -789,6 +863,16 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [
+        "roundtrip-check",
+        "dump-json",
+        "validate-json",
+        "export-json",
+        "import-json",
+        "plan",
+        "apply",
+        "grid-add-column"
+      ],
       "purpose": "Apply structured UI edit operations to local display artifacts.",
       "example": "node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json"
     },
@@ -807,6 +891,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Inspect a local Profound UI display-file projection and optionally trace field bindings.",
       "example": "node cli/zeus.js pui-inspect --file ./display/DSPFILE.MBR --json"
     },
@@ -826,6 +911,11 @@
         "mcp": false
       },
       "capabilityId": null,
+      "subcommands": [
+        "extract",
+        "validate",
+        "inspect"
+      ],
       "purpose": "Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local PUI structure.",
       "example": "node cli/zeus.js knowledge extract --mode ui-patterns --file ./display/DSPFILE.MBR --out ./output --run-id run-001"
     },
@@ -846,6 +936,7 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [],
       "purpose": "Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`.",
       "example": "node cli/zeus.js docs:generate-catalog"
     },
@@ -864,6 +955,10 @@
         "mcp": false
       },
       "capabilityId": null,
+      "subcommands": [
+        "serve",
+        "help"
+      ],
       "purpose": "Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.",
       "example": "node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status,zeus.project-knowledge.check,zeus.project-knowledge.locate,zeus.project-knowledge.lookup"
     },
@@ -880,6 +975,11 @@
         "mcp": false
       },
       "capabilityId": null,
+      "subcommands": [
+        "list",
+        "describe",
+        "guide"
+      ],
       "purpose": "List and describe canonical command-help records as stable JSON for CLI and MCP parity.",
       "example": "node cli/zeus.js tools list --json"
     },
@@ -901,6 +1001,31 @@
         "mcp": true
       },
       "capabilityId": null,
+      "subcommands": [
+        "check",
+        "sync",
+        "lookup",
+        "locate",
+        "discover",
+        "list",
+        "status",
+        "inspect-policy",
+        "create-project",
+        "full-index",
+        "incremental-update",
+        "query",
+        "impact-analysis",
+        "build-context-package",
+        "inspect-snapshot",
+        "verify-integrity",
+        "create",
+        "index",
+        "incremental",
+        "impact",
+        "context",
+        "inspect",
+        "verify"
+      ],
       "purpose": "Community-neutral Knowledge First check/locate/lookup/sync over the SQLite-backed source snapshot, plus the backwards-compatible optional Project Intelligence adapter operations. Read-only locate and lookup check freshness before retrieval; locate returns a selected source only when the selector is fresh and unambiguous; sync is explicit and writes locally.",
       "example": "node cli/zeus.js project-knowledge locate --knowledge-root $KNOWLEDGE_ROOT --project-id demo --relative-path QRPGLESRC/ORDER.rpgle --json"
     }

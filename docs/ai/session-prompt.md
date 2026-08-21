@@ -10,6 +10,7 @@ Use this prompt at the start of a new Zeus session with an AI assistant.
 
 Related:
 
+- [`agent-start-here.md`](agent-start-here.md)
 - [`../tool-catalog.md`](../tool-catalog.md)
 - [`../mcp/operator-guide.md`](../mcp/operator-guide.md)
 - [`../index.md`](../index.md)
@@ -37,6 +38,10 @@ Authoritative references (priority order when MCP is available):
 4) `docs/mcp/operator-guide.md` for allowlist posture and operator startup
 5) Agent failure playbook (`zeus://metadata/agent-failure-playbook.json` / `docs/ai/agent-failure-playbook.md`) for recovery codes
 6) This session prompt for operating model and safety rules
+
+CLI-only first point to check: `node cli/zeus.js tools guide --json`. It returns the same
+intent map, working-context contract, safety checkpoints, and command inventory that MCP exposes
+through `zeus.agent.bootstrap` and `zeus://metadata/agent-orientation.json`.
 
 Safety rules:
 1) Never run write operations on production systems.

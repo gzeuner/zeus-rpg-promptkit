@@ -8,6 +8,7 @@ const { listMcpTools, MCP_TOOL_TO_CAPABILITY } = require('./mcpTools');
 const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
 const { buildAgentBootstrapPayload } = require('./agentBootstrap');
 const { buildAgentFailurePlaybook } = require('./agentFailurePlaybook');
+const { buildAiOrientation } = require('../docs/aiOrientation');
 const { listWorkflowPresets } = require('../workflow/workflowPresetRegistry');
 const { listPromptContracts } = require('../prompt/promptRegistry');
 const { listAnalysisRuns, readAnalysisRun, readArtifactContent } = require('../ui/localUiDataApi');
@@ -85,6 +86,14 @@ const RESOURCE_DEFINITIONS = Object.freeze([
     description: 'Structured bootstrap payload for AI agents.',
     mimeType: 'application/json',
     generator: buildAgentBootstrapPayload,
+  }),
+  Object.freeze({
+    uri: 'zeus://metadata/agent-orientation.json',
+    name: 'Agent Orientation',
+    description:
+      'Intent-driven AI orientation with the working-context contract, safety checkpoints, and CLI/MCP decision map.',
+    mimeType: 'application/json',
+    generator: buildAiOrientation,
   }),
   Object.freeze({
     uri: 'zeus://metadata/agent-failure-playbook.json',

@@ -20,11 +20,13 @@ const {
   buildToolsListPayload,
   listCommandHelpEntries,
 } = require('../commandHelp');
+const { buildAiOrientation, renderAiOrientationMarkdown } = require('../../docs/aiOrientation');
 
 function printHelp() {
   console.log('Tools commands:');
   console.log('  zeus tools list [--json]                 # list stable command-help records');
   console.log('  zeus tools describe <name> [--json]      # describe one command');
+  console.log('  zeus tools guide [--json]                # AI-first orientation and decision map');
   console.log('');
   console.log('Notes:');
   console.log('  - CLI help records are shared with MCP zeus.help.');
@@ -38,9 +40,10 @@ function renderListTable(commands) {
     entry.safety || '',
     entry.scope || '',
     entry.mcpName || '',
+    entry.subcommands.length > 0 ? entry.subcommands.join(', ') : '',
     entry.recommendedNextCommands.length > 0 ? entry.recommendedNextCommands.join(', ') : '',
   ]);
-  return renderAsciiTable(['CLI', 'Safety', 'Scope', 'MCP', 'Next'], rows);
+  return renderAsciiTable(['CLI', 'Safety', 'Scope', 'MCP', 'Subcommands', 'Next'], rows);
 }
 
 function printDescribeHuman(help) {
@@ -51,6 +54,9 @@ function printDescribeHuman(help) {
   console.log(`Scope: ${help.scope || '(unknown)'}`);
   console.log(`Purpose: ${help.purpose || '(none)'}`);
   console.log(`Example: ${help.example || '(none)'}`);
+  console.log(
+    `Subcommands/actions: ${help.subcommands.length > 0 ? help.subcommands.join(', ') : '(none)'}`
+  );
   console.log(
     `Recommended next: ${
       help.recommendedNextCommands.length > 0 ? help.recommendedNextCommands.join(', ') : '(none)'
@@ -92,6 +98,16 @@ async function runTools(args = {}) {
       json.print(payload);
     } else {
       printDescribeHuman(payload.help);
+    }
+    return payload;
+  }
+
+  if (subcommand === 'guide') {
+    const payload = buildAiOrientation();
+    if (json.isJsonMode) {
+      json.print(payload);
+    } else {
+      console.log(renderAiOrientationMarkdown(payload));
     }
     return payload;
   }

@@ -177,6 +177,9 @@ function validateCatalogMetadata({
       errors.push(`${id}.safety is not a declared safety level: ${commandMetadata.safety}`);
     }
     if (!Array.isArray(contract.aliases)) errors.push(`${id}.aliases must be an array`);
+    if (commandMetadata.subcommands !== undefined && !Array.isArray(commandMetadata.subcommands)) {
+      errors.push(`${id}.subcommands must be an array when provided`);
+    }
     if (!STATUS_VALUES.has(contract.status))
       errors.push(`${id}.status is invalid: ${contract.status}`);
     if (!contract.availability || typeof contract.availability !== 'object') {
@@ -260,6 +263,7 @@ function buildCatalogModel({ repoRoot, env = process.env } = {}) {
       sideEffects: [...contract.sideEffects],
       availability: { ...contract.availability },
       capabilityId: contract.capabilityId,
+      subcommands: Array.isArray(metadata.subcommands) ? [...metadata.subcommands] : [],
       purpose: metadata.purpose,
       example: metadata.example,
     };
@@ -332,18 +336,21 @@ function renderMarkdown(model) {
     '',
     '## CLI Command Catalog',
     '',
-    '| Command | Aliases | Status | Safety | Scope | Side Effects | Availability | Capability | Purpose | Example |',
-    '|---|---|---|---|---|---|---|---|---|---|'
+    '| Command | Aliases | Subcommands / actions | Status | Safety | Scope | Side Effects | Availability | Capability | Purpose | Example |',
+    '|---|---|---|---|---|---|---|---|---|---|---|'
   );
   for (const row of model.commandRows) {
     const aliases = row.aliases.length ? row.aliases.map(alias => `\`${alias}\``).join(', ') : '—';
+    const subcommands = row.subcommands.length
+      ? row.subcommands.map(subcommand => `\`${subcommand}\``).join(', ')
+      : '—';
     const sideEffects = row.sideEffects.length ? row.sideEffects.join(', ') : 'none';
     const availability = Object.entries(row.availability)
       .filter(([, available]) => available)
       .map(([surface]) => surface)
       .join(', ');
     lines.push(
-      `| \`${escapePipe(row.command)}\` | ${escapePipe(aliases)} | \`${row.status}\` | \`${row.safety}\` | ${escapePipe(row.scope)} | ${escapePipe(sideEffects)} | ${escapePipe(availability)} | ${row.capabilityId ? `\`${row.capabilityId}\`` : '—'} | ${escapePipe(row.purpose)} | \`${escapePipe(row.example)}\` |`
+      `| \`${escapePipe(row.command)}\` | ${escapePipe(aliases)} | ${escapePipe(subcommands)} | \`${row.status}\` | \`${row.safety}\` | ${escapePipe(row.scope)} | ${escapePipe(sideEffects)} | ${escapePipe(availability)} | ${row.capabilityId ? `\`${row.capabilityId}\`` : '—'} | ${escapePipe(row.purpose)} | \`${escapePipe(row.example)}\` |`
     );
   }
   lines.push('', '## Workflow Presets', '', '| Preset | Analyze Mode | Goal |', '|---|---|---|');
