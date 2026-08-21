@@ -626,19 +626,20 @@ Source-Root und Output-Root innerhalb des geöffneten Workspace.
 
 ## 📚 Dokumentation
 
-| Einstieg                                                                                                                     | Zweck                                               |
-| ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| [`docs/index.md`](docs/index.md)                                                                                             | zentraler Dokumentations-Hub                        |
-| [`docs/tool-catalog.md`](docs/tool-catalog.md)                                                                               | verbindliche Command-, Safety- und Scope-Referenz   |
-| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)                                                                     | Bootstrap für Evidence-first-KI-Sessions            |
-| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)                                                               | schnellster lokaler Einstieg                        |
-| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)                                         | vollständiges IBM-i-Onboarding                      |
-| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md)                                                                   | MCP-Betrieb, Policy und Troubleshooting             |
-| [`docs/safety/`](docs/safety/)                                                                                               | Governance, sichere Weitergabe und Workspace-Regeln |
-| [`docs/workflows/`](docs/workflows/)                                                                                         | geführte Analyse- und Agenten-Workflows             |
-| [`docs/sql/`](docs/sql/)                                                                                                     | reproduzierbare Discovery-Abfragen für Db2 for i    |
-| [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md)                                       | Project Intelligence: Lieferstand und Non-Claims    |
-| [`docs/architecture/adr-009-project-intelligence-ownership.md`](docs/architecture/adr-009-project-intelligence-ownership.md) | ZPI-Ownership und Open-Core-Grenze                  |
+| Einstieg                                                                                                                     | Zweck                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [`docs/index.md`](docs/index.md)                                                                                             | zentraler Dokumentations-Hub                                      |
+| [`docs/tool-catalog.md`](docs/tool-catalog.md)                                                                               | verbindliche Command-, Safety- und Scope-Referenz                 |
+| [`docs/ai/agent-start-here.md`](docs/ai/agent-start-here.md)                                                                 | KI-Einstieg, Kontextsteuerung und Evidence-first-Entscheidungsweg |
+| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)                                                                     | Bootstrap für Evidence-first-KI-Sessions                          |
+| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)                                                               | schnellster lokaler Einstieg                                      |
+| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)                                         | vollständiges IBM-i-Onboarding                                    |
+| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md)                                                                   | MCP-Betrieb, Policy und Troubleshooting                           |
+| [`docs/safety/`](docs/safety/)                                                                                               | Governance, sichere Weitergabe und Workspace-Regeln               |
+| [`docs/workflows/`](docs/workflows/)                                                                                         | geführte Analyse- und Agenten-Workflows                           |
+| [`docs/sql/`](docs/sql/)                                                                                                     | reproduzierbare Discovery-Abfragen für Db2 for i                  |
+| [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md)                                       | Project Intelligence: Lieferstand und Non-Claims                  |
+| [`docs/architecture/adr-009-project-intelligence-ownership.md`](docs/architecture/adr-009-project-intelligence-ownership.md) | ZPI-Ownership und Open-Core-Grenze                                |
 
 Tool-Katalog nach Änderungen an der CLI neu erzeugen:
 
@@ -651,6 +652,14 @@ Optional zusätzlich als JSON:
 ```bash
 node cli/zeus.js docs:generate-catalog --json-output docs/tool-catalog.json
 ```
+
+Für einen maschinenlesbaren Einstieg in eine unbekannte Zeus-Session:
+
+```bash
+node cli/zeus.js tools guide --json
+```
+
+Mit MCP ist `zeus.agent.bootstrap` der erste Einstiegspunkt; die laufzeitnahe Orientierung ist zusätzlich als `zeus://metadata/agent-orientation.json` verfügbar.
 
 ## 🏗️ Architekturüberblick
 
@@ -1310,19 +1319,20 @@ opened workspace.
 
 ## 📚 Documentation
 
-| Entry point                                                                                                                  | Purpose                                             |
-| ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| [`docs/index.md`](docs/index.md)                                                                                             | central documentation hub                           |
-| [`docs/tool-catalog.md`](docs/tool-catalog.md)                                                                               | authoritative command, safety, and scope reference  |
-| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)                                                                     | bootstrap for evidence-first AI sessions            |
-| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)                                                               | fastest local entry point                           |
-| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)                                         | complete IBM i onboarding                           |
-| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md)                                                                   | MCP operation, policy, and troubleshooting          |
-| [`docs/safety/`](docs/safety/)                                                                                               | governance, safe sharing, and workspace policies    |
-| [`docs/workflows/`](docs/workflows/)                                                                                         | guided analysis and agent workflows                 |
-| [`docs/sql/`](docs/sql/)                                                                                                     | reproducible discovery queries for Db2 for i        |
-| [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md)                                       | Project Intelligence delivery status and non-claims |
-| [`docs/architecture/adr-009-project-intelligence-ownership.md`](docs/architecture/adr-009-project-intelligence-ownership.md) | ZPI ownership and open-core boundary                |
+| Entry point                                                                                                                  | Purpose                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| [`docs/index.md`](docs/index.md)                                                                                             | central documentation hub                                                 |
+| [`docs/tool-catalog.md`](docs/tool-catalog.md)                                                                               | authoritative command, safety, and scope reference                        |
+| [`docs/ai/agent-start-here.md`](docs/ai/agent-start-here.md)                                                                 | AI first point to check, context control, and evidence-first decision map |
+| [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md)                                                                     | bootstrap for evidence-first AI sessions                                  |
+| [`docs/quickstart/5-minutes.md`](docs/quickstart/5-minutes.md)                                                               | fastest local entry point                                                 |
+| [`docs/quickstart/onboarding-new-ibm-i.md`](docs/quickstart/onboarding-new-ibm-i.md)                                         | complete IBM i onboarding                                                 |
+| [`docs/mcp/operator-guide.md`](docs/mcp/operator-guide.md)                                                                   | MCP operation, policy, and troubleshooting                                |
+| [`docs/safety/`](docs/safety/)                                                                                               | governance, safe sharing, and workspace policies                          |
+| [`docs/workflows/`](docs/workflows/)                                                                                         | guided analysis and agent workflows                                       |
+| [`docs/sql/`](docs/sql/)                                                                                                     | reproducible discovery queries for Db2 for i                              |
+| [`docs/knowledgebase/zpi-closure-status.md`](docs/knowledgebase/zpi-closure-status.md)                                       | Project Intelligence delivery status and non-claims                       |
+| [`docs/architecture/adr-009-project-intelligence-ownership.md`](docs/architecture/adr-009-project-intelligence-ownership.md) | ZPI ownership and open-core boundary                                      |
 
 Regenerate the tool catalog after CLI changes:
 
@@ -1335,6 +1345,15 @@ Optionally generate JSON as well:
 ```bash
 node cli/zeus.js docs:generate-catalog --json-output docs/tool-catalog.json
 ```
+
+For a machine-readable orientation when entering an unfamiliar Zeus session:
+
+```bash
+node cli/zeus.js tools guide --json
+```
+
+With MCP, start with `zeus.agent.bootstrap`; the live orientation is also available at
+`zeus://metadata/agent-orientation.json`.
 
 ### Test and typecheck integrity
 

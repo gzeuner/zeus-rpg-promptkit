@@ -113,6 +113,10 @@ function buildCommandHelpEntry(commandName) {
   const example = catalogMeta && catalogMeta.example ? String(catalogMeta.example) : '';
   const examples = example ? [example] : [];
   const recommendedNextCommands = getRecommendedNextCommands(normalizedName, uiMeta);
+  const subcommands =
+    catalogMeta && Array.isArray(catalogMeta.subcommands)
+      ? [...new Set(catalogMeta.subcommands.map(value => String(value).trim()).filter(Boolean))]
+      : [];
 
   return Object.freeze({
     command: normalizedName,
@@ -134,6 +138,7 @@ function buildCommandHelpEntry(commandName) {
       (catalogMeta && catalogMeta.purpose ? String(catalogMeta.purpose) : null),
     example: example || null,
     examples: Object.freeze(examples),
+    subcommands: Object.freeze(subcommands),
     recommendedNextCommands: Object.freeze(recommendedNextCommands),
   });
 }

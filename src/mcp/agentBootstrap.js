@@ -6,6 +6,7 @@ const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
 const { discoverProjectIntelligenceCapabilities } = require('../projectIntelligence/adapters');
 const { buildAgentFailurePlaybook } = require('./agentFailurePlaybook');
 const { buildWorkingContextView } = require('../context/workingContext');
+const { buildAiOrientation } = require('../docs/aiOrientation');
 
 const PACKAGE_JSON_PATH = path.resolve(__dirname, '..', '..', 'package.json');
 
@@ -60,6 +61,7 @@ function buildProjectIntelligenceSnapshot(context = {}) {
 function buildAgentBootstrapPayload(context = {}) {
   const projectIntelligenceSnapshot = buildProjectIntelligenceSnapshot(context);
   const failurePlaybook = buildAgentFailurePlaybook({ compact: true });
+  const orientation = buildAiOrientation();
 
   return {
     ok: true,
@@ -95,6 +97,7 @@ function buildAgentBootstrapPayload(context = {}) {
     piDiscoverySnapshot: projectIntelligenceSnapshot,
     workingContext: buildWorkingContextView({ cwd: context.cwd || process.cwd() }),
     failurePlaybook,
+    orientation,
     communityFallbacks: [
       'If integrated Project Intelligence is absent, use Knowledge First check/lookup for an existing local snapshot, or analyze, search-source, field-search, impact, and bundle for a new evidence run.',
       'If you do not know a tool name, use tools/list or zeus.help; do not guess.',
@@ -106,6 +109,7 @@ function buildAgentBootstrapPayload(context = {}) {
       'tools/list is the live source of truth for allowlisted MCP tools; docs are secondary.',
       'The default allowlist CSV in docs/mcp/operator-guide.md must match DEFAULT_MCP_SAFE_TOOL_NAMES.',
       'failurePlaybook codes are stable; full entries live at zeus://metadata/agent-failure-playbook.json.',
+      'The full AI orientation and intent decision map is available at zeus://metadata/agent-orientation.json and via `zeus tools guide --json`.',
       'The working context is local, credential-free state in .zeus/working-context.json; explicit command/tool arguments always win.',
     ],
     next: 'help',

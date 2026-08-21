@@ -57,6 +57,11 @@ test('catalog model is deterministic and preserves the public command contracts'
 
   const querySql = first.commandRows.find(entry => entry.command === 'query-sql');
   assert.deepEqual(querySql.aliases, ['sql']);
+  const tools = first.commandRows.find(entry => entry.command === 'tools');
+  assert.deepEqual(tools.subcommands, ['list', 'describe', 'guide']);
+  const projectKnowledge = first.commandRows.find(entry => entry.command === 'project-knowledge');
+  assert.ok(projectKnowledge.subcommands.includes('check'));
+  assert.ok(projectKnowledge.subcommands.includes('verify-integrity'));
   assert.equal(querySql.safety, 'S2');
   assert.equal(
     first.commandRows.some(entry => entry.command === 'help'),
@@ -69,6 +74,14 @@ test('catalog model is deterministic and preserves the public command contracts'
       `missing ${command}`
     );
   }
+});
+
+test('catalog exposes nested command actions instead of leaving them implicit', () => {
+  const model = buildCatalogModel({ repoRoot: projectRoot, env: {} });
+  const markdown = renderMarkdown(model);
+  assert.match(markdown, /\| `tools` \|[^\n]*`list`, `describe`, `guide`/);
+  assert.match(markdown, /\| `bridge` \|[^\n]*`plan`, `stage`, `apply`/);
+  assert.match(markdown, /\| `test-run` \|[^\n]*`start`, `capture`, `show`, `rollback`/);
 });
 
 test('catalog capability projections exactly match runtime descriptors', () => {

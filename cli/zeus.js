@@ -140,7 +140,7 @@ function printHelp() {
   console.log(
     '  zeus [--config <path>] discover-environment --profile <name> [--libraries L1,L2] [--schemas S1,S2] [--include-members] [--no-tables] [--role metadata|data] [--system <name>] [--json] [--out <path>]  # Read-only Auto-Discovery von Bibliotheken/Source-Files/Members/Tabellen + Resource-Vorschlag'
   );
-  console.log('  zeus [--config <path>] tools <list|describe> [name] [--json]');
+  console.log('  zeus [--config <path>] tools <list|describe|guide> [name] [--json]');
   console.log(
     '  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--library <name>] [--filter <pattern>] [--save <datei.csv|datei.json>] [--json]'
   );
