@@ -61,6 +61,7 @@ const { runSecret } = require('../src/cli/commands/secretCommand');
 const { runInvestigate } = require('../src/cli/commands/investigateCommand');
 const { runProjectKnowledge } = require('../src/cli/commands/projectKnowledgeCommand');
 const { run: runKnowledge } = require('../src/cli/commands/knowledgeCommand');
+const { runJournalRowDiffCommand } = require('../src/cli/commands/journalRowDiffCommand');
 const path = require('path');
 const { autoLoadEnvFiles } = require('../src/config/envFileLoader');
 const { detectPlaintextSecrets } = require('../src/security/plaintextSecretDetector');
@@ -202,6 +203,9 @@ function printHelp() {
   );
   console.log(
     '  zeus [--config <path>] inspect-object --profile <name> --lib <lib> --name <name> [--type *PGM|*FILE|*SRVPGM|*MODULE] [--journal]'
+  );
+  console.log(
+    '  zeus [--config <path>] journal-row-diff --profile <name> --journal-library <lib> --journal-name <name> --layout "COL:P:5:0,..." --key-columns "COL,..." --audit-query "SELECT ..." --start <timestamp> --end <timestamp> [--ignore-columns "COL,..."] [--json]'
   );
   console.log(
     '  zeus [--config <path>] test-run <start|capture|show|rollback> --profile <name> [options]'
@@ -617,6 +621,11 @@ async function main() {
 
   if (command === 'joblog') {
     await runJoblog(args);
+    return;
+  }
+
+  if (command === 'journal-row-diff') {
+    await runJournalRowDiffCommand(args);
     return;
   }
 

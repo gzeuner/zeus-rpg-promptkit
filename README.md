@@ -58,6 +58,7 @@ Damit beantwortet Zeus Fragen wie:
 | Statische Analyse  | RPG, CL und DDS scannen, Entitäten erkennen und Referenzen extrahieren                         |
 | Abhängigkeiten     | Programmaufrufe, Datei-/Tabellennutzung, Felder und Reverse-Impact-Beziehungen sichtbar machen |
 | Db2-Kontext        | Tabellen, Spalten, Keys, Trigger, Views, Aliase und weitere Metadaten read-only ergänzen       |
+| Journalauswertung  | Journal-Row-Diffs mit frei definierbarem Layout und unabhängiger Audit-Validierung aggregieren |
 | Evidence-Artefakte | Markdown-Reports, JSON-Modelle, Mermaid-Graphen, Manifeste und KI-Prompts erzeugen             |
 | Investigation      | Vorhandene Analyseergebnisse fokussiert durchsuchen und schrittweise vertiefen                 |
 | Review & Planung   | Risikoanalysen, Testszenarien, QA-Ausgaben, Checklisten und Bundles vorbereiten                |
@@ -419,6 +420,7 @@ Der automatisch erzeugte [`docs/tool-catalog.md`](docs/tool-catalog.md) ist die 
 | Analyse              | `analyze`, `investigate`, `workflow`, `workflow run`                 |               `S0/S1` |
 | Suche & Beziehungen  | `search-source`, `field-search`, `trace`, `xref`, `impact`           |               `S0–S2` |
 | Db2 read-only        | `query-table`, `query-sql`, `sql`                                    |                  `S2` |
+| Journalauswertung    | `journal-row-diff`                                                   |                  `S2` |
 | Review & Planung     | `assess-risk`, `generate-test`, `generate-checklist`, `qa`           |                  `S1` |
 | Artefakte            | `bundle`, `analyses`, `serve`                                        |               `S0/S1` |
 | Kontrollierte Writes | `write-sql`, `upsert`, `insert`, `update`, `delete`                  |                  `S3` |
@@ -1106,6 +1108,7 @@ The generated [`docs/tool-catalog.md`](docs/tool-catalog.md) is the **authoritat
 | Analysis                 | `analyze`, `investigate`, `workflow`, `workflow run`                 |          `S0/S1` |
 | Search and relationships | `search-source`, `field-search`, `trace`, `xref`, `impact`           |          `S0–S2` |
 | Db2 read-only            | `query-table`, `query-sql`, `sql`                                    |             `S2` |
+| Journal analysis         | `journal-row-diff`                                                   |             `S2` |
 | Review and planning      | `assess-risk`, `generate-test`, `generate-checklist`, `qa`           |             `S1` |
 | Artifacts                | `bundle`, `analyses`, `serve`                                        |          `S0/S1` |
 | Controlled writes        | `write-sql`, `upsert`, `insert`, `update`, `delete`                  |             `S3` |

@@ -1,7 +1,7 @@
 ---
 Title: Zeus RPG PromptKit Documentation Hub (v2.2)
 Description: Central, AI-friendly navigation across documentation domains including safety-first onboarding, external extension boundaries, and the ZPI architecture baseline.
-Last Updated: 2026-08-17
+Last Updated: 2026-08-21
 ---
 
 # Zeus RPG PromptKit Documentation Hub (v2.2)
@@ -39,6 +39,7 @@ Question -> Analyze -> Investigate (search/trace/xref) -> Impact/Risk -> Generat
 | `safety/`        | Safety guidance, governance, sharing                                                                                   | [`safety/best-practice-guide.md`](safety/best-practice-guide.md)                                                                                                                                               | Reviewers, security, leads                 |
 | `viewer/`        | Optional local artifact viewer and experimental UI shell                                                               | [`viewer/local-ui-shell.md`](viewer/local-ui-shell.md)                                                                                                                                                         | Tooling engineers                          |
 | `sql/`           | Reproducible IBM i and DB2 discovery SQL                                                                               | [`sql/index.md`](sql/index.md)                                                                                                                                                                                 | Analysts, DB2 engineers                    |
+| `journaling/`    | Read-only journal before/after comparison with independent validation                                                  | [`journaling/read-only-row-diff.md`](journaling/read-only-row-diff.md)                                                                                                                                         | Analysts, DB2 engineers, AI assistants     |
 
 ## Quick Links For AI Assistants
 
@@ -54,6 +55,7 @@ Question -> Analyze -> Investigate (search/trace/xref) -> Impact/Risk -> Generat
 | Safe sharing guidance               | [`safety/safe-sharing.md`](safety/safe-sharing.md)                                                                                                                                                                                 | Reduction and sanitization rules for external use                     |
 | CLI examples                        | [`cli/examples.md`](cli/examples.md)                                                                                                                                                                                               | Fast reproducible command patterns                                    |
 | DB2 discovery SQL                   | [`sql/system-environment-discovery.sql`](sql/system-environment-discovery.sql)                                                                                                                                                     | Standardized discovery queries for system and ticket context          |
+| Read-only journal comparison        | [`journaling/read-only-row-diff.md`](journaling/read-only-row-diff.md)                                                                                                                                                             | Aggregate no-op/change evidence without exposing row data             |
 
 ## Governance Notes
 
