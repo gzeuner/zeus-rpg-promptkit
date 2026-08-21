@@ -303,6 +303,11 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.ok(Array.isArray(uiMetadata.config.fields));
     assert.ok(Array.isArray(uiMetadata.commands.entries));
     assert.ok(Array.isArray(uiMetadata.workflowCards));
+    assert.equal(uiMetadata.aiWorkbench.schemaVersion, 1);
+    assert.equal(uiMetadata.aiWorkbench.roles.length, 4);
+    assert.ok(uiMetadata.aiWorkbench.roles.some(entry => entry.id === 'developer'));
+    assert.ok(uiMetadata.aiWorkbench.roles.some(entry => entry.id === 'product-owner'));
+    assert.ok(uiMetadata.aiWorkbench.actions.some(entry => entry.id === 'review-evidence'));
     assert.equal(uiMetadata.workflowCards.length, 6);
     assert.equal(uiMetadata.workflowCards.find(entry => entry.id === 'configure').title, 'Setup');
     assert.equal(
@@ -843,6 +848,10 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
 
     const shellHtml = await fetch(`${started.url}/`).then(response => response.text());
     assert.match(shellHtml, /Zeus RPG PromptKit/);
+    assert.match(shellHtml, /AI Workbench/);
+    assert.match(shellHtml, /What do you want to do\? Search the Zeus toolset/);
+    assert.match(shellHtml, /Ctrl\/Cmd\+K/);
+    assert.match(shellHtml, /allowlisted UI actions/);
     assert.match(shellHtml, /Setup/);
     assert.match(shellHtml, /Reports/);
     assert.match(shellHtml, /Advanced \/ Tools/);
