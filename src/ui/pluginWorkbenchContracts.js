@@ -30,6 +30,13 @@ function normalizeList(value) {
   );
 }
 
+function toPluginId(value) {
+  return normalizeText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 function normalizePluginDescriptor(descriptor) {
   if (!descriptor || typeof descriptor !== 'object' || Array.isArray(descriptor)) return null;
   const kind = normalizeText(descriptor.kind).toLowerCase();
@@ -73,6 +80,60 @@ function buildPluginCatalog(descriptors = []) {
     telemetry: 'disabled',
     plugins: Object.freeze(plugins),
   });
+}
+
+function buildLivePluginCatalog({
+  commands = [],
+  workflows = [],
+  roles = [],
+  themes = [
+    { id: 'local-default', label: 'Local Default', description: 'Built-in neutral UI theme.' },
+  ],
+  allowlist = [],
+} = {}) {
+  const descriptors = [
+    ...(Array.isArray(commands) ? commands : []).map(command => {
+      const id = toPluginId(command && command.name);
+      return {
+        kind: 'command',
+        id,
+        label: command && (command.title || command.name),
+        description: command && (command.summary || command.primaryUseCase),
+        capabilities: command && command.requiredCapabilities,
+        requires: command && command.commonOptions,
+        tags: ['live', command && command.category],
+        allowlistKey: `command:${id}`,
+      };
+    }),
+    ...(Array.isArray(workflows) ? workflows : []).map(workflow => ({
+      kind: 'workflow',
+      id: workflow && workflow.id,
+      label: workflow && (workflow.title || workflow.id),
+      description: workflow && workflow.description,
+      capabilities: workflow && workflow.commands,
+      tags: ['live', workflow && workflow.category, workflow && workflow.availability],
+      allowlistKey: `workflow:${workflow && workflow.id}`,
+    })),
+    ...(Array.isArray(roles) ? roles : []).map(role => ({
+      kind: 'role',
+      id: role && role.id,
+      label: role && (role.label || role.id),
+      description: role && role.description,
+      capabilities: role && (role.preferredModules || role.commands),
+      tags: ['live', role && role.safetyLevel],
+      allowlistKey: `role:${role && role.id}`,
+    })),
+    ...(Array.isArray(themes) ? themes : []).map(theme => ({
+      ...theme,
+      kind: 'theme',
+      allowlistKey: `theme:${theme && theme.id}`,
+      tags: ['local', 'neutral'],
+    })),
+  ];
+  const catalog = buildPluginCatalog(descriptors);
+  return Array.isArray(allowlist) && allowlist.length > 0
+    ? applyPluginAllowlist(catalog, allowlist)
+    : catalog;
 }
 
 function applyPluginAllowlist(catalog, allowlist = []) {
@@ -125,6 +186,7 @@ module.exports = {
   PLUGIN_KINDS,
   applyPluginAllowlist,
   buildPluginCatalog,
+  buildLivePluginCatalog,
   normalizePluginDescriptor,
   summarizePluginCatalog,
   validatePluginCatalog,

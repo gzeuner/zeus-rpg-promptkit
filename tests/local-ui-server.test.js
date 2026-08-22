@@ -323,6 +323,41 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     ]);
     assert.equal(uiMetadata.pluginContracts.catalog.executable, false);
     assert.equal(uiMetadata.pluginContracts.catalog.telemetry, 'disabled');
+    assert.equal(uiMetadata.pluginContracts.allowlist.mode, 'all-live-built-ins');
+    assert.equal(
+      uiMetadata.pluginContracts.summary.total,
+      uiMetadata.pluginContracts.summary.byKind.command +
+        uiMetadata.workflowCards.length +
+        uiMetadata.roleProfiles.profiles.length +
+        1
+    );
+    assert.ok(
+      uiMetadata.pluginContracts.catalog.plugins.some(
+        entry => entry.allowlistKey === 'command:doctor'
+      )
+    );
+    assert.ok(
+      uiMetadata.pluginContracts.catalog.plugins.some(
+        entry => entry.allowlistKey === 'workflow:configure'
+      )
+    );
+    assert.ok(
+      uiMetadata.pluginContracts.catalog.plugins.some(
+        entry => entry.allowlistKey === 'role:developer'
+      )
+    );
+    assert.ok(
+      uiMetadata.pluginContracts.catalog.plugins.some(
+        entry => entry.allowlistKey === 'theme:local-default'
+      )
+    );
+    assert.equal(uiMetadata.setupChecklist.schemaVersion, 1);
+    assert.equal(uiMetadata.setupChecklist.localOnly, true);
+    assert.deepEqual(
+      uiMetadata.setupChecklist.tasks.map(entry => entry.id),
+      ['profile', 'key', 'doctor', 'evidence']
+    );
+    assert.match(uiMetadata.setupChecklist.boundaries.join(' '), /credentials|key material/i);
     assert.equal(uiMetadata.workflowCards.length, 6);
     assert.equal(uiMetadata.workflowCards.find(entry => entry.id === 'configure').title, 'Setup');
     assert.equal(

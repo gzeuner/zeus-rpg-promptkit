@@ -49,6 +49,7 @@ module.exports = {
     ],
     unit: [
       'tests/gui-workbench-contracts.test.js',
+      'tests/local-ui-accessibility.test.js',
       'tests/plugin-workbench-contracts.test.js',
       'tests/profile-key-wizard-service.test.js',
       'tests/journal-row-diff.test.js',

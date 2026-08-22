@@ -455,6 +455,47 @@ input[type="search"]{
 .field-item strong{
   font-size:15px;
 }
+.setup-checklist{
+  display:grid;
+  gap:12px;
+  border-color:rgba(15,142,168,.45);
+  background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(231,244,247,.88));
+}
+.setup-checklist ol{
+  display:grid;
+  gap:8px;
+  list-style:none;
+  margin:0;
+  padding:0;
+}
+.checklist-item{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:start;
+  gap:10px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(255,255,255,.76);
+}
+.checklist-index{
+  display:grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:var(--accent-soft);
+  color:var(--brand-dark);
+  font-size:12px;
+  font-weight:700;
+}
+.checklist-item strong{display:block;font-size:14px}
+.checklist-item p{margin:3px 0 0;color:var(--muted);font-size:12px;line-height:1.4}
+.checklist-item .token{align-self:start}
+.plugin-catalog{display:grid;gap:8px;max-height:460px;overflow:auto;padding-right:4px}
+.plugin-entry{display:grid;gap:5px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.plugin-entry strong{font-size:13px}
+.plugin-entry .small{overflow-wrap:anywhere}
 .home-card{
   padding:16px;
   display:grid;
@@ -923,9 +964,10 @@ function renderTabs(){
   q('tabs').setAttribute('aria-label','Main views');
   q('tabs').innerHTML=tabs.map(([id,label])=>{
     const active=(id==='reports'&&isReportsTab(s.tab))||(s.tab===id)||(id==='home'&&s.tab==='workbench');
-    return '<button class="tab'+(active?' active':'')+'" role="tab" aria-selected="'+String(active)+'" data-tab="'+id+'">'+label+'</button>';
+    return '<button class="tab'+(active?' active':'')+'" role="tab" aria-selected="'+String(active)+'" aria-controls="'+id+'" tabindex="'+(active?'0':'-1')+'" data-tab="'+id+'">'+label+'</button>';
   }).join('');
   for(const b of q('tabs').querySelectorAll('[data-tab]')) b.onclick=()=>selectTab(b.dataset.tab);
+  bindRovingTabKeyboard(q('tabs'),'[data-tab]');
 }
 
 function isReportsTab(tab){
@@ -933,7 +975,7 @@ function isReportsTab(tab){
 }
 
 function renderReportsSubnav(activeTab){
-  return '<div class="stack"><div><h2>Reports</h2><p>Reports are local and read-only. They inspect existing artifacts and never fetch, query, or modify remote systems.</p></div><div class="tabs" role="tablist" aria-label="Report views">'+reportViews.map(([id,label])=>'<button class="tab'+(id===activeTab?' active':'')+'" role="tab" aria-selected="'+String(id===activeTab)+'" data-report-view="'+esc(id)+'">'+esc(label)+'</button>').join('')+'</div><div class="small">Select a run in the left sidebar, then choose the report view you want to inspect.</div></div>';
+  return '<div class="stack"><div><h2>Reports</h2><p>Reports are local and read-only. They inspect existing artifacts and never fetch, query, or modify remote systems.</p></div><div class="tabs" role="tablist" aria-label="Report views">'+reportViews.map(([id,label])=>'<button class="tab'+(id===activeTab?' active':'')+'" role="tab" aria-selected="'+String(id===activeTab)+'" aria-controls="'+escAttr(id)+'" tabindex="'+(id===activeTab?'0':'-1')+'" data-report-view="'+esc(id)+'">'+esc(label)+'</button>').join('')+'</div><div class="small">Select a run in the left sidebar, then choose the report view you want to inspect.</div></div>';
 }
 
 function bindReportsSubnav(root){
@@ -941,6 +983,35 @@ function bindReportsSubnav(root){
     button.onclick=async ()=>{
       s.tab=button.dataset.reportView||'artifacts';
       await render();
+    };
+  }
+  const tablist=root.querySelector('[role="tablist"]');
+  if(tablist) bindRovingTabKeyboard(tablist,'[data-report-view]');
+}
+
+function bindRovingTabKeyboard(tablist,selector){
+  const buttons=Array.from(tablist.querySelectorAll(selector));
+  if(!buttons.length) return;
+  for(const [index,button] of buttons.entries()){
+    button.onkeydown=(event)=>{
+      const key=String(event.key||'');
+      if(key==='Enter'||key===' '){
+        event.preventDefault();
+        button.click();
+        return;
+      }
+      if(!['ArrowRight','ArrowDown','ArrowLeft','ArrowUp','Home','End'].includes(key)) return;
+      event.preventDefault();
+      const nextIndex=key==='Home'
+        ? 0
+        : (key==='End'
+          ? buttons.length-1
+          : (['ArrowRight','ArrowDown'].includes(key)
+            ? (index+1)%buttons.length
+            : (index-1+buttons.length)%buttons.length));
+      const next=buttons[nextIndex];
+      for(const candidate of buttons) candidate.setAttribute('tabindex',candidate===next?'0':'-1');
+      next.focus();
     };
   }
 }
@@ -1069,6 +1140,20 @@ function profileKeyWizardMetadata(){
   const payload=s.uiMetadata&&s.uiMetadata.payload;
   return payload&&payload.profileKeyWizard&&typeof payload.profileKeyWizard==='object'
     ? payload.profileKeyWizard
+    : null;
+}
+
+function setupChecklistMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.setupChecklist&&typeof payload.setupChecklist==='object'
+    ? payload.setupChecklist
+    : null;
+}
+
+function pluginContractsMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.pluginContracts&&typeof payload.pluginContracts==='object'
+    ? payload.pluginContracts
     : null;
 }
 
@@ -1396,7 +1481,7 @@ function renderProfileKeyWizardPanel(){
   const status=s.profileKeyWizard.loading?'Checking...':(state.status||'not checked');
   const source=state.source&&state.source.label?String(state.source.label):'No key material available';
   const error=s.profileKeyWizard.error;
-  return '<div class="sub"><details'+(error||s.profileKeyWizard.status?' open':'')+'><summary>Local Secret Key Readiness</summary>'+
+  return '<div class="sub"><details id="profileKeyWizardSection"'+(error||s.profileKeyWizard.status?' open':'')+'><summary>Local Secret Key Readiness</summary>'+
     '<p class="small">The GUI can create local key material without receiving or displaying a secret. Encrypt actual values with the CLI.</p>'+
     '<div class="tokens"><div class="token '+esc(statusToneClass(status))+'">status: '+esc(status)+'</div><div class="token">source: '+esc(source)+'</div><div class="token">browser secret values: never</div></div>'+
     (error?'<div class="hint-list"><div class="hint-item"><strong>Key wizard error</strong><p>'+esc(error)+'</p></div></div>':'')+
@@ -1876,6 +1961,78 @@ function preferredProfileWizardDoctorProfile(){
     : (profiles[0]&&profiles[0].name?profiles[0].name:'dev');
 }
 
+function renderSetupChecklist(options){
+  const safeOptions=options&&typeof options==='object'?options:{};
+  const metadata=setupChecklistMetadata()||{};
+  const configuredTasks=Array.isArray(metadata.tasks)&&metadata.tasks.length
+    ? metadata.tasks
+    : [
+      { id:'profile', title:'Profile and source scope', description:'Choose or save the local profile and make workspace paths explicit.', target:'profileWizardSection' },
+      { id:'key', title:'Local key readiness', description:'Verify local key storage without displaying key material.', target:'profileKeyWizardSection' },
+      { id:'doctor', title:'Effective runtime configuration', description:'Run Doctor after profile and environment precedence are settled.', target:'configDoctorProfile' },
+      { id:'evidence', title:'Evidence freshness', description:'Review recorded hashes before relying on an existing run.', target:'reports' }
+    ];
+  const draft=safeOptions.draft&&typeof safeOptions.draft==='object'?safeOptions.draft:{};
+  const selectedProfile=safeOptions.selectedProfileSummary||null;
+  const profileName=String(draft.profileName||'').trim();
+  const profileState=selectedProfile
+    ? { status:'ready', label:'ready', detail:'Profile loaded: '+String(selectedProfile.name||profileName) }
+    : (profileName
+      ? { status:'review', label:'draft', detail:'Unsaved draft: '+profileName }
+      : { status:'pending', label:'pending', detail:'Choose or create a profile.' });
+  const keyState=s.profileKeyWizard&&s.profileKeyWizard.state||{};
+  const keyReady=String(keyState.status||'').toLowerCase()==='ready'
+    || Boolean(keyState.ready===true||keyState.available===true);
+  const keyStateView=s.profileKeyWizard&&s.profileKeyWizard.loading
+    ? { status:'running', label:'checking', detail:'Checking local key storage.' }
+    : (keyReady
+      ? { status:'ready', label:'ready', detail:'Local key storage is available; key material remains hidden.' }
+      : { status:'pending', label:'pending', detail:'Check local key readiness.' });
+  const doctorState=safeOptions.doctorState&&typeof safeOptions.doctorState==='object'?safeOptions.doctorState:{};
+  const doctorResult=doctorState.result&&typeof doctorState.result==='object'?doctorState.result:null;
+  const doctorStatus=String(doctorResult&&doctorResult.status||'').toLowerCase();
+  const doctorView=doctorState.running
+    ? { status:'running', label:'checking', detail:'Doctor is checking effective configuration.' }
+    : (doctorStatus==='ready'
+      ? { status:'ready', label:'ready', detail:'Effective runtime configuration passed Doctor.' }
+      : (doctorStatus==='warning'
+        ? { status:'review', label:'review', detail:'Doctor returned warnings; inspect the checks before continuing.' }
+        : (doctorStatus==='failed'||doctorStatus==='error'||doctorState.error
+          ? { status:'blocked', label:'blocked', detail:'Resolve the Doctor result before relying on this setup.' }
+          : { status:'pending', label:'pending', detail:'Run Doctor after the profile is saved.' })));
+  const evidence=s.detail&&s.detail.views&&s.detail.views.evidence&&typeof s.detail.views.evidence==='object'
+    ? s.detail.views.evidence
+    : null;
+  const evidenceStatus=String(evidence&&evidence.overallStatus||evidence&&evidence.status||'').toLowerCase();
+  const evidenceView=evidence
+    ? (['changed','stale','missing','unverified','warning'].includes(evidenceStatus)
+      ? { status:'review', label:'review', detail:'Evidence needs a freshness review.' }
+      : { status:'ready', label:'ready', detail:'Recorded evidence is available for review.' })
+    : { status:'not-available', label:'not available', detail:'Select a run to review recorded evidence.' };
+  const views={ profile:profileState, key:keyStateView, doctor:doctorView, evidence:evidenceView };
+  const items=configuredTasks.map((task,index)=>{
+    const view=views[String(task.id||'').trim()]||{ status:'pending', label:'pending', detail:'Open this setup area for details.' };
+    const target=String(task.target||'').trim();
+    const button=target
+      ? '<button class="btn" type="button" data-setup-checklist-target="'+escAttr(target)+'">Open</button>'
+      : '';
+    return '<li class="checklist-item '+escAttr(statusToneClass(view.status))+'"><div class="checklist-index" aria-hidden="true">'+esc(String(index+1))+'</div><div><strong>'+esc(String(task.title||task.id||'Setup task'))+'</strong><p>'+esc(String(task.description||''))+'</p><p class="small" role="status">'+esc(view.detail)+'</p></div><div class="stack"><div class="token '+escAttr(statusToneClass(view.status))+'" aria-label="Status: '+escAttr(view.label)+'">'+esc(view.label)+'</div>'+button+'</div></li>';
+  }).join('');
+  return '<section class="sub setup-checklist" aria-labelledby="setupChecklistTitle" data-setup-checklist><div><h3 id="setupChecklistTitle">'+esc(String(metadata.title||'Secure Setup Checklist'))+'</h3><p>'+esc(String(metadata.summary||'Confirm profile, key, effective configuration, and evidence freshness in that order.'))+'</p></div><ol>'+items+'</ol><p class="small">Local-only flow. Credentials, key material, and plaintext secrets are never shown here; evidence refresh stays an explicit read-only review.</p></section>';
+}
+
+function renderPluginCatalogPanel(){
+  const metadata=pluginContractsMetadata()||{};
+  const catalog=metadata.catalog&&Array.isArray(metadata.catalog.plugins)?metadata.catalog:{ plugins:[] };
+  const summary=metadata.summary&&typeof metadata.summary==='object'?metadata.summary:{};
+  const allowlist=metadata.allowlist&&typeof metadata.allowlist==='object'?metadata.allowlist:{};
+  const plugins=catalog.plugins;
+  const entries=plugins.length
+    ? plugins.map((plugin)=>'<li class="plugin-entry"><strong>'+esc(String(plugin.label||plugin.id||'Unnamed plugin'))+'</strong><div class="small">'+esc(String(plugin.kind||'unknown'))+' · '+esc(String(plugin.id||''))+'</div><div class="small">'+esc(String(plugin.description||'No description available.'))+'</div>'+renderTokenRow([...(Array.isArray(plugin.tags)?plugin.tags:[]),plugin.allowlistKey?'allowlist: '+plugin.allowlistKey:null],'workflow-meta')+'</li>').join('')
+    : '<li class="empty">No live plugin metadata is available.</li>';
+  return '<section class="sub" id="pluginCatalogSection" aria-labelledby="pluginCatalogTitle"><details><summary id="pluginCatalogTitle">Live Tool Catalog</summary><p class="small">Commands, workflows, roles, and the neutral built-in theme are exposed as declarative metadata. The catalog does not execute plugins or send telemetry.</p>'+renderTokenRow(['total: '+String(summary.total||plugins.length||0),'commands: '+String(summary.byKind&&summary.byKind.command||0),'workflows: '+String(summary.byKind&&summary.byKind.workflow||0),'roles: '+String(summary.byKind&&summary.byKind.role||0),'allowlist: '+String(allowlist.mode||'default')],'workflow-meta')+'<ul class="plugin-catalog">'+entries+'</ul></details></section>';
+}
+
 function renderConfigureStartPanel(options){
   const safeOptions=options&&typeof options==='object'?options:{};
   const setupMeta=setupMetadata()||{};
@@ -1970,6 +2127,7 @@ function renderConfigureStartPanel(options){
       { title:'Browser safety', body:boundaryNotes.join(' ') },
       { title:'Resolution order', body:(precedenceRules.length?precedenceRules.join(' '):precedenceSummary)+' Doctor checks the effective configuration after those rules are applied.' }
     ])+
+    renderSetupChecklist({ draft, selectedProfileSummary, doctorState })+
     '<div class="field-list">'+
       '<div class="field-item"><strong>Recommended Next Step</strong><p>'+esc(recommendedNext)+'</p>'+renderTokenRow(recommendedNextTokens,'workflow-meta')+'</div>'+
       '<div class="field-item"><strong>1. Choose Or Create A Profile</strong><p>'+esc(stepOneStatus)+'</p>'+renderTokenRow([
@@ -2664,8 +2822,9 @@ function renderConfigure(){
       profile:profileForWizard,
       doctorResult
     })+
-    '<div class="sub"><details'+(wizardDetailsOpen?' open':'')+'><summary>Local-only Profile Wizard</summary><p class="small">Use this only when you need to create or adjust the local-only profile overlay that Setup and Doctor rely on.</p>'+renderProfileWizardPanel()+'</details></div>'+
+    '<div class="sub"><details id="profileWizardSection"'+(wizardDetailsOpen?' open':'')+'><summary>Local-only Profile Wizard</summary><p class="small">Use this only when you need to create or adjust the local-only profile overlay that Setup and Doctor rely on.</p>'+renderProfileWizardPanel()+'</details></div>'+
     renderProfileKeyWizardPanel()+
+    renderPluginCatalogPanel()+
     '<div class="sub"><h2>Advanced Setup Details</h2><p class="small">These sections explain the metadata-driven wizard model and read-only preview stubs. They are optional once the main setup flow is clear.</p><details'+(discoveryResult||discoveryState.error?' open':'')+'><summary>Read-only Discovery Actions</summary><div class="stack"><div class="field-list">'+(discoveryActions.length?discoveryActions.map((action)=>'<div class="field-item"><strong>'+esc(action.title)+'</strong><p>'+esc(action.description||'')+'</p><div class="workflow-meta"><div class="token">safety: '+esc(action.safetyLevel||'S2')+'</div><div class="token">'+esc(action.status||'stubbed-preview-only')+'</div><div class="token">'+esc(action.expensive?'preview first':'read-only')+'</div></div><div class="actions"><button class="btn" data-discovery-preview="'+esc(action.id)+'">'+esc(String(action.status||'').indexOf('config-preview-ready')===0?'Preview':'Preview Stub')+'</button></div></div>').join(''):'<div class="empty">No discovery actions available.</div>')+'</div>'+(discoveryState.error?'<div class="hint-list"><div class="hint-item"><strong>Discovery preview error</strong><p>'+esc(discoveryState.error)+'</p></div></div>':'')+renderGuidedDiscoveryPreview(discoveryResult)+'</div></details><details><summary>Safe CLI Preview</summary><p class="small">Generated from the selected intent. Secrets are never included.</p><div class="field-grid"><label>Analysis Intent<select id="guidedIntentSelect">'+intents.map((intent)=>'<option value="'+escAttr(intent.id)+'"'+(selectedIntent&&intent.id===selectedIntent.id?' selected':'')+'>'+esc(intent.title)+'</option>').join('')+'</select></label></div>'+renderGuidedCliPreview(selectedIntent,profileForWizard)+'</details><details><summary>Guided Wizard Metadata</summary><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Wizard steps: '+esc(String(steps.length||0))+'</div><div class="token">Intents: '+esc(String(intents.length||0))+'</div><div class="token">Purpose labels: '+esc(String(guided&&guided.purposeLabels&&guided.purposeLabels.length||0))+'</div></div><div class="section-list">'+steps.map((step)=>'<button class="btn section-btn'+(selectedStep&&step.id===selectedStep.id?' active':'')+'" data-guided-step="'+esc(step.id)+'">'+esc(step.shortTitle||step.title)+'</button>').join('')+'</div><div class="configure-layout"><div class="section-list">'+
       sections.map((section)=>'<button class="btn section-btn'+(section.id===s.uiMetadata.selectedConfigSection?' active':'')+'" data-config-section="'+esc(section.id)+'">'+esc(section.label||section.id)+'</button>').join('')+
     '</div><div class="field-list">'+
@@ -2945,6 +3104,23 @@ function renderConfigure(){
     button.onclick=()=>{
       s.uiMetadata.selectedConfigSection=button.dataset.configSection;
       renderConfigure();
+    };
+  }
+  for(const button of root.querySelectorAll('[data-setup-checklist-target]')){
+    button.onclick=async ()=>{
+      const target=String(button.dataset.setupChecklistTarget||'').trim();
+      if(target==='reports'){
+        await selectTab('reports');
+        return;
+      }
+      const targetNode=target?root.querySelector('#'+target):null;
+      if(!targetNode) return;
+      if(targetNode.tagName==='DETAILS') targetNode.open=true;
+      if(typeof targetNode.scrollIntoView==='function') targetNode.scrollIntoView({ block:'center', behavior:'smooth' });
+      const focusTarget=targetNode.matches('input,select,button,summary,[tabindex]')
+        ? targetNode
+        : targetNode.querySelector('summary,input,select,button,[tabindex]');
+      if(focusTarget&&typeof focusTarget.focus==='function') focusTarget.focus();
     };
   }
 }

@@ -221,11 +221,33 @@ Bewusst nicht umgesetzt:
 
 Nächstes To-do nach Iteration 7: manueller Accessibility-Walkthrough sowie Plugin-Katalog-Anbindung an bestehende Live-Metadaten.
 
+### Iteration 8 — Live-Katalog, sichere Setup-Checkliste und Accessibility-Walkthrough
+
+Status: umgesetzt am 2026-08-22; automatisierte lokale Prüfungen und manueller Browser-Walkthrough grün, Gesamt-CI folgt im Veröffentlichungsdurchlauf.
+
+Umgesetzt:
+
+- Live-Plugin-Katalog aus den bestehenden Command-, Workflow-, Rollen- und neutralen Theme-Metadaten
+- deterministische Katalogzusammenfassung mit sichtbarer Herkunft und optionaler lokaler `ZEUS_UI_PLUGIN_ALLOWLIST`
+- keine Plugin-Ausführung, keine dynamische Installation und keine Telemetrie durch den Katalog
+- einheitliche Secure Setup Checklist für Profil-/Quellbereich, lokale Key-Bereitschaft, Doctor und Evidence-Freshness
+- sichere Zielnavigation von den Checklisten-Schritten zu Profilwizard, Key-Status, Doctor und Reports
+- roving keyboard navigation für Haupt- und Report-Tabs mit Pfeiltasten, `Home`, `End`, `Enter` und `Space`
+- wiederholbarer manueller Prüfablauf in `docs/architecture/gui-accessibility-walkthrough.md`
+
+Bewusst nicht umgesetzt:
+
+- keine automatische Evidence-Aktualisierung oder Remote-Fetch-Aktion aus der GUI
+- keine Anzeige oder Entschlüsselung von Credentials, Schlüsselmaterial oder Klartext-Secrets
+- keine vollständige Screenreader-/WCAG-Zertifizierung; der lokale Browser-Walkthrough bleibt der nächste Prüfpunkt
+
+Nächstes To-do nach Iteration 8: manuellen Browser-Walkthrough mit realer Tastatur und einem Screenreader durchführen, anschließend visuelle Detailpolitur und Katalog-Erweiterungsdokumentation priorisieren.
+
 ## Weitere geplante Iterationen
 
 1. Manueller Accessibility-Walkthrough mit Tastatur, Screenreader und Forced-Colors-Prüfung
-2. Plugin-Katalog sicher an Live-Command-, Workflow- und Rollen-Metadaten anbinden
-3. Profile, Key-Status und Evidence-Refresh als einheitliche sichere Setup-Checkliste darstellen
+2. Katalog-Erweiterungsdokumentation und sichere Authoring-Vorlage für neutrale Metadaten
+3. Evidence-Freshness-Refresh als explizite, überprüfbare lokale Aktion weiterführen
 
 ## Update-Regel für jede Iteration
 

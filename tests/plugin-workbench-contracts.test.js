@@ -20,6 +20,7 @@ const test = require('node:test');
 const {
   applyPluginAllowlist,
   buildPluginCatalog,
+  buildLivePluginCatalog,
   normalizePluginDescriptor,
   summarizePluginCatalog,
   validatePluginCatalog,
@@ -73,6 +74,35 @@ test('allowlist returns only explicitly selected plugins and remains determinist
     byKind: { command: 0, workflow: 0, role: 1, theme: 1 },
     allowlistKeys: ['role:developer', 'theme:quiet-light'],
   });
+});
+
+test('builds the live catalog from command, workflow, role, and theme metadata', () => {
+  const catalog = buildLivePluginCatalog({
+    commands: [{ name: 'doctor', title: 'Doctor', summary: 'Check readiness', category: 'setup' }],
+    workflows: [{ id: 'configure', title: 'Setup', description: 'Configure locally' }],
+    roles: [{ id: 'developer', label: 'Developer', description: 'Build safely' }],
+    themes: [{ id: 'local-default', label: 'Local Default', description: 'Neutral theme' }],
+  });
+  assert.deepEqual(
+    catalog.plugins.map(plugin => plugin.allowlistKey),
+    ['command:doctor', 'workflow:configure', 'role:developer', 'theme:local-default']
+  );
+  assert.deepEqual(validatePluginCatalog(catalog), []);
+  assert.equal(catalog.executable, false);
+  assert.equal(catalog.telemetry, 'disabled');
+  const workflowRun = buildLivePluginCatalog({
+    commands: [{ name: 'workflow run', title: 'Workflow Run' }],
+  });
+  assert.equal(workflowRun.plugins[0].id, 'workflow-run');
+  assert.equal(workflowRun.plugins[0].allowlistKey, 'command:workflow-run');
+  const filtered = buildLivePluginCatalog({
+    commands: [{ name: 'doctor' }, { name: 'analyze' }],
+    allowlist: ['command:doctor'],
+  });
+  assert.deepEqual(
+    filtered.plugins.map(plugin => plugin.id),
+    ['doctor']
+  );
 });
 
 test('catalog validation rejects execution and telemetry claims', () => {
