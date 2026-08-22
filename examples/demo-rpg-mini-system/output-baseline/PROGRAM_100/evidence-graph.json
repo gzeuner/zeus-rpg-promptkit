@@ -1,0 +1,1223 @@
+{
+  "schemaVersion": 1,
+  "kind": "evidence-graph",
+  "program": "PROGRAM_100",
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "generator": "evidence-graph-builder@v1",
+  "nodes": [
+    {
+      "id": "FILE:PROGRAM_100:ETCH",
+      "type": "FILE",
+      "name": "ETCH",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 11,
+          "endLine": 11
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "FILE:PROGRAM_100:FILE_100",
+      "type": "FILE",
+      "name": "FILE_100",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QDDSSRC/FILE_100.pf",
+          "startLine": 1,
+          "endLine": 1
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QDDSSRC/FILE_100.pf",
+          "line": 1
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "FILE:PROGRAM_100:FILE_200",
+      "type": "FILE",
+      "name": "FILE_200",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROCEDURE:PROGRAM_100:MAIN:PROCEDURE",
+      "type": "PROCEDURE",
+      "name": "MAIN",
+      "kind": "PROCEDURE",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "startLine": 6,
+          "endLine": 9
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 6
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 6
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROCEDURE:PROGRAM_100:PROCEDURE:PROGRAM_100:QRPGLESRC/PROGRAM_100.RPGLE:MAIN",
+      "type": "PROCEDURE",
+      "name": "PROCEDURE:PROGRAM_100:QRPGLESRC/PROGRAM_100.RPGLE:MAIN",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "startLine": 6,
+          "endLine": 9
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROCEDURE:PROGRAM_100:PROCEDURE:PROGRAM_200:QRPGLESRC/PROGRAM_200.SQLRPGLE:MAIN",
+      "type": "PROCEDURE",
+      "name": "PROCEDURE:PROGRAM_200:QRPGLESRC/PROGRAM_200.SQLRPGLE:MAIN",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 6,
+          "endLine": 17
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROCEDURE:PROGRAM_100:PROCEDURE:PROGRAM_300:QRPGLESRC/PROGRAM_300.RPGLE:MAIN",
+      "type": "PROCEDURE",
+      "name": "PROCEDURE:PROGRAM_300:QRPGLESRC/PROGRAM_300.RPGLE:MAIN",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 6,
+          "endLine": 9
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:DRIVER_100",
+      "type": "PROGRAM",
+      "name": "DRIVER_100",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:FILE_100",
+      "type": "PROGRAM",
+      "name": "FILE_100",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:FILE:QCLLESRC/DRIVER_100.CLLE",
+      "type": "PROGRAM",
+      "name": "FILE:QCLLESRC/DRIVER_100.CLLE",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:FILE:QDDSSRC/FILE_100.PF",
+      "type": "PROGRAM",
+      "name": "FILE:QDDSSRC/FILE_100.PF",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:FILE:QRPGLESRC/PROGRAM_100.RPGLE",
+      "type": "PROGRAM",
+      "name": "FILE:QRPGLESRC/PROGRAM_100.RPGLE",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:FILE:QRPGLESRC/PROGRAM_200.SQLRPGLE",
+      "type": "PROGRAM",
+      "name": "FILE:QRPGLESRC/PROGRAM_200.SQLRPGLE",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:FILE:QRPGLESRC/PROGRAM_300.RPGLE",
+      "type": "PROGRAM",
+      "name": "FILE:QRPGLESRC/PROGRAM_300.RPGLE",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:MODULE:PROGRAM_100:QRPGLESRC/PROGRAM_100.RPGLE:PROGRAM_100",
+      "type": "PROGRAM",
+      "name": "MODULE:PROGRAM_100:QRPGLESRC/PROGRAM_100.RPGLE:PROGRAM_100",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "startLine": 2,
+          "endLine": 2
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:MODULE:PROGRAM_200:QRPGLESRC/PROGRAM_200.SQLRPGLE:PROGRAM_200",
+      "type": "PROGRAM",
+      "name": "MODULE:PROGRAM_200:QRPGLESRC/PROGRAM_200.SQLRPGLE:PROGRAM_200",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 2,
+          "endLine": 2
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:MODULE:PROGRAM_300:QRPGLESRC/PROGRAM_300.RPGLE:PROGRAM_300",
+      "type": "PROGRAM",
+      "name": "MODULE:PROGRAM_300:QRPGLESRC/PROGRAM_300.RPGLE:PROGRAM_300",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 2,
+          "endLine": 2
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:NATIVE_FILE:ETCH",
+      "type": "PROGRAM",
+      "name": "NATIVE_FILE:ETCH",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 11,
+          "endLine": 11
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:NATIVE_FILE:FILE_100",
+      "type": "PROGRAM",
+      "name": "NATIVE_FILE:FILE_100",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QDDSSRC/FILE_100.pf",
+          "startLine": 1,
+          "endLine": 1
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QDDSSRC/FILE_100.pf",
+          "line": 1
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:NATIVE_FILE:FILE_200",
+      "type": "PROGRAM",
+      "name": "NATIVE_FILE:FILE_200",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:PROGRAM_100",
+      "type": "PROGRAM",
+      "name": "PROGRAM_100",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:PROGRAM_200",
+      "type": "PROGRAM",
+      "name": "PROGRAM_200",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:PROGRAM_300",
+      "type": "PROGRAM",
+      "name": "PROGRAM_300",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "type": "PROGRAM",
+      "name": "PROGRAM:PROGRAM_100",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QCLLESRC/DRIVER_100.clle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_200",
+      "type": "PROGRAM",
+      "name": "PROGRAM:PROGRAM_200",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "startLine": 7,
+          "endLine": 7
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 7
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_300",
+      "type": "PROGRAM",
+      "name": "PROGRAM:PROGRAM_300",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "startLine": 8,
+          "endLine": 8
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 8
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:SQL:0001",
+      "type": "PROGRAM",
+      "name": "SQL:0001",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 7
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:SQL:0002",
+      "type": "PROGRAM",
+      "name": "SQL:0002",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 13,
+          "endLine": 16
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:TABLE:ETCH",
+      "type": "PROGRAM",
+      "name": "TABLE:ETCH",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 11,
+          "endLine": 11
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:TABLE:FILE_100",
+      "type": "PROGRAM",
+      "name": "TABLE:FILE_100",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:TABLE:FILE_200",
+      "type": "PROGRAM",
+      "name": "TABLE:FILE_200",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_100:TABLE:TABLE_100",
+      "type": "PROGRAM",
+      "name": "TABLE:TABLE_100",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 7,
+          "endLine": 11
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 7
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "SOURCE_MEMBER:PROGRAM_100:QCLLESRC/DRIVER_100.CLLE",
+      "type": "SOURCE_MEMBER",
+      "name": "QCLLESRC/DRIVER_100.CLLE",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QCLLESRC/DRIVER_100.clle",
+          "startLine": null,
+          "endLine": null
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QCLLESRC/DRIVER_100.clle",
+          "line": null
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "SOURCE_MEMBER:PROGRAM_100:QDDSSRC/FILE_100.PF",
+      "type": "SOURCE_MEMBER",
+      "name": "QDDSSRC/FILE_100.PF",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QDDSSRC/FILE_100.pf",
+          "startLine": null,
+          "endLine": null
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QDDSSRC/FILE_100.pf",
+          "line": null
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "SOURCE_MEMBER:PROGRAM_100:QRPGLESRC/PROGRAM_100.RPGLE",
+      "type": "SOURCE_MEMBER",
+      "name": "QRPGLESRC/PROGRAM_100.RPGLE",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "startLine": null,
+          "endLine": null
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": null
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "SOURCE_MEMBER:PROGRAM_100:QRPGLESRC/PROGRAM_200.SQLRPGLE",
+      "type": "SOURCE_MEMBER",
+      "name": "QRPGLESRC/PROGRAM_200.SQLRPGLE",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": null,
+          "endLine": null
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": null
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "SOURCE_MEMBER:PROGRAM_100:QRPGLESRC/PROGRAM_300.RPGLE",
+      "type": "SOURCE_MEMBER",
+      "name": "QRPGLESRC/PROGRAM_300.RPGLE",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": null,
+          "endLine": null
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": null
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "TABLE:PROGRAM_100:ETCH:FILE",
+      "type": "TABLE",
+      "name": "ETCH",
+      "kind": "FILE",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 11,
+          "endLine": 11
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "TABLE:PROGRAM_100:FILE_100:DISK",
+      "type": "TABLE",
+      "name": "FILE_100",
+      "kind": "DISK",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "TABLE:PROGRAM_100:FILE_200:DISK",
+      "type": "TABLE",
+      "name": "FILE_200",
+      "kind": "DISK",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "TABLE:PROGRAM_100:TABLE_100:SQL",
+      "type": "TABLE",
+      "name": "TABLE_100",
+      "kind": "SQL",
+      "program": "PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 7,
+          "endLine": 7
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 13,
+          "endLine": 13
+        }
+      ],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 7
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "BOUND_PROCEDURE_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROCEDURE:PROGRAM_100:PROCEDURE:PROGRAM_100:QRPGLESRC/PROGRAM_100.RPGLE:MAIN",
+      "type": "BOUND_PROCEDURE_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROCEDURE:PROGRAM_100:PROCEDURE:PROGRAM_100:QRPGLESRC/PROGRAM_100.RPGLE:MAIN",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "BOUND_PROCEDURE_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_200->PROCEDURE:PROGRAM_100:PROCEDURE:PROGRAM_200:QRPGLESRC/PROGRAM_200.SQLRPGLE:MAIN",
+      "type": "BOUND_PROCEDURE_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_200",
+      "to": "PROCEDURE:PROGRAM_100:PROCEDURE:PROGRAM_200:QRPGLESRC/PROGRAM_200.SQLRPGLE:MAIN",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "BOUND_PROCEDURE_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_300->PROCEDURE:PROGRAM_100:PROCEDURE:PROGRAM_300:QRPGLESRC/PROGRAM_300.RPGLE:MAIN",
+      "type": "BOUND_PROCEDURE_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_300",
+      "to": "PROCEDURE:PROGRAM_100:PROCEDURE:PROGRAM_300:QRPGLESRC/PROGRAM_300.RPGLE:MAIN",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:FILE:QCLLESRC/DRIVER_100.CLLE",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:FILE:QCLLESRC/DRIVER_100.CLLE",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:FILE:QDDSSRC/FILE_100.PF",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:FILE:QDDSSRC/FILE_100.PF",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:FILE:QRPGLESRC/PROGRAM_100.RPGLE",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:FILE:QRPGLESRC/PROGRAM_100.RPGLE",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:FILE:QRPGLESRC/PROGRAM_200.SQLRPGLE",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:FILE:QRPGLESRC/PROGRAM_200.SQLRPGLE",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:FILE:QRPGLESRC/PROGRAM_300.RPGLE",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:FILE:QRPGLESRC/PROGRAM_300.RPGLE",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:MODULE:PROGRAM_100:QRPGLESRC/PROGRAM_100.RPGLE:PROGRAM_100",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:MODULE:PROGRAM_100:QRPGLESRC/PROGRAM_100.RPGLE:PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:NATIVE_FILE:ETCH",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:NATIVE_FILE:ETCH",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:NATIVE_FILE:FILE_100",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:NATIVE_FILE:FILE_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QDDSSRC/FILE_100.pf",
+          "line": 1
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:NATIVE_FILE:FILE_200",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:NATIVE_FILE:FILE_200",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QCLLESRC/DRIVER_100.clle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_200",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_200",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 7
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_300",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_300",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 8
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:SQL:0001",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:SQL:0001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 7
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:SQL:0002",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:SQL:0002",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:TABLE:ETCH",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:TABLE:ETCH",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:TABLE:FILE_100",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:TABLE:FILE_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:TABLE:FILE_200",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:TABLE:FILE_200",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100->PROGRAM:PROGRAM_100:TABLE:TABLE_100",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_100",
+      "to": "PROGRAM:PROGRAM_100:TABLE:TABLE_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 7
+        },
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_200->PROGRAM:PROGRAM_100:MODULE:PROGRAM_200:QRPGLESRC/PROGRAM_200.SQLRPGLE:PROGRAM_200",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_200",
+      "to": "PROGRAM:PROGRAM_100:MODULE:PROGRAM_200:QRPGLESRC/PROGRAM_200.SQLRPGLE:PROGRAM_200",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_300->PROGRAM:PROGRAM_100:MODULE:PROGRAM_300:QRPGLESRC/PROGRAM_300.RPGLE:PROGRAM_300",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:PROGRAM:PROGRAM_300",
+      "to": "PROGRAM:PROGRAM_100:MODULE:PROGRAM_300:QRPGLESRC/PROGRAM_300.RPGLE:PROGRAM_300",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:SQL:0001->PROGRAM:PROGRAM_100:TABLE:TABLE_100",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:SQL:0001",
+      "to": "PROGRAM:PROGRAM_100:TABLE:TABLE_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 7
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_100:SQL:0002->PROGRAM:PROGRAM_100:TABLE:TABLE_100",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_100:SQL:0002",
+      "to": "PROGRAM:PROGRAM_100:TABLE:TABLE_100",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    }
+  ],
+  "summary": {
+    "nodeCount": 41,
+    "edgeCount": 25,
+    "unresolvedCount": 0
+  }
+}

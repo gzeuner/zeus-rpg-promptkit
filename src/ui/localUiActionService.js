@@ -22,6 +22,7 @@ const {
   resolveProfile,
 } = require('../config/runtimeConfig');
 const { ANALYZE_RUN_MANIFEST_FILE } = require('../analyze/analyzeRunManifest');
+const { buildWorkingContextView, loadWorkingContext } = require('../context/workingContext');
 const { DEFAULT_SOURCE_FILES } = require('../fetch/fetchService');
 const {
   buildEnvProfileConflictMessage,
@@ -38,7 +39,7 @@ const {
   getGuidedDiscoveryAction,
 } = require('./guidedConfigWizardModel');
 
-const ALLOWED_DOCTOR_KEYS = new Set(['profile', 'showResolved']);
+const ALLOWED_DOCTOR_KEYS = new Set(['profile', 'showResolved', 'probe']);
 const ALLOWED_ANALYZE_WORKSPACE_KEYS = new Set(['profile', 'program', 'member', 'safeSharing']);
 const ALLOWED_DISCOVERY_PREVIEW_KEYS = new Set(['profile', 'actionId']);
 const ALLOWED_AI_SESSION_PROMPT_KEYS = new Set([
@@ -49,6 +50,7 @@ const ALLOWED_AI_SESSION_PROMPT_KEYS = new Set([
   'doctorSummary',
 ]);
 const FETCH_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
+  'preview-fetch-plan',
   'discover-source-libraries',
   'discover-source-physical-files',
   'discover-members',
@@ -65,7 +67,7 @@ const KNOWN_ANALYZE_FAILURE_CODES = new Set([
   'SOURCE_REQUIRED',
   'SOURCE_ROOT_MISSING',
 ]);
-const ALLOWED_DOCTOR_SUMMARY_KEYS = new Set(['status', 'summary', 'finishedAt']);
+const ALLOWED_DOCTOR_SUMMARY_KEYS = new Set(['status', 'summary', 'finishedAt', 'probe']);
 const ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS = new Set([
   'total',
   'pass',
@@ -74,6 +76,7 @@ const ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS = new Set([
   'info',
   'skip',
 ]);
+const ALLOWED_DOCTOR_PROBE_KEYS = new Set(['requested', 'total', 'ok', 'fail', 'functions']);
 
 class UiActionError extends Error {
   constructor(message, statusCode = 400) {
@@ -221,10 +224,57 @@ function normalizeDoctorSummary(rawDoctorSummary) {
     }
   }
 
+  let probe = null;
+  if (rawDoctorSummary.probe !== undefined) {
+    if (!isPlainObject(rawDoctorSummary.probe)) {
+      throw new UiActionError('Invalid payload: doctorSummary.probe must be an object', 400);
+    }
+    const unknownProbeKeys = Object.keys(rawDoctorSummary.probe).filter(
+      key => !ALLOWED_DOCTOR_PROBE_KEYS.has(key)
+    );
+    if (unknownProbeKeys.length > 0) {
+      throw new UiActionError(
+        `Invalid payload: unsupported doctorSummary.probe key(s): ${unknownProbeKeys.join(', ')}`,
+        400
+      );
+    }
+    probe = {
+      requested: Boolean(rawDoctorSummary.probe.requested),
+      total: 0,
+      ok: 0,
+      fail: 0,
+      functions: [],
+    };
+    for (const key of ['total', 'ok', 'fail']) {
+      if (rawDoctorSummary.probe[key] === undefined) continue;
+      const numericValue = Number(rawDoctorSummary.probe[key]);
+      if (!Number.isInteger(numericValue) || numericValue < 0) {
+        throw new UiActionError(
+          `Invalid payload: doctorSummary.probe.${key} must be a non-negative integer`,
+          400
+        );
+      }
+      probe[key] = numericValue;
+    }
+    if (rawDoctorSummary.probe.functions !== undefined) {
+      if (!Array.isArray(rawDoctorSummary.probe.functions)) {
+        throw new UiActionError(
+          'Invalid payload: doctorSummary.probe.functions must be an array',
+          400
+        );
+      }
+      probe.functions = rawDoctorSummary.probe.functions
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+        .slice(0, 20);
+    }
+  }
+
   return {
     status,
     summary,
     finishedAt: finishedAt || null,
+    probe,
   };
 }
 
@@ -241,9 +291,11 @@ function normalizeDoctorPayload(rawPayload) {
   const profile = validateProfileName(rawPayload.profile);
   const showResolved =
     rawPayload.showResolved === undefined ? false : Boolean(rawPayload.showResolved);
+  const probe = rawPayload.probe === undefined ? false : Boolean(rawPayload.probe);
   return {
     profile,
     showResolved,
+    probe,
   };
 }
 
@@ -608,6 +660,28 @@ function buildObjectDiscoveryConfigContext(fetchConfig, workflowConfig, preparat
   };
 }
 
+function buildDiscoveryWorkingContext(cwd = process.cwd()) {
+  const loaded = loadWorkingContext({ cwd });
+  const view = buildWorkingContextView({ cwd });
+  const active = view.active && typeof view.active === 'object' ? view.active : {};
+  return {
+    exists: loaded.exists,
+    source: loaded.exists ? 'workspace-file' : 'default-empty-context',
+    activeKind: String(view.activeKind || 'sourceCode'),
+    profile: String(view.profile || active.profile || '').trim() || null,
+    scope: {
+      system: active.system || null,
+      library: active.library || active.schema || null,
+      sourceFile: active.sourceFile || null,
+      table: active.table || null,
+      member: active.member || null,
+      objectType: active.objectType || null,
+      objectName: active.objectName || null,
+    },
+    containsCredentials: false,
+  };
+}
+
 function isExpectedAnalyzeFailure(error) {
   const code = String((error && error.code) || '')
     .trim()
@@ -738,6 +812,7 @@ function createLocalUiActionService({
     const args = {
       profile: payload.profile,
       'show-resolved': payload.showResolved,
+      probe: payload.probe,
     };
 
     const doctorResult = await Promise.resolve(doctorExecutor(args, { cwd, env }));
@@ -768,6 +843,15 @@ function createLocalUiActionService({
           status: entry.status,
           details: entry.details,
         })),
+        probeRows: Array.isArray(doctorResult && doctorResult.probeRows)
+          ? doctorResult.probeRows.map(entry => ({
+              system: entry && entry.system ? String(entry.system) : null,
+              profile: entry && entry.profile ? String(entry.profile) : payload.profile,
+              functionName: entry && entry.functionName ? String(entry.functionName) : null,
+              status: entry && entry.status ? String(entry.status) : null,
+              details: entry && entry.details ? String(entry.details) : null,
+            }))
+          : [],
       },
       notes: payload.showResolved
         ? [
@@ -905,6 +989,7 @@ function createLocalUiActionService({
   async function runDiscoveryPreviewAction(rawPayload) {
     const payload = normalizeDiscoveryPreviewPayload(rawPayload);
     const startedAt = new Date();
+    const workingContext = buildDiscoveryWorkingContext(cwd);
     let configContext = null;
 
     if (FETCH_CONFIG_DERIVED_DISCOVERY_ACTIONS.has(payload.actionId)) {
@@ -980,16 +1065,23 @@ function createLocalUiActionService({
       finishedAt: finishedAt.toISOString(),
       durationMs: finishedAt.getTime() - startedAt.getTime(),
       input: payload,
+      workingContext,
       result: preview,
       notes:
         preview.previewKind === 'config-derived-local-preview'
           ? [
               'This preview was derived locally from resolved runtime configuration only.',
               'No remote discovery or DB2 access was executed for this UI response.',
+              workingContext.exists
+                ? 'The reviewed Working Context is shown separately as the operator scope checkpoint.'
+                : 'No Working Context file exists yet; the GUI should require context review before continuing.',
             ]
           : [
               'This preview is explicit about not executing remote discovery yet.',
               'Use the CLI as the operational foundation until GUI-backed discovery is wired to read-only backend flows.',
+              workingContext.exists
+                ? 'The reviewed Working Context is shown separately as the operator scope checkpoint.'
+                : 'No Working Context file exists yet; the GUI should require context review before continuing.',
             ],
     };
   }
@@ -1068,6 +1160,7 @@ function createLocalUiActionService({
     normalizeDiscoveryPreviewPayload,
     normalizeDoctorPayload,
     buildDiscoveryConfigContext,
+    buildDiscoveryWorkingContext,
     buildDb2DiscoveryConfigContext,
     buildObjectDiscoveryConfigContext,
     validateProfileName,
@@ -1079,6 +1172,7 @@ module.exports = {
   UiActionError,
   createLocalUiActionService,
   buildDiscoveryConfigContext,
+  buildDiscoveryWorkingContext,
   buildDb2DiscoveryConfigContext,
   buildObjectDiscoveryConfigContext,
   normalizeAnalyzeExistingWorkspacePayload,

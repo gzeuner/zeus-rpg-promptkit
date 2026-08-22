@@ -2075,7 +2075,7 @@
   },
   "notes": [
     "DB2 metadata export skipped (reproducible mode or --skip-db2-metadata).",
-    "Skipped file SOURCE_ROOT/QDDSSRC/FILE_200.lf: object is not iterable (cannot read property Symbol(Symbol.iterator))",
+    "Skipped file SOURCE_ROOT\\QDDSSRC\\FILE_200.lf: object is not iterable (cannot read property Symbol(Symbol.iterator))",
     "Test data extraction was skipped because no DB2 connection configuration was available."
   ],
   "optimization": {
@@ -2098,7 +2098,7 @@
       }
     }
   },
-  "estimatedTokens": 8687,
+  "estimatedTokens": 8728,
   "analysisCache": {
     "enabled": true,
     "sourceScan": {
@@ -2110,7 +2110,7 @@
       "invalidations": 0,
       "writes": 5,
       "entryCount": 5,
-      "cacheDir": "OUTPUT_ROOT/.zeus-cache/source-scans"
+      "cacheDir": "OUTPUT_ROOT\\.zeus-cache\\source-scans"
     },
     "db2Metadata": {
       "status": "skipped",

@@ -10,14 +10,14 @@
     "startedAt": "2000-01-01T00:00:00.000Z",
     "completedAt": "2000-01-01T00:00:00.000Z",
     "durationMs": 0,
-    "cwd": "WORKSPACE_ROOT",
-    "outputDir": "OUTPUT_ROOT/PROGRAM_100",
+    "cwd": "SAFE_SHARING_WORKSPACE",
+    "outputDir": "SAFE_SHARING_OUTPUT_DIR",
     "reproducible": true
   },
   "inputs": {
-    "program": "PROGRAM_100",
-    "sourceRoot": "SOURCE_ROOT",
-    "outputRoot": "OUTPUT_ROOT",
+    "program": "PROGRAM_001",
+    "sourceRoot": "SAFE_SHARING_SOURCE_ROOT",
+    "outputRoot": "SAFE_SHARING_OUTPUT_ROOT",
     "options": {
       "optimizeContextEnabled": true,
       "denseLevel": null,
@@ -41,15 +41,15 @@
           "PHONE"
         ],
         "allowTables": [
-          "DATA_EXAMPLE.CUSTOMERS",
-          "DATA_EXAMPLE.ORDERS"
+          "SCHEMA_001.CUSTOMERS",
+          "SCHEMA_001.ORDERS"
         ],
         "denyTables": [
-          "DATA_EXAMPLE.AUDIT_LOG"
+          "SCHEMA_001.AUDIT_LOG"
         ],
         "maskRules": [
           {
-            "schema": "DATA_EXAMPLE",
+            "schema": "SCHEMA_001",
             "table": "CUSTOMERS",
             "columns": [
               "PHONE"
@@ -152,43 +152,43 @@
       }
     },
     "sourceSnapshot": {
-      "root": "SOURCE_ROOT",
+      "root": "SAFE_SHARING_SOURCE_ROOT",
       "fileCount": 6,
       "fingerprint": "dd03395e6333a70a13113a0c243bb4656a15d38f7ce2170f6e13aacb33d22816",
       "contentFingerprint": "dd03395e6333a70a13113a0c243bb4656a15d38f7ce2170f6e13aacb33d22816",
       "files": [
         {
-          "path": "QCLLESRC/DRIVER_100.clle",
+          "path": "SOURCE_FILE_001.clle",
           "sizeBytes": 36,
           "mtimeMs": null,
           "sha256": "a0483086294615b3f6161fd35a525c31adcff516c031f2823835c8516f9ebf6e"
         },
         {
-          "path": "QDDSSRC/FILE_100.pf",
+          "path": "SOURCE_FILE_002.pf",
           "sizeBytes": 118,
           "mtimeMs": null,
           "sha256": "e9913181a46f8018ee0bf3826b510d792dd7d529c1a9c946ab1ed92a3627d189"
         },
         {
-          "path": "QDDSSRC/FILE_200.lf",
+          "path": "SOURCE_FILE_010.lf",
           "sizeBytes": 72,
           "mtimeMs": null,
           "sha256": "828df66bbfb8d45ccc72471d2d577e47fb26b8cc434691de7687a37130e9ad11"
         },
         {
-          "path": "QRPGLESRC/PROGRAM_100.rpgle",
+          "path": "SOURCE_FILE_003.rpgle",
           "sizeBytes": 140,
           "mtimeMs": null,
           "sha256": "45800c0ea725d5e77617dee7a5bbccff6816cd6e59d50dfd4f4306d4de808c1d"
         },
         {
-          "path": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "path": "SOURCE_FILE_004.sqlrpgle",
           "sizeBytes": 266,
           "mtimeMs": null,
           "sha256": "3a7f37e6957a8d4447e3dfd72caf4307182e43b3e83fd6bdfbfb353d1edeb253"
         },
         {
-          "path": "QRPGLESRC/PROGRAM_300.rpgle",
+          "path": "SOURCE_FILE_005.rpgle",
           "sizeBytes": 148,
           "mtimeMs": null,
           "sha256": "269ca2663ea11ea37699f6f33e104219adedbd10fd4ab5d87825c01c98e2c48b"
@@ -207,7 +207,7 @@
         "value": "42ba1564c2d9c75eb6762e1350b08cf1f15f96aa58efbd4dd76c282b6adffec2"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "42ba1564c2d9c75eb6762e1350b08cf1f15f96aa58efbd4dd76c282b6adffec2",
       "exists": true
@@ -221,7 +221,7 @@
         "value": "a29966d24b584e3c3af9b5ffa59d39f833ecf5a468e846474c4219b00f6aceff"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "a29966d24b584e3c3af9b5ffa59d39f833ecf5a468e846474c4219b00f6aceff",
       "exists": true
@@ -235,7 +235,7 @@
         "value": "18ac76df3e3b7bc0c55c887924cfa7f2525838d0d2d6a60f724cca8581296a36"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "18ac76df3e3b7bc0c55c887924cfa7f2525838d0d2d6a60f724cca8581296a36",
       "exists": true
@@ -249,7 +249,7 @@
         "value": "39a25d1b0671bd170b1606d0f320f94d172af99f4fdf689221b0b1aa064b65d7"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "39a25d1b0671bd170b1606d0f320f94d172af99f4fdf689221b0b1aa064b65d7",
       "exists": true
@@ -263,7 +263,7 @@
         "value": "de24e7faac5aca867e4d6e557c77d699db7086178ae9074fe67dd6696f928d38"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "de24e7faac5aca867e4d6e557c77d699db7086178ae9074fe67dd6696f928d38",
       "exists": true
@@ -277,7 +277,7 @@
         "value": "4c3bc6bf647938693ea0952f899754f1b78063f435534f6f9c7fc23302692ea7"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "4c3bc6bf647938693ea0952f899754f1b78063f435534f6f9c7fc23302692ea7",
       "exists": true
@@ -291,7 +291,7 @@
         "value": "4b587b86a94535d6cb86df5791e2e679f1b001d413c92f50ca3ddbccdee36980"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "4b587b86a94535d6cb86df5791e2e679f1b001d413c92f50ca3ddbccdee36980",
       "exists": true
@@ -305,7 +305,7 @@
         "value": "789ba5500682822ae91650183ba7e21f5197ee6e5e79a4b9ceb23fe43e63887d"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "789ba5500682822ae91650183ba7e21f5197ee6e5e79a4b9ceb23fe43e63887d",
       "exists": true
@@ -319,7 +319,7 @@
         "value": "79ad9bbec542e31fd36d703ce17b351ec48fac55b7709ac66ff8e6dda8478c20"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "79ad9bbec542e31fd36d703ce17b351ec48fac55b7709ac66ff8e6dda8478c20",
       "exists": true
@@ -333,7 +333,7 @@
         "value": "7ce4d6b1f0f700bada8174be12d2feb4a1b8af7843e3dca45030551c9b86a512"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "7ce4d6b1f0f700bada8174be12d2feb4a1b8af7843e3dca45030551c9b86a512",
       "exists": true
@@ -347,7 +347,7 @@
         "value": "f9b02d9f6f5eafc2464d18d89c98eaa02596b23672bf8a0c8dac2da1c8b3fadb"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "f9b02d9f6f5eafc2464d18d89c98eaa02596b23672bf8a0c8dac2da1c8b3fadb",
       "exists": true
@@ -361,7 +361,7 @@
         "value": "1371b6bd0a695e79bf92b143b844cec6655f3fc176b12d5045d6e4b4c6d972e2"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "1371b6bd0a695e79bf92b143b844cec6655f3fc176b12d5045d6e4b4c6d972e2",
       "exists": true
@@ -375,7 +375,7 @@
         "value": "27fdcf045b252148a8984dddfcfd332e2052302e6b667abb451a6f4fcf9234e4"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "27fdcf045b252148a8984dddfcfd332e2052302e6b667abb451a6f4fcf9234e4",
       "exists": true
@@ -389,7 +389,7 @@
         "value": "a3376ddc48d37ec6cf7f947f8fe3a330c6ec011bb3441bd4609ad7614b338a31"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "a3376ddc48d37ec6cf7f947f8fe3a330c6ec011bb3441bd4609ad7614b338a31",
       "exists": true
@@ -403,7 +403,7 @@
         "value": "620d833ed36a2f8667c7eb7af96209d05831a108e4c3b9d8d0d62e7031a27b84"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "620d833ed36a2f8667c7eb7af96209d05831a108e4c3b9d8d0d62e7031a27b84",
       "exists": true
@@ -417,7 +417,7 @@
         "value": "4371c90bc0d1af0dfb47a928d28b2c86f9858be08c78149390ee6d5f98540af7"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "4371c90bc0d1af0dfb47a928d28b2c86f9858be08c78149390ee6d5f98540af7",
       "exists": true
@@ -431,7 +431,7 @@
         "value": "8009c38cb994af7250d0080bc454a07fcf80e0b576a53b9a1772670725868216"
       },
       "producer": "analyze",
-      "schema": "zeus.artifact-reference@1",
+      "schema": "SCHEMA_004",
       "safeSharing": "none",
       "sha256": "8009c38cb994af7250d0080bc454a07fcf80e0b576a53b9a1772670725868216",
       "exists": true
@@ -458,7 +458,7 @@
       "invalidations": 0,
       "writes": 5,
       "entryCount": 5,
-      "cacheDir": "OUTPUT_ROOT\\.zeus-cache\\source-scans"
+      "cacheDir": "SAFE_SHARING_OUTPUT_ROOT\\.zeus-cache\\source-scans"
     },
     "db2Metadata": {
       "status": "skipped",
@@ -521,7 +521,7 @@
           "invalidations": 0,
           "writes": 5,
           "entryCount": 5,
-          "cacheDir": "OUTPUT_ROOT\\.zeus-cache\\source-scans"
+          "cacheDir": "SAFE_SHARING_OUTPUT_ROOT\\.zeus-cache\\source-scans"
         },
         "analysisArtifactCacheEntries": 0,
         "scannedFileCount": 5,
@@ -649,7 +649,7 @@
           "invalidations": 0,
           "writes": 5,
           "entryCount": 5,
-          "cacheDir": "OUTPUT_ROOT\\.zeus-cache\\source-scans"
+          "cacheDir": "SAFE_SHARING_OUTPUT_ROOT\\.zeus-cache\\source-scans"
         },
         "sourceSnippetFound": true
       },
@@ -795,17 +795,17 @@
         "policy": {
           "allowTables": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "CUSTOMERS"
             },
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "ORDERS"
             }
           ],
           "denyTables": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "AUDIT_LOG"
             }
           ],
@@ -816,7 +816,7 @@
           ],
           "maskRules": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "CUSTOMERS",
               "columns": [
                 "PHONE"

@@ -139,6 +139,28 @@ test('config-derived discovery preview stays local-only and honest about source 
   assert.ok(preview.notes.some(entry => /does not contact IBM i/i.test(entry)));
 });
 
+test('fetch plan preview exposes bounded local routing without executing a fetch', () => {
+  const preview = buildDiscoveryActionPreview({
+    actionId: 'preview-fetch-plan',
+    profile: 'dev',
+    configContext: {
+      sourceLibrary: 'APPLIB',
+      sourceFiles: ['QRPGLESRC'],
+      members: ['ORDERPGM'],
+      outputRoot: './rpg_sources',
+      matchesDefaultSourceFiles: false,
+    },
+  });
+
+  assert.equal(preview.status, 'config-preview-ready');
+  assert.equal(preview.implemented, true);
+  assert.equal(preview.readOnly, true);
+  assert.equal(preview.scope, 'local fetch plan');
+  assert.equal(preview.resolvedScope.sourceLibrary, 'APPLIB');
+  assert.equal(preview.resolvedScope.memberFilterCount, 1);
+  assert.ok(preview.notes.some(entry => /does not contact IBM i/i.test(entry)));
+});
+
 test('DB2 discovery preview can stay local-only while deriving honest metadata scope hints', () => {
   const preview = buildDiscoveryActionPreview({
     actionId: 'discover-db2-tables',

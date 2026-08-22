@@ -22,8 +22,13 @@ test('ui metadata payload exposes config, command, and workflow card contracts',
   assert.ok(Array.isArray(payload.guidedConfiguration.steps));
   assert.ok(Array.isArray(payload.guidedConfiguration.intents));
   assert.ok(Array.isArray(payload.guidedConfiguration.discoveryActions));
+  assert.ok(
+    payload.guidedConfiguration.discoveryActions.some(entry => entry.id === 'preview-fetch-plan')
+  );
   assert.ok(payload.setup);
   assert.equal(payload.setup.primaryAction.actionPath, '/api/ui-actions/doctor');
+  assert.equal(payload.setup.probeAction.actionPath, '/api/ui-actions/doctor');
+  assert.equal(payload.setup.probeAction.payload.probe, true);
   assert.ok(payload.aiSessionStarter);
   assert.equal(payload.aiSessionStarter.actionPath, '/api/ui-actions/generate-ai-session-prompt');
   assert.ok(payload.profileWizard);

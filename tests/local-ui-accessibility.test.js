@@ -30,6 +30,16 @@ test('local UI shell contains keyboard-first and secure setup contracts', () => 
   assert.match(html, /prefers-reduced-motion/);
   assert.match(html, /forced-colors/);
   assert.match(html, /data-setup-checklist/);
+  assert.match(html, /data-operator-readiness/);
+  assert.match(html, /Test Connections \(read-only\)/);
+  assert.match(html, /api\/ui-context/);
+  assert.match(html, /Working context/);
+  assert.match(html, /workingContextWizardSection/);
+  assert.match(html, /Preview Changes/);
+  assert.match(html, /Save Reviewed Context/);
+  assert.match(html, /data-context-kind/);
+  assert.match(html, /Review and save the Working Context before running a GUI discovery preview/);
+  assert.match(html, /data-discovery-preview/);
   assert.match(html, /profileKeyWizardSection/);
   assert.match(html, /pluginCatalogSection/);
   assert.match(html, /credentials, key material, and plaintext secrets are never shown here/i);

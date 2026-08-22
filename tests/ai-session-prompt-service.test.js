@@ -70,6 +70,7 @@ test('AI session prompt service replaces the goal placeholder and preserves safe
     doctorSummary: {
       status: 'warning',
       summary: { pass: 2, warn: 1, fail: 0, info: 0, skip: 0 },
+      probe: { requested: true, total: 2, ok: 1, fail: 1, functions: ['fetch', 'metadata-db'] },
       finishedAt: '2026-06-19T12:00:00.000Z',
     },
   });
@@ -78,6 +79,10 @@ test('AI session prompt service replaces the goal placeholder and preserves safe
   assert.match(result.prompt, /Profile: development/);
   assert.match(result.prompt, /Environment hint: sandbox/);
   assert.match(result.prompt, /Doctor summary: status=warning/);
+  assert.match(
+    result.prompt,
+    /probe\(requested=true, total=2, ok=1, fail=1, functions=fetch,metadata-db\)/
+  );
   assert.match(result.prompt, /Analyze program ORDERPGM and summarize dependencies\./);
   assert.match(result.prompt, /docs\/tool-catalog\.md/);
   assert.doesNotMatch(result.prompt, /\[INSERT USER GOAL HERE\]/);

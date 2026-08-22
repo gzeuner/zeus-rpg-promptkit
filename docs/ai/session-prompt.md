@@ -1,7 +1,7 @@
 ---
 Title: AI Session Prompt
 Description: Standardized session-start prompt for CLI/MCP-first, evidence-first, and safety-first work with Zeus.
-Last Updated: 2026-08-17
+Last Updated: 2026-08-22
 ---
 
 # Zeus RPG PromptKit - AI Session Prompt (v2.5)
@@ -30,6 +30,8 @@ Core operating model:
 - Always explain why you ran a command or MCP tool and what evidence it produced
 - Do not invent tool or command names
 - Always inspect the current working context before reading source or metadata; state the system, library/schema, source file, and member explicitly.
+- Treat the operator handoff as a checkpoint: environment loaded in the active shell, Doctor completed, and the working context reviewed before deeper work.
+- At the start of every consequential step, repeat the exact scope (`system / library-or-schema / source-file-or-table / member`) and identify whether it came from working context, an explicit argument, or a profile default.
 
 Authoritative references (priority order when MCP is available):
 1) MCP `tools/list`, `zeus.agent.bootstrap`, and `zeus.help` (live allowlist + structured help - prefer these first)
@@ -58,11 +60,12 @@ Execution protocol:
 3) Call `zeus.context.get`; if the system/library/file/member is wrong or unset, use `zeus.context.set` and report the change.
 4) Load the environment explicitly in the current shell if it is not already loaded.
 5) Run `doctor` first (`zeus.doctor`).
-6) If a local knowledge root is known, call `zeus.project-knowledge.check` first. Use `lookup` only when it reports `fresh`; `sync` requires explicit local-write authorization and allowlisting.
-7) Optional: call `zeus.project-knowledge.discover` for older integrated operations (fail-closed; do not thrash missing ops).
-8) Use read-only CLI or MCP commands to collect evidence.
-9) Run `analyze` or `workflow` locally when no fresh snapshot exists or new evidence is needed, then deepen only as needed.
-10) Summarize findings with snapshot/evidence references and note both freshness scope and the risk level of the next step.
+6) When connectivity is relevant, run `doctor --probe` explicitly and distinguish configuration validation from live read-only connection results.
+7) If a local knowledge root is known, call `zeus.project-knowledge.check` first. Use `lookup` only when it reports `fresh`; `sync` requires explicit local-write authorization and allowlisting.
+8) Optional: call `zeus.project-knowledge.discover` for older integrated operations (fail-closed; do not thrash missing ops).
+9) Use read-only CLI or MCP commands to collect evidence.
+10) Run `analyze` or `workflow` locally when no fresh snapshot exists or new evidence is needed, then deepen only as needed.
+11) Summarize findings with snapshot/evidence references and note both freshness scope and the risk level of the next step.
 
 Tooling quick reference (CLI names; MCP tools are typically `zeus.<name>`):
 | Command / MCP family | Safety | Purpose | Notes |
@@ -138,7 +141,7 @@ source ./config/load-env.sh <environment>
 node cli/zeus.js doctor --profile <profile> --probe --show-resolved
 
 # 3. Make the exact working location explicit
-node cli/zeus.js context show
+node cli/zeus.js context show --json
 
 # 4. Fetch only when needed and approved
 node cli/zeus.js fetch --profile <profile>

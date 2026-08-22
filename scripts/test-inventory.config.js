@@ -73,6 +73,7 @@ module.exports = {
       'tests/consolidated-projectIntelligence.test.js',
       'tests/consolidated-productSurface.test.js',
       'tests/working-context.test.js',
+      'tests/working-context-wizard-service.test.js',
     ],
   },
   exclusions: [],

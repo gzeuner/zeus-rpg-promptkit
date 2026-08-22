@@ -492,6 +492,13 @@ input[type="search"]{
 .checklist-item strong{display:block;font-size:14px}
 .checklist-item p{margin:3px 0 0;color:var(--muted);font-size:12px;line-height:1.4}
 .checklist-item .token{align-self:start}
+.operator-readiness{display:grid;gap:12px;border-color:rgba(43,183,163,.55);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(225,247,242,.9))}
+.operator-steps{display:grid;gap:8px;list-style:none;margin:0;padding:0}
+.operator-step{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.76)}
+.operator-step.ready{border-color:rgba(22,101,52,.4)}
+.operator-step strong{display:block;font-size:14px}
+.operator-step p{margin:3px 0 0;color:var(--muted);font-size:12px;line-height:1.4}
+.operator-step .token{align-self:start}
 .plugin-catalog{display:grid;gap:8px;max-height:460px;overflow:auto;padding-right:4px}
 .plugin-entry{display:grid;gap:5px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
 .plugin-entry strong{font-size:13px}
@@ -680,6 +687,7 @@ const s={
   uiActions:{
     doctor:{
       profile:'dev',
+      probe:false,
       running:false,
       error:null,
       result:null
@@ -711,6 +719,21 @@ const s={
       copyStatus:'',
       expanded:false
     }
+  },
+  workingContext:{
+    loading:false,
+    error:null,
+    payload:null
+  },
+  workingContextWizard:{
+    draft:null,
+    preview:null,
+    loading:false,
+    previewing:false,
+    saving:false,
+    dirty:false,
+    error:null,
+    status:''
   },
   profileWizard:{
     loading:false,
@@ -1393,6 +1416,100 @@ async function loadUiMetadata(){
     s.uiMetadata.error=error.message||String(error);
   }finally{
     s.uiMetadata.loading=false;
+  }
+}
+
+async function loadWorkingContextState(){
+  s.workingContext.loading=true;
+  s.workingContext.error=null;
+  try{
+    const payload=await getJson('/api/ui-context');
+    s.workingContext.payload=payload;
+    if(!s.workingContextWizard.dirty){
+      s.workingContextWizard.draft=workingContextDraftFromPayload(payload);
+      s.workingContextWizard.preview=null;
+    }
+  }catch(error){
+    s.workingContext.error=error.message||String(error);
+    s.workingContext.payload=null;
+  }finally{
+    s.workingContext.loading=false;
+  }
+}
+
+function workingContextDraftFromPayload(payload){
+  const source=payload&&typeof payload==='object'?payload:{};
+  const resources=source.resources&&typeof source.resources==='object'?source.resources:{};
+  const fields={
+    sourceCode:['profile','system','library','sourceFile','member','localRoot','path','ifsPath'],
+    objects:['profile','system','library','objectType','objectName'],
+    metadata:['profile','system','schema','table'],
+    data:['profile','system','schema','table']
+  };
+  return {
+    activeKind:['sourceCode','objects','metadata','data'].includes(String(source.activeKind||''))?String(source.activeKind):'sourceCode',
+    profile:String(source.profile||'').trim(),
+    resources:Object.fromEntries(Object.entries(fields).map(([kind,names])=>[kind,Object.fromEntries(names.map((name)=>[name,String(resources[kind]&&resources[kind][name]||'').trim()]))]))
+  };
+}
+
+function ensureWorkingContextDraft(){
+  if(!s.workingContextWizard.draft){
+    s.workingContextWizard.draft=workingContextDraftFromPayload(s.workingContext.payload||{});
+  }
+  return s.workingContextWizard.draft;
+}
+
+function setWorkingContextDraftField(kind,field,value){
+  const draft=ensureWorkingContextDraft();
+  if(kind==='root') draft[field]=value;
+  else if(draft.resources&&draft.resources[kind]) draft.resources[kind][field]=value;
+  s.workingContextWizard.dirty=true;
+  s.workingContextWizard.preview=null;
+  s.workingContextWizard.error=null;
+  s.workingContextWizard.status='Draft changed. Preview it before saving.';
+}
+
+async function previewWorkingContextDraft(){
+  const draft=ensureWorkingContextDraft();
+  s.workingContextWizard.previewing=true;
+  s.workingContextWizard.error=null;
+  try{
+    s.workingContextWizard.preview=await sendJson('POST','/api/ui-context/preview',{draft});
+    s.workingContextWizard.status='Preview ready. Review the changes before saving.';
+  }catch(error){
+    s.workingContextWizard.preview=null;
+    s.workingContextWizard.error=error.message||String(error);
+  }finally{
+    s.workingContextWizard.previewing=false;
+  }
+}
+
+async function saveWorkingContextDraft(){
+  const draft=ensureWorkingContextDraft();
+  const preview=s.workingContextWizard.preview;
+  if(!preview||!preview.fingerprint||!preview.baseFingerprint){
+    s.workingContextWizard.error='Preview the Working Context draft first. Saving requires an explicit reviewed diff.';
+    return;
+  }
+  s.workingContextWizard.saving=true;
+  s.workingContextWizard.error=null;
+  try{
+    const result=await sendJson('POST','/api/ui-context/save',{
+      draft,
+      confirm:true,
+      baseFingerprint:preview.baseFingerprint,
+      previewFingerprint:preview.fingerprint
+    });
+    s.workingContext.payload=result.context;
+    s.workingContextWizard.draft=workingContextDraftFromPayload(result.context);
+    s.workingContextWizard.preview=null;
+    s.workingContextWizard.dirty=false;
+    s.workingContextWizard.status='Working Context saved locally. Doctor should be run again.';
+  }catch(error){
+    s.workingContextWizard.error=error.message||String(error);
+  }finally{
+    s.workingContextWizard.saving=false;
   }
 }
 
@@ -2159,6 +2276,9 @@ function buildAiSessionDoctorSummaryPayload(doctorResult){
   const summary=doctorResult.result&&doctorResult.result.summary&&typeof doctorResult.result.summary==='object'
     ? doctorResult.result.summary
     : null;
+  const probeRows=doctorResult.result&&Array.isArray(doctorResult.result.probeRows)
+    ? doctorResult.result.probeRows
+    : [];
   return {
     status:String(doctorResult.status||'').trim()||'unknown',
     summary:summary?{
@@ -2169,6 +2289,13 @@ function buildAiSessionDoctorSummaryPayload(doctorResult){
       info:Number(summary.info||0),
       skip:Number(summary.skip||0)
     }:null,
+    probe:{
+      requested:Boolean(doctorResult.input&&doctorResult.input.probe),
+      total:probeRows.length,
+      ok:probeRows.filter((entry)=>String(entry&&entry.status||'').toUpperCase()==='OK').length,
+      fail:probeRows.filter((entry)=>String(entry&&entry.status||'').toUpperCase()==='FAIL').length,
+      functions:Array.from(new Set(probeRows.map((entry)=>String(entry&&entry.functionName||'').trim()).filter(Boolean))).slice(0,20)
+    },
     finishedAt:doctorResult.finishedAt||null
   };
 }
@@ -2181,6 +2308,9 @@ function renderAiSessionStarterPanel(options){
   const state=safeOptions.state&&typeof safeOptions.state==='object'?safeOptions.state:(s.uiActions.aiSession||{});
   const doctorResult=safeOptions.doctorResult&&typeof safeOptions.doctorResult==='object'?safeOptions.doctorResult:null;
   const doctorAvailable=Boolean(doctorResult);
+  const contextSummary=operatorContextSummary(s.workingContext.payload);
+  const contextAvailable=Boolean(contextSummary.exists);
+  const promptBlocked=!doctorAvailable||!contextAvailable;
   const includeDoctorSummary=doctorAvailable
     ? state.includeDoctorSummary!==false
     : false;
@@ -2205,8 +2335,8 @@ function renderAiSessionStarterPanel(options){
     ? metadata.capabilityGuidance.approvalRequiredCommands
     : [];
   const doctorStatusText=doctorAvailable
-    ? 'Doctor result available. The generated prompt can include a compact summary, but the assistant should still run doctor first.'
-    : 'No doctor result is available yet. Run Check Readiness first for a better session handoff.';
+    ? 'Doctor result available. The generated prompt can include a compact summary, but the assistant should still re-check live context first.'
+    : 'No doctor result is available yet. Run configuration validation or the explicit read-only probe first.';
   return '<div class="sub"><details'+(starterOpen?' open':'')+' id="aiSessionStarterDetails"><summary>Start AI Session</summary><p class="small">Use this after checking readiness. It creates a safe prompt for an AI assistant and stays local-only.</p>'+
     renderHintList([
       { title:'Boundary', body:'The Local UI cannot load env vars into your already-open terminal. Use the helper commands below, then validate with Doctor.' },
@@ -2294,14 +2424,19 @@ function renderProfileWizardPanel(){
   '</div>';
 }
 
-async function runDoctorReadinessAction(){
+async function runDoctorReadinessAction(probeOverride){
   const profile=String(s.uiActions.doctor.profile||'dev').trim()||'dev';
+  const probe=probeOverride===undefined
+    ? Boolean(s.uiActions.doctor.probe)
+    : Boolean(probeOverride);
+  s.uiActions.doctor.probe=probe;
   s.uiActions.doctor.running=true;
   s.uiActions.doctor.error=null;
   try{
     const payload=await sendJson('POST','/api/ui-actions/doctor',{
       profile,
-      showResolved:false
+      showResolved:false,
+      probe
     });
     s.uiActions.doctor.result=payload;
   }catch(error){
@@ -2315,6 +2450,11 @@ async function runDoctorReadinessAction(){
 async function runDiscoveryPreviewAction(){
   const profile=String(s.uiActions.discovery.profile||s.uiActions.doctor.profile||'dev').trim()||'dev';
   const actionId=String(s.uiActions.discovery.actionId||'').trim()||'discover-source-libraries';
+  if(!s.workingContext.payload||s.workingContext.payload.exists!==true){
+    s.uiActions.discovery.error='Review and save the Working Context before running a GUI discovery preview.';
+    s.uiActions.discovery.result=null;
+    return;
+  }
   s.uiActions.discovery.running=true;
   s.uiActions.discovery.error=null;
   try{
@@ -2382,6 +2522,96 @@ function renderDoctorDiagnostics(result){
   return '<div class="hint-list"><div class="hint-item"><strong>'+esc(heading)+'</strong><p>'+(warningCount>0?'These warnings explain why the selected profile and the active environment may point to different DB targets.':'Doctor returned structured diagnostics for review.')+'</p>'+(summaryParts.length?'<p class="small">'+esc(summaryParts.join(' • '))+'</p>':'')+'</div>'+diagnostics.map((entry)=>renderDoctorDiagnosticEntry(entry)).join('')+'</div>';
 }
 
+function renderDoctorProbeRows(result){
+  const rows=result&&result.result&&Array.isArray(result.result.probeRows)
+    ? result.result.probeRows.filter((entry)=>entry&&typeof entry==='object')
+    : [];
+  if(!rows.length) return '';
+  const body=rows.map((entry)=>'<div class="field-item"><strong>'+esc(String(entry.functionName||'connection'))+'</strong><div class="tokens"><div class="token '+esc(statusToneClass(String(entry.status||'').toLowerCase()))+'">'+esc(String(entry.status||'unknown'))+'</div>'+(entry.system?'<div class="token">target: '+esc(String(entry.system))+'</div>':'')+'</div><p class="small">'+esc(String(entry.details||'No probe details available.'))+'</p></div>').join('');
+  return '<details open><summary>Read-only connection probe results</summary><div class="field-list">'+body+'</div></details>';
+}
+
+function operatorContextSummary(payload){
+  const context=payload&&typeof payload==='object'?payload:{};
+  const active=context.active&&typeof context.active==='object'?context.active:{};
+  const location=[
+    active.system,
+    active.library||active.schema,
+    active.sourceFile||active.table,
+    active.member
+  ].map((value)=>String(value||'').trim()).filter(Boolean);
+  return {
+    exists:Boolean(context.exists),
+    activeKind:String(context.activeKind||'sourceCode'),
+    profile:String(context.profile||active.profile||'').trim(),
+    location:location.length?location.join(' / '):'No system / library / source / member selected',
+    updatedAt:String(context.updatedAt||'').trim()
+  };
+}
+
+function renderWorkingContextWizard(){
+  const state=s.workingContextWizard||{};
+  const draft=ensureWorkingContextDraft();
+  const preview=state.preview&&typeof state.preview==='object'?state.preview:null;
+  const open=Boolean(state.dirty||state.error||state.status||preview);
+  const resourceFields={
+    sourceCode:[
+      ['system','System'],['library','Library'],['sourceFile','Source file'],['member','Member'],
+      ['localRoot','Local source root'],['path','Local source path'],['ifsPath','IFS path']
+    ],
+    objects:[['system','System'],['library','Library'],['objectType','Object type'],['objectName','Object name']],
+    metadata:[['system','System'],['schema','Schema / library'],['table','Metadata table']],
+    data:[['system','System'],['schema','Schema / library'],['table','Data table']]
+  };
+  const labelFor=(kind)=>({sourceCode:'Source code',objects:'Objects',metadata:'Metadata',data:'Data'}[kind]||kind);
+  const inputFor=(kind,field,label)=>{
+    const value=String(draft.resources&&draft.resources[kind]&&draft.resources[kind][field]||'');
+    return '<label>'+esc(label)+'<input data-context-kind="'+escAttr(kind)+'" data-context-field="'+escAttr(field)+'" value="'+escAttr(value)+'" placeholder="'+escAttr(field==='system'?'configured system':'optional')+'"></label>';
+  };
+  const resourceHtml=Object.entries(resourceFields).map(([kind,fields])=>
+    '<details class="context-resource"'+(kind===draft.activeKind?' open':'')+'><summary>'+esc(labelFor(kind))+'</summary><div class="field-grid">'+fields.map(([field,label])=>inputFor(kind,field,label)).join('')+'</div></details>'
+  ).join('');
+  const changes=preview&&Array.isArray(preview.changes)?preview.changes:[];
+  const diffHtml=preview
+    ? '<div class="field-item"><strong>Reviewed changes</strong>'+(changes.length?'<div class="field-list">'+changes.map((entry)=>'<div class="field-item"><strong>'+esc(String(entry.field||''))+'</strong><p><code>'+esc(String(entry.before||'(empty)'))+'</code> → <code>'+esc(String(entry.after||'(empty)'))+'</code></p></div>').join('')+'</div>':'<p>No changes detected.</p>')+(Array.isArray(preview.warnings)&&preview.warnings.length?renderHintList(preview.warnings.map((entry)=>({body:String(entry)}))):'')+'</div>'
+    : '<div class="empty">Preview is required before saving.</div>';
+  return '<div class="sub"><details id="workingContextWizardSection"'+(open?' open':'')+'><summary>Working Context Wizard</summary><p class="small">Set the exact first point to check: system, library/schema, source file or table, and member. This only saves local routing metadata; it never changes credentials or remote data.</p>'+
+    '<div class="field-grid"><label>Active resource<select data-context-root-field="activeKind"><option value="sourceCode"'+(draft.activeKind==='sourceCode'?' selected':'')+'>Source code</option><option value="objects"'+(draft.activeKind==='objects'?' selected':'')+'>Objects</option><option value="metadata"'+(draft.activeKind==='metadata'?' selected':'')+'>Metadata</option><option value="data"'+(draft.activeKind==='data'?' selected':'')+'>Data</option></select></label><label>Profile hint<input data-context-root-field="profile" value="'+escAttr(String(draft.profile||''))+'" placeholder="dev"></label></div>'+resourceHtml+
+    '<div class="actions"><button class="btn" data-context-preview="1">'+esc(state.previewing?'Previewing...':'Preview Changes')+'</button><button class="btn primary" data-context-save="1">'+esc(state.saving?'Saving...':'Save Reviewed Context')+'</button><button class="btn" data-context-reload-draft="1">Reload Context</button></div>'+ (state.status?'<p class="small '+esc(statusToneClass(state.status))+'">'+esc(state.status)+'</p>':'')+(state.error?renderHintList([{title:'Working Context error',body:String(state.error)}]):'')+diffHtml+
+    '</details></div>';
+}
+
+function renderOperatorReadinessPanel(options){
+  const safe=options&&typeof options==='object'?options:{};
+  const doctorState=safe.doctorState&&typeof safe.doctorState==='object'?safe.doctorState:{};
+  const doctorResult=doctorState.result&&typeof doctorState.result==='object'?doctorState.result:null;
+  const context=operatorContextSummary(s.workingContext.payload);
+  const doctorRan=Boolean(doctorResult);
+  const probeRequested=Boolean(doctorResult&&doctorResult.input&&doctorResult.input.probe);
+  const probeHealthy=probeRequested&&doctorResult.status!=='failed';
+  const contextReady=context.exists&&Boolean(context.profile||context.location!=='No system / library / source / member selected');
+  const promptReady=Boolean(safe.aiSessionState&&safe.aiSessionState.result&&safe.aiSessionState.result.prompt);
+  const metadata=aiSessionStarterMetadata()||{};
+  const envLoading=metadata.envLoading||{};
+  const status=(ready,label,detail)=>({ready,label,detail});
+  const items=[
+    status(Boolean(envLoading.powerShell||envLoading.bash),'handoff','Load the selected environment in the same shell that starts the UI; the browser cannot change an existing shell.'),
+    status(doctorRan&&(!probeRequested||probeHealthy),doctorRan?(probeRequested?'checked':'validated'):'pending',doctorRan?(probeRequested?'Doctor and the explicit read-only probe returned.':'Configuration validated; run the read-only probe before remote work.'):'Run configuration validation first.'),
+    status(contextReady,'ready',contextReady?'Working context loaded from .zeus/working-context.json.':'Read the workspace working context before source, metadata, or data work.'),
+    status(promptReady,'pending',promptReady?'Session prompt generated and ready to copy.':'Generate the session prompt only after Doctor and context review.')
+  ];
+  const itemHtml=items.map((entry,index)=>'<li class="operator-step '+(entry.ready?'ready':'pending')+'"><div class="checklist-index" aria-hidden="true">'+String(index+1)+'</div><div><strong>'+esc(['Environment handoff','Doctor / connection probe','Working context','AI session prompt'][index])+'</strong><p class="small">'+esc(entry.detail)+'</p></div><div class="token '+(entry.ready?'ok':'pending')+'">'+esc(entry.label)+'</div></li>').join('');
+  const contextAction=contextReady?'Refresh context':'Read working context';
+  const promptBlocked=!doctorRan||!contextReady;
+  return '<section class="sub operator-readiness" aria-labelledby="operatorReadinessTitle" data-operator-readiness>'+
+    '<div><h3 id="operatorReadinessTitle">AI Session Readiness</h3><p>Follow this handoff before asking an AI assistant to inspect sources, metadata, data, or journals. The GUI displays status; CLI/MCP remain authoritative.</p></div>'+
+    '<ol class="operator-steps">'+itemHtml+'</ol>'+
+    '<div class="field-list">'+
+      '<div class="field-item"><strong>Environment handoff</strong><p>Run the command below in the terminal before starting or restarting the local UI server. Values are never read into browser responses.</p><div class="preview"><pre>'+esc((envLoading.powerShell&&envLoading.powerShell.command)||'. .\\config\\load-env.ps1 -Environment &lt;environment&gt;')+' / '+esc((envLoading.bash&&envLoading.bash.command)||'source ./config/load-env.sh &lt;environment&gt;')+'</pre></div><p class="small">The selected environment name is only a routing hint; the running server process is what Doctor actually checks.</p></div>'+
+      '<div class="field-item"><strong>Working context</strong><p>'+esc(context.location)+'</p>'+renderTokenRow(['kind: '+context.activeKind,context.profile?'profile: '+context.profile:'profile unset',context.updatedAt?'updated: '+context.updatedAt:'not updated'],'workflow-meta')+'<div class="actions"><button class="btn" data-context-refresh="1">'+esc(contextAction)+'</button></div>'+(s.workingContext.error?'<p class="small danger">'+esc(s.workingContext.error)+'</p>':'')+'</div>'+
+    '</div><div class="small">'+(promptBlocked?'Session prompt stays guided until Doctor and a working context have been reviewed.':'The handoff is complete enough to generate a safe session prompt; the assistant should still re-check live context before remote work.')+'</div></section>';
+}
+
 function selectedGuidedIntent(){
   const intents=guidedConfigIntents();
   return intents.find((entry)=>entry.id===s.uiMetadata.selectedGuidedIntent)||intents[0]||null;
@@ -2409,6 +2639,9 @@ function renderGuidedCliPreview(intent,profile){
 function renderGuidedDiscoveryPreview(result){
   const preview=result&&result.result?result.result:null;
   if(!preview) return '';
+  const workingContext=result&&result.workingContext&&typeof result.workingContext==='object'
+    ? result.workingContext
+    : null;
   const candidates=Array.isArray(preview.candidates)?preview.candidates:[];
   const warnings=Array.isArray(preview.warnings)?preview.warnings:[];
   const resolvedScope=preview&&preview.resolvedScope&&typeof preview.resolvedScope==='object'?preview.resolvedScope:null;
@@ -2443,7 +2676,10 @@ function renderGuidedDiscoveryPreview(result){
   const previewMode=preview.previewKind==='config-derived-local-preview'
     ? 'This preview is config-derived and local-only.'
     : (preview.implemented===false?'This action is intentionally stubbed and does not execute discovery yet.':'');
-  return '<div class="hint-list"><div class="hint-item"><strong>'+esc(preview.title||'Discovery Preview')+'</strong><div class="tokens"><div class="token '+esc(statusToneClass(preview.status||'not-ready'))+'">'+esc(preview.status||'not-ready')+'</div><div class="token">Safety: '+esc(preview.safetyLevel||'S2')+'</div><div class="token">'+esc(preview.scope||'read-only')+'</div></div>'+previewSummary+'<p>'+esc(previewMode)+'</p>'+scopeTokens+'</div></div>'+candidatePanel+warningPanel+commandPreview+(Array.isArray(preview.notes)&&preview.notes.length?'<div class="hint-list">'+preview.notes.map((note)=>'<div class="hint-item"><p>'+esc(String(note))+'</p></div>').join('')+'</div>':'');
+  const contextScope=workingContext
+    ? '<div class="field-item"><strong>Working Context checkpoint</strong><div class="tokens"><div class="token '+(workingContext.exists?'ok':'warning')+'">'+esc(workingContext.exists?'reviewed':'missing')+'</div><div class="token">kind: '+esc(String(workingContext.activeKind||'sourceCode'))+'</div>'+(workingContext.profile?'<div class="token">profile: '+esc(String(workingContext.profile))+'</div>':'')+'</div><p class="small">'+esc([workingContext.scope&&workingContext.scope.system,workingContext.scope&&workingContext.scope.library,workingContext.scope&&workingContext.scope.sourceFile||workingContext.scope&&workingContext.scope.table,workingContext.scope&&workingContext.scope.member].map((value)=>String(value||'').trim()).filter(Boolean).join(' / ')||'No explicit system / library / source scope selected.')+'</p></div>'
+    : '';
+  return '<div class="hint-list"><div class="hint-item"><strong>'+esc(preview.title||'Discovery Preview')+'</strong><div class="tokens"><div class="token '+esc(statusToneClass(preview.status||'not-ready'))+'">'+esc(preview.status||'not-ready')+'</div><div class="token">Safety: '+esc(preview.safetyLevel||'S2')+'</div><div class="token">'+esc(preview.scope||'read-only')+'</div></div>'+previewSummary+'<p>'+esc(previewMode)+'</p>'+scopeTokens+contextScope+'</div></div>'+candidatePanel+warningPanel+commandPreview+(Array.isArray(preview.notes)&&preview.notes.length?'<div class="hint-list">'+preview.notes.map((note)=>'<div class="hint-item"><p>'+esc(String(note))+'</p></div>').join('')+'</div>':'');
 }
 
 function renderGuidedStepDetails(step,intent){
@@ -2811,9 +3047,12 @@ function renderConfigure(){
       doctorState,
       doctorStatusLabel
     })+
-    '<div class="sub"><h2>Doctor Readiness Check</h2><p>Run Zeus Doctor after the profile draft has been previewed and saved. Doctor reads saved profile data only and reports the effective configuration status as ready, warning, failed, or error.</p><div class="field-grid"><label>Profile Name<input id="configDoctorProfile" value="'+escAttr(profileForWizard)+'" placeholder="dev"></label></div><div class="actions"><button class="btn primary" data-config-doctor="1">'+esc(doctorState.running?'Checking...':'Check Readiness')+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div><div class="tokens"><div class="token '+esc(doctorTone)+'">Doctor: '+esc(doctorStatusLabel)+'</div><div class="token">profile: '+esc(profileForWizard)+'</div>'+(doctorResult?'<div class="token">duration: '+esc(String(doctorResult.durationMs||0))+' ms</div>':'')+'</div>'+
+    renderOperatorReadinessPanel({doctorState,aiSessionState})+
+    renderWorkingContextWizard()+
+    '<div class="sub"><h2>Doctor Readiness Check</h2><p>Validate the effective configuration first. Use the explicit read-only probe only when you want to test the configured IBM i / DB2 connections; it never writes remote data.</p><div class="field-grid"><label>Profile Name<input id="configDoctorProfile" value="'+escAttr(profileForWizard)+'" placeholder="dev"></label></div><div class="actions"><button class="btn" data-config-doctor="1">'+esc(doctorState.running&&!doctorState.probe?'Checking...':'Validate Configuration')+'</button><button class="btn primary" data-config-probe="1">'+esc(doctorState.running&&doctorState.probe?'Testing Connections...':'Test Connections (read-only)')+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div><div class="tokens"><div class="token '+esc(doctorTone)+'">Doctor: '+esc(doctorStatusLabel)+'</div><div class="token">profile: '+esc(profileForWizard)+'</div><div class="token">mode: '+esc(doctorState.probe?'read-only probe':'configuration only')+'</div>'+(doctorResult?'<div class="token">duration: '+esc(String(doctorResult.durationMs||0))+' ms</div>':'')+'</div>'+
     (doctorSummary?'<div class="hint-list"><div class="hint-item"><strong>Summary</strong><p>pass '+esc(String(doctorSummary.pass||0))+' • warn '+esc(String(doctorSummary.warn||0))+' • fail '+esc(String(doctorSummary.fail||0))+' • skip '+esc(String(doctorSummary.skip||0))+'</p><p class="small">'+esc(doctorHint)+'</p></div></div>':'<div class="hint-list"><div class="hint-item"><strong>Status</strong><p>'+esc(doctorHint)+'</p></div></div>')+
     doctorDiagnosticsPanel+
+    renderDoctorProbeRows(doctorResult)+
     (doctorDetails?'<details><summary>Show checks</summary><div class="preview"><pre>'+esc(doctorDetails)+'</pre></div></details>':'')+
     '</div>'+
     renderAiSessionStarterPanel({
@@ -3023,6 +3262,42 @@ function renderConfigure(){
     s.uiActions.aiSession.goal=value;
     s.uiActions.aiSession.copyStatus='';
   });
+  for(const node of root.querySelectorAll('[data-context-root-field]')){
+    const field=String(node.dataset.contextRootField||'').trim();
+    const apply=(value)=>setWorkingContextDraftField('root',field,value.trim());
+    node.oninput=(event)=>apply(String(event.target.value||''));
+    node.onchange=(event)=>apply(String(event.target.value||''));
+  }
+  for(const node of root.querySelectorAll('[data-context-kind][data-context-field]')){
+    const kind=String(node.dataset.contextKind||'').trim();
+    const field=String(node.dataset.contextField||'').trim();
+    const apply=(value)=>setWorkingContextDraftField(kind,field,value.trim());
+    node.oninput=(event)=>apply(String(event.target.value||''));
+    node.onchange=(event)=>apply(String(event.target.value||''));
+  }
+  for(const previewButton of root.querySelectorAll('[data-context-preview]')){
+    previewButton.onclick=async ()=>{
+      renderConfigure();
+      await previewWorkingContextDraft();
+      renderConfigure();
+    };
+  }
+  for(const saveButton of root.querySelectorAll('[data-context-save]')){
+    saveButton.onclick=async ()=>{
+      renderConfigure();
+      await saveWorkingContextDraft();
+      renderConfigure();
+    };
+  }
+  for(const reloadButton of root.querySelectorAll('[data-context-reload-draft]')){
+    reloadButton.onclick=async ()=>{
+      s.workingContextWizard.dirty=false;
+      s.workingContextWizard.preview=null;
+      s.workingContextWizard.error=null;
+      await loadWorkingContextState();
+      renderConfigure();
+    };
+  }
   const aiSessionDoctorSummary=root.querySelector('#aiSessionIncludeDoctorSummary');
   if(aiSessionDoctorSummary){
     aiSessionDoctorSummary.onchange=(event)=>{
@@ -3081,8 +3356,26 @@ function renderConfigure(){
       renderConfigure();
     };
   }
+  for(const probeButton of root.querySelectorAll('[data-config-probe]')){
+    probeButton.onclick=async ()=>{
+      const profileInput=q('configDoctorProfile');
+      if(profileInput){
+        const nextValue=String(profileInput.value||'').trim()||'dev';
+        s.uiActions.doctor.profile=nextValue;
+        s.uiActions.discovery.profile=nextValue;
+        s.uiActions.aiSession.profile=nextValue;
+      }
+      await runDoctorReadinessAction(true);
+      renderConfigure();
+    };
+  }
   for(const generateButton of root.querySelectorAll('[data-ai-session-generate]')){
     generateButton.onclick=async ()=>{
+      if(!s.uiActions.doctor.result||!s.workingContext.payload||s.workingContext.payload.exists!==true){
+        s.uiActions.aiSession.error='Review Doctor and the workspace working context before generating the AI session prompt.';
+        renderConfigure();
+        return;
+      }
       await runGenerateAiSessionPromptAction();
       renderConfigure();
     };
@@ -3096,8 +3389,15 @@ function renderConfigure(){
     refreshButton.onclick=async ()=>{
       await loadUiMetadata();
       await loadProfileWizardState();
+      await loadWorkingContextState();
       renderConfigure();
       if(s.tab==='home') renderHome();
+    };
+  }
+  for(const contextButton of root.querySelectorAll('[data-context-refresh]')){
+    contextButton.onclick=async ()=>{
+      await loadWorkingContextState();
+      renderConfigure();
     };
   }
   for(const button of root.querySelectorAll('[data-config-section]')){
@@ -4267,6 +4567,7 @@ async function boot(){
   await loadUiMetadata();
   await loadProfileWizardState();
   await loadProfileKeyWizardState();
+  await loadWorkingContextState();
   renderConfigure();
   await loadPromptBuilderData();
   await refreshRuns();

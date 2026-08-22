@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "contract": "zeus.run-manifest@1",
+  "tool": {
+    "name": "zeus-rpg-promptkit",
+    "command": "bundle"
+  },
+  "run": {
+    "status": "unknown",
+    "startedAt": "2026-08-22T18:34:14.792Z",
+    "completedAt": null,
+    "durationMs": null,
+    "cwd": null,
+    "outputDir": null,
+    "reproducible": false
+  },
+  "inputs": {
+    "program": "PROGRAM_100"
+  },
+  "artifacts": [
+    {
+      "path": "safe-sharing/ai_prompt_documentation.md",
+      "kind": "markdown",
+      "sizeBytes": 2341,
+      "sha256": "b5290f5ca583d0c33c66326da806b94c1decfd77c3a66815b9ad0bd11f752db6",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/ai-knowledge.json",
+      "kind": "json",
+      "sizeBytes": 71680,
+      "sha256": "8069ba7138beb421c89f36ddb81fa12c4befbcbb90d3c98d7c3d9a2078c5e2a6",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/analysis-index.json",
+      "kind": "json",
+      "sizeBytes": 58077,
+      "sha256": "3f55c16f90b014cd11a3b75a16b0129ceb20e3c672e7594674b79cbcb789d3e2",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/analyze-run-manifest.json",
+      "kind": "json",
+      "sizeBytes": 27938,
+      "sha256": "69f937eef17ddc918b832404f28122528ba7959ce9b56f4e332a94c66b63a6fc",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/architecture-report.md",
+      "kind": "markdown",
+      "sizeBytes": 2233,
+      "sha256": "9d0a298fcea412628b6bfe23208354fe13002ecd125afd6756b1fb4161e4bfb4",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/canonical-analysis.json",
+      "kind": "json",
+      "sizeBytes": 39349,
+      "sha256": "ad31fcd83ba5809ed7f9b3590836871ae277f757a8a37e25a2dc47080a9d5e1a",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/context-plan.json",
+      "kind": "json",
+      "sizeBytes": 4271,
+      "sha256": "eab18ddba20f135480604a66e4ca3e1e29628f06a03b6f44349a068c7e5ba6ef",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/context.json",
+      "kind": "json",
+      "sizeBytes": 19258,
+      "sha256": "b4e1a0719ec95f7d623376194e25bbb8360bbd619eee6daba95cf5526058b1da",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/dependency-graph.json",
+      "kind": "json",
+      "sizeBytes": 2230,
+      "sha256": "ac85892c24afd77c567bd1108defefa6ad599dbc5e05309430e81aa0448ef5a4",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/dependency-graph.md",
+      "kind": "markdown",
+      "sizeBytes": 1026,
+      "sha256": "8d9c3e4f49105bbe27b0746b259968daeecc764c12bb5baef7c1660cc0552cdf",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/evidence-graph.json",
+      "kind": "json",
+      "sizeBytes": 33149,
+      "sha256": "93b310f12cd8b3d6d9d13755699f5994b7ff700a97b8fcd67774684009ae40c0",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/optimized-context.json",
+      "kind": "json",
+      "sizeBytes": 62077,
+      "sha256": "89c1711f6b931318b1a201675452579aa9fa63d28dee3ccdc313cebaf61351a5",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/program-call-tree.json",
+      "kind": "json",
+      "sizeBytes": 2207,
+      "sha256": "19ad40ad45d18bbdc2d054fd643a488c67f735f35eada9df623c1383ba9772cf",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/program-call-tree.md",
+      "kind": "markdown",
+      "sizeBytes": 658,
+      "sha256": "b717ee2d9a93f0b4508902f5d4a30d53a5b68707853ddb38218465c09ff98a3c",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/redaction-manifest.json",
+      "kind": "json",
+      "sizeBytes": 1919,
+      "sha256": "4b7d838d67cd8f5ac2744815c9f3d29d096fa06566c0e61a52e224a0b2960021",
+      "source": "bundle-scan"
+    },
+    {
+      "path": "safe-sharing/report.md",
+      "kind": "markdown",
+      "sizeBytes": 5295,
+      "sha256": "d4eaf2213c4b44f4dd98dd6618bf820d617a5ea6af29a83e02dd5a1084361f0a",
+      "source": "bundle-scan"
+    }
+  ],
+  "program": "PROGRAM_100",
+  "generatedAt": "2026-08-22T18:34:14.793Z",
+  "files": [
+    "safe-sharing/ai_prompt_documentation.md",
+    "safe-sharing/ai-knowledge.json",
+    "safe-sharing/analysis-index.json",
+    "safe-sharing/analyze-run-manifest.json",
+    "safe-sharing/architecture-report.md",
+    "safe-sharing/canonical-analysis.json",
+    "safe-sharing/context-plan.json",
+    "safe-sharing/context.json",
+    "safe-sharing/dependency-graph.json",
+    "safe-sharing/dependency-graph.md",
+    "safe-sharing/evidence-graph.json",
+    "safe-sharing/optimized-context.json",
+    "safe-sharing/program-call-tree.json",
+    "safe-sharing/program-call-tree.md",
+    "safe-sharing/redaction-manifest.json",
+    "safe-sharing/report.md"
+  ],
+  "summary": {
+    "jsonFiles": 11,
+    "markdownFiles": 5,
+    "htmlFiles": 0,
+    "totalFiles": 16,
+    "totalSizeBytes": 333708
+  },
+  "safeSharing": {
+    "enabled": true,
+    "sourceDir": "safe-sharing",
+    "redactionManifestFile": "safe-sharing/redaction-manifest.json"
+  },
+  "analyzeRun": {
+    "schemaVersion": 1,
+    "manifestFile": "analyze-run-manifest.json",
+    "status": "succeeded",
+    "completedAt": "2000-01-01T00:00:00.000Z",
+    "sourceFingerprint": "dd03395e6333a70a13113a0c243bb4656a15d38f7ce2170f6e13aacb33d22816",
+    "artifactCount": 17
+  },
+  "sourceProvenance": null,
+  "reproducibility": {
+    "enabled": false,
+    "stableTimestamp": null,
+    "contentFingerprint": "478363311b3bdb269524f140d72c590474ef7808b9734e182a643f7098e27a60"
+  }
+}

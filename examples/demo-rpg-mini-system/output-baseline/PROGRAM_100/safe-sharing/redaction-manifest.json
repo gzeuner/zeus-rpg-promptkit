@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "kind": "safe-sharing-redaction-manifest",
+  "generatedAt": "2000-01-01T00:00:00.000Z",
+  "sourceArtifactCount": 18,
+  "redactedArtifactCount": 18,
+  "sourceArtifacts": [
+    "ai_prompt_documentation.md",
+    "ai-knowledge.json",
+    "analysis-index.json",
+    "analyze-run-manifest.json",
+    "architecture-report.md",
+    "architecture.html",
+    "canonical-analysis.json",
+    "context-plan.json",
+    "context.json",
+    "dependency-graph.json",
+    "dependency-graph.md",
+    "dependency-graph.mmd",
+    "evidence-graph.json",
+    "optimized-context.json",
+    "program-call-tree.json",
+    "program-call-tree.md",
+    "program-call-tree.mmd",
+    "report.md"
+  ],
+  "redactedArtifacts": [
+    "safe-sharing/ai_prompt_documentation.md",
+    "safe-sharing/ai-knowledge.json",
+    "safe-sharing/analysis-index.json",
+    "safe-sharing/analyze-run-manifest.json",
+    "safe-sharing/architecture-report.md",
+    "safe-sharing/architecture.html",
+    "safe-sharing/canonical-analysis.json",
+    "safe-sharing/context-plan.json",
+    "safe-sharing/context.json",
+    "safe-sharing/dependency-graph.json",
+    "safe-sharing/dependency-graph.md",
+    "safe-sharing/dependency-graph.mmd",
+    "safe-sharing/evidence-graph.json",
+    "safe-sharing/optimized-context.json",
+    "safe-sharing/program-call-tree.json",
+    "safe-sharing/program-call-tree.md",
+    "safe-sharing/program-call-tree.mmd",
+    "safe-sharing/report.md"
+  ],
+  "safeSharingDirectory": "safe-sharing",
+  "summary": {
+    "placeholderCounts": {
+      "PROGRAM": 5,
+      "SOURCE_FILE": 10,
+      "TABLE": 3,
+      "PROCEDURE": 1,
+      "SCHEMA": 4,
+      "VALUE": 1
+    },
+    "replacementCount": 27,
+    "dataValueCount": 1
+  },
+  "notes": [
+    "Reverse placeholder mappings are intentionally not exported.",
+    "Redacted artifacts preserve workflow structure but replace sensitive identifiers and extracted values."
+  ]
+}
