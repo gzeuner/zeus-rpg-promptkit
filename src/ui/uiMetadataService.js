@@ -29,11 +29,18 @@ const { PROFILE_KEY_WIZARD_METADATA } = require('./profileKeyWizardService');
 const {
   PLUGIN_CONTRACT_SCHEMA_VERSION,
   PLUGIN_KINDS,
-  buildPluginCatalog,
+  buildLivePluginCatalog,
   summarizePluginCatalog,
 } = require('./pluginWorkbenchContracts');
 
 const UI_METADATA_SCHEMA_VERSION = 1;
+
+function readPluginAllowlist(env = process.env) {
+  return String(env.ZEUS_UI_PLUGIN_ALLOWLIST || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+}
 
 const WORKFLOW_CARD_DEFINITIONS = Object.freeze([
   Object.freeze({
@@ -467,8 +474,17 @@ function deriveWorkflowCards(commandEntries = listCommandUiMetadata()) {
   });
 }
 
-function buildUiMetadataPayload() {
+function buildUiMetadataPayload({ env = process.env } = {}) {
   const commandEntries = listCommandUiMetadata();
+  const workflowCards = deriveWorkflowCards(commandEntries);
+  const roleProfiles = buildRoleProfileMetadata();
+  const pluginAllowlist = readPluginAllowlist(env);
+  const pluginCatalog = buildLivePluginCatalog({
+    commands: commandEntries,
+    workflows: workflowCards,
+    roles: roleProfiles.profiles,
+    allowlist: pluginAllowlist,
+  });
   return {
     schemaVersion: UI_METADATA_SCHEMA_VERSION,
     uiMode: 'metadata-workflow-shell',
@@ -488,15 +504,20 @@ function buildUiMetadataPayload() {
     pluginContracts: {
       schemaVersion: PLUGIN_CONTRACT_SCHEMA_VERSION,
       supportedKinds: PLUGIN_KINDS,
-      catalog: buildPluginCatalog([]),
-      summary: summarizePluginCatalog(buildPluginCatalog([])),
+      catalog: pluginCatalog,
+      summary: summarizePluginCatalog(pluginCatalog),
+      allowlist: {
+        mode: pluginAllowlist.length > 0 ? 'explicit' : 'all-live-built-ins',
+        source: pluginAllowlist.length > 0 ? 'ZEUS_UI_PLUGIN_ALLOWLIST' : 'default',
+        entries: pluginAllowlist,
+      },
       note: 'Optional plugins are declarative, local-only, allowlisted, and telemetry-free.',
     },
     commands: {
       categories: COMMAND_CATEGORIES,
       entries: commandEntries,
     },
-    workflowCards: deriveWorkflowCards(commandEntries),
+    workflowCards,
     aiWorkbench: buildAiWorkbenchMetadata(commandEntries),
     guidedWorkflow: {
       schemaVersion: 1,
@@ -515,7 +536,44 @@ function buildUiMetadataPayload() {
         'Compare recorded source and artifact hashes with files currently available locally.',
       route: '/api/runs/:program',
     },
-    roleProfiles: buildRoleProfileMetadata(),
+    roleProfiles,
+    setupChecklist: {
+      schemaVersion: 1,
+      title: 'Secure Setup Checklist',
+      summary:
+        'Confirm local profile routing, key readiness, effective runtime configuration, and evidence freshness in that order.',
+      localOnly: true,
+      tasks: [
+        {
+          id: 'profile',
+          title: 'Profile and source scope',
+          description: 'Choose or save the local profile and make workspace paths explicit.',
+          target: 'profileWizardSection',
+        },
+        {
+          id: 'key',
+          title: 'Local key readiness',
+          description: 'Verify local key storage without displaying key material.',
+          target: 'profileKeyWizardSection',
+        },
+        {
+          id: 'doctor',
+          title: 'Effective runtime configuration',
+          description: 'Run Doctor after profile and environment precedence are settled.',
+          target: 'configDoctorProfile',
+        },
+        {
+          id: 'evidence',
+          title: 'Evidence freshness',
+          description: 'Review recorded hashes before relying on an existing run.',
+          target: 'reports',
+        },
+      ],
+      boundaries: [
+        'The checklist never receives or displays credentials, key material, or plaintext secrets.',
+        'Evidence refresh remains read-only in the GUI; fetch and mutation stay explicit CLI workflows.',
+      ],
+    },
     accessibility: {
       schemaVersion: 1,
       keyboardFirst: true,

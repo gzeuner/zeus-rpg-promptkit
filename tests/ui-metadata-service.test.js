@@ -32,6 +32,25 @@ test('ui metadata payload exposes config, command, and workflow card contracts',
   assert.ok(payload.profileWizard.steps.length >= 6);
   assert.ok(Array.isArray(payload.workflowCards));
   assert.equal(payload.workflowCards.length, 6);
+  assert.equal(payload.pluginContracts.catalog.executable, false);
+  assert.equal(payload.pluginContracts.allowlist.mode, 'all-live-built-ins');
+  assert.ok(
+    payload.pluginContracts.catalog.plugins.some(entry => entry.allowlistKey === 'command:doctor')
+  );
+  assert.equal(payload.setupChecklist.tasks.length, 4);
+});
+
+test('ui metadata supports an explicit local plugin allowlist', () => {
+  const payload = buildUiMetadataPayload({
+    env: { ZEUS_UI_PLUGIN_ALLOWLIST: 'command:doctor, role:developer' },
+  });
+
+  assert.equal(payload.pluginContracts.allowlist.mode, 'explicit');
+  assert.deepEqual(payload.pluginContracts.allowlist.entries, ['command:doctor', 'role:developer']);
+  assert.deepEqual(
+    payload.pluginContracts.catalog.plugins.map(entry => entry.allowlistKey),
+    ['command:doctor', 'role:developer']
+  );
 });
 
 test('workflow cards are derived from command metadata categories', () => {
