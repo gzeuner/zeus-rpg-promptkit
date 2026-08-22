@@ -25,6 +25,13 @@ const {
 } = require('./aiSessionPromptService');
 const { buildGuidedConfigurationPayload } = require('./guidedConfigWizardModel');
 const { buildRoleProfileMetadata } = require('./guiWorkbenchContracts');
+const { PROFILE_KEY_WIZARD_METADATA } = require('./profileKeyWizardService');
+const {
+  PLUGIN_CONTRACT_SCHEMA_VERSION,
+  PLUGIN_KINDS,
+  buildPluginCatalog,
+  summarizePluginCatalog,
+} = require('./pluginWorkbenchContracts');
 
 const UI_METADATA_SCHEMA_VERSION = 1;
 
@@ -477,6 +484,14 @@ function buildUiMetadataPayload() {
     }),
     aiSessionStarter: buildAiSessionStarterMetadata(),
     profileWizard: PROFILE_WIZARD_METADATA,
+    profileKeyWizard: PROFILE_KEY_WIZARD_METADATA,
+    pluginContracts: {
+      schemaVersion: PLUGIN_CONTRACT_SCHEMA_VERSION,
+      supportedKinds: PLUGIN_KINDS,
+      catalog: buildPluginCatalog([]),
+      summary: summarizePluginCatalog(buildPluginCatalog([])),
+      note: 'Optional plugins are declarative, local-only, allowlisted, and telemetry-free.',
+    },
     commands: {
       categories: COMMAND_CATEGORIES,
       entries: commandEntries,
@@ -501,6 +516,15 @@ function buildUiMetadataPayload() {
       route: '/api/runs/:program',
     },
     roleProfiles: buildRoleProfileMetadata(),
+    accessibility: {
+      schemaVersion: 1,
+      keyboardFirst: true,
+      focusVisible: true,
+      reducedMotion: 'respected',
+      forcedColors: 'supported',
+      responsiveBreakpoints: ['1200px', '980px', '640px'],
+      liveRegions: ['subtitle', 'chips'],
+    },
   };
 }
 

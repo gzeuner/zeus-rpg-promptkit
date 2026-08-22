@@ -25,6 +25,10 @@ const { renderLocalUiShell } = require('./localUiShell');
 const { buildUiMetadataPayload } = require('./uiMetadataService');
 const { UiActionError, createLocalUiActionService } = require('./localUiActionService');
 const { ProfileWizardError, createProfileWizardService } = require('./profileWizardService');
+const {
+  ProfileKeyWizardError,
+  createProfileKeyWizardService,
+} = require('./profileKeyWizardService');
 const { createPromptWorkbenchService } = require('./promptWorkbenchService');
 const {
   collectSensitiveTermsFromEnv,
@@ -199,6 +203,7 @@ async function handleProfileWizardRequest({
   pathname,
   segments,
   profileWizardService,
+  profileKeyWizardService,
   sensitiveTerms = [],
 }) {
   const send = (statusCode, payload) => sendJson(response, statusCode, payload, { sensitiveTerms });
@@ -208,6 +213,26 @@ async function handleProfileWizardRequest({
   }
 
   try {
+    if (pathname === '/api/profile-wizard/key-state') {
+      if (request.method !== 'GET') {
+        sendMethodNotAllowed(response, ['GET']);
+        return true;
+      }
+      send(200, profileKeyWizardService.getState());
+      return true;
+    }
+
+    if (pathname === '/api/profile-wizard/key-init') {
+      if (request.method !== 'POST') {
+        sendMethodNotAllowed(response, ['POST']);
+        return true;
+      }
+      requireJsonRequest(request);
+      const payload = await readJsonBody(request);
+      send(200, profileKeyWizardService.initialize(payload));
+      return true;
+    }
+
     if (pathname === '/api/profile-wizard/state') {
       if (request.method !== 'GET') {
         sendMethodNotAllowed(response, ['GET']);
@@ -260,9 +285,11 @@ async function handleProfileWizardRequest({
     const statusCode =
       error instanceof ProfileWizardError
         ? error.statusCode
-        : /^invalid json body:|^request body exceeds/i.test(String(error && error.message))
-          ? 400
-          : 500;
+        : error instanceof ProfileKeyWizardError
+          ? error.statusCode
+          : /^invalid json body:|^request body exceeds/i.test(String(error && error.message))
+            ? 400
+            : 500;
     send(statusCode, {
       error:
         statusCode === 500
@@ -560,6 +587,7 @@ function createLocalUiRequestHandler({
   promptWorkbenchService,
   actionService,
   profileWizardService,
+  profileKeyWizardService,
   registryPath = null,
   sensitiveTerms = [],
 }) {
@@ -567,6 +595,8 @@ function createLocalUiRequestHandler({
   const service = promptWorkbenchService || createPromptWorkbenchService();
   const uiActionService = actionService || createLocalUiActionService();
   const resolvedProfileWizardService = profileWizardService || createProfileWizardService();
+  const resolvedProfileKeyWizardService =
+    profileKeyWizardService || createProfileKeyWizardService();
 
   return async function handleRequest(request, response) {
     const url = new URL(request.url, 'http://127.0.0.1');
@@ -605,6 +635,7 @@ function createLocalUiRequestHandler({
         pathname,
         segments,
         profileWizardService: resolvedProfileWizardService,
+        profileKeyWizardService: resolvedProfileKeyWizardService,
         sensitiveTerms,
       });
       if (profileWizardHandled) {
@@ -744,6 +775,7 @@ async function startLocalUiServer({
   templateStorePath,
   actionService,
   profileWizardService,
+  profileKeyWizardService,
   actionServiceOptions = {},
   registryPath = null,
   sensitiveTerms = [],
@@ -772,6 +804,12 @@ async function startLocalUiServer({
       cwd: actionServiceOptions.cwd || process.cwd(),
       env: actionServiceOptions.env || process.env,
     });
+  const resolvedProfileKeyWizardService =
+    profileKeyWizardService ||
+    createProfileKeyWizardService({
+      cwd: actionServiceOptions.cwd || process.cwd(),
+      env: actionServiceOptions.env || process.env,
+    });
   const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(process.env, sensitiveTerms);
   const server = http.createServer(
     createLocalUiRequestHandler({
@@ -779,6 +817,7 @@ async function startLocalUiServer({
       promptWorkbenchService,
       actionService: uiActionService,
       profileWizardService: resolvedProfileWizardService,
+      profileKeyWizardService: resolvedProfileKeyWizardService,
       registryPath: registryPath ? path.resolve(registryPath) : null,
       sensitiveTerms: resolvedSensitiveTerms,
     })
