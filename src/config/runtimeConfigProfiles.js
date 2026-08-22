@@ -162,7 +162,7 @@ function loadProfiles({
     // Secrets-Hygiene: warn on profile load if plaintext credentials still present (once per process)
     if (!warnedPlaintextProfiles) {
       try {
-        const hygiene = detectPlaintextSecrets({ cwd, checkProfiles: true, env: process.env });
+        const hygiene = detectPlaintextSecrets({ cwd, checkProfiles: true, env });
         if (hygiene.length > 0) {
           console.warn(
             `[WARN] Secrets-Hygiene: ${hygiene.length} Klartext-Credential(s) in .env oder Profilen erkannt beim Laden von Profilen.`

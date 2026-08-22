@@ -41,6 +41,11 @@ module.exports = {
       'tests/provider-offline.test.js',
     ],
     corpus: ['tests/scanner-corpus.test.js'],
+    e2e: [
+      'tests/e2e/gui-workbench.e2e.test.js',
+      'tests/e2e/mcp-stdio.e2e.test.js',
+      'tests/e2e/sftp-fetch-analyze-bundle.e2e.test.js',
+    ],
     benchmark: ['tests/analyze-benchmark.test.js', 'tests/project-intelligence-benchmark.test.js'],
     quality: [
       'tests/golden-quality.test.js',
