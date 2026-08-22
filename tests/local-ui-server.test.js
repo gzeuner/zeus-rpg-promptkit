@@ -6,6 +6,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const { startLocalUiServer } = require('../src/ui/localUiServer');
+const { createWorkingContextWizardService } = require('../src/ui/workingContextWizardService');
 
 const projectRoot = path.resolve(__dirname, '..');
 const cliPath = path.join(projectRoot, 'cli', 'zeus.js');
@@ -224,6 +225,7 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
       outputRoot,
       port: 0,
       templateStorePath,
+      workingContextWizardService: createWorkingContextWizardService({ cwd: tempRoot }),
       actionServiceOptions: {
         doctorExecutor: args => {
           if (args.profile === 'explode') {
@@ -435,6 +437,75 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.equal(profileKeyState.secretValuesInBrowser, false);
     assert.equal(JSON.stringify(profileKeyState).includes('internal-host.example'), false);
 
+    const uiContextResponse = await fetch(`${started.url}/api/ui-context`);
+    assert.equal(uiContextResponse.status, 200);
+    const uiContext = await uiContextResponse.json();
+    assert.equal(uiContext.kind, 'zeus-working-context');
+    assert.equal(uiContext.control.containsCredentials, false);
+    assert.equal(typeof uiContext.exists, 'boolean');
+    assert.equal(Object.prototype.hasOwnProperty.call(uiContext, 'storagePath'), false);
+    assert.equal(JSON.stringify(uiContext).includes('PASSWORD'), false);
+
+    const contextDraft = {
+      activeKind: 'sourceCode',
+      profile: 'dev',
+      resources: {
+        sourceCode: {
+          profile: 'dev',
+          system: 'dev-system',
+          library: 'app-lib',
+          sourceFile: 'QRPGLESRC',
+          member: 'ORDERPGM',
+          localRoot: './workspace/source',
+          path: './workspace/source/ORDERPGM.rpgle',
+          ifsPath: null,
+        },
+        objects: {},
+        metadata: {},
+        data: {},
+      },
+    };
+    const contextPreviewResponse = await fetch(`${started.url}/api/ui-context/preview`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ draft: contextDraft }),
+    });
+    assert.equal(contextPreviewResponse.status, 200);
+    const contextPreview = await contextPreviewResponse.json();
+    assert.equal(contextPreview.action, 'working-context-preview');
+    assert.equal(contextPreview.proposed.active.member, 'ORDERPGM');
+    assert.equal(Object.prototype.hasOwnProperty.call(contextPreview, 'storagePath'), false);
+    assert.equal(JSON.stringify(contextPreview).includes('PASSWORD'), false);
+
+    const contextSaveResponse = await fetch(`${started.url}/api/ui-context/save`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        draft: contextDraft,
+        confirm: true,
+        baseFingerprint: contextPreview.baseFingerprint,
+        previewFingerprint: contextPreview.fingerprint,
+      }),
+    });
+    assert.equal(contextSaveResponse.status, 200);
+    const contextSave = await contextSaveResponse.json();
+    assert.equal(contextSave.status, 'saved');
+    assert.equal(contextSave.context.control.containsCredentials, false);
+    assert.equal(fs.existsSync(path.join(tempRoot, '.zeus', 'working-context.json')), true);
+
+    const contextMissingConfirmationResponse = await fetch(`${started.url}/api/ui-context/save`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        draft: contextDraft,
+        baseFingerprint: contextPreview.baseFingerprint,
+        previewFingerprint: contextPreview.fingerprint,
+      }),
+    });
+    assert.equal(contextMissingConfirmationResponse.status, 400);
+    const contextMissingConfirmation = await contextMissingConfirmationResponse.json();
+    assert.equal(contextMissingConfirmation.code, 'WORKING_CONTEXT_CONFIRMATION_REQUIRED');
+
     const profileWizardPreviewResponse = await fetch(`${started.url}/api/profile-wizard/preview`, {
       method: 'POST',
       headers: {
@@ -587,12 +658,29 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.equal(doctorPayload.status, 'warning');
     assert.equal(doctorPayload.input.profile, 'dev');
     assert.equal(doctorPayload.input.showResolved, false);
+    assert.equal(doctorPayload.input.probe, false);
+    assert.deepEqual(doctorPayload.result.probeRows, []);
     assert.equal(Object.prototype.hasOwnProperty.call(doctorPayload, 'resolvedValues'), false);
     assert.equal(Array.isArray(doctorPayload.diagnostics), true);
     assert.equal(doctorPayload.diagnostics.length, 1);
     assert.equal(doctorPayload.diagnostics[0].code, 'ENV_PROFILE_CONFLICT');
     assert.equal(doctorPayload.diagnostics[0].message.includes('<strong>'), false);
     assert.equal(JSON.stringify(doctorPayload).includes('PASSWORD'), false);
+
+    const probeResponse = await fetch(`${started.url}/api/ui-actions/doctor`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        probe: true,
+      }),
+    });
+    assert.equal(probeResponse.status, 200);
+    const probePayload = await probeResponse.json();
+    assert.equal(probePayload.input.probe, true);
+    assert.equal(probePayload.result.probeRows.length, 0);
 
     const doctorUnknownKey = await fetch(`${started.url}/api/ui-actions/doctor`, {
       method: 'POST',

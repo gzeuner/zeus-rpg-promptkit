@@ -1,0 +1,35 @@
+{
+  "summary": {
+    "riskLevel": "YELLOW",
+    "distribution": "1🟢 / 1🟡 / 0🔴"
+  },
+  "accessPoints": [
+    {
+      "type": "SQL",
+      "subtype": "UPDATE",
+      "tables": [
+        "TABLE_100"
+      ],
+      "intent": "WRITE",
+      "evidence": [
+        {
+          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "startLine": 13,
+          "endLine": 16
+        }
+      ],
+      "assessment": {
+        "risk": "YELLOW",
+        "score": 70
+      }
+    }
+  ],
+  "riskMetrics": {
+    "totalAccesses": 2,
+    "greenCount": 1,
+    "yellowCount": 1,
+    "redCount": 0
+  },
+  "criticalPaths": [],
+  "recommendations": []
+}

@@ -189,7 +189,7 @@ async function startChrome() {
     await send('Page.enable');
     return {
       async navigate(url) {
-        await send('Page.navigate', { url });
+        await send('Page.navigate', { url }, 30000);
         await waitFor(async () => (await this.evaluate('document.readyState')) === 'complete', {
           timeoutMs: 15000,
           message: `Page did not finish loading: ${url}`,

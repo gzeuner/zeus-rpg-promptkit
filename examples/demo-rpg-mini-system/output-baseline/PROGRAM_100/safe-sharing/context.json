@@ -1,10 +1,10 @@
 {
-  "program": "PROGRAM_100",
+  "program": "PROGRAM_001",
   "scannedAt": "2000-01-01T00:00:00.000Z",
-  "sourceRoot": "SOURCE_ROOT",
+  "sourceRoot": "SAFE_SHARING_SOURCE_ROOT",
   "sourceFiles": [
     {
-      "path": "QCLLESRC/DRIVER_100.clle",
+      "path": "SOURCE_FILE_001.clle",
       "sizeBytes": 36,
       "lines": 5,
       "sourceType": "CLLE",
@@ -16,7 +16,7 @@
       }
     },
     {
-      "path": "QDDSSRC/FILE_100.pf",
+      "path": "SOURCE_FILE_002.pf",
       "sizeBytes": 118,
       "lines": 6,
       "sourceType": "PF",
@@ -28,7 +28,7 @@
       }
     },
     {
-      "path": "QRPGLESRC/PROGRAM_100.rpgle",
+      "path": "SOURCE_FILE_003.rpgle",
       "sizeBytes": 140,
       "lines": 11,
       "sourceType": "RPGLE",
@@ -40,7 +40,7 @@
       }
     },
     {
-      "path": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "path": "SOURCE_FILE_004.sqlrpgle",
       "sizeBytes": 266,
       "lines": 19,
       "sourceType": "SQLRPGLE",
@@ -52,7 +52,7 @@
       }
     },
     {
-      "path": "QRPGLESRC/PROGRAM_300.rpgle",
+      "path": "SOURCE_FILE_005.rpgle",
       "sizeBytes": 148,
       "lines": 11,
       "sourceType": "RPGLE",
@@ -93,34 +93,34 @@
     "serviceProgramCount": 0,
     "bindingDirectoryCount": 0,
     "unresolvedBindingCount": 0,
-    "text": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings)."
+    "text": "Program PROGRAM_001 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings)."
   },
   "dependencies": {
     "tables": [
       {
-        "name": "ETCH",
+        "name": "TABLE_001",
         "kind": "FILE",
         "evidenceCount": 1
       },
       {
-        "name": "FILE_100",
+        "name": "PROGRAM_003",
         "kind": "DISK",
         "evidenceCount": 1
       },
       {
-        "name": "FILE_200",
+        "name": "TABLE_002",
         "kind": "DISK",
         "evidenceCount": 1
       },
       {
-        "name": "TABLE_100",
+        "name": "TABLE_003",
         "kind": "SQL",
         "evidenceCount": 2
       }
     ],
     "programCalls": [
       {
-        "name": "PROGRAM_100",
+        "name": "PROGRAM_001",
         "kind": "PROGRAM",
         "evidenceCount": 0,
         "resolutionSource": "SOURCE",
@@ -131,7 +131,7 @@
         "catalogSqlName": null
       },
       {
-        "name": "PROGRAM_200",
+        "name": "PROGRAM_004",
         "kind": "PROGRAM",
         "evidenceCount": 0,
         "resolutionSource": "SOURCE",
@@ -142,7 +142,7 @@
         "catalogSqlName": null
       },
       {
-        "name": "PROGRAM_300",
+        "name": "PROGRAM_005",
         "kind": "PROGRAM",
         "evidenceCount": 0,
         "resolutionSource": "SOURCE",
@@ -168,10 +168,10 @@
     },
     "procedures": [
       {
-        "name": "MAIN",
+        "name": "PROCEDURE_001",
         "kind": "PROCEDURE",
-        "ownerProgram": "PROGRAM_100",
-        "sourceFile": "QRPGLESRC/PROGRAM_100.rpgle",
+        "ownerProgram": "PROGRAM_001",
+        "sourceFile": "SOURCE_FILE_003.rpgle",
         "startLine": 6,
         "endLine": 9,
         "sourceForm": "FREE_FORM",
@@ -179,10 +179,10 @@
         "evidenceCount": 1
       },
       {
-        "name": "MAIN",
+        "name": "PROCEDURE_001",
         "kind": "PROCEDURE",
-        "ownerProgram": "PROGRAM_200",
-        "sourceFile": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+        "ownerProgram": "PROGRAM_004",
+        "sourceFile": "SOURCE_FILE_004.sqlrpgle",
         "startLine": 6,
         "endLine": 17,
         "sourceForm": "FREE_FORM",
@@ -190,10 +190,10 @@
         "evidenceCount": 1
       },
       {
-        "name": "MAIN",
+        "name": "PROCEDURE_001",
         "kind": "PROCEDURE",
-        "ownerProgram": "PROGRAM_300",
-        "sourceFile": "QRPGLESRC/PROGRAM_300.rpgle",
+        "ownerProgram": "PROGRAM_005",
+        "sourceFile": "SOURCE_FILE_005.rpgle",
         "startLine": 6,
         "endLine": 9,
         "sourceForm": "FREE_FORM",
@@ -217,30 +217,30 @@
     },
     "modules": [
       {
-        "name": "PROGRAM_100",
+        "name": "PROGRAM_001",
         "kind": "PROGRAM_MODULE",
-        "ownerProgram": "PROGRAM_100",
-        "sourceFile": "QRPGLESRC/PROGRAM_100.rpgle",
+        "ownerProgram": "PROGRAM_001",
+        "sourceFile": "SOURCE_FILE_003.rpgle",
         "bindingDirectories": [],
         "servicePrograms": [],
         "importedProcedures": [],
         "unresolvedBindings": false
       },
       {
-        "name": "PROGRAM_200",
+        "name": "PROGRAM_004",
         "kind": "PROGRAM_MODULE",
-        "ownerProgram": "PROGRAM_200",
-        "sourceFile": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+        "ownerProgram": "PROGRAM_004",
+        "sourceFile": "SOURCE_FILE_004.sqlrpgle",
         "bindingDirectories": [],
         "servicePrograms": [],
         "importedProcedures": [],
         "unresolvedBindings": false
       },
       {
-        "name": "PROGRAM_300",
+        "name": "PROGRAM_005",
         "kind": "PROGRAM_MODULE",
-        "ownerProgram": "PROGRAM_300",
-        "sourceFile": "QRPGLESRC/PROGRAM_300.rpgle",
+        "ownerProgram": "PROGRAM_005",
+        "sourceFile": "SOURCE_FILE_005.rpgle",
         "bindingDirectories": [],
         "servicePrograms": [],
         "importedProcedures": [],
@@ -263,7 +263,7 @@
     },
     "files": [
       {
-        "name": "ETCH",
+        "name": "TABLE_001",
         "kind": "FILE",
         "keyed": false,
         "declaredAccess": [],
@@ -282,7 +282,7 @@
         "evidenceCount": 1
       },
       {
-        "name": "FILE_100",
+        "name": "PROGRAM_003",
         "kind": "DISK",
         "keyed": true,
         "declaredAccess": [
@@ -303,7 +303,7 @@
         "evidenceCount": 2
       },
       {
-        "name": "FILE_200",
+        "name": "TABLE_002",
         "kind": "DISK",
         "keyed": false,
         "declaredAccess": [
@@ -343,9 +343,9 @@
       {
         "type": "SELECT",
         "intent": "READ",
-        "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+        "text": "exec sql select ID into :ID_001 from TABLE_003 fetch first 1 row only;",
         "tables": [
-          "TABLE_100"
+          "TABLE_003"
         ],
         "hostVariables": [
           "ID_001"
@@ -353,10 +353,10 @@
         "cursors": [
           {
             "name": "FIRST",
-            "action": "FETCH"
+            "action": "FTABLE_001"
           }
         ],
-        "driverTable": "TABLE_100",
+        "driverTable": "TABLE_003",
         "joins": [],
         "filters": [],
         "confidence": "HIGH",
@@ -369,7 +369,7 @@
         ],
         "evidence": [
           {
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 7,
             "endLine": 11
           }
@@ -379,9 +379,9 @@
       {
         "type": "UPDATE",
         "intent": "WRITE",
-        "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+        "text": "exec sql update TABLE_003 set STATUS = 'VALUE_001' where ID = :ID_001;",
         "tables": [
-          "TABLE_100"
+          "TABLE_003"
         ],
         "hostVariables": [
           "ID_001"
@@ -400,7 +400,7 @@
         ],
         "evidence": [
           {
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 13,
             "endLine": 16
           }
@@ -409,7 +409,7 @@
       }
     ],
     "tableNames": [
-      "TABLE_100"
+      "TABLE_003"
     ],
     "hostVariables": [
       "ID_001"
@@ -418,7 +418,7 @@
       {
         "name": "FIRST",
         "actions": [
-          "FETCH"
+          "FTABLE_001"
         ]
       }
     ],
@@ -444,10 +444,10 @@
       {
         "name": "*INLR",
         "kind": "WRITE",
-        "ownerProgram": "PROGRAM_300",
+        "ownerProgram": "PROGRAM_005",
         "evidence": [
           {
-            "file": "SOURCE_ROOT\\QRPGLESRC\\PROGRAM_300.rpgle",
+            "file": "SOURCE_FILE_006.rpgle",
             "line": 8,
             "text": "*inlr = *on;"
           }
@@ -458,13 +458,13 @@
     "standaloneFields": [
       {
         "name": "ID_001",
-        "ownerProgram": "PROGRAM_200",
+        "ownerProgram": "PROGRAM_004",
         "like": null,
         "detail": "packed(7:0);",
         "sourceForm": "FREE_FORM",
         "evidence": [
           {
-            "file": "SOURCE_ROOT\\QRPGLESRC\\PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_007.sqlrpgle",
             "line": 4,
             "text": "dcl-s ID_001 packed(7:0);"
           }
@@ -529,12 +529,12 @@
       {
         "name": "CALL",
         "command": "CALL",
-        "text": "CALL PGM(PROGRAM_100)",
+        "text": "CALL PGM(PROGRAM_001)",
         "evidence": [
           {
-            "file": "SOURCE_ROOT\\QCLLESRC\\DRIVER_100.clle",
+            "file": "SOURCE_FILE_008.clle",
             "line": 2,
-            "text": "CALL PGM(PROGRAM_100)"
+            "text": "CALL PGM(PROGRAM_001)"
           }
         ]
       },
@@ -544,7 +544,7 @@
         "text": "ENDPGM",
         "evidence": [
           {
-            "file": "SOURCE_ROOT\\QCLLESRC\\DRIVER_100.clle",
+            "file": "SOURCE_FILE_008.clle",
             "line": 3,
             "text": "ENDPGM"
           }
@@ -556,7 +556,7 @@
         "text": "PGM",
         "evidence": [
           {
-            "file": "SOURCE_ROOT\\QCLLESRC\\DRIVER_100.clle",
+            "file": "SOURCE_FILE_008.clle",
             "line": 1,
             "text": "PGM"
           }
@@ -566,7 +566,7 @@
     "objectUsages": [],
     "ddsFiles": [
       {
-        "name": "FILE_100",
+        "name": "PROGRAM_003",
         "kind": "DISK",
         "sourceType": "PF",
         "recordFormats": [
@@ -575,9 +575,9 @@
         "referencedFiles": [],
         "evidence": [
           {
-            "file": "SOURCE_ROOT\\QDDSSRC\\FILE_100.pf",
+            "file": "SOURCE_FILE_009.pf",
             "line": 1,
-            "text": "FILE_100"
+            "text": "PROGRAM_003"
           }
         ]
       }
@@ -702,7 +702,7 @@
       "invalidations": 0,
       "writes": 5,
       "entryCount": 5,
-      "cacheDir": "OUTPUT_ROOT\\.zeus-cache\\source-scans"
+      "cacheDir": "SAFE_SHARING_OUTPUT_ROOT\\.zeus-cache\\source-scans"
     },
     "db2Metadata": {
       "status": "skipped",
@@ -738,17 +738,17 @@
     "policy": {
       "allowTables": [
         {
-          "schema": "DATA_EXAMPLE",
+          "schema": "SCHEMA_001",
           "table": "CUSTOMERS"
         },
         {
-          "schema": "DATA_EXAMPLE",
+          "schema": "SCHEMA_001",
           "table": "ORDERS"
         }
       ],
       "denyTables": [
         {
-          "schema": "DATA_EXAMPLE",
+          "schema": "SCHEMA_001",
           "table": "AUDIT_LOG"
         }
       ],
@@ -759,7 +759,7 @@
       ],
       "maskRules": [
         {
-          "schema": "DATA_EXAMPLE",
+          "schema": "SCHEMA_001",
           "table": "CUSTOMERS",
           "columns": [
             "PHONE"
@@ -783,15 +783,15 @@
   "aiContext": {
     "programPurposeHint": "",
     "primaryTables": [
-      "ETCH",
-      "FILE_100",
-      "FILE_200",
-      "TABLE_100"
+      "TABLE_001",
+      "PROGRAM_003",
+      "TABLE_002",
+      "TABLE_003"
     ],
     "primaryCalls": [
-      "PROGRAM_100",
-      "PROGRAM_200",
-      "PROGRAM_300"
+      "PROGRAM_001",
+      "PROGRAM_004",
+      "PROGRAM_005"
     ],
     "riskHints": [
       "Embedded SQL detected",
@@ -801,7 +801,7 @@
   },
   "notes": [
     "DB2 metadata export skipped (reproducible mode or --skip-db2-metadata).",
-    "Skipped file SOURCE_ROOT\\QDDSSRC\\FILE_200.lf: object is not iterable (cannot read property Symbol(Symbol.iterator))",
+    "Skipped file SAFE_SHARING_SOURCE_ROOT\\QDDSSRC\\TABLE_002.lf: object is not iterable (cannot read property Symbol(Symbol.iterator))",
     "Test data extraction was skipped because no DB2 connection configuration was available."
   ]
 }

@@ -1,0 +1,110 @@
+{
+  "rootProgram": "PROGRAM_001",
+  "nodes": [
+    {
+      "id": "TABLE_001",
+      "type": "TABLE",
+      "label": "TABLE_001"
+    },
+    {
+      "id": "PROGRAM_003",
+      "type": "TABLE",
+      "label": "PROGRAM_003"
+    },
+    {
+      "id": "TABLE_002",
+      "type": "TABLE",
+      "label": "TABLE_002"
+    },
+    {
+      "id": "PROGRAM_001",
+      "type": "PROGRAM",
+      "label": "PROGRAM_001"
+    },
+    {
+      "id": "PROGRAM_004",
+      "type": "PROGRAM",
+      "label": "PROGRAM_004"
+    },
+    {
+      "id": "PROGRAM_005",
+      "type": "PROGRAM",
+      "label": "PROGRAM_005"
+    },
+    {
+      "id": "TABLE_003",
+      "type": "TABLE",
+      "label": "TABLE_003"
+    }
+  ],
+  "edges": [
+    {
+      "from": "PROGRAM_001",
+      "to": "PROGRAM_003",
+      "type": "USES_TABLE"
+    },
+    {
+      "from": "PROGRAM_001",
+      "to": "PROGRAM_004",
+      "type": "CALLS_PROGRAM"
+    },
+    {
+      "from": "PROGRAM_001",
+      "to": "PROGRAM_005",
+      "type": "CALLS_PROGRAM"
+    },
+    {
+      "from": "PROGRAM_004",
+      "to": "TABLE_001",
+      "type": "USES_TABLE"
+    },
+    {
+      "from": "PROGRAM_004",
+      "to": "TABLE_003",
+      "type": "USES_TABLE"
+    },
+    {
+      "from": "PROGRAM_005",
+      "to": "TABLE_002",
+      "type": "USES_TABLE"
+    }
+  ],
+  "summary": {
+    "programCount": 3,
+    "tableCount": 4,
+    "copyMemberCount": 0,
+    "scannedFileCount": 3,
+    "edgeCount": 6,
+    "ambiguousPrograms": [],
+    "unresolvedPrograms": [],
+    "truncated": false,
+    "limitDiagnosticsCount": 0,
+    "limitsConfigured": {
+      "maxProgramDepth": 25,
+      "maxPrograms": 500,
+      "maxNodes": 5000,
+      "maxEdges": 4000,
+      "maxScannedFiles": 500,
+      "maxProgramCallsPerProgram": 200
+    },
+    "limitsReached": {
+      "maxProgramDepth": false,
+      "maxPrograms": false,
+      "maxNodes": false,
+      "maxEdges": false,
+      "maxScannedFiles": false,
+      "maxProgramCallsPerProgram": false
+    }
+  },
+  "sourceCatalog": {
+    "fileCount": 6,
+    "distinctMemberCount": 6,
+    "manifestBackedCount": 0,
+    "ambiguousMemberCount": 0,
+    "ambiguousMembers": []
+  },
+  "ambiguousPrograms": [],
+  "unresolvedPrograms": [],
+  "diagnostics": [],
+  "notes": []
+}

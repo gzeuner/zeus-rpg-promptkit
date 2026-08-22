@@ -378,6 +378,21 @@ const GUIDED_ANALYSIS_INTENTS = Object.freeze([
 
 const GUIDED_DISCOVERY_ACTIONS = Object.freeze([
   Object.freeze({
+    id: 'preview-fetch-plan',
+    title: 'Preview Fetch Plan',
+    description:
+      'Show the bounded source-fetch plan resolved from the selected profile before any remote fetch is considered.',
+    safetyLevel: 'S0',
+    status: 'config-preview-ready',
+    scope: 'local fetch plan',
+    expensive: false,
+    commandPreviewTemplates: Object.freeze([]),
+    notes: Object.freeze([
+      'This action only previews profile-derived routing, source files, members, output, and transport hints.',
+      'It does not connect to IBM i, download sources, or write local source artifacts.',
+    ]),
+  }),
+  Object.freeze({
     id: 'discover-source-libraries',
     title: 'Discover Source Libraries',
     description:
@@ -933,6 +948,34 @@ function buildConfigDerivedDiscoveryPreview(definition, profile, configContext =
     };
   }
 
+  if (definition.id === 'preview-fetch-plan') {
+    const warnings = [];
+    if (!sourceLibrary) warnings.push('No source library resolves for the selected profile yet.');
+    if (!outputRoot)
+      warnings.push('No local fetch output root resolves for the selected profile yet.');
+    if (!sourceFiles.length && !members.length) {
+      warnings.push(
+        'No source-file or member filter resolves yet; keep the future fetch bounded manually.'
+      );
+    }
+    const ready = Boolean(sourceLibrary && outputRoot);
+    return {
+      ...basePreview,
+      status: ready ? 'config-preview-ready' : 'needs-profile-input',
+      summary: ready
+        ? 'The selected profile resolves a local-only fetch plan for review.'
+        : 'The selected profile does not resolve enough fetch settings for a plan yet.',
+      candidates: [],
+      warnings,
+      resolvedScope: {
+        sourceLibrary: sourceLibrary || '(not configured)',
+        sourceFileCount: sourceFiles.length,
+        memberFilterCount: members.length,
+        outputRoot: outputRoot || '(not configured)',
+      },
+    };
+  }
+
   if (definition.id === 'discover-source-physical-files') {
     const candidates = sourceFiles.map(value => ({
       value,
@@ -1259,7 +1302,8 @@ function buildDiscoveryActionPreview({ actionId, profile = 'dev', configContext 
     configContext &&
     (definition.id === 'discover-source-libraries' ||
       definition.id === 'discover-source-physical-files' ||
-      definition.id === 'discover-members')
+      definition.id === 'discover-members' ||
+      definition.id === 'preview-fetch-plan')
   ) {
     return buildConfigDerivedDiscoveryPreview(definition, profile, configContext);
   }

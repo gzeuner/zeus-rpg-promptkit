@@ -64,6 +64,10 @@ test('real browser can operate the secure GUI setup and report navigation', asyn
     setupTab: document.querySelector('[aria-controls="configure"]')?.textContent?.trim(),
     reportsTab: document.querySelector('[aria-controls="reports"]')?.textContent?.trim(),
     checklistCount: document.querySelectorAll('[data-setup-checklist] li').length,
+    operatorReadiness: Boolean(document.querySelector('[data-operator-readiness]')),
+    probeButton: Boolean(document.querySelector('[data-config-probe]')),
+    contextWizard: Boolean(document.querySelector('#workingContextWizardSection')),
+    contextPreviewButton: Boolean(document.querySelector('[data-context-preview]')),
     catalog: Boolean(document.querySelector('#pluginCatalogSection')),
     body: document.body.innerText
   }))()`);
@@ -71,6 +75,10 @@ test('real browser can operate the secure GUI setup and report navigation', asyn
   assert.equal(initial.setupTab, 'Setup');
   assert.equal(initial.reportsTab, 'Reports');
   assert.equal(initial.checklistCount, 4);
+  assert.equal(initial.operatorReadiness, true);
+  assert.equal(initial.probeButton, true);
+  assert.equal(initial.contextWizard, true);
+  assert.equal(initial.contextPreviewButton, true);
   assert.equal(initial.catalog, true);
   assertNoSensitiveTerms(initial.body, ['e2e-private-token']);
 
@@ -114,4 +122,24 @@ test('real browser can operate the secure GUI setup and report navigation', asyn
   assert.equal(metadata.pluginContracts.summary.total >= 30, true);
   assert.equal(metadata.setupChecklist.tasks.length, 4);
   assertNoSensitiveTerms(metadata, ['e2e-private-token']);
+
+  const contextPreviewUi = await browser.evaluate(`(async () => {
+    const button = document.querySelector('[data-context-preview]');
+    button?.click();
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline) {
+      if (document.body.innerText.includes('Preview ready. Review the changes before saving.')) return true;
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    return false;
+  })()`);
+  assert.equal(contextPreviewUi, true);
+
+  const workingContext = await browser.evaluate(
+    `fetch('/api/ui-context').then(response => response.json())`
+  );
+  assert.equal(workingContext.kind, 'zeus-working-context');
+  assert.equal(workingContext.control.containsCredentials, false);
+  assert.equal(Object.prototype.hasOwnProperty.call(workingContext, 'storagePath'), false);
+  assertNoSensitiveTerms(workingContext, ['e2e-private-token']);
 });

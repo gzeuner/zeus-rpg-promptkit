@@ -42,6 +42,11 @@ const {
 } = require('../workspace/analysisRegistryService');
 const { readWorkspaceIndex, WORKSPACE_INDEX_FILE } = require('../workspace/workspaceIndexBuilder');
 const { DEFAULT_UI_HOST, DEFAULT_UI_PORT } = require('./localUiDefaults');
+const { buildWorkingContextView, loadWorkingContext } = require('../context/workingContext');
+const {
+  WorkingContextWizardError,
+  createWorkingContextWizardService,
+} = require('./workingContextWizardService');
 const MAX_JSON_BODY_BYTES = 512 * 1024;
 
 function normalizeHost(host) {
@@ -190,6 +195,85 @@ async function handleUiActionRequest({
       statusCode,
       {
         error: statusCode === 500 ? 'Internal server error' : error.message || 'Action failed',
+      },
+      { sensitiveTerms }
+    );
+  }
+  return true;
+}
+
+function handleUiContextRequest({
+  request,
+  response,
+  pathname,
+  cwd = process.cwd(),
+  sensitiveTerms = [],
+}) {
+  if (pathname !== '/api/ui-context') {
+    return false;
+  }
+
+  if (request.method !== 'GET') {
+    sendMethodNotAllowed(response, ['GET']);
+    return true;
+  }
+
+  const loaded = loadWorkingContext({ cwd });
+  sendJson(
+    response,
+    200,
+    {
+      ...buildWorkingContextView({ cwd }),
+      exists: loaded.exists,
+      source: loaded.exists ? 'workspace-file' : 'default-empty-context',
+    },
+    { sensitiveTerms }
+  );
+  return true;
+}
+
+async function handleWorkingContextWizardRequest({
+  request,
+  response,
+  pathname,
+  workingContextWizardService,
+  sensitiveTerms = [],
+}) {
+  if (!pathname.startsWith('/api/ui-context/')) {
+    return false;
+  }
+
+  if (request.method !== 'POST') {
+    sendMethodNotAllowed(response, ['POST']);
+    return true;
+  }
+
+  try {
+    requireJsonRequest(request);
+    const payload = await readJsonBody(request);
+    let result;
+    if (pathname === '/api/ui-context/preview') {
+      result = workingContextWizardService.previewDraft(payload);
+    } else if (pathname === '/api/ui-context/save') {
+      result = workingContextWizardService.saveDraft(payload);
+    } else {
+      sendJson(response, 404, { error: `Route not found: ${pathname}` }, { sensitiveTerms });
+      return true;
+    }
+    sendJson(response, 200, result, { sensitiveTerms });
+  } catch (error) {
+    const statusCode =
+      error instanceof WorkingContextWizardError
+        ? error.statusCode
+        : /^invalid json body:|^request body exceeds/i.test(String(error && error.message))
+          ? 400
+          : 500;
+    sendJson(
+      response,
+      statusCode,
+      {
+        error: statusCode === 500 ? 'Internal server error' : error.message || 'Action failed',
+        code: error && error.code ? error.code : undefined,
       },
       { sensitiveTerms }
     );
@@ -584,8 +668,10 @@ async function handleAnalysesRequest({
 
 function createLocalUiRequestHandler({
   outputRoot,
+  cwd = process.cwd(),
   promptWorkbenchService,
   actionService,
+  workingContextWizardService,
   profileWizardService,
   profileKeyWizardService,
   registryPath = null,
@@ -594,6 +680,8 @@ function createLocalUiRequestHandler({
   const resolvedOutputRoot = path.resolve(outputRoot);
   const service = promptWorkbenchService || createPromptWorkbenchService();
   const uiActionService = actionService || createLocalUiActionService();
+  const resolvedWorkingContextWizardService =
+    workingContextWizardService || createWorkingContextWizardService({ cwd });
   const resolvedProfileWizardService = profileWizardService || createProfileWizardService();
   const resolvedProfileKeyWizardService =
     profileKeyWizardService || createProfileKeyWizardService();
@@ -614,6 +702,28 @@ function createLocalUiRequestHandler({
         sensitiveTerms,
       });
       if (analysesHandled) {
+        return;
+      }
+
+      const uiContextHandled = handleUiContextRequest({
+        request,
+        response,
+        pathname,
+        cwd,
+        sensitiveTerms,
+      });
+      if (uiContextHandled) {
+        return;
+      }
+
+      const workingContextWizardHandled = await handleWorkingContextWizardRequest({
+        request,
+        response,
+        pathname,
+        workingContextWizardService: resolvedWorkingContextWizardService,
+        sensitiveTerms,
+      });
+      if (workingContextWizardHandled) {
         return;
       }
 
@@ -774,6 +884,7 @@ async function startLocalUiServer({
   port = DEFAULT_UI_PORT,
   templateStorePath,
   actionService,
+  workingContextWizardService,
   profileWizardService,
   profileKeyWizardService,
   actionServiceOptions = {},
@@ -811,12 +922,17 @@ async function startLocalUiServer({
       cwd: actionServiceOptions.cwd || process.cwd(),
       env: resolvedEnv,
     });
+  const resolvedWorkingContextWizardService =
+    workingContextWizardService ||
+    createWorkingContextWizardService({ cwd: actionServiceOptions.cwd || process.cwd() });
   const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(resolvedEnv, sensitiveTerms);
   const server = http.createServer(
     createLocalUiRequestHandler({
       outputRoot: resolvedOutputRoot,
+      cwd: actionServiceOptions.cwd || process.cwd(),
       promptWorkbenchService,
       actionService: uiActionService,
+      workingContextWizardService: resolvedWorkingContextWizardService,
       profileWizardService: resolvedProfileWizardService,
       profileKeyWizardService: resolvedProfileKeyWizardService,
       registryPath: registryPath ? path.resolve(registryPath) : null,

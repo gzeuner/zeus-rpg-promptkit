@@ -323,6 +323,12 @@ function buildSetupMetadata() {
       label: 'Check Readiness',
       actionPath: '/api/ui-actions/doctor',
     },
+    probeAction: {
+      label: 'Test Connections (read-only)',
+      actionPath: '/api/ui-actions/doctor',
+      payload: { probe: true },
+      safety: 'S2',
+    },
     steps: [
       {
         id: 'choose-profile',
@@ -349,7 +355,7 @@ function buildSetupMetadata() {
     ],
     boundaryNotes: [
       'This screen only edits local-only config and placeholder-based environment routing.',
-      'It does not expose secrets and it does not connect to IBM i or DB2 here.',
+      'It does not expose secrets. IBM i / DB2 access occurs only after the operator explicitly selects the read-only probe.',
     ],
     recommendedNextTokens: [
       'setup focus',

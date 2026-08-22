@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "kind": "ai-knowledge-projection",
   "generatedAt": "2000-01-01T00:00:00.000Z",
-  "program": "PROGRAM_100",
-  "sourceRoot": "SOURCE_ROOT",
+  "program": "PROGRAM_001",
+  "sourceRoot": "SAFE_SHARING_SOURCE_ROOT",
   "provenance": {
     "canonicalSchemaVersion": 1,
     "canonicalKind": "canonical-analysis",
@@ -42,7 +42,7 @@
     "serviceProgramCount": 0,
     "bindingDirectoryCount": 0,
     "unresolvedBindingCount": 0,
-    "text": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings)."
+    "text": "Program PROGRAM_001 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings)."
   },
   "riskMarkers": [
     "Embedded SQL detected",
@@ -56,8 +56,8 @@
     {
       "id": "EV0001",
       "category": "TABLE",
-      "label": "ETCH",
-      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "label": "TABLE_001",
+      "file": "SOURCE_FILE_004.sqlrpgle",
       "startLine": 11,
       "endLine": 11,
       "rawText": "fetch first 1 row only;",
@@ -66,78 +66,78 @@
     {
       "id": "EV0002",
       "category": "TABLE",
-      "label": "FILE_100",
-      "file": "QRPGLESRC/PROGRAM_100.rpgle",
+      "label": "PROGRAM_003",
+      "file": "SOURCE_FILE_003.rpgle",
       "startLine": 4,
       "endLine": 4,
-      "rawText": "dcl-f FILE_100 disk keyed usage(*input);",
-      "snippet": "dcl-f FILE_100 disk keyed usage(*input);"
+      "rawText": "dcl-f PROGRAM_003 disk keyed usage(*input);",
+      "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);"
     },
     {
       "id": "EV0003",
       "category": "TABLE",
-      "label": "FILE_200",
-      "file": "QRPGLESRC/PROGRAM_300.rpgle",
+      "label": "TABLE_002",
+      "file": "SOURCE_FILE_005.rpgle",
       "startLine": 4,
       "endLine": 4,
-      "rawText": "dcl-f FILE_200 disk usage(*update);",
-      "snippet": "dcl-f FILE_200 disk usage(*update);"
+      "rawText": "dcl-f TABLE_002 disk usage(*update);",
+      "snippet": "dcl-f TABLE_002 disk usage(*update);"
     },
     {
       "id": "EV0004",
       "category": "TABLE",
-      "label": "TABLE_100",
-      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "label": "TABLE_003",
+      "file": "SOURCE_FILE_004.sqlrpgle",
       "startLine": 7,
       "endLine": 7,
-      "rawText": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+      "rawText": "exec sql select ID into :ID_001 from TABLE_003 fetch first 1 row only;",
       "snippet": "exec sql"
     },
     {
       "id": "EV0005",
       "category": "TABLE",
-      "label": "TABLE_100",
-      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "label": "TABLE_003",
+      "file": "SOURCE_FILE_004.sqlrpgle",
       "startLine": 13,
       "endLine": 13,
-      "rawText": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+      "rawText": "exec sql update TABLE_003 set STATUS = 'VALUE_001' where ID = :ID_001;",
       "snippet": "exec sql"
     },
     {
       "id": "EV0006",
       "category": "SQL",
       "label": "SELECT",
-      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "file": "SOURCE_FILE_004.sqlrpgle",
       "startLine": 7,
       "endLine": 11,
       "rawText": "",
-      "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;"
+      "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;"
     },
     {
       "id": "EV0007",
       "category": "SQL",
       "label": "UPDATE",
-      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "file": "SOURCE_FILE_004.sqlrpgle",
       "startLine": 13,
       "endLine": 16,
       "rawText": "",
-      "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;"
+      "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;"
     },
     {
       "id": "EV0008",
       "category": "NATIVE_FILE",
-      "label": "FILE_100",
-      "file": "QDDSSRC/FILE_100.pf",
+      "label": "PROGRAM_003",
+      "file": "SOURCE_FILE_002.pf",
       "startLine": 1,
       "endLine": 1,
-      "rawText": "FILE_100 DISK",
+      "rawText": "PROGRAM_003 DISK",
       "snippet": "A          R REC100"
     },
     {
       "id": "EV0009",
       "category": "MODULE",
-      "label": "PROGRAM_100",
-      "file": "QRPGLESRC/PROGRAM_100.rpgle",
+      "label": "PROGRAM_001",
+      "file": "SOURCE_FILE_003.rpgle",
       "startLine": 2,
       "endLine": 2,
       "rawText": "ctl-opt dftactgrp(*no);",
@@ -146,8 +146,8 @@
     {
       "id": "EV0010",
       "category": "MODULE",
-      "label": "PROGRAM_200",
-      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "label": "PROGRAM_004",
+      "file": "SOURCE_FILE_004.sqlrpgle",
       "startLine": 2,
       "endLine": 2,
       "rawText": "ctl-opt dftactgrp(*no);",
@@ -156,8 +156,8 @@
     {
       "id": "EV0011",
       "category": "MODULE",
-      "label": "PROGRAM_300",
-      "file": "QRPGLESRC/PROGRAM_300.rpgle",
+      "label": "PROGRAM_005",
+      "file": "SOURCE_FILE_005.rpgle",
       "startLine": 2,
       "endLine": 2,
       "rawText": "ctl-opt dftactgrp(*no);",
@@ -167,88 +167,88 @@
       "id": "EV0012",
       "category": "CALLS_PROGRAM",
       "label": "CALLS_PROGRAM",
-      "file": "QCLLESRC/DRIVER_100.clle",
+      "file": "SOURCE_FILE_001.clle",
       "startLine": 2,
       "endLine": 2,
-      "rawText": "CALL PGM(PROGRAM_100)",
-      "snippet": "CALL PGM(PROGRAM_100)"
+      "rawText": "CALL PGM(PROGRAM_001)",
+      "snippet": "CALL PGM(PROGRAM_001)"
     },
     {
       "id": "EV0013",
       "category": "CALLS_PROGRAM",
       "label": "CALLS_PROGRAM",
-      "file": "QRPGLESRC/PROGRAM_100.rpgle",
+      "file": "SOURCE_FILE_003.rpgle",
       "startLine": 7,
       "endLine": 7,
-      "rawText": "call PROGRAM_200;",
-      "snippet": "call PROGRAM_200;"
+      "rawText": "call PROGRAM_004;",
+      "snippet": "call PROGRAM_004;"
     },
     {
       "id": "EV0014",
       "category": "CALLS_PROGRAM",
       "label": "CALLS_PROGRAM",
-      "file": "QRPGLESRC/PROGRAM_100.rpgle",
+      "file": "SOURCE_FILE_003.rpgle",
       "startLine": 8,
       "endLine": 8,
-      "rawText": "call PROGRAM_300;",
-      "snippet": "call PROGRAM_300;"
+      "rawText": "call PROGRAM_005;",
+      "snippet": "call PROGRAM_005;"
     },
     {
       "id": "EV0015",
       "category": "OWNS_PROCEDURE",
       "label": "OWNS_PROCEDURE",
-      "file": "QRPGLESRC/PROGRAM_100.rpgle",
+      "file": "SOURCE_FILE_003.rpgle",
       "startLine": 6,
       "endLine": 9,
-      "rawText": "dcl-proc MAIN;",
-      "snippet": "dcl-proc MAIN;\n  call PROGRAM_200;\n  call PROGRAM_300;\nend-proc;"
+      "rawText": "dcl-proc PROCEDURE_001;",
+      "snippet": "dcl-proc PROCEDURE_001;\n  call PROGRAM_004;\n  call PROGRAM_005;\nend-proc;"
     },
     {
       "id": "EV0016",
       "category": "OWNS_PROCEDURE",
       "label": "OWNS_PROCEDURE",
-      "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+      "file": "SOURCE_FILE_004.sqlrpgle",
       "startLine": 6,
       "endLine": 17,
-      "rawText": "dcl-proc MAIN;",
-      "snippet": "dcl-proc MAIN;\n  exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;"
+      "rawText": "dcl-proc PROCEDURE_001;",
+      "snippet": "dcl-proc PROCEDURE_001;\n  exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;"
     },
     {
       "id": "EV0017",
       "category": "OWNS_PROCEDURE",
       "label": "OWNS_PROCEDURE",
-      "file": "QRPGLESRC/PROGRAM_300.rpgle",
+      "file": "SOURCE_FILE_005.rpgle",
       "startLine": 6,
       "endLine": 9,
-      "rawText": "dcl-proc MAIN;",
-      "snippet": "dcl-proc MAIN;\n  // Synthetic placeholder operation.\n  *inlr = *on;\nend-proc;"
+      "rawText": "dcl-proc PROCEDURE_001;",
+      "snippet": "dcl-proc PROCEDURE_001;\n  // Synthetic placeholder operation.\n  *inlr = *on;\nend-proc;"
     }
   ],
   "entities": {
     "tables": [
       {
-        "name": "ETCH",
+        "name": "TABLE_001",
         "kind": "FILE",
         "evidenceRefs": [
           "EV0001"
         ]
       },
       {
-        "name": "FILE_100",
+        "name": "PROGRAM_003",
         "kind": "DISK",
         "evidenceRefs": [
           "EV0002"
         ]
       },
       {
-        "name": "FILE_200",
+        "name": "TABLE_002",
         "kind": "DISK",
         "evidenceRefs": [
           "EV0003"
         ]
       },
       {
-        "name": "TABLE_100",
+        "name": "TABLE_003",
         "kind": "SQL",
         "evidenceRefs": [
           "EV0004",
@@ -258,7 +258,7 @@
     ],
     "programCalls": [
       {
-        "name": "PROGRAM_100",
+        "name": "PROGRAM_001",
         "kind": "PROGRAM",
         "resolutionSource": "SOURCE",
         "catalogObjectType": null,
@@ -269,7 +269,7 @@
         ]
       },
       {
-        "name": "PROGRAM_200",
+        "name": "PROGRAM_004",
         "kind": "PROGRAM",
         "resolutionSource": "SOURCE",
         "catalogObjectType": null,
@@ -280,7 +280,7 @@
         ]
       },
       {
-        "name": "PROGRAM_300",
+        "name": "PROGRAM_005",
         "kind": "PROGRAM",
         "resolutionSource": "SOURCE",
         "catalogObjectType": null,
@@ -298,14 +298,14 @@
         "id": "SQL:0001",
         "type": "SELECT",
         "intent": "READ",
-        "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+        "text": "exec sql select ID into :ID_001 from TABLE_003 fetch first 1 row only;",
         "tables": [
-          "TABLE_100"
+          "TABLE_003"
         ],
         "hostVariables": [
           "ID_001"
         ],
-        "driverTable": "TABLE_100",
+        "driverTable": "TABLE_003",
         "joins": [],
         "filters": [],
         "confidence": "HIGH",
@@ -322,9 +322,9 @@
         "id": "SQL:0002",
         "type": "UPDATE",
         "intent": "WRITE",
-        "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+        "text": "exec sql update TABLE_003 set STATUS = 'VALUE_001' where ID = :ID_001;",
         "tables": [
-          "TABLE_100"
+          "TABLE_003"
         ],
         "hostVariables": [
           "ID_001"
@@ -345,7 +345,7 @@
     ],
     "nativeFiles": [
       {
-        "name": "ETCH",
+        "name": "TABLE_001",
         "kind": "FILE",
         "keyed": false,
         "mutating": false,
@@ -356,7 +356,7 @@
         ]
       },
       {
-        "name": "FILE_100",
+        "name": "PROGRAM_003",
         "kind": "DISK",
         "keyed": true,
         "mutating": false,
@@ -368,7 +368,7 @@
         ]
       },
       {
-        "name": "FILE_200",
+        "name": "TABLE_002",
         "kind": "DISK",
         "keyed": false,
         "mutating": true,
@@ -459,7 +459,7 @@
     "binding": {
       "modules": [
         {
-          "name": "PROGRAM_100",
+          "name": "PROGRAM_001",
           "kind": "PROGRAM_MODULE",
           "bindingDirectories": [],
           "servicePrograms": [],
@@ -470,7 +470,7 @@
           ]
         },
         {
-          "name": "PROGRAM_200",
+          "name": "PROGRAM_004",
           "kind": "PROGRAM_MODULE",
           "bindingDirectories": [],
           "servicePrograms": [],
@@ -481,7 +481,7 @@
           ]
         },
         {
-          "name": "PROGRAM_300",
+          "name": "PROGRAM_005",
           "kind": "PROGRAM_MODULE",
           "bindingDirectories": [],
           "servicePrograms": [],
@@ -497,19 +497,19 @@
     },
     "modules": [
       {
-        "name": "PROGRAM_100",
+        "name": "PROGRAM_001",
         "evidenceRefs": [
           "EV0009"
         ]
       },
       {
-        "name": "PROGRAM_200",
+        "name": "PROGRAM_004",
         "evidenceRefs": [
           "EV0010"
         ]
       },
       {
-        "name": "PROGRAM_300",
+        "name": "PROGRAM_005",
         "evidenceRefs": [
           "EV0011"
         ]
@@ -519,10 +519,10 @@
   "workflows": {
     "documentation": {
       "name": "documentation",
-      "summary": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
+      "summary": "Program PROGRAM_001 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
       "tables": [
         {
-          "name": "TABLE_100",
+          "name": "TABLE_003",
           "kind": "SQL",
           "evidenceRefs": [
             "EV0004",
@@ -530,21 +530,21 @@
           ]
         },
         {
-          "name": "FILE_200",
+          "name": "TABLE_002",
           "kind": "DISK",
           "evidenceRefs": [
             "EV0003"
           ]
         },
         {
-          "name": "FILE_100",
+          "name": "PROGRAM_003",
           "kind": "DISK",
           "evidenceRefs": [
             "EV0002"
           ]
         },
         {
-          "name": "ETCH",
+          "name": "TABLE_001",
           "kind": "FILE",
           "evidenceRefs": [
             "EV0001"
@@ -553,21 +553,21 @@
       ],
       "programCalls": [
         {
-          "name": "PROGRAM_100",
+          "name": "PROGRAM_001",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0012"
           ]
         },
         {
-          "name": "PROGRAM_200",
+          "name": "PROGRAM_004",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0013"
           ]
         },
         {
-          "name": "PROGRAM_300",
+          "name": "PROGRAM_005",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0014"
@@ -581,9 +581,9 @@
           "id": "SQL:0002",
           "type": "UPDATE",
           "intent": "WRITE",
-          "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+          "text": "exec sql update TABLE_003 set STATUS = 'VALUE_001' where ID = :ID_001;",
           "tables": [
-            "TABLE_100"
+            "TABLE_003"
           ],
           "hostVariables": [
             "ID_001"
@@ -601,9 +601,9 @@
           "id": "SQL:0001",
           "type": "SELECT",
           "intent": "READ",
-          "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+          "text": "exec sql select ID into :ID_001 from TABLE_003 fetch first 1 row only;",
           "tables": [
-            "TABLE_100"
+            "TABLE_003"
           ],
           "hostVariables": [
             "ID_001"
@@ -620,7 +620,7 @@
       ],
       "nativeFiles": [
         {
-          "name": "FILE_200",
+          "name": "TABLE_002",
           "kind": "DISK",
           "keyed": false,
           "mutating": true,
@@ -631,7 +631,7 @@
           ]
         },
         {
-          "name": "FILE_100",
+          "name": "PROGRAM_003",
           "kind": "DISK",
           "keyed": true,
           "mutating": false,
@@ -643,7 +643,7 @@
           ]
         },
         {
-          "name": "ETCH",
+          "name": "TABLE_001",
           "kind": "FILE",
           "keyed": false,
           "mutating": false,
@@ -675,10 +675,10 @@
             "rank": 1,
             "score": 174,
             "label": "UPDATE SQL",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 13,
             "endLine": 16,
-            "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+            "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
             "ref": "EV0007",
             "category": "sql"
           },
@@ -686,10 +686,10 @@
             "rank": 3,
             "score": 102,
             "label": "SELECT SQL",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 7,
             "endLine": 11,
-            "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+            "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
             "ref": "EV0006",
             "category": "sql"
           }
@@ -698,33 +698,33 @@
           {
             "rank": 4,
             "score": 40,
-            "label": "Program Call PROGRAM_100",
-            "file": "QCLLESRC/DRIVER_100.clle",
+            "label": "Program Call PROGRAM_001",
+            "file": "SOURCE_FILE_001.clle",
             "startLine": 2,
             "endLine": 2,
-            "snippet": "CALL PGM(PROGRAM_100)",
+            "snippet": "CALL PGM(PROGRAM_001)",
             "ref": "EV0012",
             "category": "calls"
           },
           {
             "rank": 6,
             "score": 40,
-            "label": "Program Call PROGRAM_200",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Program Call PROGRAM_004",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 7,
             "endLine": 7,
-            "snippet": "call PROGRAM_200;",
+            "snippet": "call PROGRAM_004;",
             "ref": "EV0013",
             "category": "calls"
           },
           {
             "rank": 7,
             "score": 40,
-            "label": "Program Call PROGRAM_300",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Program Call PROGRAM_005",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 8,
             "endLine": 8,
-            "snippet": "call PROGRAM_300;",
+            "snippet": "call PROGRAM_005;",
             "ref": "EV0014",
             "category": "calls"
           }
@@ -733,30 +733,30 @@
           {
             "rank": 2,
             "score": 115,
-            "label": "Native File FILE_200",
-            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "label": "Native File TABLE_002",
+            "file": "SOURCE_FILE_005.rpgle",
             "startLine": 4,
             "endLine": 4,
-            "snippet": "dcl-f FILE_200 disk usage(*update);",
+            "snippet": "dcl-f TABLE_002 disk usage(*update);",
             "ref": "EV0003",
             "category": "fileUsage"
           },
           {
             "rank": 5,
             "score": 40,
-            "label": "Native File FILE_100",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Native File PROGRAM_003",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 4,
             "endLine": 4,
-            "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+            "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
             "ref": "EV0002",
             "category": "fileUsage"
           },
           {
             "rank": 9,
             "score": 23,
-            "label": "Native File ETCH",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "label": "Native File TABLE_001",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 11,
             "endLine": 11,
             "snippet": "fetch first 1 row only;",
@@ -769,7 +769,7 @@
             "rank": 8,
             "score": 27,
             "label": "Conditional Logic",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 8,
             "endLine": 8,
             "snippet": "select ID",
@@ -784,21 +784,21 @@
           "rank": 1,
           "score": 174,
           "label": "UPDATE SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 13,
           "endLine": 16,
-          "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+          "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
           "ref": "EV0007",
           "category": "sql"
         },
         {
           "rank": 2,
           "score": 115,
-          "label": "Native File FILE_200",
-          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "label": "Native File TABLE_002",
+          "file": "SOURCE_FILE_005.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "snippet": "dcl-f TABLE_002 disk usage(*update);",
           "ref": "EV0003",
           "category": "fileUsage"
         },
@@ -806,54 +806,54 @@
           "rank": 3,
           "score": 102,
           "label": "SELECT SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 7,
           "endLine": 11,
-          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
           "ref": "EV0006",
           "category": "sql"
         },
         {
           "rank": 4,
           "score": 40,
-          "label": "Program Call PROGRAM_100",
-          "file": "QCLLESRC/DRIVER_100.clle",
+          "label": "Program Call PROGRAM_001",
+          "file": "SOURCE_FILE_001.clle",
           "startLine": 2,
           "endLine": 2,
-          "snippet": "CALL PGM(PROGRAM_100)",
+          "snippet": "CALL PGM(PROGRAM_001)",
           "ref": "EV0012",
           "category": "calls"
         },
         {
           "rank": 5,
           "score": 40,
-          "label": "Native File FILE_100",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Native File PROGRAM_003",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+          "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
           "ref": "EV0002",
           "category": "fileUsage"
         },
         {
           "rank": 6,
           "score": 40,
-          "label": "Program Call PROGRAM_200",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_004",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 7,
           "endLine": 7,
-          "snippet": "call PROGRAM_200;",
+          "snippet": "call PROGRAM_004;",
           "ref": "EV0013",
           "category": "calls"
         },
         {
           "rank": 7,
           "score": 40,
-          "label": "Program Call PROGRAM_300",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_005",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 8,
           "endLine": 8,
-          "snippet": "call PROGRAM_300;",
+          "snippet": "call PROGRAM_005;",
           "ref": "EV0014",
           "category": "calls"
         },
@@ -861,7 +861,7 @@
           "rank": 8,
           "score": 27,
           "label": "Conditional Logic",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 8,
           "endLine": 8,
           "snippet": "select ID",
@@ -871,8 +871,8 @@
         {
           "rank": 9,
           "score": 23,
-          "label": "Native File ETCH",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "label": "Native File TABLE_001",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 11,
           "endLine": 11,
           "snippet": "fetch first 1 row only;",
@@ -885,21 +885,21 @@
           "rank": 1,
           "score": 174,
           "label": "UPDATE SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 13,
           "endLine": 16,
-          "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+          "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
           "ref": "EV0007",
           "category": "sql"
         },
         {
           "rank": 2,
           "score": 115,
-          "label": "Native File FILE_200",
-          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "label": "Native File TABLE_002",
+          "file": "SOURCE_FILE_005.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "snippet": "dcl-f TABLE_002 disk usage(*update);",
           "ref": "EV0003",
           "category": "fileUsage"
         },
@@ -907,54 +907,54 @@
           "rank": 3,
           "score": 102,
           "label": "SELECT SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 7,
           "endLine": 11,
-          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
           "ref": "EV0006",
           "category": "sql"
         },
         {
           "rank": 4,
           "score": 40,
-          "label": "Program Call PROGRAM_100",
-          "file": "QCLLESRC/DRIVER_100.clle",
+          "label": "Program Call PROGRAM_001",
+          "file": "SOURCE_FILE_001.clle",
           "startLine": 2,
           "endLine": 2,
-          "snippet": "CALL PGM(PROGRAM_100)",
+          "snippet": "CALL PGM(PROGRAM_001)",
           "ref": "EV0012",
           "category": "calls"
         },
         {
           "rank": 5,
           "score": 40,
-          "label": "Native File FILE_100",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Native File PROGRAM_003",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+          "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
           "ref": "EV0002",
           "category": "fileUsage"
         },
         {
           "rank": 6,
           "score": 40,
-          "label": "Program Call PROGRAM_200",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_004",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 7,
           "endLine": 7,
-          "snippet": "call PROGRAM_200;",
+          "snippet": "call PROGRAM_004;",
           "ref": "EV0013",
           "category": "calls"
         },
         {
           "rank": 7,
           "score": 40,
-          "label": "Program Call PROGRAM_300",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_005",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 8,
           "endLine": 8,
-          "snippet": "call PROGRAM_300;",
+          "snippet": "call PROGRAM_005;",
           "ref": "EV0014",
           "category": "calls"
         },
@@ -962,7 +962,7 @@
           "rank": 8,
           "score": 27,
           "label": "Conditional Logic",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 8,
           "endLine": 8,
           "snippet": "select ID",
@@ -972,8 +972,8 @@
         {
           "rank": 9,
           "score": 23,
-          "label": "Native File ETCH",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "label": "Native File TABLE_001",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 11,
           "endLine": 11,
           "snippet": "fetch first 1 row only;",
@@ -997,17 +997,17 @@
         "policy": {
           "allowTables": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "CUSTOMERS"
             },
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "ORDERS"
             }
           ],
           "denyTables": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "AUDIT_LOG"
             }
           ],
@@ -1018,7 +1018,7 @@
           ],
           "maskRules": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "CUSTOMERS",
               "columns": [
                 "PHONE"
@@ -1043,10 +1043,10 @@
     },
     "errorAnalysis": {
       "name": "error-analysis",
-      "summary": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
+      "summary": "Program PROGRAM_001 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
       "tables": [
         {
-          "name": "TABLE_100",
+          "name": "TABLE_003",
           "kind": "SQL",
           "evidenceRefs": [
             "EV0004",
@@ -1054,21 +1054,21 @@
           ]
         },
         {
-          "name": "FILE_200",
+          "name": "TABLE_002",
           "kind": "DISK",
           "evidenceRefs": [
             "EV0003"
           ]
         },
         {
-          "name": "FILE_100",
+          "name": "PROGRAM_003",
           "kind": "DISK",
           "evidenceRefs": [
             "EV0002"
           ]
         },
         {
-          "name": "ETCH",
+          "name": "TABLE_001",
           "kind": "FILE",
           "evidenceRefs": [
             "EV0001"
@@ -1077,21 +1077,21 @@
       ],
       "programCalls": [
         {
-          "name": "PROGRAM_100",
+          "name": "PROGRAM_001",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0012"
           ]
         },
         {
-          "name": "PROGRAM_200",
+          "name": "PROGRAM_004",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0013"
           ]
         },
         {
-          "name": "PROGRAM_300",
+          "name": "PROGRAM_005",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0014"
@@ -1105,9 +1105,9 @@
           "id": "SQL:0002",
           "type": "UPDATE",
           "intent": "WRITE",
-          "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+          "text": "exec sql update TABLE_003 set STATUS = 'VALUE_001' where ID = :ID_001;",
           "tables": [
-            "TABLE_100"
+            "TABLE_003"
           ],
           "hostVariables": [
             "ID_001"
@@ -1125,9 +1125,9 @@
           "id": "SQL:0001",
           "type": "SELECT",
           "intent": "READ",
-          "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+          "text": "exec sql select ID into :ID_001 from TABLE_003 fetch first 1 row only;",
           "tables": [
-            "TABLE_100"
+            "TABLE_003"
           ],
           "hostVariables": [
             "ID_001"
@@ -1144,7 +1144,7 @@
       ],
       "nativeFiles": [
         {
-          "name": "FILE_200",
+          "name": "TABLE_002",
           "kind": "DISK",
           "keyed": false,
           "mutating": true,
@@ -1155,7 +1155,7 @@
           ]
         },
         {
-          "name": "FILE_100",
+          "name": "PROGRAM_003",
           "kind": "DISK",
           "keyed": true,
           "mutating": false,
@@ -1167,7 +1167,7 @@
           ]
         },
         {
-          "name": "ETCH",
+          "name": "TABLE_001",
           "kind": "FILE",
           "keyed": false,
           "mutating": false,
@@ -1199,10 +1199,10 @@
             "rank": 1,
             "score": 210,
             "label": "UPDATE SQL",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 13,
             "endLine": 16,
-            "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+            "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
             "ref": "EV0007",
             "category": "sql"
           },
@@ -1210,10 +1210,10 @@
             "rank": 3,
             "score": 123,
             "label": "SELECT SQL",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 7,
             "endLine": 11,
-            "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+            "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
             "ref": "EV0006",
             "category": "sql"
           }
@@ -1222,33 +1222,33 @@
           {
             "rank": 4,
             "score": 54,
-            "label": "Program Call PROGRAM_100",
-            "file": "QCLLESRC/DRIVER_100.clle",
+            "label": "Program Call PROGRAM_001",
+            "file": "SOURCE_FILE_001.clle",
             "startLine": 2,
             "endLine": 2,
-            "snippet": "CALL PGM(PROGRAM_100)",
+            "snippet": "CALL PGM(PROGRAM_001)",
             "ref": "EV0012",
             "category": "calls"
           },
           {
             "rank": 5,
             "score": 54,
-            "label": "Program Call PROGRAM_200",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Program Call PROGRAM_004",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 7,
             "endLine": 7,
-            "snippet": "call PROGRAM_200;",
+            "snippet": "call PROGRAM_004;",
             "ref": "EV0013",
             "category": "calls"
           },
           {
             "rank": 6,
             "score": 54,
-            "label": "Program Call PROGRAM_300",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Program Call PROGRAM_005",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 8,
             "endLine": 8,
-            "snippet": "call PROGRAM_300;",
+            "snippet": "call PROGRAM_005;",
             "ref": "EV0014",
             "category": "calls"
           }
@@ -1257,30 +1257,30 @@
           {
             "rank": 2,
             "score": 125,
-            "label": "Native File FILE_200",
-            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "label": "Native File TABLE_002",
+            "file": "SOURCE_FILE_005.rpgle",
             "startLine": 4,
             "endLine": 4,
-            "snippet": "dcl-f FILE_200 disk usage(*update);",
+            "snippet": "dcl-f TABLE_002 disk usage(*update);",
             "ref": "EV0003",
             "category": "fileUsage"
           },
           {
             "rank": 7,
             "score": 44,
-            "label": "Native File FILE_100",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Native File PROGRAM_003",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 4,
             "endLine": 4,
-            "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+            "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
             "ref": "EV0002",
             "category": "fileUsage"
           },
           {
             "rank": 9,
             "score": 25,
-            "label": "Native File ETCH",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "label": "Native File TABLE_001",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 11,
             "endLine": 11,
             "snippet": "fetch first 1 row only;",
@@ -1293,7 +1293,7 @@
             "rank": 8,
             "score": 32,
             "label": "Conditional Logic",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 8,
             "endLine": 8,
             "snippet": "select ID",
@@ -1308,21 +1308,21 @@
           "rank": 1,
           "score": 210,
           "label": "UPDATE SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 13,
           "endLine": 16,
-          "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+          "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
           "ref": "EV0007",
           "category": "sql"
         },
         {
           "rank": 2,
           "score": 125,
-          "label": "Native File FILE_200",
-          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "label": "Native File TABLE_002",
+          "file": "SOURCE_FILE_005.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "snippet": "dcl-f TABLE_002 disk usage(*update);",
           "ref": "EV0003",
           "category": "fileUsage"
         },
@@ -1330,54 +1330,54 @@
           "rank": 3,
           "score": 123,
           "label": "SELECT SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 7,
           "endLine": 11,
-          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
           "ref": "EV0006",
           "category": "sql"
         },
         {
           "rank": 4,
           "score": 54,
-          "label": "Program Call PROGRAM_100",
-          "file": "QCLLESRC/DRIVER_100.clle",
+          "label": "Program Call PROGRAM_001",
+          "file": "SOURCE_FILE_001.clle",
           "startLine": 2,
           "endLine": 2,
-          "snippet": "CALL PGM(PROGRAM_100)",
+          "snippet": "CALL PGM(PROGRAM_001)",
           "ref": "EV0012",
           "category": "calls"
         },
         {
           "rank": 5,
           "score": 54,
-          "label": "Program Call PROGRAM_200",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_004",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 7,
           "endLine": 7,
-          "snippet": "call PROGRAM_200;",
+          "snippet": "call PROGRAM_004;",
           "ref": "EV0013",
           "category": "calls"
         },
         {
           "rank": 6,
           "score": 54,
-          "label": "Program Call PROGRAM_300",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_005",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 8,
           "endLine": 8,
-          "snippet": "call PROGRAM_300;",
+          "snippet": "call PROGRAM_005;",
           "ref": "EV0014",
           "category": "calls"
         },
         {
           "rank": 7,
           "score": 44,
-          "label": "Native File FILE_100",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Native File PROGRAM_003",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+          "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
           "ref": "EV0002",
           "category": "fileUsage"
         },
@@ -1385,7 +1385,7 @@
           "rank": 8,
           "score": 32,
           "label": "Conditional Logic",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 8,
           "endLine": 8,
           "snippet": "select ID",
@@ -1395,8 +1395,8 @@
         {
           "rank": 9,
           "score": 25,
-          "label": "Native File ETCH",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "label": "Native File TABLE_001",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 11,
           "endLine": 11,
           "snippet": "fetch first 1 row only;",
@@ -1409,21 +1409,21 @@
           "rank": 1,
           "score": 210,
           "label": "UPDATE SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 13,
           "endLine": 16,
-          "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+          "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
           "ref": "EV0007",
           "category": "sql"
         },
         {
           "rank": 2,
           "score": 125,
-          "label": "Native File FILE_200",
-          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "label": "Native File TABLE_002",
+          "file": "SOURCE_FILE_005.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "snippet": "dcl-f TABLE_002 disk usage(*update);",
           "ref": "EV0003",
           "category": "fileUsage"
         },
@@ -1431,54 +1431,54 @@
           "rank": 3,
           "score": 123,
           "label": "SELECT SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 7,
           "endLine": 11,
-          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
           "ref": "EV0006",
           "category": "sql"
         },
         {
           "rank": 4,
           "score": 54,
-          "label": "Program Call PROGRAM_100",
-          "file": "QCLLESRC/DRIVER_100.clle",
+          "label": "Program Call PROGRAM_001",
+          "file": "SOURCE_FILE_001.clle",
           "startLine": 2,
           "endLine": 2,
-          "snippet": "CALL PGM(PROGRAM_100)",
+          "snippet": "CALL PGM(PROGRAM_001)",
           "ref": "EV0012",
           "category": "calls"
         },
         {
           "rank": 5,
           "score": 54,
-          "label": "Program Call PROGRAM_200",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_004",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 7,
           "endLine": 7,
-          "snippet": "call PROGRAM_200;",
+          "snippet": "call PROGRAM_004;",
           "ref": "EV0013",
           "category": "calls"
         },
         {
           "rank": 6,
           "score": 54,
-          "label": "Program Call PROGRAM_300",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_005",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 8,
           "endLine": 8,
-          "snippet": "call PROGRAM_300;",
+          "snippet": "call PROGRAM_005;",
           "ref": "EV0014",
           "category": "calls"
         },
         {
           "rank": 7,
           "score": 44,
-          "label": "Native File FILE_100",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Native File PROGRAM_003",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+          "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
           "ref": "EV0002",
           "category": "fileUsage"
         },
@@ -1486,7 +1486,7 @@
           "rank": 8,
           "score": 32,
           "label": "Conditional Logic",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 8,
           "endLine": 8,
           "snippet": "select ID",
@@ -1496,8 +1496,8 @@
         {
           "rank": 9,
           "score": 25,
-          "label": "Native File ETCH",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "label": "Native File TABLE_001",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 11,
           "endLine": 11,
           "snippet": "fetch first 1 row only;",
@@ -1521,17 +1521,17 @@
         "policy": {
           "allowTables": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "CUSTOMERS"
             },
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "ORDERS"
             }
           ],
           "denyTables": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "AUDIT_LOG"
             }
           ],
@@ -1542,7 +1542,7 @@
           ],
           "maskRules": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "CUSTOMERS",
               "columns": [
                 "PHONE"
@@ -1567,10 +1567,10 @@
     },
     "security": {
       "name": "security",
-      "summary": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
+      "summary": "Program PROGRAM_001 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
       "tables": [
         {
-          "name": "TABLE_100",
+          "name": "TABLE_003",
           "kind": "SQL",
           "evidenceRefs": [
             "EV0004",
@@ -1578,21 +1578,21 @@
           ]
         },
         {
-          "name": "FILE_200",
+          "name": "TABLE_002",
           "kind": "DISK",
           "evidenceRefs": [
             "EV0003"
           ]
         },
         {
-          "name": "FILE_100",
+          "name": "PROGRAM_003",
           "kind": "DISK",
           "evidenceRefs": [
             "EV0002"
           ]
         },
         {
-          "name": "ETCH",
+          "name": "TABLE_001",
           "kind": "FILE",
           "evidenceRefs": [
             "EV0001"
@@ -1601,21 +1601,21 @@
       ],
       "programCalls": [
         {
-          "name": "PROGRAM_100",
+          "name": "PROGRAM_001",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0012"
           ]
         },
         {
-          "name": "PROGRAM_200",
+          "name": "PROGRAM_004",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0013"
           ]
         },
         {
-          "name": "PROGRAM_300",
+          "name": "PROGRAM_005",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0014"
@@ -1629,9 +1629,9 @@
           "id": "SQL:0002",
           "type": "UPDATE",
           "intent": "WRITE",
-          "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+          "text": "exec sql update TABLE_003 set STATUS = 'VALUE_001' where ID = :ID_001;",
           "tables": [
-            "TABLE_100"
+            "TABLE_003"
           ],
           "hostVariables": [
             "ID_001"
@@ -1649,9 +1649,9 @@
           "id": "SQL:0001",
           "type": "SELECT",
           "intent": "READ",
-          "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+          "text": "exec sql select ID into :ID_001 from TABLE_003 fetch first 1 row only;",
           "tables": [
-            "TABLE_100"
+            "TABLE_003"
           ],
           "hostVariables": [
             "ID_001"
@@ -1668,7 +1668,7 @@
       ],
       "nativeFiles": [
         {
-          "name": "FILE_200",
+          "name": "TABLE_002",
           "kind": "DISK",
           "keyed": false,
           "mutating": true,
@@ -1679,7 +1679,7 @@
           ]
         },
         {
-          "name": "FILE_100",
+          "name": "PROGRAM_003",
           "kind": "DISK",
           "keyed": true,
           "mutating": false,
@@ -1691,7 +1691,7 @@
           ]
         },
         {
-          "name": "ETCH",
+          "name": "TABLE_001",
           "kind": "FILE",
           "keyed": false,
           "mutating": false,
@@ -1723,10 +1723,10 @@
             "rank": 1,
             "score": 218,
             "label": "UPDATE SQL",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 13,
             "endLine": 16,
-            "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+            "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
             "ref": "EV0007",
             "category": "sql"
           },
@@ -1734,10 +1734,10 @@
             "rank": 3,
             "score": 128,
             "label": "SELECT SQL",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 7,
             "endLine": 11,
-            "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+            "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
             "ref": "EV0006",
             "category": "sql"
           }
@@ -1746,33 +1746,33 @@
           {
             "rank": 4,
             "score": 64,
-            "label": "Program Call PROGRAM_100",
-            "file": "QCLLESRC/DRIVER_100.clle",
+            "label": "Program Call PROGRAM_001",
+            "file": "SOURCE_FILE_001.clle",
             "startLine": 2,
             "endLine": 2,
-            "snippet": "CALL PGM(PROGRAM_100)",
+            "snippet": "CALL PGM(PROGRAM_001)",
             "ref": "EV0012",
             "category": "calls"
           },
           {
             "rank": 5,
             "score": 64,
-            "label": "Program Call PROGRAM_200",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Program Call PROGRAM_004",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 7,
             "endLine": 7,
-            "snippet": "call PROGRAM_200;",
+            "snippet": "call PROGRAM_004;",
             "ref": "EV0013",
             "category": "calls"
           },
           {
             "rank": 6,
             "score": 64,
-            "label": "Program Call PROGRAM_300",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Program Call PROGRAM_005",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 8,
             "endLine": 8,
-            "snippet": "call PROGRAM_300;",
+            "snippet": "call PROGRAM_005;",
             "ref": "EV0014",
             "category": "calls"
           }
@@ -1781,30 +1781,30 @@
           {
             "rank": 2,
             "score": 130,
-            "label": "Native File FILE_200",
-            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "label": "Native File TABLE_002",
+            "file": "SOURCE_FILE_005.rpgle",
             "startLine": 4,
             "endLine": 4,
-            "snippet": "dcl-f FILE_200 disk usage(*update);",
+            "snippet": "dcl-f TABLE_002 disk usage(*update);",
             "ref": "EV0003",
             "category": "fileUsage"
           },
           {
             "rank": 7,
             "score": 46,
-            "label": "Native File FILE_100",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Native File PROGRAM_003",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 4,
             "endLine": 4,
-            "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+            "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
             "ref": "EV0002",
             "category": "fileUsage"
           },
           {
             "rank": 9,
             "score": 26,
-            "label": "Native File ETCH",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "label": "Native File TABLE_001",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 11,
             "endLine": 11,
             "snippet": "fetch first 1 row only;",
@@ -1817,7 +1817,7 @@
             "rank": 8,
             "score": 33,
             "label": "Conditional Logic",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 8,
             "endLine": 8,
             "snippet": "select ID",
@@ -1832,21 +1832,21 @@
           "rank": 1,
           "score": 218,
           "label": "UPDATE SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 13,
           "endLine": 16,
-          "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+          "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
           "ref": "EV0007",
           "category": "sql"
         },
         {
           "rank": 2,
           "score": 130,
-          "label": "Native File FILE_200",
-          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "label": "Native File TABLE_002",
+          "file": "SOURCE_FILE_005.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "snippet": "dcl-f TABLE_002 disk usage(*update);",
           "ref": "EV0003",
           "category": "fileUsage"
         },
@@ -1854,54 +1854,54 @@
           "rank": 3,
           "score": 128,
           "label": "SELECT SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 7,
           "endLine": 11,
-          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
           "ref": "EV0006",
           "category": "sql"
         },
         {
           "rank": 4,
           "score": 64,
-          "label": "Program Call PROGRAM_100",
-          "file": "QCLLESRC/DRIVER_100.clle",
+          "label": "Program Call PROGRAM_001",
+          "file": "SOURCE_FILE_001.clle",
           "startLine": 2,
           "endLine": 2,
-          "snippet": "CALL PGM(PROGRAM_100)",
+          "snippet": "CALL PGM(PROGRAM_001)",
           "ref": "EV0012",
           "category": "calls"
         },
         {
           "rank": 5,
           "score": 64,
-          "label": "Program Call PROGRAM_200",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_004",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 7,
           "endLine": 7,
-          "snippet": "call PROGRAM_200;",
+          "snippet": "call PROGRAM_004;",
           "ref": "EV0013",
           "category": "calls"
         },
         {
           "rank": 6,
           "score": 64,
-          "label": "Program Call PROGRAM_300",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_005",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 8,
           "endLine": 8,
-          "snippet": "call PROGRAM_300;",
+          "snippet": "call PROGRAM_005;",
           "ref": "EV0014",
           "category": "calls"
         },
         {
           "rank": 7,
           "score": 46,
-          "label": "Native File FILE_100",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Native File PROGRAM_003",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+          "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
           "ref": "EV0002",
           "category": "fileUsage"
         },
@@ -1909,7 +1909,7 @@
           "rank": 8,
           "score": 33,
           "label": "Conditional Logic",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 8,
           "endLine": 8,
           "snippet": "select ID",
@@ -1919,8 +1919,8 @@
         {
           "rank": 9,
           "score": 26,
-          "label": "Native File ETCH",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "label": "Native File TABLE_001",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 11,
           "endLine": 11,
           "snippet": "fetch first 1 row only;",
@@ -1933,21 +1933,21 @@
           "rank": 1,
           "score": 218,
           "label": "UPDATE SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 13,
           "endLine": 16,
-          "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+          "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
           "ref": "EV0007",
           "category": "sql"
         },
         {
           "rank": 2,
           "score": 130,
-          "label": "Native File FILE_200",
-          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "label": "Native File TABLE_002",
+          "file": "SOURCE_FILE_005.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "snippet": "dcl-f TABLE_002 disk usage(*update);",
           "ref": "EV0003",
           "category": "fileUsage"
         },
@@ -1955,54 +1955,54 @@
           "rank": 3,
           "score": 128,
           "label": "SELECT SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 7,
           "endLine": 11,
-          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
           "ref": "EV0006",
           "category": "sql"
         },
         {
           "rank": 4,
           "score": 64,
-          "label": "Program Call PROGRAM_100",
-          "file": "QCLLESRC/DRIVER_100.clle",
+          "label": "Program Call PROGRAM_001",
+          "file": "SOURCE_FILE_001.clle",
           "startLine": 2,
           "endLine": 2,
-          "snippet": "CALL PGM(PROGRAM_100)",
+          "snippet": "CALL PGM(PROGRAM_001)",
           "ref": "EV0012",
           "category": "calls"
         },
         {
           "rank": 5,
           "score": 64,
-          "label": "Program Call PROGRAM_200",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_004",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 7,
           "endLine": 7,
-          "snippet": "call PROGRAM_200;",
+          "snippet": "call PROGRAM_004;",
           "ref": "EV0013",
           "category": "calls"
         },
         {
           "rank": 6,
           "score": 64,
-          "label": "Program Call PROGRAM_300",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_005",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 8,
           "endLine": 8,
-          "snippet": "call PROGRAM_300;",
+          "snippet": "call PROGRAM_005;",
           "ref": "EV0014",
           "category": "calls"
         },
         {
           "rank": 7,
           "score": 46,
-          "label": "Native File FILE_100",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Native File PROGRAM_003",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+          "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
           "ref": "EV0002",
           "category": "fileUsage"
         },
@@ -2010,7 +2010,7 @@
           "rank": 8,
           "score": 33,
           "label": "Conditional Logic",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 8,
           "endLine": 8,
           "snippet": "select ID",
@@ -2020,8 +2020,8 @@
         {
           "rank": 9,
           "score": 26,
-          "label": "Native File ETCH",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "label": "Native File TABLE_001",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 11,
           "endLine": 11,
           "snippet": "fetch first 1 row only;",
@@ -2045,17 +2045,17 @@
         "policy": {
           "allowTables": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "CUSTOMERS"
             },
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "ORDERS"
             }
           ],
           "denyTables": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "AUDIT_LOG"
             }
           ],
@@ -2066,7 +2066,7 @@
           ],
           "maskRules": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "CUSTOMERS",
               "columns": [
                 "PHONE"
@@ -2091,10 +2091,10 @@
     },
     "modernization": {
       "name": "modernization",
-      "summary": "Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
+      "summary": "Program PROGRAM_001 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).",
       "tables": [
         {
-          "name": "TABLE_100",
+          "name": "TABLE_003",
           "kind": "SQL",
           "evidenceRefs": [
             "EV0004",
@@ -2102,21 +2102,21 @@
           ]
         },
         {
-          "name": "FILE_200",
+          "name": "TABLE_002",
           "kind": "DISK",
           "evidenceRefs": [
             "EV0003"
           ]
         },
         {
-          "name": "FILE_100",
+          "name": "PROGRAM_003",
           "kind": "DISK",
           "evidenceRefs": [
             "EV0002"
           ]
         },
         {
-          "name": "ETCH",
+          "name": "TABLE_001",
           "kind": "FILE",
           "evidenceRefs": [
             "EV0001"
@@ -2125,21 +2125,21 @@
       ],
       "programCalls": [
         {
-          "name": "PROGRAM_100",
+          "name": "PROGRAM_001",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0012"
           ]
         },
         {
-          "name": "PROGRAM_200",
+          "name": "PROGRAM_004",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0013"
           ]
         },
         {
-          "name": "PROGRAM_300",
+          "name": "PROGRAM_005",
           "kind": "PROGRAM",
           "evidenceRefs": [
             "EV0014"
@@ -2153,9 +2153,9 @@
           "id": "SQL:0002",
           "type": "UPDATE",
           "intent": "WRITE",
-          "text": "exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;",
+          "text": "exec sql update TABLE_003 set STATUS = 'VALUE_001' where ID = :ID_001;",
           "tables": [
-            "TABLE_100"
+            "TABLE_003"
           ],
           "hostVariables": [
             "ID_001"
@@ -2173,9 +2173,9 @@
           "id": "SQL:0001",
           "type": "SELECT",
           "intent": "READ",
-          "text": "exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only;",
+          "text": "exec sql select ID into :ID_001 from TABLE_003 fetch first 1 row only;",
           "tables": [
-            "TABLE_100"
+            "TABLE_003"
           ],
           "hostVariables": [
             "ID_001"
@@ -2192,7 +2192,7 @@
       ],
       "nativeFiles": [
         {
-          "name": "FILE_200",
+          "name": "TABLE_002",
           "kind": "DISK",
           "keyed": false,
           "mutating": true,
@@ -2203,7 +2203,7 @@
           ]
         },
         {
-          "name": "FILE_100",
+          "name": "PROGRAM_003",
           "kind": "DISK",
           "keyed": true,
           "mutating": false,
@@ -2215,7 +2215,7 @@
           ]
         },
         {
-          "name": "ETCH",
+          "name": "TABLE_001",
           "kind": "FILE",
           "keyed": false,
           "mutating": false,
@@ -2247,10 +2247,10 @@
             "rank": 2,
             "score": 174,
             "label": "UPDATE SQL",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 13,
             "endLine": 16,
-            "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+            "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
             "ref": "EV0007",
             "category": "sql"
           },
@@ -2258,10 +2258,10 @@
             "rank": 3,
             "score": 102,
             "label": "SELECT SQL",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 7,
             "endLine": 11,
-            "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+            "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
             "ref": "EV0006",
             "category": "sql"
           }
@@ -2270,33 +2270,33 @@
           {
             "rank": 4,
             "score": 68,
-            "label": "Program Call PROGRAM_100",
-            "file": "QCLLESRC/DRIVER_100.clle",
+            "label": "Program Call PROGRAM_001",
+            "file": "SOURCE_FILE_001.clle",
             "startLine": 2,
             "endLine": 2,
-            "snippet": "CALL PGM(PROGRAM_100)",
+            "snippet": "CALL PGM(PROGRAM_001)",
             "ref": "EV0012",
             "category": "calls"
           },
           {
             "rank": 5,
             "score": 68,
-            "label": "Program Call PROGRAM_200",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Program Call PROGRAM_004",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 7,
             "endLine": 7,
-            "snippet": "call PROGRAM_200;",
+            "snippet": "call PROGRAM_004;",
             "ref": "EV0013",
             "category": "calls"
           },
           {
             "rank": 6,
             "score": 68,
-            "label": "Program Call PROGRAM_300",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Program Call PROGRAM_005",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 8,
             "endLine": 8,
-            "snippet": "call PROGRAM_300;",
+            "snippet": "call PROGRAM_005;",
             "ref": "EV0014",
             "category": "calls"
           }
@@ -2305,30 +2305,30 @@
           {
             "rank": 1,
             "score": 180,
-            "label": "Native File FILE_200",
-            "file": "QRPGLESRC/PROGRAM_300.rpgle",
+            "label": "Native File TABLE_002",
+            "file": "SOURCE_FILE_005.rpgle",
             "startLine": 4,
             "endLine": 4,
-            "snippet": "dcl-f FILE_200 disk usage(*update);",
+            "snippet": "dcl-f TABLE_002 disk usage(*update);",
             "ref": "EV0003",
             "category": "fileUsage"
           },
           {
             "rank": 7,
             "score": 63,
-            "label": "Native File FILE_100",
-            "file": "QRPGLESRC/PROGRAM_100.rpgle",
+            "label": "Native File PROGRAM_003",
+            "file": "SOURCE_FILE_003.rpgle",
             "startLine": 4,
             "endLine": 4,
-            "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+            "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
             "ref": "EV0002",
             "category": "fileUsage"
           },
           {
             "rank": 8,
             "score": 36,
-            "label": "Native File ETCH",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "label": "Native File TABLE_001",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 11,
             "endLine": 11,
             "snippet": "fetch first 1 row only;",
@@ -2341,7 +2341,7 @@
             "rank": 9,
             "score": 30,
             "label": "Conditional Logic",
-            "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_FILE_004.sqlrpgle",
             "startLine": 8,
             "endLine": 8,
             "snippet": "select ID",
@@ -2355,11 +2355,11 @@
         {
           "rank": 1,
           "score": 180,
-          "label": "Native File FILE_200",
-          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "label": "Native File TABLE_002",
+          "file": "SOURCE_FILE_005.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "snippet": "dcl-f TABLE_002 disk usage(*update);",
           "ref": "EV0003",
           "category": "fileUsage"
         },
@@ -2367,10 +2367,10 @@
           "rank": 2,
           "score": 174,
           "label": "UPDATE SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 13,
           "endLine": 16,
-          "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+          "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
           "ref": "EV0007",
           "category": "sql"
         },
@@ -2378,62 +2378,62 @@
           "rank": 3,
           "score": 102,
           "label": "SELECT SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 7,
           "endLine": 11,
-          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
           "ref": "EV0006",
           "category": "sql"
         },
         {
           "rank": 4,
           "score": 68,
-          "label": "Program Call PROGRAM_100",
-          "file": "QCLLESRC/DRIVER_100.clle",
+          "label": "Program Call PROGRAM_001",
+          "file": "SOURCE_FILE_001.clle",
           "startLine": 2,
           "endLine": 2,
-          "snippet": "CALL PGM(PROGRAM_100)",
+          "snippet": "CALL PGM(PROGRAM_001)",
           "ref": "EV0012",
           "category": "calls"
         },
         {
           "rank": 5,
           "score": 68,
-          "label": "Program Call PROGRAM_200",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_004",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 7,
           "endLine": 7,
-          "snippet": "call PROGRAM_200;",
+          "snippet": "call PROGRAM_004;",
           "ref": "EV0013",
           "category": "calls"
         },
         {
           "rank": 6,
           "score": 68,
-          "label": "Program Call PROGRAM_300",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_005",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 8,
           "endLine": 8,
-          "snippet": "call PROGRAM_300;",
+          "snippet": "call PROGRAM_005;",
           "ref": "EV0014",
           "category": "calls"
         },
         {
           "rank": 7,
           "score": 63,
-          "label": "Native File FILE_100",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Native File PROGRAM_003",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+          "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
           "ref": "EV0002",
           "category": "fileUsage"
         },
         {
           "rank": 8,
           "score": 36,
-          "label": "Native File ETCH",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "label": "Native File TABLE_001",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 11,
           "endLine": 11,
           "snippet": "fetch first 1 row only;",
@@ -2444,7 +2444,7 @@
           "rank": 9,
           "score": 30,
           "label": "Conditional Logic",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 8,
           "endLine": 8,
           "snippet": "select ID",
@@ -2456,11 +2456,11 @@
         {
           "rank": 1,
           "score": 180,
-          "label": "Native File FILE_200",
-          "file": "QRPGLESRC/PROGRAM_300.rpgle",
+          "label": "Native File TABLE_002",
+          "file": "SOURCE_FILE_005.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_200 disk usage(*update);",
+          "snippet": "dcl-f TABLE_002 disk usage(*update);",
           "ref": "EV0003",
           "category": "fileUsage"
         },
@@ -2468,10 +2468,10 @@
           "rank": 2,
           "score": 174,
           "label": "UPDATE SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 13,
           "endLine": 16,
-          "snippet": "exec sql\n    update TABLE_100\n       set STATUS = 'READY'\n     where ID = :ID_001;",
+          "snippet": "exec sql\n    update TABLE_003\n       set STATUS = 'VALUE_001'\n     where ID = :ID_001;",
           "ref": "EV0007",
           "category": "sql"
         },
@@ -2479,62 +2479,62 @@
           "rank": 3,
           "score": 102,
           "label": "SELECT SQL",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 7,
           "endLine": 11,
-          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_100\n      fetch first 1 row only;",
+          "snippet": "exec sql\n    select ID\n      into :ID_001\n      from TABLE_003\n      fetch first 1 row only;",
           "ref": "EV0006",
           "category": "sql"
         },
         {
           "rank": 4,
           "score": 68,
-          "label": "Program Call PROGRAM_100",
-          "file": "QCLLESRC/DRIVER_100.clle",
+          "label": "Program Call PROGRAM_001",
+          "file": "SOURCE_FILE_001.clle",
           "startLine": 2,
           "endLine": 2,
-          "snippet": "CALL PGM(PROGRAM_100)",
+          "snippet": "CALL PGM(PROGRAM_001)",
           "ref": "EV0012",
           "category": "calls"
         },
         {
           "rank": 5,
           "score": 68,
-          "label": "Program Call PROGRAM_200",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_004",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 7,
           "endLine": 7,
-          "snippet": "call PROGRAM_200;",
+          "snippet": "call PROGRAM_004;",
           "ref": "EV0013",
           "category": "calls"
         },
         {
           "rank": 6,
           "score": 68,
-          "label": "Program Call PROGRAM_300",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Program Call PROGRAM_005",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 8,
           "endLine": 8,
-          "snippet": "call PROGRAM_300;",
+          "snippet": "call PROGRAM_005;",
           "ref": "EV0014",
           "category": "calls"
         },
         {
           "rank": 7,
           "score": 63,
-          "label": "Native File FILE_100",
-          "file": "QRPGLESRC/PROGRAM_100.rpgle",
+          "label": "Native File PROGRAM_003",
+          "file": "SOURCE_FILE_003.rpgle",
           "startLine": 4,
           "endLine": 4,
-          "snippet": "dcl-f FILE_100 disk keyed usage(*input);",
+          "snippet": "dcl-f PROGRAM_003 disk keyed usage(*input);",
           "ref": "EV0002",
           "category": "fileUsage"
         },
         {
           "rank": 8,
           "score": 36,
-          "label": "Native File ETCH",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "label": "Native File TABLE_001",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 11,
           "endLine": 11,
           "snippet": "fetch first 1 row only;",
@@ -2545,7 +2545,7 @@
           "rank": 9,
           "score": 30,
           "label": "Conditional Logic",
-          "file": "QRPGLESRC/PROGRAM_200.sqlrpgle",
+          "file": "SOURCE_FILE_004.sqlrpgle",
           "startLine": 8,
           "endLine": 8,
           "snippet": "select ID",
@@ -2569,17 +2569,17 @@
         "policy": {
           "allowTables": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "CUSTOMERS"
             },
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "ORDERS"
             }
           ],
           "denyTables": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "AUDIT_LOG"
             }
           ],
@@ -2590,7 +2590,7 @@
           ],
           "maskRules": [
             {
-              "schema": "DATA_EXAMPLE",
+              "schema": "SCHEMA_001",
               "table": "CUSTOMERS",
               "columns": [
                 "PHONE"

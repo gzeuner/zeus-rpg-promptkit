@@ -35,6 +35,15 @@ test('doctor action accepts valid payload and returns structured metadata', asyn
           message: 'unsafe placeholder',
         },
       ],
+      probeRows: [
+        {
+          system: 'synthetic-system',
+          profile: 'dev',
+          functionName: 'metadata-db',
+          status: 'OK',
+          details: 'SELECT 1 succeeded.',
+        },
+      ],
     }),
   });
 
@@ -50,12 +59,42 @@ test('doctor action accepts valid payload and returns structured metadata', asyn
   assert.equal(typeof result.durationMs, 'number');
   assert.equal(result.input.profile, 'dev');
   assert.equal(result.input.showResolved, false);
+  assert.equal(result.input.probe, false);
   assert.equal(result.result.summary.pass, 1);
   assert.equal(result.result.summary.warn, 1);
   assert.equal(result.result.diagnosticsSummary.warn, 1);
   assert.equal(result.diagnostics.length, 1);
   assert.equal(result.diagnostics[0].code, 'ENV_PROFILE_CONFLICT');
   assert.equal(result.diagnostics[0].message.includes('Env vars have precedence.'), true);
+  assert.deepEqual(result.result.probeRows, [
+    {
+      system: 'synthetic-system',
+      profile: 'dev',
+      functionName: 'metadata-db',
+      status: 'OK',
+      details: 'SELECT 1 succeeded.',
+    },
+  ]);
+});
+
+test('doctor action forwards an explicit read-only probe request', async () => {
+  let receivedArgs = null;
+  const service = createLocalUiActionService({
+    doctorExecutor: args => {
+      receivedArgs = args;
+      return {
+        hasCriticalFailure: false,
+        checks: [{ name: 'Metadata', status: 'PASS', details: 'probe ok' }],
+        probeRows: [{ functionName: 'metadata-db', status: 'OK', details: 'SELECT 1 succeeded.' }],
+      };
+    },
+  });
+
+  const result = await service.executeAction('doctor', { profile: 'dev', probe: true });
+
+  assert.equal(receivedArgs.probe, true);
+  assert.equal(result.input.probe, true);
+  assert.equal(result.result.probeRows[0].functionName, 'metadata-db');
 });
 
 test('unknown action is rejected', async () => {
@@ -123,6 +162,8 @@ test('discovery-preview action derives source scope locally from resolved fetch 
   assert.equal(result.status, 'config-preview-ready');
   assert.equal(result.input.profile, 'dev');
   assert.equal(result.input.actionId, 'discover-source-libraries');
+  assert.equal(result.workingContext.exists, false);
+  assert.equal(result.workingContext.containsCredentials, false);
   assert.equal(result.result.implemented, true);
   assert.equal(result.result.readOnly, true);
   assert.equal(result.result.previewKind, 'config-derived-local-preview');
@@ -130,6 +171,29 @@ test('discovery-preview action derives source scope locally from resolved fetch 
   assert.equal(result.result.resolvedScope.outputRoot, './rpg_sources');
   assert.ok(Array.isArray(result.result.notes));
   assert.ok(result.notes.some(entry => /resolved runtime configuration/i.test(entry)));
+});
+
+test('discovery-preview exposes a local-only fetch plan with the reviewed-context checkpoint', async () => {
+  const service = createLocalUiActionService({
+    cwd: '/workspace/project',
+    fetchConfigResolver: () => ({
+      sourceLibrary: 'APPLIB',
+      files: ['QRPGLESRC'],
+      members: ['ORDERPGM'],
+      out: '/workspace/project/rpg_sources',
+    }),
+  });
+  const result = await service.executeAction('discovery-preview', {
+    profile: 'dev',
+    actionId: 'preview-fetch-plan',
+  });
+
+  assert.equal(result.status, 'config-preview-ready');
+  assert.equal(result.workingContext.containsCredentials, false);
+  assert.equal(result.result.scope, 'local fetch plan');
+  assert.equal(result.result.resolvedScope.outputRoot, './rpg_sources');
+  assert.equal(result.result.candidates.length, 0);
+  assert.ok(result.result.notes.some(entry => /does not contact IBM i/i.test(entry)));
 });
 
 test('discovery-preview derives DB2 metadata scope locally from resolved analyze and workflow config', async () => {

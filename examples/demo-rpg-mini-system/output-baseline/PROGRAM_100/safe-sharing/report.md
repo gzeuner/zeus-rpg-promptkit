@@ -1,29 +1,29 @@
 # Zeus RPG Analysis Report
 
 ## Overview
-- Program: PROGRAM_100
+- Program: PROGRAM_001
 - Scanned At: 2000-01-01T00:00:00.000Z
-- Source Root: SOURCE_ROOT
+- Source Root: SAFE_SHARING_SOURCE_ROOT
 - Source File Count: 5
 - Table Count: 4
 - Program Call Count: 3
 - Copy Member Count: 0
 - SQL Statement Count: 2
-- Summary: Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).
+- Summary: Program PROGRAM_001 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings).
 
 ## AI Context Optimization
 - Enabled: true
 - Context Tokens: 3230
 - Optimized Tokens: 8734
 - Reduction: 0%
-- Soft Token Limit: 10000
+- Soft Token Limit: 0
 
 ## Source Files
-- QCLLESRC/DRIVER_100.clle (36 bytes, 5 lines, CLLE, normalization: ok)
-- QDDSSRC/FILE_100.pf (118 bytes, 6 lines, PF, normalization: ok)
-- QRPGLESRC/PROGRAM_100.rpgle (140 bytes, 11 lines, RPGLE, normalization: ok)
-- QRPGLESRC/PROGRAM_200.sqlrpgle (266 bytes, 19 lines, SQLRPGLE, normalization: ok)
-- QRPGLESRC/PROGRAM_300.rpgle (148 bytes, 11 lines, RPGLE, normalization: ok)
+- SOURCE_FILE_001.clle (36 bytes, 5 lines, CLLE, normalization: ok)
+- SOURCE_FILE_002.pf (118 bytes, 6 lines, PF, normalization: ok)
+- SOURCE_FILE_003.rpgle (140 bytes, 11 lines, RPGLE, normalization: ok)
+- SOURCE_FILE_004.sqlrpgle (266 bytes, 19 lines, SQLRPGLE, normalization: ok)
+- SOURCE_FILE_005.rpgle (148 bytes, 11 lines, RPGLE, normalization: ok)
 
 ## Source Ingest
 - Files Seen: 6
@@ -42,7 +42,7 @@
 - SQLRPGLE: 1
 
 ### CL Commands
-- CALL: CALL PGM(PROGRAM_100)
+- CALL: CALL PGM(PROGRAM_001)
 - ENDPGM: ENDPGM
 - PGM: PGM
 
@@ -50,7 +50,7 @@
 - None detected
 
 ### DDS Metadata
-- FILE_100 [DISK] formats: REC100
+- PROGRAM_003 [DISK] formats: REC100
 
 ## IFS Path Usage
 IFS path scanning was not enabled for this run.
@@ -80,19 +80,19 @@ No diagnostic packs were selected for this run.
 - Source Scan Writes: 5
 - DB2 Metadata Cache: skipped
 - Test Data Cache: disabled
-- Source Scan Cache Dir: OUTPUT_ROOT\.zeus-cache\source-scans
+- Source Scan Cache Dir: SAFE_SHARING_OUTPUT_ROOT\.zeus-cache\source-scans
 - Artifact Cache Manifest: analysis-cache.json
 
 ## Tables
-- ETCH (FILE)
-- FILE_100 (DISK)
-- FILE_200 (DISK)
-- TABLE_100 (SQL)
+- TABLE_001 (FILE)
+- PROGRAM_003 (DISK)
+- TABLE_002 (DISK)
+- TABLE_003 (SQL)
 
 ## Program Calls
-- PROGRAM_100 (PROGRAM)
-- PROGRAM_200 (PROGRAM)
-- PROGRAM_300 (PROGRAM)
+- PROGRAM_001 (PROGRAM)
+- PROGRAM_004 (PROGRAM)
+- PROGRAM_005 (PROGRAM)
 
 ## Copy Members
 - None detected
@@ -125,9 +125,9 @@ No diagnostic packs were selected for this run.
 - Exported Symbols: 0
 
 ### Modules
-- PROGRAM_100 (PROGRAM_MODULE)
-- PROGRAM_200 (PROGRAM_MODULE)
-- PROGRAM_300 (PROGRAM_MODULE)
+- PROGRAM_001 (PROGRAM_MODULE)
+- PROGRAM_004 (PROGRAM_MODULE)
+- PROGRAM_005 (PROGRAM_MODULE)
 
 ### Service Programs
 - None detected
@@ -142,9 +142,9 @@ No diagnostic packs were selected for this run.
 - Keyed Files: 1
 - Record Formats: 0
 
-- ETCH [FILE]
-- FILE_100 [DISK, READ, KEYED]
-- FILE_200 [DISK, READ, UPDATE, MUTATING]
+- TABLE_001 [FILE]
+- PROGRAM_003 [DISK, READ, KEYED]
+- TABLE_002 [DISK, READ, UPDATE, MUTATING]
 
 ## SQL Statements
 - SQL Statements: 2
@@ -156,8 +156,8 @@ No diagnostic packs were selected for this run.
 - Host Variables: 1
 - Cursors: 1
 
-- [SELECT/READ] exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only; tables: TABLE_100 host vars: ID_001 cursors: FIRST/FETCH
-- [UPDATE/WRITE] exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001; tables: TABLE_100 host vars: ID_001
+- [SELECT/READ] exec sql select ID into :ID_001 from TABLE_003 fetch first 1 row only; tables: TABLE_003 host vars: ID_001 cursors: FIRST/FTABLE_001
+- [UPDATE/WRITE] exec sql update TABLE_003 set STATUS = 'VALUE_001' where ID = :ID_001; tables: TABLE_003 host vars: ID_001
 
 ## DB2 Metadata
 DB2 metadata export was skipped because skipped by --reproducible or --skip-db2-metadata.
@@ -170,7 +170,7 @@ Test data extraction was skipped because no DB2 connection configuration was ava
 - Mask rules: 1
 
 ## Dependency Graph
-Dependency graph generated for PROGRAM_100.
+Dependency graph generated for PROGRAM_001.
 
 - Nodes: 10
 - Edges: 10

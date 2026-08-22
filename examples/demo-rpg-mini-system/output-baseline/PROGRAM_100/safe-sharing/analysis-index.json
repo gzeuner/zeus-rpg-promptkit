@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "kind": "analysis-task-index",
   "generatedAt": "2000-01-01T00:00:00.000Z",
-  "program": "PROGRAM_100",
-  "sourceRoot": "SOURCE_ROOT",
+  "program": "PROGRAM_001",
+  "sourceRoot": "SAFE_SHARING_SOURCE_ROOT",
   "selectedMode": "documentation",
   "derivedModeSettings": {
     "name": "documentation",
@@ -1425,7 +1425,7 @@
         ]
       },
       "nextActions": [
-        "Run zeus impact --target <name> --program PROGRAM_100 to compute reverse dependency blast radius.",
+        "Run zeus impact --target <name> --program PROGRAM_001 to compute reverse dependency blast radius.",
         "Inspect program-call-tree.json and dependency-graph.json before choosing the impact target."
       ]
     },

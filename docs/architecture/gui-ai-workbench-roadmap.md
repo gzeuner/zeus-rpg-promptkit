@@ -243,11 +243,112 @@ Bewusst nicht umgesetzt:
 
 Nächstes To-do nach Iteration 8: manuellen Browser-Walkthrough mit realer Tastatur und einem Screenreader durchführen, anschließend visuelle Detailpolitur und Katalog-Erweiterungsdokumentation priorisieren.
 
+### Iteration 9 — Operator-first Connection and AI Handoff
+
+Status: umgesetzt lokal am 2026-08-22; fokussierte lokale GUI-/Doctor-/Prompt-Tests und Browser-E2E grün.
+
+Umgesetzt:
+
+- Setup trennt jetzt Konfigurationsprüfung und expliziten `doctor --probe`-ähnlichen read-only Verbindungstest.
+- Redigierte Probe-Ergebnisse werden als Funktion/Status/Ziel/Detail angezeigt; keine Credential-Werte oder `show-resolved`-Interna werden in der UI ausgegeben.
+- Neue read-only Route `/api/ui-context` zeigt den autoritativen lokalen Working Context aus `.zeus/working-context.json` inklusive Herkunft und Aktualitätsstatus.
+- Neue AI-Session-Readiness-Strecke führt den Operator durch Environment-Handoff, Doctor/Probe, Working Context und Session-Prompt.
+- Session-Prompt fordert die KI ausdrücklich auf, vor jedem Quellen-, Metadaten- oder Datenzugriff den exakten Scope zu lesen und bei jedem wesentlichen Schritt zu wiederholen.
+- Session-Prompt-Generierung aus der GUI wird bis zur Prüfung von Doctor und Working Context geführt zurückgehalten.
+
+Bewusst nicht umgesetzt:
+
+- Die GUI lädt keine Environment-Variablen in einen bereits laufenden Shell-Prozess.
+- Der Working Context wird nicht frei überschrieben: Änderungen laufen über Preview, Diff, explizite Bestätigung und optimistic-concurrency-Fingerprints.
+- Kein Remote-Fetch, keine freie DB2-Abfrage und keine Mutation werden aus dem Browser ausgelöst; nur der explizit gewählte Doctor-Readiness-Probe darf die bestehenden read-only Verbindungstests ausführen.
+
+Prüfstand:
+
+- Fokussierte GUI-/Doctor-/Prompt-/Working-Context-Tests: grün.
+- Generiertes UI-JavaScript und bestehende Accessibility-Verträge: grün.
+- Echter Browser-E2E-Test der Preview-Aktion: grün.
+- Full Suite, Paketierung, Hygiene und Release-Integrity werden im Abschlusslauf wiederholt; Docker-SFTP bleibt umgebungsabhängig.
+
+Nächstes To-do nach Iteration 9: GUI-gestützte read-only Discovery-/Fetch-Previews auf Basis des reviewed Working Context; danach Accessibility-Walkthrough.
+
+### Iteration 10 — Working Context Wizard und Provider Boundaries
+
+Status: umgesetzt lokal am 2026-08-22; Commit und CI folgen dem normalen Review-Prozess.
+
+Umgesetzt:
+
+- Die GUI zeigt und bearbeitet den exakten First-Point-to-Check für Source Code,
+  Objects, Metadata und Data.
+- `Preview Changes` erzeugt einen redigierten Diff ohne Schreibvorgang.
+- `Save Reviewed Context` verlangt explizite Bestätigung, einen aktuellen
+  Preview-Fingerprint und einen unveränderten Ausgangskontext.
+- Stale Previews werden mit einem Conflict abgewiesen, statt Änderungen still
+  zu überschreiben.
+- Gespeichert wird ausschließlich `.zeus/working-context.json`; Profile,
+  Environment-Dateien, Key-Material und Remote-Systeme bleiben unangetastet.
+- Die Browser-E2E-Strecke klickt die Preview-Aktion im echten Browser.
+- [Provider Adapter Boundaries](../ai/provider-adapter-boundaries.md) beschreibt
+  die sichere, optionale Einbindung von Grok und anderen Modellprovidern.
+
+Bewusst nicht umgesetzt:
+
+- keine automatische Grok-/OpenAI-/sonstige Provider-Ausführung;
+- keine Übertragung von Workspace-Inhalten ohne explizit freigegebenes Paket;
+- keine Remote-Fetch-, DB2- oder Mutationsaktion aus dem Context-Wizard;
+- keine Bearbeitung von Credentials oder Schlüsselmaterial im Context-Wizard.
+
+Grok wurde lokal nur auf Verfügbarkeit und Authentifizierungsstatus geprüft. Die
+CLI war nicht authentifiziert; der Credential-Store wurde nicht ausgelesen und
+es wurden keine Projektdaten übertragen.
+
+Nächstes To-do nach Iteration 10: reviewed Working Context für sichere,
+read-only Discovery-/Fetch-Previews verwenden und anschließend die noch
+offenen Accessibility-Buttons manuell durchgehen.
+
+### Iteration 11 — Reviewed Context Checkpoint und Fetch-Plan-Preview
+
+Status: umgesetzt lokal am 2026-08-22; lokale Gesamtprüfungen grün.
+
+Umgesetzt:
+
+- Die GUI verlangt vor einer Discovery-Preview einen gespeicherten und
+  geprüften Working Context; bei fehlendem Context wird kein Request ausgelöst.
+- Discovery-Ergebnisse enthalten einen sicheren Working-Context-Checkpoint mit
+  Kind, Profil und Scope, aber ohne Credentials, lokale Root-Pfade oder
+  Schlüsselmaterial.
+- Der neue read-only Schritt `Preview Fetch Plan` leitet die lokale
+  Source-/Metadata-/Data-Route aus der validierten Konfiguration ab.
+- Der Fetch-Plan führt keinen Remote-Fetch, keine IBM-i-Verbindung, keinen
+  DB2-Zugriff und keinen Schreibvorgang aus; er macht die spätere Aktion nur
+  transparent und überprüfbar.
+- Tests decken UI-Gate, sichere Context-Projektion, bounded Routing und die
+  Katalog-/Metadaten-Anbindung ab.
+
+Bewusst nicht umgesetzt:
+
+- kein automatischer Remote-Fetch aus der GUI;
+- keine freie Datenbankabfrage und keine Mutation;
+- kein Context-Bypass für die GUI, wenn die Review-/Save-Stufe fehlt;
+- keine Übertragung von Workspace-Inhalten an Grok oder andere Provider.
+
+Prüfstand:
+
+- `npm test`: 899/899 Tests grün, 0 Fehler, 0 übersprungen;
+- Format, Lint, Typecheck, Docs-Check, Quality und Hygiene: grün;
+- GUI-Browser-E2E: 1/1 grün;
+- die drei Windows-Symlink-Tests bleiben in CI-/Windows-Umgebungen
+  berechtigt übersprungen.
+
+Nächstes To-do nach Iteration 11: die Discovery-/Fetch-Preview mit einem
+expliziten, weiterhin read-only lokalen Source-/Metadata-/Data-Fetch-Schritt
+verbinden und dabei jeden tatsächlichen Endpunktzugriff sichtbar bestätigen.
+
 ## Weitere geplante Iterationen
 
-1. Manueller Accessibility-Walkthrough mit Tastatur, Screenreader und Forced-Colors-Prüfung
-2. Katalog-Erweiterungsdokumentation und sichere Authoring-Vorlage für neutrale Metadaten
-3. Evidence-Freshness-Refresh als explizite, überprüfbare lokale Aktion weiterführen
+1. Read-only Fetch-Preview mit expliziter Endpunktbestätigung vertiefen
+2. Manuellen Accessibility-Walkthrough mit Tastatur, Screenreader und Forced-Colors-Prüfung wiederholen
+3. Katalog-Erweiterungsdokumentation und sichere Authoring-Vorlage für neutrale Metadaten
+4. Evidence-Freshness-Refresh als explizite, überprüfbare lokale Aktion weiterführen
 
 ## Update-Regel für jede Iteration
 
