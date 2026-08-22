@@ -43,6 +43,10 @@
     "test:contract": "node scripts/run-tests.js --contract",
     "test:smoke": "node scripts/run-tests.js --smoke",
     "test:corpus": "node scripts/run-tests.js --corpus",
+    "test:e2e": "npm run test:e2e:mcp && npm run test:e2e:sftp && npm run test:e2e:gui",
+    "test:e2e:mcp": "node --test tests/e2e/mcp-stdio.e2e.test.js",
+    "test:e2e:sftp": "node --test tests/e2e/sftp-fetch-analyze-bundle.e2e.test.js",
+    "test:e2e:gui": "node --test tests/e2e/gui-workbench.e2e.test.js",
     "test:quality": "node scripts/run-tests.js --quality",
     "test:benchmark": "node scripts/run-tests.js --benchmark",
     "package:smoke": "node scripts/package-smoke.js",
@@ -77,6 +81,7 @@
     "eslint": "^9.39.5",
     "globals": "^17.7.0",
     "prettier": "^3.9.5",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "ws": "^8.21.3"
   }
 }

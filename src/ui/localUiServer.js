@@ -787,11 +787,12 @@ async function startLocalUiServer({
     templateStorePath,
     outputRoot: resolvedOutputRoot,
   });
+  const resolvedEnv = actionServiceOptions.env || process.env;
   const uiActionService =
     actionService ||
     createLocalUiActionService({
       cwd: actionServiceOptions.cwd || process.cwd(),
-      env: actionServiceOptions.env || process.env,
+      env: resolvedEnv,
       doctorExecutor: actionServiceOptions.doctorExecutor,
       analyzeExecutor: actionServiceOptions.analyzeExecutor,
       analyzeConfigResolver: actionServiceOptions.analyzeConfigResolver,
@@ -802,15 +803,15 @@ async function startLocalUiServer({
     profileWizardService ||
     createProfileWizardService({
       cwd: actionServiceOptions.cwd || process.cwd(),
-      env: actionServiceOptions.env || process.env,
+      env: resolvedEnv,
     });
   const resolvedProfileKeyWizardService =
     profileKeyWizardService ||
     createProfileKeyWizardService({
       cwd: actionServiceOptions.cwd || process.cwd(),
-      env: actionServiceOptions.env || process.env,
+      env: resolvedEnv,
     });
-  const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(process.env, sensitiveTerms);
+  const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(resolvedEnv, sensitiveTerms);
   const server = http.createServer(
     createLocalUiRequestHandler({
       outputRoot: resolvedOutputRoot,
