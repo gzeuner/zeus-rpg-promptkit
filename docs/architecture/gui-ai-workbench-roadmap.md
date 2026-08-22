@@ -166,11 +166,66 @@ Bewusst nicht umgesetzt:
 
 Nächstes To-do nach Iteration 4: OS-gebundene Secret-Verwaltung als separater, explizit sichtbarer Profil-/Key-Wizard.
 
+### Iteration 5 — Profil-/Key-Wizard mit OS-gebundener Secret-Verwaltung
+
+Status: umgesetzt am 2026-08-22; lokale Prüfungen grün, Gesamt-CI folgt im Veröffentlichungsdurchlauf.
+
+Umgesetzt:
+
+- neuer lokaler Key-Readiness-Vertrag mit Status, Quelle und bevorzugtem Speicherort ohne Schlüsselmaterial
+- expliziter GUI-Schritt zum Erzeugen von Key-Material in Windows-secure storage oder der gitignorierten lokalen Key-Datei
+- Browser-API nimmt keine Klartext-Secrets an und gibt weder Schlüssel noch absolute Zielpfade zurück
+- tatsächliche Secret-Verschlüsselung bleibt bewusst CLI-first (`zeus secret encrypt`)
+- Fehlerfälle wie fehlende Bestätigung und Windows-only Storage werden fail-closed behandelt
+
+Bewusst nicht umgesetzt:
+
+- kein Klartextfeld und kein Decrypt-Endpoint in der GUI
+- keine automatische Rotation, kein Überschreiben vorhandener Schlüssel und keine externe Secret-Manager-Abhängigkeit
+
+Nächstes To-do nach Iteration 5: neutrale Plugin-Verträge als deklarative Erweiterungspunkte.
+
+### Iteration 6 — Deklarative Plugin-Verträge
+
+Status: umgesetzt am 2026-08-22; lokale Prüfungen grün, Gesamt-CI folgt im Veröffentlichungsdurchlauf.
+
+Umgesetzt:
+
+- deterministischer, deduplizierter Katalog für Commands, Workflows, Rollen und Themes
+- explizite Allowlist-Unterstützung für Plugin-IDs und Allowlist-Keys
+- deklarative Verträge ohne Plugin-Ausführung, Netzwerkzugriff oder Telemetrie
+- Validierung gegen ausführbare oder telemetrierende Plugin-Behauptungen
+
+Bewusst nicht umgesetzt:
+
+- keine dynamische Plugin-Ladung, keine beliebige Codeausführung und keine automatische Installation
+- keine zweite Command- oder Workflow-Engine neben den bestehenden öffentlichen Verträgen
+
+Nächstes To-do nach Iteration 6: Accessibility und responsive, telemetrie-freie UX-Politur.
+
+### Iteration 7 — Accessibility und responsive UX-Politur
+
+Status: umgesetzt am 2026-08-22; lokale Prüfungen grün, Gesamt-CI folgt im Veröffentlichungsdurchlauf.
+
+Umgesetzt:
+
+- sichtbare Keyboard-Fokuszustände und semantische Tab-/Tablist-Rollen für Haupt- und Report-Navigation
+- `aria-selected`, `aria-current`, Live-Regionen und verständliche Labels für zentrale Arbeitsbereiche
+- Reduced-Motion- und Forced-Colors-Unterstützung ohne Telemetrie
+- Accessibility-Vertrag im UI-Metadatenpayload und bestehende responsive Breakpoints transparent beschrieben
+
+Bewusst nicht umgesetzt:
+
+- keine externe Accessibility-Bibliothek und kein clientseitiges Telemetrie- oder Session-Tracking
+- keine vollständige WCAG-Zertifizierung; visuelle Prüfung mit Screenreader und Browser-Tools bleibt ein offener manueller Schritt
+
+Nächstes To-do nach Iteration 7: manueller Accessibility-Walkthrough sowie Plugin-Katalog-Anbindung an bestehende Live-Metadaten.
+
 ## Weitere geplante Iterationen
 
-1. Profil-/Key-Wizard mit OS-gebundener Secret-Verwaltung
-2. Plugin-Verträge für Commands, Workflows, Rollen und Themes
-3. Accessibility, responsive Layouts, Telemetrie-freie lokale UX und visuelle Politur
+1. Manueller Accessibility-Walkthrough mit Tastatur, Screenreader und Forced-Colors-Prüfung
+2. Plugin-Katalog sicher an Live-Command-, Workflow- und Rollen-Metadaten anbinden
+3. Profile, Key-Status und Evidence-Refresh als einheitliche sichere Setup-Checkliste darstellen
 
 ## Update-Regel für jede Iteration
 

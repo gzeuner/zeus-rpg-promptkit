@@ -311,6 +311,18 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.equal(uiMetadata.guidedWorkflow.schemaVersion, 1);
     assert.equal(uiMetadata.evidenceExplorer.readOnly, true);
     assert.equal(uiMetadata.roleProfiles.profiles.length, 4);
+    assert.equal(uiMetadata.profileKeyWizard.secretValuesInBrowser, false);
+    assert.deepEqual(uiMetadata.profileKeyWizard.supportedStorage, ['windows-secure', 'keyfile']);
+    assert.equal(uiMetadata.accessibility.keyboardFirst, true);
+    assert.equal(uiMetadata.accessibility.reducedMotion, 'respected');
+    assert.deepEqual(uiMetadata.pluginContracts.supportedKinds, [
+      'command',
+      'workflow',
+      'role',
+      'theme',
+    ]);
+    assert.equal(uiMetadata.pluginContracts.catalog.executable, false);
+    assert.equal(uiMetadata.pluginContracts.catalog.telemetry, 'disabled');
     assert.equal(uiMetadata.workflowCards.length, 6);
     assert.equal(uiMetadata.workflowCards.find(entry => entry.id === 'configure').title, 'Setup');
     assert.equal(
@@ -380,6 +392,13 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
       'shared'
     );
     assert.equal(JSON.stringify(profileWizardState).includes('internal-host.example'), false);
+
+    const profileKeyState = await fetch(`${started.url}/api/profile-wizard/key-state`).then(
+      response => response.json()
+    );
+    assert.ok(['missing', 'ready'].includes(profileKeyState.status));
+    assert.equal(profileKeyState.secretValuesInBrowser, false);
+    assert.equal(JSON.stringify(profileKeyState).includes('internal-host.example'), false);
 
     const profileWizardPreviewResponse = await fetch(`${started.url}/api/profile-wizard/preview`, {
       method: 'POST',

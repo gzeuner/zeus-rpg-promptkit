@@ -538,6 +538,18 @@ input[type="search"]{
 .status-ok{color:var(--success)}
 .status-warn{color:var(--accent)}
 .status-err{color:var(--danger)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{
+  outline:3px solid var(--accent);
+  outline-offset:3px;
+}
+button:disabled{cursor:not-allowed;opacity:.62}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+}
+@media (forced-colors: active){
+  .panel,.card,.home-card,.workflow-card,.item,.run,.hint-item{border:1px solid CanvasText}
+  .status-ok,.status-warn,.status-err{color:CanvasText}
+}
 @media(max-width:1200px){
   .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
@@ -586,16 +598,16 @@ input[type="search"]{
   <div class="main">
     <div class="panel hero">
       <div class="stack">
-        <h2 id="title">Setup &amp; Readiness</h2>
-        <p id="subtitle">Start with Setup to confirm profile selection, env overrides, and doctor readiness.</p>
+        <h2 id="title" tabindex="-1">Setup &amp; Readiness</h2>
+        <p id="subtitle" aria-live="polite">Start with Setup to confirm profile selection, env overrides, and doctor readiness.</p>
       </div>
-      <div id="chips" class="chips hero-meta"><div class="token">Runs: 0</div><div class="token">Setup first</div></div>
+      <div id="chips" class="chips hero-meta" aria-live="polite"><div class="token">Runs: 0</div><div class="token">Setup first</div></div>
     </div>
 
     <div id="ai-workbench-bar" class="panel ai-workbench"><div class="ai-empty">Loading AI Workbench metadata...</div></div>
 
     <div id="metrics" class="metrics"><div class="panel metric"><div>Primary Tab</div><strong>Setup</strong></div><div class="panel metric"><div>First Action</div><strong>Check Readiness</strong></div><div class="panel metric"><div>Reports</div><strong>After Output</strong></div><div class="panel metric"><div>Secrets</div><strong>Hidden</strong></div></div>
-    <div id="tabs" class="panel tabs"><button class="tab active">Setup</button><button class="tab">Reports</button><button class="tab">Advanced / Tools</button></div>
+    <div id="tabs" class="panel tabs" role="tablist" aria-label="Main views"><button class="tab active" role="tab" aria-selected="true">Setup</button><button class="tab" role="tab" aria-selected="false">Reports</button><button class="tab" role="tab" aria-selected="false">Advanced / Tools</button></div>
 
     <div id="home" class="panel view two"></div>
     <div id="configure" class="panel view two active"></div>
@@ -671,6 +683,13 @@ const s={
     selectedProfileName:'',
     draft:null,
     preview:null
+  },
+  profileKeyWizard:{
+    loading:false,
+    initializing:false,
+    error:null,
+    status:'',
+    state:null
   },
   promptBuilder:{
     loading:false,
@@ -850,7 +869,7 @@ function renderRuns(){
     root.innerHTML='<div class="empty">No analysis runs found yet. Finish Setup first, then generate output with the CLI and refresh this list.</div>';
     return;
   }
-  root.innerHTML=s.runs.map((r)=>'<button class="run'+(r.program===s.program?' active':'')+'" data-run="'+esc(r.program)+'"><strong>'+esc(r.program)+'</strong><div>'+esc(r.status||'unknown')+' • '+esc(r.workflowPreset||r.workflowMode||'standard')+'</div><div>'+esc(fmt(r.completedAt))+'</div></button>').join('');
+    root.innerHTML=s.runs.map((r)=>'<button class="run'+(r.program===s.program?' active':'')+'" data-run="'+esc(r.program)+'" aria-label="Open run '+escAttr(r.program)+'"'+(r.program===s.program?' aria-current="true"':'')+'><strong>'+esc(r.program)+'</strong><div>'+esc(r.status||'unknown')+' • '+esc(r.workflowPreset||r.workflowMode||'standard')+'</div><div>'+esc(fmt(r.completedAt))+'</div></button>').join('');
   for(const b of root.querySelectorAll('[data-run]')) b.onclick=()=>selectRun(b.dataset.run);
 }
 
@@ -900,9 +919,11 @@ function renderMetrics(){
 }
 
 function renderTabs(){
+  q('tabs').setAttribute('role','tablist');
+  q('tabs').setAttribute('aria-label','Main views');
   q('tabs').innerHTML=tabs.map(([id,label])=>{
     const active=(id==='reports'&&isReportsTab(s.tab))||(s.tab===id)||(id==='home'&&s.tab==='workbench');
-    return '<button class="tab'+(active?' active':'')+'" data-tab="'+id+'">'+label+'</button>';
+    return '<button class="tab'+(active?' active':'')+'" role="tab" aria-selected="'+String(active)+'" data-tab="'+id+'">'+label+'</button>';
   }).join('');
   for(const b of q('tabs').querySelectorAll('[data-tab]')) b.onclick=()=>selectTab(b.dataset.tab);
 }
@@ -912,7 +933,7 @@ function isReportsTab(tab){
 }
 
 function renderReportsSubnav(activeTab){
-  return '<div class="stack"><div><h2>Reports</h2><p>Reports are local and read-only. They inspect existing artifacts and never fetch, query, or modify remote systems.</p></div><div class="tabs">'+reportViews.map(([id,label])=>'<button class="tab'+(id===activeTab?' active':'')+'" data-report-view="'+esc(id)+'">'+esc(label)+'</button>').join('')+'</div><div class="small">Select a run in the left sidebar, then choose the report view you want to inspect.</div></div>';
+  return '<div class="stack"><div><h2>Reports</h2><p>Reports are local and read-only. They inspect existing artifacts and never fetch, query, or modify remote systems.</p></div><div class="tabs" role="tablist" aria-label="Report views">'+reportViews.map(([id,label])=>'<button class="tab'+(id===activeTab?' active':'')+'" role="tab" aria-selected="'+String(id===activeTab)+'" data-report-view="'+esc(id)+'">'+esc(label)+'</button>').join('')+'</div><div class="small">Select a run in the left sidebar, then choose the report view you want to inspect.</div></div>';
 }
 
 function bindReportsSubnav(root){
@@ -1041,6 +1062,13 @@ function profileWizardMetadata(){
   const payload=s.uiMetadata&&s.uiMetadata.payload;
   return payload&&payload.profileWizard&&typeof payload.profileWizard==='object'
     ? payload.profileWizard
+    : null;
+}
+
+function profileKeyWizardMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.profileKeyWizard&&typeof payload.profileKeyWizard==='object'
+    ? payload.profileKeyWizard
     : null;
 }
 
@@ -1324,6 +1352,59 @@ async function loadProfileWizardState(){
   }finally{
     s.profileWizard.loading=false;
   }
+}
+
+async function loadProfileKeyWizardState(){
+  s.profileKeyWizard.loading=true;
+  s.profileKeyWizard.error=null;
+  try{
+    s.profileKeyWizard.state=await getJson('/api/profile-wizard/key-state');
+  }catch(error){
+    s.profileKeyWizard.error=error.message||String(error);
+  }finally{
+    s.profileKeyWizard.loading=false;
+  }
+}
+
+async function initializeProfileKeyWizard(){
+  const metadata=profileKeyWizardMetadata()||{};
+  const storageNode=document.querySelector('#profileKeyWizardStorage');
+  const storage=storageNode&&storageNode.value?storageNode.value:'auto';
+  if(typeof window.confirm==='function'&&!window.confirm('Create local key material now? The key will never be shown in the browser.')){
+    return;
+  }
+  s.profileKeyWizard.initializing=true;
+  s.profileKeyWizard.error=null;
+  try{
+    const result=await sendJson('POST','/api/profile-wizard/key-init',{storage,confirm:true});
+    s.profileKeyWizard.state=Object.assign({},s.profileKeyWizard.state||{},result);
+    s.profileKeyWizard.status='Local key storage initialized. Secret values remain CLI-only.';
+    if(metadata.defaultStorage&&storage==='auto'){
+      s.profileKeyWizard.status='Local '+String(metadata.defaultStorage)+' key storage initialized.';
+    }
+  }catch(error){
+    s.profileKeyWizard.error=error.message||String(error);
+  }finally{
+    s.profileKeyWizard.initializing=false;
+  }
+}
+
+function renderProfileKeyWizardPanel(){
+  const state=s.profileKeyWizard.state||{};
+  const metadata=profileKeyWizardMetadata()||{};
+  const storage=Array.isArray(metadata.supportedStorage)?metadata.supportedStorage:['keyfile'];
+  const status=s.profileKeyWizard.loading?'Checking...':(state.status||'not checked');
+  const source=state.source&&state.source.label?String(state.source.label):'No key material available';
+  const error=s.profileKeyWizard.error;
+  return '<div class="sub"><details'+(error||s.profileKeyWizard.status?' open':'')+'><summary>Local Secret Key Readiness</summary>'+
+    '<p class="small">The GUI can create local key material without receiving or displaying a secret. Encrypt actual values with the CLI.</p>'+
+    '<div class="tokens"><div class="token '+esc(statusToneClass(status))+'">status: '+esc(status)+'</div><div class="token">source: '+esc(source)+'</div><div class="token">browser secret values: never</div></div>'+
+    (error?'<div class="hint-list"><div class="hint-item"><strong>Key wizard error</strong><p>'+esc(error)+'</p></div></div>':'')+
+    (s.profileKeyWizard.status?'<div class="hint-list"><div class="hint-item"><strong>Key wizard</strong><p>'+esc(s.profileKeyWizard.status)+'</p></div></div>':'')+
+    '<div class="field-grid"><label>Local storage<select id="profileKeyWizardStorage"><option value="auto">Recommended for this OS</option>'+storage.map((entry)=>'<option value="'+escAttr(entry)+'">'+esc(entry)+'</option>').join('')+'</select></label></div>'+
+    '<div class="actions"><button class="btn" data-pkw-refresh="1">'+esc(s.profileKeyWizard.loading?'Checking...':'Check Key Readiness')+'</button><button class="btn primary" data-pkw-init="1">'+esc(s.profileKeyWizard.initializing?'Creating...':'Create Local Key')+'</button></div>'+
+    '<div class="small">Storage target: '+esc(String(state.keyFile||'config/local-only/.zeus-key'))+' or OS-secure storage. Key material is not returned by this API.</div>'+
+    '</details></div>';
 }
 
 async function loadProfileWizardProfile(profileName){
@@ -2584,6 +2665,7 @@ function renderConfigure(){
       doctorResult
     })+
     '<div class="sub"><details'+(wizardDetailsOpen?' open':'')+'><summary>Local-only Profile Wizard</summary><p class="small">Use this only when you need to create or adjust the local-only profile overlay that Setup and Doctor rely on.</p>'+renderProfileWizardPanel()+'</details></div>'+
+    renderProfileKeyWizardPanel()+
     '<div class="sub"><h2>Advanced Setup Details</h2><p class="small">These sections explain the metadata-driven wizard model and read-only preview stubs. They are optional once the main setup flow is clear.</p><details'+(discoveryResult||discoveryState.error?' open':'')+'><summary>Read-only Discovery Actions</summary><div class="stack"><div class="field-list">'+(discoveryActions.length?discoveryActions.map((action)=>'<div class="field-item"><strong>'+esc(action.title)+'</strong><p>'+esc(action.description||'')+'</p><div class="workflow-meta"><div class="token">safety: '+esc(action.safetyLevel||'S2')+'</div><div class="token">'+esc(action.status||'stubbed-preview-only')+'</div><div class="token">'+esc(action.expensive?'preview first':'read-only')+'</div></div><div class="actions"><button class="btn" data-discovery-preview="'+esc(action.id)+'">'+esc(String(action.status||'').indexOf('config-preview-ready')===0?'Preview':'Preview Stub')+'</button></div></div>').join(''):'<div class="empty">No discovery actions available.</div>')+'</div>'+(discoveryState.error?'<div class="hint-list"><div class="hint-item"><strong>Discovery preview error</strong><p>'+esc(discoveryState.error)+'</p></div></div>':'')+renderGuidedDiscoveryPreview(discoveryResult)+'</div></details><details><summary>Safe CLI Preview</summary><p class="small">Generated from the selected intent. Secrets are never included.</p><div class="field-grid"><label>Analysis Intent<select id="guidedIntentSelect">'+intents.map((intent)=>'<option value="'+escAttr(intent.id)+'"'+(selectedIntent&&intent.id===selectedIntent.id?' selected':'')+'>'+esc(intent.title)+'</option>').join('')+'</select></label></div>'+renderGuidedCliPreview(selectedIntent,profileForWizard)+'</details><details><summary>Guided Wizard Metadata</summary><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Wizard steps: '+esc(String(steps.length||0))+'</div><div class="token">Intents: '+esc(String(intents.length||0))+'</div><div class="token">Purpose labels: '+esc(String(guided&&guided.purposeLabels&&guided.purposeLabels.length||0))+'</div></div><div class="section-list">'+steps.map((step)=>'<button class="btn section-btn'+(selectedStep&&step.id===selectedStep.id?' active':'')+'" data-guided-step="'+esc(step.id)+'">'+esc(step.shortTitle||step.title)+'</button>').join('')+'</div><div class="configure-layout"><div class="section-list">'+
       sections.map((section)=>'<button class="btn section-btn'+(section.id===s.uiMetadata.selectedConfigSection?' active':'')+'" data-config-section="'+esc(section.id)+'">'+esc(section.label||section.id)+'</button>').join('')+
     '</div><div class="field-list">'+
@@ -2727,6 +2809,18 @@ function renderConfigure(){
   for(const pwSave of root.querySelectorAll('[data-pw-save]')){
     pwSave.onclick=async ()=>{
       await saveProfileWizardDraft();
+      renderConfigure();
+    };
+  }
+  for(const pkwRefresh of root.querySelectorAll('[data-pkw-refresh]')){
+    pkwRefresh.onclick=async ()=>{
+      await loadProfileKeyWizardState();
+      renderConfigure();
+    };
+  }
+  for(const pkwInit of root.querySelectorAll('[data-pkw-init]')){
+    pkwInit.onclick=async ()=>{
+      await initializeProfileKeyWizard();
       renderConfigure();
     };
   }
@@ -3996,6 +4090,7 @@ async function boot(){
   renderTabs();
   await loadUiMetadata();
   await loadProfileWizardState();
+  await loadProfileKeyWizardState();
   renderConfigure();
   await loadPromptBuilderData();
   await refreshRuns();
