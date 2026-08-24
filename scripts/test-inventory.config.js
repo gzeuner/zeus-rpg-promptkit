@@ -74,6 +74,7 @@ module.exports = {
       'tests/consolidated-productSurface.test.js',
       'tests/working-context.test.js',
       'tests/working-context-wizard-service.test.js',
+      'tests/fetch-member-service.test.js',
     ],
   },
   exclusions: [],

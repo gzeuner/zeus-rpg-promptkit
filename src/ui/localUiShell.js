@@ -699,6 +699,11 @@ const s={
       error:null,
       result:null
     },
+    fetchMember:{
+      running:false,
+      error:null,
+      result:null
+    },
     analyze:{
       profile:'dev',
       program:'',
@@ -2471,6 +2476,25 @@ async function runDiscoveryPreviewAction(){
   }
 }
 
+async function runReadOnlyFetchMemberAction(planId){
+  const profile=String(s.uiActions.discovery.profile||s.uiActions.doctor.profile||'dev').trim()||'dev';
+  s.uiActions.fetchMember.running=true;
+  s.uiActions.fetchMember.error=null;
+  try{
+    const result=await sendJson('POST','/api/ui-actions/fetch-member',{
+      profile,
+      planId:String(planId||'').trim(),
+      confirmEndpoint:true
+    });
+    s.uiActions.fetchMember.result=result;
+  }catch(error){
+    s.uiActions.fetchMember.error=error.message||String(error);
+    s.uiActions.fetchMember.result=null;
+  }finally{
+    s.uiActions.fetchMember.running=false;
+  }
+}
+
 async function runAnalyzeExistingWorkspaceAction(){
   const profile=String(s.uiActions.analyze.profile||'dev').trim()||'dev';
   const program=String(s.uiActions.analyze.program||'').trim();
@@ -2639,6 +2663,8 @@ function renderGuidedCliPreview(intent,profile){
 function renderGuidedDiscoveryPreview(result){
   const preview=result&&result.result?result.result:null;
   if(!preview) return '';
+  const fetchPlan=preview.fetchPlan&&typeof preview.fetchPlan==='object'?preview.fetchPlan:null;
+  const fetchState=s.uiActions.fetchMember||{};
   const workingContext=result&&result.workingContext&&typeof result.workingContext==='object'
     ? result.workingContext
     : null;
@@ -2676,10 +2702,22 @@ function renderGuidedDiscoveryPreview(result){
   const previewMode=preview.previewKind==='config-derived-local-preview'
     ? 'This preview is config-derived and local-only.'
     : (preview.implemented===false?'This action is intentionally stubbed and does not execute discovery yet.':'');
+  const fetchPlanPanel=fetchPlan
+    ? '<div class="field-item"><strong>Explicit endpoint confirmation</strong><p>Review this exact target before fetching. The remote operation is read-only; only the listed local artifact path may be written.</p><div class="tokens"><div class="token">transport: '+esc(String(fetchPlan.endpoint&&fetchPlan.endpoint.transport||'unknown'))+'</div><div class="token">target: '+esc(String(fetchPlan.endpoint&&fetchPlan.endpoint.target||'unknown'))+'</div><div class="token">library: '+esc(String(fetchPlan.scope&&fetchPlan.scope.sourceLibrary||''))+'</div><div class="token">file: '+esc(String(fetchPlan.scope&&fetchPlan.scope.sourceFile||''))+'</div><div class="token">member: '+esc(String(fetchPlan.scope&&fetchPlan.scope.members&&fetchPlan.scope.members.join(', ')||''))+'</div><div class="token">plan: '+esc(String(fetchPlan.planId||''))+'</div></div><p class="small">Credentials are resolved only by the local server process and are never sent back to this page.</p><div class="actions"><button class="btn primary" data-fetch-member-plan="'+escAttr(String(fetchPlan.planId||''))+'"'+(fetchState.running?' disabled':'')+'>'+esc(fetchState.running?'Probing and fetching...':'Confirm endpoint and fetch read-only source')+'</button></div></div>'
+    : (preview.actionId==='preview-fetch-plan'&&preview.endpointConfirmationRequired===false&&preview.status==='config-preview-ready'
+      ? '<div class="hint-item"><strong>Fetch confirmation unavailable</strong><p>Select a concrete source member in Working Context or the profile before a fetch plan can be confirmed.</p></div>'
+      : '');
+  const fetchResult=fetchState.result&&typeof fetchState.result==='object'?fetchState.result:null;
+  const fetched=fetchResult&&fetchResult.result&&Array.isArray(fetchResult.result.fetched)?fetchResult.result.fetched:[];
+  const fetchResultPanel=fetchState.error
+    ? '<div class="hint-list"><div class="hint-item"><strong>Read-only fetch error</strong><p>'+esc(fetchState.error)+'</p></div></div>'
+    : (fetchResult
+      ? '<div class="hint-list"><div class="hint-item"><strong>Read-only fetch result</strong><div class="tokens"><div class="token '+esc(statusToneClass(fetchResult.status||'not-run'))+'">'+esc(String(fetchResult.status||'not-run'))+'</div><div class="token">remote: read-only</div><div class="token">local write: '+esc(fetchResult.status==='blocked'?'not started':'reviewed output root')+'</div></div><p>'+esc(fetchResult.notes&&fetchResult.notes.join(' ')||'No additional details.')+'</p>'+(fetched.length?'<div class="field-list">'+fetched.map((entry)=>'<div class="field-item"><strong>'+esc(String(entry.member||''))+'</strong><p class="small">'+esc(String(entry.path||''))+'</p></div>').join('')+'</div>':'')+'</div></div>'
+      : '');
   const contextScope=workingContext
     ? '<div class="field-item"><strong>Working Context checkpoint</strong><div class="tokens"><div class="token '+(workingContext.exists?'ok':'warning')+'">'+esc(workingContext.exists?'reviewed':'missing')+'</div><div class="token">kind: '+esc(String(workingContext.activeKind||'sourceCode'))+'</div>'+(workingContext.profile?'<div class="token">profile: '+esc(String(workingContext.profile))+'</div>':'')+'</div><p class="small">'+esc([workingContext.scope&&workingContext.scope.system,workingContext.scope&&workingContext.scope.library,workingContext.scope&&workingContext.scope.sourceFile||workingContext.scope&&workingContext.scope.table,workingContext.scope&&workingContext.scope.member].map((value)=>String(value||'').trim()).filter(Boolean).join(' / ')||'No explicit system / library / source scope selected.')+'</p></div>'
     : '';
-  return '<div class="hint-list"><div class="hint-item"><strong>'+esc(preview.title||'Discovery Preview')+'</strong><div class="tokens"><div class="token '+esc(statusToneClass(preview.status||'not-ready'))+'">'+esc(preview.status||'not-ready')+'</div><div class="token">Safety: '+esc(preview.safetyLevel||'S2')+'</div><div class="token">'+esc(preview.scope||'read-only')+'</div></div>'+previewSummary+'<p>'+esc(previewMode)+'</p>'+scopeTokens+contextScope+'</div></div>'+candidatePanel+warningPanel+commandPreview+(Array.isArray(preview.notes)&&preview.notes.length?'<div class="hint-list">'+preview.notes.map((note)=>'<div class="hint-item"><p>'+esc(String(note))+'</p></div>').join('')+'</div>':'');
+  return '<div class="hint-list"><div class="hint-item"><strong>'+esc(preview.title||'Discovery Preview')+'</strong><div class="tokens"><div class="token '+esc(statusToneClass(preview.status||'not-ready'))+'">'+esc(preview.status||'not-ready')+'</div><div class="token">Safety: '+esc(preview.safetyLevel||'S2')+'</div><div class="token">'+esc(preview.scope||'read-only')+'</div></div>'+previewSummary+'<p>'+esc(previewMode)+'</p>'+scopeTokens+contextScope+'</div></div>'+candidatePanel+warningPanel+fetchPlanPanel+fetchResultPanel+commandPreview+(Array.isArray(preview.notes)&&preview.notes.length?'<div class="hint-list">'+preview.notes.map((note)=>'<div class="hint-item"><p>'+esc(String(note))+'</p></div>').join('')+'</div>':'');
 }
 
 function renderGuidedStepDetails(step,intent){
@@ -3322,6 +3360,15 @@ function renderConfigure(){
       s.uiActions.discovery.actionId=button.dataset.discoveryPreview||selectedDiscoveryActionId;
       renderConfigure();
       await runDiscoveryPreviewAction();
+      renderConfigure();
+    };
+  }
+  for(const button of root.querySelectorAll('[data-fetch-member-plan]')){
+    button.onclick=async ()=>{
+      const planId=String(button.dataset.fetchMemberPlan||'').trim();
+      if(!planId) return;
+      renderConfigure();
+      await runReadOnlyFetchMemberAction(planId);
       renderConfigure();
     };
   }

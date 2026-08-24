@@ -9,6 +9,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const SftpClient = require('ssh2-sftp-client');
 const { fetchSources } = require('../../src/fetch/fetchService');
 const { downloadDirectory } = require('../../src/fetch/sftpDownloader');
 const {
@@ -16,9 +17,9 @@ const {
   commandExists,
   createE2eWorkspace,
   runProcess,
-  skipOrFailPrerequisite,
 } = require('./support/e2eHarness');
 const { startSftpFixture } = require('./support/sftpFixture');
+const { startEmbeddedSftpFixture } = require('./support/embeddedSftpFixture');
 
 const repositoryRoot = path.resolve(__dirname, '..', '..');
 const cliPath = path.join(repositoryRoot, 'cli', 'zeus.js');
@@ -36,14 +37,6 @@ function sanitizedEnvironment(extra = {}) {
 }
 
 test('real SFTP fetch feeds analyze and bundle with traceable synthetic evidence', async t => {
-  if (!commandExists('docker')) {
-    skipOrFailPrerequisite(
-      t,
-      'Docker is not available; portable SFTP E2E requires the fixture container.'
-    );
-    return;
-  }
-
   const workspace = createE2eWorkspace('zeus-sftp-e2e-');
   let fixture;
   t.after(async () => {
@@ -51,10 +44,12 @@ test('real SFTP fetch feeds analyze and bundle with traceable synthetic evidence
     workspace.cleanup();
   });
 
-  fixture = await startSftpFixture({
-    fixtureRoot: sourceFixtureRoot,
-    repositoryRoot,
-  });
+  fixture = commandExists('docker')
+    ? await startSftpFixture({
+        fixtureRoot: sourceFixtureRoot,
+        repositoryRoot,
+      })
+    : await startEmbeddedSftpFixture({ fixtureRoot: sourceFixtureRoot });
 
   const fetchedRoot = workspace.path('fetched');
   const fetchSummary = await fetchSources(
@@ -147,4 +142,30 @@ test('real SFTP fetch feeds analyze and bundle with traceable synthetic evidence
     `${JSON.stringify(fetchSummary)}\n${analyze.stdout}\n${bundle.stdout}\n${JSON.stringify(manifest)}`,
     forbiddenTerms
   );
+
+  if (fixture.mode === 'embedded-node-ssh2') {
+    const verificationClient = new SftpClient();
+    try {
+      await verificationClient.connect({
+        host: fixture.host,
+        port: fixture.port,
+        username: fixture.user,
+        password: fixture.password,
+      });
+      await assert.rejects(
+        () =>
+          verificationClient.put(
+            Buffer.from('must not be written'),
+            `${fixture.remoteRoot}/blocked.txt`
+          ),
+        /permission|read-only|failure/i
+      );
+      await assert.rejects(
+        () => verificationClient.list(`${fixture.remoteRoot}/../outside`),
+        /outside|no such|failure|permission/i
+      );
+    } finally {
+      await verificationClient.end().catch(() => {});
+    }
+  }
 });

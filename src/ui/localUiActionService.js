@@ -24,6 +24,7 @@ const {
 const { ANALYZE_RUN_MANIFEST_FILE } = require('../analyze/analyzeRunManifest');
 const { buildWorkingContextView, loadWorkingContext } = require('../context/workingContext');
 const { DEFAULT_SOURCE_FILES } = require('../fetch/fetchService');
+const { buildFetchMemberPlan, executeReadOnlyMemberFetch } = require('../fetch/fetchMemberService');
 const {
   buildEnvProfileConflictMessage,
   summarizeTargetValue,
@@ -42,6 +43,7 @@ const {
 const ALLOWED_DOCTOR_KEYS = new Set(['profile', 'showResolved', 'probe']);
 const ALLOWED_ANALYZE_WORKSPACE_KEYS = new Set(['profile', 'program', 'member', 'safeSharing']);
 const ALLOWED_DISCOVERY_PREVIEW_KEYS = new Set(['profile', 'actionId']);
+const ALLOWED_FETCH_MEMBER_KEYS = new Set(['profile', 'planId', 'confirmEndpoint']);
 const ALLOWED_AI_SESSION_PROMPT_KEYS = new Set([
   'profile',
   'environment',
@@ -350,6 +352,35 @@ function normalizeDiscoveryPreviewPayload(rawPayload) {
   return {
     profile,
     actionId,
+  };
+}
+
+function normalizeFetchMemberPayload(rawPayload) {
+  if (!isPlainObject(rawPayload)) {
+    throw new UiActionError('Invalid payload: expected JSON object', 400);
+  }
+
+  const unknownKeys = Object.keys(rawPayload).filter(key => !ALLOWED_FETCH_MEMBER_KEYS.has(key));
+  if (unknownKeys.length > 0) {
+    throw new UiActionError(`Invalid payload: unsupported key(s): ${unknownKeys.join(', ')}`, 400);
+  }
+
+  const profile = validateProfileName(rawPayload.profile);
+  const planId = String(rawPayload.planId || '').trim();
+  if (!/^[a-f0-9]{24}$/i.test(planId)) {
+    throw new UiActionError('Invalid payload: a reviewed fetch planId is required', 400);
+  }
+  if (rawPayload.confirmEndpoint !== true) {
+    throw new UiActionError(
+      'Explicit endpoint confirmation is required before a remote read-only fetch.',
+      400
+    );
+  }
+
+  return {
+    profile,
+    planId,
+    confirmEndpoint: true,
   };
 }
 
@@ -682,6 +713,92 @@ function buildDiscoveryWorkingContext(cwd = process.cwd()) {
   };
 }
 
+function buildReadOnlyFetchScope({ cwd, profile, fetchConfig, workingContextView }) {
+  const context =
+    workingContextView && typeof workingContextView === 'object'
+      ? workingContextView
+      : buildWorkingContextView({ cwd });
+  const sourceContext =
+    context.resources &&
+    context.resources.sourceCode &&
+    typeof context.resources.sourceCode === 'object'
+      ? context.resources.sourceCode
+      : {};
+  const active = context.active && typeof context.active === 'object' ? context.active : {};
+  const source =
+    context.activeKind === 'sourceCode' ? { ...sourceContext, ...active } : sourceContext;
+  const files = Array.isArray(fetchConfig && fetchConfig.files) ? fetchConfig.files : [];
+  const members = Array.isArray(fetchConfig && fetchConfig.members) ? fetchConfig.members : [];
+  const sourceLibrary = source.library || fetchConfig.sourceLibrary || fetchConfig.sourceLib;
+  const sourceFile = source.sourceFile || files[0] || DEFAULT_SOURCE_FILES[0];
+  const member = source.member || members[0] || null;
+  const outputRoot = fetchConfig.out || source.localRoot || './rpg_sources';
+
+  return {
+    profile,
+    host: fetchConfig.host || null,
+    user: fetchConfig.user || null,
+    password: fetchConfig.password || null,
+    transport: fetchConfig.transport || 'jt400',
+    sourceLibrary,
+    sourceFile,
+    member,
+    outputRoot,
+    workingContextExists: Boolean(context.updatedAt || context.profile || context.resources),
+    workingContextFingerprint: context.updatedAt || null,
+  };
+}
+
+function buildReadOnlyFetchPlan({ cwd, profile, fetchConfig, workingContextView }) {
+  const scope = buildReadOnlyFetchScope({ cwd, profile, fetchConfig, workingContextView });
+  if (!scope.sourceLibrary) {
+    throw new UiActionError('No source library is configured for the selected fetch profile.', 409);
+  }
+  if (!scope.member) {
+    throw new UiActionError(
+      'Select or configure a source member in Working Context before fetching.',
+      409
+    );
+  }
+  if (!scope.host) {
+    throw new UiActionError(
+      'The selected fetch profile does not provide an endpoint reference for a read-only fetch.',
+      409
+    );
+  }
+
+  return {
+    scope,
+    plan: buildFetchMemberPlan({
+      cwd,
+      profile,
+      host: scope.host,
+      transport: scope.transport,
+      sourceLib: scope.sourceLibrary,
+      sourceFile: scope.sourceFile,
+      members: [scope.member],
+      outputRoot: scope.outputRoot,
+      workingContextFingerprint: scope.workingContextFingerprint,
+    }),
+  };
+}
+
+function summarizeFetchDoctorResult(doctorResult, profile) {
+  const checks = Array.isArray(doctorResult && doctorResult.checks) ? doctorResult.checks : [];
+  const diagnostics = normalizeDoctorDiagnostics(doctorResult && doctorResult.diagnostics);
+  const summary = summarizeDoctorChecks(checks);
+  const diagnosticsSummary = summarizeDoctorDiagnostics(diagnostics);
+  const hasCriticalFailure = Boolean(doctorResult && doctorResult.hasCriticalFailure);
+  return {
+    status: mapDoctorOutcome({ hasCriticalFailure, summary, diagnosticsSummary }),
+    hasCriticalFailure,
+    profile,
+    probeRequested: true,
+    summary,
+    diagnosticsSummary,
+  };
+}
+
 function isExpectedAnalyzeFailure(error) {
   const code = String((error && error.code) || '')
     .trim()
@@ -803,6 +920,7 @@ function createLocalUiActionService({
   analyzeExecutor = defaultAnalyzeExecutor,
   analyzeConfigResolver = defaultAnalyzeConfigResolver,
   fetchConfigResolver = defaultFetchConfigResolver,
+  fetchMemberExecutor = executeReadOnlyMemberFetch,
   workflowConfigResolver = defaultWorkflowConfigResolver,
   aiSessionPromptService = createAiSessionPromptService(),
 } = {}) {
@@ -991,11 +1109,12 @@ function createLocalUiActionService({
     const startedAt = new Date();
     const workingContext = buildDiscoveryWorkingContext(cwd);
     let configContext = null;
+    let resolvedFetchConfig = null;
 
     if (FETCH_CONFIG_DERIVED_DISCOVERY_ACTIONS.has(payload.actionId)) {
       try {
-        const fetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
-        configContext = buildDiscoveryConfigContext(fetchConfig, cwd);
+        resolvedFetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
+        configContext = buildDiscoveryConfigContext(resolvedFetchConfig, cwd);
       } catch (error) {
         if (!isExpectedDiscoveryPreparationFailure(error)) {
           throw error;
@@ -1056,6 +1175,25 @@ function createLocalUiActionService({
       profile: payload.profile,
       configContext,
     });
+    let fetchPlan = null;
+    let fetchPlanWarning = null;
+    if (payload.actionId === 'preview-fetch-plan' && resolvedFetchConfig) {
+      try {
+        fetchPlan = buildReadOnlyFetchPlan({
+          cwd,
+          profile: payload.profile,
+          fetchConfig: resolvedFetchConfig,
+          workingContextView: buildWorkingContextView({ cwd }),
+        }).plan;
+      } catch (error) {
+        fetchPlanWarning = error.message;
+      }
+    }
+    if (fetchPlanWarning) {
+      preview.warnings = [...(preview.warnings || []), fetchPlanWarning];
+    }
+    preview.fetchPlan = fetchPlan;
+    preview.endpointConfirmationRequired = Boolean(fetchPlan);
     const finishedAt = new Date();
 
     return {
@@ -1083,6 +1221,95 @@ function createLocalUiActionService({
                 ? 'The reviewed Working Context is shown separately as the operator scope checkpoint.'
                 : 'No Working Context file exists yet; the GUI should require context review before continuing.',
             ],
+    };
+  }
+
+  async function runReadOnlyFetchMemberAction(rawPayload) {
+    const startedAt = new Date();
+    const payload = normalizeFetchMemberPayload(rawPayload);
+    const loadedContext = loadWorkingContext({ cwd });
+    if (!loadedContext.exists) {
+      throw new UiActionError(
+        'Review and save the Working Context before starting a remote read-only fetch.',
+        409
+      );
+    }
+
+    let fetchConfig;
+    try {
+      fetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
+    } catch (error) {
+      throw new UiActionError(summarizeDiscoveryPreparationFailure(error), 409);
+    }
+
+    const { plan, scope } = buildReadOnlyFetchPlan({
+      cwd,
+      profile: payload.profile,
+      fetchConfig,
+      workingContextView: buildWorkingContextView({ cwd }),
+    });
+    if (plan.planId !== payload.planId) {
+      throw new UiActionError(
+        'The reviewed fetch plan is stale. Preview the plan again before confirming the endpoint.',
+        409
+      );
+    }
+    if (!scope.user || !scope.password) {
+      throw new UiActionError(
+        'The selected fetch profile does not provide credentials for the confirmed endpoint.',
+        409
+      );
+    }
+
+    const doctorResult = await Promise.resolve(
+      doctorExecutor(
+        { profile: payload.profile, 'show-resolved': false, probe: true },
+        { cwd, env }
+      )
+    );
+    const doctor = summarizeFetchDoctorResult(doctorResult, payload.profile);
+    if (doctor.hasCriticalFailure || doctor.status === 'failed') {
+      return {
+        action: 'fetch-member',
+        status: 'blocked',
+        reasonCode: 'FETCH_ENDPOINT_PROBE_FAILED',
+        startedAt: startedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        input: { profile: payload.profile, planId: payload.planId, confirmed: true },
+        plan,
+        doctor,
+        result: null,
+        notes: [
+          'The fresh read-only Doctor probe failed; no member fetch and no local artifact write was started.',
+        ],
+      };
+    }
+
+    const execution = await Promise.resolve(
+      fetchMemberExecutor({
+        cwd,
+        plan,
+        host: scope.host,
+        user: scope.user,
+        password: scope.password,
+        confirmPlanId: plan.planId,
+      })
+    );
+    const finishedAt = new Date();
+    return {
+      action: 'fetch-member',
+      status: execution.status || 'failed',
+      startedAt: startedAt.toISOString(),
+      finishedAt: finishedAt.toISOString(),
+      durationMs: finishedAt.getTime() - startedAt.getTime(),
+      input: { profile: payload.profile, planId: payload.planId, confirmed: true },
+      plan,
+      doctor,
+      result: execution,
+      notes: [
+        'The endpoint was explicitly confirmed and freshly probed in read-only mode.',
+        'Remote operation: source-member read only. Local operation: write fetched source artifacts under the reviewed output root.',
+      ],
     };
   }
 
@@ -1146,6 +1373,9 @@ function createLocalUiActionService({
     if (normalizedAction === 'discovery-preview') {
       return runDiscoveryPreviewAction(payload);
     }
+    if (normalizedAction === 'fetch-member') {
+      return runReadOnlyFetchMemberAction(payload);
+    }
     if (normalizedAction === 'generate-ai-session-prompt') {
       return runGenerateAiSessionPromptAction(payload);
     }
@@ -1158,6 +1388,7 @@ function createLocalUiActionService({
     normalizeAnalyzeExistingWorkspacePayload,
     normalizeAiSessionPromptPayload,
     normalizeDiscoveryPreviewPayload,
+    normalizeFetchMemberPayload,
     normalizeDoctorPayload,
     buildDiscoveryConfigContext,
     buildDiscoveryWorkingContext,
@@ -1165,6 +1396,7 @@ function createLocalUiActionService({
     buildObjectDiscoveryConfigContext,
     validateProfileName,
     validateObjectName,
+    buildReadOnlyFetchPlan,
   };
 }
 
@@ -1178,9 +1410,11 @@ module.exports = {
   normalizeAnalyzeExistingWorkspacePayload,
   normalizeAiSessionPromptPayload,
   normalizeDiscoveryPreviewPayload,
+  normalizeFetchMemberPayload,
   normalizeDoctorPayload,
   normalizeDoctorDiagnostics,
   validateProfileName,
   validateOptionalSimpleName,
   validateObjectName,
+  buildReadOnlyFetchPlan,
 };

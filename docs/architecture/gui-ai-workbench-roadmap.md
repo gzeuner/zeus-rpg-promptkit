@@ -343,12 +343,98 @@ Nächstes To-do nach Iteration 11: die Discovery-/Fetch-Preview mit einem
 expliziten, weiterhin read-only lokalen Source-/Metadata-/Data-Fetch-Schritt
 verbinden und dabei jeden tatsächlichen Endpunktzugriff sichtbar bestätigen.
 
+### Iteration 12 — Bestätigter read-only Source-Member-Fetch
+
+Status: umgesetzt lokal am 2026-08-24; fokussierte Fetch-/GUI-Tests grün.
+
+Umgesetzt:
+
+- neuer gemeinsamer \`fetchMemberService\`-Vertrag für einen deterministischen,
+  credential-freien Fetch-Plan mit Plan-ID, Endpunkt, Source-Bibliothek,
+  Source-Datei, Member und lokalem Ausgabepfad;
+- \`Preview Fetch Plan\` zeigt bei vollständig aufgelöster Konfiguration einen
+  sichtbaren Endpunkt und verlangt eine separate, explizite
+  \`Confirm endpoint and fetch read-only source\`-Aktion;
+- vor jeder tatsächlichen Ausführung läuft eine frische \`doctor --probe\`-artige
+  Prüfung; bei Fehler wird der Fetch blockiert und kein lokales Artefakt
+  gestartet;
+- die bestätigte Ausführung liest remote ausschließlich den Source-Member und
+  schreibt nur die geplanten lokalen Artefakte; Plan- und Ergebnisobjekte
+  enthalten keine Credentials;
+- stale Plan-IDs, fehlender Working Context, unsichere Pfade und unvollständige
+  Endpunktdaten werden fail-closed abgewiesen;
+- Service-, Action-Service- und UI-Flows sind mit synthetischen Endpunkten und
+  Test-Exportern abgedeckt, ohne externe Systeme zu benötigen.
+
+Bewusst nicht umgesetzt:
+
+- kein freier Remote-Fetch ohne vorherige Preview und Endpunktbestätigung;
+- noch kein gleichwertiger GUI-Fetch für DB2-Metadaten, Daten, Objekte oder
+  Journale;
+- keine automatische Aktualisierung bereits gefetchter Quellen und kein
+  Diff-/Freshness-Status für Source-Member;
+- keine Credential-Anzeige oder Credential-Übertragung in den Browser.
+
+Prüfstand:
+
+- Fetch-Service- und Action-Service-Tests: grün;
+- lokale UI-Server-, Accessibility- und Browser-nahe Tests: grün;
+- vollständige Format-, Lint-, Typecheck-, Gesamt- und E2E-Prüfungen folgen im
+  Abschlusslauf dieser Iteration.
+
+Nächstes To-do nach Iteration 12: Fetch-Ergebnisse um Source-Fingerprint und
+Freshness-/Change-Check erweitern und daraus einen ebenso bestätigungspflichtigen
+lokalen Refresh-Flow ableiten.
+
+### Iteration 13 — Dockerloser echter SFTP-E2E-Fallback
+
+Status: umgesetzt lokal am 2026-08-24; fokussierter SFTP-E2E-Test grün.
+
+Umgesetzt:
+
+- Docker bleibt der bevorzugte realistische SFTP-Testdienst für CI und lokale
+  Integrationsumgebungen.
+- Wenn Docker nicht verfügbar ist, startet der E2E-Test automatisch einen
+  eingebetteten SSH/SFTP-Server auf `127.0.0.1` mit einem temporären,
+  synthetischen Fixture-Bestand.
+- Der Fallback unterstützt ausschließlich die für den Fetch benötigten
+  read-only-Operationen, verweigert Mutationen und weist Pfade außerhalb des
+  virtuellen `/incoming`-Roots zurück.
+- Der Host-Key wird pro Testlauf flüchtig erzeugt; Benutzername, Passwort und
+  Quellen sind ausschließlich synthetische Testwerte und werden nicht als
+  Projekt- oder Betriebs-Credentials verwendet.
+- Der E2E-Test prüft den echten SFTP-Fetch über SSH, die nachgelagerte Analyse,
+  Bundle-Erzeugung sowie Read-only- und Path-Traversal-Schutz.
+- Der direkte `ssh2`-Testtreiber bleibt auf die E2E-Entwicklungsabhängigkeiten
+  beschränkt; seine MIT-Lizenz wurde geprüft und der Produktionspfad erhält
+  keinen neuen SFTP-Server.
+- Ein bestehender Timeout-Cleanup-Fehler im Transport-Diagnosepfad wurde
+  behoben: erfolgreiche Transfers lassen keinen 30-Sekunden-Timer zurück.
+
+Bewusst nicht umgesetzt:
+
+- kein dauerhafter lokaler SFTP-Dienst und keine globale Benutzerverwaltung;
+- kein Ersatz für die Docker-/OpenSSH-Abdeckung in CI;
+- keine Schreib-, Lösch- oder Administrationsfunktionen im Test-Fallback;
+- keine Übernahme von externen Projekt-, System-, Journal-, Personen- oder
+  Credential-Daten.
+
+Prüfstand:
+
+- fokussierter echter SFTP-Fetch-/Analyze-/Bundle-E2E-Test: grün;
+- eingebetteter Fallback ohne Docker: grün;
+- Read-only- und Path-Traversal-Verträge: grün.
+
+Nächstes To-do nach Iteration 13: Fetch-Ergebnisse um Source-Fingerprint und
+Freshness-/Change-Check erweitern und daraus einen ebenso bestätigungspflichtigen
+lokalen Refresh-Flow ableiten.
+
 ## Weitere geplante Iterationen
 
-1. Read-only Fetch-Preview mit expliziter Endpunktbestätigung vertiefen
-2. Manuellen Accessibility-Walkthrough mit Tastatur, Screenreader und Forced-Colors-Prüfung wiederholen
-3. Katalog-Erweiterungsdokumentation und sichere Authoring-Vorlage für neutrale Metadaten
-4. Evidence-Freshness-Refresh als explizite, überprüfbare lokale Aktion weiterführen
+1. Source-Fingerprint und Freshness-/Change-Check für Fetch-Ergebnisse
+2. Read-only GUI-Preview für Metadata, Data, Objects und Journals
+3. Manuellen Accessibility-Walkthrough mit Tastatur, Screenreader und Forced-Colors-Prüfung wiederholen
+4. Katalog-Erweiterungsdokumentation und sichere Authoring-Vorlage für neutrale Metadaten
 
 ## Update-Regel für jede Iteration
 
