@@ -908,6 +908,7 @@ async function startLocalUiServer({
       analyzeExecutor: actionServiceOptions.analyzeExecutor,
       analyzeConfigResolver: actionServiceOptions.analyzeConfigResolver,
       fetchConfigResolver: actionServiceOptions.fetchConfigResolver,
+      fetchMemberExecutor: actionServiceOptions.fetchMemberExecutor,
       workflowConfigResolver: actionServiceOptions.workflowConfigResolver,
     });
   const resolvedProfileWizardService =

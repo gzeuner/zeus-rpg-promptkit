@@ -176,12 +176,13 @@ async function executeWithTransportDiagnostics(strategies, transportFn, options 
       console.log(`[transport]   Profile: ${getTransportProfile(strategy)}`);
     }
 
+    let timeoutId;
     try {
       const result = await Promise.race([
         transportFn(strategy),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(`Timeout (${timeout}ms)`)), timeout)
-        ),
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(`Timeout (${timeout}ms)`)), timeout);
+        }),
       ]);
 
       const elapsed = Date.now() - attemptStart;
@@ -218,6 +219,8 @@ async function executeWithTransportDiagnostics(strategies, transportFn, options 
         console.log(`[transport] ❌ ${strategy} failed after ${elapsed}ms`);
         console.log(`[transport]   Error: ${error.message}`);
       }
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
   }
 

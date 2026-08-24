@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 
 const {
   UiActionError,
@@ -14,6 +17,11 @@ const {
   normalizeDoctorPayload,
   validateProfileName,
 } = require('../src/ui/localUiActionService');
+const { setWorkingContext } = require('../src/context/workingContext');
+
+function temporaryUiWorkspace() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-ui-fetch-'));
+}
 
 test('doctor action accepts valid payload and returns structured metadata', async () => {
   const service = createLocalUiActionService({
@@ -194,6 +202,143 @@ test('discovery-preview exposes a local-only fetch plan with the reviewed-contex
   assert.equal(result.result.resolvedScope.outputRoot, './rpg_sources');
   assert.equal(result.result.candidates.length, 0);
   assert.ok(result.result.notes.some(entry => /does not contact IBM i/i.test(entry)));
+});
+
+test('fetch-member requires a reviewed context and explicit confirmation payload', async () => {
+  const service = createLocalUiActionService({ cwd: temporaryUiWorkspace() });
+
+  await assert.rejects(
+    () => service.executeAction('fetch-member', { profile: 'dev', planId: 'bad' }),
+    error => error instanceof UiActionError && error.statusCode === 400
+  );
+  const planId = '0123456789abcdef01234567';
+  await assert.rejects(
+    () =>
+      service.executeAction('fetch-member', {
+        profile: 'dev',
+        planId,
+        confirmEndpoint: true,
+      }),
+    error => error instanceof UiActionError && error.statusCode === 409
+  );
+});
+
+test('fetch-member re-probes the endpoint and invokes the executor only after plan confirmation', async () => {
+  const cwd = temporaryUiWorkspace();
+  setWorkingContext({
+    cwd,
+    patch: {
+      profile: 'dev',
+      activeKind: 'sourceCode',
+      resources: {
+        sourceCode: {
+          system: 'synthetic-system',
+          library: 'APPLIB',
+          sourceFile: 'QRPGLESRC',
+          member: 'ORDERPGM',
+        },
+      },
+    },
+  });
+  const fetchConfig = {
+    host: 'synthetic-system.example',
+    user: 'operator',
+    password: 'secret-not-returned',
+    sourceLibrary: 'APPLIB',
+    files: ['QRPGLESRC'],
+    members: ['ORDERPGM'],
+    out: './rpg_sources',
+    transport: 'jt400',
+  };
+  let doctorArgs = null;
+  let executorArgs = null;
+  const service = createLocalUiActionService({
+    cwd,
+    fetchConfigResolver: () => fetchConfig,
+    doctorExecutor: args => {
+      doctorArgs = args;
+      return { hasCriticalFailure: false, checks: [{ name: 'probe', status: 'PASS' }] };
+    },
+    fetchMemberExecutor: args => {
+      executorArgs = args;
+      return {
+        status: 'completed',
+        operation: 'read-only-member-fetch',
+        planId: args.plan.planId,
+        remoteMutation: false,
+        localArtifactWrite: true,
+        fetched: [{ member: 'ORDERPGM', path: 'rpg_sources/QRPGLESRC/ORDERPGM.rpgle' }],
+        failures: [],
+      };
+    },
+  });
+  const preview = await service.executeAction('discovery-preview', {
+    profile: 'dev',
+    actionId: 'preview-fetch-plan',
+  });
+  const plan = preview.result.fetchPlan;
+  assert.ok(plan);
+  const result = await service.executeAction('fetch-member', {
+    profile: 'dev',
+    planId: plan.planId,
+    confirmEndpoint: true,
+  });
+
+  assert.equal(doctorArgs.probe, true);
+  assert.equal(result.status, 'completed');
+  assert.equal(result.doctor.status, 'ready');
+  assert.equal(executorArgs.confirmPlanId, plan.planId);
+  assert.equal(executorArgs.password, 'secret-not-returned');
+  assert.equal(JSON.stringify(result).includes('secret-not-returned'), false);
+});
+
+test('fetch-member blocks without executing when the fresh endpoint probe fails', async () => {
+  const cwd = temporaryUiWorkspace();
+  setWorkingContext({
+    cwd,
+    patch: {
+      profile: 'dev',
+      resources: {
+        sourceCode: {
+          library: 'APPLIB',
+          sourceFile: 'QRPGLESRC',
+          member: 'ORDERPGM',
+        },
+      },
+    },
+  });
+  const service = createLocalUiActionService({
+    cwd,
+    fetchConfigResolver: () => ({
+      host: 'synthetic-system.example',
+      user: 'operator',
+      password: 'secret',
+      sourceLibrary: 'APPLIB',
+      files: ['QRPGLESRC'],
+      members: ['ORDERPGM'],
+      out: './rpg_sources',
+    }),
+    doctorExecutor: () => ({
+      hasCriticalFailure: true,
+      checks: [{ name: 'probe', status: 'FAIL', details: 'unavailable' }],
+    }),
+    fetchMemberExecutor: () => {
+      throw new Error('must not run');
+    },
+  });
+  const preview = await service.executeAction('discovery-preview', {
+    profile: 'dev',
+    actionId: 'preview-fetch-plan',
+  });
+  const result = await service.executeAction('fetch-member', {
+    profile: 'dev',
+    planId: preview.result.fetchPlan.planId,
+    confirmEndpoint: true,
+  });
+
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.reasonCode, 'FETCH_ENDPOINT_PROBE_FAILED');
+  assert.equal(result.result, null);
 });
 
 test('discovery-preview derives DB2 metadata scope locally from resolved analyze and workflow config', async () => {

@@ -28,22 +28,31 @@ Or run all three:
 npm run test:e2e
 ```
 
-The MCP test needs only Node.js. The SFTP test needs Docker. The GUI test needs
-Chrome or Chromium and a Node runtime with native WebSocket support. Missing
-optional infrastructure is reported as a skipped E2E test; a running service
-that fails is a test failure.
+The MCP test needs only Node.js. The SFTP test prefers Docker for its OpenSSH
+fixture and automatically falls back to an embedded, ephemeral `ssh2` server
+when Docker is unavailable. The GUI test needs Chrome or Chromium and a Node
+runtime with native WebSocket support. Missing optional browser infrastructure
+is reported as a skipped E2E test; a running service that fails is a test
+failure.
 
-CI sets `ZEUS_E2E_REQUIRED=1`. In that mode missing Docker or Chrome/Chromium is
-an explicit failure instead of a silent skip.
+CI sets `ZEUS_E2E_REQUIRED=1`. In that mode missing Chrome/Chromium is an
+explicit failure instead of a silent skip; Docker is not required because the
+SFTP fallback keeps that transport lane fully local.
 
 ## What is covered
 
 ### SFTP → Analyze → Bundle
 
-`tests/e2e/sftp-fetch-analyze-bundle.e2e.test.js` builds a small OpenSSH/SFTP
-fixture container, connects with the real `ssh2-sftp-client` implementation,
-feeds the downloaded synthetic RPG/SQL source through the fetch orchestration,
-then invokes the real CLI for analysis and bundle creation.
+`tests/e2e/sftp-fetch-analyze-bundle.e2e.test.js` uses a small OpenSSH/SFTP
+fixture container when Docker is available. Without Docker it starts a local,
+ephemeral SFTP server with an in-memory host key and a temporary synthetic
+source root. Both modes connect with the real `ssh2-sftp-client`
+implementation, feed the downloaded synthetic RPG/SQL source through the fetch
+orchestration, and invoke the real CLI for analysis and bundle creation.
+
+The embedded fallback is intentionally read-only: mutation requests and paths
+outside its virtual `/incoming` root are rejected. It is a test transport, not
+a production SFTP service or an operator credential store.
 
 The IBM i member discovery/export step is supplied by a synthetic test backend.
 This keeps the test portable while preserving the actual network transport and
