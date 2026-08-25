@@ -809,6 +809,29 @@ const reportViews=[
   ['evidence','Evidence Explorer']
 ];
 
+function reportViewAvailable(viewId){
+  if(viewId==='artifacts') return true;
+  if(!s.detail||!s.detail.views) return false;
+  if(viewId==='graph') return Boolean(s.detail.views.graph&&s.detail.views.graph.available);
+  if(viewId==='db2'){
+    const db2=s.detail.views.db2||{};
+    const summary=db2.summary&&typeof db2.summary==='object'?db2.summary:{};
+    return Boolean(db2.metadataAvailable||db2.testDataAvailable||Number(summary.tableCount||0)>0);
+  }
+  if(viewId==='prompts'){
+    return Boolean(s.detail.views.prompts&&Array.isArray(s.detail.views.prompts.artifacts)&&s.detail.views.prompts.artifacts.length);
+  }
+  if(viewId==='evidence'){
+    const evidence=s.detail.views.evidence;
+    return Boolean(evidence&&evidence.summary&&Number(evidence.summary.total||0)>0);
+  }
+  return false;
+}
+
+function availableReportViews(){
+  return reportViews.filter(([id])=>reportViewAvailable(id));
+}
+
 const WB_PREVIEW_DEBOUNCE_MS=220;
 
 const pref=['report.md','architecture.html','analysis-index.json','context.json','ai_prompt_documentation.md'];
@@ -958,8 +981,8 @@ function renderHero(){
     ? 'Review setup, profile readiness, and safe next steps.'
     : (isReportsTab(s.tab)
       ? 'Read-only reports and report views for the selected run.'
-      : (s.tab==='home'||s.tab==='workbench'
-        ? 'Advanced and experimental tools live here after Setup is ready.'
+        : (s.tab==='home'||s.tab==='workbench'
+        ? 'Advanced tools live here after Setup is ready.'
         : 'Read-only explorer for generated analysis evidence.'));
   q('chips').innerHTML=['Status: '+(x.status||'unknown'),'Mode: '+(x.workflowPreset||x.workflowMode||'standard'),'Artifacts: '+x.artifactCount,x.safeSharingEnabled?'Safe sharing':'No safe sharing'].map((v)=>'<div class="token">'+esc(v)+'</div>').join('');
 }
@@ -1003,7 +1026,9 @@ function isReportsTab(tab){
 }
 
 function renderReportsSubnav(activeTab){
-  return '<div class="stack"><div><h2>Reports</h2><p>Reports are local and read-only. They inspect existing artifacts and never fetch, query, or modify remote systems.</p></div><div class="tabs" role="tablist" aria-label="Report views">'+reportViews.map(([id,label])=>'<button class="tab'+(id===activeTab?' active':'')+'" role="tab" aria-selected="'+String(id===activeTab)+'" aria-controls="'+escAttr(id)+'" tabindex="'+(id===activeTab?'0':'-1')+'" data-report-view="'+esc(id)+'">'+esc(label)+'</button>').join('')+'</div><div class="small">Select a run in the left sidebar, then choose the report view you want to inspect.</div></div>';
+  const views=availableReportViews();
+  const visibleActive=views.some(([id])=>id===activeTab)?activeTab:'artifacts';
+  return '<div class="stack"><div><h2>Reports</h2><p>Reports are local and read-only. They inspect existing artifacts and never fetch, query, or modify remote systems.</p></div><div class="tabs" role="tablist" aria-label="Available report views">'+views.map(([id,label])=>'<button class="tab'+(id===visibleActive?' active':'')+'" role="tab" aria-selected="'+String(id===visibleActive)+'" aria-controls="'+escAttr(id)+'" tabindex="'+(id===visibleActive?'0':'-1')+'" data-report-view="'+esc(id)+'">'+esc(label)+'</button>').join('')+'</div><div class="small">Only report views with data for the selected run are shown.</div></div>';
 }
 
 function bindReportsSubnav(root){
@@ -2795,16 +2820,8 @@ function renderAnalyzeWorkspacePanel(){
     '</div>';
 }
 
-function renderDisabledWorkflowCard(card){
-  const status=String(card.availability||card.status||'coming-later');
-  return '<div class="workflow-card disabled"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description||'')+'</p><div class="workflow-meta"><div class="token">'+esc(card.badge||card.category||'workflow')+'</div><div class="token">'+esc(status)+'</div></div><p class="small">'+esc(card.explanation||'This workflow is not available as a browser action yet.')+'</p><div class="actions"><button class="btn" disabled>'+esc(card.primaryActionLabel||'Coming Later')+'</button></div></div>';
-}
-
 function renderAdvancedOverviewPanel(){
-  const cards=workflowCards();
-  const disabledCards=cards.filter((card)=>card&&card.enabledInShell===false);
-  return '<div class="sub"><h2>Advanced / Tools</h2><p>Setup is the recommended starting point, and Reports is the normal follow-up for reviewing output. Everything here is optional and intended for experienced users.</p><div class="hint-list"><div class="hint-item"><strong>How to use this area</strong><p>Choose a specialist local tool when you already know what you want to inspect, preview, or generate. Nothing here is required for onboarding.</p></div><div class="hint-item"><strong>Safety boundary</strong><p>No arbitrary browser command execution. No remote fetch. No live DB2 query execution. Secret values are never shown.</p></div></div><h3>Prompt Tools</h3><div class="home-grid"><div class="home-card"><strong>Prompt Workbench</strong><p>Guided prompt canvas with local preview, saved templates, prompt import from existing runs, and export options.</p><div class="tokens"><div class="token">specialist tool</div><div class="token">local preview</div><div class="token">optional</div></div><div class="actions"><button class="btn primary" data-home-target="workbench">Open Prompt Workbench</button></div></div><div class="home-card"><strong>Prompt Compare</strong><p>Use Reports when you want to compare generated prompt artifacts from an existing run.</p><div class="tokens"><div class="token">read-only</div><div class="token">report view</div><div class="token">after output</div></div><div class="actions"><button class="btn" data-home-target="prompts">Open In Reports</button></div></div></div><h3>Local Analysis Tools</h3><div class="home-grid"><div class="home-card"><strong>Analyze Workspace</strong><p>Runs the existing local-only analyze pipeline against the profile source root after Setup is ready.</p><div class="tokens"><div class="token">local-only</div><div class="token">no remote fetch</div><div class="token">optional</div></div><div class="actions"><button class="btn" data-home-target="analyze-workspace">Open Analyze Workspace</button></div></div><div class="home-card"><strong>Reports Shortcut</strong><p>When output already exists, jump back to Reports to inspect artifacts, Graph, DB2/Test Data, or Prompt Compare.</p><div class="tokens"><div class="token">read-only</div><div class="token">after output</div><div class="token">safe local read</div></div><div class="actions"><button class="btn" data-home-target="artifacts">Open Reports</button><button class="btn" data-home-target="refresh">Refresh Runs</button></div></div></div><h3>Prompt Workbench Choices</h3><p class="small">These starter choices help you enter Prompt Workbench faster, but they do not replace Setup or Reports.</p>'+promptWorkbenchHighlights()+'</div>'+
-    '<div class="sub"><h2>Experimental / Coming Later</h2><p>These cards remain visible for orientation only. They are not active production browser actions.</p><div class="hint-list"><div class="hint-item"><strong>Deferred remote workflows</strong><p>Fetch Sources, Query DB2, and Generate AI Context stay disabled here until they are safely implemented and explicitly allowlisted.</p></div></div>'+(disabledCards.length?'<div class="workflow-grid">'+disabledCards.map((card)=>renderDisabledWorkflowCard(card)).join('')+'</div>':'<div class="empty">No deferred workflow cards registered.</div>')+'</div>';
+  return '<div class="sub"><h2>Advanced / Tools</h2><p>Setup is the recommended starting point, and Reports is the normal follow-up for reviewing output. Everything here is optional and intended for experienced users.</p><div class="hint-list"><div class="hint-item"><strong>How to use this area</strong><p>Choose a specialist local tool when you already know what you want to inspect, preview, or generate. Nothing here is required for onboarding.</p></div><div class="hint-item"><strong>Safety boundary</strong><p>No arbitrary browser command execution. No remote fetch. No live DB2 query execution. Secret values are never shown.</p></div></div><h3>Prompt Tools</h3><div class="home-grid"><div class="home-card"><strong>Prompt Workbench</strong><p>Guided prompt canvas with local preview, saved templates, prompt import from existing runs, and export options.</p><div class="tokens"><div class="token">specialist tool</div><div class="token">local preview</div><div class="token">optional</div></div><div class="actions"><button class="btn primary" data-home-target="workbench">Open Prompt Workbench</button></div></div><div class="home-card"><strong>Prompt Compare</strong><p>Use Reports when you want to compare generated prompt artifacts from an existing run.</p><div class="tokens"><div class="token">read-only</div><div class="token">report view</div><div class="token">after output</div></div><div class="actions"><button class="btn" data-home-target="prompts">Open In Reports</button></div></div></div><h3>Local Analysis Tools</h3><div class="home-grid"><div class="home-card"><strong>Analyze Workspace</strong><p>Runs the existing local-only analyze pipeline against the profile source root after Setup is ready.</p><div class="tokens"><div class="token">local-only</div><div class="token">no remote fetch</div><div class="token">optional</div></div><div class="actions"><button class="btn" data-home-target="analyze-workspace">Open Analyze Workspace</button></div></div><div class="home-card"><strong>Reports Shortcut</strong><p>When output already exists, jump back to Reports to inspect artifacts, Graph, DB2/Test Data, or Prompt Compare.</p><div class="tokens"><div class="token">read-only</div><div class="token">after output</div><div class="token">safe local read</div></div><div class="actions"><button class="btn" data-home-target="artifacts">Open Reports</button><button class="btn" data-home-target="refresh">Refresh Runs</button></div></div></div><h3>Prompt Workbench Choices</h3><p class="small">These starter choices help you enter Prompt Workbench faster, but they do not replace Setup or Reports.</p>'+promptWorkbenchHighlights()+'</div>';
 }
 
 async function refreshRuns(preferredProgram){
@@ -2880,8 +2897,13 @@ async function openHomeTarget(target,options){
     return;
   }
 
-  if((target==='graph'||target==='db2'||target==='prompts'||target==='artifacts'||target==='evidence')&&!s.detail&&s.runs.length>0){
+  if(isReportsTab(target)&&!s.detail&&s.runs.length>0){
     await selectRun(s.runs[0].program);
+  }
+  if(isReportsTab(target)&&target!=='artifacts'&&!reportViewAvailable(target)){
+    s.tab='artifacts';
+    await render();
+    return;
   }
   s.tab=target;
   await render();
@@ -4090,17 +4112,41 @@ function setPreviewEditMode(editable){
 }
 
 async function copyTextToClipboard(text){
-  if(navigator&&navigator.clipboard&&navigator.clipboard.writeText){
-    await navigator.clipboard.writeText(text);
-    return;
+  if(typeof navigator!=='undefined'&&navigator.clipboard&&navigator.clipboard.writeText){
+    let timeoutId;
+    try{
+      await Promise.race([
+        navigator.clipboard.writeText(text),
+        new Promise((_,reject)=>{
+          timeoutId=setTimeout(()=>reject(new Error('Clipboard access timed out.')),750);
+        })
+      ]);
+      return;
+    }catch{
+      // Continue with the synchronous browser fallback below.
+    }finally{
+      if(timeoutId) clearTimeout(timeoutId);
+    }
+    throw new Error('The browser did not allow clipboard access.');
+  }
+  if(document.queryCommandSupported&&document.queryCommandSupported('copy')===false){
+    throw new Error('The browser does not support clipboard copy.');
   }
   const area=document.createElement('textarea');
+  area.setAttribute('readonly','');
+  area.style.position='fixed';
+  area.style.opacity='0';
   area.value=text;
   document.body.appendChild(area);
   area.focus();
   area.select();
-  document.execCommand('copy');
-  document.body.removeChild(area);
+  let copied=false;
+  try{
+    copied=document.execCommand('copy');
+  }finally{
+    document.body.removeChild(area);
+  }
+  if(!copied) throw new Error('The browser did not allow clipboard access.');
 }
 
 async function copyWorkbenchPreview(){
@@ -4110,11 +4156,13 @@ async function copyWorkbenchPreview(){
     renderWorkbench();
     return;
   }
+  s.promptBuilder.saveStatus='Copying preview...';
+  renderWorkbench();
   try {
     await copyTextToClipboard(text);
     s.promptBuilder.saveStatus='Preview copied.';
-  } catch(error){
-    s.promptBuilder.saveStatus=workbenchUserError('Could not copy the preview',error);
+  } catch{
+    s.promptBuilder.saveStatus='Clipboard unavailable. Open Edit Preview Draft, select the text, and copy it manually.';
   }
   renderWorkbench();
 }
@@ -4482,9 +4530,13 @@ function renderArtifacts(){
       available:evidenceAvailable,
       detail:evidenceAvailable?'status: '+String(evidence.overallStatus):'read-only view unavailable',
     }
-  ];
+  ].filter((card)=>card.available);
 
-  root.innerHTML='<div class="sub">'+renderReportsSubnav('artifacts')+renderWorkflowRunCard(s.detail.workflowRunCard)+'<div class="workflow-meta"><div class="token">selected run: '+esc(String(summary.program||s.program||''))+'</div><div class="token">runs found: '+esc(String(s.runs.length||0))+'</div><div class="token">artifacts: '+esc(String(artifactCount))+'</div><div class="token">safe local read</div></div><div class="hint-list"><div class="hint-item"><strong>After Setup</strong><p>Use the left sidebar to switch runs, then choose the report view that best matches what you want to inspect.</p></div><div class="hint-item"><strong>What is available here</strong><p>Overview, Graph, DB2/Test Data, Prompt Compare, Evidence Explorer, and artifact previews are report views over existing output. They do not execute remote actions.</p></div></div><h3>Reports Overview</h3><div class="workflow-grid">'+reportsCards.map((card)=>'<div class="workflow-card'+(card.available?'':' disabled')+'"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description)+'</p><div class="workflow-meta"><div class="token">'+esc(card.available?'Available now':'Read-only unavailable')+'</div><div class="token">'+esc(card.detail)+'</div></div><div class="actions">'+(card.available&&card.target!=='artifacts'?'<button class="btn" data-reports-target="'+esc(card.target)+'">Open '+esc(card.title)+'</button>':'')+(card.target==='artifacts'?'<button class="btn'+(card.available?' primary':'')+'"'+(card.available?' data-reports-target="artifacts"':' disabled')+'>'+(card.available?'Browse Artifacts':'Artifacts unavailable')+'</button>':'')+(card.available?'<button class="btn" data-reports-target="refresh">Refresh Runs</button>':'')+'</div></div>').join('')+'</div><h3>Artifacts In This Run</h3>'+(artifactCount>0?'<div class="item-list">'+s.detail.artifacts.map((a)=>'<button class="item'+(a.path===s.artifact?' active':'')+'" data-aid="'+esc(a.path)+'"><strong>'+esc(a.path)+'</strong><div>'+esc(a.kind)+' • '+esc(String(a.sizeBytes))+' bytes</div></button>').join('')+'</div>':'<div class="empty">This run does not contain previewable artifacts yet.</div>')+'</div><div class="sub"><div class="stack"><h2 id="aTitle">Artifact Preview</h2><p id="aSub">Choose an artifact.</p></div><a id="aRaw" class="btn" target="_blank" rel="noreferrer" hidden>Open Raw</a><div id="aPrev" class="preview"><div class="empty">No artifact selected.</div></div></div>';
+  const reportOverview=reportsCards.length
+    ? '<div class="workflow-grid">'+reportsCards.map((card)=>'<div class="workflow-card"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description)+'</p><div class="workflow-meta"><div class="token">Available now</div><div class="token">'+esc(card.detail)+'</div></div><div class="actions">'+(card.target!=='artifacts'?'<button class="btn" data-reports-target="'+esc(card.target)+'">Open '+esc(card.title)+'</button>':'<button class="btn primary" data-reports-target="artifacts">Browse Artifacts</button>')+'<button class="btn" data-reports-target="refresh">Refresh Runs</button></div></div>').join('')+'</div>'
+    : '<div class="empty">No additional report views are available for this run. Browse the saved artifacts below.</div>';
+
+  root.innerHTML='<div class="sub">'+renderReportsSubnav('artifacts')+renderWorkflowRunCard(s.detail.workflowRunCard)+'<div class="workflow-meta"><div class="token">selected run: '+esc(String(summary.program||s.program||''))+'</div><div class="token">runs found: '+esc(String(s.runs.length||0))+'</div><div class="token">artifacts: '+esc(String(artifactCount))+'</div><div class="token">safe local read</div></div><div class="hint-list"><div class="hint-item"><strong>After Setup</strong><p>Use the left sidebar to switch runs, then choose the report view that best matches what you want to inspect.</p></div><div class="hint-item"><strong>What is available here</strong><p>Overview, Graph, DB2/Test Data, Prompt Compare, Evidence Explorer, and artifact previews are report views over existing output. They do not execute remote actions.</p></div></div><h3>Reports Overview</h3>'+reportOverview+'<h3>Artifacts In This Run</h3>'+(artifactCount>0?'<div class="item-list">'+s.detail.artifacts.map((a)=>'<button class="item'+(a.path===s.artifact?' active':'')+'" data-aid="'+esc(a.path)+'"><strong>'+esc(a.path)+'</strong><div>'+esc(a.kind)+' • '+esc(String(a.sizeBytes))+' bytes</div></button>').join('')+'</div>':'<div class="empty">This run does not contain previewable artifacts yet.</div>')+'</div><div class="sub"><div class="stack"><h2 id="aTitle">Artifact Preview</h2><p id="aSub">Choose an artifact.</p></div><a id="aRaw" class="btn" target="_blank" rel="noreferrer" hidden>Open Raw</a><div id="aPrev" class="preview"><div class="empty">No artifact selected.</div></div></div>';
 
   for(const b of root.querySelectorAll('[data-aid]')){
     b.onclick=()=>{

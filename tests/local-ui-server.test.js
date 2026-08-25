@@ -1058,12 +1058,10 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /Analyze Workspace/);
     assert.match(shellHtml, /Prompt Tools/);
     assert.match(shellHtml, /Local Analysis Tools/);
-    assert.match(shellHtml, /Experimental \/ Coming Later/);
     assert.match(shellHtml, /Advanced: optional/);
     assert.match(shellHtml, /Everything here is optional and intended for experienced users/);
     assert.match(shellHtml, /Open In Reports/);
     assert.match(shellHtml, /local-only/);
-    assert.match(shellHtml, /Deferred remote workflows/);
     assert.match(shellHtml, /Open analysis report/);
     assert.match(shellHtml, /Show raw result/);
     assert.match(shellHtml, /\/api\/ui-actions\/analyze-existing-workspace/);
@@ -1094,8 +1092,9 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /Export Preview/);
     assert.match(shellHtml, /Preview is safe and local/);
     assert.match(shellHtml, /Beginner path/);
-    assert.match(shellHtml, /Coming Later/);
-    assert.match(shellHtml, /Remote fetch is not a supported browser action in this iteration\./);
+    assert.doesNotMatch(shellHtml, /Experimental \/ Coming Later/);
+    assert.doesNotMatch(shellHtml, /Deferred remote workflows/);
+    assert.doesNotMatch(shellHtml, /renderDisabledWorkflowCard/);
     assert.match(shellHtml, /Quick Actions|Open Prompt Workbench|Open Prompt Workbench/);
     assert.doesNotMatch(shellHtml, /Prepare Fetch Inputs/);
     assert.doesNotMatch(shellHtml, /Review Query Commands/);

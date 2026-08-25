@@ -429,6 +429,90 @@ Nächstes To-do nach Iteration 13: Fetch-Ergebnisse um Source-Fingerprint und
 Freshness-/Change-Check erweitern und daraus einen ebenso bestätigungspflichtigen
 lokalen Refresh-Flow ableiten.
 
+### Iteration 14 — Funktionale GUI-Aktionen und verfügbare Reports
+
+Status: umgesetzt lokal am 2026-08-25; lokale Gesamt- und GUI-E2E-Prüfungen grün.
+
+Umgesetzt:
+
+- deaktivierte „Coming Later“-Workflow-Karten aus der sichtbaren GUI entfernt;
+  die technischen Katalogeinträge bleiben für CLI-/MCP-Orientierung erhalten;
+- Reports zeigt nur noch Ansichten mit Daten für den ausgewählten Lauf und
+  bietet keine leeren oder deaktivierten Report-Aktionen mehr an;
+- direkte Navigation zu nicht verfügbaren Report-Zielen fällt sicher auf die
+  Report-Übersicht zurück;
+- Browser-E2E prüft jetzt echte Interaktionen für Advanced, Prompt Workbench,
+  Use-Case-/Prompt-Vorschau, Analyze-Navigation, AI-Workbench, Reports und
+  Setup-Rücksprung;
+- GUI-Verträge bestätigen, dass im sichtbaren Advanced-/Reports-Bereich keine
+  toten Buttons zurückbleiben.
+
+Bewusst nicht umgesetzt:
+
+- kein automatischer Remote-Fetch, keine freie DB2-Abfrage und keine Mutation;
+- keine Entfernung technischer Katalogeinträge für noch nicht GUI-fähige CLI-/MCP-
+  Funktionen;
+- kein Push, Merge oder CI-Status aus dieser lokalen Iteration.
+
+Prüfstand:
+
+- `npm test`: 906 bestanden, 0 fehlgeschlagen, 3 berechtigt übersprungen
+  (Windows-Symlink-Fixtures);
+- `npm run test:e2e`: MCP, SFTP und GUI grün;
+- `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run docs:check`,
+  `npm run package:smoke`, `npm run demo:run`, Hygiene, Portabilität und
+  `git diff --check`: grün;
+- geänderte Dateien enthalten keine Credentials, privaten Schlüssel oder
+  privaten lokalen Pfade.
+
+Nächstes To-do nach Iteration 14: einen synthetischen Lauf mit verfügbaren
+Graph-, DB2-, Prompt- und Evidence-Daten im Browser-E2E durchspielen und die
+verbleibenden Setup-/Workbench-Aktionen einzeln auf sichtbare Ergebnisse,
+Fehlerzustände und Clipboard-/Export-Fallbacks prüfen.
+
+### Iteration 15 — Befüllte Reports und robuste Prompt-Workbench-Aktionen
+
+Status: umgesetzt lokal am 2026-08-25; fokussierte Browser- und Server-Tests grün.
+
+Umgesetzt:
+
+- eine wiederverwendbare synthetische GUI-E2E-Fixture erzeugt einen vollständigen,
+  hash-konsistenten Analyse-Lauf mit Graph-, DB2-, Testdaten-, Prompt- und
+  Evidence-Artefakten;
+- echter Chrome-Browser navigiert und bedient Graph-Knoten, DB2-Tabellen,
+  Prompt-Vergleich und Evidence-Einträge;
+- Prompt Workbench prüft Preview, Export, Kontext-Run-Refresh und Clipboard-
+  Rückmeldung in einem befüllten lokalen Lauf;
+- Clipboard-Zugriffe haben ein kurzes Timeout und zeigen bei Browser-Sperre eine
+  verständliche manuelle Fallback-Anweisung statt dauerhaft zu hängen;
+- die E2E-Testumgebung erteilt Clipboard-Berechtigung, wenn der Browser das
+  unterstützt, ohne die Produktlogik von Remote- oder Dateisystemzugriffen zu
+  erweitern.
+
+Bewusst nicht umgesetzt:
+
+- kein externer SFTP-, DB2- oder MCP-Dienst im GUI-Test;
+- kein automatischer Download- oder Clipboard-Zwang, wenn der Browser die Aktion
+  aus Sicherheitsgründen verweigert;
+- keine privaten, kundenbezogenen oder realen Zugangsdaten in Fixtures.
+
+Prüfstand:
+
+- fokussierter befüllter GUI-Browser-E2E-Test: grün;
+- `npm test`: 906 bestanden, 0 fehlgeschlagen, 3 berechtigt übersprungen
+  (Windows-Symlink-Fixtures);
+- `npm run test:e2e`: MCP, SFTP und GUI grün;
+- `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run docs:check`,
+  `npm run package:smoke`, `npm run demo:run`, Hygiene, Portabilität und
+  `git diff --check`: grün;
+- Secret-/Schlüssel- und private-Pfad-Scan im geänderten Scope ohne Treffer;
+- die synthetische Fixture enthält keine Credentials, privaten Schlüssel,
+  Kundendaten oder realen Systemnamen.
+
+Nächstes To-do nach Iteration 15: die übrigen Setup-/Workbench-Aktionen (Templates,
+Kontextimport und Wizard-Speicherpfade) im befüllten Browserlauf mit positiven und
+negativen sichtbaren Ergebnissen ergänzen.
+
 ## Weitere geplante Iterationen
 
 1. Source-Fingerprint und Freshness-/Change-Check für Fetch-Ergebnisse
