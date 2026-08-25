@@ -190,6 +190,14 @@ async function startChrome() {
     return {
       async navigate(url) {
         await send('Page.navigate', { url }, 30000);
+        try {
+          await send('Browser.grantPermissions', {
+            origin: new URL(url).origin,
+            permissions: ['clipboardReadWrite'],
+          });
+        } catch {
+          // Clipboard permission is optional; the product fallback remains covered below.
+        }
         await waitFor(async () => (await this.evaluate('document.readyState')) === 'complete', {
           timeoutMs: 15000,
           message: `Page did not finish loading: ${url}`,
