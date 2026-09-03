@@ -45,7 +45,7 @@ Damit beantwortet Zeus Fragen wie:
 - Wie bleiben Agenten-Workflows lokal, begrenzt, auditierbar und reviewfähig?
 
 > [!IMPORTANT]
-> **Unterstützter Produktpfad:** CLI und MCP erzeugen die Evidenz und Artefakte. `zeus serve` ist ein optionaler, lokaler und experimenteller Viewer für bereits vorhandene Ergebnisse.
+> **Unterstützter Produktpfad:** Die CLI erzeugt die Evidenz und Artefakte und ist der kanonische Agentenpfad. MCP ist ein optionaler lokaler Adapter; `zeus serve` ist ein optionaler, lokaler und experimenteller Viewer für bereits vorhandene Ergebnisse.
 
 > [!NOTE]
 > Das Projekt befindet sich in aktiver Entwicklung. CLI-Verträge, Workflows, Artefakte, MCP-Tools und experimentelle Integrationen können sich zwischen Releases ändern. Die verbindliche Referenz ist [`docs/tool-catalog.md`](docs/tool-catalog.md).
@@ -449,9 +449,23 @@ node cli/zeus.js workflow --preset refactoring-review --source ./rpg_sources --p
 node cli/zeus.js workflow --preset test-generation-review --source ./rpg_sources --program ORDERPGM
 ```
 
-## 🤖 Lokale MCP-Integration (experimentell)
+## 🤖 CLI-Agenten und optionale MCP-Integration
 
-Zeus kann eine kontrollierte Tool-Oberfläche über **MCP und lokalen `stdio`-Transport** bereitstellen. Ziel ist nicht „der Agent darf alles“, sondern eine begrenzte, auditierbare und standardmäßig read-orientierte Integration.
+Der bevorzugte Einstieg für Menschen und KI-Agenten ist die CLI:
+
+```powershell
+node .\cli\zeus.js agent bootstrap --json
+node .\cli\zeus.js tools list --json
+node .\cli\zeus.js context show --json
+```
+
+Der Agentenvertrag und die Entscheidungslogik stehen in [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md) und [`docs/ai/cli-agent-guide.md`](docs/ai/cli-agent-guide.md).
+
+## 🤖 Lokale MCP-Integration (optional, experimentell)
+
+Zeus kann zusätzlich eine kontrollierte Tool-Oberfläche über **MCP und lokalen `stdio`-Transport** bereitstellen. Ziel ist nicht „der Agent darf alles“, sondern eine begrenzte, auditierbare und standardmäßig read-orientierte Integration.
+
+MCP ist dabei ein optionaler KI-Adapter: CLI, Capability-Registry und gemeinsame Services bleiben die kanonische Ausführungsschicht. MCP ergänzt lokale Discovery und policy-gesteuerten Zugriff, aber keine zweite Facharchitektur.
 
 ```bash
 node cli/zeus.js mcp serve --stdio true --verbose
@@ -1136,9 +1150,27 @@ node cli/zeus.js workflow --preset refactoring-review --source ./rpg_sources --p
 node cli/zeus.js workflow --preset test-generation-review --source ./rpg_sources --program ORDERPGM
 ```
 
+## 🤖 CLI agent integration and optional MCP
+
+The CLI is the canonical entry point for people and AI agents. Start with the
+machine-readable operating contract, then discover the installed capabilities
+and current scope:
+
+```powershell
+node .\cli\zeus.js agent bootstrap --json
+node .\cli\zeus.js tools list --json
+node .\cli\zeus.js context show --json
+```
+
+See [`docs/ai/cli-agent-guide.md`](docs/ai/cli-agent-guide.md) for the agent
+contract and intent-based workflow selection. MCP is an optional adapter for
+clients that explicitly support it.
+
 ## 🤖 Local MCP integration (experimental)
 
 Zeus can expose a controlled tool surface through **MCP using local `stdio` transport**. The goal is not to let an agent do everything, but to provide bounded, auditable, read-oriented integration by default.
+
+MCP is an optional AI adapter: the CLI, capability registry, and shared services remain the canonical execution layer. MCP adds local discovery and policy-gated access without creating a second business architecture.
 
 ```bash
 node cli/zeus.js mcp serve --stdio true --verbose

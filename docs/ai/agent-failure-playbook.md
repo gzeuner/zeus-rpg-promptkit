@@ -1,110 +1,174 @@
 ---
 Title: Agent Failure Playbook
-Description: Stable recovery guidance for AI agents when Zeus MCP tools refuse, miss prerequisites, or return incomplete evidence.
-Last Updated: 2026-08-04
+Description: Stable CLI and MCP recovery guidance for AI agents working with Zeus.
+Last Updated: 2026-09-03
 ---
 
 # Agent Failure Playbook
 
-Use this playbook when an MCP tool call fails, is refused, or returns incomplete evidence. Prefer matching the situation to a **stable code**, then follow **Do / Don't / Next tools**.
+Use this playbook when a Zeus CLI command or optional MCP operation fails, is refused, or returns incomplete evidence. Match the situation to a stable code, follow one recovery path, and avoid retry loops.
 
-Live machine-readable copy:
+Machine-readable copy:
 
-- `zeus://metadata/agent-failure-playbook.json`
-- Embedded compact summary in `zeus.agent.bootstrap` → `failurePlaybook`
+- CLI: `node cli/zeus.js agent bootstrap --json` → `failurePlaybook`
+- MCP, when explicitly available: `zeus://metadata/agent-failure-playbook.json`
 
 ## Principles
 
-1. **Do not invent.** Tool names, profiles, analysis results, and unresolved symbols stay evidence-backed.
-2. **Fail closed on policy.** Allowlist and S3/S4 approval are not optional.
-3. **One diagnosis, one recovery path.** Avoid retry loops with the same invalid call.
-4. **Prefer default-allowlisted tools** when commercial or high-risk surfaces are unavailable.
+1. Do not invent commands, options, profiles, tools, analysis results, or unresolved symbols.
+2. Fail closed on policy, workspace containment, and approval gates.
+3. Use one diagnosis and one recovery path; do not retry the same invalid call.
+4. Prefer local, read-only evidence when remote or optional capabilities are unavailable.
+5. Report the original error, recovery attempted, and remaining uncertainty.
 
 ## Codes
 
-### POLICY_REFUSED
+### POLICY_REFUSED / TOOL_NOT_ALLOWED
 
-Tool is not on the current MCP allowlist or policy denied the call.
+The requested capability is not available in the current surface or policy.
 
-- **Do:** Call `tools/list` or `zeus.help`; ask the operator to allowlist if justified; prefer a default-allowlisted alternative.
-- **Don't:** Invent tool names or retry the same denied tool in a loop.
-- **Next tools:** `zeus.help`, `zeus.agent.bootstrap`, `zeus.doctor`
+- Do: run `node cli/zeus.js tools list --json` and, for a known command, `node cli/zeus.js tools describe <command> --json`.
+- Do: choose a documented lower-risk CLI alternative or ask the operator to enable the capability.
+- Do not: invent a command, MCP tool, or alternate spelling and retry repeatedly.
+
+Next CLI commands:
+
+```text
+node cli/zeus.js tools list --json
+node cli/zeus.js agent suggest --goal "<goal>" --json
+node cli/zeus.js doctor --profile <profile> --show-resolved
+```
 
 ### MISSING_PROFILE
 
-A required runtime profile is missing or empty.
+A profile is required but missing, empty, or unresolved.
 
-- **Do:** Call `zeus.profiles`; ask the operator which profile to use; pass `profile` explicitly.
-- **Don't:** Guess profile names or proceed with remote/analysis tools without a profile when required.
-- **Next tools:** `zeus.profiles`, `zeus.doctor`, `zeus.onboarding`
+- Do: run `profiles`, ask which profile is intended, then pass it explicitly.
+- Do: use local source analysis if the task does not need IBM i or Db2.
+- Do not: guess a profile name or proceed against a remote target without validation.
+
+Next CLI commands:
+
+```text
+node cli/zeus.js profiles --json
+node cli/zeus.js doctor --profile <profile> --show-resolved
+node cli/zeus.js onboarding
+```
 
 ### ANALYZE_REQUIRED
 
-Downstream tool needs existing canonical-analysis artifacts that are absent.
+A dependent command needs analysis artifacts that do not exist.
 
-- **Do:** Run `zeus.analyze` (with `source` when a full run is needed); confirm artifacts via `zeus.analyses`; retry the dependent tool.
-- **Don't:** Invent analysis results or skip analyze when the dependent tool requires graph/artifacts.
-- **Next tools:** `zeus.analyze`, `zeus.analyses`, `zeus.workflow.suggest`
+- Do: run `analyze` or a suitable `workflow` for the target program.
+- Do: verify `analyze-run-manifest.json` and the expected output directory.
+- Do not: infer impact, risk, callers, or test cases without the evidence run.
+
+Next CLI commands:
+
+```text
+node cli/zeus.js analyze --source <source-root> --program <program> --out <output-root> --json
+node cli/zeus.js analyses list --json
+node cli/zeus.js impact --target <target> --program <program> --out <output-root> --json
+```
 
 ### UNRESOLVED_REFS
 
-Symbols, bindings, or references could not be resolved from evidence.
+Symbols, bindings, callers, tables, or references could not be resolved from the available evidence.
 
-- **Do:** Search local source (`zeus.search-source` / `field-search`); re-run analyze with the correct source root; report unresolved items explicitly.
-- **Don't:** Invent call targets, tables, or procedure names.
-- **Next tools:** `zeus.search-source`, `zeus.field-search`, `zeus.analyze`, `zeus.impact`
+- Do: search local source, widen the source root, or re-run analysis with the correct inputs.
+- Do: report the unresolved item explicitly and explain what evidence is missing.
+- Do not: turn an unresolved reference into a confirmed dependency.
+
+Next CLI commands:
+
+```text
+node cli/zeus.js search-source --source-root <source-root> --search-term "<term>"
+node cli/zeus.js field-search --profile <profile> --field <field> --mode all --json
+node cli/zeus.js analyze --source <source-root> --program <program> --out <output-root> --json
+```
 
 ### PI_ABSENT
 
-Commercial Project Intelligence module is not present or not allowlisted.
+Optional Project Intelligence or a local knowledge snapshot is unavailable, stale, or not enabled.
 
-- **Do:** Call `zeus.project-knowledge.check` when a local knowledge root is known; use `lookup` only for a fresh snapshot. Otherwise fall back to Community tools (analyze, search-source, impact, bundle).
-- **Don't:** Serve stale/unknown Knowledge First results, thrash missing optional project-knowledge operations, or claim integrated PI when discovery says absent.
-- **Next tools:** `zeus.project-knowledge.check`, `zeus.project-knowledge.lookup`, `zeus.project-knowledge.discover`, `zeus.analyze`, `zeus.search-source`, `zeus.impact`
+- Do: inspect the status/check result and use local `analyze`, `search-source`, `impact`, and `bundle` capabilities.
+- Do: use Knowledge First lookup only when the snapshot is reported fresh.
+- Do not: claim integrated Project Intelligence or serve stale/unknown retrieval results.
+
+Next CLI commands:
+
+```text
+node cli/zeus.js project-knowledge discover --json
+node cli/zeus.js project-knowledge check --json
+node cli/zeus.js analyze --source <source-root> --program <program> --out <output-root> --json
+```
 
 ### INVALID_ARGS
 
-Tool arguments failed schema validation (required, type, enum, length).
+The command arguments failed validation.
 
-- **Do:** Re-read the tool `inputSchema` from `tools/list`; fix required fields and types; use schema `examples` when present; retry once.
-- **Don't:** Send properties outside the schema or retry the same invalid payload.
-- **Next tools:** `zeus.help`, `zeus.agent.bootstrap`
+- Do: read the command record and example from `tools describe`.
+- Do: correct required fields, types, enum values, and paths; retry once.
+- Do not: send extra arguments or repeat the same invalid payload.
+
+Next CLI commands:
+
+```text
+node cli/zeus.js tools describe <command> --json
+node cli/zeus.js agent bootstrap --json
+```
 
 ### RUNTIME_BACKEND
 
-Underlying runtime, DB2, or process backend failed (connection, timeout, crash).
+The local runtime, Java process, IBM i connection, or Db2 backend failed.
 
-- **Do:** Run `zeus.doctor` for the profile; report the backend error; prefer local-only tools until healthy.
-- **Don't:** Hammer remote tools after repeated backend failures or invent successful remote results.
-- **Next tools:** `zeus.doctor`, `zeus.profiles`, `zeus.resources`
+- Do: run `doctor` for the selected profile and preserve the diagnostic message.
+- Do: continue with local-only commands when they can answer part of the question.
+- Do not: hammer a failing remote service or claim successful remote evidence.
+
+Next CLI commands:
+
+```text
+node cli/zeus.js doctor --profile <profile> --show-resolved
+node cli/zeus.js resources --profile <profile> --json
+node cli/zeus.js search-source --source-root <source-root> --search-term "<term>"
+```
 
 ### PATH_OUTSIDE_WORKSPACE
 
-Requested path is outside the allowed workspace containment boundary.
+A requested path is outside the configured workspace or source containment boundary.
 
-- **Do:** Use paths under configured workspace / source roots only; ask the operator for an in-workspace path.
-- **Don't:** Attempt path traversal or absolute paths outside policy.
-- **Next tools:** `zeus.resources`, `zeus.doctor`
+- Do: use an explicitly contained source/output path or ask the operator for an approved workspace path.
+- Do not: disable containment checks, use traversal, or silently redirect output.
+
+Next CLI commands:
+
+```text
+node cli/zeus.js context show --json
+node cli/zeus.js resources --profile <profile> --json
+```
 
 ### APPROVAL_REQUIRED
 
-Tool or step requires explicit operator approval (S3/S4, mutations, PI query).
+The requested action requires explicit user/operator approval, typically because it is remote, S3, S4, a mutation, or a fetch.
 
-- **Do:** Show the exact tool name and arguments; wait for explicit approval; use a lower-safety alternative if approval is not given.
-- **Don't:** Call `approvalRequired` steps without confirmation or treat silence as approval.
-- **Next tools:** `zeus.workflow.suggest`, `zeus.help`, `zeus.agent.bootstrap`
+- Do: show the exact command, target, scope, safety level, and expected effect.
+- Do: wait for explicit approval and use a dry-run, plan, report, or local alternative when possible.
+- Do not: treat silence, a warning, or a previous approval as approval for a new target.
 
-### TOOL_NOT_ALLOWED
+Next CLI commands:
 
-Named tool is unknown or not registered on the current MCP server surface.
+```text
+node cli/zeus.js agent suggest --goal "<goal>" --json
+node cli/zeus.js tools describe <command> --json
+```
 
-- **Do:** Use `tools/list` or `zeus.help`; map intent to a known tool via `zeus.workflow.suggest`.
-- **Don't:** Guess tool names from docs alone when `tools/list` is available.
-- **Next tools:** `zeus.help`, `zeus.workflow.suggest`, `zeus.agent.bootstrap`
+## Standard recovery order
 
-## Suggested recovery order
+1. Capture exit status, structured output, command, and scope.
+2. Match the closest stable code above.
+3. Run one listed `nextCommands` recovery path.
+4. Verify its checkpoint or artifact output.
+5. If still blocked, stop and ask the operator with the code and last error.
 
-1. Match the failure to a code above (or closest summary).
-2. Follow **Do** once; avoid **Don't**.
-3. Call one of the **Next tools** to regain a valid footing.
-4. If still blocked, stop and ask the operator with the code and the last error message.
+Optional MCP clients should apply the same recovery logic using their live `tools/list` surface. The CLI commands above remain the canonical fallback.

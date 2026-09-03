@@ -11,25 +11,26 @@ This page is the central entry point for humans and AI assistants.
 ## The Product Golden Path (Canonical Journey)
 
 The primary user journey is documented in [`quickstart/5-minutes.md`](quickstart/5-minutes.md):
-Question -> Analyze -> Investigate (search/trace/xref) -> Impact/Risk -> Generate (tests/checklist/QA) -> Bundle (safe and reproducible) -> Verify -> (optional MCP) -> Human review.
+Question -> CLI bootstrap/discovery -> Analyze -> Investigate (search/trace/xref) -> Impact/Risk -> Generate (tests/checklist/QA) -> Bundle (safe and reproducible) -> Verify -> Human review -> (optional MCP adapter).
 
 **What Zeus is:** Evidence and investigation platform. Produces reproducible, reviewable artifacts. Humans decide. Local control.
 
 **What Zeus is not:** Autonomous generator, correctness guarantee, production mutator, hosted service.
 
-## Start Sequence (CLI/MCP-First)
+## Start Sequence (CLI-First)
 
-1. Load the environment explicitly in the shell (`config/load-env.sh` or `config/load-env.ps1`).
-2. Run `doctor` before planning further actions.
-3. Use [`tool-catalog.md`](tool-catalog.md) as the authoritative command, safety, and scope reference.
-4. Start AI sessions with [`ai/session-prompt.md`](ai/session-prompt.md).
-5. Work evidence-first through CLI or MCP and use generated artifacts as proof.
+1. Start with `node cli/zeus.js agent bootstrap --json` and `node cli/zeus.js tools list --json`.
+2. Inspect the scope with `node cli/zeus.js context show --json`.
+3. Use `doctor` before profile-based remote work; local-only analysis can proceed without a live IBM i connection.
+4. Use [`tool-catalog.md`](tool-catalog.md) as the authoritative command, safety, and scope reference.
+5. Start AI sessions with [`ai/session-prompt.md`](ai/session-prompt.md) and use [`ai/cli-agent-guide.md`](ai/cli-agent-guide.md) for details.
+6. Work evidence-first through the CLI and use generated artifacts as proof. MCP is optional.
 
 ## Documentation Domains
 
 | Domain           | Purpose                                                                                                                | Primary Entry                                                                                                                                                                                                  | Typical Audience                           |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `ai/`            | AI contracts, session patterns, validation                                                                             | [`ai/session-prompt.md`](ai/session-prompt.md)                                                                                                                                                                 | AI agents, prompt engineers                |
+| `ai/`            | AI contracts, CLI-first session patterns, validation                                                                   | [`ai/session-prompt.md`](ai/session-prompt.md), [`ai/cli-agent-guide.md`](ai/cli-agent-guide.md)                                                                                                               | AI agents, prompt engineers                |
 | `cli/`           | Reference and practical command examples                                                                               | [`cli/reference.md`](cli/reference.md)                                                                                                                                                                         | Developers, operators                      |
 | `quickstart/`    | Canonical evidence-investigation golden path plus credential and onboarding guides                                     | [`quickstart/5-minutes.md`](quickstart/5-minutes.md), [`quickstart/secrets-and-overrides.md`](quickstart/secrets-and-overrides.md), [`quickstart/onboarding-new-ibm-i.md`](quickstart/onboarding-new-ibm-i.md) | All roles                                  |
 | `architecture/`  | Architecture baseline, ADRs, runtime config, dependency rules, capability model, safety trust zones, and ZPI contracts | [`architecture/index.md`](architecture/index.md)                                                                                                                                                               | Maintainers, tooling engineers, architects |
@@ -45,7 +46,7 @@ Question -> Analyze -> Investigate (search/trace/xref) -> Impact/Risk -> Generat
 | Need                                | Go To                                                                                                                                                                                                                              | Why                                                                   |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | Authoritative command behavior      | [`tool-catalog.md`](tool-catalog.md)                                                                                                                                                                                               | Single source of truth for commands, safety, and examples             |
-| Session bootstrap                   | [`ai/session-prompt.md`](ai/session-prompt.md)                                                                                                                                                                                     | Standardized workflow with safety gates                               |
+| CLI agent bootstrap                 | [`ai/session-prompt.md`](ai/session-prompt.md), [`ai/cli-agent-guide.md`](ai/cli-agent-guide.md)                                                                                                                                   | CLI-first workflow with safety gates                                  |
 | MCP operator setup                  | [`mcp/operator-guide.md`](mcp/operator-guide.md)                                                                                                                                                                                   | Start, policy, and audit reference for local MCP operation            |
 | Prompt schema and constraints       | [`ai/prompt-contracts.md`](ai/prompt-contracts.md)                                                                                                                                                                                 | Prevents inconsistent prompt outputs                                  |
 | Architecture decisions and baseline | [`architecture/index.md`](architecture/index.md)                                                                                                                                                                                   | ADRs for kernel, dependencies, contracts, registry, and ZPI           |
@@ -64,6 +65,6 @@ Question -> Analyze -> Investigate (search/trace/xref) -> Impact/Risk -> Generat
 - `docs/knowledgebase/README.md` and the ZPI documents beneath it define the security, licensing,
   test strategy, and **closure status** for Project Intelligence (integrated engines, operations,
   and thin adapters in the public package).
-- CLI and MCP remain the supported product path; the local viewer is optional and experimental.
+- The CLI is the canonical product and agent path; MCP is an optional local adapter and the viewer is optional and experimental.
 - Documentation changes should keep safety levels and scope terminology consistent (`S0` to `S4`).
 - The tool catalog is generated from code via `zeus docs:generate-catalog`.

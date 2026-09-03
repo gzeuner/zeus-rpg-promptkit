@@ -33,17 +33,16 @@ describe('Track G0: default MCP allowlist docs sync', () => {
     }
   });
 
-  it('session-prompt covers key default-safe families for agents', () => {
+  it('session-prompt makes the CLI-first contract explicit for agents', () => {
     const text = fs.readFileSync(SESSION_PROMPT, 'utf8');
     const requiredSnippets = [
-      'zeus.help',
-      'zeus.agent.bootstrap',
-      'tools/list',
-      'investigation',
+      'The Zeus CLI is the canonical agent surface',
+      'node cli/zeus.js agent bootstrap --json',
+      'node cli/zeus.js tools list --json',
+      'node cli/zeus.js context show --json',
       'discover-environment',
-      'project-knowledge.discover',
-      'zeus://metadata/agent-bootstrap.json',
-      'Do not invent tool',
+      'Do not invent commands',
+      'MCP and the browser/UI are optional',
     ];
     for (const snippet of requiredSnippets) {
       assert.ok(text.includes(snippet), `session-prompt missing: ${snippet}`);

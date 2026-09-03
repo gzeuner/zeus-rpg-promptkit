@@ -1,7 +1,7 @@
 ---
 Title: Agentic Coding with Zeus
-Description: Workflow-orientierte Leitfaeden fuer Analyse-, Review- und Agentenablaeufe.
-Last Updated: 2026-06-19
+Description: CLI-first workflow for building IBM i context before coding, review, or analysis.
+Last Updated: 2026-09-03
 ---
 
 # Agentic Coding with Zeus
@@ -10,68 +10,70 @@ This is the recommended setup for developers who want an AI to build IBM i conte
 
 ## Recommended product shape
 
-Use **Zeus CLI commands and MCP tools as the core integration contract**.
+Use **Zeus CLI commands as the core integration contract**.
 
 That means:
 
-- Any capable chat session can use Zeus when Zeus tools are exposed through your chosen integration layer (for example MCP, internal tool gateway, or script wrapper).
-- The standard session bootstrap is [`../ai/session-prompt.md`](../ai/session-prompt.md).
+- Any capable agent can use Zeus through the shell and the stable JSON CLI contract.
+- `agent bootstrap`, `tools list`, and `tools describe` make the installed capabilities discoverable.
+- MCP may be added as an optional adapter when the client explicitly supports it.
 - The real behavior lives in Zeus CLI/API commands and generated artifacts.
 
-In practice the product shape is:
+In practice:
 
-1. Expose Zeus tools through one integration layer.
-2. Keep the real behavior in the CLI/MCP tools.
-3. Use normal chat plus the standard session prompt as the default entry point.
+1. Start the CLI bootstrap and discover the installed commands.
+2. Establish the exact working context.
+3. Generate evidence locally before asking the AI for conclusions or code changes.
+4. Keep remote reads and all mutations behind explicit scope and approval gates.
 
-For a faster operational checklist, see [`../quickstart/5-minutes.md`](../quickstart/5-minutes.md).
-
-For rollout validation, see [`../ai/agent-validation-checklist.md`](../ai/agent-validation-checklist.md).
+For the detailed route and artifact contract, see [`../ai/cli-agent-guide.md`](../ai/cli-agent-guide.md).
 
 ## Fastest developer path
 
 1. Run `npm install` in the repository root.
-2. Copy `config/profiles.example.json` to `config/local-only/profiles.json`.
-3. Load the required environment explicitly in the current shell.
-4. Run `node cli/zeus.js doctor --profile default --show-resolved`.
-5. Run `node cli/zeus.js analyze --profile default` or a `workflow` preset.
-6. Review the generated artifacts or package them with `bundle`.
-7. Open your AI client and start with [`../ai/session-prompt.md`](../ai/session-prompt.md).
-8. Stay in normal chat mode and ask the AI to use the Zeus tools.
+2. Copy `config/profiles.example.json` only when remote access is required.
+3. Run `node cli/zeus.js agent bootstrap --json`.
+4. Run `node cli/zeus.js tools list --json` and `node cli/zeus.js context show --json`.
+5. Run `doctor` for profile-based remote work.
+6. Run `analyze` or a suitable `workflow` preset.
+7. Review the generated artifacts or package them with `bundle --safe-sharing`.
+8. Open the AI client and start with [`../ai/session-prompt.md`](../ai/session-prompt.md).
 
-## Recommended tool sequence
+## Recommended CLI sequence
 
-For most tasks the agent should do this:
+For most tasks:
 
-1. `zeus.doctor`
-2. `zeus.analyze` or `zeus.workflow`
-3. `zeus.query-table`, `zeus.query-sql`, `zeus.joblog`, or `zeus.inspect-object` only if more evidence is needed
-4. `zeus.bundle` to package artifacts for review/sharing
-5. `zeus.serve` only if an optional local viewer helps
-6. `zeus.fetch` only with explicit user confirmation
+1. `node cli/zeus.js agent bootstrap --json`
+2. `node cli/zeus.js tools list --json`
+3. `node cli/zeus.js context show --json`
+4. `node cli/zeus.js analyze` or `node cli/zeus.js workflow --preset ...`
+5. `node cli/zeus.js query-table`, `query-sql`, `joblog`, or `inspect-object` only if more evidence is needed
+6. `node cli/zeus.js impact`, `assess-risk`, `generate-test`, `generate-checklist`, or `qa`
+7. `node cli/zeus.js bundle --safe-sharing`
+8. `node cli/zeus.js fetch` only with explicit user confirmation
 
-## Why a tool adapter is still necessary
+## Optional tool adapters
 
-An adapter layer is still required for direct tool calls from chat.
+An adapter layer is optional for direct tool calls from chat. When present, it can provide:
 
-It provides:
+- tool schema and registration for the AI runtime;
+- runtime execution and safety enforcement;
+- workspace-aware profile, environment, and CLI wiring.
 
-- tool schema/registration for the AI runtime
-- runtime execution and safety enforcement
-- workspace-aware profile, environment, and CLI wiring
+Without an adapter, Zeus remains fully usable through the CLI/API surfaces and generated artifacts.
 
-Without an adapter, Zeus commands exist only as CLI/API surfaces and are not directly callable from chat.
-
-## Example chat flow
+## Example CLI-driven flow
 
 Developer:
-`Run doctor first, then use the Zeus tools to analyze ORDERPGM in documentation mode and summarize the generated artifacts.`
+`Use the Zeus CLI to analyze ORDERPGM in documentation mode and summarize the generated artifacts.`
 
-Expected tool sequence:
+Expected sequence:
 
-1. `zeus.doctor`
-2. `zeus.analyze`
-3. `zeus.bundle`
-4. optional follow-up evidence tools as needed
+1. `node cli/zeus.js agent bootstrap --json`
+2. `node cli/zeus.js tools list --json`
+3. `node cli/zeus.js context show --json`
+4. `node cli/zeus.js analyze --source <source-root> --program ORDERPGM --out <output-root>`
+5. inspect `report.md`, `architecture-report.md`, and `analyze-run-manifest.json`
+6. optionally run `bundle --safe-sharing`
 
-That is the default recommendation for agentic coding: **tools first, normal chat first**.
+The default recommendation is: **CLI discovery first, evidence before conclusions, human review before changes**.

@@ -10,6 +10,11 @@ Last Updated: 2026-08-18
 
 Expose a safe, policy-gated subset of Zeus capabilities over MCP stdio for AI clients and automation.
 
+MCP is an optional AI adapter. The CLI, capability registry, and shared
+services remain the canonical execution surface; MCP provides local discovery
+and policy-gated access to those capabilities rather than a second business
+implementation.
+
 ## Security Posture
 
 - Transport: stdio only (local process boundary)

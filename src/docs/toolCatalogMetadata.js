@@ -338,6 +338,13 @@ const COMMAND_METADATA = Object.freeze({
       'List and describe canonical command-help records as stable JSON for CLI and MCP parity.',
     example: 'node cli/zeus.js tools list --json',
   }),
+  agent: Object.freeze({
+    safety: 'S0',
+    scope: 'Local',
+    purpose:
+      'Bootstrap CLI agents and suggest a bounded, evidence-first command sequence without executing work.',
+    example: 'node cli/zeus.js agent bootstrap --json',
+  }),
   'project-knowledge': Object.freeze({
     safety: 'S1',
     scope: 'Local',
@@ -695,6 +702,13 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: [],
     capabilityId: null,
   }),
+  agent: catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: [],
+    capabilityId: null,
+  }),
   'project-knowledge': catalogContract({
     aliases: ['project-intelligence'],
     status: 'stable',
@@ -753,6 +767,7 @@ const COMMAND_ORDER = Object.freeze([
   'docs:generate-catalog',
   'mcp',
   'tools',
+  'agent',
   'project-knowledge',
 ]);
 
@@ -793,7 +808,10 @@ const MANDATORY_AI_RULES = Object.freeze([
 ]);
 
 const RECOMMENDED_AI_SEQUENCE = Object.freeze([
-  '`doctor` (environment contract)',
+  '`agent bootstrap --json` (operating contract and recovery playbook)',
+  '`tools list --json` and `tools describe <id> --json` (capability discovery)',
+  '`context show --json` (current scope and environment)',
+  '`doctor` (before profile-based remote work)',
   '`fetch` (only if source refresh is needed and approved)',
   '`analyze` or `workflow --preset ...`',
   '`query-table`/`query-sql`/`joblog`/`field-search`/`search-source`/`inspect-object` for evidence deepening',
