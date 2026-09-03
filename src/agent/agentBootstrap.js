@@ -50,12 +50,23 @@ const INTENT_MAP = Object.freeze([
     commands: Object.freeze(['bundle --safe-sharing']),
     firstStep: 'Verify artifact contents and use safe-sharing before external distribution.',
   }),
+  Object.freeze({
+    intent: 'learn from prior failures or workarounds',
+    commands: Object.freeze(['agent log list', 'agent log']),
+    firstStep:
+      'Read recent records before retrying and record one sanitized event after the attempt.',
+  }),
 ]);
 
 const RECOMMENDED_SEQUENCE = Object.freeze([
   Object.freeze({
     command: 'node cli/zeus.js agent bootstrap --json',
     purpose: 'Load the transport-neutral CLI agent contract.',
+    safety: 'S0',
+  }),
+  Object.freeze({
+    command: 'node cli/zeus.js agent log list --json',
+    purpose: 'Read prior safe lessons before repeating a failed or blocked attempt.',
     safety: 'S0',
   }),
   Object.freeze({
@@ -103,9 +114,10 @@ function buildCliAgentBootstrapPayload() {
     canonicalSurface: 'cli',
     mcpOptional: true,
     whatToDo:
-      'Use the CLI bootstrap and command catalog to select a bounded, evidence-first workflow. Do not hunt markdown for command names.',
+      'Use the CLI bootstrap and command catalog to select a bounded, evidence-first workflow. Read prior experience before retries and record bounded lessons after failures. Do not hunt markdown for command names.',
     startHere: [
       'node cli/zeus.js agent bootstrap --json',
+      'node cli/zeus.js agent log list --json',
       'node cli/zeus.js tools list --json',
       'node cli/zeus.js context show --json',
     ],
@@ -155,6 +167,25 @@ function buildCliAgentBootstrapPayload() {
       promptFiles: 'ai_prompt_*.md',
       sharing: 'bundle-manifest.json and safe-sharing/',
       rule: 'Every finding must cite an artifact path and evidence id or source location when available.',
+    },
+    experienceLog: {
+      purpose:
+        'Keep a local append-only record of failed, blocked, partial, and corrected attempts so future agents can avoid repeating known mistakes.',
+      storage: '.zeus/agent-experience.jsonl',
+      record:
+        'node cli/zeus.js agent log --outcome failed --command "<safe-command>" --failure-code <CODE> --symptom "<what happened>" --workaround "<what helped>" --lesson "<reusable lesson>" --next-step "<next safe command>" --json',
+      list: 'node cli/zeus.js agent log list --json',
+      recordWhen: ['failed', 'blocked', 'partial', 'successful workaround or confirmed correction'],
+      required: ['outcome', 'command'],
+      privacy: [
+        'Only sanitized structured fields are written; raw stdout, stderr, environment dumps, and credentials are not accepted as log payloads.',
+        'The default log is local and ignored by Git under .zeus/. Use a reviewable artifact only when its contents are explicitly safe to share.',
+      ],
+      loop: [
+        'Read recent records before retrying a failed command.',
+        'Record one concise event after a failure, block, or workaround.',
+        'Use recurring failure codes and lessons to improve prompts, docs, or command contracts.',
+      ],
     },
     failurePlaybook: buildAgentFailurePlaybook({ compact: true }),
     fallback:

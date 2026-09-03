@@ -227,7 +227,7 @@ function printHelp() {
     '  zeus knowledge <extract|validate|inspect> [options] [--json]  # LOKAL: privacy-gated project-neutral catalog'
   );
   console.log(
-    '  zeus [--config <path>] agent <bootstrap|suggest> [options] [--json]  # CLI-first agent contract and workflow suggestion'
+    '  zeus [--config <path>] agent <bootstrap|suggest|log> [options] [--json]  # CLI-first agent contract, workflow suggestion, and experience log'
   );
   console.log(
     '  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]'
@@ -246,7 +246,7 @@ function printHelp() {
 
 function parseArgs(argv) {
   const args = { _: [] };
-  const multiValueKeys = new Set(['require-column', 'sfl-field']);
+  const multiValueKeys = new Set(['require-column', 'sfl-field', 'tag']);
 
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];

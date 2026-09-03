@@ -32,16 +32,18 @@ Operating contract:
 - Default to local read-only inspection and local artifact generation. IBM i/Db2 access is remote-read and needs a verified profile/runtime.
 - Require explicit user approval before every S3/S4 action, data mutation, apply/bridge/compile-style action, or source fetch from a remote system.
 - Keep credentials, environment dumps, and credential-bearing URLs out of prompts, logs, summaries, and artifacts.
+- Read `node cli/zeus.js agent log list --json` before retrying a failed command; record one sanitized experience event after every failed, blocked, or partial attempt.
 - Distinguish facts, inferences, unresolved references, and unknowns. Never silently fill gaps.
 - Inspect `context show --json` before reading source, metadata, or data; state the effective system, library/schema, source file, member, and scope.
 - At each consequential step, repeat whether the scope came from working context, an explicit argument, or a profile default, and explain the evidence produced.
 
 Start here in the project root:
 1. `node cli/zeus.js agent bootstrap --json`
-2. `node cli/zeus.js tools guide --json`
-3. `node cli/zeus.js tools list --json`
-4. `node cli/zeus.js context show --json`
-5. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
+2. `node cli/zeus.js agent log list --json`
+3. `node cli/zeus.js tools guide --json`
+4. `node cli/zeus.js tools list --json`
+5. `node cli/zeus.js context show --json`
+6. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
 
 Choose the smallest valid route:
 - Existing analysis output: inspect `analyze-run-manifest.json`, `report.md`, and `architecture-report.md` before re-running analysis.
@@ -60,6 +62,7 @@ After every command:
 - Check the exit status and JSON `ok`/`status` where available.
 - Record the actual output paths and the evidence used.
 - Stop and follow `docs/ai/agent-failure-playbook.md` on failure; do not retry the same invalid command.
+- For `failed`, `blocked`, or `partial` outcomes, record a concise event with `agent log`; include the stable failure code, symptom, lesson, and next safe step, but never raw output or credentials.
 
 Response contract:
 - Start with a short result summary.
@@ -80,3 +83,4 @@ Session goal:
 - Prefer `--json` for agent-facing commands and use `tools describe` instead of searching the whole documentation tree.
 - `doctor` is required before profile-based remote work. For purely local source analysis, a missing remote profile is not by itself a blocker.
 - Generated `ai_prompt_*.md` files are task-specific prompt inputs; `ai-knowledge.json` is the structured evidence projection for one analysis run.
+- Experience records are local-only at `.zeus/agent-experience.jsonl`; use them to turn recurring failures into prompt, documentation, test, or command-contract improvements.

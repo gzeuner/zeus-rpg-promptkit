@@ -114,6 +114,22 @@ For every result, record:
 - the artifact path, evidence id, source file, and line location supporting the claim;
 - freshness, uncertainty, unresolved references, and the next safety level.
 
+## Experience loop
+
+Use the local experience log as a bounded memory between attempts and sessions:
+
+```powershell
+node .\cli\zeus.js agent log list --json
+```
+
+Before retrying a failed command, read the recent records and apply an existing workaround. After a failed, blocked, or partial attempt, write exactly one concise event:
+
+```powershell
+node .\cli\zeus.js agent log --outcome failed --command "<safe-command>" --failure-code <CODE> --symptom "<what happened>" --workaround "<what helped>" --lesson "<reusable lesson>" --next-step "<next safe command>" --json
+```
+
+The default `.zeus/agent-experience.jsonl` is local and ignored by Git. The command stores structured, redacted fields only; never pass raw stdout/stderr, environment dumps, credentials, or credential-bearing URLs. Use stable failure codes so repeated problems can be identified and converted into better prompts, documentation, tests, or command contracts.
+
 ## Artifact contract
 
 Read in this order for orientation:

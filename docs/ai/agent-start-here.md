@@ -5,17 +5,18 @@ Description: Short orientation for an AI agent entering an unfamiliar Zeus sessi
 
 # Zeus RPG PromptKit — AI Start Here
 
-Zeus is a CLI/MCP-first, evidence-first toolkit for understanding IBM i and RPG applications. The local viewer is optional. The authoritative live map is available through `zeus tools guide --json` or, with MCP, `zeus.agent.bootstrap` and `zeus://metadata/agent-orientation.json`.
+Zeus is a CLI-first, evidence-first toolkit for understanding IBM i and RPG applications. MCP and the local viewer are optional adapters. The authoritative CLI map starts with `zeus agent bootstrap --json`; the live command guide is `zeus tools guide --json`. With MCP, the equivalent optional resources are `zeus.agent.bootstrap` and `zeus://metadata/agent-orientation.json`.
 
 ## First point to check
 
 CLI:
 
 ```text
+node cli/zeus.js agent bootstrap --json
+node cli/zeus.js agent log list --json
 node cli/zeus.js tools guide --json
 node cli/zeus.js context show --json
-node cli/zeus.js doctor --profile <name> --show-resolved --json
-node cli/zeus.js tools list --json
+node cli/zeus.js doctor --profile <name> --show-resolved
 ```
 
 MCP:
@@ -70,3 +71,19 @@ context → project-knowledge check → locate/lookup only when fresh → sync o
 - `S4`: bridge/apply/compile; operator-gated and never implicit.
 
 Keep credentials out of prompts, logs, generated artifacts, and responses. For the complete command list, aliases, nested actions, safety levels, examples, and workflow presets, use [`docs/tool-catalog.md`](../tool-catalog.md). For recovery, use the [agent failure playbook](agent-failure-playbook.md).
+
+## Experience loop
+
+The local experience log makes failed attempts useful for the next session:
+
+1. Read recent records before retrying: `node cli/zeus.js agent log list --json`.
+2. After a failed, blocked, or partial attempt, record one concise event with `outcome`, the safe command, a stable `failure-code`, the symptom, the lesson, and the next safe step.
+3. Use the recurring failure codes and lessons to improve the prompt, documentation, or command contract instead of repeating the same invalid call.
+
+Example:
+
+```text
+node cli/zeus.js agent log --outcome failed --command "node cli/zeus.js impact --target <target> --program <program>" --failure-code ANALYZE_REQUIRED --symptom "analysis artifacts were missing" --workaround "run analyze and verify the manifest" --lesson "impact requires a completed analysis run" --next-step "node cli/zeus.js analyze --source <source-root> --program <program> --out <output-root> --json" --json
+```
+
+Records are stored in `.zeus/agent-experience.jsonl`, which is ignored by Git. Never put raw stdout/stderr, environment dumps, credentials, or credential-bearing URLs into the event.

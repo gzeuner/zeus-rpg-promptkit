@@ -369,8 +369,9 @@ const COMMAND_METADATA = Object.freeze({
   agent: Object.freeze({
     safety: 'S0',
     scope: 'Local',
+    subcommands: ['bootstrap', 'suggest', 'log', 'log list'],
     purpose:
-      'Bootstrap CLI agents and suggest a bounded, evidence-first command sequence without executing work.',
+      'Bootstrap CLI agents, suggest bounded evidence-first workflows, and record/read sanitized local experience events without executing work.',
     example: 'node cli/zeus.js agent bootstrap --json',
   }),
   'project-knowledge': Object.freeze({
@@ -870,6 +871,7 @@ const MANDATORY_AI_RULES = Object.freeze([
 
 const RECOMMENDED_AI_SEQUENCE = Object.freeze([
   '`agent bootstrap --json` (operating contract and recovery playbook)',
+  '`agent log list --json` (read prior sanitized lessons before retries)',
   '`tools list --json` and `tools describe <id> --json` (capability discovery)',
   '`context show --json` (current scope and environment)',
   '`doctor` (before profile-based remote work)',
@@ -877,6 +879,7 @@ const RECOMMENDED_AI_SEQUENCE = Object.freeze([
   '`analyze` or `workflow --preset ...`',
   '`query-table`/`query-sql`/`joblog`/`field-search`/`search-source`/`inspect-object` for evidence deepening',
   '`impact`/`assess-risk`/`generate-test`/`generate-checklist`/`qa` for planning and validation',
+  '`agent log --outcome ...` after failed, blocked, partial, or corrected attempts (iterative learning)',
   'generated artifacts and `bundle` for review/sharing; optional `serve` for local viewing',
   '`upsert`/`upsert-sql`/`insert`/`update` only after explicit user approval',
   '`bridge` only in operator-gated, explicitly approved flows',

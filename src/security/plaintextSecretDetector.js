@@ -21,6 +21,11 @@ const fs = require('fs');
 const path = require('path');
 
 const SECRET_KEYS = /PASSWORD|SECRET|TOKEN|PWD|KEY/i;
+const EXPECTED_KEY_MATERIAL_ENV_KEYS = new Set([
+  'ZEUS_SECRET_KEY',
+  'ZEUS_CONNECTION_MASTER_KEY',
+  'ZEUS_CONNECTION_MASTER_KEY_FILE',
+]);
 
 // Treat ${env:FOO} and general ${...} placeholders (used in profiles.json) as non-plaintext.
 const PLACEHOLDER_RE = /^\$\{[^}]+\}$/;
@@ -28,6 +33,14 @@ const PLACEHOLDER_RE = /^\$\{[^}]+\}$/;
 function isPlaceholder(value) {
   const s = String(value || '').trim();
   return PLACEHOLDER_RE.test(s);
+}
+
+function isExpectedKeyMaterialEnvKey(key) {
+  return EXPECTED_KEY_MATERIAL_ENV_KEYS.has(
+    String(key || '')
+      .trim()
+      .toUpperCase()
+  );
 }
 
 function findPlaintextInObject(obj, path = '') {
@@ -62,6 +75,7 @@ function detectPlaintextSecrets({
   envFiles = [],
   env = {},
   checkProfiles = false,
+  ignoreExpectedKeyMaterial = false,
 } = {}) {
   const findings = [];
   const seenKeys = new Set();
@@ -132,6 +146,7 @@ function detectPlaintextSecrets({
   // Scan currently loaded env for plaintext (e.g. already exported in shell or auto-loaded)
   if (env && typeof env === 'object') {
     for (const [key, val] of Object.entries(env)) {
+      if (ignoreExpectedKeyMaterial && isExpectedKeyMaterialEnvKey(key)) continue;
       if (
         SECRET_KEYS.test(key) &&
         val &&
@@ -191,7 +206,9 @@ function detectPlaintextSecrets({
 
 module.exports = {
   detectPlaintextSecrets,
+  EXPECTED_KEY_MATERIAL_ENV_KEYS,
   SECRET_KEYS,
+  isExpectedKeyMaterialEnvKey,
   isPlaceholder,
   PLACEHOLDER_RE,
 };
