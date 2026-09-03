@@ -20,6 +20,18 @@ Machine-readable copy:
 3. Use one diagnosis and one recovery path; do not retry the same invalid call.
 4. Prefer local, read-only evidence when remote or optional capabilities are unavailable.
 5. Report the original error, recovery attempted, and remaining uncertainty.
+6. Read prior experience before a retry and record one sanitized event after a failure, block, partial result, or useful workaround.
+
+## Experience loop
+
+The CLI keeps a local append-only JSONL log for iterative improvement:
+
+```text
+node cli/zeus.js agent log list --json
+node cli/zeus.js agent log --outcome failed --command "<safe-command>" --failure-code <CODE> --symptom "<what happened>" --workaround "<what helped>" --lesson "<reusable lesson>" --next-step "<next safe command>" --json
+```
+
+Use stable codes such as `MISSING_PROFILE`, `ANALYZE_REQUIRED`, or `PATH_OUTSIDE_WORKSPACE`. The log is stored at `.zeus/agent-experience.jsonl` and accepts structured redacted fields only. Do not copy raw stdout/stderr, environment dumps, credentials, or credential-bearing URLs into it. A lesson should describe the reusable contract, not merely repeat the error text.
 
 ## Codes
 
@@ -167,8 +179,10 @@ node cli/zeus.js tools describe <command> --json
 
 1. Capture exit status, structured output, command, and scope.
 2. Match the closest stable code above.
-3. Run one listed `nextCommands` recovery path.
-4. Verify its checkpoint or artifact output.
-5. If still blocked, stop and ask the operator with the code and last error.
+3. Read `node cli/zeus.js agent log list --json` and apply a matching prior lesson if one exists.
+4. Run one listed `nextCommands` recovery path.
+5. Verify its checkpoint or artifact output.
+6. Record one sanitized event with the outcome and next safe step.
+7. If still blocked, stop and ask the operator with the code and last error.
 
 Optional MCP clients should apply the same recovery logic using their live `tools/list` surface. The CLI commands above remain the canonical fallback.

@@ -58,6 +58,8 @@ node cli/zeus.js secret decrypt --value "enc:v1:..."   # Nur zum Testen
 node cli/zeus.js doctor --profile <name>    # Check "Secret Vault" in der Diagnose
 ```
 
+Die Hygieneprüfung unterscheidet zwischen eigentlichen Credential-Werten (z. B. `ZEUS_DB_PASSWORD`) und dem absichtlich zur Laufzeit gesetzten Secret-Vault-Schlüssel (`ZEUS_SECRET_KEY` bzw. ein kompatibler Master-Key). Der Vault-Schlüssel wird nicht als zu migrierender Passwortwert gemeldet; die eigentlichen Profil- und `.env`-Credentials werden weiterhin geprüft.
+
 **Schlüssel-Quellen (Priorität):**
 
 1. Umgebungsvariable `ZEUS_SECRET_KEY`

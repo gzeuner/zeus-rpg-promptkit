@@ -164,6 +164,30 @@ test('detectPlaintextSecrets scans current env', () => {
   assert.ok(findings.some(f => f.key === 'ZEUS_DB_PASSWORD' && f.source === 'env'));
 });
 
+test('detectPlaintextSecrets can ignore expected vault key material without hiding credentials', () => {
+  const findings = detectPlaintextSecrets({
+    cwd: '/tmp',
+    env: {
+      ZEUS_SECRET_KEY: 'vault-key-material',
+      ZEUS_CONNECTION_MASTER_KEY: 'connection-key-material',
+      ZEUS_DB_PASSWORD: 'database-password',
+    },
+    ignoreExpectedKeyMaterial: true,
+  });
+  assert.equal(
+    findings.some(f => f.key === 'ZEUS_SECRET_KEY'),
+    false
+  );
+  assert.equal(
+    findings.some(f => f.key === 'ZEUS_CONNECTION_MASTER_KEY'),
+    false
+  );
+  assert.equal(
+    findings.some(f => f.key === 'ZEUS_DB_PASSWORD'),
+    true
+  );
+});
+
 test('detectPlaintextSecrets ignores ${env:...} placeholders in profiles (no false-positive)', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
   fs.mkdirSync(path.join(tempRoot, 'config', 'local-only'), { recursive: true });

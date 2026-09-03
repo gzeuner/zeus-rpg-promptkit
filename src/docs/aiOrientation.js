@@ -146,6 +146,15 @@ const AI_INTENTS = Object.freeze([
       'zeus.bridge',
     ],
   }),
+  Object.freeze({
+    intent: 'learn',
+    question: 'What failed before, and how can the next attempt avoid repeating it?',
+    cli: [
+      'agent log list --json',
+      'agent log --outcome <outcome> --command "<safe-command>" --json',
+    ],
+    mcp: [],
+  }),
 ]);
 
 const SAFETY_CHECKPOINTS = Object.freeze([
@@ -172,22 +181,24 @@ function buildAiOrientation() {
     service: 'zeus-rpg-promptkit',
     schemaVersion: ORIENTATION_SCHEMA_VERSION,
     purpose:
-      'A CLI/MCP-first, evidence-first map for an AI agent entering an unfamiliar Zeus RPG PromptKit session.',
+      'A CLI-first, evidence-first map for an AI agent entering an unfamiliar Zeus RPG PromptKit session. MCP is an optional adapter.',
     firstPoint: {
-      cli: 'node cli/zeus.js tools guide --json',
-      mcp: 'zeus.agent.bootstrap',
+      cli: 'node cli/zeus.js agent bootstrap --json',
+      mcp: 'zeus.agent.bootstrap (optional adapter)',
       then: [
-        'zeus.context.get / zeus context show --json',
-        'zeus.doctor / zeus doctor --profile <name> --show-resolved',
-        'zeus.help / zeus tools list --json',
+        'node cli/zeus.js agent log list --json',
+        'node cli/zeus.js tools guide --json',
+        'node cli/zeus.js context show --json',
+        'node cli/zeus.js doctor --profile <name> --show-resolved',
       ],
     },
     operatingModel: [
-      'CLI and MCP are the primary product surfaces; the local viewer is optional.',
+      'The CLI is the canonical product surface; MCP and the local viewer are optional adapters.',
       'Evidence comes before conclusions: locate, check freshness, read, analyze, then report provenance.',
       'Never infer a system, library, source file, member, schema, or data scope from a filename alone.',
       'Explicit command/tool arguments override the working context and must be echoed in the result.',
       'Credentials remain in the local runtime configuration and never belong in prompts, logs, artifacts, or responses.',
+      'Read prior agent experience before retries and record one concise sanitized event after failures, blocks, or useful workarounds.',
     ],
     workingContext: {
       fields: [...WORKING_CONTEXT_FIELDS],
@@ -212,7 +223,16 @@ function buildAiOrientation() {
       'evidence: commands/tools used, freshness result, and artifact references',
       'finding: distinguish observed facts, inference, and unknowns',
       'next: one recommended next command/tool with safety level and approval requirement',
+      'learning: when something failed or was corrected, include the experience event id and reusable lesson',
     ],
+    experienceLog: {
+      storage: '.zeus/agent-experience.jsonl',
+      listCli: 'node cli/zeus.js agent log list --json',
+      recordCli:
+        'node cli/zeus.js agent log --outcome failed --command "<safe-command>" --failure-code <CODE> --symptom "<what happened>" --lesson "<reusable lesson>" --next-step "<next safe command>" --json',
+      privacy:
+        'Local JSONL only; raw output, environment dumps, credentials, and credential-bearing URLs are redacted or excluded.',
+    },
     commands,
     documentation: {
       cliCatalog: 'docs/tool-catalog.md',

@@ -29,9 +29,12 @@ test('CLI agent bootstrap exposes the canonical CLI contract', () => {
   assert.equal(payload.canonicalSurface, 'cli');
   assert.equal(payload.mcpOptional, true);
   assert.ok(payload.startHere.includes('node cli/zeus.js tools list --json'));
+  assert.ok(payload.startHere.includes('node cli/zeus.js agent log list --json'));
   assert.ok(payload.intentMap.some(entry => entry.commands.includes('impact')));
   assert.ok(payload.failurePlaybook);
   assert.ok(Array.isArray(payload.failurePlaybook.entries));
+  assert.equal(payload.experienceLog.storage, '.zeus/agent-experience.jsonl');
+  assert.match(payload.experienceLog.record, /agent log --outcome/);
 });
 
 test('CLI agent suggestion maps MCP planning metadata to executable CLI commands', () => {

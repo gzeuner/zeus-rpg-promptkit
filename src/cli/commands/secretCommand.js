@@ -77,7 +77,12 @@ function printKeyStatus(cwd = process.cwd()) {
   }
 
   // Secrets-Hygiene: active check for plaintext credentials
-  const hygiene = detectPlaintextSecrets({ cwd, checkProfiles: true, env: process.env });
+  const hygiene = detectPlaintextSecrets({
+    cwd,
+    checkProfiles: true,
+    env: process.env,
+    ignoreExpectedKeyMaterial: true,
+  });
   if (hygiene.length > 0) {
     console.log('');
     console.log('  [WARN] Secrets-Hygiene: Klartext-Credentials erkannt!');
@@ -204,6 +209,7 @@ async function runSecret(args) {
       cwd: process.cwd(),
       checkProfiles: true,
       env: process.env,
+      ignoreExpectedKeyMaterial: true,
     });
     if (hygiene.length > 0) {
       console.warn(
@@ -237,6 +243,7 @@ async function runSecret(args) {
       cwd: process.cwd(),
       checkProfiles: true,
       env: process.env,
+      ignoreExpectedKeyMaterial: true,
     });
     if (hygiene.length > 0) {
       console.log('[FAIL] Secrets-Hygiene: Klartext-Credentials gefunden!');
@@ -259,6 +266,7 @@ async function runSecret(args) {
       cwd: process.cwd(),
       checkProfiles: true,
       env: process.env,
+      ignoreExpectedKeyMaterial: true,
     });
     if (hygiene.length === 0) {
       console.log('Keine Klartext-Credentials gefunden. Nichts zu migrieren.');

@@ -34,6 +34,7 @@ module.exports = {
       'tests/knowledge-first.test.js',
       'tests/project-intelligence-export-corpora.test.js',
       'tests/agent-command.test.js',
+      'tests/agent-experience.test.js',
     ],
     smoke: [
       'tests/reproducible-output.test.js',

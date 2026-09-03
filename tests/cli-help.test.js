@@ -55,7 +55,7 @@ test('tools guide provides a machine-readable AI first point to check', () => {
   assert.equal(result.status, 0, result.stderr);
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.ok, true);
-  assert.equal(payload.firstPoint.cli, 'node cli/zeus.js tools guide --json');
+  assert.equal(payload.firstPoint.cli, 'node cli/zeus.js agent bootstrap --json');
   assert.ok(payload.intents.some(intent => intent.intent === 'locate'));
   assert.deepEqual(payload.workingContext.fields.slice(0, 6), [
     'active',

@@ -155,6 +155,8 @@ local/
 **/.zeus/
 **/.zeus-cache/
 **/.analysis-cache/
+# Local AI experience memory; keep operator wording and lessons out of Git.
+**/.zeus/agent-experience.jsonl
 
 # -----------------------------
 # Local analyses registry/workspaces
