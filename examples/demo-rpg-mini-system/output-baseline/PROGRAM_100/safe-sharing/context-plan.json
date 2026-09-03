@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "kind": "context-plan",
+  "planId": "plan:PROGRAM_001:PROGRAM_001",
+  "goal": "PROGRAM_001",
+  "targets": [
+    "PROGRAM_001"
+  ],
+  "tokenBudget": 8000,
+  "estimatedTokensUsed": 582,
+  "selected": [
+    {
+      "id": "MODULE:PROGRAM_001:SOURCE_FILE_003.rpgle:PROGRAM_001",
+      "type": "MODULE",
+      "name": "PROGRAM_001",
+      "kind": "PROGRAM_MODULE",
+      "reasons": [
+        "exact-modules-match"
+      ],
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 2,
+          "endLine": 2
+        }
+      ],
+      "contentHash": "h16ca7593",
+      "confidence": "HIGH",
+      "provenance": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 2,
+          "text": "ctl-opt dftactgrp(*no);"
+        }
+      ],
+      "lexicalScore": 10,
+      "estimatedTokens": 101
+    },
+    {
+      "id": "PROCEDURE:PROGRAM_001:PROCEDURE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROCEDURE_001",
+      "type": "PROCEDURE",
+      "name": "PROCEDURE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROCEDURE_001",
+      "reasons": [
+        "graph-neighbor"
+      ],
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 6,
+          "endLine": 9
+        }
+      ],
+      "contentHash": "h46abb765",
+      "confidence": "MEDIUM",
+      "graphPath": [],
+      "lexicalScore": 10,
+      "estimatedTokens": 90
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001",
+      "type": "PROGRAM",
+      "name": "PROGRAM_001",
+      "kind": null,
+      "reasons": [
+        "exact-programs-match"
+      ],
+      "locations": [],
+      "contentHash": "h560aed56",
+      "confidence": "HIGH",
+      "provenance": [],
+      "lexicalScore": 10,
+      "estimatedTokens": 52
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:FILE:SCHEMA_002/PROGRAM_001.RPGLE",
+      "type": "PROGRAM",
+      "name": "FILE:SCHEMA_002/PROGRAM_001.RPGLE",
+      "reasons": [
+        "graph-neighbor"
+      ],
+      "locations": [],
+      "contentHash": "h6ff8862a",
+      "confidence": "MEDIUM",
+      "graphPath": [],
+      "lexicalScore": 10,
+      "estimatedTokens": 62
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:MODULE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROGRAM_001",
+      "type": "PROGRAM",
+      "name": "MODULE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROGRAM_001",
+      "reasons": [
+        "graph-neighbor"
+      ],
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 2,
+          "endLine": 2
+        }
+      ],
+      "contentHash": "h7b908d2e",
+      "confidence": "MEDIUM",
+      "graphPath": [],
+      "lexicalScore": 10,
+      "estimatedTokens": 91
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:PROGRAM_001",
+      "type": "PROGRAM",
+      "name": "PROGRAM_001",
+      "reasons": [
+        "graph-neighbor"
+      ],
+      "locations": [],
+      "contentHash": "h1dff9164",
+      "confidence": "MEDIUM",
+      "graphPath": [],
+      "lexicalScore": 10,
+      "estimatedTokens": 51
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "type": "PROGRAM",
+      "name": "PROGRAM:PROGRAM_001",
+      "reasons": [
+        "graph-neighbor"
+      ],
+      "locations": [],
+      "contentHash": "h28fbb486",
+      "confidence": "MEDIUM",
+      "graphPath": [],
+      "lexicalScore": 10,
+      "estimatedTokens": 55
+    },
+    {
+      "id": "SOURCE_MEMBER:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE",
+      "type": "SOURCE_MEMBER",
+      "name": "SCHEMA_002/PROGRAM_001.RPGLE",
+      "reasons": [
+        "graph-neighbor"
+      ],
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": null,
+          "endLine": null
+        }
+      ],
+      "contentHash": "h7f366bb2",
+      "confidence": "MEDIUM",
+      "graphPath": [],
+      "lexicalScore": 10,
+      "estimatedTokens": 80
+    }
+  ],
+  "omissions": [],
+  "graphPaths": [],
+  "unresolved": [],
+  "confidence": "MEDIUM",
+  "reasonsSummary": [
+    "exact-modules-match",
+    "graph-neighbor",
+    "exact-programs-match",
+    "graph-neighbor",
+    "graph-neighbor",
+    "graph-neighbor",
+    "graph-neighbor",
+    "graph-neighbor"
+  ],
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "generator": "graph-guided-context-planner@v1"
+}

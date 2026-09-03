@@ -1,0 +1,936 @@
+{
+  "schemaVersion": 1,
+  "contract": "zeus.run-manifest@1",
+  "tool": {
+    "name": "zeus-rpg-promptkit",
+    "command": "analyze"
+  },
+  "run": {
+    "status": "succeeded",
+    "startedAt": "2000-01-01T00:00:00.000Z",
+    "completedAt": "2000-01-01T00:00:00.000Z",
+    "durationMs": 0,
+    "cwd": "SAFE_SHARING_WORKSPACE",
+    "outputDir": "SAFE_SHARING_OUTPUT_DIR",
+    "reproducible": true
+  },
+  "inputs": {
+    "program": "PROGRAM_001",
+    "sourceRoot": "SAFE_SHARING_SOURCE_ROOT",
+    "outputRoot": "SAFE_SHARING_OUTPUT_ROOT",
+    "options": {
+      "optimizeContextEnabled": true,
+      "denseLevel": null,
+      "safeSharingEnabled": true,
+      "emitDiagnosticsEnabled": false,
+      "skipTestData": false,
+      "testDataLimit": 50,
+      "analysisLimits": {
+        "maxProgramDepth": 25,
+        "maxPrograms": 500,
+        "maxNodes": 5000,
+        "maxEdges": 4000,
+        "maxScannedFiles": 500,
+        "maxProgramCallsPerProgram": 200
+      },
+      "testDataPolicy": {
+        "limit": 50,
+        "maskColumns": [
+          "NAME",
+          "EMAIL",
+          "PHONE"
+        ],
+        "allowTables": [
+          "SCHEMA_001.CUSTOMERS",
+          "SCHEMA_001.ORDERS"
+        ],
+        "denyTables": [
+          "SCHEMA_001.AUDIT_LOG"
+        ],
+        "maskRules": [
+          {
+            "schema": "SCHEMA_001",
+            "table": "CUSTOMERS",
+            "columns": [
+              "PHONE"
+            ],
+            "value": "MASKED_PHONE"
+          }
+        ],
+        "writeSafety": {
+          "enabled": true,
+          "maxRowsAffected": 100,
+          "maxRowsByStatement": {
+            "update": 100,
+            "delete": 50
+          },
+          "blockWhenCountUnavailable": true
+        }
+      },
+      "extensions": [
+        ".rpg",
+        ".rpgle",
+        ".sqlrpgle",
+        ".rpgile",
+        ".bnd",
+        ".binder",
+        ".bndsrc",
+        ".clp",
+        ".clle",
+        ".dds",
+        ".dspf",
+        ".prtf",
+        ".pf",
+        ".lf"
+      ],
+      "reproducibleEnabled": true,
+      "guidedMode": {
+        "name": "documentation",
+        "title": "Documentation",
+        "description": "Generate prompt-ready technical documentation grounded in the canonical and AI projections.",
+        "autoOptimizeContext": true,
+        "promptTemplates": [
+          "documentation"
+        ],
+        "workflowKeys": "[REDACTED]",
+        "primaryArtifacts": [
+          "analysis-index.json",
+          "ai-knowledge.json",
+          "report.md",
+          "ai_prompt_documentation.md"
+        ],
+        "reviewWorkflow": {
+          "intendedAudience": [
+            "New engineers",
+            "Technical writers",
+            "Maintainers assembling onboarding or system orientation notes"
+          ],
+          "keyQuestionsAnswered": "[REDACTED]",
+          "expectedDecisions": [
+            "Decide whether the generated documentation is sufficient for onboarding or needs deeper analysis.",
+            "Choose the next artifact or subsystem to document in more detail."
+          ],
+          "interpretationGuidance": [
+            "Prefer ai_prompt_documentation.md for narrative synthesis and use report.md or ai-knowledge.json to verify claims.",
+            "Treat missing evidence highlights as a sign that the workflow is broad orientation, not a complete design review."
+          ],
+          "requiredInputs": [
+            "A local IBM i source tree and selected root program.",
+            "Prompt-ready AI knowledge projection with documentation workflow evidence.",
+            "Report and prompt artifacts for narrative handoff."
+          ],
+          "recommendedOutputs": [
+            {
+              "path": "report.md",
+              "purpose": "Broad run summary with source-backed counts and notes."
+            },
+            {
+              "path": "ai_prompt_documentation.md",
+              "purpose": "Documentation-first prompt for onboarding or explanation."
+            },
+            {
+              "path": "ai-knowledge.json",
+              "purpose": "Prompt-ready evidence projection for follow-up AI tasks."
+            }
+          ]
+        },
+        "effectiveOptimizeContext": true
+      },
+      "workflowPreset": null,
+      "investigation": {
+        "scanIfsPathsEnabled": false,
+        "searchTerms": [],
+        "searchIgnorePatterns": [],
+        "searchMaxResults": 200,
+        "diagnosticPacks": [],
+        "diagnosticParameterString": ""
+      },
+      "knownFacts": {
+        "enabled": false,
+        "profile": null,
+        "storePath": null
+      }
+    },
+    "sourceSnapshot": {
+      "root": "SAFE_SHARING_SOURCE_ROOT",
+      "fileCount": 6,
+      "fingerprint": "dd03395e6333a70a13113a0c243bb4656a15d38f7ce2170f6e13aacb33d22816",
+      "contentFingerprint": "dd03395e6333a70a13113a0c243bb4656a15d38f7ce2170f6e13aacb33d22816",
+      "files": [
+        {
+          "path": "SOURCE_FILE_001.clle",
+          "sizeBytes": 36,
+          "mtimeMs": null,
+          "sha256": "a0483086294615b3f6161fd35a525c31adcff516c031f2823835c8516f9ebf6e"
+        },
+        {
+          "path": "SOURCE_FILE_002.pf",
+          "sizeBytes": 118,
+          "mtimeMs": null,
+          "sha256": "e9913181a46f8018ee0bf3826b510d792dd7d529c1a9c946ab1ed92a3627d189"
+        },
+        {
+          "path": "SOURCE_FILE_010.lf",
+          "sizeBytes": 72,
+          "mtimeMs": null,
+          "sha256": "828df66bbfb8d45ccc72471d2d577e47fb26b8cc434691de7687a37130e9ad11"
+        },
+        {
+          "path": "SOURCE_FILE_003.rpgle",
+          "sizeBytes": 140,
+          "mtimeMs": null,
+          "sha256": "45800c0ea725d5e77617dee7a5bbccff6816cd6e59d50dfd4f4306d4de808c1d"
+        },
+        {
+          "path": "SOURCE_FILE_004.sqlrpgle",
+          "sizeBytes": 266,
+          "mtimeMs": null,
+          "sha256": "3a7f37e6957a8d4447e3dfd72caf4307182e43b3e83fd6bdfbfb353d1edeb253"
+        },
+        {
+          "path": "SOURCE_FILE_005.rpgle",
+          "sizeBytes": 148,
+          "mtimeMs": null,
+          "sha256": "269ca2663ea11ea37699f6f33e104219adedbd10fd4ab5d87825c01c98e2c48b"
+        }
+      ]
+    },
+    "importManifest": null
+  },
+  "artifacts": [
+    {
+      "path": "ai_prompt_documentation.md",
+      "kind": "markdown",
+      "sizeBytes": 2363,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "42ba1564c2d9c75eb6762e1350b08cf1f15f96aa58efbd4dd76c282b6adffec2"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "42ba1564c2d9c75eb6762e1350b08cf1f15f96aa58efbd4dd76c282b6adffec2",
+      "exists": true
+    },
+    {
+      "path": "ai-knowledge.json",
+      "kind": "json",
+      "sizeBytes": 72019,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "a29966d24b584e3c3af9b5ffa59d39f833ecf5a468e846474c4219b00f6aceff"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "a29966d24b584e3c3af9b5ffa59d39f833ecf5a468e846474c4219b00f6aceff",
+      "exists": true
+    },
+    {
+      "path": "analysis-index.json",
+      "kind": "json",
+      "sizeBytes": 58064,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "18ac76df3e3b7bc0c55c887924cfa7f2525838d0d2d6a60f724cca8581296a36"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "18ac76df3e3b7bc0c55c887924cfa7f2525838d0d2d6a60f724cca8581296a36",
+      "exists": true
+    },
+    {
+      "path": "architecture-report.md",
+      "kind": "markdown",
+      "sizeBytes": 2648,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "39a25d1b0671bd170b1606d0f320f94d172af99f4fdf689221b0b1aa064b65d7"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "39a25d1b0671bd170b1606d0f320f94d172af99f4fdf689221b0b1aa064b65d7",
+      "exists": true
+    },
+    {
+      "path": "architecture.html",
+      "kind": "html",
+      "sizeBytes": 653292,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "de24e7faac5aca867e4d6e557c77d699db7086178ae9074fe67dd6696f928d38"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "de24e7faac5aca867e4d6e557c77d699db7086178ae9074fe67dd6696f928d38",
+      "exists": true
+    },
+    {
+      "path": "canonical-analysis.json",
+      "kind": "json",
+      "sizeBytes": 39619,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "4c3bc6bf647938693ea0952f899754f1b78063f435534f6f9c7fc23302692ea7"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "4c3bc6bf647938693ea0952f899754f1b78063f435534f6f9c7fc23302692ea7",
+      "exists": true
+    },
+    {
+      "path": "context-plan.json",
+      "kind": "json",
+      "sizeBytes": 4281,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "4b587b86a94535d6cb86df5791e2e679f1b001d413c92f50ca3ddbccdee36980"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "4b587b86a94535d6cb86df5791e2e679f1b001d413c92f50ca3ddbccdee36980",
+      "exists": true
+    },
+    {
+      "path": "context.json",
+      "kind": "json",
+      "sizeBytes": 19332,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "789ba5500682822ae91650183ba7e21f5197ee6e5e79a4b9ceb23fe43e63887d"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "789ba5500682822ae91650183ba7e21f5197ee6e5e79a4b9ceb23fe43e63887d",
+      "exists": true
+    },
+    {
+      "path": "dependency-graph.json",
+      "kind": "json",
+      "sizeBytes": 2203,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "79ad9bbec542e31fd36d703ce17b351ec48fac55b7709ac66ff8e6dda8478c20"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "79ad9bbec542e31fd36d703ce17b351ec48fac55b7709ac66ff8e6dda8478c20",
+      "exists": true
+    },
+    {
+      "path": "dependency-graph.md",
+      "kind": "markdown",
+      "sizeBytes": 999,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "7ce4d6b1f0f700bada8174be12d2feb4a1b8af7843e3dca45030551c9b86a512"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "7ce4d6b1f0f700bada8174be12d2feb4a1b8af7843e3dca45030551c9b86a512",
+      "exists": true
+    },
+    {
+      "path": "dependency-graph.mmd",
+      "kind": "mermaid",
+      "sizeBytes": 775,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "f9b02d9f6f5eafc2464d18d89c98eaa02596b23672bf8a0c8dac2da1c8b3fadb"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "f9b02d9f6f5eafc2464d18d89c98eaa02596b23672bf8a0c8dac2da1c8b3fadb",
+      "exists": true
+    },
+    {
+      "path": "evidence-graph.json",
+      "kind": "json",
+      "sizeBytes": 33332,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "1371b6bd0a695e79bf92b143b844cec6655f3fc176b12d5045d6e4b4c6d972e2"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "1371b6bd0a695e79bf92b143b844cec6655f3fc176b12d5045d6e4b4c6d972e2",
+      "exists": true
+    },
+    {
+      "path": "optimized-context.json",
+      "kind": "json",
+      "sizeBytes": 62408,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "27fdcf045b252148a8984dddfcfd332e2052302e6b667abb451a6f4fcf9234e4"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "27fdcf045b252148a8984dddfcfd332e2052302e6b667abb451a6f4fcf9234e4",
+      "exists": true
+    },
+    {
+      "path": "program-call-tree.json",
+      "kind": "json",
+      "sizeBytes": 2180,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "a3376ddc48d37ec6cf7f947f8fe3a330c6ec011bb3441bd4609ad7614b338a31"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "a3376ddc48d37ec6cf7f947f8fe3a330c6ec011bb3441bd4609ad7614b338a31",
+      "exists": true
+    },
+    {
+      "path": "program-call-tree.md",
+      "kind": "markdown",
+      "sizeBytes": 631,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "620d833ed36a2f8667c7eb7af96209d05831a108e4c3b9d8d0d62e7031a27b84"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "620d833ed36a2f8667c7eb7af96209d05831a108e4c3b9d8d0d62e7031a27b84",
+      "exists": true
+    },
+    {
+      "path": "program-call-tree.mmd",
+      "kind": "mermaid",
+      "sizeBytes": 462,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "4371c90bc0d1af0dfb47a928d28b2c86f9858be08c78149390ee6d5f98540af7"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "4371c90bc0d1af0dfb47a928d28b2c86f9858be08c78149390ee6d5f98540af7",
+      "exists": true
+    },
+    {
+      "path": "report.md",
+      "kind": "markdown",
+      "sizeBytes": 5266,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "8009c38cb994af7250d0080bc454a07fcf80e0b576a53b9a1772670725868216"
+      },
+      "producer": "analyze",
+      "schema": "SCHEMA_004",
+      "safeSharing": "none",
+      "sha256": "8009c38cb994af7250d0080bc454a07fcf80e0b576a53b9a1772670725868216",
+      "exists": true
+    }
+  ],
+  "summary": {
+    "stageCount": 9,
+    "completedStageCount": 9,
+    "failedStageCount": 0,
+    "diagnosticCount": 2,
+    "errorCount": 0,
+    "warningCount": 2,
+    "generatedArtifactCount": 17,
+    "sourceFileCount": 6
+  },
+  "cacheStatus": {
+    "enabled": true,
+    "sourceScan": {
+      "requests": 6,
+      "hits": 0,
+      "memoryHits": 0,
+      "persistentHits": 0,
+      "misses": 5,
+      "invalidations": 0,
+      "writes": 5,
+      "entryCount": 5,
+      "cacheDir": "SAFE_SHARING_OUTPUT_ROOT\\.zeus-cache\\source-scans"
+    },
+    "db2Metadata": {
+      "status": "skipped",
+      "hits": 0,
+      "misses": 0,
+      "reason": "flag"
+    },
+    "testData": {
+      "status": "disabled",
+      "hits": 0,
+      "misses": 0,
+      "cacheKey": null,
+      "payloadFile": null,
+      "markdownFile": null,
+      "manifestFile": "analysis-cache.json",
+      "reason": "no DB2 connection configuration was available"
+    },
+    "artifactManifestFile": "analysis-cache.json"
+  },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "message": "DB2 metadata export skipped (reproducible mode or --skip-db2-metadata).",
+      "code": "DB2_EXPORT_SKIPPED"
+    },
+    {
+      "severity": "warning",
+      "message": "Test data extraction was skipped because no DB2 connection configuration was available.",
+      "code": "TEST_DATA_SKIPPED"
+    }
+  ],
+  "stages": [
+    {
+      "id": "collect-scan",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Collect and scan source files",
+        "description": "Discovers source files, validates encodings, and runs the base scanner suite.",
+        "category": "scan",
+        "registrationOrder": 0,
+        "before": [],
+        "after": []
+      },
+      "metadata": {
+        "sourceFileCount": 6,
+        "scannableSourceFileCount": 6,
+        "invalidSourceFileCount": 0,
+        "sourceValidationWarningCount": 0,
+        "importManifestFound": false,
+        "scanCache": {
+          "requests": 6,
+          "hits": 0,
+          "memoryHits": 0,
+          "persistentHits": 0,
+          "misses": 5,
+          "invalidations": 0,
+          "writes": 5,
+          "entryCount": 5,
+          "cacheDir": "SAFE_SHARING_OUTPUT_ROOT\\.zeus-cache\\source-scans"
+        },
+        "analysisArtifactCacheEntries": 0,
+        "scannedFileCount": 5,
+        "tableCount": 4,
+        "programCallCount": 3,
+        "copyMemberCount": 0,
+        "sqlStatementCount": 2,
+        "procedureCount": 3,
+        "prototypeCount": 0,
+        "procedureCallCount": 0,
+        "nativeFileCount": 3,
+        "nativeFileAccessCount": 0,
+        "moduleCount": 3,
+        "bindingDirectoryCount": 0,
+        "serviceProgramCount": 0,
+        "commandCount": 3,
+        "objectUsageCount": 0,
+        "ddsFileCount": 1,
+        "sourceTypeSummary": {
+          "byType": {
+            "CLLE": 1,
+            "PF": 1,
+            "RPGLE": 2,
+            "SQLRPGLE": 1
+          },
+          "byFamily": {
+            "CL": 1,
+            "DDS": 1,
+            "RPG": 3
+          }
+        },
+        "sourceNormalization": {
+          "fileCount": 6,
+          "convertedEncodingCount": 0,
+          "normalizedFileCount": 0,
+          "bomRemovedCount": 0,
+          "normalizedLineEndingCount": 0,
+          "invalidFileCount": 0,
+          "warningCount": 0
+        },
+        "diagnosticCount": 0,
+        "noteCount": 1
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "build-context",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Build semantic context",
+        "description": "Builds canonical/context projections and the dependency graphs.",
+        "category": "analysis",
+        "registrationOrder": 1,
+        "before": [],
+        "after": [
+          "collect-scan"
+        ]
+      },
+      "metadata": {
+        "canonicalAnalysis": {
+          "schemaVersion": 1,
+          "relationCount": 26,
+          "sourceFileCount": 5
+        },
+        "dependencyGraph": {
+          "nodeCount": 10,
+          "edgeCount": 10,
+          "tableCount": 4,
+          "programCallCount": 3,
+          "copyMemberCount": 0,
+          "moduleCount": 3,
+          "serviceProgramCount": 0,
+          "bindingDirectoryCount": 0,
+          "bindEdgeCount": 3,
+          "files": {
+            "json": "dependency-graph.json",
+            "mermaid": "dependency-graph.mmd",
+            "markdown": "dependency-graph.md"
+          }
+        },
+        "crossProgramGraph": {
+          "programCount": 3,
+          "tableCount": 4,
+          "copyMemberCount": 0,
+          "scannedFileCount": 3,
+          "edgeCount": 6,
+          "ambiguousPrograms": [],
+          "unresolvedPrograms": [],
+          "truncated": false,
+          "limitDiagnosticsCount": 0,
+          "limitsConfigured": {
+            "maxProgramDepth": 25,
+            "maxPrograms": 500,
+            "maxNodes": 5000,
+            "maxEdges": 4000,
+            "maxScannedFiles": 500,
+            "maxProgramCallsPerProgram": 200
+          },
+          "limitsReached": {
+            "maxProgramDepth": false,
+            "maxPrograms": false,
+            "maxNodes": false,
+            "maxEdges": false,
+            "maxScannedFiles": false,
+            "maxProgramCallsPerProgram": false
+          }
+        },
+        "sourceCatalog": {
+          "fileCount": 6,
+          "distinctMemberCount": 6,
+          "manifestBackedCount": 0,
+          "ambiguousMemberCount": 0,
+          "ambiguousMembers": []
+        },
+        "scanCache": {
+          "requests": 9,
+          "hits": 3,
+          "memoryHits": 3,
+          "persistentHits": 0,
+          "misses": 5,
+          "invalidations": 0,
+          "writes": 5,
+          "entryCount": 5,
+          "cacheDir": "SAFE_SHARING_OUTPUT_ROOT\\.zeus-cache\\source-scans"
+        },
+        "sourceSnippetFound": true
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "load-known-facts",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Load local known facts",
+        "description": "Optionally reads profile-scoped local known facts and folds them into the local analysis context.",
+        "category": "analysis",
+        "registrationOrder": 2,
+        "before": [],
+        "after": [
+          "build-context"
+        ]
+      },
+      "metadata": {
+        "enabled": false,
+        "status": "disabled",
+        "profile": null,
+        "factCount": 0
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "investigate-sources",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Run source investigations",
+        "description": "Applies optional IFS-path, full-text search, and similar source investigations.",
+        "category": "investigation",
+        "registrationOrder": 3,
+        "before": [],
+        "after": [
+          "load-known-facts"
+        ]
+      },
+      "metadata": {
+        "ifsPathScanEnabled": false,
+        "ifsPathCount": 0,
+        "searchEnabled": false,
+        "searchTermCount": 0,
+        "searchMatchCount": 0,
+        "searchTruncated": false
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "optimize-context",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Optimize prompt context",
+        "description": "Builds the salience-ranked optimized context projection when enabled.",
+        "category": "optimization",
+        "registrationOrder": 4,
+        "before": [],
+        "after": [
+          "investigate-sources"
+        ]
+      },
+      "metadata": {
+        "enabled": true,
+        "contextTokens": 3230,
+        "optimizedTokens": 8734,
+        "reductionPercent": 0
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "export-db2",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Export DB2 metadata",
+        "description": "Exports DB2 metadata and folds linked evidence back into semantic analysis.",
+        "category": "db2",
+        "registrationOrder": 5,
+        "before": [],
+        "after": [
+          "optimize-context"
+        ]
+      },
+      "metadata": {
+        "status": "skipped",
+        "reason": "skipped by --reproducible or --skip-db2-metadata",
+        "connectionRole": "metadata",
+        "cache": {
+          "status": "skipped",
+          "reason": "flag"
+        }
+      },
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "message": "DB2 metadata export skipped (reproducible mode or --skip-db2-metadata).",
+          "code": "DB2_EXPORT_SKIPPED"
+        }
+      ]
+    },
+    {
+      "id": "export-test-data",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Export governed test data",
+        "description": "Exports bounded DB2 sample rows with configured masking and governance policy.",
+        "category": "db2",
+        "registrationOrder": 6,
+        "before": [],
+        "after": [
+          "export-db2"
+        ]
+      },
+      "metadata": {
+        "status": "skipped",
+        "file": "test-data.json",
+        "markdownFile": "test-data.md",
+        "tableCount": 0,
+        "requestedTableCount": 4,
+        "skippedTableCount": 4,
+        "rowLimit": 50,
+        "reason": "no DB2 connection configuration was available",
+        "policy": {
+          "allowTables": [
+            {
+              "schema": "SCHEMA_001",
+              "table": "CUSTOMERS"
+            },
+            {
+              "schema": "SCHEMA_001",
+              "table": "ORDERS"
+            }
+          ],
+          "denyTables": [
+            {
+              "schema": "SCHEMA_001",
+              "table": "AUDIT_LOG"
+            }
+          ],
+          "maskColumns": [
+            "EMAIL",
+            "NAME",
+            "PHONE"
+          ],
+          "maskRules": [
+            {
+              "schema": "SCHEMA_001",
+              "table": "CUSTOMERS",
+              "columns": [
+                "PHONE"
+              ],
+              "value": "MASKED_PHONE"
+            }
+          ]
+        },
+        "policySummary": {
+          "allowlistCount": 2,
+          "denylistCount": 1,
+          "maskRuleCount": 1,
+          "globalMaskColumnCount": 3,
+          "deniedTableCount": 0,
+          "notAllowlistedTableCount": 0,
+          "maskedTableCount": 0,
+          "maskedColumnCount": 0
+        },
+        "cacheStatus": "disabled",
+        "connectionRole": "testData",
+        "cache": {
+          "status": "disabled",
+          "hits": 0,
+          "misses": 0,
+          "cacheKey": null,
+          "payloadFile": null,
+          "markdownFile": null,
+          "manifestFile": "analysis-cache.json",
+          "reason": "no DB2 connection configuration was available"
+        }
+      },
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "message": "Test data extraction was skipped because no DB2 connection configuration was available.",
+          "code": "TEST_DATA_SKIPPED"
+        }
+      ]
+    },
+    {
+      "id": "run-diagnostic-packs",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": {
+        "pluginName": "core",
+        "title": "Run diagnostic packs",
+        "description": "Executes optional read-only investigation packs after the main semantic pipeline.",
+        "category": "investigation",
+        "registrationOrder": 7,
+        "before": [],
+        "after": [
+          "export-test-data"
+        ]
+      },
+      "metadata": {
+        "enabled": false,
+        "packCount": 0,
+        "failedPackCount": 0,
+        "stepCount": 0
+      },
+      "diagnostics": []
+    },
+    {
+      "id": "write-artifacts",
+      "status": "completed",
+      "startedAt": "2000-01-01T00:00:00.000Z",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "definition": null,
+      "metadata": {
+        "fileCount": 17,
+        "generatedFiles": [
+          "canonical-analysis.json",
+          "context.json",
+          "optimized-context.json",
+          "ai-knowledge.json",
+          "analysis-index.json",
+          "evidence-graph.json",
+          "context-plan.json",
+          "dependency-graph.json",
+          "dependency-graph.mmd",
+          "dependency-graph.md",
+          "program-call-tree.json",
+          "program-call-tree.mmd",
+          "program-call-tree.md",
+          "architecture.html",
+          "architecture-report.md",
+          "ai_prompt_documentation.md",
+          "report.md"
+        ],
+        "workflowMode": "documentation",
+        "workflowPreset": null,
+        "promptTemplateCount": 1,
+        "diagnosticsFileWritten": false,
+        "viewerAsset": {
+          "packageName": "vis-network",
+          "version": "10.0.2",
+          "license": "(Apache-2.0 OR MIT)",
+          "asset": "vis-network/standalone/umd/vis-network.min.js",
+          "sourceMode": "bundled-inline",
+          "sha256": "92a2603c7125a249f1b61f3c3a316b4041ef47b32f4433484e3471f140f91485"
+        }
+      },
+      "diagnostics": []
+    }
+  ],
+  "reproducibility": {
+    "enabled": true,
+    "stableTimestamp": "2000-01-01T00:00:00.000Z",
+    "contentFingerprint": "e1dc8b28d00090be93109d3cb65e5215d9cfa983af09b4fd504558b35ae5ee24",
+    "runtimeMetadataSuppressed": true,
+    "comparisonSuppressed": true
+  },
+  "comparison": null
+}

@@ -1,0 +1,1223 @@
+{
+  "schemaVersion": 1,
+  "kind": "evidence-graph",
+  "program": "PROGRAM_001",
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "generator": "evidence-graph-builder@v1",
+  "nodes": [
+    {
+      "id": "FILE:PROGRAM_001:TABLE_001",
+      "type": "FILE",
+      "name": "TABLE_001",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "startLine": 11,
+          "endLine": 11
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "FILE:PROGRAM_001:PROGRAM_003",
+      "type": "FILE",
+      "name": "PROGRAM_003",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_002.pf",
+          "startLine": 1,
+          "endLine": 1
+        },
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_002.pf",
+          "line": 1
+        },
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "FILE:PROGRAM_001:TABLE_002",
+      "type": "FILE",
+      "name": "TABLE_002",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROCEDURE:PROGRAM_001:PROCEDURE_001:PROCEDURE",
+      "type": "PROCEDURE",
+      "name": "PROCEDURE_001",
+      "kind": "PROCEDURE",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 6,
+          "endLine": 9
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 6
+        },
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 6
+        },
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROCEDURE:PROGRAM_001:PROCEDURE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROCEDURE_001",
+      "type": "PROCEDURE",
+      "name": "PROCEDURE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROCEDURE_001",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 6,
+          "endLine": 9
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROCEDURE:PROGRAM_001:PROCEDURE:PROGRAM_004:SCHEMA_002/PROGRAM_004.SQLRPGLE:PROCEDURE_001",
+      "type": "PROCEDURE",
+      "name": "PROCEDURE:PROGRAM_004:SCHEMA_002/PROGRAM_004.SQLRPGLE:PROCEDURE_001",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "startLine": 6,
+          "endLine": 17
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROCEDURE:PROGRAM_001:PROCEDURE:PROGRAM_005:SCHEMA_002/PROGRAM_005.RPGLE:PROCEDURE_001",
+      "type": "PROCEDURE",
+      "name": "PROCEDURE:PROGRAM_005:SCHEMA_002/PROGRAM_005.RPGLE:PROCEDURE_001",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "startLine": 6,
+          "endLine": 9
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:PROGRAM_002",
+      "type": "PROGRAM",
+      "name": "PROGRAM_002",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:PROGRAM_003",
+      "type": "PROGRAM",
+      "name": "PROGRAM_003",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:FILE:SCHEMA_003/PROGRAM_002.CLLE",
+      "type": "PROGRAM",
+      "name": "FILE:SCHEMA_003/PROGRAM_002.CLLE",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:FILE:QDDSSRC/PROGRAM_003.PF",
+      "type": "PROGRAM",
+      "name": "FILE:QDDSSRC/PROGRAM_003.PF",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:FILE:SCHEMA_002/PROGRAM_001.RPGLE",
+      "type": "PROGRAM",
+      "name": "FILE:SCHEMA_002/PROGRAM_001.RPGLE",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:FILE:SCHEMA_002/PROGRAM_004.SQLRPGLE",
+      "type": "PROGRAM",
+      "name": "FILE:SCHEMA_002/PROGRAM_004.SQLRPGLE",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:FILE:SCHEMA_002/PROGRAM_005.RPGLE",
+      "type": "PROGRAM",
+      "name": "FILE:SCHEMA_002/PROGRAM_005.RPGLE",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:MODULE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROGRAM_001",
+      "type": "PROGRAM",
+      "name": "MODULE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROGRAM_001",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 2,
+          "endLine": 2
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:MODULE:PROGRAM_004:SCHEMA_002/PROGRAM_004.SQLRPGLE:PROGRAM_004",
+      "type": "PROGRAM",
+      "name": "MODULE:PROGRAM_004:SCHEMA_002/PROGRAM_004.SQLRPGLE:PROGRAM_004",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "startLine": 2,
+          "endLine": 2
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:MODULE:PROGRAM_005:SCHEMA_002/PROGRAM_005.RPGLE:PROGRAM_005",
+      "type": "PROGRAM",
+      "name": "MODULE:PROGRAM_005:SCHEMA_002/PROGRAM_005.RPGLE:PROGRAM_005",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "startLine": 2,
+          "endLine": 2
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:NATIVE_FILE:TABLE_001",
+      "type": "PROGRAM",
+      "name": "NATIVE_FILE:TABLE_001",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "startLine": 11,
+          "endLine": 11
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:NATIVE_FILE:PROGRAM_003",
+      "type": "PROGRAM",
+      "name": "NATIVE_FILE:PROGRAM_003",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_002.pf",
+          "startLine": 1,
+          "endLine": 1
+        },
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_002.pf",
+          "line": 1
+        },
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:NATIVE_FILE:TABLE_002",
+      "type": "PROGRAM",
+      "name": "NATIVE_FILE:TABLE_002",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:PROGRAM_001",
+      "type": "PROGRAM",
+      "name": "PROGRAM_001",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:PROGRAM_004",
+      "type": "PROGRAM",
+      "name": "PROGRAM_004",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:PROGRAM_005",
+      "type": "PROGRAM",
+      "name": "PROGRAM_005",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "type": "PROGRAM",
+      "name": "PROGRAM:PROGRAM_001",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_001.clle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_004",
+      "type": "PROGRAM",
+      "name": "PROGRAM:PROGRAM_004",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 7,
+          "endLine": 7
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 7
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_005",
+      "type": "PROGRAM",
+      "name": "PROGRAM:PROGRAM_005",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 8,
+          "endLine": 8
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 8
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:SQL:0001",
+      "type": "PROGRAM",
+      "name": "SQL:0001",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 7
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:SQL:0002",
+      "type": "PROGRAM",
+      "name": "SQL:0002",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "startLine": 13,
+          "endLine": 16
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:TABLE:TABLE_001",
+      "type": "PROGRAM",
+      "name": "TABLE:TABLE_001",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "startLine": 11,
+          "endLine": 11
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:TABLE:PROGRAM_003",
+      "type": "PROGRAM",
+      "name": "TABLE:PROGRAM_003",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:TABLE:TABLE_002",
+      "type": "PROGRAM",
+      "name": "TABLE:TABLE_002",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM:PROGRAM_001:TABLE:TABLE_003",
+      "type": "PROGRAM",
+      "name": "TABLE:TABLE_003",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "startLine": 7,
+          "endLine": 11
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 7
+        },
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "SOURCE_MEMBER:PROGRAM_001:SCHEMA_003/PROGRAM_002.CLLE",
+      "type": "SOURCE_MEMBER",
+      "name": "SCHEMA_003/PROGRAM_002.CLLE",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_001.clle",
+          "startLine": null,
+          "endLine": null
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_001.clle",
+          "line": null
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "SOURCE_MEMBER:PROGRAM_001:QDDSSRC/PROGRAM_003.PF",
+      "type": "SOURCE_MEMBER",
+      "name": "QDDSSRC/PROGRAM_003.PF",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_002.pf",
+          "startLine": null,
+          "endLine": null
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_002.pf",
+          "line": null
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "SOURCE_MEMBER:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE",
+      "type": "SOURCE_MEMBER",
+      "name": "SCHEMA_002/PROGRAM_001.RPGLE",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": null,
+          "endLine": null
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": null
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "SOURCE_MEMBER:PROGRAM_001:SCHEMA_002/PROGRAM_004.SQLRPGLE",
+      "type": "SOURCE_MEMBER",
+      "name": "SCHEMA_002/PROGRAM_004.SQLRPGLE",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "startLine": null,
+          "endLine": null
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": null
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "SOURCE_MEMBER:PROGRAM_001:SCHEMA_002/PROGRAM_005.RPGLE",
+      "type": "SOURCE_MEMBER",
+      "name": "SCHEMA_002/PROGRAM_005.RPGLE",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "startLine": null,
+          "endLine": null
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": null
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "TABLE:PROGRAM_001:TABLE_001:FILE",
+      "type": "TABLE",
+      "name": "TABLE_001",
+      "kind": "FILE",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "startLine": 11,
+          "endLine": 11
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "TABLE:PROGRAM_001:PROGRAM_003:DISK",
+      "type": "TABLE",
+      "name": "PROGRAM_003",
+      "kind": "DISK",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "TABLE:PROGRAM_001:TABLE_002:DISK",
+      "type": "TABLE",
+      "name": "TABLE_002",
+      "kind": "DISK",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "startLine": 4,
+          "endLine": 4
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "TABLE:PROGRAM_001:TABLE_003:SQL",
+      "type": "TABLE",
+      "name": "TABLE_003",
+      "kind": "SQL",
+      "program": "PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "startLine": 7,
+          "endLine": 7
+        },
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "startLine": 13,
+          "endLine": 13
+        }
+      ],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 7
+        },
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "BOUND_PROCEDURE_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROCEDURE:PROGRAM_001:PROCEDURE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROCEDURE_001",
+      "type": "BOUND_PROCEDURE_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROCEDURE:PROGRAM_001:PROCEDURE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROCEDURE_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "BOUND_PROCEDURE_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_004->PROCEDURE:PROGRAM_001:PROCEDURE:PROGRAM_004:SCHEMA_002/PROGRAM_004.SQLRPGLE:PROCEDURE_001",
+      "type": "BOUND_PROCEDURE_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_004",
+      "to": "PROCEDURE:PROGRAM_001:PROCEDURE:PROGRAM_004:SCHEMA_002/PROGRAM_004.SQLRPGLE:PROCEDURE_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "BOUND_PROCEDURE_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_005->PROCEDURE:PROGRAM_001:PROCEDURE:PROGRAM_005:SCHEMA_002/PROGRAM_005.RPGLE:PROCEDURE_001",
+      "type": "BOUND_PROCEDURE_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_005",
+      "to": "PROCEDURE:PROGRAM_001:PROCEDURE:PROGRAM_005:SCHEMA_002/PROGRAM_005.RPGLE:PROCEDURE_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": 6
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:FILE:SCHEMA_003/PROGRAM_002.CLLE",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:FILE:SCHEMA_003/PROGRAM_002.CLLE",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:FILE:QDDSSRC/PROGRAM_003.PF",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:FILE:QDDSSRC/PROGRAM_003.PF",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:FILE:SCHEMA_002/PROGRAM_001.RPGLE",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:FILE:SCHEMA_002/PROGRAM_001.RPGLE",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:FILE:SCHEMA_002/PROGRAM_004.SQLRPGLE",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:FILE:SCHEMA_002/PROGRAM_004.SQLRPGLE",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:FILE:SCHEMA_002/PROGRAM_005.RPGLE",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:FILE:SCHEMA_002/PROGRAM_005.RPGLE",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:MODULE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROGRAM_001",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:MODULE:PROGRAM_001:SCHEMA_002/PROGRAM_001.RPGLE:PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:NATIVE_FILE:TABLE_001",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:NATIVE_FILE:TABLE_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:NATIVE_FILE:PROGRAM_003",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:NATIVE_FILE:PROGRAM_003",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_002.pf",
+          "line": 1
+        },
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:NATIVE_FILE:TABLE_002",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:NATIVE_FILE:TABLE_002",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_001.clle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_004",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_004",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 7
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_005",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_005",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 8
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:SQL:0001",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:SQL:0001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 7
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:SQL:0002",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:SQL:0002",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:TABLE:TABLE_001",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:TABLE:TABLE_001",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 11
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:TABLE:PROGRAM_003",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:TABLE:PROGRAM_003",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_003.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:TABLE:TABLE_002",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:TABLE:TABLE_002",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": 4
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001->PROGRAM:PROGRAM_001:TABLE:TABLE_003",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_001",
+      "to": "PROGRAM:PROGRAM_001:TABLE:TABLE_003",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 7
+        },
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_004->PROGRAM:PROGRAM_001:MODULE:PROGRAM_004:SCHEMA_002/PROGRAM_004.SQLRPGLE:PROGRAM_004",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_004",
+      "to": "PROGRAM:PROGRAM_001:MODULE:PROGRAM_004:SCHEMA_002/PROGRAM_004.SQLRPGLE:PROGRAM_004",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_005->PROGRAM:PROGRAM_001:MODULE:PROGRAM_005:SCHEMA_002/PROGRAM_005.RPGLE:PROGRAM_005",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:PROGRAM:PROGRAM_005",
+      "to": "PROGRAM:PROGRAM_001:MODULE:PROGRAM_005:SCHEMA_002/PROGRAM_005.RPGLE:PROGRAM_005",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_005.rpgle",
+          "line": 2
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:SQL:0001->PROGRAM:PROGRAM_001:TABLE:TABLE_003",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:SQL:0001",
+      "to": "PROGRAM:PROGRAM_001:TABLE:TABLE_003",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 7
+        }
+      ],
+      "uncertainty": []
+    },
+    {
+      "id": "PROGRAM_CALL:PROGRAM:PROGRAM_001:SQL:0002->PROGRAM:PROGRAM_001:TABLE:TABLE_003",
+      "type": "PROGRAM_CALL",
+      "from": "PROGRAM:PROGRAM_001:SQL:0002",
+      "to": "PROGRAM:PROGRAM_001:TABLE:TABLE_003",
+      "confidence": "MEDIUM",
+      "resolver": "canonical-analysis",
+      "locations": [],
+      "evidence": [
+        {
+          "file": "SOURCE_FILE_004.sqlrpgle",
+          "line": 13
+        }
+      ],
+      "uncertainty": []
+    }
+  ],
+  "summary": {
+    "nodeCount": 41,
+    "edgeCount": 25,
+    "unresolvedCount": 0
+  }
+}

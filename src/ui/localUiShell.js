@@ -149,6 +149,38 @@ p{margin:0;color:var(--muted);line-height:1.45}
   gap:20px;
 }
 .hero-meta{justify-content:flex-end}
+.ai-workbench{
+  padding:18px 20px;
+  display:grid;
+  gap:14px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(43,183,163,.18), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,.98), rgba(222,244,248,.9));
+}
+.ai-workbench-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.ai-workbench-title{display:grid;gap:4px}
+.ai-workbench-title h3{color:var(--text);font-size:15px;letter-spacing:.06em}
+.ai-workbench-title p{font-size:13px}
+.ai-workbench-shortcut{font-family:"Cascadia Code",Consolas,monospace;font-size:11px;color:var(--brand-dark);white-space:nowrap}
+.ai-context{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.ai-context-token{display:grid;gap:3px;min-width:120px;padding:8px 11px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.78)}
+.ai-context-token strong{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.ai-context-token span{font-size:12px;overflow-wrap:anywhere}
+.ai-context-token.fresh{border-color:var(--brand-mint)}
+.ai-palette{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.ai-palette input{width:100%;padding:12px 14px;border:1px solid var(--accent);border-radius:13px;background:#fff;box-shadow:0 6px 18px rgba(15,142,168,.1)}
+.ai-palette input:focus{outline:3px solid rgba(15,142,168,.18);outline-offset:1px}
+.ai-roles{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ai-role{padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.78);color:var(--accent);cursor:pointer;font-size:12px}
+.ai-role.active{background:var(--brand-dark);border-color:var(--brand-dark);color:#fff}
+.ai-role-description{font-size:12px;color:var(--muted);flex:1 1 260px}
+.ai-command-results{display:flex;gap:8px;flex-wrap:wrap}
+.ai-command{display:grid;gap:4px;min-width:190px;max-width:260px;text-align:left;padding:10px 12px}
+.ai-command strong{font-size:13px}
+.ai-command small{font-size:11px;color:var(--muted);line-height:1.35}
+.ai-command .token{justify-self:start;padding:4px 8px;font-size:10px}
+.ai-command[disabled]{cursor:not-allowed;opacity:.58}
+.ai-empty{font-size:12px;color:var(--muted);padding:8px 0}
 .list,.tabs,.chips,.tokens,.actions,.hero-meta{
   display:flex;
   flex-wrap:wrap;
@@ -365,6 +397,28 @@ input[type="search"]{
 .workflow-card.disabled{
   background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(241,246,247,.94));
 }
+.workflow-steps{
+  display:grid;
+  gap:8px;
+  margin:14px 0;
+}
+.workflow-step{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--panel-soft);
+}
+.step-index{
+  min-width:76px;
+  color:var(--brand-dark);
+  font-size:11px;
+  font-weight:700;
+  text-transform:uppercase;
+}
+.guided-run-card{display:grid;gap:12px}
 .workflow-card h4{
   font-size:16px;
 }
@@ -401,6 +455,54 @@ input[type="search"]{
 .field-item strong{
   font-size:15px;
 }
+.setup-checklist{
+  display:grid;
+  gap:12px;
+  border-color:rgba(15,142,168,.45);
+  background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(231,244,247,.88));
+}
+.setup-checklist ol{
+  display:grid;
+  gap:8px;
+  list-style:none;
+  margin:0;
+  padding:0;
+}
+.checklist-item{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:start;
+  gap:10px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(255,255,255,.76);
+}
+.checklist-index{
+  display:grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:var(--accent-soft);
+  color:var(--brand-dark);
+  font-size:12px;
+  font-weight:700;
+}
+.checklist-item strong{display:block;font-size:14px}
+.checklist-item p{margin:3px 0 0;color:var(--muted);font-size:12px;line-height:1.4}
+.checklist-item .token{align-self:start}
+.operator-readiness{display:grid;gap:12px;border-color:rgba(43,183,163,.55);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(225,247,242,.9))}
+.operator-steps{display:grid;gap:8px;list-style:none;margin:0;padding:0}
+.operator-step{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.76)}
+.operator-step.ready{border-color:rgba(22,101,52,.4)}
+.operator-step strong{display:block;font-size:14px}
+.operator-step p{margin:3px 0 0;color:var(--muted);font-size:12px;line-height:1.4}
+.operator-step .token{align-self:start}
+.plugin-catalog{display:grid;gap:8px;max-height:460px;overflow:auto;padding-right:4px}
+.plugin-entry{display:grid;gap:5px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.plugin-entry strong{font-size:13px}
+.plugin-entry .small{overflow-wrap:anywhere}
 .home-card{
   padding:16px;
   display:grid;
@@ -484,6 +586,18 @@ input[type="search"]{
 .status-ok{color:var(--success)}
 .status-warn{color:var(--accent)}
 .status-err{color:var(--danger)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{
+  outline:3px solid var(--accent);
+  outline-offset:3px;
+}
+button:disabled{cursor:not-allowed;opacity:.62}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+}
+@media (forced-colors: active){
+  .panel,.card,.home-card,.workflow-card,.item,.run,.hint-item{border:1px solid CanvasText}
+  .status-ok,.status-warn,.status-err{color:CanvasText}
+}
 @media(max-width:1200px){
   .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
@@ -502,6 +616,8 @@ input[type="search"]{
 }
 @media(max-width:640px){
   .metrics{grid-template-columns:1fr}
+  .ai-palette{grid-template-columns:1fr}
+  .ai-context-token{min-width:calc(50% - 4px)}
 }
 </style>
 </head>
@@ -530,20 +646,23 @@ input[type="search"]{
   <div class="main">
     <div class="panel hero">
       <div class="stack">
-        <h2 id="title">Setup &amp; Readiness</h2>
-        <p id="subtitle">Start with Setup to confirm profile selection, env overrides, and doctor readiness.</p>
+        <h2 id="title" tabindex="-1">Setup &amp; Readiness</h2>
+        <p id="subtitle" aria-live="polite">Start with Setup to confirm profile selection, env overrides, and doctor readiness.</p>
       </div>
-      <div id="chips" class="chips hero-meta"><div class="token">Runs: 0</div><div class="token">Setup first</div></div>
+      <div id="chips" class="chips hero-meta" aria-live="polite"><div class="token">Runs: 0</div><div class="token">Setup first</div></div>
     </div>
 
+    <div id="ai-workbench-bar" class="panel ai-workbench"><div class="ai-empty">Loading AI Workbench metadata...</div></div>
+
     <div id="metrics" class="metrics"><div class="panel metric"><div>Primary Tab</div><strong>Setup</strong></div><div class="panel metric"><div>First Action</div><strong>Check Readiness</strong></div><div class="panel metric"><div>Reports</div><strong>After Output</strong></div><div class="panel metric"><div>Secrets</div><strong>Hidden</strong></div></div>
-    <div id="tabs" class="panel tabs"><button class="tab active">Setup</button><button class="tab">Reports</button><button class="tab">Advanced / Tools</button></div>
+    <div id="tabs" class="panel tabs" role="tablist" aria-label="Main views"><button class="tab active" role="tab" aria-selected="true">Setup</button><button class="tab" role="tab" aria-selected="false">Reports</button><button class="tab" role="tab" aria-selected="false">Advanced / Tools</button></div>
 
     <div id="home" class="panel view two"></div>
     <div id="configure" class="panel view two active"></div>
     <div id="graph" class="panel view two"></div>
     <div id="db2" class="panel view two"></div>
     <div id="prompts" class="panel view three"></div>
+    <div id="evidence" class="panel view two"></div>
     <div id="workbench" class="panel view two"></div>
     <div id="artifacts" class="panel view two"></div>
   </div>
@@ -551,7 +670,7 @@ input[type="search"]{
 
 <script>
 const s={
-  runs:[],detail:null,program:null,tab:'configure',homePanel:'guide',artifact:null,node:null,table:null,left:null,right:null,cache:new Map(),
+  runs:[],detail:null,program:null,tab:'configure',homePanel:'guide',artifact:null,node:null,table:null,evidenceEntry:null,left:null,right:null,cache:new Map(),
   uiMetadata:{
     loading:false,
     error:null,
@@ -560,9 +679,15 @@ const s={
     selectedGuidedStep:'workspace',
     selectedGuidedIntent:'onboarding'
   },
+  aiWorkbench:{
+    role:'developer',
+    query:'',
+    keyboardBound:false
+  },
   uiActions:{
     doctor:{
       profile:'dev',
+      probe:false,
       running:false,
       error:null,
       result:null
@@ -570,6 +695,11 @@ const s={
     discovery:{
       profile:'dev',
       actionId:'discover-source-libraries',
+      running:false,
+      error:null,
+      result:null
+    },
+    fetchMember:{
       running:false,
       error:null,
       result:null
@@ -595,6 +725,21 @@ const s={
       expanded:false
     }
   },
+  workingContext:{
+    loading:false,
+    error:null,
+    payload:null
+  },
+  workingContextWizard:{
+    draft:null,
+    preview:null,
+    loading:false,
+    previewing:false,
+    saving:false,
+    dirty:false,
+    error:null,
+    status:''
+  },
   profileWizard:{
     loading:false,
     loaded:false,
@@ -607,6 +752,13 @@ const s={
     selectedProfileName:'',
     draft:null,
     preview:null
+  },
+  profileKeyWizard:{
+    loading:false,
+    initializing:false,
+    error:null,
+    status:'',
+    state:null
   },
   promptBuilder:{
     loading:false,
@@ -625,6 +777,7 @@ const s={
     previewLoading:false,
     previewError:null,
     additionalRequirements:'',
+    roleId:'',
     templates:[],
     selectedTemplateId:null,
     templateName:'',
@@ -652,8 +805,32 @@ const reportViews=[
   ['artifacts','Overview'],
   ['graph','Graph'],
   ['db2','DB2 / Test Data'],
-  ['prompts','Prompt Compare']
+  ['prompts','Prompt Compare'],
+  ['evidence','Evidence Explorer']
 ];
+
+function reportViewAvailable(viewId){
+  if(viewId==='artifacts') return true;
+  if(!s.detail||!s.detail.views) return false;
+  if(viewId==='graph') return Boolean(s.detail.views.graph&&s.detail.views.graph.available);
+  if(viewId==='db2'){
+    const db2=s.detail.views.db2||{};
+    const summary=db2.summary&&typeof db2.summary==='object'?db2.summary:{};
+    return Boolean(db2.metadataAvailable||db2.testDataAvailable||Number(summary.tableCount||0)>0);
+  }
+  if(viewId==='prompts'){
+    return Boolean(s.detail.views.prompts&&Array.isArray(s.detail.views.prompts.artifacts)&&s.detail.views.prompts.artifacts.length);
+  }
+  if(viewId==='evidence'){
+    const evidence=s.detail.views.evidence;
+    return Boolean(evidence&&evidence.summary&&Number(evidence.summary.total||0)>0);
+  }
+  return false;
+}
+
+function availableReportViews(){
+  return reportViews.filter(([id])=>reportViewAvailable(id));
+}
 
 const WB_PREVIEW_DEBOUNCE_MS=220;
 
@@ -672,7 +849,7 @@ const statusToneClass=(value)=>{
   const normalized=String(value||'').trim().toLowerCase();
   if(!normalized) return '';
   if(/fail|error|unavailable|not found/.test(normalized)) return 'status-err';
-  if(/warn|warning|loading|refreshing|saving|deleting|importing|select |nothing to|no ai_prompt|empty|needs-|review|preview-ready|stale/.test(normalized)) return 'status-warn';
+  if(/warn|warning|loading|refreshing|saving|deleting|importing|select |nothing to|no ai_prompt|empty|needs-|review|preview-ready|stale|changed|missing|unverified|running|pending/.test(normalized)) return 'status-warn';
   return 'status-ok';
 };
 
@@ -784,7 +961,7 @@ function renderRuns(){
     root.innerHTML='<div class="empty">No analysis runs found yet. Finish Setup first, then generate output with the CLI and refresh this list.</div>';
     return;
   }
-  root.innerHTML=s.runs.map((r)=>'<button class="run'+(r.program===s.program?' active':'')+'" data-run="'+esc(r.program)+'"><strong>'+esc(r.program)+'</strong><div>'+esc(r.workflowPreset||r.workflowMode||'standard')+'</div><div>'+esc(fmt(r.completedAt))+'</div></button>').join('');
+    root.innerHTML=s.runs.map((r)=>'<button class="run'+(r.program===s.program?' active':'')+'" data-run="'+esc(r.program)+'" aria-label="Open run '+escAttr(r.program)+'"'+(r.program===s.program?' aria-current="true"':'')+'><strong>'+esc(r.program)+'</strong><div>'+esc(r.status||'unknown')+' • '+esc(r.workflowPreset||r.workflowMode||'standard')+'</div><div>'+esc(fmt(r.completedAt))+'</div></button>').join('');
   for(const b of root.querySelectorAll('[data-run]')) b.onclick=()=>selectRun(b.dataset.run);
 }
 
@@ -804,8 +981,8 @@ function renderHero(){
     ? 'Review setup, profile readiness, and safe next steps.'
     : (isReportsTab(s.tab)
       ? 'Read-only reports and report views for the selected run.'
-      : (s.tab==='home'||s.tab==='workbench'
-        ? 'Advanced and experimental tools live here after Setup is ready.'
+        : (s.tab==='home'||s.tab==='workbench'
+        ? 'Advanced tools live here after Setup is ready.'
         : 'Read-only explorer for generated analysis evidence.'));
   q('chips').innerHTML=['Status: '+(x.status||'unknown'),'Mode: '+(x.workflowPreset||x.workflowMode||'standard'),'Artifacts: '+x.artifactCount,x.safeSharingEnabled?'Safe sharing':'No safe sharing'].map((v)=>'<div class="token">'+esc(v)+'</div>').join('');
 }
@@ -834,19 +1011,24 @@ function renderMetrics(){
 }
 
 function renderTabs(){
+  q('tabs').setAttribute('role','tablist');
+  q('tabs').setAttribute('aria-label','Main views');
   q('tabs').innerHTML=tabs.map(([id,label])=>{
     const active=(id==='reports'&&isReportsTab(s.tab))||(s.tab===id)||(id==='home'&&s.tab==='workbench');
-    return '<button class="tab'+(active?' active':'')+'" data-tab="'+id+'">'+label+'</button>';
+    return '<button class="tab'+(active?' active':'')+'" role="tab" aria-selected="'+String(active)+'" aria-controls="'+id+'" tabindex="'+(active?'0':'-1')+'" data-tab="'+id+'">'+label+'</button>';
   }).join('');
   for(const b of q('tabs').querySelectorAll('[data-tab]')) b.onclick=()=>selectTab(b.dataset.tab);
+  bindRovingTabKeyboard(q('tabs'),'[data-tab]');
 }
 
 function isReportsTab(tab){
-  return tab==='artifacts'||tab==='graph'||tab==='db2'||tab==='prompts';
+  return tab==='artifacts'||tab==='graph'||tab==='db2'||tab==='prompts'||tab==='evidence';
 }
 
 function renderReportsSubnav(activeTab){
-  return '<div class="stack"><div><h2>Reports</h2><p>Reports are local and read-only. They inspect existing artifacts and never fetch, query, or modify remote systems.</p></div><div class="tabs">'+reportViews.map(([id,label])=>'<button class="tab'+(id===activeTab?' active':'')+'" data-report-view="'+esc(id)+'">'+esc(label)+'</button>').join('')+'</div><div class="small">Select a run in the left sidebar, then choose the report view you want to inspect.</div></div>';
+  const views=availableReportViews();
+  const visibleActive=views.some(([id])=>id===activeTab)?activeTab:'artifacts';
+  return '<div class="stack"><div><h2>Reports</h2><p>Reports are local and read-only. They inspect existing artifacts and never fetch, query, or modify remote systems.</p></div><div class="tabs" role="tablist" aria-label="Available report views">'+views.map(([id,label])=>'<button class="tab'+(id===visibleActive?' active':'')+'" role="tab" aria-selected="'+String(id===visibleActive)+'" aria-controls="'+escAttr(id)+'" tabindex="'+(id===visibleActive?'0':'-1')+'" data-report-view="'+esc(id)+'">'+esc(label)+'</button>').join('')+'</div><div class="small">Only report views with data for the selected run are shown.</div></div>';
 }
 
 function bindReportsSubnav(root){
@@ -854,6 +1036,35 @@ function bindReportsSubnav(root){
     button.onclick=async ()=>{
       s.tab=button.dataset.reportView||'artifacts';
       await render();
+    };
+  }
+  const tablist=root.querySelector('[role="tablist"]');
+  if(tablist) bindRovingTabKeyboard(tablist,'[data-report-view]');
+}
+
+function bindRovingTabKeyboard(tablist,selector){
+  const buttons=Array.from(tablist.querySelectorAll(selector));
+  if(!buttons.length) return;
+  for(const [index,button] of buttons.entries()){
+    button.onkeydown=(event)=>{
+      const key=String(event.key||'');
+      if(key==='Enter'||key===' '){
+        event.preventDefault();
+        button.click();
+        return;
+      }
+      if(!['ArrowRight','ArrowDown','ArrowLeft','ArrowUp','Home','End'].includes(key)) return;
+      event.preventDefault();
+      const nextIndex=key==='Home'
+        ? 0
+        : (key==='End'
+          ? buttons.length-1
+          : (['ArrowRight','ArrowDown'].includes(key)
+            ? (index+1)%buttons.length
+            : (index-1+buttons.length)%buttons.length));
+      const next=buttons[nextIndex];
+      for(const candidate of buttons) candidate.setAttribute('tabindex',candidate===next?'0':'-1');
+      next.focus();
     };
   }
 }
@@ -978,11 +1189,194 @@ function profileWizardMetadata(){
     : null;
 }
 
+function profileKeyWizardMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.profileKeyWizard&&typeof payload.profileKeyWizard==='object'
+    ? payload.profileKeyWizard
+    : null;
+}
+
+function setupChecklistMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.setupChecklist&&typeof payload.setupChecklist==='object'
+    ? payload.setupChecklist
+    : null;
+}
+
+function pluginContractsMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.pluginContracts&&typeof payload.pluginContracts==='object'
+    ? payload.pluginContracts
+    : null;
+}
+
 function aiSessionStarterMetadata(){
   const payload=s.uiMetadata&&s.uiMetadata.payload;
   return payload&&payload.aiSessionStarter&&typeof payload.aiSessionStarter==='object'
     ? payload.aiSessionStarter
     : null;
+}
+
+function aiWorkbenchMetadata(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  return payload&&payload.aiWorkbench&&typeof payload.aiWorkbench==='object'
+    ? payload.aiWorkbench
+    : null;
+}
+
+function aiWorkbenchRoles(){
+  const metadata=aiWorkbenchMetadata();
+  const roles=metadata&&Array.isArray(metadata.roles)?metadata.roles:[];
+  return roles;
+}
+
+function aiWorkbenchActions(){
+  const metadata=aiWorkbenchMetadata();
+  const actions=metadata&&Array.isArray(metadata.actions)?metadata.actions:[];
+  return actions;
+}
+
+function roleProfiles(){
+  const payload=s.uiMetadata&&s.uiMetadata.payload;
+  const metadata=payload&&payload.roleProfiles;
+  return metadata&&Array.isArray(metadata.profiles)?metadata.profiles:[];
+}
+
+function selectedRoleProfile(){
+  const profiles=roleProfiles();
+  return profiles.find((profile)=>profile.id===s.promptBuilder.roleId)||profiles[0]||null;
+}
+
+function applyRoleProfile(roleId){
+  const profile=roleProfiles().find((entry)=>entry.id===roleId);
+  if(!profile) return;
+  s.promptBuilder.roleId=profile.id;
+  if(profile.defaultUseCaseId&&s.promptBuilder.useCases.some((entry)=>entry.id===profile.defaultUseCaseId)){
+    s.promptBuilder.selectedUseCaseId=profile.defaultUseCaseId;
+  }
+  s.promptBuilder.fields={
+    ...(s.promptBuilder.fields||{}),
+    assistantRole:profile.assistantRole||'',
+    language:'German'
+  };
+  initializeWorkbenchForUseCase(selectedUseCase(),{reset:true});
+  s.promptBuilder.fields={
+    ...(s.promptBuilder.fields||{}),
+    assistantRole:profile.assistantRole||'',
+    language:'German'
+  };
+  s.promptBuilder.additionalRequirements=profile.promptGuidance||'';
+  s.promptBuilder.saveStatus='Role profile applied locally.';
+  renderWorkbench();
+  scheduleWorkbenchPreview();
+}
+
+function selectedAiWorkbenchRole(){
+  const roles=aiWorkbenchRoles();
+  return roles.find((role)=>role.id===s.aiWorkbench.role)||roles[0]||null;
+}
+
+function aiWorkbenchActionMatches(action,query){
+  const normalized=String(query||'').trim().toLowerCase();
+  if(!normalized) return true;
+  const haystack=[action.label,action.description].concat(Array.isArray(action.keywords)?action.keywords:[]).join(' ').toLowerCase();
+  return haystack.includes(normalized);
+}
+
+function aiWorkbenchContext(){
+  const detail=s.detail;
+  if(!detail){
+    return [
+      {label:'System',value:'not bound'},
+      {label:'Library',value:'not bound'},
+      {label:'Source / member',value:'not bound'},
+      {label:'Evidence',value:'not loaded'}
+    ];
+  }
+
+  const summary=detail.summary||{};
+  const manifest=detail.analyzeManifest||{};
+  const inputs=manifest.inputs||{};
+  const sourceRoot=inputs.sourceRoot||summary.sourceRoot||'profile-defined';
+  const source=[summary.program,inputs.member||inputs.sourceFile].filter(Boolean).join(' / ')||'run selected';
+  return [
+    {label:'System',value:'profile-defined'},
+    {label:'Library',value:sourceRoot},
+    {label:'Source / member',value:source},
+    {label:'Evidence',value:summary.completedAt?fmt(summary.completedAt):'run available',fresh:true}
+  ];
+}
+
+function renderAiWorkbenchBar(){
+  const root=q('ai-workbench-bar');
+  if(!root) return;
+  const metadata=aiWorkbenchMetadata();
+  if(!metadata){
+    root.innerHTML='<div class="ai-empty">AI Workbench metadata is unavailable. Use Setup or the CLI orientation guide.</div>';
+    return;
+  }
+
+  const roles=aiWorkbenchRoles();
+  const selectedRole=selectedAiWorkbenchRole();
+  const query=String(s.aiWorkbench.query||'').trim();
+  const preferred=selectedRole&&Array.isArray(selectedRole.preferredActions)?selectedRole.preferredActions:[];
+  const actions=aiWorkbenchActions()
+    .filter((action)=>aiWorkbenchActionMatches(action,query))
+    .sort((left,right)=>{
+      const leftRank=preferred.indexOf(left.id);
+      const rightRank=preferred.indexOf(right.id);
+      return (leftRank<0?999:leftRank)-(rightRank<0?999:rightRank);
+    })
+    .slice(0,query?8:5);
+
+  const context=aiWorkbenchContext();
+  root.innerHTML='<div class="ai-workbench-header"><div class="ai-workbench-title"><h3>'+esc(metadata.title||'AI Workbench')+'</h3><p>'+esc(metadata.summary||'Choose a task and keep the active scope visible.')+'</p></div><div class="ai-workbench-shortcut">'+esc(metadata.keyboardShortcut||'Ctrl/Cmd+K')+' focuses the palette</div></div>'+
+    '<div class="ai-context">'+context.map((entry)=>'<div class="ai-context-token'+(entry.fresh?' fresh':'')+'"><strong>'+esc(entry.label)+'</strong><span>'+esc(entry.value)+'</span></div>').join('')+'</div>'+
+    '<div class="ai-palette"><input id="aiCommandSearch" type="search" value="'+escAttr(query)+'" placeholder="What do you want to do? Search the Zeus toolset..." aria-label="Search Zeus actions"><div class="token">allowlisted UI actions</div></div>'+
+    '<div class="ai-roles"><span class="small">Role:</span>'+roles.map((role)=>'<button class="ai-role'+(selectedRole&&role.id===selectedRole.id?' active':'')+'" data-ai-role="'+escAttr(role.id)+'">'+esc(role.label)+'</button>').join('')+'<span class="ai-role-description">'+esc(selectedRole&&selectedRole.description||'Choose a role to prioritize useful actions.')+'</span></div>'+
+    '<div class="ai-command-results">'+(actions.length?actions.map((action)=>{
+      const disabled=Boolean(action.requiresRun&&!s.detail);
+      return '<button class="btn ai-command" data-ai-action="'+escAttr(action.target||'')+'"'+(disabled?' disabled':'')+'><strong>'+esc(action.label)+'</strong><small>'+esc(action.description||'')+'</small><span class="token">'+esc(action.safety||'S0')+(disabled?' • select a run':'')+'</span></button>';
+    }).join(''):'<div class="ai-empty">No matching action. Try “source”, “analyze”, “evidence”, or “journal”.</div>')+'</div>'+
+    '<div class="small">'+esc(metadata.safetyNote||'Actions are local and allowlisted.')+'</div>';
+
+  const search=root.querySelector('#aiCommandSearch');
+  if(search){
+    search.oninput=(event)=>{
+      s.aiWorkbench.query=String(event.target.value||'');
+      renderAiWorkbenchBar();
+      const next=q('aiCommandSearch');
+      if(next){next.focus();next.setSelectionRange(next.value.length,next.value.length);}
+    };
+  }
+  for(const button of root.querySelectorAll('[data-ai-role]')){
+    button.onclick=()=>{
+      s.aiWorkbench.role=button.dataset.aiRole||'developer';
+      renderAiWorkbenchBar();
+      const next=q('aiCommandSearch');
+      if(next) next.focus();
+    };
+  }
+  for(const button of root.querySelectorAll('[data-ai-action]')){
+    button.onclick=async ()=>{
+      await openHomeTarget(button.dataset.aiAction||'guide');
+    };
+  }
+
+  if(!s.aiWorkbench.keyboardBound){
+    document.addEventListener('keydown',(event)=>{
+      if((event.ctrlKey||event.metaKey)&&String(event.key).toLowerCase()==='k'){
+        event.preventDefault();
+        const input=q('aiCommandSearch');
+        if(input){input.focus();input.select();}
+      }
+      if(event.key==='Escape'&&document.activeElement&&document.activeElement.id==='aiCommandSearch'){
+        s.aiWorkbench.query='';
+        renderAiWorkbenchBar();
+      }
+    });
+    s.aiWorkbench.keyboardBound=true;
+  }
 }
 
 function fallbackProfileWizardSteps(){
@@ -1055,6 +1449,100 @@ async function loadUiMetadata(){
   }
 }
 
+async function loadWorkingContextState(){
+  s.workingContext.loading=true;
+  s.workingContext.error=null;
+  try{
+    const payload=await getJson('/api/ui-context');
+    s.workingContext.payload=payload;
+    if(!s.workingContextWizard.dirty){
+      s.workingContextWizard.draft=workingContextDraftFromPayload(payload);
+      s.workingContextWizard.preview=null;
+    }
+  }catch(error){
+    s.workingContext.error=error.message||String(error);
+    s.workingContext.payload=null;
+  }finally{
+    s.workingContext.loading=false;
+  }
+}
+
+function workingContextDraftFromPayload(payload){
+  const source=payload&&typeof payload==='object'?payload:{};
+  const resources=source.resources&&typeof source.resources==='object'?source.resources:{};
+  const fields={
+    sourceCode:['profile','system','library','sourceFile','member','localRoot','path','ifsPath'],
+    objects:['profile','system','library','objectType','objectName'],
+    metadata:['profile','system','schema','table'],
+    data:['profile','system','schema','table']
+  };
+  return {
+    activeKind:['sourceCode','objects','metadata','data'].includes(String(source.activeKind||''))?String(source.activeKind):'sourceCode',
+    profile:String(source.profile||'').trim(),
+    resources:Object.fromEntries(Object.entries(fields).map(([kind,names])=>[kind,Object.fromEntries(names.map((name)=>[name,String(resources[kind]&&resources[kind][name]||'').trim()]))]))
+  };
+}
+
+function ensureWorkingContextDraft(){
+  if(!s.workingContextWizard.draft){
+    s.workingContextWizard.draft=workingContextDraftFromPayload(s.workingContext.payload||{});
+  }
+  return s.workingContextWizard.draft;
+}
+
+function setWorkingContextDraftField(kind,field,value){
+  const draft=ensureWorkingContextDraft();
+  if(kind==='root') draft[field]=value;
+  else if(draft.resources&&draft.resources[kind]) draft.resources[kind][field]=value;
+  s.workingContextWizard.dirty=true;
+  s.workingContextWizard.preview=null;
+  s.workingContextWizard.error=null;
+  s.workingContextWizard.status='Draft changed. Preview it before saving.';
+}
+
+async function previewWorkingContextDraft(){
+  const draft=ensureWorkingContextDraft();
+  s.workingContextWizard.previewing=true;
+  s.workingContextWizard.error=null;
+  try{
+    s.workingContextWizard.preview=await sendJson('POST','/api/ui-context/preview',{draft});
+    s.workingContextWizard.status='Preview ready. Review the changes before saving.';
+  }catch(error){
+    s.workingContextWizard.preview=null;
+    s.workingContextWizard.error=error.message||String(error);
+  }finally{
+    s.workingContextWizard.previewing=false;
+  }
+}
+
+async function saveWorkingContextDraft(){
+  const draft=ensureWorkingContextDraft();
+  const preview=s.workingContextWizard.preview;
+  if(!preview||!preview.fingerprint||!preview.baseFingerprint){
+    s.workingContextWizard.error='Preview the Working Context draft first. Saving requires an explicit reviewed diff.';
+    return;
+  }
+  s.workingContextWizard.saving=true;
+  s.workingContextWizard.error=null;
+  try{
+    const result=await sendJson('POST','/api/ui-context/save',{
+      draft,
+      confirm:true,
+      baseFingerprint:preview.baseFingerprint,
+      previewFingerprint:preview.fingerprint
+    });
+    s.workingContext.payload=result.context;
+    s.workingContextWizard.draft=workingContextDraftFromPayload(result.context);
+    s.workingContextWizard.preview=null;
+    s.workingContextWizard.dirty=false;
+    s.workingContextWizard.status='Working Context saved locally. Doctor should be run again.';
+  }catch(error){
+    s.workingContextWizard.error=error.message||String(error);
+  }finally{
+    s.workingContextWizard.saving=false;
+  }
+}
+
 function profileWizardState(){
   return s.profileWizard&&s.profileWizard.state&&typeof s.profileWizard.state==='object'
     ? s.profileWizard.state
@@ -1096,6 +1584,59 @@ async function loadProfileWizardState(){
   }finally{
     s.profileWizard.loading=false;
   }
+}
+
+async function loadProfileKeyWizardState(){
+  s.profileKeyWizard.loading=true;
+  s.profileKeyWizard.error=null;
+  try{
+    s.profileKeyWizard.state=await getJson('/api/profile-wizard/key-state');
+  }catch(error){
+    s.profileKeyWizard.error=error.message||String(error);
+  }finally{
+    s.profileKeyWizard.loading=false;
+  }
+}
+
+async function initializeProfileKeyWizard(){
+  const metadata=profileKeyWizardMetadata()||{};
+  const storageNode=document.querySelector('#profileKeyWizardStorage');
+  const storage=storageNode&&storageNode.value?storageNode.value:'auto';
+  if(typeof window.confirm==='function'&&!window.confirm('Create local key material now? The key will never be shown in the browser.')){
+    return;
+  }
+  s.profileKeyWizard.initializing=true;
+  s.profileKeyWizard.error=null;
+  try{
+    const result=await sendJson('POST','/api/profile-wizard/key-init',{storage,confirm:true});
+    s.profileKeyWizard.state=Object.assign({},s.profileKeyWizard.state||{},result);
+    s.profileKeyWizard.status='Local key storage initialized. Secret values remain CLI-only.';
+    if(metadata.defaultStorage&&storage==='auto'){
+      s.profileKeyWizard.status='Local '+String(metadata.defaultStorage)+' key storage initialized.';
+    }
+  }catch(error){
+    s.profileKeyWizard.error=error.message||String(error);
+  }finally{
+    s.profileKeyWizard.initializing=false;
+  }
+}
+
+function renderProfileKeyWizardPanel(){
+  const state=s.profileKeyWizard.state||{};
+  const metadata=profileKeyWizardMetadata()||{};
+  const storage=Array.isArray(metadata.supportedStorage)?metadata.supportedStorage:['keyfile'];
+  const status=s.profileKeyWizard.loading?'Checking...':(state.status||'not checked');
+  const source=state.source&&state.source.label?String(state.source.label):'No key material available';
+  const error=s.profileKeyWizard.error;
+  return '<div class="sub"><details id="profileKeyWizardSection"'+(error||s.profileKeyWizard.status?' open':'')+'><summary>Local Secret Key Readiness</summary>'+
+    '<p class="small">The GUI can create local key material without receiving or displaying a secret. Encrypt actual values with the CLI.</p>'+
+    '<div class="tokens"><div class="token '+esc(statusToneClass(status))+'">status: '+esc(status)+'</div><div class="token">source: '+esc(source)+'</div><div class="token">browser secret values: never</div></div>'+
+    (error?'<div class="hint-list"><div class="hint-item"><strong>Key wizard error</strong><p>'+esc(error)+'</p></div></div>':'')+
+    (s.profileKeyWizard.status?'<div class="hint-list"><div class="hint-item"><strong>Key wizard</strong><p>'+esc(s.profileKeyWizard.status)+'</p></div></div>':'')+
+    '<div class="field-grid"><label>Local storage<select id="profileKeyWizardStorage"><option value="auto">Recommended for this OS</option>'+storage.map((entry)=>'<option value="'+escAttr(entry)+'">'+esc(entry)+'</option>').join('')+'</select></label></div>'+
+    '<div class="actions"><button class="btn" data-pkw-refresh="1">'+esc(s.profileKeyWizard.loading?'Checking...':'Check Key Readiness')+'</button><button class="btn primary" data-pkw-init="1">'+esc(s.profileKeyWizard.initializing?'Creating...':'Create Local Key')+'</button></div>'+
+    '<div class="small">Storage target: '+esc(String(state.keyFile||'config/local-only/.zeus-key'))+' or OS-secure storage. Key material is not returned by this API.</div>'+
+    '</details></div>';
 }
 
 async function loadProfileWizardProfile(profileName){
@@ -1567,6 +2108,78 @@ function preferredProfileWizardDoctorProfile(){
     : (profiles[0]&&profiles[0].name?profiles[0].name:'dev');
 }
 
+function renderSetupChecklist(options){
+  const safeOptions=options&&typeof options==='object'?options:{};
+  const metadata=setupChecklistMetadata()||{};
+  const configuredTasks=Array.isArray(metadata.tasks)&&metadata.tasks.length
+    ? metadata.tasks
+    : [
+      { id:'profile', title:'Profile and source scope', description:'Choose or save the local profile and make workspace paths explicit.', target:'profileWizardSection' },
+      { id:'key', title:'Local key readiness', description:'Verify local key storage without displaying key material.', target:'profileKeyWizardSection' },
+      { id:'doctor', title:'Effective runtime configuration', description:'Run Doctor after profile and environment precedence are settled.', target:'configDoctorProfile' },
+      { id:'evidence', title:'Evidence freshness', description:'Review recorded hashes before relying on an existing run.', target:'reports' }
+    ];
+  const draft=safeOptions.draft&&typeof safeOptions.draft==='object'?safeOptions.draft:{};
+  const selectedProfile=safeOptions.selectedProfileSummary||null;
+  const profileName=String(draft.profileName||'').trim();
+  const profileState=selectedProfile
+    ? { status:'ready', label:'ready', detail:'Profile loaded: '+String(selectedProfile.name||profileName) }
+    : (profileName
+      ? { status:'review', label:'draft', detail:'Unsaved draft: '+profileName }
+      : { status:'pending', label:'pending', detail:'Choose or create a profile.' });
+  const keyState=s.profileKeyWizard&&s.profileKeyWizard.state||{};
+  const keyReady=String(keyState.status||'').toLowerCase()==='ready'
+    || Boolean(keyState.ready===true||keyState.available===true);
+  const keyStateView=s.profileKeyWizard&&s.profileKeyWizard.loading
+    ? { status:'running', label:'checking', detail:'Checking local key storage.' }
+    : (keyReady
+      ? { status:'ready', label:'ready', detail:'Local key storage is available; key material remains hidden.' }
+      : { status:'pending', label:'pending', detail:'Check local key readiness.' });
+  const doctorState=safeOptions.doctorState&&typeof safeOptions.doctorState==='object'?safeOptions.doctorState:{};
+  const doctorResult=doctorState.result&&typeof doctorState.result==='object'?doctorState.result:null;
+  const doctorStatus=String(doctorResult&&doctorResult.status||'').toLowerCase();
+  const doctorView=doctorState.running
+    ? { status:'running', label:'checking', detail:'Doctor is checking effective configuration.' }
+    : (doctorStatus==='ready'
+      ? { status:'ready', label:'ready', detail:'Effective runtime configuration passed Doctor.' }
+      : (doctorStatus==='warning'
+        ? { status:'review', label:'review', detail:'Doctor returned warnings; inspect the checks before continuing.' }
+        : (doctorStatus==='failed'||doctorStatus==='error'||doctorState.error
+          ? { status:'blocked', label:'blocked', detail:'Resolve the Doctor result before relying on this setup.' }
+          : { status:'pending', label:'pending', detail:'Run Doctor after the profile is saved.' })));
+  const evidence=s.detail&&s.detail.views&&s.detail.views.evidence&&typeof s.detail.views.evidence==='object'
+    ? s.detail.views.evidence
+    : null;
+  const evidenceStatus=String(evidence&&evidence.overallStatus||evidence&&evidence.status||'').toLowerCase();
+  const evidenceView=evidence
+    ? (['changed','stale','missing','unverified','warning'].includes(evidenceStatus)
+      ? { status:'review', label:'review', detail:'Evidence needs a freshness review.' }
+      : { status:'ready', label:'ready', detail:'Recorded evidence is available for review.' })
+    : { status:'not-available', label:'not available', detail:'Select a run to review recorded evidence.' };
+  const views={ profile:profileState, key:keyStateView, doctor:doctorView, evidence:evidenceView };
+  const items=configuredTasks.map((task,index)=>{
+    const view=views[String(task.id||'').trim()]||{ status:'pending', label:'pending', detail:'Open this setup area for details.' };
+    const target=String(task.target||'').trim();
+    const button=target
+      ? '<button class="btn" type="button" data-setup-checklist-target="'+escAttr(target)+'">Open</button>'
+      : '';
+    return '<li class="checklist-item '+escAttr(statusToneClass(view.status))+'"><div class="checklist-index" aria-hidden="true">'+esc(String(index+1))+'</div><div><strong>'+esc(String(task.title||task.id||'Setup task'))+'</strong><p>'+esc(String(task.description||''))+'</p><p class="small" role="status">'+esc(view.detail)+'</p></div><div class="stack"><div class="token '+escAttr(statusToneClass(view.status))+'" aria-label="Status: '+escAttr(view.label)+'">'+esc(view.label)+'</div>'+button+'</div></li>';
+  }).join('');
+  return '<section class="sub setup-checklist" aria-labelledby="setupChecklistTitle" data-setup-checklist><div><h3 id="setupChecklistTitle">'+esc(String(metadata.title||'Secure Setup Checklist'))+'</h3><p>'+esc(String(metadata.summary||'Confirm profile, key, effective configuration, and evidence freshness in that order.'))+'</p></div><ol>'+items+'</ol><p class="small">Local-only flow. Credentials, key material, and plaintext secrets are never shown here; evidence refresh stays an explicit read-only review.</p></section>';
+}
+
+function renderPluginCatalogPanel(){
+  const metadata=pluginContractsMetadata()||{};
+  const catalog=metadata.catalog&&Array.isArray(metadata.catalog.plugins)?metadata.catalog:{ plugins:[] };
+  const summary=metadata.summary&&typeof metadata.summary==='object'?metadata.summary:{};
+  const allowlist=metadata.allowlist&&typeof metadata.allowlist==='object'?metadata.allowlist:{};
+  const plugins=catalog.plugins;
+  const entries=plugins.length
+    ? plugins.map((plugin)=>'<li class="plugin-entry"><strong>'+esc(String(plugin.label||plugin.id||'Unnamed plugin'))+'</strong><div class="small">'+esc(String(plugin.kind||'unknown'))+' · '+esc(String(plugin.id||''))+'</div><div class="small">'+esc(String(plugin.description||'No description available.'))+'</div>'+renderTokenRow([...(Array.isArray(plugin.tags)?plugin.tags:[]),plugin.allowlistKey?'allowlist: '+plugin.allowlistKey:null],'workflow-meta')+'</li>').join('')
+    : '<li class="empty">No live plugin metadata is available.</li>';
+  return '<section class="sub" id="pluginCatalogSection" aria-labelledby="pluginCatalogTitle"><details><summary id="pluginCatalogTitle">Live Tool Catalog</summary><p class="small">Commands, workflows, roles, and the neutral built-in theme are exposed as declarative metadata. The catalog does not execute plugins or send telemetry.</p>'+renderTokenRow(['total: '+String(summary.total||plugins.length||0),'commands: '+String(summary.byKind&&summary.byKind.command||0),'workflows: '+String(summary.byKind&&summary.byKind.workflow||0),'roles: '+String(summary.byKind&&summary.byKind.role||0),'allowlist: '+String(allowlist.mode||'default')],'workflow-meta')+'<ul class="plugin-catalog">'+entries+'</ul></details></section>';
+}
+
 function renderConfigureStartPanel(options){
   const safeOptions=options&&typeof options==='object'?options:{};
   const setupMeta=setupMetadata()||{};
@@ -1661,6 +2274,7 @@ function renderConfigureStartPanel(options){
       { title:'Browser safety', body:boundaryNotes.join(' ') },
       { title:'Resolution order', body:(precedenceRules.length?precedenceRules.join(' '):precedenceSummary)+' Doctor checks the effective configuration after those rules are applied.' }
     ])+
+    renderSetupChecklist({ draft, selectedProfileSummary, doctorState })+
     '<div class="field-list">'+
       '<div class="field-item"><strong>Recommended Next Step</strong><p>'+esc(recommendedNext)+'</p>'+renderTokenRow(recommendedNextTokens,'workflow-meta')+'</div>'+
       '<div class="field-item"><strong>1. Choose Or Create A Profile</strong><p>'+esc(stepOneStatus)+'</p>'+renderTokenRow([
@@ -1692,6 +2306,9 @@ function buildAiSessionDoctorSummaryPayload(doctorResult){
   const summary=doctorResult.result&&doctorResult.result.summary&&typeof doctorResult.result.summary==='object'
     ? doctorResult.result.summary
     : null;
+  const probeRows=doctorResult.result&&Array.isArray(doctorResult.result.probeRows)
+    ? doctorResult.result.probeRows
+    : [];
   return {
     status:String(doctorResult.status||'').trim()||'unknown',
     summary:summary?{
@@ -1702,6 +2319,13 @@ function buildAiSessionDoctorSummaryPayload(doctorResult){
       info:Number(summary.info||0),
       skip:Number(summary.skip||0)
     }:null,
+    probe:{
+      requested:Boolean(doctorResult.input&&doctorResult.input.probe),
+      total:probeRows.length,
+      ok:probeRows.filter((entry)=>String(entry&&entry.status||'').toUpperCase()==='OK').length,
+      fail:probeRows.filter((entry)=>String(entry&&entry.status||'').toUpperCase()==='FAIL').length,
+      functions:Array.from(new Set(probeRows.map((entry)=>String(entry&&entry.functionName||'').trim()).filter(Boolean))).slice(0,20)
+    },
     finishedAt:doctorResult.finishedAt||null
   };
 }
@@ -1714,6 +2338,9 @@ function renderAiSessionStarterPanel(options){
   const state=safeOptions.state&&typeof safeOptions.state==='object'?safeOptions.state:(s.uiActions.aiSession||{});
   const doctorResult=safeOptions.doctorResult&&typeof safeOptions.doctorResult==='object'?safeOptions.doctorResult:null;
   const doctorAvailable=Boolean(doctorResult);
+  const contextSummary=operatorContextSummary(s.workingContext.payload);
+  const contextAvailable=Boolean(contextSummary.exists);
+  const promptBlocked=!doctorAvailable||!contextAvailable;
   const includeDoctorSummary=doctorAvailable
     ? state.includeDoctorSummary!==false
     : false;
@@ -1738,8 +2365,8 @@ function renderAiSessionStarterPanel(options){
     ? metadata.capabilityGuidance.approvalRequiredCommands
     : [];
   const doctorStatusText=doctorAvailable
-    ? 'Doctor result available. The generated prompt can include a compact summary, but the assistant should still run doctor first.'
-    : 'No doctor result is available yet. Run Check Readiness first for a better session handoff.';
+    ? 'Doctor result available. The generated prompt can include a compact summary, but the assistant should still re-check live context first.'
+    : 'No doctor result is available yet. Run configuration validation or the explicit read-only probe first.';
   return '<div class="sub"><details'+(starterOpen?' open':'')+' id="aiSessionStarterDetails"><summary>Start AI Session</summary><p class="small">Use this after checking readiness. It creates a safe prompt for an AI assistant and stays local-only.</p>'+
     renderHintList([
       { title:'Boundary', body:'The Local UI cannot load env vars into your already-open terminal. Use the helper commands below, then validate with Doctor.' },
@@ -1827,14 +2454,19 @@ function renderProfileWizardPanel(){
   '</div>';
 }
 
-async function runDoctorReadinessAction(){
+async function runDoctorReadinessAction(probeOverride){
   const profile=String(s.uiActions.doctor.profile||'dev').trim()||'dev';
+  const probe=probeOverride===undefined
+    ? Boolean(s.uiActions.doctor.probe)
+    : Boolean(probeOverride);
+  s.uiActions.doctor.probe=probe;
   s.uiActions.doctor.running=true;
   s.uiActions.doctor.error=null;
   try{
     const payload=await sendJson('POST','/api/ui-actions/doctor',{
       profile,
-      showResolved:false
+      showResolved:false,
+      probe
     });
     s.uiActions.doctor.result=payload;
   }catch(error){
@@ -1848,6 +2480,11 @@ async function runDoctorReadinessAction(){
 async function runDiscoveryPreviewAction(){
   const profile=String(s.uiActions.discovery.profile||s.uiActions.doctor.profile||'dev').trim()||'dev';
   const actionId=String(s.uiActions.discovery.actionId||'').trim()||'discover-source-libraries';
+  if(!s.workingContext.payload||s.workingContext.payload.exists!==true){
+    s.uiActions.discovery.error='Review and save the Working Context before running a GUI discovery preview.';
+    s.uiActions.discovery.result=null;
+    return;
+  }
   s.uiActions.discovery.running=true;
   s.uiActions.discovery.error=null;
   try{
@@ -1861,6 +2498,25 @@ async function runDiscoveryPreviewAction(){
     s.uiActions.discovery.result=null;
   }finally{
     s.uiActions.discovery.running=false;
+  }
+}
+
+async function runReadOnlyFetchMemberAction(planId){
+  const profile=String(s.uiActions.discovery.profile||s.uiActions.doctor.profile||'dev').trim()||'dev';
+  s.uiActions.fetchMember.running=true;
+  s.uiActions.fetchMember.error=null;
+  try{
+    const result=await sendJson('POST','/api/ui-actions/fetch-member',{
+      profile,
+      planId:String(planId||'').trim(),
+      confirmEndpoint:true
+    });
+    s.uiActions.fetchMember.result=result;
+  }catch(error){
+    s.uiActions.fetchMember.error=error.message||String(error);
+    s.uiActions.fetchMember.result=null;
+  }finally{
+    s.uiActions.fetchMember.running=false;
   }
 }
 
@@ -1915,6 +2571,96 @@ function renderDoctorDiagnostics(result){
   return '<div class="hint-list"><div class="hint-item"><strong>'+esc(heading)+'</strong><p>'+(warningCount>0?'These warnings explain why the selected profile and the active environment may point to different DB targets.':'Doctor returned structured diagnostics for review.')+'</p>'+(summaryParts.length?'<p class="small">'+esc(summaryParts.join(' • '))+'</p>':'')+'</div>'+diagnostics.map((entry)=>renderDoctorDiagnosticEntry(entry)).join('')+'</div>';
 }
 
+function renderDoctorProbeRows(result){
+  const rows=result&&result.result&&Array.isArray(result.result.probeRows)
+    ? result.result.probeRows.filter((entry)=>entry&&typeof entry==='object')
+    : [];
+  if(!rows.length) return '';
+  const body=rows.map((entry)=>'<div class="field-item"><strong>'+esc(String(entry.functionName||'connection'))+'</strong><div class="tokens"><div class="token '+esc(statusToneClass(String(entry.status||'').toLowerCase()))+'">'+esc(String(entry.status||'unknown'))+'</div>'+(entry.system?'<div class="token">target: '+esc(String(entry.system))+'</div>':'')+'</div><p class="small">'+esc(String(entry.details||'No probe details available.'))+'</p></div>').join('');
+  return '<details open><summary>Read-only connection probe results</summary><div class="field-list">'+body+'</div></details>';
+}
+
+function operatorContextSummary(payload){
+  const context=payload&&typeof payload==='object'?payload:{};
+  const active=context.active&&typeof context.active==='object'?context.active:{};
+  const location=[
+    active.system,
+    active.library||active.schema,
+    active.sourceFile||active.table,
+    active.member
+  ].map((value)=>String(value||'').trim()).filter(Boolean);
+  return {
+    exists:Boolean(context.exists),
+    activeKind:String(context.activeKind||'sourceCode'),
+    profile:String(context.profile||active.profile||'').trim(),
+    location:location.length?location.join(' / '):'No system / library / source / member selected',
+    updatedAt:String(context.updatedAt||'').trim()
+  };
+}
+
+function renderWorkingContextWizard(){
+  const state=s.workingContextWizard||{};
+  const draft=ensureWorkingContextDraft();
+  const preview=state.preview&&typeof state.preview==='object'?state.preview:null;
+  const open=Boolean(state.dirty||state.error||state.status||preview);
+  const resourceFields={
+    sourceCode:[
+      ['system','System'],['library','Library'],['sourceFile','Source file'],['member','Member'],
+      ['localRoot','Local source root'],['path','Local source path'],['ifsPath','IFS path']
+    ],
+    objects:[['system','System'],['library','Library'],['objectType','Object type'],['objectName','Object name']],
+    metadata:[['system','System'],['schema','Schema / library'],['table','Metadata table']],
+    data:[['system','System'],['schema','Schema / library'],['table','Data table']]
+  };
+  const labelFor=(kind)=>({sourceCode:'Source code',objects:'Objects',metadata:'Metadata',data:'Data'}[kind]||kind);
+  const inputFor=(kind,field,label)=>{
+    const value=String(draft.resources&&draft.resources[kind]&&draft.resources[kind][field]||'');
+    return '<label>'+esc(label)+'<input data-context-kind="'+escAttr(kind)+'" data-context-field="'+escAttr(field)+'" value="'+escAttr(value)+'" placeholder="'+escAttr(field==='system'?'configured system':'optional')+'"></label>';
+  };
+  const resourceHtml=Object.entries(resourceFields).map(([kind,fields])=>
+    '<details class="context-resource"'+(kind===draft.activeKind?' open':'')+'><summary>'+esc(labelFor(kind))+'</summary><div class="field-grid">'+fields.map(([field,label])=>inputFor(kind,field,label)).join('')+'</div></details>'
+  ).join('');
+  const changes=preview&&Array.isArray(preview.changes)?preview.changes:[];
+  const diffHtml=preview
+    ? '<div class="field-item"><strong>Reviewed changes</strong>'+(changes.length?'<div class="field-list">'+changes.map((entry)=>'<div class="field-item"><strong>'+esc(String(entry.field||''))+'</strong><p><code>'+esc(String(entry.before||'(empty)'))+'</code> → <code>'+esc(String(entry.after||'(empty)'))+'</code></p></div>').join('')+'</div>':'<p>No changes detected.</p>')+(Array.isArray(preview.warnings)&&preview.warnings.length?renderHintList(preview.warnings.map((entry)=>({body:String(entry)}))):'')+'</div>'
+    : '<div class="empty">Preview is required before saving.</div>';
+  return '<div class="sub"><details id="workingContextWizardSection"'+(open?' open':'')+'><summary>Working Context Wizard</summary><p class="small">Set the exact first point to check: system, library/schema, source file or table, and member. This only saves local routing metadata; it never changes credentials or remote data.</p>'+
+    '<div class="field-grid"><label>Active resource<select data-context-root-field="activeKind"><option value="sourceCode"'+(draft.activeKind==='sourceCode'?' selected':'')+'>Source code</option><option value="objects"'+(draft.activeKind==='objects'?' selected':'')+'>Objects</option><option value="metadata"'+(draft.activeKind==='metadata'?' selected':'')+'>Metadata</option><option value="data"'+(draft.activeKind==='data'?' selected':'')+'>Data</option></select></label><label>Profile hint<input data-context-root-field="profile" value="'+escAttr(String(draft.profile||''))+'" placeholder="dev"></label></div>'+resourceHtml+
+    '<div class="actions"><button class="btn" data-context-preview="1">'+esc(state.previewing?'Previewing...':'Preview Changes')+'</button><button class="btn primary" data-context-save="1">'+esc(state.saving?'Saving...':'Save Reviewed Context')+'</button><button class="btn" data-context-reload-draft="1">Reload Context</button></div>'+ (state.status?'<p class="small '+esc(statusToneClass(state.status))+'">'+esc(state.status)+'</p>':'')+(state.error?renderHintList([{title:'Working Context error',body:String(state.error)}]):'')+diffHtml+
+    '</details></div>';
+}
+
+function renderOperatorReadinessPanel(options){
+  const safe=options&&typeof options==='object'?options:{};
+  const doctorState=safe.doctorState&&typeof safe.doctorState==='object'?safe.doctorState:{};
+  const doctorResult=doctorState.result&&typeof doctorState.result==='object'?doctorState.result:null;
+  const context=operatorContextSummary(s.workingContext.payload);
+  const doctorRan=Boolean(doctorResult);
+  const probeRequested=Boolean(doctorResult&&doctorResult.input&&doctorResult.input.probe);
+  const probeHealthy=probeRequested&&doctorResult.status!=='failed';
+  const contextReady=context.exists&&Boolean(context.profile||context.location!=='No system / library / source / member selected');
+  const promptReady=Boolean(safe.aiSessionState&&safe.aiSessionState.result&&safe.aiSessionState.result.prompt);
+  const metadata=aiSessionStarterMetadata()||{};
+  const envLoading=metadata.envLoading||{};
+  const status=(ready,label,detail)=>({ready,label,detail});
+  const items=[
+    status(Boolean(envLoading.powerShell||envLoading.bash),'handoff','Load the selected environment in the same shell that starts the UI; the browser cannot change an existing shell.'),
+    status(doctorRan&&(!probeRequested||probeHealthy),doctorRan?(probeRequested?'checked':'validated'):'pending',doctorRan?(probeRequested?'Doctor and the explicit read-only probe returned.':'Configuration validated; run the read-only probe before remote work.'):'Run configuration validation first.'),
+    status(contextReady,'ready',contextReady?'Working context loaded from .zeus/working-context.json.':'Read the workspace working context before source, metadata, or data work.'),
+    status(promptReady,'pending',promptReady?'Session prompt generated and ready to copy.':'Generate the session prompt only after Doctor and context review.')
+  ];
+  const itemHtml=items.map((entry,index)=>'<li class="operator-step '+(entry.ready?'ready':'pending')+'"><div class="checklist-index" aria-hidden="true">'+String(index+1)+'</div><div><strong>'+esc(['Environment handoff','Doctor / connection probe','Working context','AI session prompt'][index])+'</strong><p class="small">'+esc(entry.detail)+'</p></div><div class="token '+(entry.ready?'ok':'pending')+'">'+esc(entry.label)+'</div></li>').join('');
+  const contextAction=contextReady?'Refresh context':'Read working context';
+  const promptBlocked=!doctorRan||!contextReady;
+  return '<section class="sub operator-readiness" aria-labelledby="operatorReadinessTitle" data-operator-readiness>'+
+    '<div><h3 id="operatorReadinessTitle">AI Session Readiness</h3><p>Follow this handoff before asking an AI assistant to inspect sources, metadata, data, or journals. The GUI displays status; CLI/MCP remain authoritative.</p></div>'+
+    '<ol class="operator-steps">'+itemHtml+'</ol>'+
+    '<div class="field-list">'+
+      '<div class="field-item"><strong>Environment handoff</strong><p>Run the command below in the terminal before starting or restarting the local UI server. Values are never read into browser responses.</p><div class="preview"><pre>'+esc((envLoading.powerShell&&envLoading.powerShell.command)||'. .\\config\\load-env.ps1 -Environment &lt;environment&gt;')+' / '+esc((envLoading.bash&&envLoading.bash.command)||'source ./config/load-env.sh &lt;environment&gt;')+'</pre></div><p class="small">The selected environment name is only a routing hint; the running server process is what Doctor actually checks.</p></div>'+
+      '<div class="field-item"><strong>Working context</strong><p>'+esc(context.location)+'</p>'+renderTokenRow(['kind: '+context.activeKind,context.profile?'profile: '+context.profile:'profile unset',context.updatedAt?'updated: '+context.updatedAt:'not updated'],'workflow-meta')+'<div class="actions"><button class="btn" data-context-refresh="1">'+esc(contextAction)+'</button></div>'+(s.workingContext.error?'<p class="small danger">'+esc(s.workingContext.error)+'</p>':'')+'</div>'+
+    '</div><div class="small">'+(promptBlocked?'Session prompt stays guided until Doctor and a working context have been reviewed.':'The handoff is complete enough to generate a safe session prompt; the assistant should still re-check live context before remote work.')+'</div></section>';
+}
+
 function selectedGuidedIntent(){
   const intents=guidedConfigIntents();
   return intents.find((entry)=>entry.id===s.uiMetadata.selectedGuidedIntent)||intents[0]||null;
@@ -1942,6 +2688,11 @@ function renderGuidedCliPreview(intent,profile){
 function renderGuidedDiscoveryPreview(result){
   const preview=result&&result.result?result.result:null;
   if(!preview) return '';
+  const fetchPlan=preview.fetchPlan&&typeof preview.fetchPlan==='object'?preview.fetchPlan:null;
+  const fetchState=s.uiActions.fetchMember||{};
+  const workingContext=result&&result.workingContext&&typeof result.workingContext==='object'
+    ? result.workingContext
+    : null;
   const candidates=Array.isArray(preview.candidates)?preview.candidates:[];
   const warnings=Array.isArray(preview.warnings)?preview.warnings:[];
   const resolvedScope=preview&&preview.resolvedScope&&typeof preview.resolvedScope==='object'?preview.resolvedScope:null;
@@ -1976,7 +2727,22 @@ function renderGuidedDiscoveryPreview(result){
   const previewMode=preview.previewKind==='config-derived-local-preview'
     ? 'This preview is config-derived and local-only.'
     : (preview.implemented===false?'This action is intentionally stubbed and does not execute discovery yet.':'');
-  return '<div class="hint-list"><div class="hint-item"><strong>'+esc(preview.title||'Discovery Preview')+'</strong><div class="tokens"><div class="token '+esc(statusToneClass(preview.status||'not-ready'))+'">'+esc(preview.status||'not-ready')+'</div><div class="token">Safety: '+esc(preview.safetyLevel||'S2')+'</div><div class="token">'+esc(preview.scope||'read-only')+'</div></div>'+previewSummary+'<p>'+esc(previewMode)+'</p>'+scopeTokens+'</div></div>'+candidatePanel+warningPanel+commandPreview+(Array.isArray(preview.notes)&&preview.notes.length?'<div class="hint-list">'+preview.notes.map((note)=>'<div class="hint-item"><p>'+esc(String(note))+'</p></div>').join('')+'</div>':'');
+  const fetchPlanPanel=fetchPlan
+    ? '<div class="field-item"><strong>Explicit endpoint confirmation</strong><p>Review this exact target before fetching. The remote operation is read-only; only the listed local artifact path may be written.</p><div class="tokens"><div class="token">transport: '+esc(String(fetchPlan.endpoint&&fetchPlan.endpoint.transport||'unknown'))+'</div><div class="token">target: '+esc(String(fetchPlan.endpoint&&fetchPlan.endpoint.target||'unknown'))+'</div><div class="token">library: '+esc(String(fetchPlan.scope&&fetchPlan.scope.sourceLibrary||''))+'</div><div class="token">file: '+esc(String(fetchPlan.scope&&fetchPlan.scope.sourceFile||''))+'</div><div class="token">member: '+esc(String(fetchPlan.scope&&fetchPlan.scope.members&&fetchPlan.scope.members.join(', ')||''))+'</div><div class="token">plan: '+esc(String(fetchPlan.planId||''))+'</div></div><p class="small">Credentials are resolved only by the local server process and are never sent back to this page.</p><div class="actions"><button class="btn primary" data-fetch-member-plan="'+escAttr(String(fetchPlan.planId||''))+'"'+(fetchState.running?' disabled':'')+'>'+esc(fetchState.running?'Probing and fetching...':'Confirm endpoint and fetch read-only source')+'</button></div></div>'
+    : (preview.actionId==='preview-fetch-plan'&&preview.endpointConfirmationRequired===false&&preview.status==='config-preview-ready'
+      ? '<div class="hint-item"><strong>Fetch confirmation unavailable</strong><p>Select a concrete source member in Working Context or the profile before a fetch plan can be confirmed.</p></div>'
+      : '');
+  const fetchResult=fetchState.result&&typeof fetchState.result==='object'?fetchState.result:null;
+  const fetched=fetchResult&&fetchResult.result&&Array.isArray(fetchResult.result.fetched)?fetchResult.result.fetched:[];
+  const fetchResultPanel=fetchState.error
+    ? '<div class="hint-list"><div class="hint-item"><strong>Read-only fetch error</strong><p>'+esc(fetchState.error)+'</p></div></div>'
+    : (fetchResult
+      ? '<div class="hint-list"><div class="hint-item"><strong>Read-only fetch result</strong><div class="tokens"><div class="token '+esc(statusToneClass(fetchResult.status||'not-run'))+'">'+esc(String(fetchResult.status||'not-run'))+'</div><div class="token">remote: read-only</div><div class="token">local write: '+esc(fetchResult.status==='blocked'?'not started':'reviewed output root')+'</div></div><p>'+esc(fetchResult.notes&&fetchResult.notes.join(' ')||'No additional details.')+'</p>'+(fetched.length?'<div class="field-list">'+fetched.map((entry)=>'<div class="field-item"><strong>'+esc(String(entry.member||''))+'</strong><p class="small">'+esc(String(entry.path||''))+'</p></div>').join('')+'</div>':'')+'</div></div>'
+      : '');
+  const contextScope=workingContext
+    ? '<div class="field-item"><strong>Working Context checkpoint</strong><div class="tokens"><div class="token '+(workingContext.exists?'ok':'warning')+'">'+esc(workingContext.exists?'reviewed':'missing')+'</div><div class="token">kind: '+esc(String(workingContext.activeKind||'sourceCode'))+'</div>'+(workingContext.profile?'<div class="token">profile: '+esc(String(workingContext.profile))+'</div>':'')+'</div><p class="small">'+esc([workingContext.scope&&workingContext.scope.system,workingContext.scope&&workingContext.scope.library,workingContext.scope&&workingContext.scope.sourceFile||workingContext.scope&&workingContext.scope.table,workingContext.scope&&workingContext.scope.member].map((value)=>String(value||'').trim()).filter(Boolean).join(' / ')||'No explicit system / library / source scope selected.')+'</p></div>'
+    : '';
+  return '<div class="hint-list"><div class="hint-item"><strong>'+esc(preview.title||'Discovery Preview')+'</strong><div class="tokens"><div class="token '+esc(statusToneClass(preview.status||'not-ready'))+'">'+esc(preview.status||'not-ready')+'</div><div class="token">Safety: '+esc(preview.safetyLevel||'S2')+'</div><div class="token">'+esc(preview.scope||'read-only')+'</div></div>'+previewSummary+'<p>'+esc(previewMode)+'</p>'+scopeTokens+contextScope+'</div></div>'+candidatePanel+warningPanel+fetchPlanPanel+fetchResultPanel+commandPreview+(Array.isArray(preview.notes)&&preview.notes.length?'<div class="hint-list">'+preview.notes.map((note)=>'<div class="hint-item"><p>'+esc(String(note))+'</p></div>').join('')+'</div>':'');
 }
 
 function renderGuidedStepDetails(step,intent){
@@ -2054,16 +2820,8 @@ function renderAnalyzeWorkspacePanel(){
     '</div>';
 }
 
-function renderDisabledWorkflowCard(card){
-  const status=String(card.availability||card.status||'coming-later');
-  return '<div class="workflow-card disabled"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description||'')+'</p><div class="workflow-meta"><div class="token">'+esc(card.badge||card.category||'workflow')+'</div><div class="token">'+esc(status)+'</div></div><p class="small">'+esc(card.explanation||'This workflow is not available as a browser action yet.')+'</p><div class="actions"><button class="btn" disabled>'+esc(card.primaryActionLabel||'Coming Later')+'</button></div></div>';
-}
-
 function renderAdvancedOverviewPanel(){
-  const cards=workflowCards();
-  const disabledCards=cards.filter((card)=>card&&card.enabledInShell===false);
-  return '<div class="sub"><h2>Advanced / Tools</h2><p>Setup is the recommended starting point, and Reports is the normal follow-up for reviewing output. Everything here is optional and intended for experienced users.</p><div class="hint-list"><div class="hint-item"><strong>How to use this area</strong><p>Choose a specialist local tool when you already know what you want to inspect, preview, or generate. Nothing here is required for onboarding.</p></div><div class="hint-item"><strong>Safety boundary</strong><p>No arbitrary browser command execution. No remote fetch. No live DB2 query execution. Secret values are never shown.</p></div></div><h3>Prompt Tools</h3><div class="home-grid"><div class="home-card"><strong>Prompt Workbench</strong><p>Guided prompt canvas with local preview, saved templates, prompt import from existing runs, and export options.</p><div class="tokens"><div class="token">specialist tool</div><div class="token">local preview</div><div class="token">optional</div></div><div class="actions"><button class="btn primary" data-home-target="workbench">Open Prompt Workbench</button></div></div><div class="home-card"><strong>Prompt Compare</strong><p>Use Reports when you want to compare generated prompt artifacts from an existing run.</p><div class="tokens"><div class="token">read-only</div><div class="token">report view</div><div class="token">after output</div></div><div class="actions"><button class="btn" data-home-target="prompts">Open In Reports</button></div></div></div><h3>Local Analysis Tools</h3><div class="home-grid"><div class="home-card"><strong>Analyze Workspace</strong><p>Runs the existing local-only analyze pipeline against the profile source root after Setup is ready.</p><div class="tokens"><div class="token">local-only</div><div class="token">no remote fetch</div><div class="token">optional</div></div><div class="actions"><button class="btn" data-home-target="analyze-workspace">Open Analyze Workspace</button></div></div><div class="home-card"><strong>Reports Shortcut</strong><p>When output already exists, jump back to Reports to inspect artifacts, Graph, DB2/Test Data, or Prompt Compare.</p><div class="tokens"><div class="token">read-only</div><div class="token">after output</div><div class="token">safe local read</div></div><div class="actions"><button class="btn" data-home-target="artifacts">Open Reports</button><button class="btn" data-home-target="refresh">Refresh Runs</button></div></div></div><h3>Prompt Workbench Choices</h3><p class="small">These starter choices help you enter Prompt Workbench faster, but they do not replace Setup or Reports.</p>'+promptWorkbenchHighlights()+'</div>'+
-    '<div class="sub"><h2>Experimental / Coming Later</h2><p>These cards remain visible for orientation only. They are not active production browser actions.</p><div class="hint-list"><div class="hint-item"><strong>Deferred remote workflows</strong><p>Fetch Sources, Query DB2, and Generate AI Context stay disabled here until they are safely implemented and explicitly allowlisted.</p></div></div>'+(disabledCards.length?'<div class="workflow-grid">'+disabledCards.map((card)=>renderDisabledWorkflowCard(card)).join('')+'</div>':'<div class="empty">No deferred workflow cards registered.</div>')+'</div>';
+  return '<div class="sub"><h2>Advanced / Tools</h2><p>Setup is the recommended starting point, and Reports is the normal follow-up for reviewing output. Everything here is optional and intended for experienced users.</p><div class="hint-list"><div class="hint-item"><strong>How to use this area</strong><p>Choose a specialist local tool when you already know what you want to inspect, preview, or generate. Nothing here is required for onboarding.</p></div><div class="hint-item"><strong>Safety boundary</strong><p>No arbitrary browser command execution. No remote fetch. No live DB2 query execution. Secret values are never shown.</p></div></div><h3>Prompt Tools</h3><div class="home-grid"><div class="home-card"><strong>Prompt Workbench</strong><p>Guided prompt canvas with local preview, saved templates, prompt import from existing runs, and export options.</p><div class="tokens"><div class="token">specialist tool</div><div class="token">local preview</div><div class="token">optional</div></div><div class="actions"><button class="btn primary" data-home-target="workbench">Open Prompt Workbench</button></div></div><div class="home-card"><strong>Prompt Compare</strong><p>Use Reports when you want to compare generated prompt artifacts from an existing run.</p><div class="tokens"><div class="token">read-only</div><div class="token">report view</div><div class="token">after output</div></div><div class="actions"><button class="btn" data-home-target="prompts">Open In Reports</button></div></div></div><h3>Local Analysis Tools</h3><div class="home-grid"><div class="home-card"><strong>Analyze Workspace</strong><p>Runs the existing local-only analyze pipeline against the profile source root after Setup is ready.</p><div class="tokens"><div class="token">local-only</div><div class="token">no remote fetch</div><div class="token">optional</div></div><div class="actions"><button class="btn" data-home-target="analyze-workspace">Open Analyze Workspace</button></div></div><div class="home-card"><strong>Reports Shortcut</strong><p>When output already exists, jump back to Reports to inspect artifacts, Graph, DB2/Test Data, or Prompt Compare.</p><div class="tokens"><div class="token">read-only</div><div class="token">after output</div><div class="token">safe local read</div></div><div class="actions"><button class="btn" data-home-target="artifacts">Open Reports</button><button class="btn" data-home-target="refresh">Refresh Runs</button></div></div></div><h3>Prompt Workbench Choices</h3><p class="small">These starter choices help you enter Prompt Workbench faster, but they do not replace Setup or Reports.</p>'+promptWorkbenchHighlights()+'</div>';
 }
 
 async function refreshRuns(preferredProgram){
@@ -2139,8 +2897,13 @@ async function openHomeTarget(target,options){
     return;
   }
 
-  if((target==='graph'||target==='db2'||target==='prompts'||target==='artifacts')&&!s.detail&&s.runs.length>0){
+  if(isReportsTab(target)&&!s.detail&&s.runs.length>0){
     await selectRun(s.runs[0].program);
+  }
+  if(isReportsTab(target)&&target!=='artifacts'&&!reportViewAvailable(target)){
+    s.tab='artifacts';
+    await render();
+    return;
   }
   s.tab=target;
   await render();
@@ -2344,9 +3107,12 @@ function renderConfigure(){
       doctorState,
       doctorStatusLabel
     })+
-    '<div class="sub"><h2>Doctor Readiness Check</h2><p>Run Zeus Doctor after the profile draft has been previewed and saved. Doctor reads saved profile data only and reports the effective configuration status as ready, warning, failed, or error.</p><div class="field-grid"><label>Profile Name<input id="configDoctorProfile" value="'+escAttr(profileForWizard)+'" placeholder="dev"></label></div><div class="actions"><button class="btn primary" data-config-doctor="1">'+esc(doctorState.running?'Checking...':'Check Readiness')+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div><div class="tokens"><div class="token '+esc(doctorTone)+'">Doctor: '+esc(doctorStatusLabel)+'</div><div class="token">profile: '+esc(profileForWizard)+'</div>'+(doctorResult?'<div class="token">duration: '+esc(String(doctorResult.durationMs||0))+' ms</div>':'')+'</div>'+
+    renderOperatorReadinessPanel({doctorState,aiSessionState})+
+    renderWorkingContextWizard()+
+    '<div class="sub"><h2>Doctor Readiness Check</h2><p>Validate the effective configuration first. Use the explicit read-only probe only when you want to test the configured IBM i / DB2 connections; it never writes remote data.</p><div class="field-grid"><label>Profile Name<input id="configDoctorProfile" value="'+escAttr(profileForWizard)+'" placeholder="dev"></label></div><div class="actions"><button class="btn" data-config-doctor="1">'+esc(doctorState.running&&!doctorState.probe?'Checking...':'Validate Configuration')+'</button><button class="btn primary" data-config-probe="1">'+esc(doctorState.running&&doctorState.probe?'Testing Connections...':'Test Connections (read-only)')+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div><div class="tokens"><div class="token '+esc(doctorTone)+'">Doctor: '+esc(doctorStatusLabel)+'</div><div class="token">profile: '+esc(profileForWizard)+'</div><div class="token">mode: '+esc(doctorState.probe?'read-only probe':'configuration only')+'</div>'+(doctorResult?'<div class="token">duration: '+esc(String(doctorResult.durationMs||0))+' ms</div>':'')+'</div>'+
     (doctorSummary?'<div class="hint-list"><div class="hint-item"><strong>Summary</strong><p>pass '+esc(String(doctorSummary.pass||0))+' • warn '+esc(String(doctorSummary.warn||0))+' • fail '+esc(String(doctorSummary.fail||0))+' • skip '+esc(String(doctorSummary.skip||0))+'</p><p class="small">'+esc(doctorHint)+'</p></div></div>':'<div class="hint-list"><div class="hint-item"><strong>Status</strong><p>'+esc(doctorHint)+'</p></div></div>')+
     doctorDiagnosticsPanel+
+    renderDoctorProbeRows(doctorResult)+
     (doctorDetails?'<details><summary>Show checks</summary><div class="preview"><pre>'+esc(doctorDetails)+'</pre></div></details>':'')+
     '</div>'+
     renderAiSessionStarterPanel({
@@ -2355,7 +3121,9 @@ function renderConfigure(){
       profile:profileForWizard,
       doctorResult
     })+
-    '<div class="sub"><details'+(wizardDetailsOpen?' open':'')+'><summary>Local-only Profile Wizard</summary><p class="small">Use this only when you need to create or adjust the local-only profile overlay that Setup and Doctor rely on.</p>'+renderProfileWizardPanel()+'</details></div>'+
+    '<div class="sub"><details id="profileWizardSection"'+(wizardDetailsOpen?' open':'')+'><summary>Local-only Profile Wizard</summary><p class="small">Use this only when you need to create or adjust the local-only profile overlay that Setup and Doctor rely on.</p>'+renderProfileWizardPanel()+'</details></div>'+
+    renderProfileKeyWizardPanel()+
+    renderPluginCatalogPanel()+
     '<div class="sub"><h2>Advanced Setup Details</h2><p class="small">These sections explain the metadata-driven wizard model and read-only preview stubs. They are optional once the main setup flow is clear.</p><details'+(discoveryResult||discoveryState.error?' open':'')+'><summary>Read-only Discovery Actions</summary><div class="stack"><div class="field-list">'+(discoveryActions.length?discoveryActions.map((action)=>'<div class="field-item"><strong>'+esc(action.title)+'</strong><p>'+esc(action.description||'')+'</p><div class="workflow-meta"><div class="token">safety: '+esc(action.safetyLevel||'S2')+'</div><div class="token">'+esc(action.status||'stubbed-preview-only')+'</div><div class="token">'+esc(action.expensive?'preview first':'read-only')+'</div></div><div class="actions"><button class="btn" data-discovery-preview="'+esc(action.id)+'">'+esc(String(action.status||'').indexOf('config-preview-ready')===0?'Preview':'Preview Stub')+'</button></div></div>').join(''):'<div class="empty">No discovery actions available.</div>')+'</div>'+(discoveryState.error?'<div class="hint-list"><div class="hint-item"><strong>Discovery preview error</strong><p>'+esc(discoveryState.error)+'</p></div></div>':'')+renderGuidedDiscoveryPreview(discoveryResult)+'</div></details><details><summary>Safe CLI Preview</summary><p class="small">Generated from the selected intent. Secrets are never included.</p><div class="field-grid"><label>Analysis Intent<select id="guidedIntentSelect">'+intents.map((intent)=>'<option value="'+escAttr(intent.id)+'"'+(selectedIntent&&intent.id===selectedIntent.id?' selected':'')+'>'+esc(intent.title)+'</option>').join('')+'</select></label></div>'+renderGuidedCliPreview(selectedIntent,profileForWizard)+'</details><details><summary>Guided Wizard Metadata</summary><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Wizard steps: '+esc(String(steps.length||0))+'</div><div class="token">Intents: '+esc(String(intents.length||0))+'</div><div class="token">Purpose labels: '+esc(String(guided&&guided.purposeLabels&&guided.purposeLabels.length||0))+'</div></div><div class="section-list">'+steps.map((step)=>'<button class="btn section-btn'+(selectedStep&&step.id===selectedStep.id?' active':'')+'" data-guided-step="'+esc(step.id)+'">'+esc(step.shortTitle||step.title)+'</button>').join('')+'</div><div class="configure-layout"><div class="section-list">'+
       sections.map((section)=>'<button class="btn section-btn'+(section.id===s.uiMetadata.selectedConfigSection?' active':'')+'" data-config-section="'+esc(section.id)+'">'+esc(section.label||section.id)+'</button>').join('')+
     '</div><div class="field-list">'+
@@ -2502,6 +3270,18 @@ function renderConfigure(){
       renderConfigure();
     };
   }
+  for(const pkwRefresh of root.querySelectorAll('[data-pkw-refresh]')){
+    pkwRefresh.onclick=async ()=>{
+      await loadProfileKeyWizardState();
+      renderConfigure();
+    };
+  }
+  for(const pkwInit of root.querySelectorAll('[data-pkw-init]')){
+    pkwInit.onclick=async ()=>{
+      await initializeProfileKeyWizard();
+      renderConfigure();
+    };
+  }
   for(const pwProductionToggle of root.querySelectorAll('[data-pw-production-toggle]')){
     pwProductionToggle.onclick=()=>{
       wizardDraft.productionSystem=!wizardDraft.productionSystem;
@@ -2542,6 +3322,42 @@ function renderConfigure(){
     s.uiActions.aiSession.goal=value;
     s.uiActions.aiSession.copyStatus='';
   });
+  for(const node of root.querySelectorAll('[data-context-root-field]')){
+    const field=String(node.dataset.contextRootField||'').trim();
+    const apply=(value)=>setWorkingContextDraftField('root',field,value.trim());
+    node.oninput=(event)=>apply(String(event.target.value||''));
+    node.onchange=(event)=>apply(String(event.target.value||''));
+  }
+  for(const node of root.querySelectorAll('[data-context-kind][data-context-field]')){
+    const kind=String(node.dataset.contextKind||'').trim();
+    const field=String(node.dataset.contextField||'').trim();
+    const apply=(value)=>setWorkingContextDraftField(kind,field,value.trim());
+    node.oninput=(event)=>apply(String(event.target.value||''));
+    node.onchange=(event)=>apply(String(event.target.value||''));
+  }
+  for(const previewButton of root.querySelectorAll('[data-context-preview]')){
+    previewButton.onclick=async ()=>{
+      renderConfigure();
+      await previewWorkingContextDraft();
+      renderConfigure();
+    };
+  }
+  for(const saveButton of root.querySelectorAll('[data-context-save]')){
+    saveButton.onclick=async ()=>{
+      renderConfigure();
+      await saveWorkingContextDraft();
+      renderConfigure();
+    };
+  }
+  for(const reloadButton of root.querySelectorAll('[data-context-reload-draft]')){
+    reloadButton.onclick=async ()=>{
+      s.workingContextWizard.dirty=false;
+      s.workingContextWizard.preview=null;
+      s.workingContextWizard.error=null;
+      await loadWorkingContextState();
+      renderConfigure();
+    };
+  }
   const aiSessionDoctorSummary=root.querySelector('#aiSessionIncludeDoctorSummary');
   if(aiSessionDoctorSummary){
     aiSessionDoctorSummary.onchange=(event)=>{
@@ -2566,6 +3382,15 @@ function renderConfigure(){
       s.uiActions.discovery.actionId=button.dataset.discoveryPreview||selectedDiscoveryActionId;
       renderConfigure();
       await runDiscoveryPreviewAction();
+      renderConfigure();
+    };
+  }
+  for(const button of root.querySelectorAll('[data-fetch-member-plan]')){
+    button.onclick=async ()=>{
+      const planId=String(button.dataset.fetchMemberPlan||'').trim();
+      if(!planId) return;
+      renderConfigure();
+      await runReadOnlyFetchMemberAction(planId);
       renderConfigure();
     };
   }
@@ -2600,8 +3425,26 @@ function renderConfigure(){
       renderConfigure();
     };
   }
+  for(const probeButton of root.querySelectorAll('[data-config-probe]')){
+    probeButton.onclick=async ()=>{
+      const profileInput=q('configDoctorProfile');
+      if(profileInput){
+        const nextValue=String(profileInput.value||'').trim()||'dev';
+        s.uiActions.doctor.profile=nextValue;
+        s.uiActions.discovery.profile=nextValue;
+        s.uiActions.aiSession.profile=nextValue;
+      }
+      await runDoctorReadinessAction(true);
+      renderConfigure();
+    };
+  }
   for(const generateButton of root.querySelectorAll('[data-ai-session-generate]')){
     generateButton.onclick=async ()=>{
+      if(!s.uiActions.doctor.result||!s.workingContext.payload||s.workingContext.payload.exists!==true){
+        s.uiActions.aiSession.error='Review Doctor and the workspace working context before generating the AI session prompt.';
+        renderConfigure();
+        return;
+      }
       await runGenerateAiSessionPromptAction();
       renderConfigure();
     };
@@ -2615,14 +3458,38 @@ function renderConfigure(){
     refreshButton.onclick=async ()=>{
       await loadUiMetadata();
       await loadProfileWizardState();
+      await loadWorkingContextState();
       renderConfigure();
       if(s.tab==='home') renderHome();
+    };
+  }
+  for(const contextButton of root.querySelectorAll('[data-context-refresh]')){
+    contextButton.onclick=async ()=>{
+      await loadWorkingContextState();
+      renderConfigure();
     };
   }
   for(const button of root.querySelectorAll('[data-config-section]')){
     button.onclick=()=>{
       s.uiMetadata.selectedConfigSection=button.dataset.configSection;
       renderConfigure();
+    };
+  }
+  for(const button of root.querySelectorAll('[data-setup-checklist-target]')){
+    button.onclick=async ()=>{
+      const target=String(button.dataset.setupChecklistTarget||'').trim();
+      if(target==='reports'){
+        await selectTab('reports');
+        return;
+      }
+      const targetNode=target?root.querySelector('#'+target):null;
+      if(!targetNode) return;
+      if(targetNode.tagName==='DETAILS') targetNode.open=true;
+      if(typeof targetNode.scrollIntoView==='function') targetNode.scrollIntoView({ block:'center', behavior:'smooth' });
+      const focusTarget=targetNode.matches('input,select,button,summary,[tabindex]')
+        ? targetNode
+        : targetNode.querySelector('summary,input,select,button,[tabindex]');
+      if(focusTarget&&typeof focusTarget.focus==='function') focusTarget.focus();
     };
   }
 }
@@ -2740,6 +3607,38 @@ async function renderPrompts(){
   q('rightSel').onchange=(e)=>{s.right=e.target.value;renderPrompts();};
   bindReportsSubnav(root);
   await Promise.all([renderPromptPreview('leftPrev',s.left),renderPromptPreview('rightPrev',s.right)]);
+}
+
+function renderWorkflowRunCard(card){
+  if(!card) return '<div class="empty">No guided workflow card is available for this run.</div>';
+  const steps=Array.isArray(card.steps)?card.steps:[];
+  const next=card.nextBestAction||{};
+  return '<div class="workflow-card guided-run-card"><div class="stack"><div class="workflow-meta"><div class="token '+escAttr(statusToneClass(card.statusLabel))+'">'+esc(card.statusLabel||'Unknown')+'</div><div class="token">'+esc(card.repeatable?'repeatable run':'recorded run')+'</div><div class="token">Evidence: '+esc(card.evidenceStatus||'empty')+'</div></div><h3>Guided Run Card</h3><p>One clear path from scope to evidence review. The card only navigates existing local views.</p></div><div class="workflow-steps">'+steps.map((step)=>'<div class="workflow-step '+escAttr(statusToneClass(step.status))+'"><div class="step-index">'+esc(step.status||'pending')+'</div><div><strong>'+esc(step.title)+'</strong><p>'+esc(step.description)+'</p></div></div>').join('')+'</div><div class="workflow-meta"><div class="token">Program: '+esc(card.scope&&card.scope.program||'n/a')+'</div><div class="token">Source scope: '+esc(card.scope&&card.scope.sourceRoot||'not recorded')+'</div><div class="token">Artifacts: '+esc(String(card.scope&&card.scope.artifactCount||0))+'</div></div><div class="actions"><button class="btn primary" data-workflow-next="'+escAttr(next.target||'evidence')+'">'+esc(next.label||'Review evidence')+'</button><span class="small">'+esc(next.reason||'Choose the safest next review step.')+' ('+esc(next.safety||'S0')+')</span></div></div>';
+}
+
+function renderEvidence(){
+  const root=q('evidence');
+  root.classList.toggle('active',s.tab==='evidence');
+  if(s.tab!=='evidence') return;
+  if(!s.detail){
+    root.innerHTML='<div class="sub">'+renderReportsSubnav('evidence')+'<div class="empty">Select a run to inspect recorded evidence freshness.</div></div>';
+    bindReportsSubnav(root);
+    return;
+  }
+  const evidence=s.detail.views&&s.detail.views.evidence;
+  if(!evidence){
+    root.innerHTML='<div class="sub">'+renderReportsSubnav('evidence')+'<div class="empty">Evidence Explorer data is not available for this run.</div></div>';
+    bindReportsSubnav(root);
+    return;
+  }
+  const summary=evidence.summary||{};
+  const selected=evidence.entries.find((entry)=>entry.path===s.evidenceEntry)||evidence.entries[0]||null;
+  const statusClass=statusToneClass(evidence.overallStatus==='fresh'?'ok':evidence.overallStatus);
+  root.innerHTML='<div class="sub">'+renderReportsSubnav('evidence')+'<div class="stack"><h2>Evidence Explorer</h2><p>Start here when you need to know what Zeus knows, where it came from, and whether it is still current.</p></div><div class="tokens"><div class="token '+escAttr(statusClass)+'">'+esc(evidence.overallLabel||evidence.overallStatus)+'</div><div class="token">Fresh: '+esc(String(summary.fresh||0))+'</div><div class="token">Changed: '+esc(String(summary.changed||0))+'</div><div class="token">Missing: '+esc(String(summary.missing||0))+'</div><div class="token">Unverified: '+esc(String(summary.unverified||0))+'</div></div><p class="small">'+esc(evidence.refreshGuidance||'')+'</p><div class="item-list">'+(evidence.entries.length?evidence.entries.map((entry)=>'<button class="item '+(selected&&selected.path===entry.path?' active':'')+'" data-evidence-entry="'+escAttr(entry.path)+'"><strong>'+esc(entry.path)+'</strong><div>'+esc(entry.evidenceType)+' • '+esc(entry.hashStatus)+' • '+esc(String(entry.sizeBytes||0))+' bytes</div></button>').join(''):'<div class="empty">No source or artifact evidence was recorded.</div>')+'</div></div><div class="sub">'+(selected?'<h3>Why is this known?</h3><div class="tokens"><div class="token">'+esc(selected.evidenceType)+'</div><div class="token">'+esc(selected.hashStatus)+'</div><div class="token">present: '+esc(String(Boolean(selected.present)))+'</div></div><p class="small">The path is relative to the selected run or recorded source snapshot. Content is not copied into this view.</p><h3>Evidence sources</h3><div class="hint-list">'+(evidence.whyKnown||[]).map((entry)=>'<div class="hint-item"><strong>'+esc(entry.source)+'</strong><p>'+esc(entry.role)+'</p></div>').join('')+'</div>':'<div class="empty">Select an evidence item to inspect its provenance.</div>')+'</div><div class="sub"><h3>Evidence Timeline</h3><div class="item-list">'+(evidence.timeline||[]).map((entry)=>'<div class="item"><strong>'+esc(entry.label)+'</strong><div>'+esc(fmt(entry.at))+' • '+esc(entry.detail)+'</div></div>').join('')+'</div></div>';
+  for(const button of root.querySelectorAll('[data-evidence-entry]')){
+    button.onclick=()=>{s.evidenceEntry=button.dataset.evidenceEntry||null;renderEvidence();};
+  }
+  bindReportsSubnav(root);
 }
 
 function moduleTitleMap(){
@@ -3089,6 +3988,7 @@ function templatePayloadFromCanvas(useCase){
   return {
     name:String(s.promptBuilder.templateName||'').trim(),
     description:String(s.promptBuilder.templateDescription||'').trim(),
+    roleId:String(s.promptBuilder.roleId||'').trim(),
     useCaseId:useCase.id,
     moduleIds:[...(s.promptBuilder.moduleOrder||[])],
     fields:s.promptBuilder.fields||{},
@@ -3109,6 +4009,7 @@ async function saveWorkbenchTemplate(){
       ? await sendJson('PUT','/api/prompt-builder/templates/'+encodeURIComponent(templateId),payload)
       : await sendJson('POST','/api/prompt-builder/templates',payload);
     s.promptBuilder.selectedTemplateId=result.template.id;
+    s.promptBuilder.roleId=result.template.roleId||payload.roleId||'';
     s.promptBuilder.templateName=result.template.name||payload.name;
     s.promptBuilder.templateDescription=result.template.description||payload.description||'';
     s.promptBuilder.templateTags=tagsListToText(result.template.tags||payload.tags||[]);
@@ -3139,6 +4040,7 @@ async function deleteWorkbenchTemplate(){
 function applyTemplateToCanvas(template){
   if(!template||typeof template!=='object') return;
   s.promptBuilder.selectedUseCaseId=template.useCaseId||s.promptBuilder.selectedUseCaseId;
+  s.promptBuilder.roleId=String(template.roleId||'').trim();
   const useCase=selectedUseCase();
   if(!useCase) return;
   initializeWorkbenchForUseCase(useCase,{reset:true});
@@ -3210,17 +4112,41 @@ function setPreviewEditMode(editable){
 }
 
 async function copyTextToClipboard(text){
-  if(navigator&&navigator.clipboard&&navigator.clipboard.writeText){
-    await navigator.clipboard.writeText(text);
-    return;
+  if(typeof navigator!=='undefined'&&navigator.clipboard&&navigator.clipboard.writeText){
+    let timeoutId;
+    try{
+      await Promise.race([
+        navigator.clipboard.writeText(text),
+        new Promise((_,reject)=>{
+          timeoutId=setTimeout(()=>reject(new Error('Clipboard access timed out.')),750);
+        })
+      ]);
+      return;
+    }catch{
+      // Continue with the synchronous browser fallback below.
+    }finally{
+      if(timeoutId) clearTimeout(timeoutId);
+    }
+    throw new Error('The browser did not allow clipboard access.');
+  }
+  if(document.queryCommandSupported&&document.queryCommandSupported('copy')===false){
+    throw new Error('The browser does not support clipboard copy.');
   }
   const area=document.createElement('textarea');
+  area.setAttribute('readonly','');
+  area.style.position='fixed';
+  area.style.opacity='0';
   area.value=text;
   document.body.appendChild(area);
   area.focus();
   area.select();
-  document.execCommand('copy');
-  document.body.removeChild(area);
+  let copied=false;
+  try{
+    copied=document.execCommand('copy');
+  }finally{
+    document.body.removeChild(area);
+  }
+  if(!copied) throw new Error('The browser did not allow clipboard access.');
 }
 
 async function copyWorkbenchPreview(){
@@ -3230,11 +4156,13 @@ async function copyWorkbenchPreview(){
     renderWorkbench();
     return;
   }
+  s.promptBuilder.saveStatus='Copying preview...';
+  renderWorkbench();
   try {
     await copyTextToClipboard(text);
     s.promptBuilder.saveStatus='Preview copied.';
-  } catch(error){
-    s.promptBuilder.saveStatus=workbenchUserError('Could not copy the preview',error);
+  } catch{
+    s.promptBuilder.saveStatus='Clipboard unavailable. Open Edit Preview Draft, select the text, and copy it manually.';
   }
   renderWorkbench();
 }
@@ -3362,6 +4290,18 @@ function renderWorkbench(){
     (selected?'<h2>'+esc(selected.title)+'</h2><p>'+esc(selected.description||'')+'</p><div class="tokens"><div class="token">Modules in Canvas: '+esc(String(moduleOrder.length))+'</div><div class="token">Preview tokens: '+esc(String((preview&&preview.estimatedTokens)||0))+'</div><div class="token">Mode: '+esc(s.promptBuilder.previewEditable?'edit':'live')+'</div></div><div class="hint-list"><div class="hint-item"><strong>Preview</strong><p>Preview is safe and local. It does not persist anything unless you save a local template or export the preview.</p></div><div class="hint-item"><strong>Beginner path</strong><p>Use the default module set first. Open Advanced Options only when you need to reorder modules or add specialist sections.</p></div></div><h3>Draft Inputs'+(selectedModule?': '+esc(selectedModule.title):'')+'</h3>'+(activeFieldDefs.length?'<div class="field-grid">'+activeFieldDefs.map((field)=>renderCanvasFieldInput(field,(s.promptBuilder.fields||{})[field.name])).join('')+'</div>':'<div class="empty">No configurable fields are available for the current selection.</div>')+'<div class="actions"><button class="btn primary" id="wbPreviewRefresh">Preview Prompt</button><button class="btn" id="wbEditToggle">'+esc(s.promptBuilder.previewEditable?'Lock Preview Editing':'Edit Preview Draft')+'</button><button class="btn" id="wbCopyPreview">Copy Preview</button><button class="btn" id="wbExportPreview">Export Preview</button><button class="btn" id="wbToCompare">Open Prompt Compare</button></div><h3>Preview Prompt</h3><div id="wbPreviewPane" class="preview">'+(s.promptBuilder.previewLoading?'<pre>Generating preview...</pre>':s.promptBuilder.previewError?'<div class="empty">'+esc(s.promptBuilder.previewError)+'</div>':s.promptBuilder.previewEditable?'<textarea id="wbPreviewEditor" style="min-height:360px">'+esc(previewText)+'</textarea>':previewText?'<pre>'+esc(previewText)+'</pre>':'<div class="empty">No preview yet. Choose a use case, review the draft inputs, and click Preview Prompt.</div>')+'</div>'
     :'<div class="empty">Select a use case to start.</div>')+
     '</div>';
+
+  const useCasesHeading=root.querySelector('h3');
+  if(useCasesHeading&&roleProfiles().length){
+    const roleSection=document.createElement('section');
+    roleSection.className='role-profile-section';
+    roleSection.innerHTML='<h3>Role Profile</h3><p class="small">Choose a role to prefill a safe prompt stance and review guidance. Profiles contain no credentials.</p><div class="card-grid">'+roleProfiles().map((profile)=>'<button class="card'+(s.promptBuilder.roleId===profile.id?' active':'')+'" data-wb-role="'+esc(profile.id)+'"><h3>'+esc(profile.label)+'</h3><p>'+esc(profile.description)+'</p><div class="meta"><div class="token">Safety: '+esc(profile.safetyLevel||'S0')+'</div><div class="token">Use case: '+esc(profile.defaultUseCaseId||'n/a')+'</div></div></button>').join('')+'</div><p class="small">Active role: '+esc(selectedRoleProfile()&&selectedRoleProfile().label||'none')+' • '+esc(selectedRoleProfile()&&selectedRoleProfile().promptGuidance||'Choose a role profile to get started.')+'</p>';
+    useCasesHeading.before(roleSection);
+  }
+
+  for(const button of root.querySelectorAll('[data-wb-role]')){
+    button.onclick=()=>applyRoleProfile(button.dataset.wbRole);
+  }
 
   const filterInput=q('wbFilter');
   if(filterInput){
@@ -3551,6 +4491,8 @@ function renderArtifacts(){
   const db2Available=Boolean(views.db2&&(views.db2.metadataAvailable||views.db2.testDataAvailable||Number(db2Summary.tableCount||0)>0));
   const promptArtifacts=views.prompts&&Array.isArray(views.prompts.artifacts)?views.prompts.artifacts:[];
   const promptCompareAvailable=promptArtifacts.length>0;
+  const evidence=views.evidence&&typeof views.evidence==='object'?views.evidence:null;
+  const evidenceAvailable=Boolean(evidence&&evidence.summary&&evidence.summary.total>0);
   const artifactCount=Array.isArray(s.detail.artifacts)?s.detail.artifacts.length:0;
   const reportsCards=[
     {
@@ -3580,10 +4522,21 @@ function renderArtifacts(){
       target:'artifacts',
       available:artifactCount>0,
       detail:'artifacts: '+String(artifactCount),
+    },
+    {
+      title:'Evidence Explorer',
+      description:evidenceAvailable?'Check whether source and artifact files still match the recorded hashes.':'No hashable evidence is available for this run yet.',
+      target:'evidence',
+      available:evidenceAvailable,
+      detail:evidenceAvailable?'status: '+String(evidence.overallStatus):'read-only view unavailable',
     }
-  ];
+  ].filter((card)=>card.available);
 
-  root.innerHTML='<div class="sub">'+renderReportsSubnav('artifacts')+'<div class="workflow-meta"><div class="token">selected run: '+esc(String(summary.program||s.program||''))+'</div><div class="token">runs found: '+esc(String(s.runs.length||0))+'</div><div class="token">artifacts: '+esc(String(artifactCount))+'</div><div class="token">safe local read</div></div><div class="hint-list"><div class="hint-item"><strong>After Setup</strong><p>Use the left sidebar to switch runs, then choose the report view that best matches what you want to inspect.</p></div><div class="hint-item"><strong>What is available here</strong><p>Overview, Graph, DB2/Test Data, Prompt Compare, and artifact previews are report views over existing output. They do not execute remote actions.</p></div></div><h3>Reports Overview</h3><div class="workflow-grid">'+reportsCards.map((card)=>'<div class="workflow-card'+(card.available?'':' disabled')+'"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description)+'</p><div class="workflow-meta"><div class="token">'+esc(card.available?'Available now':'Read-only unavailable')+'</div><div class="token">'+esc(card.detail)+'</div></div><div class="actions">'+(card.available&&card.target!=='artifacts'?'<button class="btn" data-reports-target="'+esc(card.target)+'">Open '+esc(card.title)+'</button>':'')+(card.target==='artifacts'?'<button class="btn'+(card.available?' primary':'')+'"'+(card.available?' data-reports-target="artifacts"':' disabled')+'>'+(card.available?'Browse Artifacts':'Artifacts unavailable')+'</button>':'')+(card.available?'<button class="btn" data-reports-target="refresh">Refresh Runs</button>':'')+'</div></div>').join('')+'</div><h3>Artifacts In This Run</h3>'+(artifactCount>0?'<div class="item-list">'+s.detail.artifacts.map((a)=>'<button class="item'+(a.path===s.artifact?' active':'')+'" data-aid="'+esc(a.path)+'"><strong>'+esc(a.path)+'</strong><div>'+esc(a.kind)+' • '+esc(String(a.sizeBytes))+' bytes</div></button>').join('')+'</div>':'<div class="empty">This run does not contain previewable artifacts yet.</div>')+'</div><div class="sub"><div class="stack"><h2 id="aTitle">Artifact Preview</h2><p id="aSub">Choose an artifact.</p></div><a id="aRaw" class="btn" target="_blank" rel="noreferrer" hidden>Open Raw</a><div id="aPrev" class="preview"><div class="empty">No artifact selected.</div></div></div>';
+  const reportOverview=reportsCards.length
+    ? '<div class="workflow-grid">'+reportsCards.map((card)=>'<div class="workflow-card"><h4>'+esc(card.title)+'</h4><p>'+esc(card.description)+'</p><div class="workflow-meta"><div class="token">Available now</div><div class="token">'+esc(card.detail)+'</div></div><div class="actions">'+(card.target!=='artifacts'?'<button class="btn" data-reports-target="'+esc(card.target)+'">Open '+esc(card.title)+'</button>':'<button class="btn primary" data-reports-target="artifacts">Browse Artifacts</button>')+'<button class="btn" data-reports-target="refresh">Refresh Runs</button></div></div>').join('')+'</div>'
+    : '<div class="empty">No additional report views are available for this run. Browse the saved artifacts below.</div>';
+
+  root.innerHTML='<div class="sub">'+renderReportsSubnav('artifacts')+renderWorkflowRunCard(s.detail.workflowRunCard)+'<div class="workflow-meta"><div class="token">selected run: '+esc(String(summary.program||s.program||''))+'</div><div class="token">runs found: '+esc(String(s.runs.length||0))+'</div><div class="token">artifacts: '+esc(String(artifactCount))+'</div><div class="token">safe local read</div></div><div class="hint-list"><div class="hint-item"><strong>After Setup</strong><p>Use the left sidebar to switch runs, then choose the report view that best matches what you want to inspect.</p></div><div class="hint-item"><strong>What is available here</strong><p>Overview, Graph, DB2/Test Data, Prompt Compare, Evidence Explorer, and artifact previews are report views over existing output. They do not execute remote actions.</p></div></div><h3>Reports Overview</h3>'+reportOverview+'<h3>Artifacts In This Run</h3>'+(artifactCount>0?'<div class="item-list">'+s.detail.artifacts.map((a)=>'<button class="item'+(a.path===s.artifact?' active':'')+'" data-aid="'+esc(a.path)+'"><strong>'+esc(a.path)+'</strong><div>'+esc(a.kind)+' • '+esc(String(a.sizeBytes))+' bytes</div></button>').join('')+'</div>':'<div class="empty">This run does not contain previewable artifacts yet.</div>')+'</div><div class="sub"><div class="stack"><h2 id="aTitle">Artifact Preview</h2><p id="aSub">Choose an artifact.</p></div><a id="aRaw" class="btn" target="_blank" rel="noreferrer" hidden>Open Raw</a><div id="aPrev" class="preview"><div class="empty">No artifact selected.</div></div></div>';
 
   for(const b of root.querySelectorAll('[data-aid]')){
     b.onclick=()=>{
@@ -3595,6 +4548,9 @@ function renderArtifacts(){
   bindReportsSubnav(root);
   for(const button of root.querySelectorAll('[data-reports-target]')){
     button.onclick=()=>openHomeTarget(button.dataset.reportsTarget);
+  }
+  for(const button of root.querySelectorAll('[data-workflow-next]')){
+    button.onclick=()=>openHomeTarget(button.dataset.workflowNext||'evidence');
   }
 }
 
@@ -3672,11 +4628,13 @@ async function selectTab(tab){
 
 async function render(){
   renderTabs();
+  renderAiWorkbenchBar();
   renderHome();
   renderConfigure();
   renderGraph();
   renderDb2();
   await renderPrompts();
+  renderEvidence();
   renderWorkbench();
   renderArtifacts();
   await renderArtifactPreview();
@@ -3689,6 +4647,7 @@ async function selectRun(program){
 
   s.detail=await getJson('/api/runs/'+encodeURIComponent(program));
   s.artifact=runDefaultArtifact();
+  s.evidenceEntry=null;
   s.node=s.detail.views.graph.nodes[0]&&s.detail.views.graph.nodes[0].id||null;
   s.table=s.detail.views.db2.tables[0]&&s.detail.views.db2.tables[0].id||null;
 
@@ -3706,6 +4665,8 @@ async function boot(){
   renderTabs();
   await loadUiMetadata();
   await loadProfileWizardState();
+  await loadProfileKeyWizardState();
+  await loadWorkingContextState();
   renderConfigure();
   await loadPromptBuilderData();
   await refreshRuns();

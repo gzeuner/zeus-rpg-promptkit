@@ -447,7 +447,7 @@
         "ownerProgram": "PROGRAM_300",
         "evidence": [
           {
-            "file": "SOURCE_ROOT/QRPGLESRC/PROGRAM_300.rpgle",
+            "file": "SOURCE_ROOT\\QRPGLESRC\\PROGRAM_300.rpgle",
             "line": 8,
             "text": "*inlr = *on;"
           }
@@ -464,7 +464,7 @@
         "sourceForm": "FREE_FORM",
         "evidence": [
           {
-            "file": "SOURCE_ROOT/QRPGLESRC/PROGRAM_200.sqlrpgle",
+            "file": "SOURCE_ROOT\\QRPGLESRC\\PROGRAM_200.sqlrpgle",
             "line": 4,
             "text": "dcl-s ID_001 packed(7:0);"
           }
@@ -532,7 +532,7 @@
         "text": "CALL PGM(PROGRAM_100)",
         "evidence": [
           {
-            "file": "SOURCE_ROOT/QCLLESRC/DRIVER_100.clle",
+            "file": "SOURCE_ROOT\\QCLLESRC\\DRIVER_100.clle",
             "line": 2,
             "text": "CALL PGM(PROGRAM_100)"
           }
@@ -544,7 +544,7 @@
         "text": "ENDPGM",
         "evidence": [
           {
-            "file": "SOURCE_ROOT/QCLLESRC/DRIVER_100.clle",
+            "file": "SOURCE_ROOT\\QCLLESRC\\DRIVER_100.clle",
             "line": 3,
             "text": "ENDPGM"
           }
@@ -556,7 +556,7 @@
         "text": "PGM",
         "evidence": [
           {
-            "file": "SOURCE_ROOT/QCLLESRC/DRIVER_100.clle",
+            "file": "SOURCE_ROOT\\QCLLESRC\\DRIVER_100.clle",
             "line": 1,
             "text": "PGM"
           }
@@ -575,7 +575,7 @@
         "referencedFiles": [],
         "evidence": [
           {
-            "file": "SOURCE_ROOT/QDDSSRC/FILE_100.pf",
+            "file": "SOURCE_ROOT\\QDDSSRC\\FILE_100.pf",
             "line": 1,
             "text": "FILE_100"
           }
@@ -702,7 +702,7 @@
       "invalidations": 0,
       "writes": 5,
       "entryCount": 5,
-      "cacheDir": "OUTPUT_ROOT/.zeus-cache/source-scans"
+      "cacheDir": "OUTPUT_ROOT\\.zeus-cache\\source-scans"
     },
     "db2Metadata": {
       "status": "skipped",
@@ -801,7 +801,7 @@
   },
   "notes": [
     "DB2 metadata export skipped (reproducible mode or --skip-db2-metadata).",
-    "Skipped file SOURCE_ROOT/QDDSSRC/FILE_200.lf: object is not iterable (cannot read property Symbol(Symbol.iterator))",
+    "Skipped file SOURCE_ROOT\\QDDSSRC\\FILE_200.lf: object is not iterable (cannot read property Symbol(Symbol.iterator))",
     "Test data extraction was skipped because no DB2 connection configuration was available."
   ]
 }

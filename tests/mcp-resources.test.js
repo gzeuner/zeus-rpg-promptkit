@@ -57,6 +57,34 @@ test('mcp resources include agent bootstrap metadata', async () => {
   assert.equal(bootstrap.piDiscoverySnapshot.present, false);
 });
 
+test('mcp resources expose the same live AI orientation used by the CLI guide', async () => {
+  const server = createTestServer({ cwd: process.cwd() });
+  const listResponse = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 408,
+    method: 'resources/list',
+    params: {},
+  });
+  assert.ok(
+    listResponse.result.resources.some(
+      resource => resource.uri === 'zeus://metadata/agent-orientation.json'
+    )
+  );
+
+  const response = await server.handleRequest({
+    jsonrpc: '2.0',
+    id: 409,
+    method: 'resources/read',
+    params: { uri: 'zeus://metadata/agent-orientation.json' },
+  });
+  const orientation = JSON.parse(response.result.contents[0].text);
+  assert.equal(orientation.schemaVersion, 1);
+  assert.equal(orientation.firstPoint.mcp, 'zeus.agent.bootstrap');
+  assert.equal(orientation.commands.length, 50);
+  assert.ok(orientation.workingContext.fields.includes('sourceFile'));
+  assert.ok(orientation.intents.some(intent => intent.intent === 'remote-read'));
+});
+
 test('mcp tools call zeus.resources returns sanitized resource model', async () => {
   const server = createTestServer({
     resourcesRunner: () => ({

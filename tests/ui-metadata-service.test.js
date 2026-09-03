@@ -22,8 +22,13 @@ test('ui metadata payload exposes config, command, and workflow card contracts',
   assert.ok(Array.isArray(payload.guidedConfiguration.steps));
   assert.ok(Array.isArray(payload.guidedConfiguration.intents));
   assert.ok(Array.isArray(payload.guidedConfiguration.discoveryActions));
+  assert.ok(
+    payload.guidedConfiguration.discoveryActions.some(entry => entry.id === 'preview-fetch-plan')
+  );
   assert.ok(payload.setup);
   assert.equal(payload.setup.primaryAction.actionPath, '/api/ui-actions/doctor');
+  assert.equal(payload.setup.probeAction.actionPath, '/api/ui-actions/doctor');
+  assert.equal(payload.setup.probeAction.payload.probe, true);
   assert.ok(payload.aiSessionStarter);
   assert.equal(payload.aiSessionStarter.actionPath, '/api/ui-actions/generate-ai-session-prompt');
   assert.ok(payload.profileWizard);
@@ -32,6 +37,25 @@ test('ui metadata payload exposes config, command, and workflow card contracts',
   assert.ok(payload.profileWizard.steps.length >= 6);
   assert.ok(Array.isArray(payload.workflowCards));
   assert.equal(payload.workflowCards.length, 6);
+  assert.equal(payload.pluginContracts.catalog.executable, false);
+  assert.equal(payload.pluginContracts.allowlist.mode, 'all-live-built-ins');
+  assert.ok(
+    payload.pluginContracts.catalog.plugins.some(entry => entry.allowlistKey === 'command:doctor')
+  );
+  assert.equal(payload.setupChecklist.tasks.length, 4);
+});
+
+test('ui metadata supports an explicit local plugin allowlist', () => {
+  const payload = buildUiMetadataPayload({
+    env: { ZEUS_UI_PLUGIN_ALLOWLIST: 'command:doctor, role:developer' },
+  });
+
+  assert.equal(payload.pluginContracts.allowlist.mode, 'explicit');
+  assert.deepEqual(payload.pluginContracts.allowlist.entries, ['command:doctor', 'role:developer']);
+  assert.deepEqual(
+    payload.pluginContracts.catalog.plugins.map(entry => entry.allowlistKey),
+    ['command:doctor', 'role:developer']
+  );
 });
 
 test('workflow cards are derived from command metadata categories', () => {

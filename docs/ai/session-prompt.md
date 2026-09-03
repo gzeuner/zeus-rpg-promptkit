@@ -10,10 +10,14 @@ Use this short prompt when starting an AI session. It is intentionally CLI-first
 
 Related:
 
+- [`agent-start-here.md`](agent-start-here.md) — compact orientation and intent map
 - [`cli-agent-guide.md`](cli-agent-guide.md) — detailed CLI workflow and intent map
 - [`../tool-catalog.md`](../tool-catalog.md) — authoritative command purpose, scope, and safety
 - [`agent-failure-playbook.md`](agent-failure-playbook.md) — recovery codes and CLI fallbacks
 - [`../quickstart/5-minutes.md`](../quickstart/5-minutes.md) — local demo golden path
+- [`../mcp/operator-guide.md`](../mcp/operator-guide.md)
+- [`../index.md`](../index.md)
+- [`../cli/reference.md`](../cli/reference.md)
 
 ## Session Start Prompt (Copy/Paste)
 
@@ -29,12 +33,15 @@ Operating contract:
 - Require explicit user approval before every S3/S4 action, data mutation, apply/bridge/compile-style action, or source fetch from a remote system.
 - Keep credentials, environment dumps, and credential-bearing URLs out of prompts, logs, summaries, and artifacts.
 - Distinguish facts, inferences, unresolved references, and unknowns. Never silently fill gaps.
+- Inspect `context show --json` before reading source, metadata, or data; state the effective system, library/schema, source file, member, and scope.
+- At each consequential step, repeat whether the scope came from working context, an explicit argument, or a profile default, and explain the evidence produced.
 
 Start here in the project root:
 1. `node cli/zeus.js agent bootstrap --json`
-2. `node cli/zeus.js tools list --json`
-3. `node cli/zeus.js context show --json`
-4. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
+2. `node cli/zeus.js tools guide --json`
+3. `node cli/zeus.js tools list --json`
+4. `node cli/zeus.js context show --json`
+5. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
 
 Choose the smallest valid route:
 - Existing analysis output: inspect `analyze-run-manifest.json`, `report.md`, and `architecture-report.md` before re-running analysis.

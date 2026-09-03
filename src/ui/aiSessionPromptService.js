@@ -96,6 +96,21 @@ function formatDoctorSummary(doctorSummary) {
     }
   }
 
+  const probe =
+    doctorSummary.probe && typeof doctorSummary.probe === 'object' ? doctorSummary.probe : null;
+  if (probe) {
+    const probeParts = [
+      `requested=${Boolean(probe.requested)}`,
+      Number.isFinite(probe.total) ? `total=${Number(probe.total)}` : null,
+      Number.isFinite(probe.ok) ? `ok=${Number(probe.ok)}` : null,
+      Number.isFinite(probe.fail) ? `fail=${Number(probe.fail)}` : null,
+      Array.isArray(probe.functions) && probe.functions.length > 0
+        ? `functions=${probe.functions.map(value => String(value)).join(',')}`
+        : null,
+    ].filter(Boolean);
+    if (probeParts.length > 0) counts.push(`probe(${probeParts.join(', ')})`);
+  }
+
   const details = [
     `status=${String(doctorSummary.status || 'unknown').trim() || 'unknown'}`,
     counts.length > 0 ? counts.join(', ') : null,
@@ -117,6 +132,8 @@ function buildSessionGoalBlock({
     environment ? `- Environment hint: ${environment}` : null,
     "- Env loading is shell-scoped. The Local UI cannot inject env vars into the user's already-open terminal session.",
     '- The Local UI server only sees env vars that were present when it started.',
+    '- Working-context checkpoint: before reading or fetching anything, call `zeus.context.get` or `node cli/zeus.js context show --json` and state the active system, library/schema, source file/table, and member.',
+    '- At the start of every consequential step, repeat the exact current scope and say whether it came from working context, an explicit argument, or a profile default.',
     includeDoctorSummary && formatDoctorSummary(doctorSummary)
       ? `- Doctor summary: ${formatDoctorSummary(doctorSummary)}`
       : '- Doctor summary: not included; run `doctor` first in this session before deeper work.',

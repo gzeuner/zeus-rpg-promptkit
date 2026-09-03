@@ -22,7 +22,9 @@ const {
   resolveProfile,
 } = require('../config/runtimeConfig');
 const { ANALYZE_RUN_MANIFEST_FILE } = require('../analyze/analyzeRunManifest');
+const { buildWorkingContextView, loadWorkingContext } = require('../context/workingContext');
 const { DEFAULT_SOURCE_FILES } = require('../fetch/fetchService');
+const { buildFetchMemberPlan, executeReadOnlyMemberFetch } = require('../fetch/fetchMemberService');
 const {
   buildEnvProfileConflictMessage,
   summarizeTargetValue,
@@ -38,9 +40,10 @@ const {
   getGuidedDiscoveryAction,
 } = require('./guidedConfigWizardModel');
 
-const ALLOWED_DOCTOR_KEYS = new Set(['profile', 'showResolved']);
+const ALLOWED_DOCTOR_KEYS = new Set(['profile', 'showResolved', 'probe']);
 const ALLOWED_ANALYZE_WORKSPACE_KEYS = new Set(['profile', 'program', 'member', 'safeSharing']);
 const ALLOWED_DISCOVERY_PREVIEW_KEYS = new Set(['profile', 'actionId']);
+const ALLOWED_FETCH_MEMBER_KEYS = new Set(['profile', 'planId', 'confirmEndpoint']);
 const ALLOWED_AI_SESSION_PROMPT_KEYS = new Set([
   'profile',
   'environment',
@@ -49,6 +52,7 @@ const ALLOWED_AI_SESSION_PROMPT_KEYS = new Set([
   'doctorSummary',
 ]);
 const FETCH_CONFIG_DERIVED_DISCOVERY_ACTIONS = new Set([
+  'preview-fetch-plan',
   'discover-source-libraries',
   'discover-source-physical-files',
   'discover-members',
@@ -65,7 +69,7 @@ const KNOWN_ANALYZE_FAILURE_CODES = new Set([
   'SOURCE_REQUIRED',
   'SOURCE_ROOT_MISSING',
 ]);
-const ALLOWED_DOCTOR_SUMMARY_KEYS = new Set(['status', 'summary', 'finishedAt']);
+const ALLOWED_DOCTOR_SUMMARY_KEYS = new Set(['status', 'summary', 'finishedAt', 'probe']);
 const ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS = new Set([
   'total',
   'pass',
@@ -74,6 +78,7 @@ const ALLOWED_DOCTOR_SUMMARY_COUNT_KEYS = new Set([
   'info',
   'skip',
 ]);
+const ALLOWED_DOCTOR_PROBE_KEYS = new Set(['requested', 'total', 'ok', 'fail', 'functions']);
 
 class UiActionError extends Error {
   constructor(message, statusCode = 400) {
@@ -221,10 +226,57 @@ function normalizeDoctorSummary(rawDoctorSummary) {
     }
   }
 
+  let probe = null;
+  if (rawDoctorSummary.probe !== undefined) {
+    if (!isPlainObject(rawDoctorSummary.probe)) {
+      throw new UiActionError('Invalid payload: doctorSummary.probe must be an object', 400);
+    }
+    const unknownProbeKeys = Object.keys(rawDoctorSummary.probe).filter(
+      key => !ALLOWED_DOCTOR_PROBE_KEYS.has(key)
+    );
+    if (unknownProbeKeys.length > 0) {
+      throw new UiActionError(
+        `Invalid payload: unsupported doctorSummary.probe key(s): ${unknownProbeKeys.join(', ')}`,
+        400
+      );
+    }
+    probe = {
+      requested: Boolean(rawDoctorSummary.probe.requested),
+      total: 0,
+      ok: 0,
+      fail: 0,
+      functions: [],
+    };
+    for (const key of ['total', 'ok', 'fail']) {
+      if (rawDoctorSummary.probe[key] === undefined) continue;
+      const numericValue = Number(rawDoctorSummary.probe[key]);
+      if (!Number.isInteger(numericValue) || numericValue < 0) {
+        throw new UiActionError(
+          `Invalid payload: doctorSummary.probe.${key} must be a non-negative integer`,
+          400
+        );
+      }
+      probe[key] = numericValue;
+    }
+    if (rawDoctorSummary.probe.functions !== undefined) {
+      if (!Array.isArray(rawDoctorSummary.probe.functions)) {
+        throw new UiActionError(
+          'Invalid payload: doctorSummary.probe.functions must be an array',
+          400
+        );
+      }
+      probe.functions = rawDoctorSummary.probe.functions
+        .map(value => String(value || '').trim())
+        .filter(Boolean)
+        .slice(0, 20);
+    }
+  }
+
   return {
     status,
     summary,
     finishedAt: finishedAt || null,
+    probe,
   };
 }
 
@@ -241,9 +293,11 @@ function normalizeDoctorPayload(rawPayload) {
   const profile = validateProfileName(rawPayload.profile);
   const showResolved =
     rawPayload.showResolved === undefined ? false : Boolean(rawPayload.showResolved);
+  const probe = rawPayload.probe === undefined ? false : Boolean(rawPayload.probe);
   return {
     profile,
     showResolved,
+    probe,
   };
 }
 
@@ -298,6 +352,35 @@ function normalizeDiscoveryPreviewPayload(rawPayload) {
   return {
     profile,
     actionId,
+  };
+}
+
+function normalizeFetchMemberPayload(rawPayload) {
+  if (!isPlainObject(rawPayload)) {
+    throw new UiActionError('Invalid payload: expected JSON object', 400);
+  }
+
+  const unknownKeys = Object.keys(rawPayload).filter(key => !ALLOWED_FETCH_MEMBER_KEYS.has(key));
+  if (unknownKeys.length > 0) {
+    throw new UiActionError(`Invalid payload: unsupported key(s): ${unknownKeys.join(', ')}`, 400);
+  }
+
+  const profile = validateProfileName(rawPayload.profile);
+  const planId = String(rawPayload.planId || '').trim();
+  if (!/^[a-f0-9]{24}$/i.test(planId)) {
+    throw new UiActionError('Invalid payload: a reviewed fetch planId is required', 400);
+  }
+  if (rawPayload.confirmEndpoint !== true) {
+    throw new UiActionError(
+      'Explicit endpoint confirmation is required before a remote read-only fetch.',
+      400
+    );
+  }
+
+  return {
+    profile,
+    planId,
+    confirmEndpoint: true,
   };
 }
 
@@ -608,6 +691,114 @@ function buildObjectDiscoveryConfigContext(fetchConfig, workflowConfig, preparat
   };
 }
 
+function buildDiscoveryWorkingContext(cwd = process.cwd()) {
+  const loaded = loadWorkingContext({ cwd });
+  const view = buildWorkingContextView({ cwd });
+  const active = view.active && typeof view.active === 'object' ? view.active : {};
+  return {
+    exists: loaded.exists,
+    source: loaded.exists ? 'workspace-file' : 'default-empty-context',
+    activeKind: String(view.activeKind || 'sourceCode'),
+    profile: String(view.profile || active.profile || '').trim() || null,
+    scope: {
+      system: active.system || null,
+      library: active.library || active.schema || null,
+      sourceFile: active.sourceFile || null,
+      table: active.table || null,
+      member: active.member || null,
+      objectType: active.objectType || null,
+      objectName: active.objectName || null,
+    },
+    containsCredentials: false,
+  };
+}
+
+function buildReadOnlyFetchScope({ cwd, profile, fetchConfig, workingContextView }) {
+  const context =
+    workingContextView && typeof workingContextView === 'object'
+      ? workingContextView
+      : buildWorkingContextView({ cwd });
+  const sourceContext =
+    context.resources &&
+    context.resources.sourceCode &&
+    typeof context.resources.sourceCode === 'object'
+      ? context.resources.sourceCode
+      : {};
+  const active = context.active && typeof context.active === 'object' ? context.active : {};
+  const source =
+    context.activeKind === 'sourceCode' ? { ...sourceContext, ...active } : sourceContext;
+  const files = Array.isArray(fetchConfig && fetchConfig.files) ? fetchConfig.files : [];
+  const members = Array.isArray(fetchConfig && fetchConfig.members) ? fetchConfig.members : [];
+  const sourceLibrary = source.library || fetchConfig.sourceLibrary || fetchConfig.sourceLib;
+  const sourceFile = source.sourceFile || files[0] || DEFAULT_SOURCE_FILES[0];
+  const member = source.member || members[0] || null;
+  const outputRoot = fetchConfig.out || source.localRoot || './rpg_sources';
+
+  return {
+    profile,
+    host: fetchConfig.host || null,
+    user: fetchConfig.user || null,
+    password: fetchConfig.password || null,
+    transport: fetchConfig.transport || 'jt400',
+    sourceLibrary,
+    sourceFile,
+    member,
+    outputRoot,
+    workingContextExists: Boolean(context.updatedAt || context.profile || context.resources),
+    workingContextFingerprint: context.updatedAt || null,
+  };
+}
+
+function buildReadOnlyFetchPlan({ cwd, profile, fetchConfig, workingContextView }) {
+  const scope = buildReadOnlyFetchScope({ cwd, profile, fetchConfig, workingContextView });
+  if (!scope.sourceLibrary) {
+    throw new UiActionError('No source library is configured for the selected fetch profile.', 409);
+  }
+  if (!scope.member) {
+    throw new UiActionError(
+      'Select or configure a source member in Working Context before fetching.',
+      409
+    );
+  }
+  if (!scope.host) {
+    throw new UiActionError(
+      'The selected fetch profile does not provide an endpoint reference for a read-only fetch.',
+      409
+    );
+  }
+
+  return {
+    scope,
+    plan: buildFetchMemberPlan({
+      cwd,
+      profile,
+      host: scope.host,
+      transport: scope.transport,
+      sourceLib: scope.sourceLibrary,
+      sourceFile: scope.sourceFile,
+      members: [scope.member],
+      outputRoot: scope.outputRoot,
+      workingContextFingerprint: scope.workingContextFingerprint,
+    }),
+  };
+}
+
+function summarizeFetchDoctorResult(doctorResult, profile) {
+  const checks = Array.isArray(doctorResult && doctorResult.checks) ? doctorResult.checks : [];
+  const diagnostics = normalizeDoctorDiagnostics(doctorResult && doctorResult.diagnostics);
+  const summary = summarizeDoctorChecks(checks);
+  const diagnosticsSummary = summarizeDoctorDiagnostics(diagnostics);
+  const hasCriticalFailure = Boolean(doctorResult && doctorResult.hasCriticalFailure);
+  return {
+    status: mapDoctorOutcome({ hasCriticalFailure, summary, diagnosticsSummary }),
+    hasCriticalFailure,
+    profile,
+    probeRequested: true,
+    summary,
+    diagnosticsSummary,
+  };
+}
+
 function isExpectedAnalyzeFailure(error) {
   const code = String((error && error.code) || '')
     .trim()
@@ -729,6 +920,7 @@ function createLocalUiActionService({
   analyzeExecutor = defaultAnalyzeExecutor,
   analyzeConfigResolver = defaultAnalyzeConfigResolver,
   fetchConfigResolver = defaultFetchConfigResolver,
+  fetchMemberExecutor = executeReadOnlyMemberFetch,
   workflowConfigResolver = defaultWorkflowConfigResolver,
   aiSessionPromptService = createAiSessionPromptService(),
 } = {}) {
@@ -738,6 +930,7 @@ function createLocalUiActionService({
     const args = {
       profile: payload.profile,
       'show-resolved': payload.showResolved,
+      probe: payload.probe,
     };
 
     const doctorResult = await Promise.resolve(doctorExecutor(args, { cwd, env }));
@@ -768,6 +961,15 @@ function createLocalUiActionService({
           status: entry.status,
           details: entry.details,
         })),
+        probeRows: Array.isArray(doctorResult && doctorResult.probeRows)
+          ? doctorResult.probeRows.map(entry => ({
+              system: entry && entry.system ? String(entry.system) : null,
+              profile: entry && entry.profile ? String(entry.profile) : payload.profile,
+              functionName: entry && entry.functionName ? String(entry.functionName) : null,
+              status: entry && entry.status ? String(entry.status) : null,
+              details: entry && entry.details ? String(entry.details) : null,
+            }))
+          : [],
       },
       notes: payload.showResolved
         ? [
@@ -905,12 +1107,14 @@ function createLocalUiActionService({
   async function runDiscoveryPreviewAction(rawPayload) {
     const payload = normalizeDiscoveryPreviewPayload(rawPayload);
     const startedAt = new Date();
+    const workingContext = buildDiscoveryWorkingContext(cwd);
     let configContext = null;
+    let resolvedFetchConfig = null;
 
     if (FETCH_CONFIG_DERIVED_DISCOVERY_ACTIONS.has(payload.actionId)) {
       try {
-        const fetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
-        configContext = buildDiscoveryConfigContext(fetchConfig, cwd);
+        resolvedFetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
+        configContext = buildDiscoveryConfigContext(resolvedFetchConfig, cwd);
       } catch (error) {
         if (!isExpectedDiscoveryPreparationFailure(error)) {
           throw error;
@@ -971,6 +1175,25 @@ function createLocalUiActionService({
       profile: payload.profile,
       configContext,
     });
+    let fetchPlan = null;
+    let fetchPlanWarning = null;
+    if (payload.actionId === 'preview-fetch-plan' && resolvedFetchConfig) {
+      try {
+        fetchPlan = buildReadOnlyFetchPlan({
+          cwd,
+          profile: payload.profile,
+          fetchConfig: resolvedFetchConfig,
+          workingContextView: buildWorkingContextView({ cwd }),
+        }).plan;
+      } catch (error) {
+        fetchPlanWarning = error.message;
+      }
+    }
+    if (fetchPlanWarning) {
+      preview.warnings = [...(preview.warnings || []), fetchPlanWarning];
+    }
+    preview.fetchPlan = fetchPlan;
+    preview.endpointConfirmationRequired = Boolean(fetchPlan);
     const finishedAt = new Date();
 
     return {
@@ -980,17 +1203,113 @@ function createLocalUiActionService({
       finishedAt: finishedAt.toISOString(),
       durationMs: finishedAt.getTime() - startedAt.getTime(),
       input: payload,
+      workingContext,
       result: preview,
       notes:
         preview.previewKind === 'config-derived-local-preview'
           ? [
               'This preview was derived locally from resolved runtime configuration only.',
               'No remote discovery or DB2 access was executed for this UI response.',
+              workingContext.exists
+                ? 'The reviewed Working Context is shown separately as the operator scope checkpoint.'
+                : 'No Working Context file exists yet; the GUI should require context review before continuing.',
             ]
           : [
               'This preview is explicit about not executing remote discovery yet.',
               'Use the CLI as the operational foundation until GUI-backed discovery is wired to read-only backend flows.',
+              workingContext.exists
+                ? 'The reviewed Working Context is shown separately as the operator scope checkpoint.'
+                : 'No Working Context file exists yet; the GUI should require context review before continuing.',
             ],
+    };
+  }
+
+  async function runReadOnlyFetchMemberAction(rawPayload) {
+    const startedAt = new Date();
+    const payload = normalizeFetchMemberPayload(rawPayload);
+    const loadedContext = loadWorkingContext({ cwd });
+    if (!loadedContext.exists) {
+      throw new UiActionError(
+        'Review and save the Working Context before starting a remote read-only fetch.',
+        409
+      );
+    }
+
+    let fetchConfig;
+    try {
+      fetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
+    } catch (error) {
+      throw new UiActionError(summarizeDiscoveryPreparationFailure(error), 409);
+    }
+
+    const { plan, scope } = buildReadOnlyFetchPlan({
+      cwd,
+      profile: payload.profile,
+      fetchConfig,
+      workingContextView: buildWorkingContextView({ cwd }),
+    });
+    if (plan.planId !== payload.planId) {
+      throw new UiActionError(
+        'The reviewed fetch plan is stale. Preview the plan again before confirming the endpoint.',
+        409
+      );
+    }
+    if (!scope.user || !scope.password) {
+      throw new UiActionError(
+        'The selected fetch profile does not provide credentials for the confirmed endpoint.',
+        409
+      );
+    }
+
+    const doctorResult = await Promise.resolve(
+      doctorExecutor(
+        { profile: payload.profile, 'show-resolved': false, probe: true },
+        { cwd, env }
+      )
+    );
+    const doctor = summarizeFetchDoctorResult(doctorResult, payload.profile);
+    if (doctor.hasCriticalFailure || doctor.status === 'failed') {
+      return {
+        action: 'fetch-member',
+        status: 'blocked',
+        reasonCode: 'FETCH_ENDPOINT_PROBE_FAILED',
+        startedAt: startedAt.toISOString(),
+        finishedAt: new Date().toISOString(),
+        input: { profile: payload.profile, planId: payload.planId, confirmed: true },
+        plan,
+        doctor,
+        result: null,
+        notes: [
+          'The fresh read-only Doctor probe failed; no member fetch and no local artifact write was started.',
+        ],
+      };
+    }
+
+    const execution = await Promise.resolve(
+      fetchMemberExecutor({
+        cwd,
+        plan,
+        host: scope.host,
+        user: scope.user,
+        password: scope.password,
+        confirmPlanId: plan.planId,
+      })
+    );
+    const finishedAt = new Date();
+    return {
+      action: 'fetch-member',
+      status: execution.status || 'failed',
+      startedAt: startedAt.toISOString(),
+      finishedAt: finishedAt.toISOString(),
+      durationMs: finishedAt.getTime() - startedAt.getTime(),
+      input: { profile: payload.profile, planId: payload.planId, confirmed: true },
+      plan,
+      doctor,
+      result: execution,
+      notes: [
+        'The endpoint was explicitly confirmed and freshly probed in read-only mode.',
+        'Remote operation: source-member read only. Local operation: write fetched source artifacts under the reviewed output root.',
+      ],
     };
   }
 
@@ -1054,6 +1373,9 @@ function createLocalUiActionService({
     if (normalizedAction === 'discovery-preview') {
       return runDiscoveryPreviewAction(payload);
     }
+    if (normalizedAction === 'fetch-member') {
+      return runReadOnlyFetchMemberAction(payload);
+    }
     if (normalizedAction === 'generate-ai-session-prompt') {
       return runGenerateAiSessionPromptAction(payload);
     }
@@ -1066,12 +1388,15 @@ function createLocalUiActionService({
     normalizeAnalyzeExistingWorkspacePayload,
     normalizeAiSessionPromptPayload,
     normalizeDiscoveryPreviewPayload,
+    normalizeFetchMemberPayload,
     normalizeDoctorPayload,
     buildDiscoveryConfigContext,
+    buildDiscoveryWorkingContext,
     buildDb2DiscoveryConfigContext,
     buildObjectDiscoveryConfigContext,
     validateProfileName,
     validateObjectName,
+    buildReadOnlyFetchPlan,
   };
 }
 
@@ -1079,14 +1404,17 @@ module.exports = {
   UiActionError,
   createLocalUiActionService,
   buildDiscoveryConfigContext,
+  buildDiscoveryWorkingContext,
   buildDb2DiscoveryConfigContext,
   buildObjectDiscoveryConfigContext,
   normalizeAnalyzeExistingWorkspacePayload,
   normalizeAiSessionPromptPayload,
   normalizeDiscoveryPreviewPayload,
+  normalizeFetchMemberPayload,
   normalizeDoctorPayload,
   normalizeDoctorDiagnostics,
   validateProfileName,
   validateOptionalSimpleName,
   validateObjectName,
+  buildReadOnlyFetchPlan,
 };

@@ -19,6 +19,7 @@ const {
   ANALYZE_RUN_MANIFEST_FILE,
 } = require('../analyze/analyzeRunManifest');
 const { SAFE_SHARING_DIR } = require('../sharing/safeSharingArtifactBuilder');
+const { buildEvidenceExplorer, buildWorkflowRunCard } = require('./guiWorkbenchContracts');
 
 const BUNDLE_MANIFEST_FILE = 'bundle-manifest.json';
 const WORKFLOW_MANIFEST_FILE = 'workflow-run-manifest.json';
@@ -399,10 +400,16 @@ function buildPromptView(artifacts) {
   };
 }
 
-function buildInteractiveViews(programOutputDir, context, artifacts) {
+function buildInteractiveViews(programOutputDir, context, artifacts, options = {}) {
   const promptView = buildPromptView(artifacts);
   const graphView = buildGraphView(programOutputDir, context, artifacts);
   const db2View = buildDb2View(programOutputDir, promptView.artifacts, artifacts);
+  const evidence = buildEvidenceExplorer({
+    program: options.program || (context && context.program) || null,
+    programOutputDir,
+    analyzeManifest: options.analyzeManifest || null,
+    artifacts,
+  });
 
   return {
     summary: {
@@ -412,10 +419,13 @@ function buildInteractiveViews(programOutputDir, context, artifacts) {
       promptCount: promptView.artifacts.length,
       graphNodeCount: graphView.summary.nodeCount,
       db2TableCount: db2View.tables.length,
+      evidenceStatus: evidence.overallStatus,
+      evidenceCount: evidence.summary.total,
     },
     graph: graphView,
     db2: db2View,
     prompts: promptView,
+    evidence,
   };
 }
 
@@ -431,6 +441,11 @@ function readAnalysisRun(outputRoot, program) {
   const artifacts = readArtifactEntries(programOutputDir);
   const context = readJsonIfExists(path.join(programOutputDir, CONTEXT_FILE));
 
+  const views = buildInteractiveViews(programOutputDir, context, artifacts, {
+    program,
+    analyzeManifest,
+  });
+
   return {
     summary: buildRunSummary(
       program,
@@ -443,7 +458,19 @@ function readAnalysisRun(outputRoot, program) {
     bundleManifest,
     workflowManifest,
     artifacts,
-    views: buildInteractiveViews(programOutputDir, context, artifacts),
+    workflowRunCard: buildWorkflowRunCard({
+      summary: buildRunSummary(
+        program,
+        programOutputDir,
+        analyzeManifest,
+        bundleManifest,
+        workflowManifest
+      ),
+      analyzeManifest,
+      workflowManifest,
+      evidence: views.evidence,
+    }),
+    views,
   };
 }
 

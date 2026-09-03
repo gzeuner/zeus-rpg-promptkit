@@ -6,6 +6,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const { startLocalUiServer } = require('../src/ui/localUiServer');
+const { createWorkingContextWizardService } = require('../src/ui/workingContextWizardService');
 
 const projectRoot = path.resolve(__dirname, '..');
 const cliPath = path.join(projectRoot, 'cli', 'zeus.js');
@@ -224,6 +225,7 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
       outputRoot,
       port: 0,
       templateStorePath,
+      workingContextWizardService: createWorkingContextWizardService({ cwd: tempRoot }),
       actionServiceOptions: {
         doctorExecutor: args => {
           if (args.profile === 'explode') {
@@ -303,6 +305,61 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.ok(Array.isArray(uiMetadata.config.fields));
     assert.ok(Array.isArray(uiMetadata.commands.entries));
     assert.ok(Array.isArray(uiMetadata.workflowCards));
+    assert.equal(uiMetadata.aiWorkbench.schemaVersion, 1);
+    assert.equal(uiMetadata.aiWorkbench.roles.length, 4);
+    assert.ok(uiMetadata.aiWorkbench.roles.some(entry => entry.id === 'developer'));
+    assert.ok(uiMetadata.aiWorkbench.roles.some(entry => entry.id === 'product-owner'));
+    assert.ok(uiMetadata.aiWorkbench.actions.some(entry => entry.id === 'review-evidence'));
+    assert.equal(uiMetadata.guidedWorkflow.schemaVersion, 1);
+    assert.equal(uiMetadata.evidenceExplorer.readOnly, true);
+    assert.equal(uiMetadata.roleProfiles.profiles.length, 4);
+    assert.equal(uiMetadata.profileKeyWizard.secretValuesInBrowser, false);
+    assert.deepEqual(uiMetadata.profileKeyWizard.supportedStorage, ['windows-secure', 'keyfile']);
+    assert.equal(uiMetadata.accessibility.keyboardFirst, true);
+    assert.equal(uiMetadata.accessibility.reducedMotion, 'respected');
+    assert.deepEqual(uiMetadata.pluginContracts.supportedKinds, [
+      'command',
+      'workflow',
+      'role',
+      'theme',
+    ]);
+    assert.equal(uiMetadata.pluginContracts.catalog.executable, false);
+    assert.equal(uiMetadata.pluginContracts.catalog.telemetry, 'disabled');
+    assert.equal(uiMetadata.pluginContracts.allowlist.mode, 'all-live-built-ins');
+    assert.equal(
+      uiMetadata.pluginContracts.summary.total,
+      uiMetadata.pluginContracts.summary.byKind.command +
+        uiMetadata.workflowCards.length +
+        uiMetadata.roleProfiles.profiles.length +
+        1
+    );
+    assert.ok(
+      uiMetadata.pluginContracts.catalog.plugins.some(
+        entry => entry.allowlistKey === 'command:doctor'
+      )
+    );
+    assert.ok(
+      uiMetadata.pluginContracts.catalog.plugins.some(
+        entry => entry.allowlistKey === 'workflow:configure'
+      )
+    );
+    assert.ok(
+      uiMetadata.pluginContracts.catalog.plugins.some(
+        entry => entry.allowlistKey === 'role:developer'
+      )
+    );
+    assert.ok(
+      uiMetadata.pluginContracts.catalog.plugins.some(
+        entry => entry.allowlistKey === 'theme:local-default'
+      )
+    );
+    assert.equal(uiMetadata.setupChecklist.schemaVersion, 1);
+    assert.equal(uiMetadata.setupChecklist.localOnly, true);
+    assert.deepEqual(
+      uiMetadata.setupChecklist.tasks.map(entry => entry.id),
+      ['profile', 'key', 'doctor', 'evidence']
+    );
+    assert.match(uiMetadata.setupChecklist.boundaries.join(' '), /credentials|key material/i);
     assert.equal(uiMetadata.workflowCards.length, 6);
     assert.equal(uiMetadata.workflowCards.find(entry => entry.id === 'configure').title, 'Setup');
     assert.equal(
@@ -372,6 +429,82 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
       'shared'
     );
     assert.equal(JSON.stringify(profileWizardState).includes('internal-host.example'), false);
+
+    const profileKeyState = await fetch(`${started.url}/api/profile-wizard/key-state`).then(
+      response => response.json()
+    );
+    assert.ok(['missing', 'ready'].includes(profileKeyState.status));
+    assert.equal(profileKeyState.secretValuesInBrowser, false);
+    assert.equal(JSON.stringify(profileKeyState).includes('internal-host.example'), false);
+
+    const uiContextResponse = await fetch(`${started.url}/api/ui-context`);
+    assert.equal(uiContextResponse.status, 200);
+    const uiContext = await uiContextResponse.json();
+    assert.equal(uiContext.kind, 'zeus-working-context');
+    assert.equal(uiContext.control.containsCredentials, false);
+    assert.equal(typeof uiContext.exists, 'boolean');
+    assert.equal(Object.prototype.hasOwnProperty.call(uiContext, 'storagePath'), false);
+    assert.equal(JSON.stringify(uiContext).includes('PASSWORD'), false);
+
+    const contextDraft = {
+      activeKind: 'sourceCode',
+      profile: 'dev',
+      resources: {
+        sourceCode: {
+          profile: 'dev',
+          system: 'dev-system',
+          library: 'app-lib',
+          sourceFile: 'QRPGLESRC',
+          member: 'ORDERPGM',
+          localRoot: './workspace/source',
+          path: './workspace/source/ORDERPGM.rpgle',
+          ifsPath: null,
+        },
+        objects: {},
+        metadata: {},
+        data: {},
+      },
+    };
+    const contextPreviewResponse = await fetch(`${started.url}/api/ui-context/preview`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ draft: contextDraft }),
+    });
+    assert.equal(contextPreviewResponse.status, 200);
+    const contextPreview = await contextPreviewResponse.json();
+    assert.equal(contextPreview.action, 'working-context-preview');
+    assert.equal(contextPreview.proposed.active.member, 'ORDERPGM');
+    assert.equal(Object.prototype.hasOwnProperty.call(contextPreview, 'storagePath'), false);
+    assert.equal(JSON.stringify(contextPreview).includes('PASSWORD'), false);
+
+    const contextSaveResponse = await fetch(`${started.url}/api/ui-context/save`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        draft: contextDraft,
+        confirm: true,
+        baseFingerprint: contextPreview.baseFingerprint,
+        previewFingerprint: contextPreview.fingerprint,
+      }),
+    });
+    assert.equal(contextSaveResponse.status, 200);
+    const contextSave = await contextSaveResponse.json();
+    assert.equal(contextSave.status, 'saved');
+    assert.equal(contextSave.context.control.containsCredentials, false);
+    assert.equal(fs.existsSync(path.join(tempRoot, '.zeus', 'working-context.json')), true);
+
+    const contextMissingConfirmationResponse = await fetch(`${started.url}/api/ui-context/save`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        draft: contextDraft,
+        baseFingerprint: contextPreview.baseFingerprint,
+        previewFingerprint: contextPreview.fingerprint,
+      }),
+    });
+    assert.equal(contextMissingConfirmationResponse.status, 400);
+    const contextMissingConfirmation = await contextMissingConfirmationResponse.json();
+    assert.equal(contextMissingConfirmation.code, 'WORKING_CONTEXT_CONFIRMATION_REQUIRED');
 
     const profileWizardPreviewResponse = await fetch(`${started.url}/api/profile-wizard/preview`, {
       method: 'POST',
@@ -525,12 +658,29 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.equal(doctorPayload.status, 'warning');
     assert.equal(doctorPayload.input.profile, 'dev');
     assert.equal(doctorPayload.input.showResolved, false);
+    assert.equal(doctorPayload.input.probe, false);
+    assert.deepEqual(doctorPayload.result.probeRows, []);
     assert.equal(Object.prototype.hasOwnProperty.call(doctorPayload, 'resolvedValues'), false);
     assert.equal(Array.isArray(doctorPayload.diagnostics), true);
     assert.equal(doctorPayload.diagnostics.length, 1);
     assert.equal(doctorPayload.diagnostics[0].code, 'ENV_PROFILE_CONFLICT');
     assert.equal(doctorPayload.diagnostics[0].message.includes('<strong>'), false);
     assert.equal(JSON.stringify(doctorPayload).includes('PASSWORD'), false);
+
+    const probeResponse = await fetch(`${started.url}/api/ui-actions/doctor`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        profile: 'dev',
+        probe: true,
+      }),
+    });
+    assert.equal(probeResponse.status, 200);
+    const probePayload = await probeResponse.json();
+    assert.equal(probePayload.input.probe, true);
+    assert.equal(probePayload.result.probeRows.length, 0);
 
     const doctorUnknownKey = await fetch(`${started.url}/api/ui-actions/doctor`, {
       method: 'POST',
@@ -804,6 +954,9 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.equal(detail.views.db2.metadataAvailable, true);
     assert.equal(detail.views.db2.testDataAvailable, true);
     assert.equal(detail.views.prompts.artifacts.length, 2);
+    assert.equal(detail.views.evidence.schemaVersion, 1);
+    assert.equal(detail.workflowRunCard.schemaVersion, 1);
+    assert.equal(detail.workflowRunCard.steps.length, 4);
     assert.ok(
       detail.views.graph.nodes.some(
         node => node.id === 'ORDERS' && node.relatedArtifactPaths.includes('test-data.json')
@@ -843,6 +996,10 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
 
     const shellHtml = await fetch(`${started.url}/`).then(response => response.text());
     assert.match(shellHtml, /Zeus RPG PromptKit/);
+    assert.match(shellHtml, /AI Workbench/);
+    assert.match(shellHtml, /What do you want to do\? Search the Zeus toolset/);
+    assert.match(shellHtml, /Ctrl\/Cmd\+K/);
+    assert.match(shellHtml, /allowlisted UI actions/);
     assert.match(shellHtml, /Setup/);
     assert.match(shellHtml, /Reports/);
     assert.match(shellHtml, /Advanced \/ Tools/);
@@ -901,12 +1058,10 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /Analyze Workspace/);
     assert.match(shellHtml, /Prompt Tools/);
     assert.match(shellHtml, /Local Analysis Tools/);
-    assert.match(shellHtml, /Experimental \/ Coming Later/);
     assert.match(shellHtml, /Advanced: optional/);
     assert.match(shellHtml, /Everything here is optional and intended for experienced users/);
     assert.match(shellHtml, /Open In Reports/);
     assert.match(shellHtml, /local-only/);
-    assert.match(shellHtml, /Deferred remote workflows/);
     assert.match(shellHtml, /Open analysis report/);
     assert.match(shellHtml, /Show raw result/);
     assert.match(shellHtml, /\/api\/ui-actions\/analyze-existing-workspace/);
@@ -937,8 +1092,9 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
     assert.match(shellHtml, /Export Preview/);
     assert.match(shellHtml, /Preview is safe and local/);
     assert.match(shellHtml, /Beginner path/);
-    assert.match(shellHtml, /Coming Later/);
-    assert.match(shellHtml, /Remote fetch is not a supported browser action in this iteration\./);
+    assert.doesNotMatch(shellHtml, /Experimental \/ Coming Later/);
+    assert.doesNotMatch(shellHtml, /Deferred remote workflows/);
+    assert.doesNotMatch(shellHtml, /renderDisabledWorkflowCard/);
     assert.match(shellHtml, /Quick Actions|Open Prompt Workbench|Open Prompt Workbench/);
     assert.doesNotMatch(shellHtml, /Prepare Fetch Inputs/);
     assert.doesNotMatch(shellHtml, /Review Query Commands/);

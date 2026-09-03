@@ -8,33 +8,41 @@ Prompt Contract: documentation@1
 Program: `PROGRAM_100`
 
 ## Summary
+
 Program PROGRAM_100 references 4 tables, calls 3 programs, includes 0 copy members, contains 2 SQL statements (1 read, 1 write, 0 dynamic), exposes 3 procedures with 0 procedure call sites, uses 3 native files (1 mutating, 0 interactive), and models 3 modules, 0 service programs, and 0 binding directories (0 unresolved bindings). Risk markers: Embedded SQL detected, External program calls detected, Mutating native file I/O detected. Uncertainty markers: UNRESOLVED_LIBRARY.
 
 ## Tables Used
+
 - TABLE_100 (SQL)
 - FILE_200 (DISK)
 - FILE_100 (DISK)
 - ETCH (FILE)
 
 ## Program Calls
+
 - PROGRAM_100 (PROGRAM)
 - PROGRAM_200 (PROGRAM)
 - PROGRAM_300 (PROGRAM)
 
 ## Copy Members
+
 - None detected
 
 ## SQL Statements
+
 - [UPDATE/WRITE] exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001; TABLE_100
 - [SELECT/READ] exec sql select ID into :ID_001 from TABLE_100 fetch first 1 row only; TABLE_100
 
 ## Dependency Graph
+
 Nodes: 10, Edges: 10
 
 ## Test Data
+
 Representative sample rows are not available in this analysis run.
 
 ## Evidence Highlights
+
 ```text
 #1 UPDATE SQL @ QRPGLESRC/PROGRAM_200.sqlrpgle:13 [score 174] exec sql update TABLE_100 set STATUS = 'READY' where ID = :ID_001;
 #2 Native File FILE_200 @ QRPGLESRC/PROGRAM_300.rpgle:4 [score 115] dcl-f FILE_200 disk usage(*update);
@@ -48,6 +56,7 @@ Representative sample rows are not available in this analysis run.
 ```
 
 Create concise technical documentation covering:
+
 - Program purpose and high-level flow
 - Business logic and decision points
 - Data access behavior and table usage

@@ -1,9 +1,10 @@
 {
-  "name": "zeus-rpg-promptkit",
+  "name": "zeus-rpg-promptkit-vscode",
   "displayName": "Zeus RPG PromptKit",
-  "description": "Evidence-first analysis and AI context for IBM i RPG/CL/DDS. Works alongside Code for IBM i.",
+  "description": "Optional, local-first VS Code adapter for explicit Zeus legacy-source analysis context.",
   "version": "0.1.0",
   "publisher": "gzeuner",
+  "license": "Apache-2.0",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -11,13 +12,19 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished",
     "onCommand:zeus.analyzeCurrent",
-    "onCommand:zeus.showReport",
-    "onCommand:zeus.registerDemoAnalyzer",
+    "onCommand:zeus.showWorkingContext",
+    "onCommand:zeus.setWorkingSourceRoot",
+    "onCommand:zeus.clearWorkingSourceRoot",
     "onView:zeus.analyses"
   ],
-  "main": "./src/extension.js",
+  "main": "./dist/extension.js",
+  "files": [
+    "dist",
+    "README.md",
+    "package.json",
+    "LICENSE"
+  ],
   "contributes": {
     "commands": [
       {
@@ -25,26 +32,26 @@
         "title": "Zeus: Analyze Current Program/Member"
       },
       {
-        "command": "zeus.showReport",
-        "title": "Zeus: Show Latest Analysis Report"
+        "command": "zeus.showWorkingContext",
+        "title": "Zeus: Show Working Context"
       },
       {
-        "command": "zeus.registerDemoAnalyzer",
-        "title": "Zeus: Register Demo Custom Analyzer (from extension)"
+        "command": "zeus.setWorkingSourceRoot",
+        "title": "Zeus: Set Working Source Root"
       },
       {
-        "command": "zeus.openWebviewReport",
-        "title": "Zeus: Open Report in Webview"
+        "command": "zeus.clearWorkingSourceRoot",
+        "title": "Zeus: Clear Working Source Root"
+      },
+      {
+        "command": "zeus.openLatestReport",
+        "title": "Zeus: Open Latest Report"
       }
     ],
     "menus": {
       "editor/context": [
         {
           "command": "zeus.analyzeCurrent",
-          "group": "zeus"
-        },
-        {
-          "command": "zeus.registerDemoAnalyzer",
           "group": "zeus"
         }
       ],
@@ -59,15 +66,14 @@
       "explorer": [
         {
           "id": "zeus.analyses",
-          "name": "Zeus Analyses",
-          "when": "zeus:enabled"
+          "name": "Zeus Analyses"
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "zeus.analyses",
-        "contents": "Run Zeus analysis on members to see results here.\n[Analyze Current](command:zeus.analyzeCurrent)"
+        "contents": "Run Zeus analysis on the current member to see evidence and reports here.\n[Analyze Current](command:zeus.analyzeCurrent)\n[Show Working Context](command:zeus.showWorkingContext)"
       }
     ],
     "configuration": {
@@ -76,7 +82,7 @@
         "zeus.defaultProfile": {
           "type": "string",
           "default": "default",
-          "description": "Default Zeus profile to use for analysis."
+          "description": "Zeus profile used for explicit analysis requests."
         },
         "zeus.defaultDenseLevel": {
           "type": "string",
@@ -86,32 +92,43 @@
             "ultra"
           ],
           "default": "full",
-          "description": "Default dense output level for editor context (cleaner for AI)."
+          "description": "Context density for generated analysis artifacts."
         },
-        "zeus.autoRegisterDemoAnalyzer": {
-          "type": "boolean",
-          "default": false,
-          "description": "Automatically register the demo analyzer on activation."
+        "zeus.workingSourceRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Optional workspace-relative source root. Empty means infer it from the current file."
+        },
+        "zeus.outputRoot": {
+          "type": "string",
+          "default": ".zeus/output",
+          "description": "Workspace-relative output root for reports and evidence artifacts."
+        },
+        "zeus.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional workspace-relative path or executable name for the Zeus CLI. Empty uses the workspace CLI when available."
         }
       }
     },
-    "chatParticipants": [
-      {
-        "id": "zeus",
-        "fullName": "Zeus RPG PromptKit",
-        "name": "zeus",
-        "description": "Provides IBM i RPG analysis context and evidence using Zeus."
+    "capabilities": {
+      "untrustedWorkspaces": {
+        "supported": false
       }
-    ]
+    }
   },
   "scripts": {
     "compile": "tsc -p ./",
+    "check": "npm run compile -- --noEmit && npm test",
+    "test": "node --test test/*.test.js",
     "watch": "tsc -watch -p ./",
-    "package": "npm run compile && vsce package"
+    "package": "npm run compile && vsce package --no-dependencies"
   },
   "devDependencies": {
+    "@types/node": "^22.15.0",
     "@types/vscode": "^1.80.0",
-    "typescript": "^5.0.0"
+    "@vscode/vsce": "^3.6.0",
+    "typescript": "^5.8.3"
   },
   "repository": {
     "type": "git",

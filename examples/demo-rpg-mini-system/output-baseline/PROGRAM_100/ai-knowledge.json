@@ -426,7 +426,7 @@
     "uiPatternKnowledge": {
       "enabled": false,
       "status": "disabled",
-      "reason": "Project-neutral knowledge catalog is not implemented yet. Source-derived local knowledge paths were removed during the privacy reset.",
+      "reason": "Knowledge access requires an explicit privacy-gated project-neutral catalog path.",
       "libraryId": null,
       "knowledgeBaseId": null,
       "generatedAt": null,
@@ -452,7 +452,7 @@
         "strategy": "disabled",
         "availableCardTypes": [],
         "notes": [
-          "MCP/API knowledge surfaces remain disabled until a privacy-gated final catalog exists."
+          "Only an explicit privacy-gated final catalog can enable knowledge projection."
         ]
       }
     },

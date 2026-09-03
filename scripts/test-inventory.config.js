@@ -42,6 +42,11 @@ module.exports = {
       'tests/provider-offline.test.js',
     ],
     corpus: ['tests/scanner-corpus.test.js'],
+    e2e: [
+      'tests/e2e/gui-workbench.e2e.test.js',
+      'tests/e2e/mcp-stdio.e2e.test.js',
+      'tests/e2e/sftp-fetch-analyze-bundle.e2e.test.js',
+    ],
     benchmark: ['tests/analyze-benchmark.test.js', 'tests/project-intelligence-benchmark.test.js'],
     quality: [
       'tests/golden-quality.test.js',
@@ -49,6 +54,11 @@ module.exports = {
       'tests/project-intelligence-multi-program-recall.test.js',
     ],
     unit: [
+      'tests/gui-workbench-contracts.test.js',
+      'tests/local-ui-accessibility.test.js',
+      'tests/plugin-workbench-contracts.test.js',
+      'tests/profile-key-wizard-service.test.js',
+      'tests/journal-row-diff.test.js',
       'tests/capability-registry.test.js',
       'tests/commercial-module-loader.test.js',
       'tests/knowledge-cli.test.js',
@@ -65,6 +75,8 @@ module.exports = {
       'tests/consolidated-productSurface.test.js',
       'tests/working-context.test.js',
       'tests/mcp-tool-gateway.test.js',
+      'tests/working-context-wizard-service.test.js',
+      'tests/fetch-member-service.test.js',
     ],
   },
   exclusions: [],

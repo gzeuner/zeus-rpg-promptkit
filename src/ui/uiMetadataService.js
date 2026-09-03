@@ -24,8 +24,23 @@ const {
   AI_SESSION_PROMPT_TEMPLATE_PATH,
 } = require('./aiSessionPromptService');
 const { buildGuidedConfigurationPayload } = require('./guidedConfigWizardModel');
+const { buildRoleProfileMetadata } = require('./guiWorkbenchContracts');
+const { PROFILE_KEY_WIZARD_METADATA } = require('./profileKeyWizardService');
+const {
+  PLUGIN_CONTRACT_SCHEMA_VERSION,
+  PLUGIN_KINDS,
+  buildLivePluginCatalog,
+  summarizePluginCatalog,
+} = require('./pluginWorkbenchContracts');
 
 const UI_METADATA_SCHEMA_VERSION = 1;
+
+function readPluginAllowlist(env = process.env) {
+  return String(env.ZEUS_UI_PLUGIN_ALLOWLIST || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+}
 
 const WORKFLOW_CARD_DEFINITIONS = Object.freeze([
   Object.freeze({
@@ -107,6 +122,142 @@ const WORKFLOW_CARD_DEFINITIONS = Object.freeze([
   }),
 ]);
 
+const AI_WORKBENCH_ROLE_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    id: 'developer',
+    label: 'Developer',
+    description:
+      'Locate sources, understand dependencies, inspect evidence, and prepare safe changes.',
+    commands: ['context', 'search-source', 'fetch-member', 'analyze', 'diff', 'generate-test'],
+    preferredActions: ['locate-source', 'analyze-workspace', 'review-evidence'],
+  }),
+  Object.freeze({
+    id: 'architect',
+    label: 'Architect',
+    description:
+      'Build a system map, trace impact, and turn legacy relationships into reviewable evidence.',
+    commands: ['context', 'xref', 'trace', 'impact', 'assess-risk', 'bundle'],
+    preferredActions: ['review-evidence', 'trace-impact', 'bundle-context'],
+  }),
+  Object.freeze({
+    id: 'tester',
+    label: 'Tester',
+    description:
+      'Validate assumptions, compare journal evidence, and create reproducible test work.',
+    commands: [
+      'context',
+      'test-run',
+      'journal-row-diff',
+      'qa',
+      'generate-checklist',
+      'generate-test',
+    ],
+    preferredActions: ['refresh-evidence', 'journal-review', 'review-evidence'],
+  }),
+  Object.freeze({
+    id: 'product-owner',
+    label: 'Product Owner',
+    description:
+      'Ask outcome-focused questions and review impact, risk, and evidence in plain language.',
+    commands: ['context', 'investigate', 'impact', 'assess-risk', 'bundle'],
+    preferredActions: ['orient', 'trace-impact', 'bundle-context'],
+  }),
+]);
+
+const AI_WORKBENCH_ACTION_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    id: 'orient',
+    label: 'Orient me',
+    description: 'Show the current setup, available runs, and the safest next step.',
+    target: 'configure',
+    keywords: ['start', 'setup', 'doctor', 'orient', 'readiness'],
+    safety: 'S0',
+  }),
+  Object.freeze({
+    id: 'locate-source',
+    label: 'Locate a source',
+    description: 'Make the exact system, library, source file, and member scope explicit.',
+    target: 'configure',
+    keywords: ['source', 'member', 'library', 'file', 'locate', 'context'],
+    safety: 'S1',
+  }),
+  Object.freeze({
+    id: 'refresh-evidence',
+    label: 'Refresh evidence',
+    description: 'Open the local analysis path and review what is currently available.',
+    target: 'refresh',
+    keywords: ['refresh', 'fetch', 'update', 'freshness', 'evidence'],
+    safety: 'S1',
+  }),
+  Object.freeze({
+    id: 'analyze-workspace',
+    label: 'Analyze workspace',
+    description: 'Run the existing local-only analysis flow after the profile is ready.',
+    target: 'analyze-workspace',
+    keywords: ['analyze', 'understand', 'program', 'workspace'],
+    safety: 'S2',
+  }),
+  Object.freeze({
+    id: 'review-evidence',
+    label: 'Review evidence',
+    description: 'Inspect reports, artifacts, graph relationships, and prompt outputs.',
+    target: 'reports',
+    keywords: ['review', 'report', 'artifact', 'graph', 'evidence'],
+    safety: 'S0',
+    requiresRun: true,
+  }),
+  Object.freeze({
+    id: 'trace-impact',
+    label: 'Trace impact',
+    description: 'Open the evidence views used to follow program and data relationships.',
+    target: 'graph',
+    keywords: ['impact', 'trace', 'dependency', 'architecture', 'relationship'],
+    safety: 'S0',
+    requiresRun: true,
+  }),
+  Object.freeze({
+    id: 'journal-review',
+    label: 'Review journal evidence',
+    description: 'Open the read-only evidence area for journal and data-focused review.',
+    target: 'db2',
+    keywords: ['journal', 'row', 'data', 'test', 'diff'],
+    safety: 'S0',
+    requiresRun: true,
+  }),
+  Object.freeze({
+    id: 'bundle-context',
+    label: 'Prepare AI context',
+    description: 'Review the prompt and evidence area before creating a shareable context bundle.',
+    target: 'workbench',
+    keywords: ['context', 'prompt', 'bundle', 'share', 'ai'],
+    safety: 'S1',
+  }),
+]);
+
+function buildAiWorkbenchMetadata(commandEntries = listCommandUiMetadata()) {
+  const commandNames = new Set(commandEntries.map(entry => entry.name));
+  return {
+    schemaVersion: 1,
+    title: 'AI Workbench',
+    summary:
+      'A task-oriented cockpit for finding the right Zeus action while keeping system, source, evidence, and freshness visible.',
+    keyboardShortcut: 'Ctrl/Cmd+K',
+    safetyNote:
+      'The palette navigates to safe, allowlisted local UI actions. It never executes arbitrary browser commands.',
+    contextFields: [
+      { id: 'system', label: 'System', empty: 'not bound' },
+      { id: 'library', label: 'Library', empty: 'not bound' },
+      { id: 'source', label: 'Source / member', empty: 'not bound' },
+      { id: 'freshness', label: 'Evidence', empty: 'not loaded' },
+    ],
+    roles: AI_WORKBENCH_ROLE_DEFINITIONS.map(role => ({
+      ...role,
+      commands: role.commands.filter(command => commandNames.has(command)),
+    })),
+    actions: AI_WORKBENCH_ACTION_DEFINITIONS,
+  };
+}
+
 const PROFILE_WIZARD_METADATA = Object.freeze({
   schemaVersion: 1,
   mode: 'local-only-profile-wizard',
@@ -172,6 +323,12 @@ function buildSetupMetadata() {
       label: 'Check Readiness',
       actionPath: '/api/ui-actions/doctor',
     },
+    probeAction: {
+      label: 'Test Connections (read-only)',
+      actionPath: '/api/ui-actions/doctor',
+      payload: { probe: true },
+      safety: 'S2',
+    },
     steps: [
       {
         id: 'choose-profile',
@@ -198,7 +355,7 @@ function buildSetupMetadata() {
     ],
     boundaryNotes: [
       'This screen only edits local-only config and placeholder-based environment routing.',
-      'It does not expose secrets and it does not connect to IBM i or DB2 here.',
+      'It does not expose secrets. IBM i / DB2 access occurs only after the operator explicitly selects the read-only probe.',
     ],
     recommendedNextTokens: [
       'setup focus',
@@ -323,8 +480,17 @@ function deriveWorkflowCards(commandEntries = listCommandUiMetadata()) {
   });
 }
 
-function buildUiMetadataPayload() {
+function buildUiMetadataPayload({ env = process.env } = {}) {
   const commandEntries = listCommandUiMetadata();
+  const workflowCards = deriveWorkflowCards(commandEntries);
+  const roleProfiles = buildRoleProfileMetadata();
+  const pluginAllowlist = readPluginAllowlist(env);
+  const pluginCatalog = buildLivePluginCatalog({
+    commands: commandEntries,
+    workflows: workflowCards,
+    roles: roleProfiles.profiles,
+    allowlist: pluginAllowlist,
+  });
   return {
     schemaVersion: UI_METADATA_SCHEMA_VERSION,
     uiMode: 'metadata-workflow-shell',
@@ -340,11 +506,89 @@ function buildUiMetadataPayload() {
     }),
     aiSessionStarter: buildAiSessionStarterMetadata(),
     profileWizard: PROFILE_WIZARD_METADATA,
+    profileKeyWizard: PROFILE_KEY_WIZARD_METADATA,
+    pluginContracts: {
+      schemaVersion: PLUGIN_CONTRACT_SCHEMA_VERSION,
+      supportedKinds: PLUGIN_KINDS,
+      catalog: pluginCatalog,
+      summary: summarizePluginCatalog(pluginCatalog),
+      allowlist: {
+        mode: pluginAllowlist.length > 0 ? 'explicit' : 'all-live-built-ins',
+        source: pluginAllowlist.length > 0 ? 'ZEUS_UI_PLUGIN_ALLOWLIST' : 'default',
+        entries: pluginAllowlist,
+      },
+      note: 'Optional plugins are declarative, local-only, allowlisted, and telemetry-free.',
+    },
     commands: {
       categories: COMMAND_CATEGORIES,
       entries: commandEntries,
     },
-    workflowCards: deriveWorkflowCards(commandEntries),
+    workflowCards,
+    aiWorkbench: buildAiWorkbenchMetadata(commandEntries),
+    guidedWorkflow: {
+      schemaVersion: 1,
+      readOnly: true,
+      summary:
+        'Each selected run exposes scope, analysis, freshness, review, and one safe next action.',
+      stepIds: ['scope', 'analyze', 'evidence', 'review'],
+      safetyNote:
+        'Run cards navigate to existing local views; they do not execute arbitrary commands.',
+    },
+    evidenceExplorer: {
+      schemaVersion: 1,
+      readOnly: true,
+      statuses: ['fresh', 'changed', 'missing', 'unverified', 'empty'],
+      summary:
+        'Compare recorded source and artifact hashes with files currently available locally.',
+      route: '/api/runs/:program',
+    },
+    roleProfiles,
+    setupChecklist: {
+      schemaVersion: 1,
+      title: 'Secure Setup Checklist',
+      summary:
+        'Confirm local profile routing, key readiness, effective runtime configuration, and evidence freshness in that order.',
+      localOnly: true,
+      tasks: [
+        {
+          id: 'profile',
+          title: 'Profile and source scope',
+          description: 'Choose or save the local profile and make workspace paths explicit.',
+          target: 'profileWizardSection',
+        },
+        {
+          id: 'key',
+          title: 'Local key readiness',
+          description: 'Verify local key storage without displaying key material.',
+          target: 'profileKeyWizardSection',
+        },
+        {
+          id: 'doctor',
+          title: 'Effective runtime configuration',
+          description: 'Run Doctor after profile and environment precedence are settled.',
+          target: 'configDoctorProfile',
+        },
+        {
+          id: 'evidence',
+          title: 'Evidence freshness',
+          description: 'Review recorded hashes before relying on an existing run.',
+          target: 'reports',
+        },
+      ],
+      boundaries: [
+        'The checklist never receives or displays credentials, key material, or plaintext secrets.',
+        'Evidence refresh remains read-only in the GUI; fetch and mutation stay explicit CLI workflows.',
+      ],
+    },
+    accessibility: {
+      schemaVersion: 1,
+      keyboardFirst: true,
+      focusVisible: true,
+      reducedMotion: 'respected',
+      forcedColors: 'supported',
+      responsiveBreakpoints: ['1200px', '980px', '640px'],
+      liveRegions: ['subtitle', 'chips'],
+    },
   };
 }
 
@@ -353,4 +597,5 @@ module.exports = {
   PROFILE_WIZARD_METADATA,
   buildUiMetadataPayload,
   deriveWorkflowCards,
+  buildAiWorkbenchMetadata,
 };

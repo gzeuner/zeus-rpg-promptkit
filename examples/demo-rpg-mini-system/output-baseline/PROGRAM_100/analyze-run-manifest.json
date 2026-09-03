@@ -21,7 +21,7 @@
     "options": {
       "optimizeContextEnabled": true,
       "denseLevel": null,
-      "safeSharingEnabled": false,
+      "safeSharingEnabled": true,
       "emitDiagnosticsEnabled": false,
       "skipTestData": false,
       "testDataLimit": 50,
@@ -201,29 +201,29 @@
     {
       "path": "ai_prompt_documentation.md",
       "kind": "markdown",
-      "sizeBytes": 2354,
+      "sizeBytes": 2363,
       "checksum": {
         "algorithm": "sha256",
-        "value": "30fc574c7fe17783086579f09c06b827ed9e4e4695112989eabc9b6c5ae5188e"
+        "value": "42ba1564c2d9c75eb6762e1350b08cf1f15f96aa58efbd4dd76c282b6adffec2"
       },
       "producer": "analyze",
       "schema": "zeus.artifact-reference@1",
       "safeSharing": "none",
-      "sha256": "30fc574c7fe17783086579f09c06b827ed9e4e4695112989eabc9b6c5ae5188e",
+      "sha256": "42ba1564c2d9c75eb6762e1350b08cf1f15f96aa58efbd4dd76c282b6adffec2",
       "exists": true
     },
     {
       "path": "ai-knowledge.json",
       "kind": "json",
-      "sizeBytes": 72080,
+      "sizeBytes": 72019,
       "checksum": {
         "algorithm": "sha256",
-        "value": "5c0ade83e3233855bc9d622b028fa53570300117884a242e25af4729cd8fa78b"
+        "value": "a29966d24b584e3c3af9b5ffa59d39f833ecf5a468e846474c4219b00f6aceff"
       },
       "producer": "analyze",
       "schema": "zeus.artifact-reference@1",
       "safeSharing": "none",
-      "sha256": "5c0ade83e3233855bc9d622b028fa53570300117884a242e25af4729cd8fa78b",
+      "sha256": "a29966d24b584e3c3af9b5ffa59d39f833ecf5a468e846474c4219b00f6aceff",
       "exists": true
     },
     {
@@ -232,12 +232,12 @@
       "sizeBytes": 58064,
       "checksum": {
         "algorithm": "sha256",
-        "value": "0705c78e701f3bba7bc6edd1b7c57c5f24d7f8160df17096f01626490cd1cace"
+        "value": "18ac76df3e3b7bc0c55c887924cfa7f2525838d0d2d6a60f724cca8581296a36"
       },
       "producer": "analyze",
       "schema": "zeus.artifact-reference@1",
       "safeSharing": "none",
-      "sha256": "0705c78e701f3bba7bc6edd1b7c57c5f24d7f8160df17096f01626490cd1cace",
+      "sha256": "18ac76df3e3b7bc0c55c887924cfa7f2525838d0d2d6a60f724cca8581296a36",
       "exists": true
     },
     {
@@ -271,29 +271,43 @@
     {
       "path": "canonical-analysis.json",
       "kind": "json",
-      "sizeBytes": 39603,
+      "sizeBytes": 39619,
       "checksum": {
         "algorithm": "sha256",
-        "value": "6d987d1bd9032efe743499bc660356f72604c88abec1b5a6d4015092a718de9a"
+        "value": "4c3bc6bf647938693ea0952f899754f1b78063f435534f6f9c7fc23302692ea7"
       },
       "producer": "analyze",
       "schema": "zeus.artifact-reference@1",
       "safeSharing": "none",
-      "sha256": "6d987d1bd9032efe743499bc660356f72604c88abec1b5a6d4015092a718de9a",
+      "sha256": "4c3bc6bf647938693ea0952f899754f1b78063f435534f6f9c7fc23302692ea7",
+      "exists": true
+    },
+    {
+      "path": "context-plan.json",
+      "kind": "json",
+      "sizeBytes": 4281,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "4b587b86a94535d6cb86df5791e2e679f1b001d413c92f50ca3ddbccdee36980"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "4b587b86a94535d6cb86df5791e2e679f1b001d413c92f50ca3ddbccdee36980",
       "exists": true
     },
     {
       "path": "context.json",
       "kind": "json",
-      "sizeBytes": 19316,
+      "sizeBytes": 19332,
       "checksum": {
         "algorithm": "sha256",
-        "value": "7f8266b99857ceb43204de915715b2d99340154dedde88eed06504fac34bde6c"
+        "value": "789ba5500682822ae91650183ba7e21f5197ee6e5e79a4b9ceb23fe43e63887d"
       },
       "producer": "analyze",
       "schema": "zeus.artifact-reference@1",
       "safeSharing": "none",
-      "sha256": "7f8266b99857ceb43204de915715b2d99340154dedde88eed06504fac34bde6c",
+      "sha256": "789ba5500682822ae91650183ba7e21f5197ee6e5e79a4b9ceb23fe43e63887d",
       "exists": true
     },
     {
@@ -339,17 +353,31 @@
       "exists": true
     },
     {
-      "path": "optimized-context.json",
+      "path": "evidence-graph.json",
       "kind": "json",
-      "sizeBytes": 62404,
+      "sizeBytes": 33332,
       "checksum": {
         "algorithm": "sha256",
-        "value": "cbe5ddfc2f0566ae67a98129bff9bad9f3a04c7a7f89cfb160d198f84d295d8a"
+        "value": "1371b6bd0a695e79bf92b143b844cec6655f3fc176b12d5045d6e4b4c6d972e2"
       },
       "producer": "analyze",
       "schema": "zeus.artifact-reference@1",
       "safeSharing": "none",
-      "sha256": "cbe5ddfc2f0566ae67a98129bff9bad9f3a04c7a7f89cfb160d198f84d295d8a",
+      "sha256": "1371b6bd0a695e79bf92b143b844cec6655f3fc176b12d5045d6e4b4c6d972e2",
+      "exists": true
+    },
+    {
+      "path": "optimized-context.json",
+      "kind": "json",
+      "sizeBytes": 62408,
+      "checksum": {
+        "algorithm": "sha256",
+        "value": "27fdcf045b252148a8984dddfcfd332e2052302e6b667abb451a6f4fcf9234e4"
+      },
+      "producer": "analyze",
+      "schema": "zeus.artifact-reference@1",
+      "safeSharing": "none",
+      "sha256": "27fdcf045b252148a8984dddfcfd332e2052302e6b667abb451a6f4fcf9234e4",
       "exists": true
     },
     {
@@ -400,12 +428,12 @@
       "sizeBytes": 5266,
       "checksum": {
         "algorithm": "sha256",
-        "value": "a6fc8499d4b67cf41eee044298456356585e9fd8c1eec8975394e0f25b42c4b5"
+        "value": "8009c38cb994af7250d0080bc454a07fcf80e0b576a53b9a1772670725868216"
       },
       "producer": "analyze",
       "schema": "zeus.artifact-reference@1",
       "safeSharing": "none",
-      "sha256": "a6fc8499d4b67cf41eee044298456356585e9fd8c1eec8975394e0f25b42c4b5",
+      "sha256": "8009c38cb994af7250d0080bc454a07fcf80e0b576a53b9a1772670725868216",
       "exists": true
     }
   ],
@@ -416,7 +444,7 @@
     "diagnosticCount": 2,
     "errorCount": 0,
     "warningCount": 2,
-    "generatedArtifactCount": 15,
+    "generatedArtifactCount": 17,
     "sourceFileCount": 6
   },
   "cacheStatus": {
@@ -430,7 +458,7 @@
       "invalidations": 0,
       "writes": 5,
       "entryCount": 5,
-      "cacheDir": "OUTPUT_ROOT/.zeus-cache/source-scans"
+      "cacheDir": "OUTPUT_ROOT\\.zeus-cache\\source-scans"
     },
     "db2Metadata": {
       "status": "skipped",
@@ -493,7 +521,7 @@
           "invalidations": 0,
           "writes": 5,
           "entryCount": 5,
-          "cacheDir": "OUTPUT_ROOT/.zeus-cache/source-scans"
+          "cacheDir": "OUTPUT_ROOT\\.zeus-cache\\source-scans"
         },
         "analysisArtifactCacheEntries": 0,
         "scannedFileCount": 5,
@@ -621,7 +649,7 @@
           "invalidations": 0,
           "writes": 5,
           "entryCount": 5,
-          "cacheDir": "OUTPUT_ROOT/.zeus-cache/source-scans"
+          "cacheDir": "OUTPUT_ROOT\\.zeus-cache\\source-scans"
         },
         "sourceSnippetFound": true
       },
@@ -698,8 +726,8 @@
       },
       "metadata": {
         "enabled": true,
-        "contextTokens": 3041,
-        "optimizedTokens": 8693,
+        "contextTokens": 3230,
+        "optimizedTokens": 8734,
         "reductionPercent": 0
       },
       "diagnostics": []
@@ -861,13 +889,15 @@
       "durationMs": 0,
       "definition": null,
       "metadata": {
-        "fileCount": 15,
+        "fileCount": 17,
         "generatedFiles": [
           "canonical-analysis.json",
           "context.json",
           "optimized-context.json",
           "ai-knowledge.json",
           "analysis-index.json",
+          "evidence-graph.json",
+          "context-plan.json",
           "dependency-graph.json",
           "dependency-graph.mmd",
           "dependency-graph.md",
@@ -898,7 +928,7 @@
   "reproducibility": {
     "enabled": true,
     "stableTimestamp": "2000-01-01T00:00:00.000Z",
-    "contentFingerprint": "88e17756e1c807baa5736b0374d8fcb01d8f44fc3c82ffae63fa0012a07e9c6d",
+    "contentFingerprint": "e1dc8b28d00090be93109d3cb65e5215d9cfa983af09b4fd504558b35ae5ee24",
     "runtimeMetadataSuppressed": true,
     "comparisonSuppressed": true
   },

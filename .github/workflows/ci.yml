@@ -120,6 +120,31 @@ jobs:
       - run: npm ci
       - run: npm run package:smoke
 
+  portable-e2e:
+    name: Portable E2E (SFTP, MCP, GUI)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ZEUS_E2E_REQUIRED: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Verify browser prerequisite
+        run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            google-chrome --version
+          elif command -v chromium >/dev/null 2>&1; then
+            chromium --version
+          else
+            echo 'Chrome/Chromium is required for the portable GUI E2E lane.' >&2
+            exit 1
+          fi
+      - run: npm run test:e2e
+
   community-container:
     name: Community Container Reference
     runs-on: ubuntu-latest
@@ -173,7 +198,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: github.event_name == 'pull_request'
-    needs: [quality, test-linux-20, test-linux-lts, test-windows-20, test-windows-22, package-smoke]
+    needs:
+      [
+        quality,
+        test-linux-20,
+        test-linux-lts,
+        test-windows-20,
+        test-windows-22,
+        package-smoke,
+        portable-e2e,
+      ]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -195,7 +229,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: github.event_name == 'push'
-    needs: [quality, test-linux-20, test-linux-lts, test-windows-20, test-windows-22, package-smoke]
+    needs:
+      [
+        quality,
+        test-linux-20,
+        test-linux-lts,
+        test-windows-20,
+        test-windows-22,
+        package-smoke,
+        portable-e2e,
+      ]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

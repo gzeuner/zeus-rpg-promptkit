@@ -13,8 +13,8 @@
 
 ## AI Context Optimization
 - Enabled: true
-- Context Tokens: 3041
-- Optimized Tokens: 8693
+- Context Tokens: 3230
+- Optimized Tokens: 8734
 - Reduction: 0%
 - Soft Token Limit: 10000
 
@@ -80,7 +80,7 @@ No diagnostic packs were selected for this run.
 - Source Scan Writes: 5
 - DB2 Metadata Cache: skipped
 - Test Data Cache: disabled
-- Source Scan Cache Dir: OUTPUT_ROOT/.zeus-cache/source-scans
+- Source Scan Cache Dir: OUTPUT_ROOT\.zeus-cache\source-scans
 - Artifact Cache Manifest: analysis-cache.json
 
 ## Tables

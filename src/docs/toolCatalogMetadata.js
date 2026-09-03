@@ -22,6 +22,7 @@ const COMMAND_METADATA = Object.freeze({
   secret: Object.freeze({
     safety: 'S1',
     scope: 'Local',
+    subcommands: ['init-key', 'status', 'encrypt', 'decrypt', 'check', 'migrate'],
     purpose:
       'Manage encrypted credentials (Secret Vault). Create key (init-key [--windows] for DPAPI on Windows), encrypt/decrypt values (enc:v1:...) for .env or profiles. Transparent decryption at runtime. Never store plaintext passwords. Supports migrate, check (with --warn-only), status.',
     example:
@@ -42,6 +43,7 @@ const COMMAND_METADATA = Object.freeze({
   context: Object.freeze({
     safety: 'S1',
     scope: 'Local workspace state',
+    subcommands: ['show', 'set', 'clear'],
     purpose:
       'Show or update the credential-free working context for the active system, source library/file/member, metadata schema, and data scope. Explicit command arguments always override it.',
     example:
@@ -78,6 +80,7 @@ const COMMAND_METADATA = Object.freeze({
   workflow: Object.freeze({
     safety: 'S1',
     scope: 'Local',
+    subcommands: ['run'],
     purpose:
       'Run preset-guided analyze and bundle flow. Supports --dense (forwarded to analyze steps).',
     example:
@@ -86,6 +89,7 @@ const COMMAND_METADATA = Object.freeze({
   'workflow run': Object.freeze({
     safety: 'S1',
     scope: 'Local',
+    subcommands: [],
     purpose:
       'Run workflow definitions from profile/runtime configuration. --dense [lite|full|ultra] is supported and forwarded to inner analyze steps (rank-aware token reduction & compaction).',
     example:
@@ -159,6 +163,14 @@ const COMMAND_METADATA = Object.freeze({
     scope: 'IBM i read',
     purpose: 'Inspect IBM i joblog messages.',
     example: 'node cli/zeus.js joblog --profile default --severity ERROR --max-messages 100',
+  }),
+  'journal-row-diff': Object.freeze({
+    safety: 'S2',
+    scope: 'DB2 read',
+    purpose:
+      'Compare journal before/after row images with an independent read-only audit query and report aggregate no-op versus content-change counts. Raw journal bytes and row values are never emitted.',
+    example:
+      'node cli/zeus.js journal-row-diff --profile default --journal-library APPDATA --journal-name APPJRN --layout "ID:P:3:0,STATUS:C:1:0" --key-columns ID --audit-query "SELECT ID, CHANGED_AT FROM APPDATA.AUDIT_LOG" --start 2026-08-21-10.00.00 --end 2026-08-21-11.00.00 --json',
   }),
   'field-search': Object.freeze({
     safety: 'S2',
@@ -235,6 +247,7 @@ const COMMAND_METADATA = Object.freeze({
   'test-run': Object.freeze({
     safety: 'S2',
     scope: 'DB2 read + local',
+    subcommands: ['start', 'capture', 'show', 'rollback'],
     purpose: 'Capture before and after test snapshots plus rollback SQL text.',
     example:
       'node cli/zeus.js test-run start --profile default --program ORDERPGM --table APPLIB.APP_TABLE_00 --key ID=1',
@@ -285,18 +298,30 @@ const COMMAND_METADATA = Object.freeze({
   analyses: Object.freeze({
     safety: 'S1',
     scope: 'Local',
+    subcommands: ['list', 'register', 'index', 'open', 'show', 'unregister'],
     purpose: 'List, register, inspect, and open locally tracked analysis artifacts.',
     example: 'node cli/zeus.js analyses list --profile default',
   }),
   bridge: Object.freeze({
     safety: 'S4',
     scope: 'Operator-gated',
+    subcommands: ['plan', 'stage', 'apply', 'compile-plan', 'compile-run', 'report'],
     purpose: 'Bridge planning/staging/apply/compile/report flow; never implicit.',
     example: 'node cli/zeus.js bridge plan --profile default --help',
   }),
   'pui-edit': Object.freeze({
     safety: 'S1',
     scope: 'Local',
+    subcommands: [
+      'roundtrip-check',
+      'dump-json',
+      'validate-json',
+      'export-json',
+      'import-json',
+      'plan',
+      'apply',
+      'grid-add-column',
+    ],
     purpose: 'Apply structured UI edit operations to local display artifacts.',
     example:
       'node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json',
@@ -304,6 +329,7 @@ const COMMAND_METADATA = Object.freeze({
   knowledge: Object.freeze({
     safety: 'S1',
     scope: 'Local',
+    subcommands: ['extract', 'validate', 'inspect'],
     purpose:
       'Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local PUI structure.',
     example:
@@ -326,6 +352,7 @@ const COMMAND_METADATA = Object.freeze({
   mcp: Object.freeze({
     safety: 'S0',
     scope: 'Local read-mostly',
+    subcommands: ['serve', 'help'],
     purpose:
       'Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools.',
     example:
@@ -334,6 +361,7 @@ const COMMAND_METADATA = Object.freeze({
   tools: Object.freeze({
     safety: 'S0',
     scope: 'Local',
+    subcommands: ['list', 'describe', 'guide'],
     purpose:
       'List and describe canonical command-help records as stable JSON for CLI and MCP parity.',
     example: 'node cli/zeus.js tools list --json',
@@ -348,6 +376,31 @@ const COMMAND_METADATA = Object.freeze({
   'project-knowledge': Object.freeze({
     safety: 'S1',
     scope: 'Local',
+    subcommands: [
+      'check',
+      'sync',
+      'lookup',
+      'locate',
+      'discover',
+      'list',
+      'status',
+      'inspect-policy',
+      'create-project',
+      'full-index',
+      'incremental-update',
+      'query',
+      'impact-analysis',
+      'build-context-package',
+      'inspect-snapshot',
+      'verify-integrity',
+      'create',
+      'index',
+      'incremental',
+      'impact',
+      'context',
+      'inspect',
+      'verify',
+    ],
     purpose:
       'Community-neutral Knowledge First check/locate/lookup/sync over the SQLite-backed source snapshot, plus the backwards-compatible optional Project Intelligence adapter operations. Read-only locate and lookup check freshness before retrieval; locate returns a selected source only when the selector is fresh and unambiguous; sync is explicit and writes locally.',
     example:
@@ -517,6 +570,13 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     aliases: [],
     status: 'stable',
     availability: CLI_MCP,
+    sideEffects: ['remote-read'],
+    capabilityId: null,
+  }),
+  'journal-row-diff': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
     sideEffects: ['remote-read'],
     capabilityId: null,
   }),
@@ -741,6 +801,7 @@ const COMMAND_ORDER = Object.freeze([
   'resolve-object',
   'query-sql',
   'joblog',
+  'journal-row-diff',
   'field-search',
   'trace',
   'xref',
