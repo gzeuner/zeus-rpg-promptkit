@@ -33,6 +33,7 @@ module.exports = {
       'tests/project-intelligence-hardening.test.js',
       'tests/knowledge-first.test.js',
       'tests/project-intelligence-export-corpora.test.js',
+      'tests/agent-command.test.js',
     ],
     smoke: [
       'tests/reproducible-output.test.js',
@@ -73,6 +74,7 @@ module.exports = {
       'tests/consolidated-projectIntelligence.test.js',
       'tests/consolidated-productSurface.test.js',
       'tests/working-context.test.js',
+      'tests/mcp-tool-gateway.test.js',
       'tests/working-context-wizard-service.test.js',
       'tests/fetch-member-service.test.js',
     ],

@@ -28,6 +28,8 @@ All subsequent implementation and agent guidance must be consistent with these d
 | [012](adr-012-snapshots-and-migrations.md)          | Snapshots and Migrations              | Accepted; snapshot engine delivered                            |
 | [013](adr-013-retrieval-and-context-policy.md)      | Retrieval and Context Policy          | Accepted; retrieval/context delivered                          |
 | [014](adr-014-unified-capability-consolidation.md)  | Unified Capability Consolidation      | Accepted                                                       |
+| [015](adr-015-knowledge-first-freshness.md)         | Knowledge-First Freshness             | Accepted                                                       |
+| [016](adr-016-mcp-adapter-boundary.md)              | MCP Adapter Boundary                  | Accepted                                                       |
 | [015](adr-015-optional-vscode-adapter-boundary.md)  | Optional VS Code Adapter Boundary     | Accepted                                                       |
 
 ## Related Reviews

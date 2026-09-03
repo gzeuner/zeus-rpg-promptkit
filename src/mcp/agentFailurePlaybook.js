@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Stable, agent-facing failure recovery codes for Zeus MCP.
+ * Stable, agent-facing failure recovery codes for Zeus CLI and MCP.
  * Codes are intentional and must not churn without a schemaVersion bump.
  */
 
@@ -156,6 +156,40 @@ const FAILURE_ENTRIES = Object.freeze([
 
 const CODE_SET = Object.freeze(new Set(FAILURE_ENTRIES.map(e => e.code)));
 
+function toCliRecoveryCommand(tool) {
+  const normalized = String(tool || '').trim();
+  const direct = {
+    'zeus.help': 'node cli/zeus.js tools list --json',
+    'zeus.agent.bootstrap': 'node cli/zeus.js agent bootstrap --json',
+    'zeus.doctor': 'node cli/zeus.js doctor --profile <profile> --show-resolved',
+    'zeus.profiles': 'node cli/zeus.js profiles --json',
+    'zeus.resources': 'node cli/zeus.js resources --profile <profile> --json',
+    'zeus.onboarding': 'node cli/zeus.js onboarding',
+    'zeus.analyze':
+      'node cli/zeus.js analyze --source <source-root> --program <program> --out <output-root>',
+    'zeus.analyses': 'node cli/zeus.js analyses list --json',
+    'zeus.workflow.suggest': 'node cli/zeus.js agent suggest --goal "<goal>" --json',
+    'zeus.search-source':
+      'node cli/zeus.js search-source --source-root <source-root> --search-term "<term>"',
+    'zeus.field-search':
+      'node cli/zeus.js field-search --profile <profile> --field <field> --mode all --json',
+    'zeus.impact':
+      'node cli/zeus.js impact --target <target> --program <program> --out <output-root> --json',
+  };
+  if (direct[normalized]) return direct[normalized];
+  if (normalized.startsWith('zeus.project-knowledge.')) {
+    const operation = normalized.slice('zeus.project-knowledge.'.length);
+    return `node cli/zeus.js project-knowledge ${operation} --json`;
+  }
+  if (normalized.startsWith('zeus.investigation.')) {
+    return 'node cli/zeus.js investigate --program <program> --goal "<goal>"';
+  }
+  if (normalized.startsWith('zeus.')) {
+    return `node cli/zeus.js ${normalized.slice('zeus.'.length)} --json`;
+  }
+  return normalized;
+}
+
 function listFailureCodes() {
   return FAILURE_ENTRIES.map(e => e.code);
 }
@@ -172,6 +206,7 @@ function buildAgentFailurePlaybook(options = {}) {
         code: entry.code,
         summary: entry.summary,
         nextTools: [...entry.nextTools],
+        nextCommands: entry.nextTools.map(toCliRecoveryCommand),
       };
     }
     return {
@@ -180,6 +215,7 @@ function buildAgentFailurePlaybook(options = {}) {
       do: [...entry.do],
       dont: [...entry.dont],
       nextTools: [...entry.nextTools],
+      nextCommands: entry.nextTools.map(toCliRecoveryCommand),
     };
   });
 

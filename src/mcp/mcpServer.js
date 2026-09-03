@@ -19,6 +19,7 @@ const { getMcpPrompt, listMcpPrompts } = require('./mcpPrompts');
 const { listMcpResources, readMcpResource } = require('./mcpResources');
 const { createMcpAuditLogger } = require('./mcpAuditLog');
 const { createMcpRedactor } = require('./mcpRedaction');
+const { createMcpToolGateway, parseDryRunFlag } = require('./mcpToolGateway');
 const { createStdioTransport } = require('./stdioTransport');
 
 const JSONRPC_VERSION = '2.0';
@@ -56,37 +57,6 @@ function createErrorResponse(id, error, redactor) {
   };
 }
 
-function normalizeToolCallResult(payload, redactor, options = {}) {
-  const sanitizePayload =
-    redactor && typeof redactor.sanitizePayload === 'function'
-      ? redactor.sanitizePayload
-      : value => value;
-  const sanitizedPayload = sanitizePayload(payload);
-  const text = JSON.stringify(sanitizedPayload, null, 2);
-  const maxResponseBytes =
-    Number.isInteger(options.maxResponseBytes) && options.maxResponseBytes > 0
-      ? options.maxResponseBytes
-      : 1024 * 1024;
-  const responseBytes = Buffer.byteLength(text, 'utf8');
-  if (responseBytes > maxResponseBytes) {
-    const error = new Error(
-      `Tool result exceeds maximum response size (${responseBytes} bytes > ${maxResponseBytes} bytes). Narrow the query or reduce payload limits.`
-    );
-    error.code = 'TOOL_RESPONSE_TOO_LARGE';
-    throw error;
-  }
-  return {
-    content: [
-      {
-        type: 'text',
-        text,
-      },
-    ],
-    structuredContent: sanitizedPayload,
-    isError: false,
-  };
-}
-
 function assertJsonRpcRequest(message) {
   if (!message || typeof message !== 'object') {
     throw new RpcError(-32600, 'Invalid Request');
@@ -97,66 +67,6 @@ function assertJsonRpcRequest(message) {
   if (!message.method || typeof message.method !== 'string') {
     throw new RpcError(-32600, 'Invalid Request: method is required');
   }
-}
-
-function normalizeAllowlist(rawAllowlist) {
-  if (!Array.isArray(rawAllowlist)) {
-    return null;
-  }
-
-  const normalized = rawAllowlist
-    .filter(entry => typeof entry === 'string')
-    .map(entry => entry.trim())
-    .filter(entry => entry.length > 0);
-
-  return normalized.length > 0 ? Array.from(new Set(normalized)) : [];
-}
-
-function parsePositiveInteger(value, fallback) {
-  const parsed = Number.parseInt(String(value), 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return fallback;
-  }
-  return parsed;
-}
-
-function createToolPolicy(runtime, tools) {
-  const knownToolNames = new Set(tools.map(tool => tool.name));
-  const defaultAllowlist = DEFAULT_MCP_SAFE_TOOL_NAMES.filter(toolName =>
-    knownToolNames.has(toolName)
-  );
-  const rawAllowlist =
-    runtime && Object.prototype.hasOwnProperty.call(runtime, 'allowlistedTools')
-      ? runtime.allowlistedTools
-      : defaultAllowlist;
-  const allowlist = normalizeAllowlist(rawAllowlist);
-  const allowedSet = new Set(allowlist === null ? defaultAllowlist : allowlist);
-
-  return {
-    listTools() {
-      return tools.filter(tool => allowedSet.has(tool.name));
-    },
-    assertToolAllowed(name) {
-      if (allowedSet.has(name)) {
-        return;
-      }
-      const error = new Error(`Tool is not allowed by MCP policy: ${name}`);
-      error.code = 'TOOL_NOT_ALLOWED';
-      throw error;
-    },
-  };
-}
-
-function parseDryRunFlag(args = {}) {
-  const candidate = args.dryRun !== undefined ? args.dryRun : args['dry-run'];
-  if (candidate === true) {
-    return true;
-  }
-  if (candidate === false || candidate === undefined || candidate === null) {
-    return false;
-  }
-  const normalized = String(candidate).trim().toLowerCase();
-  return normalized === 'true' || normalized === '1' || normalized === 'yes';
 }
 
 function createMcpServer(runtime = {}) {
@@ -225,32 +135,15 @@ function createMcpServer(runtime = {}) {
   };
   const stdioInput = runtime.stdioInput || process.stdin;
   const stdioOutput = runtime.stdioOutput || process.stdout;
-  const toolExecutionTimeoutMs = parsePositiveInteger(runtime.toolExecutionTimeoutMs, 30000);
-  const maxToolResponseBytes = parsePositiveInteger(runtime.maxToolResponseBytes, 1024 * 1024);
   const tools = listMcpTools();
-  const toolPolicy = createToolPolicy(runtime, tools);
-
-  async function executeToolCallWithTimeout(name, callArgs) {
-    let timer = null;
-    try {
-      return await Promise.race([
-        executeMcpToolCall(name, callArgs, context),
-        new Promise((_, reject) => {
-          timer = setTimeout(() => {
-            const timeoutError = new Error(
-              `Tool execution timed out after ${toolExecutionTimeoutMs}ms: ${name}`
-            );
-            timeoutError.code = 'TOOL_TIMEOUT';
-            reject(timeoutError);
-          }, toolExecutionTimeoutMs);
-        }),
-      ]);
-    } finally {
-      if (timer) {
-        clearTimeout(timer);
-      }
-    }
-  }
+  const toolGateway = createMcpToolGateway({
+    runtime,
+    context,
+    redactor,
+    auditLogger,
+    tools,
+    executeMcpToolCall,
+  });
 
   async function handleRequest(message) {
     assertJsonRpcRequest(message);
@@ -288,7 +181,7 @@ function createMcpServer(runtime = {}) {
     }
 
     if (method === 'tools/list') {
-      return respond({ tools: toolPolicy.listTools() });
+      return respond({ tools: toolGateway.listTools() });
     }
 
     if (method === 'resources/list') {
@@ -364,30 +257,10 @@ function createMcpServer(runtime = {}) {
         throw new RpcError(-32602, 'Invalid params: tools/call requires params.name');
       }
       try {
-        toolPolicy.assertToolAllowed(name);
-        const payload = await executeToolCallWithTimeout(name, callArgs);
-        try {
-          auditLogger.appendToolCallEvent({
-            toolName: name,
-            profile: profile || null,
-            dryRun,
-            policyDecision: 'allowed',
-            status: 'success',
-            resultCode: 0,
-          });
-        } catch (_) {
-          // Audit must never break MCP response handling.
-        }
-        return respond(
-          normalizeToolCallResult(payload, redactor, {
-            maxResponseBytes: maxToolResponseBytes,
-          })
-        );
+        return respond(await toolGateway.call(name, callArgs));
       } catch (error) {
         let rpcError = null;
-        let policyDecision = 'allowed';
         if (error && error.code === 'TOOL_NOT_ALLOWED') {
-          policyDecision = 'refused';
           rpcError = new RpcError(-32601, error.message);
         }
         if (!rpcError && error && error.code === 'TOOL_INVALID_ARGUMENTS') {
@@ -404,19 +277,6 @@ function createMcpServer(runtime = {}) {
         }
         if (!rpcError) {
           rpcError = new RpcError(-32000, error.message || 'Tool execution failed');
-        }
-        try {
-          auditLogger.appendToolCallEvent({
-            toolName: name,
-            profile: profile || null,
-            dryRun,
-            policyDecision,
-            status: 'error',
-            resultCode: rpcError.code,
-            errorMessage: rpcError.message,
-          });
-        } catch (_) {
-          // Audit must never break MCP response handling.
         }
         throw rpcError;
       }

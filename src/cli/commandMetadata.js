@@ -333,6 +333,20 @@ const COMMAND_UI_METADATA = Object.freeze([
     outputArtifacts: Object.freeze(['zip bundle', 'bundle-manifest.json']),
     recommendedNextCommands: Object.freeze(['serve']),
   }),
+  Object.freeze({
+    name: 'agent',
+    title: 'Agent Bootstrap',
+    summary:
+      'Bootstrap CLI agents and suggest bounded evidence-first workflows without executing work.',
+    category: 'context',
+    primaryUseCase:
+      'Give an AI agent a stable CLI contract, intent map, safety rules, and next commands.',
+    requiredCapabilities: Object.freeze([]),
+    commonOptions: Object.freeze(['--json']),
+    advancedOptions: Object.freeze(['--goal', '--profile', '--program', '--source', '--out']),
+    outputArtifacts: Object.freeze(['structured bootstrap or workflow suggestion on stdout']),
+    recommendedNextCommands: Object.freeze(['doctor', 'analyze']),
+  }),
 ]);
 
 function validateCommandUiMetadata(entries = COMMAND_UI_METADATA, categories = COMMAND_CATEGORIES) {

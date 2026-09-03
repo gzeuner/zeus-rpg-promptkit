@@ -984,6 +984,23 @@
       "example": "node cli/zeus.js tools list --json"
     },
     {
+      "command": "agent",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S0",
+      "scope": "Local",
+      "sideEffects": [],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "subcommands": [],
+      "purpose": "Bootstrap CLI agents and suggest a bounded, evidence-first command sequence without executing work.",
+      "example": "node cli/zeus.js agent bootstrap --json"
+    },
+    {
       "command": "project-knowledge",
       "aliases": [
         "project-intelligence"
@@ -1102,7 +1119,10 @@
     "Always report exact command lines before execution when risk is non-trivial."
   ],
   "sequence": [
-    "`doctor` (environment contract)",
+    "`agent bootstrap --json` (operating contract and recovery playbook)",
+    "`tools list --json` and `tools describe <id> --json` (capability discovery)",
+    "`context show --json` (current scope and environment)",
+    "`doctor` (before profile-based remote work)",
     "`fetch` (only if source refresh is needed and approved)",
     "`analyze` or `workflow --preset ...`",
     "`query-table`/`query-sql`/`joblog`/`field-search`/`search-source`/`inspect-object` for evidence deepening",

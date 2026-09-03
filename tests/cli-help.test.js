@@ -65,7 +65,7 @@ test('tools guide provides a machine-readable AI first point to check', () => {
     'member',
     'sourceRoot',
   ]);
-  assert.equal(payload.commands.length, 49);
+  assert.equal(payload.commands.length, 50);
 });
 
 test('help lookalikes are not accepted as explicit top-level help', () => {

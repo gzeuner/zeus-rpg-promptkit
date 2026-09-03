@@ -61,6 +61,7 @@ const { runSecret } = require('../src/cli/commands/secretCommand');
 const { runInvestigate } = require('../src/cli/commands/investigateCommand');
 const { runProjectKnowledge } = require('../src/cli/commands/projectKnowledgeCommand');
 const { run: runKnowledge } = require('../src/cli/commands/knowledgeCommand');
+const { runAgent } = require('../src/cli/commands/agentCommand');
 const { runJournalRowDiffCommand } = require('../src/cli/commands/journalRowDiffCommand');
 const path = require('path');
 const { autoLoadEnvFiles } = require('../src/config/envFileLoader');
@@ -224,6 +225,9 @@ function printHelp() {
   );
   console.log(
     '  zeus knowledge <extract|validate|inspect> [options] [--json]  # LOKAL: privacy-gated project-neutral catalog'
+  );
+  console.log(
+    '  zeus [--config <path>] agent <bootstrap|suggest> [options] [--json]  # CLI-first agent contract and workflow suggestion'
   );
   console.log(
     '  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]'
@@ -770,6 +774,10 @@ async function main() {
 
   if (command === 'tools') {
     await runTools(args);
+    return;
+  }
+  if (command === 'agent') {
+    await runAgent(args);
     return;
   }
   if (command === 'mcp') {
