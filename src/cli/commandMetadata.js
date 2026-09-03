@@ -345,7 +345,7 @@ const COMMAND_UI_METADATA = Object.freeze([
     commonOptions: Object.freeze(['--json']),
     advancedOptions: Object.freeze(['--goal', '--profile', '--program', '--source', '--out']),
     outputArtifacts: Object.freeze(['structured bootstrap or workflow suggestion on stdout']),
-    recommendedNextCommands: Object.freeze(['tools', 'context', 'doctor', 'analyze']),
+    recommendedNextCommands: Object.freeze(['doctor', 'analyze']),
   }),
 ]);
 
