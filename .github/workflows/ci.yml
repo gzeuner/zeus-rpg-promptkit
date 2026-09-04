@@ -108,7 +108,7 @@ jobs:
         run: |
           $maxAttempts = 3
           for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-            npm audit --omit=dev --audit-level=high
+            npm audit --omit=dev --audit-level=high --fetch-retries=0 --fetch-timeout=60000
             $exitCode = $LASTEXITCODE
             if ($exitCode -eq 0) {
               exit 0
