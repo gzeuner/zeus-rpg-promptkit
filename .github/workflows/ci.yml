@@ -110,6 +110,7 @@ jobs:
           $auditTimeoutSeconds = 90
           for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
             $auditProcess = Start-Process -FilePath "npm.cmd" -ArgumentList @(
+              # Canonical audit command: npm audit --omit=dev --audit-level=high
               "audit",
               "--omit=dev",
               "--audit-level=high",
