@@ -162,6 +162,19 @@ node cli/zeus.js fetch --profile new-system --system dev --members ORDERPGM
 
 After fetch: sources land in `./rpg_sources` (or your `ZEUS_FETCH_OUT`).
 
+For existing batch output or operational evidence, read a known spoolfile without
+fetching source or changing the IBM-i system:
+
+```bash
+node cli/zeus.js spool-read --profile new-system --job-number 000001 --job-user APPUSER --job-name BATCHJOB --spool-file QPRINT --spool-number 1 --json
+```
+
+`spool-read` is remote read-only (`S2`), bounds output to 1 MiB by default (4 MiB
+maximum), defaults to `Cp037`, and masks detected secrets before output. The
+configured account must be able to see and open the target spoolfile. See the
+[dedicated spool-read contract](../cli/spool-read.md) for exact parameters and
+recovery guidance.
+
 ## 6. Discovering Objects (PGM, Tables, etc.)
 
 ### PGM / *SRVPGM Objects

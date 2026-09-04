@@ -167,6 +167,25 @@
       "example": "node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM"
     },
     {
+      "command": "spool-read",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S2",
+      "scope": "IBM i read",
+      "sideEffects": [
+        "remote-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "subcommands": [],
+      "purpose": "Read the text of an existing IBM i spool file through JT400 without creating, changing, or deleting spool files. The output is bounded and secrets are masked before display.",
+      "example": "node cli/zeus.js spool-read --profile default-fetch --job-number 000001 --job-user APPUSER --job-name BATCHJOB --spool-file QPRINT --json"
+    },
+    {
       "command": "analyze",
       "aliases": [],
       "status": "stable",
@@ -1130,6 +1149,7 @@
     "`context show --json` (current scope and environment)",
     "`doctor` (before profile-based remote work)",
     "`fetch` (only if source refresh is needed and approved)",
+    "`spool-read` (only if existing IBM-i spool output is needed; bounded `S2` read)",
     "`analyze` or `workflow --preset ...`",
     "`query-table`/`query-sql`/`joblog`/`field-search`/`search-source`/`inspect-object` for evidence deepening",
     "`impact`/`assess-risk`/`generate-test`/`generate-checklist`/`qa` for planning and validation",

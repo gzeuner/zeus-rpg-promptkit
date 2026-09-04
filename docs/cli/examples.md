@@ -50,6 +50,22 @@ node .\cli\zeus.js query-sql --profile default --file .\diagnostics\readonly.sql
 node .\cli\zeus.js joblog --profile default --severity ERROR --max-messages 100
 ```
 
+## IBM-i Spoolfile Read (Read-Only)
+
+Use the spool reader for existing batch output or operational evidence. It does
+not create, update, or delete spoolfiles and returns bounded, secret-masked text:
+
+```powershell
+node .\cli\zeus.js tools describe spool-read --json
+node .\cli\zeus.js doctor --profile default-fetch --probe --show-resolved
+node .\cli\zeus.js spool-read --profile default-fetch --job-number 000001 --job-user APPUSER --job-name BATCHJOB --spool-file QPRINT --spool-number 1 --json
+```
+
+`--spool-number` is optional. Without it, Zeus enumerates matching spoolfiles
+visible to the configured IBM-i account. The default charset is `Cp037`; use
+`--charset` for a different spool encoding. Output is limited to 1 MiB by
+default and 4 MiB maximum; `truncated: true` must be reported when applicable.
+
 `query-sql` accepts multiple read-only `SELECT` / `WITH` statements separated by semicolons,
 both in `--sql` and `--file`. The batch is sent through one DB2 runner call after the normal
 connection guard probe. JSON output returns one result object per statement.

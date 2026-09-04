@@ -416,7 +416,7 @@ Der automatisch erzeugte [`docs/tool-catalog.md`](docs/tool-catalog.md) ist die 
 | -------------------- | -------------------------------------------------------------------- | --------------------: |
 | Setup & Profile      | `doctor`, `profiles`, `resources`, `secret`                          |               `S0/S1` |
 | Discovery            | `discover-environment`, `resolve-object`, `inspect-object`, `joblog` |               `S0/S2` |
-| Quellen              | `fetch`, `fetch-member`, `copy-to-workspace`, `diff`                 |               `S1/S2` |
+| Quellen              | `fetch`, `fetch-member`, `spool-read`, `copy-to-workspace`, `diff`   |               `S1/S2` |
 | Analyse              | `analyze`, `investigate`, `workflow`, `workflow run`                 |               `S0/S1` |
 | Suche & Beziehungen  | `search-source`, `field-search`, `trace`, `xref`, `impact`           |               `S0–S2` |
 | Db2 read-only        | `query-table`, `query-sql`, `sql`                                    |                  `S2` |
@@ -1129,7 +1129,7 @@ The generated [`docs/tool-catalog.md`](docs/tool-catalog.md) is the **authoritat
 | ------------------------ | -------------------------------------------------------------------- | ---------------: |
 | Setup and profiles       | `doctor`, `profiles`, `resources`, `secret`                          |          `S0/S1` |
 | Discovery                | `discover-environment`, `resolve-object`, `inspect-object`, `joblog` |          `S0/S2` |
-| Sources                  | `fetch`, `fetch-member`, `copy-to-workspace`, `diff`                 |          `S1/S2` |
+| Sources                  | `fetch`, `fetch-member`, `spool-read`, `copy-to-workspace`, `diff`   |          `S1/S2` |
 | Analysis                 | `analyze`, `investigate`, `workflow`, `workflow run`                 |          `S0/S1` |
 | Search and relationships | `search-source`, `field-search`, `trace`, `xref`, `impact`           |          `S0–S2` |
 | Db2 read-only            | `query-table`, `query-sql`, `sql`                                    |             `S2` |

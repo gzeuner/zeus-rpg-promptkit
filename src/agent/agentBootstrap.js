@@ -28,9 +28,15 @@ const INTENT_MAP = Object.freeze([
   }),
   Object.freeze({
     intent: 'investigate an error or defect',
-    commands: Object.freeze(['investigate', 'search-source', 'field-search', 'joblog']),
+    commands: Object.freeze([
+      'investigate',
+      'search-source',
+      'field-search',
+      'joblog',
+      'spool-read',
+    ]),
     firstStep:
-      'Start with local evidence; use joblog only when a verified IBM i profile is required.',
+      'Start with local evidence; use joblog or spool-read only when a verified IBM i profile is required.',
   }),
   Object.freeze({
     intent: 'plan modernization or refactoring',
@@ -146,6 +152,11 @@ function buildCliAgentBootstrapPayload() {
           'Run analyze or an appropriate workflow preset; a live IBM i connection is not required.',
       },
       {
+        case: 'Existing IBM i spool output is needed',
+        action:
+          'Run doctor first, then use the bounded read-only spool-read command with the exact job and spool identity.',
+      },
+      {
         case: 'Source must be refreshed from IBM i',
         action: 'Run doctor first and request explicit approval before fetch or fetch-member.',
       },
@@ -195,6 +206,7 @@ function buildCliAgentBootstrapPayload() {
       cliAgentGuide: 'docs/ai/cli-agent-guide.md',
       sessionPrompt: 'docs/ai/session-prompt.md',
       failurePlaybook: 'docs/ai/agent-failure-playbook.md',
+      spoolRead: 'docs/cli/spool-read.md',
     },
     next: 'tools list',
   };

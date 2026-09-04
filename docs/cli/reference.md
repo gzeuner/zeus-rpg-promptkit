@@ -14,6 +14,7 @@ Der unterstützte Produktpfad ist CLI-first:
 - Befehle mit `zeus tools list --json` und `zeus tools describe <command> --json` entdecken
 - Umgebung explizit in der Shell laden
 - `doctor` vor profilbasierter Remote-Arbeit ausführen
+- für vorhandene IBM-i-Spoolausgabe `spool-read` als begrenzten read-only S2-Weg verwenden
 - danach Tool-Katalog und Safety-Policy befolgen
 - MCP nur als optionalen Adapter verwenden
 - den lokalen Viewer nur optional für vorhandene Artefakte nutzen

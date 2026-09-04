@@ -46,6 +46,7 @@ const { run: runPuiEdit } = require('../src/cli/commands/puiEditCommand');
 const { run: runPuiInspect } = require('../src/cli/commands/puiInspectCommand');
 const { runSearchSource } = require('../src/cli/commands/searchSourceCommand');
 const { runJoblog } = require('../src/cli/commands/joblogCommand');
+const { run: runSpoolRead } = require('../src/cli/commands/spoolReadCommand');
 const { runResolveObject } = require('../src/cli/commands/resolveObjectCommand');
 const { runDocsGenerateCatalog } = require('./commands/generate-tool-catalog');
 const { run: runAnalyses } = require('../src/cli/commands/analysesCommand');
@@ -110,6 +111,9 @@ function printHelp() {
   );
   console.log(
     '  zeus [--config <path>] fetch-member --profile <name> --lib <library> --member <name>[,<name>,...] [--file <QRPGLESRC>] [--out <dir>] [--verbose]  # Einzel- oder Mehrfach-Member-Download'
+  );
+  console.log(
+    '  zeus [--config <path>] spool-read --profile <name> --job-number <n> --job-user <name> --job-name <job> --spool-file <name> [--spool-number <n>] [--charset <name>] [--max-bytes <n>] [--json]  # Read one IBM i spool file (read-only)'
   );
   console.log(
     '  zeus [--config <path>] serve [--source-output-root <path>] [--profile <name>] [--host 127.0.0.1] [--port <n>] [--verbose]'
@@ -333,6 +337,7 @@ const COMMANDS_NEEDING_ENV = new Set([
   'query-table',
   'fetch',
   'fetch-member',
+  'spool-read',
   'analyze',
   'workflow',
   'upsert',
@@ -366,6 +371,7 @@ const COMMANDS_AUTO_ENV = new Set([
   'joblog',
   'fetch',
   'fetch-member',
+  'spool-read',
   'inspect-object',
   'diff',
   'field-search',
@@ -502,9 +508,10 @@ function autoLoadEnvironment(command, args) {
 function checkEnvLoaded(command) {
   if (!COMMANDS_NEEDING_ENV.has(command)) return;
   const missingDb = collectMissingDbEnvVars();
-  const missingFetch = command.startsWith('fetch')
-    ? FETCH_ENV_VARS.filter(envVar => !hasNonEmptyEnvVar(envVar))
-    : [];
+  const missingFetch =
+    command.startsWith('fetch') || command === 'spool-read'
+      ? FETCH_ENV_VARS.filter(envVar => !hasNonEmptyEnvVar(envVar))
+      : [];
   const missing = [...new Set([...missingDb, ...missingFetch])];
   if (missing.length > 0) {
     process.stderr.write(
@@ -577,6 +584,11 @@ async function main() {
 
   if (command === 'fetch-member') {
     await runFetchMember(args);
+    return;
+  }
+
+  if (command === 'spool-read') {
+    await runSpoolRead(args);
     return;
   }
 

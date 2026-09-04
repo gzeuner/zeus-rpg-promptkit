@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entitled Project Intelligence under one public Apache-2.0 package;
 - added the generic read-only `journal-row-diff` command with caller-defined row layouts,
   independent audit-query validation, and aggregate-only results;
+- integrated the read-only `spool-read` command for bounded IBM-i spoolfile evidence via JT400;
 - explicit `--built-in-modules` / `ZEUS_BUILT_IN_MODULES` selection and unified package smoke coverage;
 - ADR-014 and a consolidated migration quickstart.
 
@@ -25,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
+- spoolfile text is bounded and configured sensitive terms, credential-bearing URLs, and detected
+  credential assignments are masked before CLI output; the IBM-i password stays out of Java arguments.
 
 ## [0.2.0] - 2026-08-08
 

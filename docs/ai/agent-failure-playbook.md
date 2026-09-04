@@ -146,6 +146,38 @@ node cli/zeus.js resources --profile <profile> --json
 node cli/zeus.js search-source --source-root <source-root> --search-term "<term>"
 ```
 
+### SPOOL_NOT_VISIBLE_OR_OPEN_FAILED
+
+The IBM-i account cannot enumerate or open the requested spoolfile, or the job
+identity/name is not an exact match.
+
+- Do: verify the exact job number, job user, job name, spoolfile name, and optional spool number.
+- Do: run `doctor` and use `joblog` for lower-risk diagnostics; report that catalog visibility does not prove content access.
+- Do not: retry the same request unchanged or assume the connected user can impersonate the job owner.
+
+Next CLI commands:
+
+```text
+node cli/zeus.js doctor --profile <profile> --probe --show-resolved
+node cli/zeus.js joblog --profile <profile> --json
+node cli/zeus.js agent log --outcome blocked --command "node cli/zeus.js spool-read ..." --failure-code SPOOL_NOT_VISIBLE_OR_OPEN_FAILED --symptom "spoolfile was not visible or could not be opened" --lesson "spool-read requires IBM-i visibility and content authority for the target job" --next-step "verify job identity and permissions before retrying" --json
+```
+
+### SPOOL_WRONG_CHARSET_OR_TRUNCATED
+
+The spool text is unreadable because the charset is wrong, or the result reached
+the configured byte limit.
+
+- Do: retry once with the charset specified by the spool's producing system and inspect `truncated`.
+- Do: lower the requested scope or use a larger `--max-bytes` only up to the documented 4 MiB limit.
+- Do not: treat garbled or truncated text as complete evidence.
+
+Next CLI command:
+
+```text
+node cli/zeus.js spool-read --profile <profile> --job-number <number> --job-user <user> --job-name <job> --spool-file <name> --charset <charset> --max-bytes <n> --json
+```
+
 ### PATH_OUTSIDE_WORKSPACE
 
 A requested path is outside the configured workspace or source containment boundary.
