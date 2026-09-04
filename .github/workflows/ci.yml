@@ -104,7 +104,22 @@ jobs:
       - name: Repository control security tests
         run: npm run test:repository-control
       - name: Production dependency audit
-        run: npm audit --omit=dev --audit-level=high
+        shell: pwsh
+        run: |
+          $maxAttempts = 3
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            npm audit --omit=dev --audit-level=high
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0) {
+              exit 0
+            }
+            if ($attempt -eq $maxAttempts) {
+              exit $exitCode
+            }
+            $delaySeconds = [math]::Pow(2, $attempt)
+            Write-Host "Dependency audit failed; retrying in $delaySeconds seconds (attempt $($attempt + 1)/$maxAttempts)."
+            Start-Sleep -Seconds $delaySeconds
+          }
       - run: npm run package:smoke
 
   package-smoke:
