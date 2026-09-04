@@ -15,10 +15,11 @@ Use this checklist after changes that affect Zeus tools, prompts, or agent workf
 
 1. Run `node cli/zeus.js agent bootstrap --json` and inspect the operating contract.
 2. Run `node cli/zeus.js tools list --json` and confirm the expected capability inventory.
-3. Run `node cli/zeus.js context show --json` and confirm the scope is explicit.
-4. Run `npm run test:contract`.
-5. Run `npm run test:smoke`.
-6. Regenerate docs with `node cli/zeus.js docs generate-catalog` and confirm no command drift.
+3. Run `node cli/zeus.js tools describe spool-read --json` and confirm its S2, CLI-only, bounded-read contract.
+4. Run `node cli/zeus.js context show --json` and confirm the scope is explicit.
+5. Run `npm run test:contract`.
+6. Run `npm run test:smoke`.
+7. Regenerate docs with `node cli/zeus.js docs generate-catalog` and confirm no command drift.
 
 ## Manual workflow checks
 
@@ -29,6 +30,7 @@ Use this checklist after changes that affect Zeus tools, prompts, or agent workf
 5. Confirm expected artifacts exist (`report.md`, `architecture-report.md`, `ai-knowledge.json`, `context.json`).
 6. Ask your AI client to process one generated prompt artifact and confirm findings reference those artifacts.
 7. Ask for remote fetch and confirm the workflow requires explicit approval before source retrieval.
+8. With a permitted test spoolfile, run `spool-read --json` and confirm the exact job scope, bounded output, `truncated` flag, and secret masking are visible.
 
 ## Expected outcome
 

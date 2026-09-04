@@ -35,6 +35,7 @@ module.exports = {
       'tests/project-intelligence-export-corpora.test.js',
       'tests/agent-command.test.js',
       'tests/agent-experience.test.js',
+      'tests/spool-read-command.test.js',
     ],
     smoke: [
       'tests/reproducible-output.test.js',

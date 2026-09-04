@@ -49,12 +49,13 @@ Choose the smallest valid route:
 - Existing analysis output: inspect `analyze-run-manifest.json`, `report.md`, and `architecture-report.md` before re-running analysis.
 - Local source available: run `analyze` or a suitable `workflow --preset ...`; a live IBM i connection is not required.
 - Source refresh required: run `doctor` with the intended profile, show the exact `fetch`/`fetch-member` command, and wait for approval.
+- Existing IBM-i spool output required: run `doctor`, then use the bounded read-only `spool-read` command with the exact job and spool identity.
 - New or unknown IBM i: use `onboarding` or `discover-environment`; do not guess source libraries or schemas.
 
 Typical evidence flow:
 1. Establish goal, project root, source root, program/member, profile, output root, and whether remote access is allowed.
 2. Run `analyze` or a workflow preset and verify `report.md`, `architecture-report.md`, `canonical-analysis.json`, `ai-knowledge.json`, and `analyze-run-manifest.json`.
-3. Deepen only as needed with `search-source`, `field-search`, `trace`, `xref`, `investigate`, `impact`, or verified read-only Db2/IBM i commands.
+3. Deepen only as needed with `search-source`, `field-search`, `trace`, `xref`, `investigate`, `impact`, `spool-read`, or verified read-only Db2/IBM i commands.
 4. Use `assess-risk`, `generate-test`, `generate-checklist`, and `qa` for review and change planning.
 5. Use `bundle --safe-sharing` when evidence leaves the local workspace.
 

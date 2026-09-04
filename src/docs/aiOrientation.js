@@ -118,6 +118,7 @@ const AI_INTENTS = Object.freeze([
       'query-table --profile <name> --table <name> --schema <schema> --json',
       'query-sql --profile <name> --sql "SELECT ..." --json',
       'joblog --profile <name> --json',
+      'spool-read --profile <name> --job-number <n> --job-user <user> --job-name <job> --spool-file <name> --json',
     ],
     mcp: [
       'zeus.resolve-object',
@@ -239,6 +240,7 @@ function buildAiOrientation() {
       cliReference: 'docs/cli/reference.md',
       sessionPrompt: 'docs/ai/session-prompt.md',
       failurePlaybook: 'docs/ai/agent-failure-playbook.md',
+      spoolRead: 'docs/cli/spool-read.md',
       mcpOperatorGuide: 'docs/mcp/operator-guide.md',
     },
   };

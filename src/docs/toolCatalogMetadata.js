@@ -69,6 +69,14 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Fetch one or more specific source members into a local output directory.',
     example: 'node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM',
   }),
+  'spool-read': Object.freeze({
+    safety: 'S2',
+    scope: 'IBM i read',
+    purpose:
+      'Read the text of an existing IBM i spool file through JT400 without creating, changing, or deleting spool files. The output is bounded and secrets are masked before display.',
+    example:
+      'node cli/zeus.js spool-read --profile default-fetch --job-number 000001 --job-user APPUSER --job-name BATCHJOB --spool-file QPRINT --json',
+  }),
   analyze: Object.freeze({
     safety: 'S1',
     scope: 'Local',
@@ -483,6 +491,13 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: ['remote-read', 'local-artifact-write'],
     capabilityId: null,
   }),
+  'spool-read': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: ['remote-read'],
+    capabilityId: null,
+  }),
   analyze: catalogContract({
     aliases: [],
     status: 'stable',
@@ -789,6 +804,7 @@ const COMMAND_ORDER = Object.freeze([
   'discover-environment',
   'fetch',
   'fetch-member',
+  'spool-read',
   'analyze',
   'investigate',
   'workflow',
@@ -876,6 +892,7 @@ const RECOMMENDED_AI_SEQUENCE = Object.freeze([
   '`context show --json` (current scope and environment)',
   '`doctor` (before profile-based remote work)',
   '`fetch` (only if source refresh is needed and approved)',
+  '`spool-read` (only if existing IBM-i spool output is needed; bounded `S2` read)',
   '`analyze` or `workflow --preset ...`',
   '`query-table`/`query-sql`/`joblog`/`field-search`/`search-source`/`inspect-object` for evidence deepening',
   '`impact`/`assess-risk`/`generate-test`/`generate-checklist`/`qa` for planning and validation',

@@ -52,6 +52,7 @@ Related:
 | `discover-environment` | — | — | `stable` | `S2` | IBM i read | remote-read | cli, api, mcp | `configure.discover-environment` | Read-only auto-discovery of libraries/source-files/members/tables + resource suggestion. | `node cli/zeus.js discover-environment --profile dev --json` |
 | `fetch` | — | — | `stable` | `S2` | IBM i read | remote-read, local-artifact-write | cli, mcp | — | Fetch source members/IFS content into the local workspace. Supports --system <name> to select a named profile system at operator request without changing the loaded profile. | `node cli/zeus.js fetch --profile combined-fetch-and-query --system dev` |
 | `fetch-member` | — | — | `stable` | `S2` | IBM i read | remote-read, local-artifact-write | cli, mcp | — | Fetch one or more specific source members into a local output directory. | `node cli/zeus.js fetch-member --profile default --lib APPLIB --member ORDERPGM` |
+| `spool-read` | — | — | `stable` | `S2` | IBM i read | remote-read | cli | — | Read the text of an existing IBM i spool file through JT400 without creating, changing, or deleting spool files. The output is bounded and secrets are masked before display. | `node cli/zeus.js spool-read --profile default-fetch --job-number 000001 --job-user APPUSER --job-name BATCHJOB --spool-file QPRINT --json` |
 | `analyze` | — | — | `stable` | `S1` | Local | local-artifact-write | cli, api, mcp | `analysis.analyze` | Analyze RPG/CL/DDS and generate evidence artifacts. Supports --optimize-context, --dense [lite\|full\|ultra] (rank-aware token reduction + compaction), --prompt-max-tokens, --skip-db2-metadata, --reproducible for large programs and CI stability. | `node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000` |
 | `investigate` | `investigation` | — | `stable` | `S1` | Local | local-artifact-write | cli, api | `investigation.investigate` | Start or resume a focused investigation session on top of existing analysis artifacts. Enables scoped, iterative deep-dives (focus, search, impact, generate-prompt) with persistent state through the CLI and in-process API. | `node cli/zeus.js investigate --program ORDERPGM --profile dev --goal "Focus on error paths" --focus "error paths" --search "dynamic sql" --generate-prompt` |
 | `workflow` | — | `run` | `stable` | `S1` | Local | local-artifact-write | cli, api, mcp | `analysis.workflow` | Run preset-guided analyze and bundle flow. Supports --dense (forwarded to analyze steps). | `node cli/zeus.js workflow --preset architecture-review --source ./rpg_sources --program ORDERPGM --out ./output --dense ultra` |
@@ -115,13 +116,14 @@ Related:
 4. `context show --json` (current scope and environment)
 5. `doctor` (before profile-based remote work)
 6. `fetch` (only if source refresh is needed and approved)
-7. `analyze` or `workflow --preset ...`
-8. `query-table`/`query-sql`/`joblog`/`field-search`/`search-source`/`inspect-object` for evidence deepening
-9. `impact`/`assess-risk`/`generate-test`/`generate-checklist`/`qa` for planning and validation
-10. `agent log --outcome ...` after failed, blocked, partial, or corrected attempts (iterative learning)
-11. generated artifacts and `bundle` for review/sharing; optional `serve` for local viewing
-12. `upsert`/`upsert-sql`/`insert`/`update` only after explicit user approval
-13. `bridge` only in operator-gated, explicitly approved flows
+7. `spool-read` (only if existing IBM-i spool output is needed; bounded `S2` read)
+8. `analyze` or `workflow --preset ...`
+9. `query-table`/`query-sql`/`joblog`/`field-search`/`search-source`/`inspect-object` for evidence deepening
+10. `impact`/`assess-risk`/`generate-test`/`generate-checklist`/`qa` for planning and validation
+11. `agent log --outcome ...` after failed, blocked, partial, or corrected attempts (iterative learning)
+12. generated artifacts and `bundle` for review/sharing; optional `serve` for local viewing
+13. `upsert`/`upsert-sql`/`insert`/`update` only after explicit user approval
+14. `bridge` only in operator-gated, explicitly approved flows
 
 ## How To Keep This File Up To Date
 

@@ -80,7 +80,7 @@ test('mcp resources expose the same live AI orientation used by the CLI guide', 
   const orientation = JSON.parse(response.result.contents[0].text);
   assert.equal(orientation.schemaVersion, 1);
   assert.equal(orientation.firstPoint.mcp, 'zeus.agent.bootstrap (optional adapter)');
-  assert.equal(orientation.commands.length, 50);
+  assert.equal(orientation.commands.length, 51);
   assert.ok(orientation.workingContext.fields.includes('sourceFile'));
   assert.ok(orientation.intents.some(intent => intent.intent === 'remote-read'));
 });

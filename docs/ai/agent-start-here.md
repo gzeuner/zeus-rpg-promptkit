@@ -62,6 +62,23 @@ Typical Knowledge First path:
 context → project-knowledge check → locate/lookup only when fresh → sync only with explicit local-write approval
 ```
 
+## Spoolfile evidence
+
+For batch output or operational evidence that already exists on IBM i, use the
+read-only `spool-read` route instead of fetching or mutating anything:
+
+```text
+node cli/zeus.js tools describe spool-read --json
+node cli/zeus.js doctor --profile <name> --probe --show-resolved
+node cli/zeus.js spool-read --profile <name> --job-number <number> --job-user <user> --job-name <job> --spool-file <name> --json
+```
+
+`spool-read` is `S2`: it reads only spoolfiles visible to the configured IBM-i
+user, returns bounded text, defaults to `Cp037`, and masks detected secrets
+before output. Add `--spool-number <number>` when the job has multiple spoolfiles;
+without it, matching visible spoolfiles are enumerated. The IBM-i account still
+needs permission to see and open the target spoolfile.
+
 ## Safety checkpoints
 
 - `S0`: local read-only; safe default for orientation and inspection.

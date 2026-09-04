@@ -76,7 +76,26 @@ node .\cli\zeus.js doctor --profile <profile> --probe --show-resolved
 node .\cli\zeus.js resources --profile <profile> --json
 ```
 
-Use `fetch`, `fetch-member`, `query-table`, `query-sql`, `resolve-object`, `inspect-object`, or `joblog` only when the task needs remote evidence. Fetch is never an implicit refresh. Credentials belong in the configured environment or Secret Vault, never in the prompt.
+Use `fetch`, `fetch-member`, `spool-read`, `query-table`, `query-sql`, `resolve-object`, `inspect-object`, or `joblog` only when the task needs remote evidence. Fetch is never an implicit refresh. Credentials belong in the configured environment or Secret Vault, never in the prompt.
+
+### Existing spoolfile output
+
+Use `spool-read` when the evidence is the text of an existing IBM-i spoolfile,
+for example batch output, reports, or operational diagnostics. It is remote
+read-only (`S2`) and does not create, change, or delete spoolfiles:
+
+```powershell
+node .\cli\zeus.js tools describe spool-read --json
+node .\cli\zeus.js doctor --profile <profile> --probe --show-resolved
+node .\cli\zeus.js spool-read --profile <profile> --job-number <number> --job-user <user> --job-name <job> --spool-file <name> --json
+```
+
+Use `--spool-number <number>` for an exact spoolfile identity. If it is omitted,
+Zeus lists visible spoolfiles for the supplied job/user/name and reads matching
+entries. The default charset is `Cp037`; `--max-bytes` defaults to 1 MiB and is
+bounded at 4 MiB. The connected IBM-i account must be allowed to see and open
+the spoolfile. Treat returned text as remote evidence and cite the command,
+target, truncation status, and uncertainty in the result.
 
 ### New or unknown IBM i
 
@@ -101,7 +120,7 @@ Never infer a library, schema, source file, member, table, or system from a file
 3. Make the working context visible.
 4. Generate or locate the smallest useful analysis run.
 5. Verify the output manifest and expected artifacts.
-6. Deepen only where evidence is missing.
+6. Deepen only where evidence is missing; use `spool-read` for existing IBM-i spool output.
 7. Separate facts, inferences, unresolved references, and unknowns.
 8. Generate risk, test, QA, and checklist artifacts when planning a change.
 9. Package with `bundle --safe-sharing` when sharing outside the workspace.
