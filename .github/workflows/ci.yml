@@ -107,9 +107,24 @@ jobs:
         shell: pwsh
         run: |
           $maxAttempts = 3
+          $auditTimeoutSeconds = 90
           for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-            npm audit --omit=dev --audit-level=high
-            $exitCode = $LASTEXITCODE
+            $auditProcess = Start-Process -FilePath "npm.cmd" -ArgumentList @(
+              # Canonical audit command: npm audit --omit=dev --audit-level=high
+              "audit",
+              "--omit=dev",
+              "--audit-level=high",
+              "--fetch-retries=0",
+              "--fetch-timeout=60000"
+            ) -NoNewWindow -PassThru
+            if (-not $auditProcess.WaitForExit($auditTimeoutSeconds * 1000)) {
+              Write-Host "Dependency audit exceeded $auditTimeoutSeconds seconds; terminating the process tree."
+              $auditProcess.Kill($true)
+              $auditProcess.WaitForExit()
+              $exitCode = 124
+            } else {
+              $exitCode = $auditProcess.ExitCode
+            }
             if ($exitCode -eq 0) {
               exit 0
             }
