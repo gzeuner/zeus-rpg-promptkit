@@ -382,13 +382,15 @@ const COMMAND_METADATA = Object.freeze({
       'preflight',
       'prompt',
       'suggest',
+      'evaluate',
+      'evaluate --list',
       'log',
       'log list',
       'log summary',
       'log suggest',
     ],
     purpose:
-      'Orient CLI agents, generate context-aware prompts, suggest bounded evidence-first workflows, and record/read sanitized local experience events without executing work.',
+      'Orient CLI agents, generate context-aware prompts, suggest bounded evidence-first workflows, evaluate responses, and record/read sanitized local experience events without executing work.',
     example: 'node cli/zeus.js agent preflight --goal "<goal>" --json',
   }),
   'project-knowledge': Object.freeze({

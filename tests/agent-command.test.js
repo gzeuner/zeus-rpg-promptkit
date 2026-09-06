@@ -2,15 +2,25 @@
 
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+
+const {
+  buildAnalyzeRunManifest,
+  writeAnalyzeRunManifest,
+} = require('../src/analyze/analyzeRunManifest');
+const { AGENT_EVALUATION_MAX_RESPONSE_BYTES } = require('../src/agent/agentEvaluation');
+const { buildResumeHints } = require('../src/agent/agentResume');
+const { CLI_INVOCATIONS, cliInvocation } = require('../src/cli/platformOutput');
 
 const ROOT = path.resolve(__dirname, '..');
 const CLI = path.join(ROOT, 'cli', 'zeus.js');
 
-function runCli(args) {
+function runCli(args, cwd = ROOT) {
   return spawnSync(process.execPath, [CLI, ...args], {
-    cwd: ROOT,
+    cwd,
     encoding: 'utf8',
   });
 }
@@ -44,6 +54,168 @@ test('CLI agent bootstrap exposes the canonical CLI contract', () => {
   assert.ok(Array.isArray(payload.failurePlaybook.entries));
   assert.equal(payload.experienceLog.storage, '.zeus/agent-experience.jsonl');
   assert.match(payload.experienceLog.record, /agent log --outcome/);
+  assert.equal(payload.evaluation.corpus, 'docs/ai/agent-evaluation-corpus.json');
+  assert.match(payload.evaluation.list, /agent evaluate --list/);
+  assert.deepEqual(payload.cliInvocation, CLI_INVOCATIONS);
+});
+
+test('CLI command examples are deterministic across Windows, POSIX, and portable usage', () => {
+  const args = ['agent', 'preflight', '--json'];
+  assert.equal(
+    cliInvocation({ platform: 'portable', args }),
+    'node cli/zeus.js agent preflight --json'
+  );
+  assert.equal(
+    cliInvocation({ platform: 'powershell', args }),
+    'node .\\cli\\zeus.js agent preflight --json'
+  );
+  assert.equal(
+    cliInvocation({ platform: 'posix', args }),
+    'node ./cli/zeus.js agent preflight --json'
+  );
+});
+
+test('CLI agent evaluation lists sanitized scenarios and scores a response deterministically', () => {
+  const list = readJson(runCli(['agent', 'evaluate', '--list', '--json']));
+  assert.equal(list.operation, 'evaluate-list');
+  assert.equal(list.scenarios.length, 7);
+  assert.ok(list.scenarios.some(scenario => scenario.id === 'unapproved-mutation'));
+
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-agent-evaluation-'));
+  try {
+    fs.writeFileSync(
+      path.join(cwd, 'response.md'),
+      'S1. Scope is local. Evidence is the source artifact. Use node cli/zeus.js agent preflight --goal "<goal>" --json and then node cli/zeus.js analyze after the source is verified. This is read-only planning.\n',
+      'utf8'
+    );
+    const payload = readJson(
+      runCli(
+        [
+          'agent',
+          'evaluate',
+          '--scenario',
+          'local-analysis',
+          '--response-file',
+          'response.md',
+          '--json',
+        ],
+        cwd
+      )
+    );
+    assert.equal(payload.passed, true);
+    assert.equal(payload.score, 100);
+    assert.equal(payload.responseFile, 'response.md');
+    assert.equal(payload.safety.level, 'S0');
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('CLI agent evaluation reports weak responses and refuses paths outside the workspace', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-agent-evaluation-'));
+  try {
+    fs.writeFileSync(path.join(cwd, 'weak.md'), 'Run analyze.', 'utf8');
+    const weak = readJson(
+      runCli(
+        [
+          'agent',
+          'evaluate',
+          '--scenario',
+          'local-analysis',
+          '--response-file',
+          'weak.md',
+          '--json',
+        ],
+        cwd
+      )
+    );
+    assert.equal(weak.passed, false);
+    assert.equal(weak.status, 'needs-attention');
+    assert.ok(weak.findings.length > 0);
+
+    const outside = runCli(
+      [
+        'agent',
+        'evaluate',
+        '--scenario',
+        'local-analysis',
+        '--response-file',
+        '../outside.md',
+        '--json',
+      ],
+      cwd
+    );
+    assert.notEqual(outside.status, 0);
+    const error = JSON.parse(outside.stdout);
+    assert.equal(error.failureCode, 'PATH_OUTSIDE_WORKSPACE');
+
+    fs.writeFileSync(
+      path.join(cwd, 'large.md'),
+      Buffer.alloc(AGENT_EVALUATION_MAX_RESPONSE_BYTES + 1, 'x')
+    );
+    const large = runCli(
+      [
+        'agent',
+        'evaluate',
+        '--scenario',
+        'local-analysis',
+        '--response-file',
+        'large.md',
+        '--json',
+      ],
+      cwd
+    );
+    assert.notEqual(large.status, 0);
+    assert.equal(JSON.parse(large.stdout).failureCode, 'AGENT_RESPONSE_TOO_LARGE');
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('legacy vocabulary makes spoolfile inputs explicit and resume hints stay workspace-relative', () => {
+  const suggestion = readJson(
+    runCli([
+      'agent',
+      'suggest',
+      '--goal',
+      'Read one existing IBM i spoolfile as evidence',
+      '--json',
+    ])
+  );
+  assert.equal(suggestion.plan, 'spool-evidence');
+  assert.ok(suggestion.legacyConcepts.some(concept => concept.id === 'spoolfile'));
+  assert.ok(suggestion.inputRequirements.missingInputs.some(input => input.name === 'job-number'));
+  assert.ok(suggestion.inputRequirements.missingInputs.some(input => input.name === 'profile'));
+
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-agent-resume-'));
+  try {
+    const sourceRoot = path.join(cwd, 'src');
+    const outputProgramDir = path.join(cwd, 'output', 'ORDERPGM');
+    fs.mkdirSync(sourceRoot, { recursive: true });
+    fs.mkdirSync(outputProgramDir, { recursive: true });
+    const manifest = buildAnalyzeRunManifest({
+      status: 'succeeded',
+      context: {
+        program: 'ORDERPGM',
+        sourceRoot,
+        outputRoot: path.join(cwd, 'output'),
+        outputProgramDir,
+        cwd,
+        startedAt: '2026-09-06T00:00:00.000Z',
+        completedAt: '2026-09-06T00:00:01.000Z',
+        durationMs: 1000,
+      },
+      result: { sourceFiles: [], stageReports: [], generatedFiles: [] },
+    });
+    writeAnalyzeRunManifest(outputProgramDir, manifest);
+    const resume = buildResumeHints({ cwd, out: 'output', program: 'ORDERPGM' });
+    assert.equal(resume.available, true);
+    assert.equal(resume.manifestPath, 'output/ORDERPGM/analyze-run-manifest.json');
+    assert.ok(resume.commands[0].includes('investigate'));
+    assert.ok(!resume.commands.some(command => command.includes(cwd)));
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
 });
 
 test('CLI agent preflight gives a goal-based local orientation without executing work', () => {

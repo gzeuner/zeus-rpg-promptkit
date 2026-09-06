@@ -35,6 +35,7 @@ Operating contract:
 - Require explicit user approval before every S3/S4 action, data mutation, apply/bridge/compile-style action, or source fetch from a remote system.
 - Keep credentials, environment dumps, and credential-bearing URLs out of prompts, logs, summaries, and artifacts.
 - Read `node cli/zeus.js agent log list --json` before retrying a failed command; record one sanitized experience event after every failed, blocked, or partial attempt.
+- Use `node cli/zeus.js agent evaluate --list --json` and evaluate a non-trivial response against a sanitized scenario before execution.
 - Distinguish facts, inferences, unresolved references, and unknowns. Never silently fill gaps.
 - Inspect `context show --json` before reading source, metadata, or data; state the effective system, library/schema, source file, member, and scope.
 - At each consequential step, repeat whether the scope came from working context, an explicit argument, or a profile default, and explain the evidence produced.
@@ -45,21 +46,24 @@ Start here in the project root:
 2. `node cli/zeus.js agent log list --json`
 3. `node cli/zeus.js agent log summary --json`
 4. `node cli/zeus.js agent log suggest --goal "<goal>" --json`
-5. `node cli/zeus.js agent bootstrap --json`
-6. `node cli/zeus.js tools list --json`
-7. `node cli/zeus.js tools guide --json`
-8. `node cli/zeus.js context show --json`
-9. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
+5. `node cli/zeus.js agent evaluate --list --json`
+6. `node cli/zeus.js agent bootstrap --json`
+7. `node cli/zeus.js tools list --json`
+8. `node cli/zeus.js tools guide --json`
+9. `node cli/zeus.js context show --json`
+10. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
 
 For a copy-ready prompt enriched with the current local context and recent sanitized lessons, use
 `node cli/zeus.js agent prompt --goal "<goal>" --json`.
 
 Choose the smallest valid route:
 - Existing analysis output: inspect `analyze-run-manifest.json`, `report.md`, and `architecture-report.md` before re-running analysis.
+- Existing output root: use `agent preflight --out <output-root> --program <program> --json` and inspect any workspace-relative `resume.commands` before continuing.
 - Local source available: run `analyze` or a suitable `workflow --preset ...`; a live IBM i connection is not required.
 - Source refresh required: run `doctor` with the intended profile, show the exact `fetch`/`fetch-member` command, and wait for approval.
 - Existing IBM-i spool output required: run `doctor`, then use the bounded read-only `spool-read` command with the exact job and spool identity.
 - New or unknown IBM i: use `onboarding` or `discover-environment`; do not guess source libraries or schemas.
+- Legacy vocabulary: map RPG/RPGLE, CL/CLLE, DDS, Db2, IBM i jobs, spoolfiles, libraries, schemas, source files, and members to the explicit `legacyConcepts` and `inputRequirements` returned by preflight/suggest.
 
 Typical evidence flow:
 1. Establish goal, project root, source root, program/member, profile, output root, and whether remote access is allowed.

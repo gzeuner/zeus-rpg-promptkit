@@ -98,6 +98,45 @@ const GOAL_PLANS = Object.freeze([
     ],
   },
   {
+    id: 'spool-evidence',
+    matches: ['spoolfile', 'spool file', 'joblog', 'job log'],
+    steps: [
+      {
+        tool: 'zeus.spool-read',
+        purpose: 'Read one explicitly identified spoolfile as bounded evidence.',
+        safety: 'S2',
+        checkpoint: 'doctor-ok',
+        onFailure: {
+          code: 'SPOOL_NOT_VISIBLE_OR_OPEN_FAILED',
+          recover:
+            'Verify profile, exact job identity, spoolfile name, and content authority before retrying.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'remote-read',
+    matches: ['ibm i', 'ibmi', 'as400', 'as/400', 'db2', 'remote metadata', 'remote read'],
+    steps: [
+      {
+        tool: 'zeus.resources',
+        purpose: 'Inspect the resolved remote resource model without changing it.',
+        safety: 'S0',
+        checkpoint: 'doctor-ok',
+      },
+      {
+        tool: 'zeus.query-table',
+        purpose: 'Read explicitly scoped Db2 metadata after profile readiness is confirmed.',
+        safety: 'S2',
+        checkpoint: 'remote-read-approval',
+        onFailure: {
+          code: 'MISSING_PROFILE',
+          recover: 'Select and validate a profile before attempting remote metadata reads.',
+        },
+      },
+    ],
+  },
+  {
     id: 'test-generation',
     matches: ['test', 'tests', 'coverage', 'regression', 'fixture'],
     steps: [
@@ -153,6 +192,28 @@ const GOAL_PLANS = Object.freeze([
     ],
   },
   {
+    id: 'unresolved-reference',
+    matches: ['unresolved reference', 'unresolved', 'caller', 'callee'],
+    steps: [
+      {
+        tool: 'zeus.investigation.start',
+        purpose: 'Start a bounded investigation on existing local analysis evidence.',
+        safety: 'S1',
+        checkpoint: 'artifacts-present',
+        onFailure: {
+          code: 'ANALYZE_REQUIRED',
+          recover:
+            'Run analyze and inspect the manifest before investigating unresolved references.',
+        },
+      },
+      {
+        tool: 'zeus.search-source',
+        purpose: 'Search local source for corroborating references without inventing callers.',
+        safety: 'S1',
+      },
+    ],
+  },
+  {
     id: 'architecture-review',
     matches: ['architecture', 'modernization', 'modernisation', 'refactor', 'design'],
     steps: [
@@ -177,6 +238,43 @@ const GOAL_PLANS = Object.freeze([
         purpose: 'Package review artifacts for sharing.',
         safety: 'S1',
         checkpoint: 'artifacts-present',
+      },
+    ],
+  },
+  {
+    id: 'mutation-gate',
+    matches: [
+      'mutation',
+      'update data',
+      'delete data',
+      'insert data',
+      'write data',
+      'change data',
+      'apply change',
+      'modify data',
+    ],
+    steps: [
+      {
+        tool: 'zeus.assess-risk',
+        purpose: 'Assess the proposed data change before any mutation is prepared.',
+        safety: 'S1',
+        checkpoint: 'artifacts-present',
+      },
+      {
+        tool: 'zeus.generate-checklist',
+        purpose: 'Generate a review and approval checklist for the proposed change.',
+        safety: 'S1',
+      },
+      {
+        tool: 'zeus.write-sql',
+        purpose: 'Only prepare a bounded write plan; never execute without explicit approval.',
+        safety: 'S3',
+        approvalRequired: true,
+        checkpoint: 'operator-approval',
+        onFailure: {
+          code: 'APPROVAL_REQUIRED',
+          recover: 'Stop, show scope and dry-run results, and wait for explicit operator approval.',
+        },
       },
     ],
   },

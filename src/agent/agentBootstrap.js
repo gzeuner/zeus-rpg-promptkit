@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { buildAgentFailurePlaybook } = require('../mcp/agentFailurePlaybook');
+const { CLI_INVOCATIONS } = require('../cli/platformOutput');
 
 const PACKAGE_JSON_PATH = path.resolve(__dirname, '..', '..', 'package.json');
 
@@ -61,6 +62,12 @@ const INTENT_MAP = Object.freeze([
     commands: Object.freeze(['agent log list', 'agent log']),
     firstStep:
       'Read recent records before retrying and record one sanitized event after the attempt.',
+  }),
+  Object.freeze({
+    intent: 'evaluate an agent response before execution',
+    commands: Object.freeze(['agent evaluate --list', 'agent evaluate']),
+    firstStep:
+      'Select a sanitized scenario, score the response, and correct scope, evidence, safety, or learning gaps before continuing.',
   }),
 ]);
 
@@ -125,6 +132,7 @@ function buildCliAgentBootstrapPayload() {
     transport: 'cli',
     canonicalSurface: 'cli',
     mcpOptional: true,
+    cliInvocation: CLI_INVOCATIONS,
     whatToDo:
       'Use the CLI bootstrap and command catalog to select a bounded, evidence-first workflow. Read prior experience before retries and record bounded lessons after failures. Do not hunt markdown for command names.',
     startHere: [
@@ -140,6 +148,9 @@ function buildCliAgentBootstrapPayload() {
       list: 'node cli/zeus.js tools list --json',
       experienceSummary: 'node cli/zeus.js agent log summary --json',
       experienceSuggest: 'node cli/zeus.js agent log suggest --goal "<goal>" --json',
+      evaluationList: 'node cli/zeus.js agent evaluate --list --json',
+      evaluationRun:
+        'node cli/zeus.js agent evaluate --scenario <id> --response-file <relative-path> --json',
       describe: 'node cli/zeus.js tools describe <command> --json',
       workflowSuggestion:
         'node cli/zeus.js agent suggest --goal "<goal>" --profile <profile> --program <program> --json',
@@ -211,6 +222,20 @@ function buildCliAgentBootstrapPayload() {
         'Use recurring failure codes and lessons to improve prompts, docs, or command contracts.',
       ],
     },
+    evaluation: {
+      corpus: 'docs/ai/agent-evaluation-corpus.json',
+      list: 'node cli/zeus.js agent evaluate --list --json',
+      run: 'node cli/zeus.js agent evaluate --scenario <id> --response-file <relative-path> --json',
+      purpose:
+        'Score a candidate agent response against sanitized scenarios before using a non-trivial route.',
+      dimensions: [
+        'commandSelection',
+        'scopeDiscipline',
+        'evidenceCitation',
+        'safetyGating',
+        'experienceLogging',
+      ],
+    },
     failurePlaybook: buildAgentFailurePlaybook({ compact: true }),
     fallback:
       'If a command is unavailable, use tools list/describe and choose a documented lower-risk alternative.',
@@ -220,6 +245,7 @@ function buildCliAgentBootstrapPayload() {
       sessionPrompt: 'docs/ai/session-prompt.md',
       failurePlaybook: 'docs/ai/agent-failure-playbook.md',
       spoolRead: 'docs/cli/spool-read.md',
+      evaluationCorpus: 'docs/ai/agent-evaluation-corpus.json',
     },
     next: 'tools list',
   };

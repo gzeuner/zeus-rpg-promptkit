@@ -58,45 +58,41 @@ hygiene, and recoverable experience records.
 - The catalog is regenerated from declarative command metadata as part of the
   verified change.
 
-## Next iterations
-
-### Iteration 2 — Stable agent response contract
-
-Normalize all agent-facing JSON responses around `ok`, `status`, `safety`,
-`scope`, `evidence`, `artifacts`, `warnings`, `nextCommands`, and
-`approvalRequired`. Map command failures to stable `failureCode`, `lesson`, and
-`nextSafeStep` fields.
-
-### Iteration 3 — Experience intelligence
-
-Add `agent log summary` and `agent log suggest --goal` with recurring failure
-counts, reusable lessons, and safe workarounds. Keep records local, bounded,
-sanitized, and excluded from Git. Add tests that reject secret-bearing lessons.
-
-### Iteration 4 — Contract and documentation drift tests
-
-Generate or verify the session prompt, AI orientation, CLI help, and tool
-catalog from shared command metadata. Add an agent-contract test that checks
-documented commands, safety levels, examples, and CLI-only operation without
-MCP.
-
 ### Iteration 5 — Agent evaluation corpus
 
-Create sanitized scenarios for local analysis, missing profiles, stale
-artifacts, spoolfile evidence, network failure, unresolved references, and
-unapproved mutation requests. Score command selection, scope discipline,
-evidence citation, safety gating, and experience logging.
+- A sanitized corpus covers local analysis, missing profiles, stale artifacts,
+  spoolfile evidence, network failures, unresolved references, and unapproved
+  mutations.
+- `agent evaluate --list` discovers scenarios and
+  `agent evaluate --scenario <id> --response-file <path>` scores command
+  selection, scope, evidence, safety gating, and experience logging.
+- Response files are workspace-contained and size-bounded; evaluation never
+  executes the drafted response.
 
 ### Iteration 6 — Legacy-system usability
 
-Improve intent routing and vocabulary for RPG, CL, DDS, Db2, IBM-i jobs,
-spoolfiles, libraries, schemas, members, and source files. Prefer explicit
-missing-input reports over guesses and expose resume commands from manifests.
+- Suggestions recognize RPG/RPGLE, CL/CLLE, DDS, Db2, IBM i jobs, spoolfiles,
+  libraries, schemas, source files, and members.
+- Preflight returns explicit `legacyConcepts` and `inputRequirements` instead of
+  silently relying on placeholders or guessed values.
+- Existing `analyze-run-manifest.json` files produce bounded, relative resume
+  commands after manifest inspection.
 
 ### Iteration 7 — Cross-platform polish
 
-Fix UTF-8 rendering in Windows CLI help, make PowerShell and POSIX examples
-consistent, and add deterministic output fixtures for Windows and Linux.
+- CLI stdout/stderr are explicitly configured for UTF-8, including Windows help.
+- Bootstrap exposes portable, PowerShell, and POSIX invocation forms while
+  generated agent commands remain portable by default.
+- Deterministic platform invocation fixtures protect the three forms.
+
+## Next iterations
+
+### Iteration 8 — Feedback-to-contract loop
+
+Turn repeated evaluation findings and experience codes into a small, reviewable
+set of prompt, documentation, and command-contract improvements. Keep the
+feedback corpus sanitized, explain why a rule changed, and add a regression
+fixture for every promoted lesson.
 
 ## Definition of done for each iteration
 

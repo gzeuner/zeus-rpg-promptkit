@@ -25,10 +25,10 @@ Zeus does not claim complete semantic understanding, autonomous correctness, pro
 Run these commands from the project root:
 
 ```powershell
-node .\cli\zeus.js agent preflight --goal "<goal>" --json
-node .\cli\zeus.js agent bootstrap --json
-node .\cli\zeus.js tools list --json
-node .\cli\zeus.js context show --json
+node cli/zeus.js agent preflight --goal "<goal>" --json
+node cli/zeus.js agent bootstrap --json
+node cli/zeus.js tools list --json
+node cli/zeus.js context show --json
 ```
 
 Use `agent prompt --goal "<goal>" --json` when the next AI session needs a copy-ready prompt enriched with the local context and sanitized experience lessons. Both commands are local read-only orientation steps; neither runs the suggested workflow.
@@ -36,7 +36,7 @@ Use `agent prompt --goal "<goal>" --json` when the next AI session needs a copy-
 Use the output of `tools list` as the installed command contract. Before using a less familiar command:
 
 ```powershell
-node .\cli\zeus.js tools describe <command> --json
+node cli/zeus.js tools describe <command> --json
 ```
 
 The bootstrap and command catalog are generated from the same command metadata that supports the other public surfaces. Documentation explains intent and safety; it does not override the installed CLI contract.
@@ -59,6 +59,23 @@ with `failureCode`, `lesson`, and `nextSafeStep`; the process still exits non-ze
 Use the failure code with [`agent-failure-playbook.md`](agent-failure-playbook.md)
 instead of retrying the same invalid command.
 
+## Self-evaluation before execution
+
+The repository contains a sanitized evaluation corpus for common legacy-system
+situations. It is deliberately local and deterministic: it evaluates a drafted
+AI response, not the target system and not a live command.
+
+```text
+node cli/zeus.js agent evaluate --list --json
+node cli/zeus.js agent evaluate --scenario <id> --response-file <relative-path> --json
+```
+
+The score covers command selection, scope discipline, evidence citation, safety
+gating, and whether a failure is fed back into the experience log. A score below
+the scenario threshold is `needs-attention`; correct the response and evaluate
+again before executing a non-trivial route. Response files must remain inside the
+current workspace and are size-bounded.
+
 ## Route selection by intent
 
 | User intent                        | Preferred first route                       | Follow-up                                                               |
@@ -74,16 +91,34 @@ instead of retrying the same invalid command.
 
 ## Scope decision
 
+### Legacy vocabulary and explicit inputs
+
+Suggestions recognize RPG/RPGLE, CL/CLLE, DDS, Db2, IBM i jobs, spoolfiles,
+libraries, schemas, source files, and members. `legacyConcepts` records what was
+recognized. `inputRequirements.missingInputs` records what is still needed, such
+as `profile`, `source-root`, `program`, exact spool job identity, `output-root`,
+or `operator-approval`. These are gates, not values to guess.
+
 ### Existing artifacts
 
 Prefer the latest analysis run. Inspect `analyze-run-manifest.json`, `analysis-index.json`, `report.md`, and `architecture-report.md`. Do not re-run analysis merely because the AI has not read the artifacts yet.
+
+If the output root is known, let preflight locate a resumable run:
+
+```text
+node cli/zeus.js agent preflight --goal "<goal>" --program <program> --out <output-root> --json
+```
+
+Use the returned `resume.manifestPath` and `resume.commands` only after checking
+the manifest status and artifact freshness. Paths are workspace-relative so the
+same response remains useful in PowerShell and POSIX environments.
 
 ### Local source
 
 Run a bounded local analysis:
 
 ```powershell
-node .\cli\zeus.js analyze --source <source-root> --program <program> --out <output-root> --optimize-context --dense full --reproducible --json
+node cli/zeus.js analyze --source <source-root> --program <program> --out <output-root> --optimize-context --dense full --reproducible --json
 ```
 
 Use `--dense lite` for a smaller context, `full` for the normal balance, and `ultra` when prompt size is the primary constraint. Use `--skip-db2-metadata` when the task is explicitly local-only.
@@ -93,8 +128,8 @@ Use `--dense lite` for a smaller context, `full` for the normal balance, and `ul
 First validate the intended profile and routing:
 
 ```powershell
-node .\cli\zeus.js doctor --profile <profile> --probe --show-resolved
-node .\cli\zeus.js resources --profile <profile> --json
+node cli/zeus.js doctor --profile <profile> --probe --show-resolved
+node cli/zeus.js resources --profile <profile> --json
 ```
 
 Use `fetch`, `fetch-member`, `spool-read`, `query-table`, `query-sql`, `resolve-object`, `inspect-object`, or `joblog` only when the task needs remote evidence. Fetch is never an implicit refresh. Credentials belong in the configured environment or Secret Vault, never in the prompt.
@@ -106,9 +141,9 @@ for example batch output, reports, or operational diagnostics. It is remote
 read-only (`S2`) and does not create, change, or delete spoolfiles:
 
 ```powershell
-node .\cli\zeus.js tools describe spool-read --json
-node .\cli\zeus.js doctor --profile <profile> --probe --show-resolved
-node .\cli\zeus.js spool-read --profile <profile> --job-number <number> --job-user <user> --job-name <job> --spool-file <name> --json
+node cli/zeus.js tools describe spool-read --json
+node cli/zeus.js doctor --profile <profile> --probe --show-resolved
+node cli/zeus.js spool-read --profile <profile> --job-number <number> --job-user <user> --job-name <job> --spool-file <name> --json
 ```
 
 Use `--spool-number <number>` for an exact spoolfile identity. If it is omitted,
@@ -159,13 +194,13 @@ For every result, record:
 Use the local experience log as a bounded memory between attempts and sessions:
 
 ```powershell
-node .\cli\zeus.js agent log list --json
+node cli/zeus.js agent log list --json
 ```
 
 Before retrying a failed command, read the recent records and apply an existing workaround. After a failed, blocked, or partial attempt, write exactly one concise event:
 
 ```powershell
-node .\cli\zeus.js agent log --outcome failed --command "<safe-command>" --failure-code <CODE> --symptom "<what happened>" --workaround "<what helped>" --lesson "<reusable lesson>" --next-step "<next safe command>" --json
+node cli/zeus.js agent log --outcome failed --command "<safe-command>" --failure-code <CODE> --symptom "<what happened>" --workaround "<what helped>" --lesson "<reusable lesson>" --next-step "<next safe command>" --json
 ```
 
 The default `.zeus/agent-experience.jsonl` is local and ignored by Git. The command stores structured, redacted fields only; never pass raw stdout/stderr, environment dumps, credentials, or credential-bearing URLs. Use stable failure codes so repeated problems can be identified and converted into better prompts, documentation, tests, or command contracts.

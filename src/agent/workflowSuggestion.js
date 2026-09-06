@@ -1,6 +1,7 @@
 'use strict';
 
 const { buildWorkflowSuggestion } = require('../mcp/workflowSuggest');
+const { buildAgentInputRequirements } = require('./legacyVocabulary');
 
 function renderArgument(value, placeholder) {
   const text = String(value || '').trim();
@@ -23,6 +24,9 @@ function cliCommandForTool(tool, options = {}) {
   if (tool === 'zeus.resources') {
     return `node cli/zeus.js resources --profile ${profile} --json`;
   }
+  if (tool === 'zeus.spool-read') {
+    return `node cli/zeus.js spool-read --profile ${profile} --job-number <job-number> --job-user <job-user> --job-name <job-name> --spool-file <spool-file> --json`;
+  }
   if (tool === 'zeus.analyze') {
     return `node cli/zeus.js analyze --source ${source} --program ${program} --out ${out} --optimize-context --json`;
   }
@@ -44,6 +48,9 @@ function cliCommandForTool(tool, options = {}) {
   }
   if (tool === 'zeus.generate-checklist') {
     return `node cli/zeus.js generate-checklist --program ${program} --out ${out}`;
+  }
+  if (tool === 'zeus.write-sql') {
+    return `node cli/zeus.js write-sql --profile ${profile} --file <sql-file> --dry-run`;
   }
   if (tool === 'zeus.qa') {
     return `node cli/zeus.js qa --input ${out}/${program} --format markdown`;
@@ -101,6 +108,14 @@ function buildCliWorkflowSuggestion(options = {}) {
       afterStep: steps.find(step => step.tool === checkpoint.tool).order,
     }));
   const baseNotes = base.notes.filter(note => !note.startsWith('Use tools/list or zeus.help'));
+  const inputRequirements = buildAgentInputRequirements({
+    goal: options.goal,
+    suggestion: { steps },
+    profile: options.profile,
+    program: options.program,
+    source: options.source,
+    out: options.out,
+  });
 
   return {
     ...base,
@@ -109,6 +124,8 @@ function buildCliWorkflowSuggestion(options = {}) {
     mcpOptional: true,
     steps,
     checkpoints,
+    legacyConcepts: inputRequirements.concepts,
+    inputRequirements,
     notes: [
       'This is a CLI command suggestion only; no command was executed.',
       'Use tools list/describe to verify the installed command surface before execution.',
@@ -119,6 +136,9 @@ function buildCliWorkflowSuggestion(options = {}) {
             'No profile supplied; profile-dependent remote steps were omitted from this local suggestion.',
           ]),
       ...baseNotes,
+      ...(inputRequirements.missingInputs.length > 0
+        ? [`Missing inputs are reported explicitly; placeholders are never inferred.`]
+        : []),
     ],
     next: cliCommandForTool(steps[0] && steps[0].tool, options),
   };

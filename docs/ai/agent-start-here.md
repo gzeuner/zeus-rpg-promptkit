@@ -16,12 +16,15 @@ node cli/zeus.js agent preflight --goal "<goal>" --json
 node cli/zeus.js agent bootstrap --json
 node cli/zeus.js agent log list --json
 node cli/zeus.js agent log summary --json
+node cli/zeus.js agent evaluate --list --json
 node cli/zeus.js tools guide --json
 node cli/zeus.js context show --json
 node cli/zeus.js agent prompt --goal "<goal>" --json
 ```
 
 `agent preflight` is the preferred first call. It is local and read-only: it summarizes the effective working context, visible profile names, prior sanitized lessons, capabilities, and a goal-based route. `agent prompt` then produces a copy-ready session prompt from that same preflight state.
+
+Use `agent evaluate --list --json` to see the sanitized self-evaluation corpus. After drafting a response, evaluate it with `--scenario <id> --response-file <relative-path>` before taking a non-trivial route. The score checks command selection, scope, evidence, safety gating, and experience logging without executing the response.
 
 All `agent ... --json` responses share a stable envelope with `ok`, `status`,
 `safety`, `scope`, `evidence`, `artifacts`, `warnings`, `nextCommands`, and
@@ -94,6 +97,19 @@ before output. Add `--spool-number <number>` when the job has multiple spoolfile
 without it, matching visible spoolfiles are enumerated. The IBM-i account still
 needs permission to see and open the target spoolfile.
 
+## Legacy vocabulary and missing inputs
+
+Preflight and workflow suggestions recognize common legacy terms such as RPG/RPGLE,
+CL/CLLE, DDS, Db2, IBM i jobs, spoolfiles, libraries, schemas, source files, and
+members. The response includes `legacyConcepts` and `inputRequirements`; missing
+profile, source root, program, job identity, spoolfile, output root, or approval
+inputs are reported explicitly. Never replace one of these placeholders with a
+guessed system, library, member, or credential.
+
+When `--out <output-root>` points at an existing analysis run, preflight checks for
+`analyze-run-manifest.json` and returns workspace-relative `resume.commands`. Inspect
+the manifest and its artifacts before deciding whether to investigate or re-run.
+
 ## Safety checkpoints
 
 - `S0`: local read-only; safe default for orientation and inspection.
@@ -111,8 +127,9 @@ The local experience log makes failed attempts useful for the next session:
 1. Read recent records before retrying: `node cli/zeus.js agent log list --json`.
 2. Summarize recurring failures: `node cli/zeus.js agent log summary --json`.
 3. Match sanitized lessons to the current goal: `node cli/zeus.js agent log suggest --goal "<goal>" --json`.
-4. After a failed, blocked, or partial attempt, record one concise event with `outcome`, the safe command, a stable `failure-code`, the symptom, the lesson, and the next safe step.
-5. Use the recurring failure codes and lessons to improve the prompt, documentation, or command contract instead of repeating the same invalid call.
+4. Evaluate the proposed response against a sanitized scenario when the route is non-trivial: `node cli/zeus.js agent evaluate --scenario <id> --response-file <relative-path> --json`.
+5. After a failed, blocked, or partial attempt, record one concise event with `outcome`, the safe command, a stable `failure-code`, the symptom, the lesson, and the next safe step.
+6. Use the recurring failure codes and lessons to improve the prompt, documentation, or command contract instead of repeating the same invalid call.
 
 Example:
 

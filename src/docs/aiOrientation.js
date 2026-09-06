@@ -160,6 +160,8 @@ const AI_INTENTS = Object.freeze([
       'agent log list --json',
       'agent log summary --json',
       'agent log suggest --goal "<goal>" --json',
+      'agent evaluate --list --json',
+      'agent evaluate --scenario <id> --response-file <relative-path> --json',
       'agent log --outcome <outcome> --command "<safe-command>" --json',
     ],
     mcp: [],
@@ -197,6 +199,7 @@ function buildAiOrientation() {
       then: [
         'node cli/zeus.js agent bootstrap --json',
         'node cli/zeus.js agent log list --json',
+        'node cli/zeus.js agent evaluate --list --json',
         'node cli/zeus.js tools guide --json',
         'node cli/zeus.js context show --json',
         'node cli/zeus.js doctor --profile <name> --show-resolved',
@@ -251,6 +254,7 @@ function buildAiOrientation() {
       sessionPrompt: 'docs/ai/session-prompt.md',
       failurePlaybook: 'docs/ai/agent-failure-playbook.md',
       spoolRead: 'docs/cli/spool-read.md',
+      evaluationCorpus: 'docs/ai/agent-evaluation-corpus.json',
       mcpOperatorGuide: 'docs/mcp/operator-guide.md',
     },
   };

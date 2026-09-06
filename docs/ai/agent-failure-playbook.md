@@ -12,6 +12,7 @@ Machine-readable copy:
 
 - CLI: `node cli/zeus.js agent preflight --goal "<goal>" --json` → local readiness and next commands
 - CLI: `node cli/zeus.js agent bootstrap --json` → `failurePlaybook`
+- CLI: `node cli/zeus.js agent evaluate --list --json` → sanitized response-quality scenarios
 - MCP, when explicitly available: `zeus://metadata/agent-failure-playbook.json`
 
 ## Principles
@@ -35,6 +36,16 @@ node cli/zeus.js agent log --outcome failed --command "<safe-command>" --failure
 ```
 
 Use stable codes such as `MISSING_PROFILE`, `ANALYZE_REQUIRED`, or `PATH_OUTSIDE_WORKSPACE`. The log is stored at `.zeus/agent-experience.jsonl` and accepts structured redacted fields only. Do not copy raw stdout/stderr, environment dumps, credentials, or credential-bearing URLs into it. A lesson should describe the reusable contract, not merely repeat the error text.
+
+For a non-trivial proposed response, run the matching corpus scenario before
+executing any suggested route:
+
+```text
+node cli/zeus.js agent evaluate --scenario <id> --response-file <relative-path> --json
+```
+
+Treat a score below the scenario threshold as `needs-attention`; correct the
+missing scope, evidence, safety gate, or learning step and evaluate again.
 
 ## Codes
 
