@@ -367,7 +367,16 @@ const COMMAND_UI_METADATA = Object.freeze([
       'Give an AI agent a stable CLI contract, intent map, safety rules, next commands, and reusable lessons from prior attempts.',
     requiredCapabilities: Object.freeze([]),
     commonOptions: Object.freeze(['--json']),
-    subcommands: Object.freeze(['bootstrap', 'preflight', 'prompt', 'suggest', 'log', 'log list']),
+    subcommands: Object.freeze([
+      'bootstrap',
+      'preflight',
+      'prompt',
+      'suggest',
+      'log',
+      'log list',
+      'log summary',
+      'log suggest',
+    ]),
     advancedOptions: Object.freeze([
       '--goal',
       '--profile',
