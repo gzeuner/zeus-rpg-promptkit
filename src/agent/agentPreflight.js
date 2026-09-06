@@ -68,9 +68,9 @@ function buildPreflightSuggestion({ goal, profile, program, source, out } = {}) 
   });
 }
 
-function readExperienceInventory({ cwd, limit } = {}) {
+function readExperienceInventory({ cwd, limit, goal } = {}) {
   try {
-    return listAgentExperience({ cwd, limit });
+    return listAgentExperience({ cwd, limit, goal });
   } catch (error) {
     return {
       ok: false,
@@ -87,6 +87,13 @@ function readExperienceInventory({ cwd, limit } = {}) {
         byOutcome: { success: 0, partial: 0, failed: 0, blocked: 0 },
         recurringFailureCodes: [],
         lessons: [],
+      },
+      intelligence: {
+        recurringFailures: [],
+        reusableLessons: [],
+        goal: goal ? sanitizeValue(goal) : null,
+        matchedEventCount: 0,
+        suggestions: [],
       },
       failureCode: String(error.code || 'AGENT_EXPERIENCE_UNAVAILABLE'),
       message: sanitizeValue(error.message || 'Agent experience could not be read.'),
@@ -111,8 +118,12 @@ function buildCliAgentPreflightPayload({
     cwd: workspaceRoot,
     args: effectiveProfile ? { profile: effectiveProfile } : {},
   });
-  const experience = readExperienceInventory({ cwd: workspaceRoot, limit: experienceLimit });
   const normalizedGoal = String(goal || '').trim() || null;
+  const experience = readExperienceInventory({
+    cwd: workspaceRoot,
+    limit: experienceLimit,
+    goal: normalizedGoal,
+  });
   const suggestion = buildPreflightSuggestion({
     goal: normalizedGoal,
     profile: effectiveProfile,
@@ -164,6 +175,7 @@ function buildCliAgentPreflightPayload({
       eventCount: experience.eventCount,
       recentEvents: experience.events,
       summary: experience.summary,
+      intelligence: experience.intelligence,
     },
     capabilities: {
       cli: true,

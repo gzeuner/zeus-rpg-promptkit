@@ -15,12 +15,18 @@ CLI:
 node cli/zeus.js agent preflight --goal "<goal>" --json
 node cli/zeus.js agent bootstrap --json
 node cli/zeus.js agent log list --json
+node cli/zeus.js agent log summary --json
 node cli/zeus.js tools guide --json
 node cli/zeus.js context show --json
 node cli/zeus.js agent prompt --goal "<goal>" --json
 ```
 
 `agent preflight` is the preferred first call. It is local and read-only: it summarizes the effective working context, visible profile names, prior sanitized lessons, capabilities, and a goal-based route. `agent prompt` then produces a copy-ready session prompt from that same preflight state.
+
+All `agent ... --json` responses share a stable envelope with `ok`, `status`,
+`safety`, `scope`, `evidence`, `artifacts`, `warnings`, `nextCommands`, and
+`approvalRequired`. Failed responses additionally provide `failureCode`,
+`lesson`, and `nextSafeStep`.
 
 For remote work, continue with:
 
@@ -103,8 +109,10 @@ Keep credentials out of prompts, logs, generated artifacts, and responses. For t
 The local experience log makes failed attempts useful for the next session:
 
 1. Read recent records before retrying: `node cli/zeus.js agent log list --json`.
-2. After a failed, blocked, or partial attempt, record one concise event with `outcome`, the safe command, a stable `failure-code`, the symptom, the lesson, and the next safe step.
-3. Use the recurring failure codes and lessons to improve the prompt, documentation, or command contract instead of repeating the same invalid call.
+2. Summarize recurring failures: `node cli/zeus.js agent log summary --json`.
+3. Match sanitized lessons to the current goal: `node cli/zeus.js agent log suggest --goal "<goal>" --json`.
+4. After a failed, blocked, or partial attempt, record one concise event with `outcome`, the safe command, a stable `failure-code`, the symptom, the lesson, and the next safe step.
+5. Use the recurring failure codes and lessons to improve the prompt, documentation, or command contract instead of repeating the same invalid call.
 
 Example:
 

@@ -1,7 +1,7 @@
 ---
 Title: CLI Agent Guide
 Description: Practical CLI-first contract for AI agents working with IBM i legacy systems through Zeus.
-Last Updated: 2026-09-03
+Last Updated: 2026-09-06
 ---
 
 # CLI Agent Guide
@@ -40,6 +40,24 @@ node .\cli\zeus.js tools describe <command> --json
 ```
 
 The bootstrap and command catalog are generated from the same command metadata that supports the other public surfaces. Documentation explains intent and safety; it does not override the installed CLI contract.
+
+## Stable agent response contract
+
+Every `agent ... --json` response exposes the same top-level fields in addition
+to operation-specific data:
+
+- `ok` and `status`: whether the operation completed and whether attention is needed;
+- `safety` and `approvalRequired`: the highest relevant safety level and approval gate;
+- `scope`: profile, system, library/schema, source file, member, program, and paths when known;
+- `evidence`: sanitized sources, count, completeness, and unresolved items;
+- `artifacts`: workspace-relative artifacts produced or consulted;
+- `warnings`: non-fatal limitations or missing optional context;
+- `nextCommands`: bounded follow-up commands, with `nextSafeStep` on failures.
+
+On a failed JSON agent command, stdout remains a machine-readable error envelope
+with `failureCode`, `lesson`, and `nextSafeStep`; the process still exits non-zero.
+Use the failure code with [`agent-failure-playbook.md`](agent-failure-playbook.md)
+instead of retrying the same invalid command.
 
 ## Route selection by intent
 

@@ -63,6 +63,7 @@ const { runInvestigate } = require('../src/cli/commands/investigateCommand');
 const { runProjectKnowledge } = require('../src/cli/commands/projectKnowledgeCommand');
 const { run: runKnowledge } = require('../src/cli/commands/knowledgeCommand');
 const { runAgent } = require('../src/cli/commands/agentCommand');
+const { buildAgentErrorResponse } = require('../src/agent/agentResponseContract');
 const { runJournalRowDiffCommand } = require('../src/cli/commands/journalRowDiffCommand');
 const path = require('path');
 const { autoLoadEnvFiles } = require('../src/config/envFileLoader');
@@ -818,7 +819,16 @@ async function main() {
 
 if (require.main === module) {
   main().catch(error => {
-    console.error(error.message);
+    const parsed = splitCommandArgs(process.argv.slice(2));
+    const args = parsed.args;
+    const format = String(args.format || args.output || '')
+      .toLowerCase()
+      .trim();
+    if (parsed.command === 'agent' && (args.json === true || format === 'json')) {
+      process.stdout.write(`${JSON.stringify(buildAgentErrorResponse(error), null, 2)}\n`);
+    } else {
+      console.error(error.message);
+    }
     process.exit(1);
   });
 }

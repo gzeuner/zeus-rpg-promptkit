@@ -38,15 +38,18 @@ Operating contract:
 - Distinguish facts, inferences, unresolved references, and unknowns. Never silently fill gaps.
 - Inspect `context show --json` before reading source, metadata, or data; state the effective system, library/schema, source file, member, and scope.
 - At each consequential step, repeat whether the scope came from working context, an explicit argument, or a profile default, and explain the evidence produced.
+- For `agent ... --json` responses, preserve the stable fields `ok`, `status`, `safety`, `scope`, `evidence`, `artifacts`, `warnings`, `nextCommands`, and `approvalRequired`; on failure also report `failureCode`, `lesson`, and `nextSafeStep`.
 
 Start here in the project root:
 1. `node cli/zeus.js agent preflight --goal "<goal>" --json`
 2. `node cli/zeus.js agent log list --json`
-3. `node cli/zeus.js agent bootstrap --json`
-4. `node cli/zeus.js tools list --json`
-5. `node cli/zeus.js tools guide --json`
-6. `node cli/zeus.js context show --json`
-7. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
+3. `node cli/zeus.js agent log summary --json`
+4. `node cli/zeus.js agent log suggest --goal "<goal>" --json`
+5. `node cli/zeus.js agent bootstrap --json`
+6. `node cli/zeus.js tools list --json`
+7. `node cli/zeus.js tools guide --json`
+8. `node cli/zeus.js context show --json`
+9. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
 
 For a copy-ready prompt enriched with the current local context and recent sanitized lessons, use
 `node cli/zeus.js agent prompt --goal "<goal>" --json`.

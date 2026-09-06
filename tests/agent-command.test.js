@@ -24,6 +24,15 @@ test('CLI agent bootstrap exposes the canonical CLI contract', () => {
   const payload = readJson(runCli(['agent', 'bootstrap', '--json']));
 
   assert.equal(payload.ok, true);
+  assert.equal(payload.contractVersion, 1);
+  assert.equal(payload.status, 'ready');
+  assert.equal(payload.safety.level, 'S0');
+  assert.equal(payload.approvalRequired, false);
+  assert.ok(payload.scope);
+  assert.ok(payload.evidence.available);
+  assert.ok(Array.isArray(payload.artifacts));
+  assert.ok(Array.isArray(payload.warnings));
+  assert.ok(Array.isArray(payload.nextCommands));
   assert.equal(payload.schemaVersion, 1);
   assert.equal(payload.transport, 'cli');
   assert.equal(payload.canonicalSurface, 'cli');
@@ -47,6 +56,11 @@ test('CLI agent preflight gives a goal-based local orientation without executing
   assert.equal(payload.status, 'ready');
   assert.equal(payload.readOnly, true);
   assert.equal(payload.executionStarted, false);
+  assert.equal(payload.contractVersion, 1);
+  assert.ok(payload.scope);
+  assert.ok(payload.evidence.sources.includes('working context'));
+  assert.ok(Array.isArray(payload.artifacts));
+  assert.equal(payload.approvalRequired, false);
   assert.equal(payload.goal, 'Understand a local ORDERPGM program');
   assert.ok(payload.context);
   assert.ok(payload.profileInventory);
@@ -74,6 +88,10 @@ test('CLI agent prompt creates a copy-ready prompt from preflight metadata', () 
   assert.equal(payload.operation, 'prompt');
   assert.equal(payload.readOnly, true);
   assert.equal(payload.executionStarted, false);
+  assert.equal(payload.contractVersion, 1);
+  assert.ok(payload.scope);
+  assert.ok(payload.evidence.sources.includes('preflight metadata'));
+  assert.equal(payload.approvalRequired, false);
   assert.match(payload.prompt, /Review dependencies for ORDERPGM/);
   assert.match(payload.prompt, /Preflight status:/);
   assert.match(payload.prompt, /Recommended next command:/);
@@ -84,7 +102,14 @@ test('CLI agent prompt creates a copy-ready prompt from preflight metadata', () 
 test('CLI agent prompt requires an explicit goal', () => {
   const result = runCli(['agent', 'prompt', '--json']);
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /goal/i);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.status, 'failed');
+  assert.equal(payload.failureCode, 'TOOL_INVALID_ARGUMENTS');
+  assert.equal(payload.safety.level, 'S0');
+  assert.equal(payload.approvalRequired, false);
+  assert.match(payload.error.message, /goal/i);
+  assert.ok(payload.nextSafeStep);
 });
 
 test('CLI agent suggestion maps MCP planning metadata to executable CLI commands', () => {
@@ -119,7 +144,10 @@ test('CLI agent suggestion maps MCP planning metadata to executable CLI commands
 test('CLI agent suggestion requires an explicit goal', () => {
   const result = runCli(['agent', 'suggest', '--json']);
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /goal/i);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.failureCode, 'TOOL_INVALID_ARGUMENTS');
+  assert.match(payload.error.message, /goal/i);
 });
 
 test('CLI agent suggestion keeps a local goal free of profile-only steps', () => {
