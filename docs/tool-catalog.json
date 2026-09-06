@@ -1017,12 +1017,14 @@
       "capabilityId": null,
       "subcommands": [
         "bootstrap",
+        "preflight",
+        "prompt",
         "suggest",
         "log",
         "log list"
       ],
-      "purpose": "Bootstrap CLI agents, suggest bounded evidence-first workflows, and record/read sanitized local experience events without executing work.",
-      "example": "node cli/zeus.js agent bootstrap --json"
+      "purpose": "Orient CLI agents, generate context-aware prompts, suggest bounded evidence-first workflows, and record/read sanitized local experience events without executing work.",
+      "example": "node cli/zeus.js agent preflight --goal \"<goal>\" --json"
     },
     {
       "command": "project-knowledge",
@@ -1143,6 +1145,8 @@
     "Always report exact command lines before execution when risk is non-trivial."
   ],
   "sequence": [
+    "`agent preflight --goal \"<goal>\" --json` (local readiness, scope, lessons, and route)",
+    "`agent prompt --goal \"<goal>\" --json` (copy-ready prompt enriched with preflight metadata)",
     "`agent bootstrap --json` (operating contract and recovery playbook)",
     "`agent log list --json` (read prior sanitized lessons before retries)",
     "`tools list --json` and `tools describe <id> --json` (capability discovery)",

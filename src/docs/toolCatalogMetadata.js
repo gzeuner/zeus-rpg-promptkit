@@ -377,10 +377,10 @@ const COMMAND_METADATA = Object.freeze({
   agent: Object.freeze({
     safety: 'S0',
     scope: 'Local',
-    subcommands: ['bootstrap', 'suggest', 'log', 'log list'],
+    subcommands: ['bootstrap', 'preflight', 'prompt', 'suggest', 'log', 'log list'],
     purpose:
-      'Bootstrap CLI agents, suggest bounded evidence-first workflows, and record/read sanitized local experience events without executing work.',
-    example: 'node cli/zeus.js agent bootstrap --json',
+      'Orient CLI agents, generate context-aware prompts, suggest bounded evidence-first workflows, and record/read sanitized local experience events without executing work.',
+    example: 'node cli/zeus.js agent preflight --goal "<goal>" --json',
   }),
   'project-knowledge': Object.freeze({
     safety: 'S1',
@@ -886,6 +886,8 @@ const MANDATORY_AI_RULES = Object.freeze([
 ]);
 
 const RECOMMENDED_AI_SEQUENCE = Object.freeze([
+  '`agent preflight --goal "<goal>" --json` (local readiness, scope, lessons, and route)',
+  '`agent prompt --goal "<goal>" --json` (copy-ready prompt enriched with preflight metadata)',
   '`agent bootstrap --json` (operating contract and recovery playbook)',
   '`agent log list --json` (read prior sanitized lessons before retries)',
   '`tools list --json` and `tools describe <id> --json` (capability discovery)',

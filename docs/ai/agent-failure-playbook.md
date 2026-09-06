@@ -1,7 +1,7 @@
 ---
 Title: Agent Failure Playbook
 Description: Stable CLI and MCP recovery guidance for AI agents working with Zeus.
-Last Updated: 2026-09-03
+Last Updated: 2026-09-06
 ---
 
 # Agent Failure Playbook
@@ -10,6 +10,7 @@ Use this playbook when a Zeus CLI command or optional MCP operation fails, is re
 
 Machine-readable copy:
 
+- CLI: `node cli/zeus.js agent preflight --goal "<goal>" --json` → local readiness and next commands
 - CLI: `node cli/zeus.js agent bootstrap --json` → `failurePlaybook`
 - MCP, when explicitly available: `zeus://metadata/agent-failure-playbook.json`
 

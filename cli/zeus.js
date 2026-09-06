@@ -231,7 +231,7 @@ function printHelp() {
     '  zeus knowledge <extract|validate|inspect> [options] [--json]  # LOKAL: privacy-gated project-neutral catalog'
   );
   console.log(
-    '  zeus [--config <path>] agent <bootstrap|suggest|log> [options] [--json]  # CLI-first agent contract, workflow suggestion, and experience log'
+    '  zeus [--config <path>] agent <bootstrap|preflight|prompt|suggest|log> [options] [--json]  # CLI-first agent contract, preflight, prompt generation, workflow suggestion, and experience log'
   );
   console.log(
     '  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]'

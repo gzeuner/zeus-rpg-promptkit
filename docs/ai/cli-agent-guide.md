@@ -25,10 +25,13 @@ Zeus does not claim complete semantic understanding, autonomous correctness, pro
 Run these commands from the project root:
 
 ```powershell
+node .\cli\zeus.js agent preflight --goal "<goal>" --json
 node .\cli\zeus.js agent bootstrap --json
 node .\cli\zeus.js tools list --json
 node .\cli\zeus.js context show --json
 ```
+
+Use `agent prompt --goal "<goal>" --json` when the next AI session needs a copy-ready prompt enriched with the local context and sanitized experience lessons. Both commands are local read-only orientation steps; neither runs the suggested workflow.
 
 Use the output of `tools list` as the installed command contract. Before using a less familiar command:
 

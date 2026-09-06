@@ -1,7 +1,7 @@
 ---
 Title: CLI Reference Alias
 Description: Stabiler Einstiegspunkt unter docs/cli mit Verweis auf den autoritativen Tool-Katalog.
-Last Updated: 2026-06-19
+Last Updated: 2026-09-06
 ---
 
 # CLI Reference
@@ -10,7 +10,9 @@ Die verbindliche CLI-Referenz wird in [`../tool-catalog.md`](../tool-catalog.md)
 
 Der unterstützte Produktpfad ist CLI-first:
 
-- Agenten mit `zeus agent bootstrap --json` starten
+- Agenten mit `zeus agent preflight --goal "<goal>" --json` orientieren
+- mit `zeus agent prompt --goal "<goal>" --json` einen kopierfertigen Session-Prompt erzeugen
+- mit `zeus agent bootstrap --json` den vollständigen Betriebsvertrag laden
 - Befehle mit `zeus tools list --json` und `zeus tools describe <command> --json` entdecken
 - Umgebung explizit in der Shell laden
 - `doctor` vor profilbasierter Remote-Arbeit ausführen

@@ -1,7 +1,7 @@
 ---
 Title: AI Session Prompt
 Description: CLI-first, evidence-first session contract for AI agents working with Zeus RPG PromptKit.
-Last Updated: 2026-09-03
+Last Updated: 2026-09-06
 ---
 
 # Zeus RPG PromptKit - AI Session Prompt (v3.0)
@@ -10,6 +10,7 @@ Use this short prompt when starting an AI session. It is intentionally CLI-first
 
 Related:
 
+- [`iteration-agenda.md`](iteration-agenda.md) — current improvement agenda and iteration status
 - [`agent-start-here.md`](agent-start-here.md) — compact orientation and intent map
 - [`cli-agent-guide.md`](cli-agent-guide.md) — detailed CLI workflow and intent map
 - [`../tool-catalog.md`](../tool-catalog.md) — authoritative command purpose, scope, and safety
@@ -28,6 +29,7 @@ Zeus is a local evidence and investigation platform. It analyzes RPG, CL, DDS, s
 
 Operating contract:
 - The Zeus CLI is the canonical agent surface. MCP and the browser/UI are optional; never assume either is available.
+- Use `agent preflight --goal "<goal>" --json` as the first local orientation call; it reports the effective context, safe capabilities, prior lessons, and the next route without executing work.
 - Use the installed CLI to discover capabilities. Do not invent commands, options, profiles, systems, libraries, tables, callers, or resolved references.
 - Default to local read-only inspection and local artifact generation. IBM i/Db2 access is remote-read and needs a verified profile/runtime.
 - Require explicit user approval before every S3/S4 action, data mutation, apply/bridge/compile-style action, or source fetch from a remote system.
@@ -38,12 +40,16 @@ Operating contract:
 - At each consequential step, repeat whether the scope came from working context, an explicit argument, or a profile default, and explain the evidence produced.
 
 Start here in the project root:
-1. `node cli/zeus.js agent bootstrap --json`
+1. `node cli/zeus.js agent preflight --goal "<goal>" --json`
 2. `node cli/zeus.js agent log list --json`
-3. `node cli/zeus.js tools guide --json`
+3. `node cli/zeus.js agent bootstrap --json`
 4. `node cli/zeus.js tools list --json`
-5. `node cli/zeus.js context show --json`
-6. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
+5. `node cli/zeus.js tools guide --json`
+6. `node cli/zeus.js context show --json`
+7. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
+
+For a copy-ready prompt enriched with the current local context and recent sanitized lessons, use
+`node cli/zeus.js agent prompt --goal "<goal>" --json`.
 
 Choose the smallest valid route:
 - Existing analysis output: inspect `analyze-run-manifest.json`, `report.md`, and `architecture-report.md` before re-running analysis.

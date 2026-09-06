@@ -90,6 +90,21 @@ test('AI session prompt service replaces the goal placeholder and preserves safe
   assert.equal(result.metadata.templateSource, 'docs/ai/session-prompt.md');
 });
 
+test('AI session prompt service accepts additional sanitized orientation context', () => {
+  const service = createAiSessionPromptService({
+    templateLoader: () => buildTemplate(),
+  });
+
+  const result = service.generatePrompt({
+    profile: 'development',
+    goal: 'Review dependencies.',
+    additionalContext: ['- Preflight status: ready', '- Recommended next command: tools guide'],
+  });
+
+  assert.match(result.prompt, /Preflight status: ready/);
+  assert.match(result.prompt, /Recommended next command: tools guide/);
+});
+
 test('AI session prompt service omits secrets from generated prompt metadata', () => {
   const service = createAiSessionPromptService({
     templateLoader: () => buildTemplate(),

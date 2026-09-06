@@ -37,6 +37,56 @@ test('CLI agent bootstrap exposes the canonical CLI contract', () => {
   assert.match(payload.experienceLog.record, /agent log --outcome/);
 });
 
+test('CLI agent preflight gives a goal-based local orientation without executing work', () => {
+  const payload = readJson(
+    runCli(['agent', 'preflight', '--goal', 'Understand a local ORDERPGM program', '--json'])
+  );
+
+  assert.equal(payload.ok, true);
+  assert.equal(payload.operation, 'preflight');
+  assert.equal(payload.status, 'ready');
+  assert.equal(payload.readOnly, true);
+  assert.equal(payload.executionStarted, false);
+  assert.equal(payload.goal, 'Understand a local ORDERPGM program');
+  assert.ok(payload.context);
+  assert.ok(payload.profileInventory);
+  assert.ok(payload.experience.summary);
+  assert.ok(payload.suggestion);
+  assert.ok(payload.nextCommands.some(command => command.includes('agent prompt')));
+  assert.equal(payload.safety.level, 'S0');
+  assert.doesNotMatch(JSON.stringify(payload), /password\s*[:=]\s*[^()\s,}]+/i);
+});
+
+test('CLI agent prompt creates a copy-ready prompt from preflight metadata', () => {
+  const payload = readJson(
+    runCli([
+      'agent',
+      'prompt',
+      '--goal',
+      'Review dependencies for ORDERPGM',
+      '--environment',
+      'local-test',
+      '--json',
+    ])
+  );
+
+  assert.equal(payload.ok, true);
+  assert.equal(payload.operation, 'prompt');
+  assert.equal(payload.readOnly, true);
+  assert.equal(payload.executionStarted, false);
+  assert.match(payload.prompt, /Review dependencies for ORDERPGM/);
+  assert.match(payload.prompt, /Preflight status:/);
+  assert.match(payload.prompt, /Recommended next command:/);
+  assert.doesNotMatch(payload.prompt, /\[INSERT USER GOAL HERE\]/);
+  assert.ok(payload.metadata.nextCommands.length > 0);
+});
+
+test('CLI agent prompt requires an explicit goal', () => {
+  const result = runCli(['agent', 'prompt', '--json']);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /goal/i);
+});
+
 test('CLI agent suggestion maps MCP planning metadata to executable CLI commands', () => {
   const payload = readJson(
     runCli([
