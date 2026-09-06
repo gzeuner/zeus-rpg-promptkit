@@ -28,6 +28,14 @@ function formatPromptContext(preflight) {
       lines.push(`  - [${lesson.failureCode}] ${lesson.lesson}`);
     }
   }
+  const suggestions = Array.isArray(preflight.experience.intelligence?.suggestions)
+    ? preflight.experience.intelligence.suggestions.slice(0, 2)
+    : [];
+  for (const suggestion of suggestions) {
+    if (suggestion.workaround) lines.push(`- Suggested workaround: ${suggestion.workaround}`);
+    if (suggestion.nextSafeStep)
+      lines.push(`- Suggested next safe step: ${suggestion.nextSafeStep}`);
+  }
   return lines.map(line => sanitizeValue(line));
 }
 

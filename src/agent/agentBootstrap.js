@@ -138,6 +138,8 @@ function buildCliAgentBootstrapPayload() {
       preflight: 'node cli/zeus.js agent preflight --goal "<goal>" --json',
       prompt: 'node cli/zeus.js agent prompt --goal "<goal>" --json',
       list: 'node cli/zeus.js tools list --json',
+      experienceSummary: 'node cli/zeus.js agent log summary --json',
+      experienceSuggest: 'node cli/zeus.js agent log suggest --goal "<goal>" --json',
       describe: 'node cli/zeus.js tools describe <command> --json',
       workflowSuggestion:
         'node cli/zeus.js agent suggest --goal "<goal>" --profile <profile> --program <program> --json',
@@ -195,6 +197,8 @@ function buildCliAgentBootstrapPayload() {
       record:
         'node cli/zeus.js agent log --outcome failed --command "<safe-command>" --failure-code <CODE> --symptom "<what happened>" --workaround "<what helped>" --lesson "<reusable lesson>" --next-step "<next safe command>" --json',
       list: 'node cli/zeus.js agent log list --json',
+      summary: 'node cli/zeus.js agent log summary --json',
+      suggest: 'node cli/zeus.js agent log suggest --goal "<goal>" --json',
       recordWhen: ['failed', 'blocked', 'partial', 'successful workaround or confirmed correction'],
       required: ['outcome', 'command'],
       privacy: [

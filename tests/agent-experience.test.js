@@ -9,8 +9,11 @@ const test = require('node:test');
 
 const {
   appendAgentExperience,
+  buildExperienceIntelligence,
   listAgentExperience,
   resolveExperienceLogPath,
+  suggestAgentExperience,
+  summarizeAgentExperience,
 } = require('../src/agent/agentExperience');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -125,4 +128,96 @@ test('CLI agent log records and reads a safe local learning loop', () => {
   assert.equal(listPayload.eventCount, 1);
   assert.equal(listPayload.events[0].failureCode, 'APPROVAL_REQUIRED');
   assert.equal(listPayload.summary.lessons.length, 1);
+});
+
+test('experience summary and suggestions match goals without exposing secret-bearing lessons', () => {
+  const cwd = createTempWorkspace();
+  const secretLesson = ['password', 'TOPSECRET'].join('=');
+  appendAgentExperience(
+    {
+      eventId: 'evt-rpg',
+      event: 'failure',
+      outcome: 'failed',
+      command: 'node cli/zeus.js impact --target STATUS --program ORDERPGM',
+      failureCode: 'ANALYZE_REQUIRED',
+      goal: 'Understand a legacy RPG program',
+      lesson: 'Impact requires a completed local analysis run.',
+      workaround: 'Run analyze and verify analyze-run-manifest.json first.',
+      nextStep:
+        'node cli/zeus.js analyze --source <source-root> --program ORDERPGM --out <output-root> --json',
+    },
+    { cwd }
+  );
+  appendAgentExperience(
+    {
+      eventId: 'evt-secret',
+      event: 'failure',
+      outcome: 'failed',
+      command: 'node cli/zeus.js doctor --profile default',
+      failureCode: 'MISSING_PROFILE',
+      goal: 'Remote setup',
+      lesson: `Never store ${secretLesson} in a lesson.`,
+      workaround: 'Use the configured secret vault instead.',
+      nextStep: 'node cli/zeus.js profiles --json',
+    },
+    { cwd }
+  );
+
+  const summary = summarizeAgentExperience({ cwd });
+  assert.equal(summary.operation, 'summary');
+  assert.equal(summary.summary.total, 2);
+  assert.ok(summary.intelligence.recurringFailures.length > 0);
+  assert.ok(summary.intelligence.reusableLessons.length > 0);
+
+  const suggestions = suggestAgentExperience({ cwd, goal: 'Analyze legacy RPG program' });
+  assert.equal(suggestions.operation, 'suggest');
+  assert.equal(suggestions.suggestions[0].failureCode, 'ANALYZE_REQUIRED');
+  assert.doesNotMatch(JSON.stringify(suggestions), /TOPSECRET/);
+  assert.doesNotMatch(
+    JSON.stringify(buildExperienceIntelligence(suggestions.suggestions)),
+    /TOPSECRET/
+  );
+});
+
+test('CLI agent log summary and suggest expose the stable learning contract', () => {
+  const cwd = createTempWorkspace();
+  const record = runCli(cwd, [
+    'agent',
+    'log',
+    '--outcome',
+    'failed',
+    '--command',
+    'node cli/zeus.js impact --target STATUS --program ORDERPGM',
+    '--failure-code',
+    'ANALYZE_REQUIRED',
+    '--goal',
+    'Analyze legacy RPG program',
+    '--lesson',
+    'Run analyze before impact.',
+    '--next-step',
+    'node cli/zeus.js analyze --source <source-root> --program ORDERPGM --out <output-root> --json',
+    '--json',
+  ]);
+  assert.equal(record.status, 0, record.stderr);
+
+  const summary = runCli(cwd, ['agent', 'log', 'summary', '--json']);
+  assert.equal(summary.status, 0, summary.stderr);
+  const summaryPayload = JSON.parse(summary.stdout);
+  assert.equal(summaryPayload.operation, 'summary');
+  assert.equal(summaryPayload.contractVersion, 1);
+  assert.ok(summaryPayload.intelligence.reusableLessons.length > 0);
+
+  const suggest = runCli(cwd, [
+    'agent',
+    'log',
+    'suggest',
+    '--goal',
+    'Analyze legacy RPG program',
+    '--json',
+  ]);
+  assert.equal(suggest.status, 0, suggest.stderr);
+  const suggestPayload = JSON.parse(suggest.stdout);
+  assert.equal(suggestPayload.operation, 'suggest');
+  assert.equal(suggestPayload.suggestions[0].failureCode, 'ANALYZE_REQUIRED');
+  assert.ok(suggestPayload.nextCommands.includes('node cli/zeus.js agent log summary --json'));
 });

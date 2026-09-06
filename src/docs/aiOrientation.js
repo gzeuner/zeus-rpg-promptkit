@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 'use strict';
 
 const { listCommandHelpEntries } = require('../cli/commandHelp');
+const { AGENT_RESPONSE_FIELDS } = require('../agent/agentResponseContract');
 
 const ORIENTATION_SCHEMA_VERSION = 1;
 
@@ -157,6 +158,8 @@ const AI_INTENTS = Object.freeze([
     question: 'What failed before, and how can the next attempt avoid repeating it?',
     cli: [
       'agent log list --json',
+      'agent log summary --json',
+      'agent log suggest --goal "<goal>" --json',
       'agent log --outcome <outcome> --command "<safe-command>" --json',
     ],
     mcp: [],
@@ -232,6 +235,7 @@ function buildAiOrientation() {
       'next: one recommended next command/tool with safety level and approval requirement',
       'learning: when something failed or was corrected, include the experience event id and reusable lesson',
     ],
+    responseContractFields: [...AGENT_RESPONSE_FIELDS],
     experienceLog: {
       storage: '.zeus/agent-experience.jsonl',
       listCli: 'node cli/zeus.js agent log list --json',
@@ -253,6 +257,7 @@ function buildAiOrientation() {
 }
 
 function renderAiOrientationMarkdown(orientation = buildAiOrientation()) {
+  const responseFields = orientation.responseContractFields.map(field => `\`${field}\``).join(', ');
   const lines = [
     '<!-- Stable orientation guide. Live command details come from `zeus tools guide --json`. -->',
     '',
@@ -292,6 +297,11 @@ function renderAiOrientationMarkdown(orientation = buildAiOrientation()) {
     `- [AI session prompt](session-prompt.md)`,
     `- [Failure playbook](agent-failure-playbook.md)`,
     `- [MCP operator guide](../mcp/operator-guide.md)`,
+    '',
+    '## Stable agent JSON response contract',
+    '',
+    `Every \`agent ... --json\` response includes: ${responseFields}.`,
+    'Failed responses additionally include `failureCode`, `lesson`, and `nextSafeStep`.',
     '',
   ];
   return lines.join('\n');

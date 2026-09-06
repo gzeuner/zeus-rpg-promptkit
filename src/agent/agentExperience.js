@@ -19,6 +19,7 @@ const MAX_LOG_BYTES = 2 * 1024 * 1024;
 const MAX_LOG_LINES = 5000;
 const DEFAULT_LIST_LIMIT = 20;
 const MAX_LIST_LIMIT = 100;
+const MAX_SUGGESTION_LIMIT = 8;
 
 const OUTCOMES = Object.freeze(['success', 'partial', 'failed', 'blocked']);
 const EVENT_TYPES = Object.freeze(['failure', 'outcome', 'lesson']);
@@ -244,6 +245,79 @@ function buildExperienceSummary(events) {
   return { total: events.length, byOutcome, recurringFailureCodes, lessons };
 }
 
+function tokenizeExperienceGoal(goal) {
+  return [
+    ...new Set(
+      String(goal || '')
+        .toLowerCase()
+        .match(/[a-z0-9äöüß]{3,}/gi) || []
+    ),
+  ].slice(0, 24);
+}
+
+function buildExperienceSuggestions(events, { goal = null, limit = MAX_SUGGESTION_LIMIT } = {}) {
+  const terms = tokenizeExperienceGoal(goal);
+  const maxSuggestions = Number.isInteger(Number(limit))
+    ? Math.min(Math.max(Number(limit), 1), MAX_SUGGESTION_LIMIT)
+    : MAX_SUGGESTION_LIMIT;
+  const scored = events
+    .filter(event => event.lesson || event.workaround || event.nextStep)
+    .map(event => {
+      const searchable = [
+        event.goal,
+        event.command,
+        event.failureCode,
+        event.symptom,
+        event.workaround,
+        event.lesson,
+        event.nextStep,
+        ...(event.tags || []),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      const matchedTerms = terms.filter(term => searchable.includes(term));
+      const score = terms.length > 0 ? matchedTerms.length * 10 : 1;
+      return {
+        score,
+        eventId: event.eventId,
+        recordedAt: event.recordedAt,
+        outcome: event.outcome,
+        failureCode: event.failureCode,
+        matchedTerms,
+        lesson: event.lesson,
+        workaround: event.workaround,
+        nextSafeStep: event.nextStep,
+      };
+    })
+    .filter(item => terms.length === 0 || item.score > 0);
+  const matchedEventCount = scored.length;
+  const suggestions = scored
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        String(right.recordedAt).localeCompare(String(left.recordedAt)) ||
+        left.eventId.localeCompare(right.eventId)
+    )
+    .slice(0, maxSuggestions)
+    .map(({ score, ...item }) => ({ ...item, relevance: score }));
+
+  return {
+    goal: goal ? redactAgentText(goal) : null,
+    matchedEventCount,
+    suggestions,
+  };
+}
+
+function buildExperienceIntelligence(events, options = {}) {
+  const summary = buildExperienceSummary(events);
+  return {
+    recurringFailures: summary.recurringFailureCodes,
+    reusableLessons: summary.lessons.slice(0, 8),
+    ...buildExperienceSuggestions(events, options),
+  };
+}
+
 function listAgentExperience(options = {}) {
   const location = resolveExperienceLogPath(options);
   if (!fs.existsSync(location.absolutePath)) {
@@ -258,6 +332,7 @@ function listAgentExperience(options = {}) {
       truncated: false,
       events: [],
       summary: buildExperienceSummary([]),
+      intelligence: buildExperienceIntelligence([], options),
     };
   }
   const stats = fs.statSync(location.absolutePath);
@@ -295,6 +370,44 @@ function listAgentExperience(options = {}) {
     truncated: lines.length > MAX_LOG_LINES,
     events: parsedEvents.slice(-limit).reverse(),
     summary: buildExperienceSummary(parsedEvents),
+    intelligence: buildExperienceIntelligence(parsedEvents, options),
+  };
+}
+
+function summarizeAgentExperience(options = {}) {
+  const listed = listAgentExperience({ ...options, limit: MAX_LIST_LIMIT });
+  return {
+    ok: listed.ok,
+    operation: 'summary',
+    schemaVersion: EXPERIENCE_SCHEMA_VERSION,
+    path: listed.path,
+    exists: listed.exists,
+    eventCount: listed.eventCount,
+    malformedCount: listed.malformedCount,
+    truncated: listed.truncated,
+    summary: listed.summary,
+    intelligence: listed.intelligence,
+  };
+}
+
+function suggestAgentExperience(options = {}) {
+  const goal = String(options.goal || '').trim();
+  if (!goal) {
+    throw createExperienceError(
+      'TOOL_INVALID_ARGUMENTS',
+      'goal is required for experience suggestions.'
+    );
+  }
+  const listed = listAgentExperience({ ...options, limit: MAX_LIST_LIMIT });
+  return {
+    ok: listed.ok,
+    operation: 'suggest',
+    schemaVersion: EXPERIENCE_SCHEMA_VERSION,
+    path: listed.path,
+    exists: listed.exists,
+    eventCount: listed.eventCount,
+    summary: listed.summary,
+    ...buildExperienceSuggestions(listed.events, { goal, limit: options.limit }),
   };
 }
 
@@ -306,8 +419,12 @@ module.exports = {
   OUTCOMES,
   appendAgentExperience,
   buildExperienceSummary,
+  buildExperienceIntelligence,
+  buildExperienceSuggestions,
   listAgentExperience,
   normalizeExperienceEvent,
   redactAgentText,
   resolveExperienceLogPath,
+  suggestAgentExperience,
+  summarizeAgentExperience,
 };

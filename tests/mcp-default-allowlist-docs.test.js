@@ -9,10 +9,19 @@ const {
   DEFAULT_MCP_SAFE_TOOL_NAMES,
   formatDefaultMcpAllowToolsCsv,
 } = require('../src/mcp/mcpPolicy');
+const { buildAiOrientation } = require('../src/docs/aiOrientation');
+const {
+  AGENT_RESPONSE_FIELDS,
+  AGENT_RESPONSE_CONTRACT_VERSION,
+} = require('../src/agent/agentResponseContract');
 
 const ROOT = path.resolve(__dirname, '..');
 const OPERATOR_GUIDE = path.join(ROOT, 'docs', 'mcp', 'operator-guide.md');
 const SESSION_PROMPT = path.join(ROOT, 'docs', 'ai', 'session-prompt.md');
+const AGENT_START_HERE = path.join(ROOT, 'docs', 'ai', 'agent-start-here.md');
+const CLI_AGENT_GUIDE = path.join(ROOT, 'docs', 'ai', 'cli-agent-guide.md');
+const TOOL_CATALOG = path.join(ROOT, 'docs', 'tool-catalog.md');
+const TOOL_CATALOG_JSON = path.join(ROOT, 'docs', 'tool-catalog.json');
 const MCP_TOOLS = path.join(ROOT, 'src', 'mcp', 'mcpTools.js');
 
 describe('Track G0: default MCP allowlist docs sync', () => {
@@ -59,5 +68,57 @@ describe('Track G0: default MCP allowlist docs sync', () => {
       text.includes('selected S2 remote-read'),
       'mcpTools.js help overview should acknowledge default-allowlisted S2 remote-read tools'
     );
+  });
+
+  it('shared orientation exposes the stable agent response fields and learning routes', () => {
+    const orientation = buildAiOrientation();
+    assert.deepEqual(orientation.responseContractFields, AGENT_RESPONSE_FIELDS);
+    assert.equal(AGENT_RESPONSE_CONTRACT_VERSION, 1);
+    assert.ok(
+      orientation.intents
+        .find(intent => intent.intent === 'learn')
+        .cli.includes('agent log summary --json')
+    );
+    assert.ok(
+      orientation.intents
+        .find(intent => intent.intent === 'learn')
+        .cli.includes('agent log suggest --goal "<goal>" --json')
+    );
+  });
+
+  it('agent contract documentation and generated catalog stay aligned', () => {
+    const docs = [
+      fs.readFileSync(SESSION_PROMPT, 'utf8'),
+      fs.readFileSync(AGENT_START_HERE, 'utf8'),
+      fs.readFileSync(CLI_AGENT_GUIDE, 'utf8'),
+    ].join('\n');
+    for (const field of AGENT_RESPONSE_FIELDS) {
+      assert.ok(docs.includes(field), `agent docs missing response field: ${field}`);
+    }
+    const catalog = fs.readFileSync(TOOL_CATALOG, 'utf8');
+    const catalogJson = JSON.parse(fs.readFileSync(TOOL_CATALOG_JSON, 'utf8'));
+    const agentRow = catalogJson.commandRows.find(row => row.command === 'agent');
+    assert.ok(agentRow, 'generated catalog missing agent command');
+    assert.ok(agentRow.subcommands.includes('log summary'));
+    assert.ok(agentRow.subcommands.includes('log suggest'));
+    assert.match(catalog, /`agent`/);
+    assert.match(catalog, /`log summary`/);
+    assert.match(catalog, /`log suggest`/);
+    assert.match(catalog, /`agent preflight --goal/);
+  });
+
+  it('documented agent entrypoint is CLI-only by default', () => {
+    const orientation = buildAiOrientation();
+    assert.match(orientation.purpose, /CLI-first/);
+    assert.equal(
+      orientation.firstPoint.cli,
+      'node cli/zeus.js agent preflight --goal "<goal>" --json'
+    );
+    assert.match(orientation.firstPoint.mcp, /optional adapter/);
+    const text = fs.readFileSync(SESSION_PROMPT, 'utf8');
+    assert.match(text, /MCP and the browser\/UI are optional/);
+    assert.match(text, /node cli\/zeus\.js agent preflight --goal/);
+    assert.match(text, /does not require MCP/i);
+    assert.doesNotMatch(text, /must (?:use|require) MCP/i);
   });
 });

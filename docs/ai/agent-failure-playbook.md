@@ -29,6 +29,8 @@ The CLI keeps a local append-only JSONL log for iterative improvement:
 
 ```text
 node cli/zeus.js agent log list --json
+node cli/zeus.js agent log summary --json
+node cli/zeus.js agent log suggest --goal "<goal>" --json
 node cli/zeus.js agent log --outcome failed --command "<safe-command>" --failure-code <CODE> --symptom "<what happened>" --workaround "<what helped>" --lesson "<reusable lesson>" --next-step "<next safe command>" --json
 ```
 

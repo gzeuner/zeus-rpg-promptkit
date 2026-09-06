@@ -30,6 +30,34 @@ hygiene, and recoverable experience records.
   with the same preflight context and sanitized experience lessons.
 - The AI documentation and session start sequence point to preflight first.
 
+### Iteration 2 — Stable agent response contract
+
+- All `agent ... --json` operations now expose the same versioned envelope with
+  status, safety, scope, evidence, artifacts, warnings, next commands, and
+  approval state.
+- JSON failures preserve a non-zero exit code while emitting a machine-readable
+  recovery envelope with stable failure code, lesson, and next safe step.
+- The contract sanitizes text and paths before returning them to an agent.
+
+### Iteration 3 — Experience intelligence
+
+- `agent log summary --json` reports bounded recurring failures, reusable
+  lessons, and recent outcomes.
+- `agent log suggest --goal "<goal>" --json` ranks sanitized workarounds and
+  next safe steps for the current goal.
+- Preflight and generated prompts consume the intelligence while the JSONL log
+  remains local, bounded, redacted, and Git-ignored.
+
+### Iteration 4 — Contract and documentation drift tests
+
+- Shared response-field metadata feeds the live AI orientation and is checked
+  against the session prompt, start-here guide, CLI guide, and generated tool
+  catalog.
+- Tests verify the CLI-first entrypoint, the learning routes, catalog actions,
+  safety documentation, and the optional nature of MCP.
+- The catalog is regenerated from declarative command metadata as part of the
+  verified change.
+
 ## Next iterations
 
 ### Iteration 2 — Stable agent response contract
