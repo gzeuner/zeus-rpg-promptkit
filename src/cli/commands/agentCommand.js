@@ -7,6 +7,12 @@ const { buildCliAgentPromptPayload } = require('../../agent/agentPrompt');
 const { withAgentResponseContract } = require('../../agent/agentResponseContract');
 const { buildCliWorkflowSuggestion } = require('../../agent/workflowSuggestion');
 const {
+  AGENT_EVALUATION_SCHEMA_VERSION,
+  evaluateAgentResponse,
+  listAgentEvaluationScenarios,
+  readAgentResponseFile,
+} = require('../../agent/agentEvaluation');
+const {
   appendAgentExperience,
   listAgentExperience,
   suggestAgentExperience,
@@ -31,6 +37,8 @@ function printHelp() {
   console.log('  zeus agent log list [--limit <n>] [--out <relative-jsonl>] [--json]');
   console.log('  zeus agent log summary [--out <relative-jsonl>] [--json]');
   console.log('  zeus agent log suggest --goal "<goal>" [--limit <n>] [--json]');
+  console.log('  zeus agent evaluate --list [--json]');
+  console.log('  zeus agent evaluate --scenario <id> --response-file <relative-path> [--json]');
   console.log('');
   console.log('The CLI is the canonical agent surface. MCP is optional.');
   console.log('Agent bootstrap and log commands do not execute work or contact remote systems.');
@@ -146,6 +154,26 @@ function printExperienceSuggestionsHuman(payload) {
   }
 }
 
+function printEvaluationHuman(payload) {
+  if (payload.operation === 'evaluate-list') {
+    console.log('Agent evaluation scenarios:');
+    for (const scenario of payload.scenarios) {
+      console.log(
+        `- ${scenario.id}: ${scenario.goal} (minimum ${scenario.minimumScore}, ${scenario.requiredSafety})`
+      );
+    }
+    return;
+  }
+  console.log(`Agent response evaluation: ${payload.scenario.id}`);
+  console.log(
+    `Score: ${payload.score}/${payload.threshold} threshold (${payload.passed ? 'PASS' : 'NEEDS WORK'})`
+  );
+  for (const [dimension, score] of Object.entries(payload.dimensions)) {
+    console.log(`- ${dimension}: ${score}/20`);
+  }
+  for (const finding of payload.findings) console.log(`Finding: ${finding}`);
+}
+
 async function runAgent(args = {}) {
   const positional = Array.isArray(args._) ? args._ : [];
   const subcommand = String(positional[0] || 'bootstrap')
@@ -256,6 +284,71 @@ async function runAgent(args = {}) {
     });
     if (json.isJsonMode) json.print(payload);
     else printSuggestionHuman(payload);
+    return payload;
+  }
+
+  if (subcommand === 'evaluate') {
+    const action = String(positional[1] || '')
+      .trim()
+      .toLowerCase();
+    if (args.list === true || action === 'list') {
+      const rawPayload = {
+        ok: true,
+        operation: 'evaluate-list',
+        service: 'zeus-rpg-promptkit',
+        schemaVersion: AGENT_EVALUATION_SCHEMA_VERSION,
+        transport: 'cli',
+        canonicalSurface: 'cli',
+        mcpOptional: true,
+        readOnly: true,
+        executionStarted: false,
+        scenarios: listAgentEvaluationScenarios(),
+      };
+      const payload = finishAgentPayload(rawPayload, {
+        evidenceSources: ['agent evaluation corpus'],
+        artifacts: ['docs/ai/agent-evaluation-corpus.json'],
+        nextCommands: [
+          'node cli/zeus.js agent evaluate --scenario <id> --response-file <relative-path> --json',
+        ],
+      });
+      if (json.isJsonMode) json.print(payload);
+      else printEvaluationHuman(payload);
+      return payload;
+    }
+
+    const scenarioId = String(args.scenario || args.id || '').trim();
+    if (!scenarioId) {
+      const error = new Error('Missing required option: --scenario <id> (or use --list)');
+      error.code = 'TOOL_INVALID_ARGUMENTS';
+      throw error;
+    }
+    const response = readAgentResponseFile({
+      cwd: process.cwd(),
+      responseFile: args['response-file'] || args.response,
+    });
+    const result = evaluateAgentResponse({ scenarioId, responseText: response.text });
+    const rawPayload = {
+      ...result,
+      responseFile: response.displayPath,
+      responseSizeBytes: response.sizeBytes,
+      warnings: result.passed
+        ? []
+        : [
+            'The response did not meet the scenario threshold; improve it before relying on the route.',
+          ],
+    };
+    const payload = finishAgentPayload(rawPayload, {
+      status: result.passed ? 'ready' : 'needs-attention',
+      evidenceSources: ['agent evaluation corpus', response.displayPath],
+      artifacts: ['docs/ai/agent-evaluation-corpus.json', response.displayPath],
+      nextCommands: [
+        result.passed
+          ? 'node cli/zeus.js agent log --outcome success --command "agent evaluate" --json'
+          : 'node cli/zeus.js agent evaluate --scenario <id> --response-file <relative-path> --json',
+      ],
+    });
+    if (json.isJsonMode) json.print(payload);
+    else printEvaluationHuman(payload);
     return payload;
   }
 

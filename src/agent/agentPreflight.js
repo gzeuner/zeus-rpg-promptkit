@@ -8,6 +8,7 @@ const { loadProfiles } = require('../config/runtimeConfig');
 const { listAgentExperience } = require('./agentExperience');
 const { buildCliAgentBootstrapPayload, readPackageVersion } = require('./agentBootstrap');
 const { buildCliWorkflowSuggestion } = require('./workflowSuggestion');
+const { buildResumeHints } = require('./agentResume');
 const { sanitizeValue } = require('../security/secretMasking');
 
 const PREFLIGHT_SCHEMA_VERSION = 1;
@@ -131,15 +132,21 @@ function buildCliAgentPreflightPayload({
     source,
     out,
   });
+  const inputRequirements = suggestion
+    ? suggestion.inputRequirements
+    : { concepts: [], missingInputs: [], ready: true };
+  const resume = buildResumeHints({ cwd: workspaceRoot, out, program });
   const contextStatePath = path.resolve(workspaceRoot, '.zeus', 'working-context.json');
   const status = profileInventory.status === 'unavailable' ? 'needs-attention' : 'ready';
 
   const bootstrap = buildCliAgentBootstrapPayload();
+  const resumeCommands = resume.available ? resume.commands : [];
   const nextCommands = normalizedGoal
     ? [
         suggestion.next,
         'node cli/zeus.js agent prompt --goal "<goal>" --json',
         'node cli/zeus.js tools describe <command> --json',
+        ...resumeCommands,
       ]
     : [
         'node cli/zeus.js agent log list --json',
@@ -204,10 +211,18 @@ function buildCliAgentPreflightPayload({
       },
     },
     suggestion,
-    warnings:
-      profileInventory.status === 'unavailable'
+    legacyConcepts: inputRequirements.concepts,
+    inputRequirements,
+    resume,
+    warnings: [
+      ...(profileInventory.status === 'unavailable'
         ? ['Profile catalog could not be loaded; local-only orientation remains available.']
-        : [],
+        : []),
+      ...inputRequirements.missingInputs.map(
+        input => `Missing input: ${input.name} — ${input.reason}`
+      ),
+      ...(resume.available ? [resume.reason] : []),
+    ],
     nextCommands,
     sessionPrompt: {
       available: Boolean(normalizedGoal),

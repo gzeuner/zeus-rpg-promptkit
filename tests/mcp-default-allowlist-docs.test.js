@@ -84,6 +84,11 @@ describe('Track G0: default MCP allowlist docs sync', () => {
         .find(intent => intent.intent === 'learn')
         .cli.includes('agent log suggest --goal "<goal>" --json')
     );
+    assert.ok(
+      orientation.intents
+        .find(intent => intent.intent === 'learn')
+        .cli.includes('agent evaluate --list --json')
+    );
   });
 
   it('agent contract documentation and generated catalog stay aligned', () => {
@@ -101,6 +106,8 @@ describe('Track G0: default MCP allowlist docs sync', () => {
     assert.ok(agentRow, 'generated catalog missing agent command');
     assert.ok(agentRow.subcommands.includes('log summary'));
     assert.ok(agentRow.subcommands.includes('log suggest'));
+    assert.ok(agentRow.subcommands.includes('evaluate'));
+    assert.ok(agentRow.subcommands.includes('evaluate --list'));
     assert.match(catalog, /`agent`/);
     assert.match(catalog, /`log summary`/);
     assert.match(catalog, /`log suggest`/);

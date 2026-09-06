@@ -63,11 +63,14 @@ const { runInvestigate } = require('../src/cli/commands/investigateCommand');
 const { runProjectKnowledge } = require('../src/cli/commands/projectKnowledgeCommand');
 const { run: runKnowledge } = require('../src/cli/commands/knowledgeCommand');
 const { runAgent } = require('../src/cli/commands/agentCommand');
+const { configureCliOutput } = require('../src/cli/platformOutput');
 const { buildAgentErrorResponse } = require('../src/agent/agentResponseContract');
 const { runJournalRowDiffCommand } = require('../src/cli/commands/journalRowDiffCommand');
 const path = require('path');
 const { autoLoadEnvFiles } = require('../src/config/envFileLoader');
 const { detectPlaintextSecrets } = require('../src/security/plaintextSecretDetector');
+
+configureCliOutput();
 
 // Compute the installation root of the zeus package.
 // Useful for global `zeus` (via bin) so that config/env discovery has a stable
@@ -232,7 +235,7 @@ function printHelp() {
     '  zeus knowledge <extract|validate|inspect> [options] [--json]  # LOKAL: privacy-gated project-neutral catalog'
   );
   console.log(
-    '  zeus [--config <path>] agent <bootstrap|preflight|prompt|suggest|log> [options] [--json]  # CLI-first agent contract, preflight, prompt generation, workflow suggestion, and experience log'
+    '  zeus [--config <path>] agent <bootstrap|preflight|prompt|suggest|evaluate|log> [options] [--json]  # CLI-first agent contract, evaluation, workflow suggestion, and experience log'
   );
   console.log(
     '  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]'

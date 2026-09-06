@@ -36,6 +36,24 @@ function formatPromptContext(preflight) {
     if (suggestion.nextSafeStep)
       lines.push(`- Suggested next safe step: ${suggestion.nextSafeStep}`);
   }
+  const missingInputs = Array.isArray(preflight.inputRequirements?.missingInputs)
+    ? preflight.inputRequirements.missingInputs.slice(0, 6)
+    : [];
+  for (const input of missingInputs) {
+    lines.push(`- Missing input: ${input.name} — ${input.reason}`);
+  }
+  const concepts = Array.isArray(preflight.legacyConcepts) ? preflight.legacyConcepts : [];
+  if (concepts.length > 0) {
+    lines.push(
+      `- Recognized legacy vocabulary: ${concepts.map(concept => concept.label).join(', ')}`
+    );
+  }
+  if (preflight.resume?.available) {
+    lines.push(
+      `- Existing run manifest: ${preflight.resume.manifestPath} (${preflight.resume.status})`
+    );
+    lines.push(`- Resume command: ${preflight.resume.commands[0] || '(inspect manifest first)'}`);
+  }
   return lines.map(line => sanitizeValue(line));
 }
 
@@ -96,6 +114,8 @@ function buildCliAgentPromptPayload({
       checks: preflight.checks,
       experience: preflight.experience,
       suggestion: preflight.suggestion,
+      inputRequirements: preflight.inputRequirements,
+      resume: preflight.resume,
     },
   };
 }
