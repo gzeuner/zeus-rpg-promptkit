@@ -1,7 +1,7 @@
 ---
 Title: Agentic Coding with Zeus
 Description: CLI-first workflow for building IBM i context before coding, review, or analysis.
-Last Updated: 2026-09-03
+Last Updated: 2026-09-06
 ---
 
 # Agentic Coding with Zeus
@@ -15,13 +15,13 @@ Use **Zeus CLI commands as the core integration contract**.
 That means:
 
 - Any capable agent can use Zeus through the shell and the stable JSON CLI contract.
-- `agent bootstrap`, `tools list`, and `tools describe` make the installed capabilities discoverable.
+- `agent preflight`, `agent prompt`, `agent bootstrap`, `tools list`, and `tools describe` make the installed capabilities discoverable.
 - MCP may be added as an optional adapter when the client explicitly supports it.
 - The real behavior lives in Zeus CLI/API commands and generated artifacts.
 
 In practice:
 
-1. Start the CLI bootstrap and discover the installed commands.
+1. Run the read-only CLI preflight for the concrete goal, then discover the installed commands.
 2. Establish the exact working context.
 3. Generate evidence locally before asking the AI for conclusions or code changes.
 4. Keep remote reads and all mutations behind explicit scope and approval gates.
@@ -32,25 +32,28 @@ For the detailed route and artifact contract, see [`../ai/cli-agent-guide.md`](.
 
 1. Run `npm install` in the repository root.
 2. Copy `config/profiles.example.json` only when remote access is required.
-3. Run `node cli/zeus.js agent bootstrap --json`.
-4. Run `node cli/zeus.js tools list --json` and `node cli/zeus.js context show --json`.
-5. Run `doctor` for profile-based remote work.
-6. Run `analyze` or a suitable `workflow` preset.
-7. Review the generated artifacts or package them with `bundle --safe-sharing`.
-8. Open the AI client and start with [`../ai/session-prompt.md`](../ai/session-prompt.md).
+3. Run `node cli/zeus.js agent preflight --goal "<goal>" --json`.
+4. Run `node cli/zeus.js agent prompt --goal "<goal>" --json` when a copy-ready session prompt is useful.
+5. Run `node cli/zeus.js agent bootstrap --json`, then `node cli/zeus.js tools list --json` and `node cli/zeus.js context show --json`.
+6. Run `doctor` for profile-based remote work.
+7. Run `analyze` or a suitable `workflow` preset.
+8. Review the generated artifacts or package them with `bundle --safe-sharing`.
+9. Open the AI client and start with [`../ai/session-prompt.md`](../ai/session-prompt.md).
 
 ## Recommended CLI sequence
 
 For most tasks:
 
-1. `node cli/zeus.js agent bootstrap --json`
-2. `node cli/zeus.js tools list --json`
-3. `node cli/zeus.js context show --json`
-4. `node cli/zeus.js analyze` or `node cli/zeus.js workflow --preset ...`
-5. `node cli/zeus.js query-table`, `query-sql`, `joblog`, or `inspect-object` only if more evidence is needed
-6. `node cli/zeus.js impact`, `assess-risk`, `generate-test`, `generate-checklist`, or `qa`
-7. `node cli/zeus.js bundle --safe-sharing`
-8. `node cli/zeus.js fetch` only with explicit user confirmation
+1. `node cli/zeus.js agent preflight --goal "<goal>" --json`
+2. `node cli/zeus.js agent prompt --goal "<goal>" --json` when a session prompt is needed
+3. `node cli/zeus.js agent bootstrap --json`
+4. `node cli/zeus.js tools list --json`
+5. `node cli/zeus.js context show --json`
+6. `node cli/zeus.js analyze` or `node cli/zeus.js workflow --preset ...`
+7. `node cli/zeus.js query-table`, `query-sql`, `joblog`, or `inspect-object` only if more evidence is needed
+8. `node cli/zeus.js impact`, `assess-risk`, `generate-test`, `generate-checklist`, or `qa`
+9. `node cli/zeus.js bundle --safe-sharing`
+10. `node cli/zeus.js fetch` only with explicit user confirmation
 
 ## Optional tool adapters
 
@@ -69,11 +72,12 @@ Developer:
 
 Expected sequence:
 
-1. `node cli/zeus.js agent bootstrap --json`
-2. `node cli/zeus.js tools list --json`
-3. `node cli/zeus.js context show --json`
-4. `node cli/zeus.js analyze --source <source-root> --program ORDERPGM --out <output-root>`
-5. inspect `report.md`, `architecture-report.md`, and `analyze-run-manifest.json`
-6. optionally run `bundle --safe-sharing`
+1. `node cli/zeus.js agent preflight --goal "Analyze ORDERPGM" --json`
+2. `node cli/zeus.js agent bootstrap --json`
+3. `node cli/zeus.js tools list --json`
+4. `node cli/zeus.js context show --json`
+5. `node cli/zeus.js analyze --source <source-root> --program ORDERPGM --out <output-root>`
+6. inspect `report.md`, `architecture-report.md`, and `analyze-run-manifest.json`
+7. optionally run `bundle --safe-sharing`
 
 The default recommendation is: **CLI discovery first, evidence before conclusions, human review before changes**.

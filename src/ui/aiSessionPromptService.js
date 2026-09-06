@@ -125,7 +125,11 @@ function buildSessionGoalBlock({
   environment,
   includeDoctorSummary = false,
   doctorSummary = null,
+  additionalContext = [],
 }) {
+  const safeAdditionalContext = Array.isArray(additionalContext)
+    ? additionalContext.map(value => sanitizeValue(String(value || '').trim())).filter(Boolean)
+    : [];
   const lines = [
     'Session context from Local UI Setup (safe metadata only):',
     `- Profile: ${profile}`,
@@ -137,6 +141,7 @@ function buildSessionGoalBlock({
     includeDoctorSummary && formatDoctorSummary(doctorSummary)
       ? `- Doctor summary: ${formatDoctorSummary(doctorSummary)}`
       : '- Doctor summary: not included; run `doctor` first in this session before deeper work.',
+    ...safeAdditionalContext,
     '- Treat `docs/tool-catalog.md` as the authoritative command and safety reference.',
     '- Use allowlisted Zeus CLI and Zeus MCP tools if available. Do not invent tools or assume unsupported capabilities.',
     '- Never request, paste, echo, or persist credentials, env dumps, or credential-bearing JDBC URLs.',
@@ -157,6 +162,7 @@ function createAiSessionPromptService({
     goal,
     includeDoctorSummary = false,
     doctorSummary = null,
+    additionalContext = [],
   }) {
     const markdown = templateLoader(templatePath);
     const promptTemplate = extractSessionPromptTemplate(markdown);
@@ -165,6 +171,7 @@ function createAiSessionPromptService({
       environment: environment ? sanitizeValue(environment) : '',
       includeDoctorSummary,
       doctorSummary,
+      additionalContext,
     });
     const sanitizedGoal = sanitizeValue(String(goal || '').trim());
     const prompt = promptTemplate.replace(

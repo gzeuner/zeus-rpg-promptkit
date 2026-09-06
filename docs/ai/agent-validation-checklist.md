@@ -13,13 +13,15 @@ Use this checklist after changes that affect Zeus tools, prompts, or agent workf
 
 ## Static checks
 
-1. Run `node cli/zeus.js agent bootstrap --json` and inspect the operating contract.
-2. Run `node cli/zeus.js tools list --json` and confirm the expected capability inventory.
-3. Run `node cli/zeus.js tools describe spool-read --json` and confirm its S2, CLI-only, bounded-read contract.
-4. Run `node cli/zeus.js context show --json` and confirm the scope is explicit.
-5. Run `npm run test:contract`.
-6. Run `npm run test:smoke`.
-7. Regenerate docs with `node cli/zeus.js docs generate-catalog` and confirm no command drift.
+1. Run `node cli/zeus.js agent preflight --goal "<goal>" --json` and inspect readiness, scope, lessons, and the suggested route.
+2. Run `node cli/zeus.js agent prompt --goal "<goal>" --json` and confirm the prompt contains no placeholder or secret.
+3. Run `node cli/zeus.js agent bootstrap --json` and inspect the operating contract.
+4. Run `node cli/zeus.js tools list --json` and confirm the expected capability inventory.
+5. Run `node cli/zeus.js tools describe spool-read --json` and confirm its S2, CLI-only, bounded-read contract.
+6. Run `node cli/zeus.js context show --json` and confirm the scope is explicit.
+7. Run `npm run test:contract`.
+8. Run `npm run test:smoke`.
+9. Regenerate docs with `node cli/zeus.js docs generate-catalog` and confirm no command drift.
 
 ## Manual workflow checks
 

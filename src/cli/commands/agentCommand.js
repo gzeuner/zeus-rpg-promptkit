@@ -2,12 +2,20 @@
 
 const { createJsonOutput } = require('../helpers/jsonOutput');
 const { buildCliAgentBootstrapPayload } = require('../../agent/agentBootstrap');
+const { buildCliAgentPreflightPayload } = require('../../agent/agentPreflight');
+const { buildCliAgentPromptPayload } = require('../../agent/agentPrompt');
 const { buildCliWorkflowSuggestion } = require('../../agent/workflowSuggestion');
 const { appendAgentExperience, listAgentExperience } = require('../../agent/agentExperience');
 
 function printHelp() {
   console.log('Agent commands:');
   console.log('  zeus agent bootstrap [--json]');
+  console.log(
+    '  zeus agent preflight [--goal "<goal>"] [--profile <name>] [--program <name>] [--source <path>] [--out <path>] [--json]'
+  );
+  console.log(
+    '  zeus agent prompt --goal "<goal>" [--profile <name>] [--environment <name>] [--program <name>] [--source <path>] [--out <path>] [--json]'
+  );
   console.log(
     '  zeus agent suggest --goal "<goal>" [--profile <name>] [--program <name>] [--source <path>] [--out <path>] [--json]'
   );
@@ -32,6 +40,33 @@ function printBootstrapHuman(payload) {
   for (const entry of payload.intentMap) {
     console.log(`  ${entry.intent}: ${entry.commands.join(', ')}`);
   }
+}
+
+function printPreflightHuman(payload) {
+  console.log('Zeus CLI agent preflight');
+  console.log(`Package: ${payload.packageVersion}`);
+  console.log(`Workspace: ${payload.workspace.root}`);
+  console.log(`Profile: ${payload.effectiveProfile || '(not set)'}`);
+  console.log(`Context: ${payload.checks.workingContext.status}`);
+  console.log(`Profiles: ${payload.profileInventory.status} (${payload.profileInventory.count})`);
+  console.log(`Experience: ${payload.experience.exists ? payload.experience.eventCount : 'empty'}`);
+  console.log(`Safety: ${payload.safety.level}; read-only=${payload.readOnly}`);
+  console.log('Next commands:');
+  for (const command of payload.nextCommands) console.log(`  ${command}`);
+  if (payload.suggestion) {
+    console.log(`Suggested route: ${payload.suggestion.plan}`);
+    for (const step of payload.suggestion.steps) {
+      console.log(`  ${step.order}. [${step.safety}] ${step.command}`);
+    }
+  }
+}
+
+function printPromptHuman(payload) {
+  console.log('Zeus AI session prompt (copy/paste)');
+  console.log('Warnings:');
+  for (const warning of payload.warnings) console.log(`  - ${warning}`);
+  console.log('');
+  console.log(payload.prompt);
 }
 
 function printSuggestionHuman(payload) {
@@ -82,6 +117,36 @@ async function runAgent(args = {}) {
     const payload = buildCliAgentBootstrapPayload();
     if (json.isJsonMode) json.print(payload);
     else printBootstrapHuman(payload);
+    return payload;
+  }
+
+  if (subcommand === 'preflight') {
+    const payload = buildCliAgentPreflightPayload({
+      cwd: process.cwd(),
+      goal: args.goal || args.description || null,
+      profile: args.profile || null,
+      program: args.program || args.member || null,
+      source: args.source || args['source-root'] || null,
+      out: args.out || args.output || null,
+      experienceLimit: args.limit,
+    });
+    if (json.isJsonMode) json.print(payload);
+    else printPreflightHuman(payload);
+    return payload;
+  }
+
+  if (subcommand === 'prompt') {
+    const payload = buildCliAgentPromptPayload({
+      cwd: process.cwd(),
+      goal: args.goal || args.description || '',
+      profile: args.profile || null,
+      environment: args.environment || '',
+      program: args.program || args.member || null,
+      source: args.source || args['source-root'] || null,
+      out: args.out || args.output || null,
+    });
+    if (json.isJsonMode) json.print(payload);
+    else printPromptHuman(payload);
     return payload;
   }
 

@@ -5,17 +5,26 @@ Description: Short orientation for an AI agent entering an unfamiliar Zeus sessi
 
 # Zeus RPG PromptKit — AI Start Here
 
-Zeus is a CLI-first, evidence-first toolkit for understanding IBM i and RPG applications. MCP and the local viewer are optional adapters. The authoritative CLI map starts with `zeus agent bootstrap --json`; the live command guide is `zeus tools guide --json`. With MCP, the equivalent optional resources are `zeus.agent.bootstrap` and `zeus://metadata/agent-orientation.json`.
+Zeus is a CLI-first, evidence-first toolkit for understanding IBM i and RPG applications. MCP and the local viewer are optional adapters. The authoritative local entrypoint is `zeus agent preflight --goal "<goal>" --json`; the live command guide is `zeus tools guide --json`. With MCP, the equivalent optional resources are `zeus.agent.bootstrap` and `zeus://metadata/agent-orientation.json`.
 
 ## First point to check
 
 CLI:
 
 ```text
+node cli/zeus.js agent preflight --goal "<goal>" --json
 node cli/zeus.js agent bootstrap --json
 node cli/zeus.js agent log list --json
 node cli/zeus.js tools guide --json
 node cli/zeus.js context show --json
+node cli/zeus.js agent prompt --goal "<goal>" --json
+```
+
+`agent preflight` is the preferred first call. It is local and read-only: it summarizes the effective working context, visible profile names, prior sanitized lessons, capabilities, and a goal-based route. `agent prompt` then produces a copy-ready session prompt from that same preflight state.
+
+For remote work, continue with:
+
+```text
 node cli/zeus.js doctor --profile <name> --show-resolved
 ```
 

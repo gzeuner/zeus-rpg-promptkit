@@ -1,7 +1,7 @@
 ---
 Title: Agent Integration
 Description: CLI-first Leitfaden fuer Analyse-, Review- und Agentenablaeufe.
-Last Updated: 2026-09-03
+Last Updated: 2026-09-06
 ---
 
 # Agent Integration
@@ -25,7 +25,7 @@ The recommended setup is **CLI-first**:
 1.  git clone / download repo
 2.  npm install
 3.  copy the profile template only when IBM i/Db2 access is needed
-4.  run agent bootstrap and command discovery
+4.  run agent preflight for the concrete goal, then bootstrap and command discovery
 5.  inspect the working context
 6.  run doctor for profile-based remote work
 7.  run analyze/workflow and verify artifacts
@@ -50,6 +50,8 @@ Load credentials through the configured environment or Secret Vault. Never paste
 From the project root:
 
 ```powershell
+node .\cli\zeus.js agent preflight --goal "<goal>" --json
+node .\cli\zeus.js agent prompt --goal "<goal>" --json
 node .\cli\zeus.js agent bootstrap --json
 node .\cli\zeus.js tools list --json
 node .\cli\zeus.js context show --json
@@ -69,21 +71,23 @@ For purely local source analysis, a missing remote profile is not by itself a bl
 
 For most tasks:
 
-1. `node cli/zeus.js agent bootstrap --json`
-2. `node cli/zeus.js tools list --json`
-3. `node cli/zeus.js context show --json`
-4. `node cli/zeus.js analyze` or `node cli/zeus.js workflow --preset ...`
-5. `node cli/zeus.js search-source`, `field-search`, `trace`, `xref`, `investigate`, or `impact` only as needed
-6. `node cli/zeus.js assess-risk`, `generate-test`, `generate-checklist`, or `qa` for review planning
-7. `node cli/zeus.js bundle --safe-sharing` for review/sharing preparation
-8. `node cli/zeus.js fetch` only with explicit user confirmation
+1. `node cli/zeus.js agent preflight --goal "<goal>" --json`
+2. `node cli/zeus.js agent prompt --goal "<goal>" --json` when a session prompt is needed
+3. `node cli/zeus.js agent bootstrap --json`
+4. `node cli/zeus.js tools list --json`
+5. `node cli/zeus.js context show --json`
+6. `node cli/zeus.js analyze` or `node cli/zeus.js workflow --preset ...`
+7. `node cli/zeus.js search-source`, `field-search`, `trace`, `xref`, `investigate`, or `impact` only as needed
+8. `node cli/zeus.js assess-risk`, `generate-test`, `generate-checklist`, or `qa` for review planning
+9. `node cli/zeus.js bundle --safe-sharing` for review/sharing preparation
+10. `node cli/zeus.js fetch` only with explicit user confirmation
 
 The read-only and local artifact sequence should continue even when optional Project Intelligence or remote services are unavailable.
 
 ## Example agent requests
 
 ```text
-Use the Zeus CLI to analyze ORDERPGM from ./rpg_sources. Start with agent bootstrap and tools list, then summarize architecture risks from the generated artifacts.
+Use the Zeus CLI to analyze ORDERPGM from ./rpg_sources. Start with agent preflight for this goal, then bootstrap and tools list, and summarize architecture risks from the generated artifacts.
 
 Use the existing Zeus analysis artifacts to find the impact of changing STATUS. Cite files, lines, evidence ids, and unresolved references.
 
@@ -104,7 +108,7 @@ The CLI is the normal path and does not depend on direct tool calls. If a client
 
 ## Validation checklist
 
-1. Run `agent bootstrap --json` and `tools list --json`.
+1. Run `agent preflight --goal "<goal>" --json`, then `agent bootstrap --json` and `tools list --json`.
 2. Run `context show --json` and confirm the intended scope.
 3. Run `analyze` and verify the output manifest and expected artifacts.
 4. Ask the agent to perform a CLI-driven evidence task and verify citations.

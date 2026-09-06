@@ -66,6 +66,12 @@ const INTENT_MAP = Object.freeze([
 
 const RECOMMENDED_SEQUENCE = Object.freeze([
   Object.freeze({
+    command: 'node cli/zeus.js agent preflight --goal "<goal>" --json',
+    purpose:
+      'Inspect local readiness, scope, prior lessons, and the goal-based route without executing work.',
+    safety: 'S0',
+  }),
+  Object.freeze({
     command: 'node cli/zeus.js agent bootstrap --json',
     purpose: 'Load the transport-neutral CLI agent contract.',
     safety: 'S0',
@@ -122,12 +128,15 @@ function buildCliAgentBootstrapPayload() {
     whatToDo:
       'Use the CLI bootstrap and command catalog to select a bounded, evidence-first workflow. Read prior experience before retries and record bounded lessons after failures. Do not hunt markdown for command names.',
     startHere: [
+      'node cli/zeus.js agent preflight --json',
       'node cli/zeus.js agent bootstrap --json',
       'node cli/zeus.js agent log list --json',
       'node cli/zeus.js tools list --json',
       'node cli/zeus.js context show --json',
     ],
     discovery: {
+      preflight: 'node cli/zeus.js agent preflight --goal "<goal>" --json',
+      prompt: 'node cli/zeus.js agent prompt --goal "<goal>" --json',
       list: 'node cli/zeus.js tools list --json',
       describe: 'node cli/zeus.js tools describe <command> --json',
       workflowSuggestion:

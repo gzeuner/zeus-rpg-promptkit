@@ -34,7 +34,12 @@ const AI_INTENTS = Object.freeze([
   Object.freeze({
     intent: 'orient',
     question: 'How do I understand the current Zeus session and available capabilities?',
-    cli: ['tools guide --json', 'context show --json', 'doctor --profile <name> --show-resolved'],
+    cli: [
+      'agent preflight --goal "<goal>" --json',
+      'tools guide --json',
+      'context show --json',
+      'doctor --profile <name> --show-resolved',
+    ],
     mcp: ['zeus.agent.bootstrap', 'tools/list', 'zeus.help', 'zeus.context.get'],
   }),
   Object.freeze({
@@ -184,9 +189,10 @@ function buildAiOrientation() {
     purpose:
       'A CLI-first, evidence-first map for an AI agent entering an unfamiliar Zeus RPG PromptKit session. MCP is an optional adapter.',
     firstPoint: {
-      cli: 'node cli/zeus.js agent bootstrap --json',
+      cli: 'node cli/zeus.js agent preflight --goal "<goal>" --json',
       mcp: 'zeus.agent.bootstrap (optional adapter)',
       then: [
+        'node cli/zeus.js agent bootstrap --json',
         'node cli/zeus.js agent log list --json',
         'node cli/zeus.js tools guide --json',
         'node cli/zeus.js context show --json',

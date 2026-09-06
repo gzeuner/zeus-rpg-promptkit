@@ -19,9 +19,9 @@ Question -> CLI bootstrap/discovery -> Analyze -> Investigate (search/trace/xref
 
 ## Start Sequence (CLI-First)
 
-1. Start with `node cli/zeus.js agent bootstrap --json` and `node cli/zeus.js tools list --json`.
-2. Inspect the scope with `node cli/zeus.js context show --json`.
-3. Use `doctor` before profile-based remote work; local-only analysis can proceed without a live IBM i connection.
+1. Start with `node cli/zeus.js agent preflight --goal "<goal>" --json` for a local, read-only orientation.
+2. Use `node cli/zeus.js agent prompt --goal "<goal>" --json` when a copy-ready prompt is needed.
+3. Inspect the scope with `node cli/zeus.js context show --json` and use `doctor` before profile-based remote work.
 4. Use [`tool-catalog.md`](tool-catalog.md) as the authoritative command, safety, and scope reference.
 5. Start AI sessions with [`ai/session-prompt.md`](ai/session-prompt.md) and use [`ai/cli-agent-guide.md`](ai/cli-agent-guide.md) for details.
 6. Work evidence-first through the CLI and use generated artifacts as proof. MCP is optional.
@@ -47,7 +47,7 @@ Question -> CLI bootstrap/discovery -> Analyze -> Investigate (search/trace/xref
 | Need                                | Go To                                                                                                                                                                                                                              | Why                                                                   |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | Authoritative command behavior      | [`tool-catalog.md`](tool-catalog.md)                                                                                                                                                                                               | Single source of truth for commands, safety, and examples             |
-| Session bootstrap                   | [`ai/agent-start-here.md`](ai/agent-start-here.md), [`ai/session-prompt.md`](ai/session-prompt.md), [`ai/cli-agent-guide.md`](ai/cli-agent-guide.md)                                                                               | CLI-first intent map, context contract, and safety gates              |
+| Session bootstrap                   | [`ai/agent-start-here.md`](ai/agent-start-here.md), [`ai/session-prompt.md`](ai/session-prompt.md), [`ai/cli-agent-guide.md`](ai/cli-agent-guide.md), [`ai/iteration-agenda.md`](ai/iteration-agenda.md)                           | CLI-first preflight, prompt generation, intent map, and safety gates  |
 | GUI target and iteration status     | [`architecture/gui-ai-workbench-roadmap.md`](architecture/gui-ai-workbench-roadmap.md)                                                                                                                                             | Living plan for the optional local AI Workbench                       |
 | Portable E2E test modules           | [`testing/portable-e2e.md`](testing/portable-e2e.md)                                                                                                                                                                               | SFTP, MCP stdio, and real-browser integration scenarios               |
 | MCP operator setup                  | [`mcp/operator-guide.md`](mcp/operator-guide.md)                                                                                                                                                                                   | Start, policy, and audit reference for local MCP operation            |
