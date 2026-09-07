@@ -49,6 +49,7 @@ test('CLI agent bootstrap exposes the canonical CLI contract', () => {
   assert.equal(payload.mcpOptional, true);
   assert.ok(payload.startHere.includes('node cli/zeus.js tools list --json'));
   assert.ok(payload.startHere.includes('node cli/zeus.js agent log list --json'));
+  assert.ok(payload.startHere.includes('node cli/zeus.js agent feedback --json'));
   assert.ok(payload.intentMap.some(entry => entry.commands.includes('impact')));
   assert.ok(payload.failurePlaybook);
   assert.ok(Array.isArray(payload.failurePlaybook.entries));
@@ -56,6 +57,7 @@ test('CLI agent bootstrap exposes the canonical CLI contract', () => {
   assert.match(payload.experienceLog.record, /agent log --outcome/);
   assert.equal(payload.evaluation.corpus, 'docs/ai/agent-evaluation-corpus.json');
   assert.match(payload.evaluation.list, /agent evaluate --list/);
+  assert.equal(payload.discovery.feedback, 'node cli/zeus.js agent feedback --json');
   assert.deepEqual(payload.cliInvocation, CLI_INVOCATIONS);
 });
 
@@ -167,6 +169,94 @@ test('CLI agent evaluation reports weak responses and refuses paths outside the 
     );
     assert.notEqual(large.status, 0);
     assert.equal(JSON.parse(large.stdout).failureCode, 'AGENT_RESPONSE_TOO_LARGE');
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('CLI agent feedback promotes repeated sanitized signals and writes a bounded review artifact', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-agent-feedback-'));
+  try {
+    for (let index = 0; index < 2; index += 1) {
+      const record = runCli(
+        [
+          'agent',
+          'log',
+          '--outcome',
+          'failed',
+          '--command',
+          'node cli/zeus.js impact --target <target> --program <program>',
+          '--failure-code',
+          'ANALYZE_REQUIRED',
+          '--lesson',
+          'Run analyze and verify the manifest before impact.',
+          '--next-step',
+          'node cli/zeus.js analyze --source <source-root> --program <program> --out <output-root>',
+          '--json',
+        ],
+        cwd
+      );
+      assert.equal(record.status, 0, record.stderr);
+    }
+
+    const result = readJson(
+      runCli(['agent', 'feedback', '--out', '.zeus/agent-feedback.json', '--json'], cwd)
+    );
+    assert.equal(result.operation, 'feedback');
+    assert.equal(result.review.required, true);
+    assert.equal(result.candidateChanges.length, 1);
+    assert.equal(result.candidateChanges[0].failureCode, 'ANALYZE_REQUIRED');
+    assert.equal(result.candidateChanges[0].regressionScenario, 'stale-artifacts');
+    assert.equal(result.candidateChanges[0].status, 'candidate');
+    assert.equal(result.feedbackArtifact, '.zeus/agent-feedback.json');
+    assert.equal(result.readOnly, false);
+    const artifact = fs.readFileSync(path.join(cwd, '.zeus', 'agent-feedback.json'), 'utf8');
+    assert.match(artifact, /analysis-prerequisite-gate/);
+    assert.doesNotMatch(artifact, /<source-root>|<output-root>/);
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('CLI agent feedback turns a failed evaluation into a reviewable regression finding', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-agent-feedback-evaluation-'));
+  try {
+    fs.writeFileSync(path.join(cwd, 'weak.md'), 'Run analyze.', 'utf8');
+    const result = readJson(
+      runCli(
+        [
+          'agent',
+          'feedback',
+          '--scenario',
+          'local-analysis',
+          '--response-file',
+          'weak.md',
+          '--json',
+        ],
+        cwd
+      )
+    );
+    assert.equal(result.review.required, true);
+    assert.ok(result.evaluationFindings.some(finding => finding.dimension === 'scopeDiscipline'));
+    assert.ok(
+      result.evaluationFindings.every(finding => finding.regressionScenario === 'local-analysis')
+    );
+    assert.doesNotMatch(JSON.stringify(result), /Run analyze\./);
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('CLI agent feedback keeps artifacts inside .zeus and requires paired evaluation inputs', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-agent-feedback-boundary-'));
+  try {
+    const outside = runCli(['agent', 'feedback', '--out', '../feedback.json', '--json'], cwd);
+    assert.notEqual(outside.status, 0);
+    assert.equal(JSON.parse(outside.stdout).failureCode, 'PATH_OUTSIDE_WORKSPACE');
+
+    const unpaired = runCli(['agent', 'feedback', '--scenario', 'local-analysis', '--json'], cwd);
+    assert.notEqual(unpaired.status, 0);
+    assert.equal(JSON.parse(unpaired.stdout).failureCode, 'TOOL_INVALID_ARGUMENTS');
   } finally {
     fs.rmSync(cwd, { recursive: true, force: true });
   }

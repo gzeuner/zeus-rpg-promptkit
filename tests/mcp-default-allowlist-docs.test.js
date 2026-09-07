@@ -108,6 +108,7 @@ describe('Track G0: default MCP allowlist docs sync', () => {
     assert.ok(agentRow.subcommands.includes('log suggest'));
     assert.ok(agentRow.subcommands.includes('evaluate'));
     assert.ok(agentRow.subcommands.includes('evaluate --list'));
+    assert.ok(agentRow.subcommands.includes('feedback'));
     assert.match(catalog, /`agent`/);
     assert.match(catalog, /`log summary`/);
     assert.match(catalog, /`log suggest`/);

@@ -1,7 +1,7 @@
 ---
 Title: Promptkit AI Iteration Agenda
 Description: Living backlog for making Zeus immediately understandable and usable by CLI-based AI agents.
-Last Updated: 2026-09-06
+Last Updated: 2026-09-07
 ---
 
 # Promptkit AI Iteration Agenda
@@ -89,10 +89,21 @@ hygiene, and recoverable experience records.
 
 ### Iteration 8 — Feedback-to-contract loop
 
-Turn repeated evaluation findings and experience codes into a small, reviewable
-set of prompt, documentation, and command-contract improvements. Keep the
-feedback corpus sanitized, explain why a rule changed, and add a regression
-fixture for every promoted lesson.
+- `agent feedback --json` turns repeated sanitized experience codes into
+  reviewable candidates with affected surface, rationale, and regression
+  scenario; it never changes contracts automatically.
+- `agent feedback --scenario <id> --response-file <path> --json` exposes failed
+  evaluation dimensions as observed findings without persisting raw responses.
+- Optional `.zeus/agent-feedback.json` output is workspace-contained, bounded,
+  redacted, and local-only.
+- The CLI metadata, bootstrap, start-here guide, session prompt, and detailed
+  guide all expose the same feedback route.
+
+### Iteration 9 — Promotion fixtures and contract diff
+
+Add a review command that compares a feedback candidate with the current
+authoritative prompt/metadata and verifies that every promoted lesson ships
+with a sanitized regression fixture and an explicit contract diff.
 
 ## Definition of done for each iteration
 

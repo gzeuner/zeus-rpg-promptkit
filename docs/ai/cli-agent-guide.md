@@ -1,7 +1,7 @@
 ---
 Title: CLI Agent Guide
 Description: Practical CLI-first contract for AI agents working with IBM i legacy systems through Zeus.
-Last Updated: 2026-09-06
+Last Updated: 2026-09-07
 ---
 
 # CLI Agent Guide
@@ -75,6 +75,29 @@ gating, and whether a failure is fed back into the experience log. A score below
 the scenario threshold is `needs-attention`; correct the response and evaluate
 again before executing a non-trivial route. Response files must remain inside the
 current workspace and are size-bounded.
+
+## Feedback-to-contract loop
+
+Turn repeated experience signals into reviewable improvements without allowing
+the agent to rewrite its own operating contract:
+
+```powershell
+node cli/zeus.js agent feedback --json
+node cli/zeus.js agent feedback --out .zeus/agent-feedback.json --json
+node cli/zeus.js agent feedback --scenario <id> --response-file <relative-path> --json
+```
+
+The report reads the local redacted `.zeus/agent-experience.jsonl` and the
+versioned evaluation corpus. A failure code becomes a `candidate` only after
+two matching sanitized records; a failed evaluation dimension remains an
+`observed` finding until it repeats or a human confirms it. Each candidate
+declares its affected surface, proposed change, and regression scenario.
+
+Review the candidate, add or update the referenced sanitized regression fixture,
+and only then change the authoritative prompt, documentation, or command
+metadata. The command is local and read-only unless `--out` is supplied; even
+then it writes only the bounded, workspace-contained feedback artifact and
+never changes a prompt or remote system.
 
 ## Route selection by intent
 
@@ -204,6 +227,15 @@ node cli/zeus.js agent log --outcome failed --command "<safe-command>" --failure
 ```
 
 The default `.zeus/agent-experience.jsonl` is local and ignored by Git. The command stores structured, redacted fields only; never pass raw stdout/stderr, environment dumps, credentials, or credential-bearing URLs. Use stable failure codes so repeated problems can be identified and converted into better prompts, documentation, tests, or command contracts.
+
+After recording a failure or correction, inspect the reviewable improvement
+report:
+
+```powershell
+node cli/zeus.js agent feedback --json
+```
+
+Only promote a candidate after human review and a sanitized regression fixture.
 
 ## Artifact contract
 

@@ -384,13 +384,14 @@ const COMMAND_METADATA = Object.freeze({
       'suggest',
       'evaluate',
       'evaluate --list',
+      'feedback',
       'log',
       'log list',
       'log summary',
       'log suggest',
     ],
     purpose:
-      'Orient CLI agents, generate context-aware prompts, suggest bounded evidence-first workflows, evaluate responses, and record/read sanitized local experience events without executing work.',
+      'Orient CLI agents, generate context-aware prompts, suggest bounded evidence-first workflows, evaluate responses, turn repeated sanitized signals into reviewable contract-improvement candidates, and record/read local experience events without executing work.',
     example: 'node cli/zeus.js agent preflight --goal "<goal>" --json',
   }),
   'project-knowledge': Object.freeze({
@@ -903,6 +904,7 @@ const RECOMMENDED_AI_SEQUENCE = Object.freeze([
   '`agent log list --json` (read prior sanitized lessons before retries)',
   '`agent log summary --json` (recurring failures and reusable lessons)',
   '`agent log suggest --goal "<goal>" --json` (goal-matched sanitized workarounds)',
+  '`agent feedback --json` (reviewable candidates from repeated lessons and evaluation findings)',
   '`tools list --json` and `tools describe <id> --json` (capability discovery)',
   '`context show --json` (current scope and environment)',
   '`doctor` (before profile-based remote work)',
