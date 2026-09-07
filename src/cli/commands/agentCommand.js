@@ -18,6 +18,11 @@ const {
   suggestAgentExperience,
   summarizeAgentExperience,
 } = require('../../agent/agentExperience');
+const {
+  buildAgentFeedback,
+  resolveFeedbackArtifactPath,
+  writeAgentFeedbackArtifact,
+} = require('../../agent/agentFeedback');
 
 function printHelp() {
   console.log('Agent commands:');
@@ -39,6 +44,9 @@ function printHelp() {
   console.log('  zeus agent log suggest --goal "<goal>" [--limit <n>] [--json]');
   console.log('  zeus agent evaluate --list [--json]');
   console.log('  zeus agent evaluate --scenario <id> --response-file <relative-path> [--json]');
+  console.log(
+    '  zeus agent feedback [--scenario <id> --response-file <relative-path>] [--out <.zeus/file.json>] [--json]'
+  );
   console.log('');
   console.log('The CLI is the canonical agent surface. MCP is optional.');
   console.log('Agent bootstrap and log commands do not execute work or contact remote systems.');
@@ -172,6 +180,23 @@ function printEvaluationHuman(payload) {
     console.log(`- ${dimension}: ${score}/20`);
   }
   for (const finding of payload.findings) console.log(`Finding: ${finding}`);
+}
+
+function printFeedbackHuman(payload) {
+  console.log('Agent feedback-to-contract report');
+  console.log(`Experience events: ${payload.experience.eventCount}`);
+  console.log(`Review required: ${payload.review.required ? 'yes' : 'no'}`);
+  for (const change of payload.candidateChanges) {
+    console.log(
+      `- candidate [${change.failureCode}] ${change.proposedChange} (regression: ${change.regressionScenario || 'new scenario'})`
+    );
+  }
+  for (const finding of payload.evaluationFindings) {
+    console.log(
+      `- evaluation [${finding.scenario}/${finding.dimension}] ${finding.proposedChange}`
+    );
+  }
+  if (payload.feedbackArtifact) console.log(`Artifact: ${payload.feedbackArtifact}`);
 }
 
 async function runAgent(args = {}) {
@@ -349,6 +374,66 @@ async function runAgent(args = {}) {
     });
     if (json.isJsonMode) json.print(payload);
     else printEvaluationHuman(payload);
+    return payload;
+  }
+
+  if (subcommand === 'feedback') {
+    const scenarioId = String(args.scenario || args.id || '').trim();
+    const responseFile = String(args['response-file'] || args.response || '').trim();
+    if (Boolean(scenarioId) !== Boolean(responseFile)) {
+      const error = new Error(
+        'scenario and response-file must be supplied together for evaluation feedback.'
+      );
+      error.code = 'TOOL_INVALID_ARGUMENTS';
+      throw error;
+    }
+    let response = null;
+    if (scenarioId && responseFile) {
+      response = readAgentResponseFile({ cwd: process.cwd(), responseFile });
+    }
+    const outputPath = args.out
+      ? resolveFeedbackArtifactPath({ cwd: process.cwd(), out: args.out }).relativePath
+      : null;
+    const rawPayload = {
+      ...buildAgentFeedback({
+        cwd: process.cwd(),
+        goal: args.goal || args.description || null,
+        scenarioId: scenarioId || null,
+        responseText: response ? response.text : null,
+        experienceLog: args['experience-log'] || undefined,
+        limit: args.limit,
+      }),
+      readOnly: !outputPath,
+    };
+    const payload = finishAgentPayload(rawPayload, {
+      status: rawPayload.review.required ? 'needs-attention' : 'ready',
+      sideEffects: outputPath ? ['local-read', 'local-artifact-write'] : ['local-read'],
+      evidenceSources: [
+        'local experience log',
+        'agent evaluation corpus',
+        response ? response.displayPath : null,
+      ],
+      artifacts: [
+        rawPayload.source.evaluationCorpus,
+        rawPayload.source.experienceExists ? rawPayload.source.experienceLog : null,
+        response ? response.displayPath : null,
+        outputPath,
+      ],
+      nextCommands: [
+        rawPayload.review.required
+          ? 'Review candidate changes and add a sanitized regression fixture.'
+          : 'node cli/zeus.js agent log --outcome success --command "agent feedback" --json',
+      ],
+    });
+    if (outputPath) {
+      payload.feedbackArtifact = outputPath;
+      writeAgentFeedbackArtifact(payload, {
+        cwd: process.cwd(),
+        out: outputPath,
+      });
+    }
+    if (json.isJsonMode) json.print(payload);
+    else printFeedbackHuman(payload);
     return payload;
   }
 

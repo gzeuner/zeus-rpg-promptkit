@@ -374,6 +374,7 @@ const COMMAND_UI_METADATA = Object.freeze([
       'suggest',
       'evaluate',
       'evaluate --list',
+      'feedback',
       'log',
       'log list',
       'log summary',
@@ -398,6 +399,7 @@ const COMMAND_UI_METADATA = Object.freeze([
       '--tag',
       '--scenario',
       '--response-file',
+      '--experience-log',
       '--list',
     ]),
     outputArtifacts: Object.freeze([
@@ -405,6 +407,7 @@ const COMMAND_UI_METADATA = Object.freeze([
       'deterministic agent evaluation score on stdout',
       'sanitized evaluation corpus in docs/ai/agent-evaluation-corpus.json',
       'local .zeus/agent-experience.jsonl experience log',
+      'reviewable .zeus/agent-feedback.json contract-improvement report',
     ]),
     recommendedNextCommands: Object.freeze(['doctor', 'analyze']),
   }),
