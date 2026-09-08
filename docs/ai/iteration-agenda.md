@@ -147,8 +147,7 @@ verification.
 Implementation and tests: `src/projectIntelligence/process/retrieval.js`,
 `src/cli/commands/processCommand.js`, and
 `tests/project-intelligence-process-retrieval.test.js`. Delivered in PR #317
-after protected-branch verification; the next active roadmap item is Iteration
-14.
+after protected-branch verification; the next active roadmap item is Iteration 14.
 
 ## Business Process Intelligence roadmap
 
