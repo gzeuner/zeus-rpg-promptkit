@@ -129,8 +129,8 @@ foundation and are ready for pipeline verification:
 
 Implementation and tests: `src/projectIntelligence/process/`,
 `tests/project-intelligence-process.test.js`, and
-`docs/ai/process-intelligence.md`. The completion entry will receive its
-merge reference after the protected-branch verification step.
+`docs/ai/process-intelligence.md`. Delivered in PR #316 after protected-branch
+verification; the next active roadmap item is Iteration 13.
 
 ## Business Process Intelligence roadmap
 
