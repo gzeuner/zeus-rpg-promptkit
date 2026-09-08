@@ -32,7 +32,9 @@ test('ZPI contract ids are registered in INITIAL_SCHEMAS and core CONTRACT_IDS',
   }
   assert.equal(CORE_IDS.PROJECT_KNOWLEDGE_PROJECT, CONTRACT_IDS.PROJECT);
   assert.equal(CORE_IDS.PROJECT_KNOWLEDGE_OPERATION_RESULT, CONTRACT_IDS.OPERATION_RESULT);
-  assert.equal(Object.keys(PROJECT_INTELLIGENCE_SCHEMAS).length, 12);
+  assert.equal(CORE_IDS.PROJECT_KNOWLEDGE_BUSINESS_PROCESS, CONTRACT_IDS.BUSINESS_PROCESS);
+  assert.equal(CORE_IDS.PROJECT_KNOWLEDGE_PROCESS_QUERY_RESULT, CONTRACT_IDS.PROCESS_QUERY_RESULT);
+  assert.equal(Object.keys(PROJECT_INTELLIGENCE_SCHEMAS).length, 19);
 });
 
 test('package export surface is available via api createZeus', () => {

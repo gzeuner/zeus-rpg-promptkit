@@ -112,6 +112,26 @@ hygiene, and recoverable experience records.
 
 ## Next iterations
 
+### Delivered in the current process-intelligence iteration set
+
+Iterations 10–12 are implemented in the existing Project Intelligence
+foundation and are ready for pipeline verification:
+
+- Iteration 10 adds seven versioned process contracts, neutral fixtures, core
+  registry integration, provenance/evidence validation, and explicit review
+  lifecycle rules.
+- Iteration 11 adds deterministic discovery from canonical analysis or typed
+  evidence graphs, stable candidate identifiers, technical flow grouping,
+  source/derived evidence references, and unresolved-dependency diagnostics.
+- Iteration 12 adds schema-constrained descriptions, a provider-neutral AI
+  prompt, candidate-only generation, explicit review, and explicit publish
+  gates. No process is published automatically.
+
+Implementation and tests: `src/projectIntelligence/process/`,
+`tests/project-intelligence-process.test.js`, and
+`docs/ai/process-intelligence.md`. Delivered in PR #316 after protected-branch
+verification; the next active roadmap item is Iteration 13.
+
 ## Business Process Intelligence roadmap
 
 The following iterations extend the existing Project Intelligence foundation.

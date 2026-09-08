@@ -14,6 +14,7 @@ const {
   DEFAULT_LIMITS,
 } = require('./constants');
 const h = require('./helpers');
+const processContracts = require('./process/contracts');
 
 const DERIVATION_VALUES = Object.values(DERIVATION_CLASSES);
 const REASON_CODE_VALUES = Object.values(REASON_CODES);
@@ -608,6 +609,19 @@ const PROJECT_INTELLIGENCE_SCHEMAS = Object.freeze({
   [CONTRACT_IDS.DIAGNOSTIC]: { version: 1, schema: diagnosticSchema },
   [CONTRACT_IDS.CONTEXT_PACKAGE]: { version: 1, schema: contextPackageSchema },
   [CONTRACT_IDS.OPERATION_RESULT]: { version: 1, schema: operationResultSchema },
+  [CONTRACT_IDS.BUSINESS_PROCESS]: { version: 1, schema: processContracts.businessProcessSchema },
+  [CONTRACT_IDS.PROCESS_VERSION]: { version: 1, schema: processContracts.processVersionSchema },
+  [CONTRACT_IDS.PROCESS_STEP]: { version: 1, schema: processContracts.processStepSchema },
+  [CONTRACT_IDS.PROCESS_CLAIM]: { version: 1, schema: processContracts.processClaimSchema },
+  [CONTRACT_IDS.PROCESS_RELATIONSHIP]: {
+    version: 1,
+    schema: processContracts.processRelationshipSchema,
+  },
+  [CONTRACT_IDS.GLOSSARY_ENTRY]: { version: 1, schema: processContracts.glossaryEntrySchema },
+  [CONTRACT_IDS.PROCESS_QUERY_RESULT]: {
+    version: 1,
+    schema: processContracts.processQueryResultSchema,
+  },
 });
 
 module.exports = {
@@ -625,4 +639,5 @@ module.exports = {
   diagnosticSchema,
   contextPackageSchema,
   operationResultSchema,
+  ...processContracts,
 };

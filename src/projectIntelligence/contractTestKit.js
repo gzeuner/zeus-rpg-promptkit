@@ -80,6 +80,13 @@ async function runProjectIntelligenceContractTests() {
       [CONTRACT_IDS.CONTEXT_PACKAGE, fixtures.contextPackage()],
       [CONTRACT_IDS.OPERATION_RESULT, fixtures.operationResultOk()],
       [CONTRACT_IDS.OPERATION_RESULT, fixtures.operationResultFail()],
+      [CONTRACT_IDS.BUSINESS_PROCESS, fixtures.businessProcess()],
+      [CONTRACT_IDS.PROCESS_VERSION, fixtures.processVersion()],
+      [CONTRACT_IDS.PROCESS_STEP, fixtures.processStep()],
+      [CONTRACT_IDS.PROCESS_CLAIM, fixtures.processClaim()],
+      [CONTRACT_IDS.PROCESS_RELATIONSHIP, fixtures.processRelationship()],
+      [CONTRACT_IDS.GLOSSARY_ENTRY, fixtures.glossaryEntry()],
+      [CONTRACT_IDS.PROCESS_QUERY_RESULT, fixtures.processQueryResult()],
     ];
     for (const [id, value] of cases) {
       const result = validateProjectIntelligenceContract(id, value);
