@@ -55,4 +55,11 @@ module.exports = Object.freeze({
   PROJECT_KNOWLEDGE_DIAGNOSTIC: 'zeus.project-knowledge-diagnostic',
   PROJECT_KNOWLEDGE_CONTEXT_PACKAGE: 'zeus.project-knowledge-context-package',
   PROJECT_KNOWLEDGE_OPERATION_RESULT: 'zeus.project-knowledge-operation-result',
+  PROJECT_KNOWLEDGE_BUSINESS_PROCESS: 'zeus.project-knowledge-business-process',
+  PROJECT_KNOWLEDGE_PROCESS_VERSION: 'zeus.project-knowledge-process-version',
+  PROJECT_KNOWLEDGE_PROCESS_STEP: 'zeus.project-knowledge-process-step',
+  PROJECT_KNOWLEDGE_PROCESS_CLAIM: 'zeus.project-knowledge-process-claim',
+  PROJECT_KNOWLEDGE_PROCESS_RELATIONSHIP: 'zeus.project-knowledge-process-relationship',
+  PROJECT_KNOWLEDGE_GLOSSARY_ENTRY: 'zeus.project-knowledge-glossary-entry',
+  PROJECT_KNOWLEDGE_PROCESS_QUERY_RESULT: 'zeus.project-knowledge-process-query-result',
 });

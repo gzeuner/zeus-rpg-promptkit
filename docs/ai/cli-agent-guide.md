@@ -41,6 +41,15 @@ node cli/zeus.js tools describe <command> --json
 
 The bootstrap and command catalog are generated from the same command metadata that supports the other public surfaces. Documentation explains intent and safety; it does not override the installed CLI contract.
 
+## Business-process projection
+
+For the current process-intelligence vertical slice, use the existing
+`project-intelligence` package export after locating a canonical analysis or
+evidence graph. See [`process-intelligence.md`](process-intelligence.md) for
+the exact functions and lifecycle rules. The result is a candidate projection
+until an explicit review; do not guess future `process` CLI commands before
+they appear in `tools guide --json`.
+
 ## Stable agent response contract
 
 Every `agent ... --json` response exposes the same top-level fields in addition

@@ -17,4 +17,11 @@ module.exports = Object.freeze({
   DIAGNOSTIC: 'zeus.project-knowledge-diagnostic',
   CONTEXT_PACKAGE: 'zeus.project-knowledge-context-package',
   OPERATION_RESULT: 'zeus.project-knowledge-operation-result',
+  BUSINESS_PROCESS: 'zeus.project-knowledge-business-process',
+  PROCESS_VERSION: 'zeus.project-knowledge-process-version',
+  PROCESS_STEP: 'zeus.project-knowledge-process-step',
+  PROCESS_CLAIM: 'zeus.project-knowledge-process-claim',
+  PROCESS_RELATIONSHIP: 'zeus.project-knowledge-process-relationship',
+  GLOSSARY_ENTRY: 'zeus.project-knowledge-glossary-entry',
+  PROCESS_QUERY_RESULT: 'zeus.project-knowledge-process-query-result',
 });

@@ -272,6 +272,173 @@ function operationResultFail(overrides = {}) {
   };
 }
 
+function processProvenance(overrides = {}) {
+  return provenance({
+    analyzerId: 'zeus.process-discovery',
+    analyzerVersion: '1.0.0',
+    derivationClass: DERIVATION_CLASSES.INFERRED,
+    ...overrides,
+  });
+}
+
+function businessProcess(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    kind: 'project-knowledge-business-process',
+    contractId: CONTRACT_IDS.BUSINESS_PROCESS,
+    projectId: 'proj-demo',
+    snapshotId: 'snap-001',
+    processId: 'process:demo-flow',
+    processVersionId: 'process:demo-flow:v1',
+    name: 'Synthetic technical flow',
+    status: 'candidate',
+    confidence: 'medium',
+    provenance: processProvenance(),
+    evidenceReferences: [{ id: 'ev-1', kind: 'source' }],
+    entryPoints: [{ id: 'PROGRAM:ORDERPGM', kind: 'program', name: 'ORDERPGM' }],
+    claimIds: ['claim:demo-flow:1'],
+    relationshipIds: ['relationship:demo-flow:1'],
+    unknowns: ['Business outcome requires review'],
+    ...overrides,
+  };
+}
+
+function processVersion(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    kind: 'project-knowledge-process-version',
+    contractId: CONTRACT_IDS.PROCESS_VERSION,
+    projectId: 'proj-demo',
+    snapshotId: 'snap-001',
+    processId: 'process:demo-flow',
+    processVersionId: 'process:demo-flow:v1',
+    title: 'Synthetic technical flow v1',
+    status: 'candidate',
+    confidence: 'medium',
+    provenance: processProvenance(),
+    evidenceReferences: [{ id: 'ev-1', kind: 'source' }],
+    stepIds: ['step:demo-flow:1'],
+    claimIds: ['claim:demo-flow:1'],
+    relationshipIds: ['relationship:demo-flow:1'],
+    systems: [{ id: 'system:legacy-application', name: 'Legacy application' }],
+    uncertainty: ['Business meaning is not established'],
+    openQuestions: ['Which business role owns the flow?'],
+    ...overrides,
+  };
+}
+
+function processStep(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    kind: 'project-knowledge-process-step',
+    contractId: CONTRACT_IDS.PROCESS_STEP,
+    projectId: 'proj-demo',
+    snapshotId: 'snap-001',
+    processId: 'process:demo-flow',
+    processVersionId: 'process:demo-flow:v1',
+    stepId: 'step:demo-flow:1',
+    sequence: 1,
+    stepKind: 'action',
+    title: 'Inspect ORDERPGM',
+    description: 'Technical observation only.',
+    status: 'candidate',
+    derivationClass: DERIVATION_CLASSES.INFERRED,
+    confidence: 'medium',
+    evidenceReferences: [{ id: 'ev-1', kind: 'source' }],
+    technicalRefs: ['PROGRAM:ORDERPGM'],
+    ...overrides,
+  };
+}
+
+function processClaim(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    kind: 'project-knowledge-process-claim',
+    contractId: CONTRACT_IDS.PROCESS_CLAIM,
+    projectId: 'proj-demo',
+    snapshotId: 'snap-001',
+    processId: 'process:demo-flow',
+    processVersionId: 'process:demo-flow:v1',
+    claimId: 'claim:demo-flow:1',
+    claimType: 'technical-observation',
+    text: 'ORDERPGM participates in the detected technical flow.',
+    status: 'candidate',
+    derivationClass: DERIVATION_CLASSES.INFERRED,
+    confidence: 'medium',
+    provenance: processProvenance(),
+    evidenceReferences: [{ id: 'ev-1', kind: 'source' }],
+    supportingRefs: ['PROGRAM:ORDERPGM'],
+    ...overrides,
+  };
+}
+
+function processRelationship(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    kind: 'project-knowledge-process-relationship',
+    contractId: CONTRACT_IDS.PROCESS_RELATIONSHIP,
+    projectId: 'proj-demo',
+    snapshotId: 'snap-001',
+    processId: 'process:demo-flow',
+    processVersionId: 'process:demo-flow:v1',
+    relationshipId: 'relationship:demo-flow:1',
+    relationshipType: 'CONTAINS',
+    fromId: 'process:demo-flow:v1',
+    toId: 'step:demo-flow:1',
+    status: 'candidate',
+    derivationClass: DERIVATION_CLASSES.INFERRED,
+    confidence: 'medium',
+    provenance: processProvenance(),
+    evidenceReferences: [{ id: 'ev-1', kind: 'source' }],
+    ...overrides,
+  };
+}
+
+function glossaryEntry(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    kind: 'project-knowledge-glossary-entry',
+    contractId: CONTRACT_IDS.GLOSSARY_ENTRY,
+    projectId: 'proj-demo',
+    snapshotId: 'snap-001',
+    entryId: 'glossary:demo-term',
+    term: 'Synthetic term',
+    definition: 'Definition awaiting explicit review.',
+    status: 'unknown',
+    derivationClass: DERIVATION_CLASSES.INFERRED,
+    confidence: 'low',
+    provenance: processProvenance(),
+    evidenceReferences: [{ id: 'ev-1', kind: 'source' }],
+    aliases: ['DEMO_TERM'],
+    relatedProcessIds: ['process:demo-flow'],
+    ...overrides,
+  };
+}
+
+function processQueryResult(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    kind: 'project-knowledge-process-query-result',
+    contractId: CONTRACT_IDS.PROCESS_QUERY_RESULT,
+    projectId: 'proj-demo',
+    snapshotId: 'snap-001',
+    queryId: 'query:demo-1',
+    question: 'What is known about the synthetic technical flow?',
+    answer: 'The flow is a candidate derived from technical evidence.',
+    status: 'candidate',
+    confidence: 'medium',
+    sourceOfTruth: false,
+    advisory: true,
+    evidenceReferences: [{ id: 'ev-1', kind: 'source' }],
+    matches: [
+      { id: 'process:demo-flow', kind: 'business-process', name: 'Synthetic technical flow' },
+    ],
+    unknowns: ['A reviewed business description is not available'],
+    nextQuestions: ['Review the candidate with a domain owner'],
+    ...overrides,
+  };
+}
+
 module.exports = {
   HASH_A,
   HASH_B,
@@ -289,4 +456,12 @@ module.exports = {
   contextPackage,
   operationResultOk,
   operationResultFail,
+  processProvenance,
+  businessProcess,
+  processVersion,
+  processStep,
+  processClaim,
+  processRelationship,
+  glossaryEntry,
+  processQueryResult,
 };

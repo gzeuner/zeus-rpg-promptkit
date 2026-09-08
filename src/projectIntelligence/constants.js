@@ -40,6 +40,30 @@ const ANALYZER_RUN_STATUSES = Object.freeze({
   PARTIAL: 'partial',
 });
 
+/** Lifecycle statuses for derived business-process knowledge. */
+const PROCESS_STATUSES = Object.freeze({
+  CANDIDATE: 'candidate',
+  REVIEWED: 'reviewed',
+  PUBLISHED: 'published',
+  STALE: 'stale',
+  UNKNOWN: 'unknown',
+});
+
+/** Confidence values used by process candidates and claims. */
+const PROCESS_CONFIDENCE = Object.freeze(['high', 'medium', 'low', 'unknown']);
+
+/** Closed relationship vocabulary for the process projection. */
+const PROCESS_RELATIONSHIP_TYPES = Object.freeze([
+  'CONTAINS',
+  'PRECEDES',
+  'CALLS',
+  'READS',
+  'WRITES',
+  'USES_INTERFACE',
+  'HAS_EXCEPTION',
+  'SUPPORTS_CLAIM',
+]);
+
 /** Evidence classes — only `source` may underpin VERIFIED facts. */
 const EVIDENCE_CLASSES = Object.freeze({
   SOURCE: 'source',
@@ -267,6 +291,9 @@ module.exports = {
   DERIVATION_CLASSES,
   SNAPSHOT_STATUSES,
   ANALYZER_RUN_STATUSES,
+  PROCESS_STATUSES,
+  PROCESS_CONFIDENCE,
+  PROCESS_RELATIONSHIP_TYPES,
   EVIDENCE_CLASSES,
   DIAGNOSTIC_SEVERITIES,
   SYMBOL_KINDS,

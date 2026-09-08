@@ -33,6 +33,7 @@ const adapters = require('./adapters');
 const portableExport = require('./export');
 const corpora = require('./corpora');
 const entitled = require('./entitled');
+const processIntelligence = require('./process');
 
 module.exports = {
   // Vocabulary
@@ -53,6 +54,13 @@ module.exports = {
   diagnosticSchema: contracts.diagnosticSchema,
   contextPackageSchema: contracts.contextPackageSchema,
   operationResultSchema: contracts.operationResultSchema,
+  businessProcessSchema: contracts.businessProcessSchema,
+  processVersionSchema: contracts.processVersionSchema,
+  processStepSchema: contracts.processStepSchema,
+  processClaimSchema: contracts.processClaimSchema,
+  processRelationshipSchema: contracts.processRelationshipSchema,
+  glossaryEntrySchema: contracts.glossaryEntrySchema,
+  processQueryResultSchema: contracts.processQueryResultSchema,
 
   // Helpers
   isSafeRelativePath: helpers.isSafeRelativePath,
@@ -68,6 +76,15 @@ module.exports = {
   // Fixtures + contract test kit
   fixtures,
   runProjectIntelligenceContractTests,
+
+  // Business Process Intelligence vertical slice (ZPI process 10-12)
+  process: processIntelligence,
+  discoverProcessCandidates: processIntelligence.discoverProcessCandidates,
+  buildProcessDescription: processIntelligence.buildProcessDescription,
+  buildProcessDescriptionPrompt: processIntelligence.buildProcessDescriptionPrompt,
+  reviewProcessDescription: processIntelligence.reviewProcessDescription,
+  publishProcessDescription: processIntelligence.publishProcessDescription,
+  validateProcessCandidate: processIntelligence.validateProcessCandidate,
 
   // Knowledge store (ZPI-03)
   store,

@@ -28,6 +28,12 @@ node cli/zeus.js agent prompt --goal "<goal>" --json
 
 Use `agent evaluate --list --json` to see the sanitized self-evaluation corpus. After drafting a response, evaluate it with `--scenario <id> --response-file <relative-path>` before taking a non-trivial route. The score checks command selection, scope, evidence, safety gating, and experience logging without executing the response.
 
+For business-process questions, read [`process-intelligence.md`](process-intelligence.md)
+after preflight. The current vertical slice derives deterministic, reviewable
+process candidates from the existing analysis graph; it does not auto-publish
+business meaning. Process retrieval CLI routes are planned next and must be
+discovered from the live catalog when available.
+
 Use `agent feedback --json` after a failed, blocked, partial, or corrected session.
 It turns repeated sanitized failure codes into reviewable prompt, documentation,
 or command-contract candidates and links each candidate to a regression scenario.

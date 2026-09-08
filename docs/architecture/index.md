@@ -31,6 +31,7 @@ All subsequent implementation and agent guidance must be consistent with these d
 | [015](adr-015-knowledge-first-freshness.md)         | Knowledge-First Freshness             | Accepted                                                       |
 | [016](adr-016-mcp-adapter-boundary.md)              | MCP Adapter Boundary                  | Accepted                                                       |
 | [015](adr-015-optional-vscode-adapter-boundary.md)  | Optional VS Code Adapter Boundary     | Accepted                                                       |
+| [017](adr-017-process-intelligence-projection.md)   | Evidence-backed Process Projection    | Accepted; vertical slice delivered                             |
 
 ## Related Reviews
 
