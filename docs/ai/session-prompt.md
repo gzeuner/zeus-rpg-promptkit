@@ -36,6 +36,7 @@ Operating contract:
 - Keep credentials, environment dumps, and credential-bearing URLs out of prompts, logs, summaries, and artifacts.
 - Read `node cli/zeus.js agent log list --json` before retrying a failed command; record one sanitized experience event after every failed, blocked, or partial attempt.
 - Use `node cli/zeus.js agent feedback --json` to turn repeated sanitized lessons into reviewable prompt, documentation, or command-contract candidates; never auto-promote them.
+- Use `node cli/zeus.js agent feedback review --candidate .zeus/agent-feedback.json --before <path> --after <path> --fixture <path> --json` before promoting a candidate; require a sanitized fixture for every scenario and a non-empty explicit contract diff.
 - Use `node cli/zeus.js agent evaluate --list --json` and evaluate a non-trivial response against a sanitized scenario before execution.
 - Distinguish facts, inferences, unresolved references, and unknowns. Never silently fill gaps.
 - Inspect `context show --json` before reading source, metadata, or data; state the effective system, library/schema, source file, member, and scope.
@@ -47,13 +48,14 @@ Start here in the project root:
 2. `node cli/zeus.js agent log list --json`
 3. `node cli/zeus.js agent log summary --json`
 4. `node cli/zeus.js agent feedback --json`
-5. `node cli/zeus.js agent log suggest --goal "<goal>" --json`
-6. `node cli/zeus.js agent evaluate --list --json`
-7. `node cli/zeus.js agent bootstrap --json`
-8. `node cli/zeus.js tools list --json`
-9. `node cli/zeus.js tools guide --json`
-10. `node cli/zeus.js context show --json`
-11. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
+5. `node cli/zeus.js agent feedback review --help`
+6. `node cli/zeus.js agent log suggest --goal "<goal>" --json`
+7. `node cli/zeus.js agent evaluate --list --json`
+8. `node cli/zeus.js agent bootstrap --json`
+9. `node cli/zeus.js tools list --json`
+10. `node cli/zeus.js tools guide --json`
+11. `node cli/zeus.js context show --json`
+12. Use `node cli/zeus.js tools describe <command> --json` before an unfamiliar command.
 
 For a copy-ready prompt enriched with the current local context and recent sanitized lessons, use
 `node cli/zeus.js agent prompt --goal "<goal>" --json`.
@@ -101,3 +103,4 @@ Session goal:
 - Generated `ai_prompt_*.md` files are task-specific prompt inputs; `ai-knowledge.json` is the structured evidence projection for one analysis run.
 - Experience records are local-only at `.zeus/agent-experience.jsonl`; use them to turn recurring failures into prompt, documentation, test, or command-contract improvements.
 - `agent feedback` produces reviewable candidates from repeated records and failed evaluations; add a sanitized regression fixture before promoting any candidate.
+- `agent feedback review` verifies the candidate, fixture, and explicit contract diff; it is a read-only gate and never applies the change.

@@ -23,6 +23,7 @@ const {
   resolveFeedbackArtifactPath,
   writeAgentFeedbackArtifact,
 } = require('../../agent/agentFeedback');
+const { buildAgentPromotionReview } = require('../../agent/agentPromotionReview');
 
 function printHelp() {
   console.log('Agent commands:');
@@ -46,6 +47,9 @@ function printHelp() {
   console.log('  zeus agent evaluate --scenario <id> --response-file <relative-path> [--json]');
   console.log(
     '  zeus agent feedback [--scenario <id> --response-file <relative-path>] [--out <.zeus/file.json>] [--json]'
+  );
+  console.log(
+    '  zeus agent feedback review --before <path> --after <path> --fixture <path> [--candidate <.zeus/file.json>] [--out <.zeus/file.json>] [--json]'
   );
   console.log('');
   console.log('The CLI is the canonical agent surface. MCP is optional.');
@@ -197,6 +201,18 @@ function printFeedbackHuman(payload) {
     );
   }
   if (payload.feedbackArtifact) console.log(`Artifact: ${payload.feedbackArtifact}`);
+}
+
+function printPromotionReviewHuman(payload) {
+  console.log('Agent feedback promotion review');
+  console.log(`Eligible: ${payload.review.eligible ? 'yes' : 'no'}`);
+  console.log(`Candidate: ${payload.candidate.path}`);
+  console.log(`Regression fixture: ${payload.regressionFixture.path}`);
+  console.log(
+    `Contract diff: ${payload.contractDiff.changed ? 'changed' : 'missing'} (${payload.contractDiff.addedLines} added, ${payload.contractDiff.removedLines} removed)`
+  );
+  for (const blocker of payload.review.blockers) console.log(`Blocker: ${blocker}`);
+  if (payload.promotionArtifact) console.log(`Artifact: ${payload.promotionArtifact}`);
 }
 
 async function runAgent(args = {}) {
@@ -374,6 +390,54 @@ async function runAgent(args = {}) {
     });
     if (json.isJsonMode) json.print(payload);
     else printEvaluationHuman(payload);
+    return payload;
+  }
+
+  if (subcommand === 'feedback' && String(positional[1] || '').toLowerCase() === 'review') {
+    const outputPath = args.out
+      ? resolveFeedbackArtifactPath({ cwd: process.cwd(), out: args.out }).relativePath
+      : null;
+    const rawPayload = {
+      ...buildAgentPromotionReview({
+        cwd: process.cwd(),
+        candidatePath: args.candidate || args['candidate-file'] || '.zeus/agent-feedback.json',
+        beforePath: args.before || args['before-contract'],
+        afterPath: args.after || args['after-contract'],
+        fixturePath: args.fixture || args['fixture-file'],
+      }),
+      readOnly: !outputPath,
+    };
+    const payload = finishAgentPayload(rawPayload, {
+      status: rawPayload.review.eligible ? 'ready' : 'needs-attention',
+      sideEffects: outputPath ? ['local-read', 'local-artifact-write'] : ['local-read'],
+      evidenceSources: [
+        rawPayload.candidate.path,
+        rawPayload.regressionFixture.path,
+        rawPayload.contractDiff.before.path,
+        rawPayload.contractDiff.after.path,
+      ],
+      artifacts: [
+        rawPayload.candidate.path,
+        rawPayload.regressionFixture.path,
+        rawPayload.contractDiff.before.path,
+        rawPayload.contractDiff.after.path,
+        outputPath,
+      ],
+      nextCommands: [
+        rawPayload.review.eligible
+          ? 'Run the regression fixture and the relevant test suite before promoting the contract diff.'
+          : 'Resolve the promotion blockers and rerun agent feedback review --json.',
+      ],
+    });
+    if (outputPath) {
+      payload.promotionArtifact = outputPath;
+      writeAgentFeedbackArtifact(payload, {
+        cwd: process.cwd(),
+        out: outputPath,
+      });
+    }
+    if (json.isJsonMode) json.print(payload);
+    else printPromotionReviewHuman(payload);
     return payload;
   }
 

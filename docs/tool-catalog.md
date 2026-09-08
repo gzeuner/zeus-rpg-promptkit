@@ -93,7 +93,7 @@ Related:
 | `docs:generate-catalog` | `docs generate-catalog` | — | `stable` | `S1` | Local | local-artifact-write | cli, mcp | — | Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`. | `node cli/zeus.js docs:generate-catalog` |
 | `mcp` | — | `serve`, `help` | `stable` | `S0` | Local read-mostly | local-process-stdio | cli | — | Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools. | `node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status,zeus.project-knowledge.check,zeus.project-knowledge.locate,zeus.project-knowledge.lookup` |
 | `tools` | — | `list`, `describe`, `guide` | `stable` | `S0` | Local | none | cli | — | List and describe canonical command-help records as stable JSON for CLI and MCP parity. | `node cli/zeus.js tools list --json` |
-| `agent` | — | `bootstrap`, `preflight`, `prompt`, `suggest`, `evaluate`, `evaluate --list`, `feedback`, `log`, `log list`, `log summary`, `log suggest` | `stable` | `S0` | Local | none | cli | — | Orient CLI agents, generate context-aware prompts, suggest bounded evidence-first workflows, evaluate responses, turn repeated sanitized signals into reviewable contract-improvement candidates, and record/read local experience events without executing work. | `node cli/zeus.js agent preflight --goal "<goal>" --json` |
+| `agent` | — | `bootstrap`, `preflight`, `prompt`, `suggest`, `evaluate`, `evaluate --list`, `feedback`, `feedback review`, `log`, `log list`, `log summary`, `log suggest` | `stable` | `S0` | Local | none | cli | — | Orient CLI agents, generate context-aware prompts, suggest bounded evidence-first workflows, evaluate responses, review contract-improvement candidates against sanitized fixtures and explicit diffs, and record/read local experience events without executing work. | `node cli/zeus.js agent preflight --goal "<goal>" --json` |
 | `project-knowledge` | `project-intelligence` | `check`, `sync`, `lookup`, `locate`, `discover`, `list`, `status`, `inspect-policy`, `create-project`, `full-index`, `incremental-update`, `query`, `impact-analysis`, `build-context-package`, `inspect-snapshot`, `verify-integrity`, `create`, `index`, `incremental`, `impact`, `context`, `inspect`, `verify` | `stable` | `S1` | Local | local-read, local-artifact-write | cli, api, mcp | — | Community-neutral Knowledge First check/locate/lookup/sync over the SQLite-backed source snapshot, plus the backwards-compatible optional Project Intelligence adapter operations. Read-only locate and lookup check freshness before retrieval; locate returns a selected source only when the selector is fresh and unambiguous; sync is explicit and writes locally. | `node cli/zeus.js project-knowledge locate --knowledge-root $KNOWLEDGE_ROOT --project-id demo --relative-path QRPGLESRC/ORDER.rpgle --json` |
 
 ## Workflow Presets
@@ -117,18 +117,19 @@ Related:
 5. `agent log summary --json` (recurring failures and reusable lessons)
 6. `agent log suggest --goal "<goal>" --json` (goal-matched sanitized workarounds)
 7. `agent feedback --json` (reviewable candidates from repeated lessons and evaluation findings)
-8. `tools list --json` and `tools describe <id> --json` (capability discovery)
-9. `context show --json` (current scope and environment)
-10. `doctor` (before profile-based remote work)
-11. `fetch` (only if source refresh is needed and approved)
-12. `spool-read` (only if existing IBM-i spool output is needed; bounded `S2` read)
-13. `analyze` or `workflow --preset ...`
-14. `query-table`/`query-sql`/`joblog`/`field-search`/`search-source`/`inspect-object` for evidence deepening
-15. `impact`/`assess-risk`/`generate-test`/`generate-checklist`/`qa` for planning and validation
-16. `agent log --outcome ...` after failed, blocked, partial, or corrected attempts (iterative learning)
-17. generated artifacts and `bundle` for review/sharing; optional `serve` for local viewing
-18. `upsert`/`upsert-sql`/`insert`/`update` only after explicit user approval
-19. `bridge` only in operator-gated, explicitly approved flows
+8. `agent feedback review --candidate .zeus/agent-feedback.json --before <path> --after <path> --fixture <path> --json` (verify a sanitized regression fixture and explicit contract diff before promotion)
+9. `tools list --json` and `tools describe <id> --json` (capability discovery)
+10. `context show --json` (current scope and environment)
+11. `doctor` (before profile-based remote work)
+12. `fetch` (only if source refresh is needed and approved)
+13. `spool-read` (only if existing IBM-i spool output is needed; bounded `S2` read)
+14. `analyze` or `workflow --preset ...`
+15. `query-table`/`query-sql`/`joblog`/`field-search`/`search-source`/`inspect-object` for evidence deepening
+16. `impact`/`assess-risk`/`generate-test`/`generate-checklist`/`qa` for planning and validation
+17. `agent log --outcome ...` after failed, blocked, partial, or corrected attempts (iterative learning)
+18. generated artifacts and `bundle` for review/sharing; optional `serve` for local viewing
+19. `upsert`/`upsert-sql`/`insert`/`update` only after explicit user approval
+20. `bridge` only in operator-gated, explicitly approved flows
 
 ## How To Keep This File Up To Date
 

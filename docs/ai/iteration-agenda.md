@@ -1,7 +1,7 @@
 ---
 Title: Promptkit AI Iteration Agenda
 Description: Living backlog for making Zeus immediately understandable and usable by CLI-based AI agents.
-Last Updated: 2026-09-07
+Last Updated: 2026-09-08
 ---
 
 # Promptkit AI Iteration Agenda
@@ -85,8 +85,6 @@ hygiene, and recoverable experience records.
   generated agent commands remain portable by default.
 - Deterministic platform invocation fixtures protect the three forms.
 
-## Next iterations
-
 ### Iteration 8 — Feedback-to-contract loop
 
 - `agent feedback --json` turns repeated sanitized experience codes into
@@ -101,9 +99,156 @@ hygiene, and recoverable experience records.
 
 ### Iteration 9 — Promotion fixtures and contract diff
 
-Add a review command that compares a feedback candidate with the current
-authoritative prompt/metadata and verifies that every promoted lesson ships
-with a sanitized regression fixture and an explicit contract diff.
+- `agent feedback review` compares workspace-contained before/after contract
+  files and returns a bounded, hashed, sanitized diff summary.
+- Reviewable feedback candidates must have a non-empty contract diff and a
+  matching sanitized regression fixture for every regression scenario.
+- Fixture metadata explicitly declares sanitization, credential absence, and
+  absence of private project identifiers.
+- The review is read-only by default, never auto-promotes a candidate, and
+  exposes stable blocker codes plus a machine-readable eligibility result.
+- Agent bootstrap, command metadata, generated catalogs, start-here guidance,
+  session prompt, and the detailed CLI guide expose the review route.
+
+## Next iterations
+
+## Business Process Intelligence roadmap
+
+The following iterations extend the existing Project Intelligence foundation.
+They do not create a second, parallel knowledge system: technical evidence,
+snapshots, provenance, freshness gates, the SQLite store, and the hybrid
+retriever remain the foundation. The new layer adds a durable, domain-oriented
+process model above the existing technical graph.
+
+### Iteration 10 — Business-process contracts and provenance
+
+Define and validate versioned contracts for:
+
+- business process and process version
+- process step, decision, actor, system, interface, data object, and exception
+- evidence-backed process claim and process relationship
+- glossary entry and process query result
+
+Every claim must carry a snapshot reference, evidence references, derivation
+class, confidence, and lifecycle status (`candidate`, `reviewed`, `published`,
+`stale`, or `unknown`). Add neutral fixtures and contract tests without
+system-specific names, credentials, host paths, or private runtime values.
+
+### Iteration 11 — Deterministic process discovery
+
+Derive process candidates from the existing technical graph and evidence:
+
+- identify jobs, APIs, files, queues, and user-facing entry points
+- group call and data-flow neighborhoods into candidate processes
+- detect reads, writes, interfaces, decisions, and error paths
+- record unresolved references and missing evidence explicitly
+
+The output is a reviewable candidate catalog, not an automatically published
+business truth.
+
+### Iteration 12 — AI-assisted process description and review
+
+Add a strict, schema-constrained description workflow that turns a candidate
+into a readable process view containing trigger, goal, steps, decisions, data,
+interfaces, exceptions, roles, evidence, uncertainty, and open questions.
+
+The AI may summarize and classify evidence, but may not invent unsupported
+steps. Publishing requires a deterministic validation result, an evidence
+check, and an explicit review diff from candidate to published version.
+
+### Iteration 13 — Process retrieval and query contract
+
+Add a canonical read-only service and CLI routes such as:
+
+```text
+zeus process list
+zeus process describe --id <process-id>
+zeus process query --question "Was macht Schnittstelle XY?"
+zeus process impact --id <process-id>
+zeus process diff --id <process-id>
+```
+
+Retrieval should rank exact identifiers and confirmed process facts ahead of
+derived summaries, expand through process relationships, verify sources, and
+return process version, freshness, evidence, confidence, and unknowns in a
+stable machine-readable response.
+
+### Iteration 14 — Business glossary and legacy vocabulary
+
+Connect technical identifiers with business terms, synonyms, abbreviations,
+legacy names, and interface aliases. Glossary changes must be versioned and
+evidence-backed. Query expansion may improve discovery, but must never hide an
+ambiguous mapping; ambiguous terms require clarification or an explicit
+uncertainty in the answer.
+
+### Iteration 15 — Role-based views and optional chat adapter
+
+Build role-specific projections from the same process facts:
+
+- Product Owner: goal, outcome, rules, roles, and business exceptions
+- Architect: systems, interfaces, dependencies, and data flows
+- Developer: programs, symbols, source spans, and implementation details
+- Tester: decisions, scenarios, error paths, and acceptance evidence
+
+Expose an optional local chat adapter over the same query service. CLI remains
+the canonical and testable interface; MCP or a UI must not become the source
+of truth.
+
+### Iteration 16 — Change impact, freshness, and process versions
+
+When a source snapshot changes, identify affected process claims and mark the
+corresponding process versions as fresh, stale, or unknown. Provide a bounded
+process diff and impact view. The answer service must refuse to present stale
+or unverified process knowledge as current without clearly saying so.
+
+### Iteration 17 — Process quality and evaluation corpus
+
+Add deterministic fixtures and evaluation scenarios for:
+
+- process discovery and boundary quality
+- evidence coverage and citation correctness
+- unresolved dependencies and incomplete process paths
+- interface and data-flow questions
+- stale-knowledge refusal
+- role-specific answer quality
+- protection against credentials and private project content
+
+Track coverage, evidence ratio, unresolved count, freshness, and answer
+reproducibility as reviewable metrics.
+
+### Iteration 18 — Experience-driven process improvement
+
+Extend the existing sanitized experience loop to record process questions that
+were blocked, ambiguous, incomplete, stale, or corrected. Produce reviewable
+improvement candidates for glossary entries, extraction rules, prompts, and
+contracts. No experience record may directly publish process knowledge or
+modify authoritative contracts.
+
+## Business Process Intelligence vertical slice
+
+Iterations 10–13 should first deliver one complete neutral example process:
+
+1. technical evidence and graph references
+2. process candidate
+3. reviewed process version
+4. `process describe` output
+5. `process query` answer with evidence and freshness
+
+This vertical slice is the acceptance gate before broad extraction across a
+legacy ERP system. It keeps the work reversible and proves that discovery,
+storage, review, retrieval, and agent consumption use the same contracts.
+
+## Agenda maintenance rules
+
+- Move an iteration to **Completed** only after implementation, tests,
+  documentation, secret scan, and pipeline verification are complete.
+- Record the merge or release reference and update `Last Updated` in the same
+  change.
+- Keep candidate process knowledge separate from published process knowledge.
+- Add a sanitized regression fixture whenever a failure changes a prompt,
+  contract, extractor, retrieval rule, or glossary mapping.
+- Never commit credentials, secrets, private runtime values, host paths, or
+  project-specific identifiers into fixtures, examples, prompts, or reports.
 
 ## Definition of done for each iteration
 
