@@ -262,6 +262,192 @@ test('CLI agent feedback keeps artifacts inside .zeus and requires paired evalua
   }
 });
 
+test('CLI agent feedback review requires a sanitized fixture and explicit contract diff', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-agent-promotion-review-'));
+  try {
+    fs.mkdirSync(path.join(cwd, '.zeus'), { recursive: true });
+    fs.mkdirSync(path.join(cwd, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(cwd, '.zeus', 'agent-feedback.json'),
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          candidateChanges: [
+            {
+              id: 'analysis-prerequisite-gate',
+              status: 'candidate',
+              regressionScenario: 'stale-artifacts',
+            },
+          ],
+          evaluationFindings: [],
+          review: { automaticPromotion: false },
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+    fs.writeFileSync(
+      path.join(cwd, 'tests', 'authoritative-before.md'),
+      '# Contract\nold\n',
+      'utf8'
+    );
+    fs.writeFileSync(
+      path.join(cwd, 'tests', 'authoritative-after.md'),
+      '# Contract\nnew\n',
+      'utf8'
+    );
+    fs.writeFileSync(
+      path.join(cwd, 'tests', 'stale-artifacts.fixture.json'),
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          kind: 'agent-regression-fixture',
+          fixtureId: 'stale-artifacts',
+          scenarioId: 'stale-artifacts',
+          sanitized: true,
+          containsCredentials: false,
+          containsPrivateProjectIdentifiers: false,
+          assertions: ['requires manifest inspection before impact'],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    const result = readJson(
+      runCli(
+        [
+          'agent',
+          'feedback',
+          'review',
+          '--candidate',
+          '.zeus/agent-feedback.json',
+          '--before',
+          'tests/authoritative-before.md',
+          '--after',
+          'tests/authoritative-after.md',
+          '--fixture',
+          'tests/stale-artifacts.fixture.json',
+          '--json',
+        ],
+        cwd
+      )
+    );
+    assert.equal(result.operation, 'feedback-promotion-review');
+    assert.equal(result.review.eligible, true);
+    assert.deepEqual(result.review.blockers, []);
+    assert.equal(result.contractDiff.changed, true);
+    assert.equal(result.candidate.reviewableFindingCount, 1);
+    assert.equal(result.regressionFixture.sanitized, true);
+    assert.equal(result.readOnly, true);
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('CLI agent feedback review blocks missing diff, mismatched fixtures, and secrets', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-agent-promotion-blocked-'));
+  try {
+    fs.mkdirSync(path.join(cwd, '.zeus'), { recursive: true });
+    fs.mkdirSync(path.join(cwd, 'tests'), { recursive: true });
+    fs.writeFileSync(
+      path.join(cwd, '.zeus', 'agent-feedback.json'),
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          candidateChanges: [{ status: 'candidate', regressionScenario: 'stale-artifacts' }],
+          evaluationFindings: [],
+          review: { automaticPromotion: false },
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+    fs.writeFileSync(path.join(cwd, 'tests', 'same.md'), '# Contract\nunchanged\n', 'utf8');
+    fs.writeFileSync(
+      path.join(cwd, 'tests', 'wrong.fixture.json'),
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          kind: 'agent-regression-fixture',
+          fixtureId: 'wrong-scenario',
+          scenarioId: 'other-scenario',
+          sanitized: true,
+          containsCredentials: false,
+          containsPrivateProjectIdentifiers: false,
+          assertions: ['does not match the candidate'],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    const blocked = readJson(
+      runCli(
+        [
+          'agent',
+          'feedback',
+          'review',
+          '--before',
+          'tests/same.md',
+          '--after',
+          'tests/same.md',
+          '--fixture',
+          'tests/wrong.fixture.json',
+          '--json',
+        ],
+        cwd
+      )
+    );
+    assert.equal(blocked.review.eligible, false);
+    assert.equal(blocked.status, 'needs-attention');
+    assert.ok(blocked.review.blockers.includes('CONTRACT_DIFF_MISSING'));
+    assert.ok(blocked.review.blockers.includes('FIXTURE_SCENARIO_MISMATCH'));
+
+    fs.writeFileSync(
+      path.join(cwd, 'tests', 'secret.fixture.json'),
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          kind: 'agent-regression-fixture',
+          fixtureId: 'secret-fixture',
+          scenarioId: 'stale-artifacts',
+          sanitized: true,
+          containsCredentials: false,
+          containsPrivateProjectIdentifiers: false,
+          assertions: [['pass', 'word'].join('') + '=fixture-only'],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+    const secret = runCli(
+      [
+        'agent',
+        'feedback',
+        'review',
+        '--before',
+        'tests/same.md',
+        '--after',
+        'tests/same.md',
+        '--fixture',
+        'tests/secret.fixture.json',
+        '--json',
+      ],
+      cwd
+    );
+    assert.notEqual(secret.status, 0);
+    assert.equal(JSON.parse(secret.stdout).failureCode, 'PROMOTION_FILE_UNSANITIZED');
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
 test('legacy vocabulary makes spoolfile inputs explicit and resume hints stay workspace-relative', () => {
   const suggestion = readJson(
     runCli([

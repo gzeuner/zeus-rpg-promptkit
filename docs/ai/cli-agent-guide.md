@@ -85,6 +85,7 @@ the agent to rewrite its own operating contract:
 node cli/zeus.js agent feedback --json
 node cli/zeus.js agent feedback --out .zeus/agent-feedback.json --json
 node cli/zeus.js agent feedback --scenario <id> --response-file <relative-path> --json
+node cli/zeus.js agent feedback review --candidate .zeus/agent-feedback.json --before <path> --after <path> --fixture <path> --json
 ```
 
 The report reads the local redacted `.zeus/agent-experience.jsonl` and the
@@ -98,6 +99,32 @@ and only then change the authoritative prompt, documentation, or command
 metadata. The command is local and read-only unless `--out` is supplied; even
 then it writes only the bounded, workspace-contained feedback artifact and
 never changes a prompt or remote system.
+
+### Promotion review
+
+`agent feedback review` is the explicit gate between a feedback candidate and
+an authoritative contract change. It compares two workspace-contained copies
+of the prompt or command metadata, verifies that their normalized content
+actually differs, and checks a JSON fixture with this shape:
+
+```json
+{
+  "schemaVersion": 1,
+  "kind": "agent-regression-fixture",
+  "fixtureId": "stale-artifacts",
+  "scenarioId": "stale-artifacts",
+  "sanitized": true,
+  "containsCredentials": false,
+  "containsPrivateProjectIdentifiers": false,
+  "assertions": ["requires manifest inspection before impact"]
+}
+```
+
+The review returns stable blocker codes, candidate and fixture hashes, a
+bounded sanitized diff preview, and `review.eligible`. It never edits or
+promotes a contract. Use `--out .zeus/agent-promotion-review.json` only when a
+local review artifact is needed. Observed, unconfirmed findings remain blocked
+until they are confirmed or become candidates through the normal feedback loop.
 
 ## Route selection by intent
 
@@ -235,7 +262,8 @@ report:
 node cli/zeus.js agent feedback --json
 ```
 
-Only promote a candidate after human review and a sanitized regression fixture.
+Only promote a candidate after human review, `agent feedback review --json`,
+and a sanitized regression fixture with an explicit contract diff.
 
 ## Artifact contract
 

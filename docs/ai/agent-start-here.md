@@ -17,6 +17,7 @@ node cli/zeus.js agent bootstrap --json
 node cli/zeus.js agent log list --json
 node cli/zeus.js agent log summary --json
 node cli/zeus.js agent feedback --json
+node cli/zeus.js agent feedback review --help
 node cli/zeus.js agent evaluate --list --json
 node cli/zeus.js tools guide --json
 node cli/zeus.js context show --json
@@ -33,6 +34,18 @@ or command-contract candidates and links each candidate to a regression scenario
 With `--scenario <id> --response-file <relative-path>`, it also explains failed
 evaluation dimensions. It never changes prompts or contracts automatically. Use
 `--out .zeus/agent-feedback.json` when a local review artifact is useful.
+
+Before promoting a candidate, run `agent feedback review` with the candidate,
+the authoritative before/after contract files, and a sanitized regression
+fixture. The review is read-only and eligible only when every finding has a
+matching fixture scenario and the contract diff is non-empty:
+
+```text
+node cli/zeus.js agent feedback review --candidate .zeus/agent-feedback.json --before <path> --after <path> --fixture <path> --json
+```
+
+The command never applies the diff. It reports blockers, hashes, a bounded
+sanitized diff preview, and the next safe step.
 
 All `agent ... --json` responses share a stable envelope with `ok`, `status`,
 `safety`, `scope`, `evidence`, `artifacts`, `warnings`, `nextCommands`, and
@@ -137,8 +150,9 @@ The local experience log makes failed attempts useful for the next session:
 3. Match sanitized lessons to the current goal: `node cli/zeus.js agent log suggest --goal "<goal>" --json`.
 4. Evaluate the proposed response against a sanitized scenario when the route is non-trivial: `node cli/zeus.js agent evaluate --scenario <id> --response-file <relative-path> --json`.
 5. Generate contract-improvement candidates: `node cli/zeus.js agent feedback --json`.
-6. After a failed, blocked, or partial attempt, record one concise event with `outcome`, the safe command, a stable `failure-code`, the symptom, the lesson, and the next safe step.
-7. Use only reviewed candidates with a sanitized regression fixture to improve the prompt, documentation, or command contract instead of repeating the same invalid call.
+6. Review a candidate with an explicit diff and fixture: `node cli/zeus.js agent feedback review --candidate .zeus/agent-feedback.json --before <path> --after <path> --fixture <path> --json`.
+7. After a failed, blocked, or partial attempt, record one concise event with `outcome`, the safe command, a stable `failure-code`, the symptom, the lesson, and the next safe step.
+8. Use only reviewed candidates with a sanitized regression fixture to improve the prompt, documentation, or command contract instead of repeating the same invalid call.
 
 Example:
 

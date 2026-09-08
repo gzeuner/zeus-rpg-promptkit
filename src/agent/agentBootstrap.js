@@ -71,9 +71,9 @@ const INTENT_MAP = Object.freeze([
   }),
   Object.freeze({
     intent: 'turn repeated lessons into reviewed improvements',
-    commands: Object.freeze(['agent feedback', 'agent log summary']),
+    commands: Object.freeze(['agent feedback', 'agent feedback review', 'agent log summary']),
     firstStep:
-      'Generate the sanitized feedback report, review repeated signals, and add a regression fixture before changing prompts or contracts.',
+      'Generate the sanitized feedback report, review the candidate with an explicit contract diff and regression fixture, and only then change prompts or contracts.',
   }),
 ]);
 
@@ -146,6 +146,7 @@ function buildCliAgentBootstrapPayload() {
       'node cli/zeus.js agent bootstrap --json',
       'node cli/zeus.js agent log list --json',
       'node cli/zeus.js agent feedback --json',
+      'node cli/zeus.js agent feedback review --help',
       'node cli/zeus.js tools list --json',
       'node cli/zeus.js context show --json',
     ],
@@ -156,6 +157,8 @@ function buildCliAgentBootstrapPayload() {
       experienceSummary: 'node cli/zeus.js agent log summary --json',
       experienceSuggest: 'node cli/zeus.js agent log suggest --goal "<goal>" --json',
       feedback: 'node cli/zeus.js agent feedback --json',
+      feedbackReview:
+        'node cli/zeus.js agent feedback review --candidate .zeus/agent-feedback.json --before <path> --after <path> --fixture <path> --json',
       evaluationList: 'node cli/zeus.js agent evaluate --list --json',
       evaluationRun:
         'node cli/zeus.js agent evaluate --scenario <id> --response-file <relative-path> --json',
@@ -228,7 +231,7 @@ function buildCliAgentBootstrapPayload() {
         'Read recent records before retrying a failed command.',
         'Record one concise event after a failure, block, or workaround.',
         'Use recurring failure codes and lessons to improve prompts, docs, or command contracts.',
-        'Use agent feedback to turn repeated signals into reviewable changes with regression fixtures; never auto-promote a candidate.',
+        'Use agent feedback to turn repeated signals into reviewable changes; use feedback review to require a sanitized regression fixture and explicit contract diff; never auto-promote a candidate.',
       ],
     },
     evaluation: {
