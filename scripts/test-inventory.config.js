@@ -80,6 +80,7 @@ module.exports = {
       'tests/mcp-tool-gateway.test.js',
       'tests/working-context-wizard-service.test.js',
       'tests/fetch-member-service.test.js',
+      'tests/project-intelligence-process-retrieval.test.js',
     ],
   },
   exclusions: [],

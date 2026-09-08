@@ -130,7 +130,24 @@ foundation and are ready for pipeline verification:
 Implementation and tests: `src/projectIntelligence/process/`,
 `tests/project-intelligence-process.test.js`, and
 `docs/ai/process-intelligence.md`. Delivered in PR #316 after protected-branch
-verification; the next active roadmap item is Iteration 13.
+verification.
+
+### Iteration 13 — Process retrieval and query contract
+
+- Added the deterministic read-only process retrieval service for list,
+  describe, query, impact, and version diff operations.
+- Added the workspace-relative CLI entrypoint `zeus process ...` and the
+  machine-readable `PROCESS_QUERY_RESULT` response with evidence, freshness,
+  confidence, lifecycle status, unknowns, and next questions.
+- Added exact-identifier-first ranking, candidate/reviewed/published ordering,
+  bounded relationship expansion, no-baseline diff behavior, and CLI/API tests.
+- Updated the process-intelligence guide, agent start sequence, command
+  metadata, generated tool catalog, test inventory, and orientation assertions.
+
+Implementation and tests: `src/projectIntelligence/process/retrieval.js`,
+`src/cli/commands/processCommand.js`, and
+`tests/project-intelligence-process-retrieval.test.js`. Delivered in PR #317
+after protected-branch verification; the next active roadmap item is Iteration 14.
 
 ## Business Process Intelligence roadmap
 

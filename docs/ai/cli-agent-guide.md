@@ -43,12 +43,20 @@ The bootstrap and command catalog are generated from the same command metadata t
 
 ## Business-process projection
 
-For the current process-intelligence vertical slice, use the existing
-`project-intelligence` package export after locating a canonical analysis or
-evidence graph. See [`process-intelligence.md`](process-intelligence.md) for
-the exact functions and lifecycle rules. The result is a candidate projection
-until an explicit review; do not guess future `process` CLI commands before
-they appear in `tools guide --json`.
+For the process-intelligence vertical slice, first locate or generate an
+explicit local `process-candidate-catalog` JSON artifact. Then use the
+read-only CLI retrieval routes:
+
+```text
+node cli/zeus.js process list --catalog ./output/process-candidates.json --json
+node cli/zeus.js process query --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json
+```
+
+Use `process describe`, `process impact`, or `process diff` with an exact
+`processId`/`processVersionId` from `process list`. See
+[`process-intelligence.md`](process-intelligence.md) for the library functions,
+ranking rules, lifecycle gates, and freshness behavior. A result remains
+advisory and candidate knowledge until explicit review and publication.
 
 ## Stable agent response contract
 

@@ -85,6 +85,13 @@ module.exports = {
   reviewProcessDescription: processIntelligence.reviewProcessDescription,
   publishProcessDescription: processIntelligence.publishProcessDescription,
   validateProcessCandidate: processIntelligence.validateProcessCandidate,
+  listProcesses: processIntelligence.listProcesses,
+  describeProcess: processIntelligence.describeProcess,
+  queryProcesses: processIntelligence.queryProcesses,
+  impactProcess: processIntelligence.impactProcess,
+  diffProcess: processIntelligence.diffProcess,
+  readProcessCatalog: processIntelligence.readProcessCatalog,
+  resolveProcessCatalogPath: processIntelligence.resolveCatalogPath,
 
   // Knowledge store (ZPI-03)
   store,

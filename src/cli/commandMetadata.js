@@ -411,6 +411,20 @@ const COMMAND_UI_METADATA = Object.freeze([
     ]),
     recommendedNextCommands: Object.freeze(['doctor', 'analyze']),
   }),
+  Object.freeze({
+    name: 'process',
+    title: 'Process Retrieval',
+    summary:
+      'Read evidence-backed business-process projections from an explicit local catalog without publishing or mutating knowledge.',
+    category: 'review',
+    primaryUseCase:
+      'Answer process questions for Product Owners, architects, developers, and testers while preserving lifecycle, freshness, evidence, and unknowns.',
+    requiredCapabilities: Object.freeze([]),
+    commonOptions: Object.freeze(['--catalog', '--json']),
+    advancedOptions: Object.freeze(['--id', '--question', '--limit', '--status']),
+    outputArtifacts: Object.freeze(['structured process result on stdout']),
+    recommendedNextCommands: Object.freeze(['analyze', 'agent']),
+  }),
 ]);
 
 function validateCommandUiMetadata(entries = COMMAND_UI_METADATA, categories = COMMAND_CATEGORIES) {
