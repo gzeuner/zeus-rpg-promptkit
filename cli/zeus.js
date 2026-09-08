@@ -61,6 +61,7 @@ const { runOnboarding } = require('../src/cli/commands/onboardingCommand');
 const { runSecret } = require('../src/cli/commands/secretCommand');
 const { runInvestigate } = require('../src/cli/commands/investigateCommand');
 const { runProjectKnowledge } = require('../src/cli/commands/projectKnowledgeCommand');
+const { runProcess } = require('../src/cli/commands/processCommand');
 const { run: runKnowledge } = require('../src/cli/commands/knowledgeCommand');
 const { runAgent } = require('../src/cli/commands/agentCommand');
 const { configureCliOutput } = require('../src/cli/platformOutput');
@@ -243,6 +244,9 @@ function printHelp() {
   console.log('  zeus [--config <path>] mcp <serve|help> [--stdio true|false] [--verbose]');
   console.log(
     '  zeus project-knowledge <discover|status|create-project|full-index|query|...> [options] [--json]  # thin PI adapter; commercial ops when registered'
+  );
+  console.log(
+    '  zeus process <list|describe|query|impact|diff> --catalog <relative-path> [--id <process-id>] [--question "<question>"] [--json]  # local read-only process retrieval'
   );
   console.log(
     '  Global module wiring (optional, explicit only): --built-in-modules <list|professional|enterprise> or --commercial-module <package-or-path>'
@@ -813,6 +817,11 @@ async function main() {
 
   if (command === 'project-knowledge' || command === 'project-intelligence') {
     await runProjectKnowledge(args);
+    return;
+  }
+
+  if (command === 'process') {
+    await runProcess(args);
     return;
   }
 

@@ -1033,6 +1033,31 @@
       "example": "node cli/zeus.js agent preflight --goal \"<goal>\" --json"
     },
     {
+      "command": "process",
+      "aliases": [],
+      "status": "experimental",
+      "safety": "S0",
+      "scope": "Local read-only",
+      "sideEffects": [
+        "local-read"
+      ],
+      "availability": {
+        "cli": true,
+        "api": true,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "subcommands": [
+        "list",
+        "describe",
+        "query",
+        "impact",
+        "diff"
+      ],
+      "purpose": "Retrieve evidence-backed business-process projections from an explicit local catalog. Exact identifiers and reviewed facts are ranked ahead of derived summaries; freshness, evidence, confidence, and unknowns remain visible.",
+      "example": "node cli/zeus.js process query --catalog ./output/process-candidates.json --question \"Was macht Schnittstelle XY?\" --json"
+    },
+    {
       "command": "project-knowledge",
       "aliases": [
         "project-intelligence"

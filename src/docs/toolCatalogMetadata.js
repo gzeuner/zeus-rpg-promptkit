@@ -428,6 +428,15 @@ const COMMAND_METADATA = Object.freeze({
     example:
       'node cli/zeus.js project-knowledge locate --knowledge-root $KNOWLEDGE_ROOT --project-id demo --relative-path QRPGLESRC/ORDER.rpgle --json',
   }),
+  process: Object.freeze({
+    safety: 'S0',
+    scope: 'Local read-only',
+    subcommands: ['list', 'describe', 'query', 'impact', 'diff'],
+    purpose:
+      'Retrieve evidence-backed business-process projections from an explicit local catalog. Exact identifiers and reviewed facts are ranked ahead of derived summaries; freshness, evidence, confidence, and unknowns remain visible.',
+    example:
+      'node cli/zeus.js process query --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json',
+  }),
 });
 
 function catalogContract({ aliases, status, availability, sideEffects, capabilityId }) {
@@ -806,6 +815,13 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: ['local-read', 'local-artifact-write'],
     capabilityId: null,
   }),
+  process: catalogContract({
+    aliases: [],
+    status: 'experimental',
+    availability: CLI_API,
+    sideEffects: ['local-read'],
+    capabilityId: null,
+  }),
 });
 
 const COMMAND_ORDER = Object.freeze([
@@ -859,6 +875,7 @@ const COMMAND_ORDER = Object.freeze([
   'mcp',
   'tools',
   'agent',
+  'process',
   'project-knowledge',
 ]);
 
