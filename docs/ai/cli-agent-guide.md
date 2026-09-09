@@ -50,13 +50,18 @@ read-only CLI retrieval routes:
 ```text
 node cli/zeus.js process list --catalog ./output/process-candidates.json --json
 node cli/zeus.js process query --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json
+node cli/zeus.js process glossary resolve --glossary ./output/process-glossary.json --term "<legacy-term>" --json
+node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht <legacy-term>?" --json
 ```
 
 Use `process describe`, `process impact`, or `process diff` with an exact
 `processId`/`processVersionId` from `process list`. See
 [`process-intelligence.md`](process-intelligence.md) for the library functions,
-ranking rules, lifecycle gates, and freshness behavior. A result remains
-advisory and candidate knowledge until explicit review and publication.
+ranking rules, scoped vocabulary behavior, lifecycle gates, and freshness
+behavior. A result remains advisory and candidate knowledge until explicit
+review and publication. For glossary-backed queries, verify `glossaryResolutions`:
+only `resolved` mappings may expand retrieval; `ambiguous` and `unknown`
+mappings remain visible as uncertainty.
 
 ## Stable agent response contract
 

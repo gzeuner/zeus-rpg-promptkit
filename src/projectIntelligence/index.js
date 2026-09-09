@@ -92,6 +92,13 @@ module.exports = {
   diffProcess: processIntelligence.diffProcess,
   readProcessCatalog: processIntelligence.readProcessCatalog,
   resolveProcessCatalogPath: processIntelligence.resolveCatalogPath,
+  buildGlossaryCatalog: processIntelligence.buildGlossaryCatalog,
+  validateGlossaryCatalog: processIntelligence.validateGlossaryCatalog,
+  listGlossaryEntries: processIntelligence.listGlossaryEntries,
+  resolveGlossaryTerm: processIntelligence.resolveGlossaryTerm,
+  resolveGlossaryMentions: processIntelligence.resolveGlossaryMentions,
+  readGlossaryCatalog: processIntelligence.readGlossaryCatalog,
+  resolveGlossaryCatalogPath: processIntelligence.resolveGlossaryCatalogPath,
 
   // Knowledge store (ZPI-03)
   store,

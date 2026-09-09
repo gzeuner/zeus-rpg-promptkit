@@ -5,6 +5,7 @@ const {
   DERIVATION_CLASSES,
   PROCESS_STATUSES,
   PROCESS_CONFIDENCE,
+  GLOSSARY_SCOPE_TYPES,
   PROCESS_RELATIONSHIP_TYPES,
   DEFAULT_LIMITS,
 } = require('../constants');
@@ -293,6 +294,22 @@ function glossaryEntrySchema(value) {
   validateProvenanceAndEvidence(errors, value);
   requireStringArray(errors, value.aliases, '/aliases');
   requireStringArray(errors, value.relatedProcessIds, '/relatedProcessIds');
+  if (value.scopeType != null) {
+    h.requireClosedEnum(errors, value.scopeType, '/scopeType', GLOSSARY_SCOPE_TYPES, 'scopeType');
+  }
+  if (value.scopeId != null) {
+    h.requireNonEmptyString(errors, value.scopeId, '/scopeId');
+  }
+  if (value.scopeType === 'global' && value.scopeId != null) {
+    h.push(errors, '/scopeId', 'global glossary entries must not carry a scopeId');
+  }
+  if (value.scopeType && value.scopeType !== 'global' && value.scopeId == null) {
+    h.push(errors, '/scopeId', 'scoped glossary entries require a scopeId');
+  }
+  h.optionalString(errors, value.domain, '/domain');
+  h.optionalString(errors, value.notes, '/notes', { maxChars: DEFAULT_LIMITS.maxSummaryChars });
+  requireStringArray(errors, value.technicalRefs, '/technicalRefs');
+  validateRefCollection(errors, value.relatedEntityRefs, '/relatedEntityRefs');
   return errors;
 }
 

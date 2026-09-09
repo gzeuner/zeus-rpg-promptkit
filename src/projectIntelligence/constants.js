@@ -52,6 +52,15 @@ const PROCESS_STATUSES = Object.freeze({
 /** Confidence values used by process candidates and claims. */
 const PROCESS_CONFIDENCE = Object.freeze(['high', 'medium', 'low', 'unknown']);
 
+/** Scope layers for environment-specific business vocabulary. */
+const GLOSSARY_SCOPE_TYPES = Object.freeze([
+  'global',
+  'environment',
+  'organization',
+  'project',
+  'task',
+]);
+
 /** Closed relationship vocabulary for the process projection. */
 const PROCESS_RELATIONSHIP_TYPES = Object.freeze([
   'CONTAINS',
@@ -293,6 +302,7 @@ module.exports = {
   ANALYZER_RUN_STATUSES,
   PROCESS_STATUSES,
   PROCESS_CONFIDENCE,
+  GLOSSARY_SCOPE_TYPES,
   PROCESS_RELATIONSHIP_TYPES,
   EVIDENCE_CLASSES,
   DIAGNOSTIC_SEVERITIES,

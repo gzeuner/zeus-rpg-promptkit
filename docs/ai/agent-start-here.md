@@ -29,13 +29,20 @@ node cli/zeus.js agent prompt --goal "<goal>" --json
 For a known process question, use the canonical local retrieval route with an
 explicit catalog: `node cli/zeus.js process query --catalog <relative-path> --question "<question>" --json`. Prefer exact process, interface, or program identifiers when the question contains one; inspect `freshness`, `evidenceReferences`, and `unknowns` before repeating the answer as fact.
 
+For project-specific legacy vocabulary, resolve the term first or pass an
+explicit glossary catalog to the query:
+`node cli/zeus.js process glossary resolve --glossary <relative-path> --term "<legacy-term>" --json`.
+The resolver distinguishes `resolved`, `ambiguous`, and `unknown`; never turn
+an ambiguous alias into a guessed process.
+
 Use `agent evaluate --list --json` to see the sanitized self-evaluation corpus. After drafting a response, evaluate it with `--scenario <id> --response-file <relative-path>` before taking a non-trivial route. The score checks command selection, scope, evidence, safety gating, and experience logging without executing the response.
 
 For business-process questions, read [`process-intelligence.md`](process-intelligence.md)
 after preflight. The current vertical slice derives deterministic, reviewable
 process candidates from the existing analysis graph; it does not auto-publish
-business meaning. Process retrieval CLI routes are planned next and must be
-discovered from the live catalog when available.
+business meaning. When a local glossary is available, use its explicit
+workspace-relative path and preserve its scope, freshness, evidence, and
+unknowns in the answer.
 
 Use `agent feedback --json` after a failed, blocked, partial, or corrected session.
 It turns repeated sanitized failure codes into reviewable prompt, documentation,
