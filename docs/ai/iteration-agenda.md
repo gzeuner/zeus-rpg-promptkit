@@ -149,6 +149,28 @@ Implementation and tests: `src/projectIntelligence/process/retrieval.js`,
 `tests/project-intelligence-process-retrieval.test.js`. Delivered in PR #317
 after protected-branch verification; the next active roadmap item is Iteration 14.
 
+### Iteration 14 — Business glossary and legacy vocabulary
+
+- Added a versioned `process-glossary-catalog` with reusable global,
+  environment, organization, project, and task scopes.
+- Added deterministic resolution for business terms, abbreviations, legacy
+  names, aliases, and technical references with explicit `resolved`,
+  `ambiguous`, and `unknown` outcomes.
+- Integrated only unambiguous glossary mappings into process retrieval;
+  ambiguous mappings remain visible and are never used to guess a process.
+- Preserved glossary freshness, lifecycle, provenance, evidence, and related
+  process references in the API and CLI response.
+- Updated the CLI help, command metadata, generated tool catalog, AI guides,
+  test inventory, and deterministic contract/CLI regression tests.
+
+Implementation: `src/projectIntelligence/process/vocabulary.js`,
+`src/projectIntelligence/process/retrieval.js`,
+`src/cli/commands/processCommand.js`, and
+`tests/project-intelligence-process-vocabulary.test.js`. Delivered in PR #318
+after protected-branch verification. No credentials, private system
+identifiers, or environment-specific values are part of the implementation.
+The next active roadmap item is Iteration 15.
+
 ## Business Process Intelligence roadmap
 
 The following iterations extend the existing Project Intelligence foundation.
@@ -210,13 +232,15 @@ derived summaries, expand through process relationships, verify sources, and
 return process version, freshness, evidence, confidence, and unknowns in a
 stable machine-readable response.
 
-### Iteration 14 — Business glossary and legacy vocabulary
+### Iteration 14 — Business glossary and legacy vocabulary (completed in PR #318)
 
 Connect technical identifiers with business terms, synonyms, abbreviations,
 legacy names, and interface aliases. Glossary changes must be versioned and
 evidence-backed. Query expansion may improve discovery, but must never hide an
 ambiguous mapping; ambiguous terms require clarification or an explicit
-uncertainty in the answer.
+uncertainty in the answer. The implementation is complete; follow-up work
+belongs to Iteration 15 and must reuse this glossary and process-query
+contract.
 
 ### Iteration 15 — Role-based views and optional chat adapter
 
