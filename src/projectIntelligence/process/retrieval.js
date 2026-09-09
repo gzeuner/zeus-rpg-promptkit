@@ -7,6 +7,7 @@ const path = require('path');
 const CONTRACT_IDS = require('../contractIds');
 const { PROCESS_STATUSES } = require('../constants');
 const { processQueryResultSchema } = require('./contracts');
+const { resolveGlossaryMentions } = require('./vocabulary');
 
 const STATUS_RANK = Object.freeze({
   [PROCESS_STATUSES.PUBLISHED]: 5,
@@ -443,10 +444,26 @@ function scoreRecord(record, question) {
 function queryProcesses(catalog, question, options = {}) {
   const normalized = normalizeCatalog(catalog);
   const query = clip(question, 1800);
+  const glossaryMentions = options.glossaryCatalog
+    ? resolveGlossaryMentions(options.glossaryCatalog, query, options)
+    : [];
+  const glossaryResolutions = glossaryMentions.map(mention => ({
+    phrase: mention.phrase,
+    ...mention.resolution,
+  }));
+  const glossaryExpansions = glossaryResolutions
+    .filter(resolution => resolution.status === 'resolved' && resolution.selected)
+    .flatMap(resolution => [
+      resolution.selected.term,
+      ...resolution.selected.aliases,
+      ...resolution.selected.technicalRefs,
+      ...resolution.selected.relatedProcessIds,
+    ]);
+  const searchQuestion = [query, ...new Set(glossaryExpansions)].join(' ');
   const scored = normalized.processes
     .map(process => findRecord(normalized, process.processId))
     .filter(Boolean)
-    .map(record => scoreRecord(record, query))
+    .map(record => scoreRecord(record, searchQuestion))
     .filter(Boolean)
     .sort(
       (a, b) =>
@@ -457,13 +474,21 @@ function queryProcesses(catalog, question, options = {}) {
   const matches = scored.slice(0, limit);
   const evidenceReferences = uniqueReferences([
     ...matches.flatMap(match => recordReferences(match.record)),
+    ...glossaryResolutions.flatMap(resolution => resolution.selected?.evidenceReferences || []),
     {
-      id: `query:${stableHash(`${catalog.projectId || ''}|${catalog.snapshotId || ''}|${query}`)}`,
+      id: `query:${stableHash(`${catalog.projectId || ''}|${catalog.snapshotId || ''}|${searchQuestion}`)}`,
       kind: 'derived-reference',
     },
   ]);
   const freshness = normalizeFreshness(catalog, options);
   const unknowns = uniqueStrings(matches.flatMap(match => recordUnknowns(match.record)));
+  for (const resolution of glossaryResolutions) {
+    if (resolution.status === 'ambiguous') {
+      unknowns.push(
+        `Glossary term "${resolution.phrase}" is ambiguous; process retrieval was not expanded for it.`
+      );
+    }
+  }
   let answer;
   let status = PROCESS_STATUSES.UNKNOWN;
   let confidence = 'unknown';
@@ -476,6 +501,12 @@ function queryProcesses(catalog, question, options = {}) {
     nextQuestions.push(
       'Provide an exact processId, processVersionId, interface id, or program identifier.'
     );
+    if (glossaryResolutions.some(resolution => resolution.status === 'ambiguous')) {
+      answer += ' At least one glossary term was ambiguous and was not used to guess a process.';
+      nextQuestions.push(
+        'Resolve the glossary ambiguity with an explicit scope or technical identifier.'
+      );
+    }
   } else {
     const top = matches[0].record;
     status = recordStatus(top);
@@ -486,6 +517,12 @@ function queryProcesses(catalog, question, options = {}) {
     answer = `The strongest evidence-backed process match is ${labels[0]}. ${
       matches.length > 1 ? `Additional matches: ${labels.slice(1).join(', ')}. ` : ''
     }It has ${top.steps.length} documented technical step(s) and ${recordReferences(top).length} evidence reference(s). This is an advisory projection, not source of truth.`;
+    const resolvedTerms = glossaryResolutions
+      .filter(resolution => resolution.status === 'resolved' && resolution.selected)
+      .map(resolution => `"${resolution.phrase}" → "${resolution.selected.term}"`);
+    if (resolvedTerms.length > 0) {
+      answer += ` Vocabulary resolution used: ${resolvedTerms.join(', ')}.`;
+    }
     if (freshness.status === 'unknown' || freshness.status === 'stale') {
       unknowns.push(
         `Catalog freshness is ${freshness.status}; verify the referenced source snapshot before treating this as current.`
@@ -506,7 +543,7 @@ function queryProcesses(catalog, question, options = {}) {
     contractId: CONTRACT_IDS.PROCESS_QUERY_RESULT,
     projectId: String(catalog.projectId || '').trim() || 'unknown-project',
     snapshotId: String(catalog.snapshotId || '').trim() || 'unknown-snapshot',
-    queryId: `query:${stableHash(`${catalog.projectId || ''}|${catalog.snapshotId || ''}|${query}`).slice(0, 16)}`,
+    queryId: `query:${stableHash(`${catalog.projectId || ''}|${catalog.snapshotId || ''}|${searchQuestion}`).slice(0, 16)}`,
     question: query,
     answer: clip(answer),
     status,
@@ -526,6 +563,7 @@ function queryProcesses(catalog, question, options = {}) {
     unknowns: uniqueStrings(unknowns),
     nextQuestions: uniqueStrings(nextQuestions),
     freshness,
+    glossaryResolutions,
   };
   const validationErrors = processQueryResultSchema(result);
   if (validationErrors.length > 0) {

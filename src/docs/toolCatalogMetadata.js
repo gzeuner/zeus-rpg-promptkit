@@ -431,11 +431,19 @@ const COMMAND_METADATA = Object.freeze({
   process: Object.freeze({
     safety: 'S0',
     scope: 'Local read-only',
-    subcommands: ['list', 'describe', 'query', 'impact', 'diff'],
+    subcommands: [
+      'list',
+      'describe',
+      'query',
+      'impact',
+      'diff',
+      'glossary list',
+      'glossary resolve',
+    ],
     purpose:
-      'Retrieve evidence-backed business-process projections from an explicit local catalog. Exact identifiers and reviewed facts are ranked ahead of derived summaries; freshness, evidence, confidence, and unknowns remain visible.',
+      'Retrieve evidence-backed business-process projections and resolve project-specific legacy vocabulary from explicit local catalogs. Exact identifiers, scoped glossary mappings, and reviewed facts are ranked ahead of derived summaries; ambiguity, freshness, evidence, confidence, and unknowns remain visible.',
     example:
-      'node cli/zeus.js process query --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json',
+      'node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht Schnittstelle XY?" --json',
   }),
 });
 

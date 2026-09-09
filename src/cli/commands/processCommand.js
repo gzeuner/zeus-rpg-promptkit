@@ -9,8 +9,13 @@ const {
   diffProcess,
   readProcessCatalog,
 } = require('../../projectIntelligence/process/retrieval');
+const {
+  listGlossaryEntries,
+  resolveGlossaryTerm,
+  readGlossaryCatalog,
+} = require('../../projectIntelligence/process/vocabulary');
 
-const OPERATIONS = new Set(['list', 'describe', 'query', 'impact', 'diff']);
+const OPERATIONS = new Set(['list', 'describe', 'query', 'impact', 'diff', 'glossary']);
 
 function printHelp() {
   console.log('Process Intelligence (local, read-only) commands:');
@@ -19,11 +24,23 @@ function printHelp() {
   console.log(
     '  zeus process query --catalog <relative-path> --question "<question>" [--limit <n>] [--json]'
   );
+  console.log(
+    '  zeus process query --catalog <relative-path> --glossary <relative-path> --question "<question>" [scope options] [--json]'
+  );
   console.log('  zeus process impact --catalog <relative-path> --id <process-id> [--json]');
   console.log('  zeus process diff --catalog <relative-path> --id <process-id> [--json]');
+  console.log(
+    '  zeus process glossary list --glossary <relative-path> [--only-applicable] [--json]'
+  );
+  console.log(
+    '  zeus process glossary resolve --glossary <relative-path> --term "<term>" [scope options] [--json]'
+  );
   console.log('');
   console.log(
     'The catalog must be a local workspace-relative process-candidate-catalog JSON file.'
+  );
+  console.log(
+    'The optional glossary is a local workspace-relative process-glossary-catalog JSON file with global, environment, organization, project, or task scope.'
   );
   console.log(
     'Results preserve lifecycle status, freshness, evidence references, confidence, and unknowns.'
@@ -42,7 +59,9 @@ function errorOutcome(operation, error) {
     nextSafeStep:
       error.code === 'PROCESS_CATALOG_REQUIRED'
         ? 'Provide --catalog <relative-path> for a generated process-candidate-catalog JSON file.'
-        : 'Run zeus process --help and correct the local, read-only command arguments.',
+        : error.code === 'GLOSSARY_CATALOG_REQUIRED'
+          ? 'Provide --glossary <relative-path> for a process-glossary-catalog JSON file.'
+          : 'Run zeus process --help and correct the local, read-only command arguments.',
   };
 }
 
@@ -54,6 +73,21 @@ function requireValue(args, key, label = `--${key}`) {
     throw error;
   }
   return String(value).trim();
+}
+
+function scopeOptions(args) {
+  const result = {};
+  for (const key of ['environment-id', 'organization-id', 'project-id', 'task-id']) {
+    if (args[key] != null && args[key] !== true && String(args[key]).trim()) {
+      result[`${key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())}`] = String(
+        args[key]
+      ).trim();
+    }
+  }
+  if (args['scope-type'] != null && args['scope-type'] !== true) {
+    result.scopeType = String(args['scope-type']).trim();
+  }
+  return result;
 }
 
 function printHuman(operation, result) {
@@ -75,6 +109,25 @@ function printHuman(operation, result) {
     console.log(`Evidence references: ${result.evidenceReferences.length}`);
     for (const match of result.matches || []) {
       console.log(`- match: ${match.id} | ${match.name}`);
+    }
+    if (result.unknowns.length > 0) console.log(`Unknowns: ${result.unknowns.join('; ')}`);
+    return;
+  }
+  if (operation === 'glossary list') {
+    console.log(`Glossary entries: ${result.total} (freshness: ${result.freshness.status})`);
+    for (const entry of result.entries) {
+      console.log(
+        `- ${entry.entryId} | ${entry.term} | scope=${entry.scopeType || 'project'}${entry.scopeId ? `:${entry.scopeId}` : ''} | ${entry.status} | ${entry.confidence}`
+      );
+    }
+    if (result.unknowns.length > 0) console.log(`Unknowns: ${result.unknowns.join('; ')}`);
+    return;
+  }
+  if (operation === 'glossary resolve') {
+    console.log(`Glossary resolution: ${result.status} for "${result.query}"`);
+    if (result.selected) console.log(`- ${result.selected.term}: ${result.selected.definition}`);
+    for (const match of result.matches || []) {
+      console.log(`- match: ${match.term} | ${match.matchType} | score=${match.score}`);
     }
     if (result.unknowns.length > 0) console.log(`Unknowns: ${result.unknowns.join('; ')}`);
     return;
@@ -105,31 +158,63 @@ function runProcess(args = {}) {
 
   const json = createJsonOutput(args);
   try {
-    const catalog = readProcessCatalog(requireValue(args, 'catalog'));
     let result;
-    if (operation === 'list') {
-      result = listProcesses(catalog, { status: args.status });
-    } else if (operation === 'describe') {
-      result = describeProcess(catalog, requireValue(args, 'id'));
-    } else if (operation === 'query') {
-      const limit = args.limit == null || args.limit === true ? undefined : Number(args.limit);
-      if (limit != null && (!Number.isInteger(limit) || limit < 1 || limit > 20)) {
-        const error = new Error('--limit must be an integer from 1 to 20');
-        error.code = 'PROCESS_LIMIT_INVALID';
+    let outputOperation = operation;
+    const scope = scopeOptions(args);
+    if (operation === 'glossary') {
+      const suboperation = String(positional[1] || 'help')
+        .trim()
+        .toLowerCase();
+      outputOperation = `glossary ${suboperation}`;
+      if (!['list', 'resolve'].includes(suboperation)) {
+        printHelp();
+        const error = new Error(`unknown process glossary operation: ${suboperation}`);
+        error.code = 'PROCESS_GLOSSARY_OPERATION_UNKNOWN';
         throw error;
       }
-      result = queryProcesses(catalog, requireValue(args, 'question'), { limit });
-    } else if (operation === 'impact') {
-      result = impactProcess(catalog, requireValue(args, 'id'));
+      const glossaryPath = args.glossary || args.catalog;
+      const glossary = readGlossaryCatalog(requireValue({ glossary: glossaryPath }, 'glossary'));
+      result =
+        suboperation === 'list'
+          ? listGlossaryEntries(glossary, {
+              ...scope,
+              scopeType: args['scope-type'],
+              onlyApplicable: args['only-applicable'] === true,
+            })
+          : resolveGlossaryTerm(glossary, requireValue(args, 'term'), scope);
     } else {
-      result = diffProcess(catalog, requireValue(args, 'id'));
+      const catalog = readProcessCatalog(requireValue(args, 'catalog'));
+      if (operation === 'list') {
+        result = listProcesses(catalog, { status: args.status });
+      } else if (operation === 'describe') {
+        result = describeProcess(catalog, requireValue(args, 'id'));
+      } else if (operation === 'query') {
+        const limit = args.limit == null || args.limit === true ? undefined : Number(args.limit);
+        if (limit != null && (!Number.isInteger(limit) || limit < 1 || limit > 20)) {
+          const error = new Error('--limit must be an integer from 1 to 20');
+          error.code = 'PROCESS_LIMIT_INVALID';
+          throw error;
+        }
+        const glossary = args.glossary
+          ? readGlossaryCatalog(requireValue(args, 'glossary'))
+          : undefined;
+        result = queryProcesses(catalog, requireValue(args, 'question'), {
+          limit,
+          glossaryCatalog: glossary,
+          ...scope,
+        });
+      } else if (operation === 'impact') {
+        result = impactProcess(catalog, requireValue(args, 'id'));
+      } else {
+        result = diffProcess(catalog, requireValue(args, 'id'));
+      }
     }
 
     const outcome = {
       ok: result.ok !== false,
       schemaVersion: 1,
       kind: 'process-command-result',
-      operation,
+      operation: outputOperation,
       service: 'zeus.process',
       result,
       ...(result.ok === false
@@ -142,7 +227,7 @@ function runProcess(args = {}) {
     };
     if (json.isJsonMode) json.print(outcome);
     else if (result.ok === false) console.error(`[${result.reasonCode}] ${result.message}`);
-    else printHuman(operation, result);
+    else printHuman(outputOperation, result);
     if (!outcome.ok) process.exitCode = 2;
     return outcome;
   } catch (error) {

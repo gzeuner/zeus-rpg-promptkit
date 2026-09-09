@@ -34,6 +34,11 @@ The public package export is `zeus-rpg-promptkit/project-intelligence`:
   changing the catalog.
 - `diffProcess(catalog, id)` compares two versions when both are present and
   reports `unknown` when no baseline exists.
+- `buildGlossaryCatalog(entries, options)` validates and deterministically
+  orders a project-specific vocabulary catalog.
+- `resolveGlossaryTerm(catalog, term, options)` resolves a business term,
+  abbreviation, legacy name, alias, or technical reference with explicit
+  `resolved`, `ambiguous`, or `unknown` status.
 
 The contracts are exported as `BUSINESS_PROCESS`, `PROCESS_VERSION`,
 `PROCESS_STEP`, `PROCESS_CLAIM`, `PROCESS_RELATIONSHIP`, `GLOSSARY_ENTRY`, and
@@ -51,6 +56,9 @@ node cli/zeus.js process describe --catalog ./output/process-candidates.json --i
 node cli/zeus.js process query --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json
 node cli/zeus.js process impact --catalog ./output/process-candidates.json --id <process-id> --json
 node cli/zeus.js process diff --catalog ./output/process-candidates.json --id <process-id> --json
+node cli/zeus.js process glossary list --glossary ./output/process-glossary.json --only-applicable --json
+node cli/zeus.js process glossary resolve --glossary ./output/process-glossary.json --term "<legacy-term>" --json
+node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht <legacy-term>?" --json
 ```
 
 `--catalog` must be workspace-relative. Query JSON contains `projectId`,
@@ -59,6 +67,39 @@ freshness, matches, unknowns, and next questions. If the catalog does not
 declare freshness, the result says `unknown` instead of implying that the
 process is current. A process identifier or interface/program identifier is
 preferred over a vague natural-language question when available.
+
+## Scoped business glossary
+
+The optional `process-glossary-catalog` connects a local environment's
+business language with technical evidence. Each entry remains a normal,
+versioned `GLOSSARY_ENTRY` with `projectId`, `snapshotId`, lifecycle status,
+confidence, provenance, and evidence references. Optional fields add:
+
+- `scopeType`: `global`, `environment`, `organization`, `project`, or `task`;
+- `scopeId`: the identifier of the selected non-global scope;
+- `aliases`: abbreviations, legacy names, and interface labels;
+- `technicalRefs`: exact program, interface, table, job, or other identifiers;
+- `relatedProcessIds`: process identifiers that may be used for deterministic
+  query expansion;
+- `domain`, `notes`, and `relatedEntityRefs` for local context.
+
+Entries are applicable only when their scope matches the query context. The
+resolver prefers the most specific applicable scope in this order:
+`task` > `project` > `organization` > `environment` > `global`. Within the
+same scope it uses exactness, lifecycle status, and confidence. If two entries
+remain equally strong, the result is `ambiguous` with no selected entry. An
+`ambiguous` entry is never used for process query expansion.
+
+The catalog itself is supplied explicitly and must be workspace-relative. Do
+not commit company names, host names, system aliases, credentials, or private
+business values. Keep those entries in a local ignored artifact or an approved
+sanitized project data package. The resolver reports catalog freshness and
+keeps glossary evidence in the process query's `evidenceReferences`.
+
+For a question such as “Was macht <legacy-term>?”, inspect
+`glossaryResolutions`, `matches`, `selected`, `unknowns`, `nextQuestions`,
+`freshness`, and `evidenceReferences` before answering. A resolved mapping is
+still advisory and is not a source of truth.
 
 ## Agent rules
 
@@ -74,6 +115,9 @@ preferred over a vague natural-language question when available.
    evidence reference is not the same as a source span.
 6. Never publish automatically and never use a process projection as a license
    to change source, data, or a remote IBM i system.
+7. Treat glossary mappings as evidence-backed vocabulary, not as permission to
+   infer unsupported business meaning. Ask for scope or an exact identifier
+   when resolution is ambiguous.
 
 When a process query is incomplete, record the sanitized failure or correction
 with `agent log`; never copy credentials, private runtime values, or raw source
