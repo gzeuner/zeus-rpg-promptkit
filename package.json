@@ -56,6 +56,7 @@
     "docs:check": "node scripts/docs-check.js",
     "check:consolidated-hygiene": "node scripts/check-consolidated-hygiene.js",
     "check:repo-portability": "node scripts/check-repo-portability.js",
+    "check:tracked-fixtures": "node scripts/check-tracked-fixtures.js",
     "release:preflight": "node scripts/release-preflight.js",
     "sbom:validate": "node scripts/validate-sbom.js",
     "repo:control": "node scripts/repository-control.js",

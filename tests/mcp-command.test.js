@@ -3,6 +3,26 @@ const assert = require('node:assert/strict');
 
 const { parseAllowlistedTools, runMcp } = require('../src/cli/commands/mcpCommand');
 
+test('runMcp treats all supported help forms as non-starting help requests', async () => {
+  const originalLog = console.log;
+  const output = [];
+  console.log = (...args) => output.push(args.join(' '));
+
+  try {
+    for (const args of [{ help: true }, { h: true }, { _: ['-h'] }, { _: ['help'] }]) {
+      await runMcp(args, {
+        createMcpServer() {
+          throw new Error('MCP server must not start for help');
+        },
+      });
+    }
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(output.filter(line => line === 'MCP commands:').length, 4);
+});
+
 test('parseAllowlistedTools normalizes comma-separated values', () => {
   assert.equal(parseAllowlistedTools(undefined), null);
   assert.deepEqual(

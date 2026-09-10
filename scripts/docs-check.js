@@ -21,10 +21,28 @@ const ROOT = path.resolve(__dirname, '..');
 const DEMO_SRC = path.join(ROOT, 'examples/demo-rpg-mini-system/rpg_sources');
 const TMP = fs.mkdtempSync(path.join(require('os').tmpdir(), 'zeus-docs-check-'));
 const _OUT = path.join(TMP, 'out');
+const DEFAULT_STEP_TIMEOUT_MS = 120000;
 
 function sh(cmd, opts = {}) {
+  const { label = cmd, timeoutMs = DEFAULT_STEP_TIMEOUT_MS, ...execOptions } = opts;
   console.log('> ' + cmd);
-  return execSync(cmd, { cwd: ROOT, stdio: 'inherit', ...opts });
+  try {
+    return execSync(cmd, {
+      cwd: ROOT,
+      stdio: 'inherit',
+      timeout: timeoutMs,
+      killSignal: 'SIGTERM',
+      ...execOptions,
+    });
+  } catch (error) {
+    if (
+      error &&
+      (error.code === 'ETIMEDOUT' || error.killed === true || error.signal === 'SIGTERM')
+    ) {
+      throw new Error(`${label} timed out after ${timeoutMs} ms`);
+    }
+    throw error;
+  }
 }
 
 function exists(p) {
@@ -52,7 +70,8 @@ try {
   console.log('=== 2-3. Analyze demo source ===');
   const ANALYZE_OUT = path.join(TMP, 'output');
   sh(
-    `node cli/zeus.js analyze --source ${DEMO_SRC} --program PROGRAM_100 --out ${ANALYZE_OUT} --mode documentation --reproducible --optimize-context`
+    `node cli/zeus.js analyze --source ${DEMO_SRC} --program PROGRAM_100 --out ${ANALYZE_OUT} --mode documentation --reproducible --optimize-context`,
+    { label: 'demo analyze', timeoutMs: 300000 }
   );
 
   const progOut = path.join(ANALYZE_OUT, 'PROGRAM_100');
@@ -124,13 +143,9 @@ try {
 
   assertExists(path.join(ANALYZE_OUT, 'bundle'), 'bundle dir');
 
-  // 10-11. Optional MCP surface + verify
+  // 10-11. MCP surface + verify — required so help regressions cannot hide in CI
   console.log('=== 10-11. MCP surface + verify ===');
-  try {
-    sh('node cli/zeus.js mcp --help');
-  } catch (e) {
-    console.log('optional: mcp --help (', e.message, ')');
-  }
+  sh('node cli/zeus.js mcp --help', { label: 'mcp --help', timeoutMs: 15000 });
 
   // Verify bundle contents (basic)
   const bundleFiles = fs.readdirSync(path.join(ANALYZE_OUT, 'bundle'));
