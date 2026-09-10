@@ -26,6 +26,12 @@ const EXPECTED_KEY_MATERIAL_ENV_KEYS = new Set([
   'ZEUS_CONNECTION_MASTER_KEY',
   'ZEUS_CONNECTION_MASTER_KEY_FILE',
 ]);
+// Public license-key references are paths, not private key material. Keep this
+// allowlist explicit so other KEY-named environment values remain protected.
+const NON_SECRET_KEY_REFERENCE_ENV_KEYS = new Set(['ZEUS_LICENSE_PUBLIC_KEY_PATH']);
+// The profile property is the equivalent non-secret path reference. Do not
+// exempt privateKeyPath or other generic key-like properties.
+const NON_SECRET_KEY_REFERENCE_PROFILE_KEYS = new Set(['PUBLICKEYPATH']);
 
 // Treat ${env:FOO} and general ${...} placeholders (used in profiles.json) as non-plaintext.
 const PLACEHOLDER_RE = /^\$\{[^}]+\}$/;
@@ -43,6 +49,22 @@ function isExpectedKeyMaterialEnvKey(key) {
   );
 }
 
+function isNonSecretKeyReferenceEnvKey(key) {
+  return NON_SECRET_KEY_REFERENCE_ENV_KEYS.has(
+    String(key || '')
+      .trim()
+      .toUpperCase()
+  );
+}
+
+function isNonSecretKeyReferenceProfileKey(key) {
+  return NON_SECRET_KEY_REFERENCE_PROFILE_KEYS.has(
+    String(key || '')
+      .trim()
+      .toUpperCase()
+  );
+}
+
 function findPlaintextInObject(obj, path = '') {
   const results = [];
   if (typeof obj !== 'object' || obj === null) return results;
@@ -54,7 +76,8 @@ function findPlaintextInObject(obj, path = '') {
       SECRET_KEYS.test(key) &&
       value.trim() &&
       !value.startsWith('enc:v1:') &&
-      !isPlaceholder(value)
+      !isPlaceholder(value) &&
+      !isNonSecretKeyReferenceProfileKey(key)
     ) {
       results.push(currentPath);
     } else if (typeof value === 'object') {
@@ -127,7 +150,8 @@ function detectPlaintextSecrets({
           SECRET_KEYS.test(key) &&
           value &&
           !value.startsWith('enc:v1:') &&
-          !isPlaceholder(value)
+          !isPlaceholder(value) &&
+          !isNonSecretKeyReferenceEnvKey(key)
         ) {
           if (!seenKeys.has(key)) {
             seenKeys.add(key);
@@ -147,6 +171,7 @@ function detectPlaintextSecrets({
   if (env && typeof env === 'object') {
     for (const [key, val] of Object.entries(env)) {
       if (ignoreExpectedKeyMaterial && isExpectedKeyMaterialEnvKey(key)) continue;
+      if (isNonSecretKeyReferenceEnvKey(key)) continue;
       if (
         SECRET_KEYS.test(key) &&
         val &&
@@ -207,8 +232,10 @@ function detectPlaintextSecrets({
 module.exports = {
   detectPlaintextSecrets,
   EXPECTED_KEY_MATERIAL_ENV_KEYS,
+  NON_SECRET_KEY_REFERENCE_ENV_KEYS,
   SECRET_KEYS,
   isExpectedKeyMaterialEnvKey,
+  isNonSecretKeyReferenceEnvKey,
   isPlaceholder,
   PLACEHOLDER_RE,
 };

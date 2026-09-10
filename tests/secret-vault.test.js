@@ -164,6 +164,66 @@ test('detectPlaintextSecrets scans current env', () => {
   assert.ok(findings.some(f => f.key === 'ZEUS_DB_PASSWORD' && f.source === 'env'));
 });
 
+test('detectPlaintextSecrets ignores public license key paths but still flags private key paths', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
+  fs.writeFileSync(
+    path.join(tempRoot, '.env.local'),
+    'ZEUS_LICENSE_PUBLIC_KEY_PATH=config/public-license.pem\nZEUS_DB_PASSWORD=file-password\n'
+  );
+
+  try {
+    const findings = detectPlaintextSecrets({
+      cwd: tempRoot,
+      env: {
+        ZEUS_LICENSE_PUBLIC_KEY_PATH: 'config/public-license.pem',
+        ZEUS_PRIVATE_KEY_PATH: 'config/private-key.pem',
+        ZEUS_DB_PASSWORD: 'env-password',
+      },
+      checkProfiles: false,
+    });
+
+    assert.equal(
+      findings.some(f => f.key === 'ZEUS_LICENSE_PUBLIC_KEY_PATH'),
+      false
+    );
+    assert.equal(
+      findings.some(f => f.key === 'ZEUS_PRIVATE_KEY_PATH'),
+      true
+    );
+    assert.equal(
+      findings.some(f => f.key === 'ZEUS_DB_PASSWORD'),
+      true
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('detectPlaintextSecrets ignores a literal publicKeyPath in profiles', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-hygiene-'));
+  fs.mkdirSync(path.join(tempRoot, 'config'), { recursive: true });
+  fs.writeFileSync(
+    path.join(tempRoot, 'config', 'profiles.json'),
+    JSON.stringify({
+      default: {
+        commercial: {
+          publicKeyPath: 'config/public-license.pem',
+        },
+      },
+    })
+  );
+
+  try {
+    const findings = detectPlaintextSecrets({ cwd: tempRoot, checkProfiles: true });
+    assert.equal(
+      findings.some(f => f.key.includes('publicKeyPath')),
+      false
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test('detectPlaintextSecrets can ignore expected vault key material without hiding credentials', () => {
   const findings = detectPlaintextSecrets({
     cwd: '/tmp',

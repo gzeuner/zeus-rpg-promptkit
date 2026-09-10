@@ -483,6 +483,33 @@ test('resolveAnalyzeConfig decrypts an encrypted DB password provided via env ov
   }
 });
 
+test('resolveAnalyzeConfig decrypts an encrypted fetch user provided via env override', () => {
+  const tempRoot = createTempProject({
+    sample: {
+      sourceRoot: './src',
+    },
+  });
+
+  const KEY = 'runtime-config-master-key';
+  const token = encryptSecret('fetch-user', { keyMaterial: KEY });
+
+  try {
+    const config = resolveAnalyzeConfig(
+      { profile: 'sample' },
+      {
+        cwd: tempRoot,
+        env: {
+          ZEUS_SECRET_KEY: KEY,
+          ZEUS_FETCH_USER: token,
+        },
+      }
+    );
+    assert.equal(config.ibmi.user, 'fetch-user');
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test('resolveAnalyzeConfig CLI --schema/--library override profile and env schema', () => {
   const tempRoot = createTempProject({
     sample: {
@@ -669,6 +696,44 @@ test('resolveFetchConfig accepts environment overrides for sensitive fetch setti
     assert.equal(config.streamFileCcsid, 1208);
     assert.equal(config.transport, 'jt400');
     assert.equal(config.replace, true);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('resolveFetchConfig decrypts encrypted fetch user and password env overrides', () => {
+  const tempRoot = createTempProject({
+    fetcher: {
+      fetch: {
+        host: 'profile-host',
+        user: 'profile-user',
+        password: 'profile-pass',
+        sourceLib: 'qrpglsrc',
+        ifsDir: '/home/profile',
+        out: './download',
+      },
+    },
+  });
+
+  const KEY = 'runtime-config-master-key';
+  const userToken = encryptSecret('fetch-user', { keyMaterial: KEY });
+  const passwordToken = encryptSecret('fetch-password', { keyMaterial: KEY });
+
+  try {
+    const config = resolveFetchConfig(
+      { profile: 'fetcher' },
+      {
+        cwd: tempRoot,
+        env: {
+          ZEUS_SECRET_KEY: KEY,
+          ZEUS_FETCH_USER: userToken,
+          ZEUS_FETCH_PASSWORD: passwordToken,
+        },
+      }
+    );
+
+    assert.equal(config.user, 'fetch-user');
+    assert.equal(config.password, 'fetch-password');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
