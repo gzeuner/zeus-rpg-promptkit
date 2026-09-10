@@ -436,15 +436,18 @@ const COMMAND_METADATA = Object.freeze({
       'list',
       'describe',
       'query',
+      'chat',
+      'view',
       'impact',
       'diff',
+      'evaluate',
       'glossary list',
       'glossary resolve',
     ],
     purpose:
-      'Retrieve evidence-backed business-process projections and resolve project-specific legacy vocabulary from explicit local catalogs. Exact identifiers, scoped glossary mappings, and reviewed facts are ranked ahead of derived summaries; ambiguity, freshness, evidence, confidence, and unknowns remain visible.',
+      'Retrieve evidence-backed business-process projections, role-specific views, a local read-only chat adapter, deterministic quality evaluations, and project-specific legacy vocabulary from explicit local catalogs. Exact identifiers, scoped glossary mappings, and reviewed facts are ranked ahead of derived summaries; ambiguity, freshness, evidence, confidence, and unknowns remain visible.',
     example:
-      'node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht Schnittstelle XY?" --json',
+      'node cli/zeus.js process chat --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json',
   }),
 });
 

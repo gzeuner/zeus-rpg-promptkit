@@ -172,7 +172,7 @@ identifiers, or environment-specific values are part of the implementation.
 The public release candidate [`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.1)
 was published from main SHA `7435637…` after PR #321; the release workflow and
 fresh-download verification completed successfully. The next active roadmap
-item is Iteration 15.
+item is now Iteration 18.
 
 ## Business Process Intelligence roadmap
 
@@ -270,9 +270,34 @@ project-neutral contracts belong in the public repository.
 Implementation: `src/workspace/analysisRegistryService.js` and
 `tests/analysis-registry-service.test.js`. No credentials, private paths, or
 project-specific identifiers are part of the implementation. The next active
-roadmap item remains Iteration 15.
+roadmap item is Iteration 18.
 
-### Iteration 15 — Role-based views and optional chat adapter
+### Iterations 15–17 — completed in the current integration block
+
+The three iterations were implemented consecutively on one feature branch,
+with neutral fixtures, contract validation, CLI/API coverage, documentation,
+and secret/private-content checks:
+
+- Iteration 15 adds `process view` for `product-owner`, `architect`,
+  `developer`, and `tester`, plus the local read-only `process chat` adapter.
+  All views reuse the same process facts, evidence, lifecycle, freshness, and
+  unknowns; they do not invent role-specific business meaning.
+- Iteration 16 compares recorded catalog identity with a current snapshot id or
+  SHA-256 source hash. Mismatches become stale, incomparable signals become
+  unknown, and process impact explicitly reports whether reanalysis is needed.
+- Iteration 17 adds `process evaluate` and the
+  `PROCESS_EVALUATION_RESULT` contract. Deterministic metrics cover process
+  coverage, evidence ratio, unresolved relationships, unknowns, freshness,
+  review needs, and optional query scenarios without persisting question text.
+
+Implementation: `src/projectIntelligence/process/views.js`,
+`freshness.js`, `evaluation.js`, the process CLI, and
+`tests/project-intelligence-process-agent-views.test.js`. Tracked in PR #327;
+the merge remains gated by the protected-branch pipeline. No credentials,
+private system identifiers, host paths, or environment-specific values are
+part of it.
+
+### Iteration 15 — Role-based views and optional chat adapter (completed)
 
 Build role-specific projections from the same process facts:
 
@@ -285,14 +310,14 @@ Expose an optional local chat adapter over the same query service. CLI remains
 the canonical and testable interface; MCP or a UI must not become the source
 of truth.
 
-### Iteration 16 — Change impact, freshness, and process versions
+### Iteration 16 — Change impact, freshness, and process versions (completed)
 
 When a source snapshot changes, identify affected process claims and mark the
 corresponding process versions as fresh, stale, or unknown. Provide a bounded
 process diff and impact view. The answer service must refuse to present stale
 or unverified process knowledge as current without clearly saying so.
 
-### Iteration 17 — Process quality and evaluation corpus
+### Iteration 17 — Process quality and evaluation corpus (completed)
 
 Add deterministic fixtures and evaluation scenarios for:
 
@@ -305,7 +330,9 @@ Add deterministic fixtures and evaluation scenarios for:
 - protection against credentials and private project content
 
 Track coverage, evidence ratio, unresolved count, freshness, and answer
-reproducibility as reviewable metrics.
+reproducibility as reviewable metrics. The first deterministic evaluation
+surface is now available through `process evaluate`; broader experience-driven
+scenario growth remains part of Iteration 18.
 
 ### Iteration 18 — Experience-driven process improvement
 

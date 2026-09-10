@@ -29,6 +29,15 @@ node cli/zeus.js agent prompt --goal "<goal>" --json
 For a known process question, use the canonical local retrieval route with an
 explicit catalog: `node cli/zeus.js process query --catalog <relative-path> --question "<question>" --json`. Prefer exact process, interface, or program identifiers when the question contains one; inspect `freshness`, `evidenceReferences`, and `unknowns` before repeating the answer as fact.
 
+For a conversational entry point use the equivalent local-only adapter:
+`node cli/zeus.js process chat --catalog <relative-path> --question "<question>" --json`.
+For a role-specific answer use `process view --id <process-id> --role
+product-owner|architect|developer|tester`. To check whether the catalog is
+still usable, pass `--current-snapshot-id` or `--current-source-hash`; a
+changed identity is stale and must not be presented as current. Use
+`process evaluate --catalog <relative-path> [--scenarios <relative-path>] --json`
+for a deterministic quality gate before relying on a process catalog broadly.
+
 For project-specific legacy vocabulary, resolve the term first or pass an
 explicit glossary catalog to the query:
 `node cli/zeus.js process glossary resolve --glossary <relative-path> --term "<legacy-term>" --json`.

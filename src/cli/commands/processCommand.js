@@ -10,12 +10,31 @@ const {
   readProcessCatalog,
 } = require('../../projectIntelligence/process/retrieval');
 const {
+  ROLE_IDS,
+  buildProcessRoleView,
+  chatProcess,
+} = require('../../projectIntelligence/process/views');
+const {
+  evaluateProcessCatalog,
+  readProcessEvaluationScenarios,
+} = require('../../projectIntelligence/process/evaluation');
+const {
   listGlossaryEntries,
   resolveGlossaryTerm,
   readGlossaryCatalog,
 } = require('../../projectIntelligence/process/vocabulary');
 
-const OPERATIONS = new Set(['list', 'describe', 'query', 'impact', 'diff', 'glossary']);
+const OPERATIONS = new Set([
+  'list',
+  'describe',
+  'query',
+  'chat',
+  'view',
+  'impact',
+  'diff',
+  'evaluate',
+  'glossary',
+]);
 
 function printHelp() {
   console.log('Process Intelligence (local, read-only) commands:');
@@ -25,10 +44,21 @@ function printHelp() {
     '  zeus process query --catalog <relative-path> --question "<question>" [--limit <n>] [--json]'
   );
   console.log(
+    '  zeus process chat --catalog <relative-path> --question "<question>" [--glossary <relative-path>] [--json]'
+  );
+  console.log(
+    `  zeus process view --catalog <relative-path> --id <process-id> --role <${ROLE_IDS.join('|')}> [--json]`
+  );
+  console.log(
     '  zeus process query --catalog <relative-path> --glossary <relative-path> --question "<question>" [scope options] [--json]'
   );
-  console.log('  zeus process impact --catalog <relative-path> --id <process-id> [--json]');
+  console.log(
+    '  zeus process impact --catalog <relative-path> --id <process-id> [--changed-evidence-id <id[,id]>] [--json]'
+  );
   console.log('  zeus process diff --catalog <relative-path> --id <process-id> [--json]');
+  console.log(
+    '  zeus process evaluate --catalog <relative-path> [--scenarios <relative-path>] [--json]'
+  );
   console.log(
     '  zeus process glossary list --glossary <relative-path> [--only-applicable] [--json]'
   );
@@ -43,7 +73,7 @@ function printHelp() {
     'The optional glossary is a local workspace-relative process-glossary-catalog JSON file with global, environment, organization, project, or task scope.'
   );
   console.log(
-    'Results preserve lifecycle status, freshness, evidence references, confidence, and unknowns.'
+    'Results preserve lifecycle status, freshness, evidence references, confidence, and unknowns. View and chat are local read-only projections; evaluate is deterministic and never calls a model.'
   );
 }
 
@@ -90,6 +120,36 @@ function scopeOptions(args) {
   return result;
 }
 
+function freshnessOptions(args) {
+  const result = {};
+  if (args['current-snapshot-id'] != null && args['current-snapshot-id'] !== true) {
+    result.currentSnapshotId = String(args['current-snapshot-id']).trim();
+  }
+  if (args['current-source-hash'] != null && args['current-source-hash'] !== true) {
+    const sourceHash = String(args['current-source-hash']).trim().toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(sourceHash)) {
+      const error = new Error('--current-source-hash must be a 64-character SHA-256 value');
+      error.code = 'PROCESS_CURRENT_SOURCE_HASH_INVALID';
+      throw error;
+    }
+    result.currentSourceHash = sourceHash;
+  }
+  return result;
+}
+
+function changedEvidenceOptions(args) {
+  const supplied = args['changed-evidence-id'];
+  if (supplied == null || supplied === true) return {};
+  const values = Array.isArray(supplied) ? supplied : [supplied];
+  return {
+    changedEvidenceIds: values
+      .flatMap(value => String(value).split(','))
+      .map(value => value.trim())
+      .filter(Boolean)
+      .slice(0, 100),
+  };
+}
+
 function printHuman(operation, result) {
   if (operation === 'list') {
     console.log(`Processes: ${result.total} (freshness: ${result.freshness.status})`);
@@ -101,7 +161,7 @@ function printHuman(operation, result) {
     if (result.unknowns.length > 0) console.log(`Unknowns: ${result.unknowns.join('; ')}`);
     return;
   }
-  if (operation === 'query') {
+  if (operation === 'query' || operation === 'chat') {
     console.log(result.answer);
     console.log(
       `Status: ${result.status}; confidence: ${result.confidence}; freshness: ${result.freshness.status}`
@@ -111,6 +171,20 @@ function printHuman(operation, result) {
       console.log(`- match: ${match.id} | ${match.name}`);
     }
     if (result.unknowns.length > 0) console.log(`Unknowns: ${result.unknowns.join('; ')}`);
+    return;
+  }
+  if (operation === 'view') {
+    console.log(
+      `Role view: ${result.role} | ${result.processId} | freshness: ${result.freshness.status}`
+    );
+    console.log(JSON.stringify(result.view, null, 2));
+    if (result.unknowns.length > 0) console.log(`Unknowns: ${result.unknowns.join('; ')}`);
+    return;
+  }
+  if (operation === 'evaluate') {
+    console.log(`Process quality: ${result.status}`);
+    console.log(JSON.stringify(result.metrics, null, 2));
+    if (result.findings.length > 0) console.log(`Findings: ${result.findings.join('; ')}`);
     return;
   }
   if (operation === 'glossary list') {
@@ -161,6 +235,8 @@ function runProcess(args = {}) {
     let result;
     let outputOperation = operation;
     const scope = scopeOptions(args);
+    const freshness = freshnessOptions(args);
+    const changedEvidence = changedEvidenceOptions(args);
     if (operation === 'glossary') {
       const suboperation = String(positional[1] || 'help')
         .trim()
@@ -185,10 +261,10 @@ function runProcess(args = {}) {
     } else {
       const catalog = readProcessCatalog(requireValue(args, 'catalog'));
       if (operation === 'list') {
-        result = listProcesses(catalog, { status: args.status });
+        result = listProcesses(catalog, { status: args.status, ...freshness });
       } else if (operation === 'describe') {
-        result = describeProcess(catalog, requireValue(args, 'id'));
-      } else if (operation === 'query') {
+        result = describeProcess(catalog, requireValue(args, 'id'), freshness);
+      } else if (operation === 'query' || operation === 'chat') {
         const limit = args.limit == null || args.limit === true ? undefined : Number(args.limit);
         if (limit != null && (!Number.isInteger(limit) || limit < 1 || limit > 20)) {
           const error = new Error('--limit must be an integer from 1 to 20');
@@ -198,15 +274,35 @@ function runProcess(args = {}) {
         const glossary = args.glossary
           ? readGlossaryCatalog(requireValue(args, 'glossary'))
           : undefined;
-        result = queryProcesses(catalog, requireValue(args, 'question'), {
+        const queryOptions = {
           limit,
           glossaryCatalog: glossary,
           ...scope,
-        });
+          ...freshness,
+        };
+        result =
+          operation === 'chat'
+            ? chatProcess(catalog, requireValue(args, 'question'), queryOptions)
+            : queryProcesses(catalog, requireValue(args, 'question'), queryOptions);
+      } else if (operation === 'view') {
+        result = buildProcessRoleView(
+          catalog,
+          requireValue(args, 'id'),
+          requireValue(args, 'role'),
+          freshness
+        );
       } else if (operation === 'impact') {
-        result = impactProcess(catalog, requireValue(args, 'id'));
+        result = impactProcess(catalog, requireValue(args, 'id'), {
+          ...freshness,
+          ...changedEvidence,
+        });
+      } else if (operation === 'diff') {
+        result = diffProcess(catalog, requireValue(args, 'id'), freshness);
       } else {
-        result = diffProcess(catalog, requireValue(args, 'id'));
+        const scenarios = args.scenarios
+          ? readProcessEvaluationScenarios(requireValue(args, 'scenarios'))
+          : [];
+        result = evaluateProcessCatalog(catalog, scenarios, freshness);
       }
     }
 

@@ -622,6 +622,14 @@ const PROJECT_INTELLIGENCE_SCHEMAS = Object.freeze({
     version: 1,
     schema: processContracts.processQueryResultSchema,
   },
+  [CONTRACT_IDS.PROCESS_ROLE_VIEW]: {
+    version: 1,
+    schema: processContracts.processRoleViewSchema,
+  },
+  [CONTRACT_IDS.PROCESS_EVALUATION_RESULT]: {
+    version: 1,
+    schema: processContracts.processEvaluationResultSchema,
+  },
 });
 
 module.exports = {
