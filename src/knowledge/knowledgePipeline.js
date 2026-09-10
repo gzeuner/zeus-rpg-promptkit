@@ -104,6 +104,48 @@ function readFinalKnowledgeCatalog(options = {}) {
   };
 }
 
+function normalizeFilter(value, name) {
+  if (value === undefined || value === null || value === '') {
+    return [];
+  }
+  const values = Array.isArray(value) ? value : [value];
+  if (!values.every(entry => typeof entry === 'string')) {
+    throw new Error(`${name} must be a string or an array of strings`);
+  }
+  return Array.from(new Set(values.map(entry => entry.trim()).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b)
+  );
+}
+
+function queryFinalKnowledgeCatalog(options = {}) {
+  const result = readFinalKnowledgeCatalog(options);
+  if (!result.available) {
+    return result;
+  }
+
+  const kinds = normalizeFilter(options.kinds, 'kinds');
+  const features = normalizeFilter(options.features, 'features');
+  const domain = normalizeFilter(options.domain, 'domain');
+  const patterns = result.catalog.patterns.filter(pattern => {
+    if (kinds.length > 0 && !kinds.includes(pattern.kind)) return false;
+    if (domain.length > 0 && !domain.includes(pattern.domain)) return false;
+    if (features.length > 0 && !features.some(feature => pattern.features.includes(feature))) {
+      return false;
+    }
+    return true;
+  });
+
+  return {
+    ...result,
+    catalog: {
+      ...result.catalog,
+      patterns,
+    },
+    filters: { kinds, features, domain },
+    matchedPatternCount: patterns.length,
+  };
+}
+
 function persistFinalKnowledgeCatalog({ outputRoot, runId, catalog }) {
   if (!outputRoot || typeof outputRoot !== 'string') throw new Error('outputRoot is required');
   const validation = validateFinalKnowledgeCatalog(catalog);
@@ -125,6 +167,7 @@ function persistFinalKnowledgeCatalog({ outputRoot, runId, catalog }) {
 module.exports = {
   finalCatalogPath,
   persistFinalKnowledgeCatalog,
+  queryFinalKnowledgeCatalog,
   readFinalKnowledgeCatalog,
   resolveFinalCatalogPath,
 };

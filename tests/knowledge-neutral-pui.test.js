@@ -9,6 +9,7 @@ const {
   buildNeutralPuiKnowledgeCatalog,
   extractAndPersistNeutralPuiKnowledge,
 } = require('../src/knowledge/extractors/puiPatternExtractor');
+const { extractPuiBatch } = require('../src/knowledge/extractors/puiBatchExtractor');
 const { readFinalKnowledgeCatalog } = require('../src/knowledge/knowledgePipeline');
 
 function syntheticPuiMember() {
@@ -85,4 +86,85 @@ test('neutral PUI extractor is deterministic for the same projection', () => {
     buildNeutralPuiKnowledgeCatalog(projection, options),
     buildNeutralPuiKnowledgeCatalog(projection, options)
   );
+});
+
+test('neutral PUI extractor maps widget types to controlled structural categories', () => {
+  const catalog = buildNeutralPuiKnowledgeCatalog({
+    recordFormats: [
+      {
+        widgets: [
+          { fieldType: 'input', boundField: 'FIELD_A', staticValue: null },
+          { fieldType: 'checkbox', boundField: 'FIELD_B', staticValue: null },
+          { fieldType: 'error-message', boundField: null, staticValue: 'Message' },
+          { fieldType: 'dialog', boundField: null, staticValue: null },
+          { fieldType: 'tab', boundField: null, staticValue: null },
+          { fieldType: 'button', boundField: null, staticValue: 'Run' },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(catalog.taxonomyVersion, 'draft-2');
+  assert.deepEqual(
+    catalog.patterns.map(pattern => pattern.kind),
+    ['ui.form', 'ui.selection', 'ui.validation', 'ui.dialog', 'ui.navigation', 'ui.toolbar']
+  );
+  const serialized = JSON.stringify(catalog);
+  assert.equal(serialized.includes('FIELD_A'), false);
+  assert.equal(serialized.includes('Message'), false);
+});
+
+test('batch extraction separates the neutral catalog from the local-only inventory', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-neutral-pui-batch-'));
+  const sourceRoot = path.join(root, 'source');
+  const outputRoot = path.join(root, 'general-output');
+  const privateOutputRoot = path.join(root, 'private-output');
+  fs.mkdirSync(path.join(sourceRoot, 'nested'), { recursive: true });
+  try {
+    fs.writeFileSync(
+      path.join(sourceRoot, 'nested', 'synthetic.dds'),
+      `${syntheticPuiMember()}\n* PUI`,
+      'utf8'
+    );
+    fs.writeFileSync(path.join(sourceRoot, 'ignored.dds'), 'synthetic DDS without marker', 'utf8');
+    const result = extractPuiBatch({
+      sourceRoot,
+      outputRoot,
+      privateOutputRoot,
+      runId: 'synthetic-batch-001',
+      generatedAt: '2026-08-04T12:00:00.000Z',
+    });
+    assert.equal(result.fileCount, 1);
+    assert.equal(fs.existsSync(result.path), true);
+    assert.equal(fs.existsSync(result.privatePath), true);
+
+    const publicCatalog = fs.readFileSync(result.path, 'utf8');
+    const privateInventory = fs.readFileSync(result.privatePath, 'utf8');
+    assert.equal(publicCatalog.includes('PRIVATE'), false);
+    assert.equal(publicCatalog.includes('synthetic.dds'), false);
+    assert.equal(privateInventory.includes('synthetic.dds'), true);
+    assert.equal(privateInventory.includes('decodedProjectionIncluded'), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('batch extraction rejects overlapping general and private output roots', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-neutral-pui-overlap-'));
+  const sourceRoot = path.join(root, 'source');
+  fs.mkdirSync(sourceRoot, { recursive: true });
+  try {
+    assert.throws(
+      () =>
+        extractPuiBatch({
+          sourceRoot,
+          outputRoot: path.join(root, 'output'),
+          privateOutputRoot: path.join(root, 'output', 'private'),
+          runId: 'synthetic-overlap-001',
+        }),
+      /separate, non-overlapping directories/
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

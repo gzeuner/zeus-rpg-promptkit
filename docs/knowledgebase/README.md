@@ -26,7 +26,8 @@ Non-negotiable rules:
 Current implementation status:
 
 - `src/knowledge/` contains the `raw/`, `sanitized/`, `final/`, and `privacy/` boundaries
-- the neutral PUI structural extractor, final-catalog persistence, validation, and read-only inspection are implemented
+- the neutral PUI structural extractor, recursive batch extraction, final-catalog persistence,
+  validation, and read-only inspection/query are implemented
 - the privacy gate is fail-closed and rejects malformed or suspicious final-catalog candidates
 - **ZPI-02 (contracts):** `src/projectIntelligence/` versioned project-knowledge contracts, closed
   reason codes, validators, fixtures, and a contract test kit
@@ -63,3 +64,15 @@ Internal knowledge-lab note:
 - raw/intermediate lab outputs are sensitive and disposable
 - lab outputs must not be treated as final project-neutral knowledge
 - only privacy-passed final catalog objects may cross into runtime surfaces
+
+Public/local output boundary:
+
+- `knowledge extract --file` supports a focused single-file projection.
+- `knowledge extract --source` recursively scans `.dds` files and requires a separate
+  `--private-out` root. The final catalog is written below
+  `<out>/knowledge/<run-id>/project-neutral-knowledge.json`.
+- The separate local inventory below `<private-out>/private/<run-id>/` may contain
+  source-relative paths, hashes, decoded projections, and consistency signals. It is
+  sensitive project data and is never committed, packaged, or exposed through MCP.
+- `zeus.queryKnowledge()` filters only the validated final catalog by controlled kind,
+  feature, and domain values; it never reads or returns the private inventory.

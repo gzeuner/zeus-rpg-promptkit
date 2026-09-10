@@ -34,7 +34,10 @@ const {
 } = require('../core/runExplorerService');
 
 const { createAnalyzeStageRegistry } = require('../analyze/stageRegistry');
-const { readFinalKnowledgeCatalog } = require('../knowledge/knowledgePipeline');
+const {
+  queryFinalKnowledgeCatalog,
+  readFinalKnowledgeCatalog,
+} = require('../knowledge/knowledgePipeline');
 const analyzeStageRegistry = createAnalyzeStageRegistry();
 
 // @ts-ignore - provided by node types / d.ts in scoped check
@@ -835,12 +838,17 @@ function readKnowledge(options = {}) {
   return readFinalKnowledgeCatalog(options);
 }
 
+function queryKnowledge(options = {}) {
+  return queryFinalKnowledgeCatalog(options);
+}
+
 // Central Zeus API object
 const zeus = {
   analyze,
   fetch,
   listRuns,
   queryTable,
+  queryKnowledge,
   readArtifact,
   readKnowledge,
   readRun,
@@ -921,6 +929,7 @@ module.exports = {
   fetch,
   listRuns,
   queryTable,
+  queryKnowledge,
   readArtifact,
   readKnowledge,
   readRun,

@@ -8,6 +8,7 @@ const { createFinalKnowledgeCatalog } = require('../src/knowledge/final/finalKno
 const {
   finalCatalogPath,
   persistFinalKnowledgeCatalog,
+  queryFinalKnowledgeCatalog,
   readFinalKnowledgeCatalog,
 } = require('../src/knowledge/knowledgePipeline');
 
@@ -110,4 +111,65 @@ test('read-only catalog loader requires the final artifact filename', () => {
     () => readFinalKnowledgeCatalog({ catalogPath: path.join(os.tmpdir(), 'catalog.json') }),
     /catalogPath must point to project-neutral-knowledge.json/
   );
+});
+
+test('read-only query filters a validated catalog deterministically', () => {
+  const outputRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-knowledge-query-'));
+  try {
+    const catalog = genericCatalog();
+    catalog.patterns.push({
+      id: 'pattern-form',
+      kind: 'ui.form',
+      domain: 'ui',
+      technology: ['ui-framework'],
+      features: ['form-control-layout'],
+      elements: [{ role: 'form-control', intent: 'capture-input' }],
+      confidence: { level: 'medium', score: 0.7 },
+      evidenceSummary: { widgetCount: 1 },
+      privacyAssessment: { status: 'passed' },
+      limitations: ['synthetic fixture'],
+    });
+    const written = persistFinalKnowledgeCatalog({
+      outputRoot,
+      runId: 'synthetic-query-001',
+      catalog,
+    });
+    const result = queryFinalKnowledgeCatalog({
+      catalogPath: written.path,
+      kinds: ['ui.form', 'ui.form'],
+      features: 'form-control-layout',
+      domain: 'ui',
+    });
+    assert.equal(result.available, true);
+    assert.deepEqual(result.filters, {
+      kinds: ['ui.form'],
+      features: ['form-control-layout'],
+      domain: ['ui'],
+    });
+    assert.equal(result.matchedPatternCount, 1);
+    assert.equal(result.catalog.patterns[0].kind, 'ui.form');
+    assert.deepEqual(
+      readFinalKnowledgeCatalog({ catalogPath: written.path }).catalog.patterns,
+      catalog.patterns
+    );
+  } finally {
+    fs.rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test('read-only query rejects non-string filters', () => {
+  const outputRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-knowledge-query-invalid-'));
+  try {
+    const written = persistFinalKnowledgeCatalog({
+      outputRoot,
+      runId: 'synthetic-query-invalid-001',
+      catalog: genericCatalog(),
+    });
+    assert.throws(
+      () => queryFinalKnowledgeCatalog({ catalogPath: written.path, kinds: [1] }),
+      /kinds must be a string or an array of strings/
+    );
+  } finally {
+    fs.rmSync(outputRoot, { recursive: true, force: true });
+  }
 });

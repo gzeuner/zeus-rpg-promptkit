@@ -6,6 +6,7 @@ const { buildPuiProjection } = require('../../pui/puiProjection');
 const {
   extractAndPersistNeutralPuiKnowledge,
 } = require('../../knowledge/extractors/puiPatternExtractor');
+const { extractPuiBatch } = require('../../knowledge/extractors/puiBatchExtractor');
 const { readFinalKnowledgeCatalog } = require('../../knowledge/knowledgePipeline');
 const { createJsonOutput } = require('../helpers/jsonOutput');
 
@@ -13,6 +14,9 @@ function printHelp() {
   console.log('Knowledge commands:');
   console.log(
     '  zeus knowledge extract --mode ui-patterns --file <dds> --out <root> --run-id <id> [--json]'
+  );
+  console.log(
+    '  zeus knowledge extract --mode ui-patterns --source <dir> --out <root> --private-out <local-root> --run-id <id> [--json]'
   );
   console.log('  zeus knowledge validate --input <project-neutral-knowledge.json> [--json]');
   console.log('  zeus knowledge inspect --input <project-neutral-knowledge.json> [--json]');
@@ -66,24 +70,43 @@ async function run(args = {}) {
         .trim()
         .toLowerCase();
       if (mode !== 'ui-patterns') throw new Error('Only --mode ui-patterns is supported.');
-      const file = requiredString(args, 'file');
       const outputRoot = requiredString(args, 'out');
       const runId = requiredString(args, 'run-id');
-      const input = readLocalFile(file);
-      const projection = buildPuiProjection(input.content, {
-        file: path.relative(process.cwd(), input.resolved) || file,
-      });
-      const written = extractAndPersistNeutralPuiKnowledge({
-        projection,
-        outputRoot: path.resolve(process.cwd(), outputRoot),
-        runId,
-      });
+      const hasFile = typeof args.file === 'string' && args.file.trim();
+      const hasSource = typeof args.source === 'string' && args.source.trim();
+      if (hasFile && hasSource) {
+        throw new Error('Use either --file or --source, not both.');
+      }
+
+      let written;
+      if (hasSource) {
+        const privateOutputRoot = requiredString(args, 'private-out');
+        written = extractPuiBatch({
+          sourceRoot: path.resolve(process.cwd(), args.source.trim()),
+          outputRoot: path.resolve(process.cwd(), outputRoot),
+          privateOutputRoot: path.resolve(process.cwd(), privateOutputRoot),
+          runId,
+        });
+      } else {
+        const file = requiredString(args, 'file');
+        const input = readLocalFile(file);
+        const projection = buildPuiProjection(input.content, {
+          file: path.relative(process.cwd(), input.resolved) || file,
+        });
+        written = extractAndPersistNeutralPuiKnowledge({
+          projection,
+          outputRoot: path.resolve(process.cwd(), outputRoot),
+          runId,
+        });
+      }
       const result = {
         ok: true,
         operation,
         mode,
         path: written.path,
         patternCount: written.catalog.patterns.length,
+        ...(written.privatePath ? { privatePath: written.privatePath } : {}),
+        ...(written.fileCount !== undefined ? { fileCount: written.fileCount } : {}),
       };
       printResult(args, { ...result, catalog: written.catalog });
       return result;
