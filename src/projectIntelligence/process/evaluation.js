@@ -83,7 +83,7 @@ function readProcessEvaluationScenarios(filePath, options = {}) {
   let parsed;
   try {
     parsed = JSON.parse(fs.readFileSync(resolved, 'utf8'));
-  } catch (error) {
+  } catch {
     const wrapped = new Error('process scenario file could not be read as JSON');
     wrapped.code = 'PROCESS_SCENARIOS_INVALID';
     throw wrapped;
