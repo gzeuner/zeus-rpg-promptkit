@@ -6,7 +6,10 @@ Last Updated: 2026-09-10
 
 # Next release checklist (unified public package)
 
-Current package version on main: **0.3.0-rc.1** (release candidate for the next Community feature cut).
+Current package version on main: **0.3.0-rc.1** (published prerelease; current cut closed below).
+
+Published prerelease source: [`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.1)
+@ `7435637…`. **Do not re-tag** `v0.3.0-rc.1`.
 
 Last published stable: [`v0.2.0`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0)
 @ `84822a6…`. **Do not re-tag** `v0.2.0`.
@@ -15,14 +18,14 @@ This checklist prepares public releases. Tag/publish still require the Release
 `workflow_dispatch` after merge to `main`.
 
 **Historical Track F freeze package:** [`freeze-readiness-0.2.0.md`](./freeze-readiness-0.2.0.md)
-(`v0.2.0` is already published; this checklist covers the `0.3.0-rc.1` feature cut.)
+(`v0.2.0` is already published; the `0.3.0-rc.1` feature cut is closed below.)
 
-## Current release target
+## Next release target
 
-| Candidate    | Rationale                                                              |
-| ------------ | ---------------------------------------------------------------------- |
-| `0.3.0-rc.1` | Public process intelligence, scoped legacy vocabulary, and AI guidance |
-| `0.3.0`      | Follow-up stable release after RC validation and owner approval        |
+| Candidate | Rationale                                                      |
+| --------- | -------------------------------------------------------------- |
+| `0.3.0`   | Stable follow-up after RC validation and owner approval        |
+| Hold      | Keep the RC available while additional feedback or soak occurs |
 
 ## Preflight (local)
 
@@ -43,13 +46,25 @@ npm run demo:run
 npm audit --omit=dev --audit-level=high
 ```
 
-Re-run all gates after the release-preparation commit and before dispatching the Release workflow.
+For a future cut, re-run all gates after the release-preparation commit and before dispatching the Release workflow.
 
 When the version is bumped and CHANGELOG / release notes exist:
 
 ```bash
 npm run release:preflight -- --version <target-version>
 ```
+
+## Closed cut: 0.3.0-rc.1 (2026-09-10)
+
+| Gate                    | Result                                                                                  |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| Prep PR                 | [#321](https://github.com/gzeuner/zeus-rpg-promptkit/pull/321)                          |
+| Release workflow        | [#134](https://github.com/gzeuner/zeus-rpg-promptkit/actions/runs/34437307370)          |
+| Tag / assets            | [`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.1) |
+| Source SHA              | `7435637aa021fa62ee1882f1d77ad2f3d22188dc`                                              |
+| Assets                  | tarball + SBOM + SHA256SUMS + attestation; fresh-download verification green            |
+| Release type            | prerelease / release candidate                                                          |
+| Credential/private scan | clean; no credentials or private runtime identifiers committed                          |
 
 ## Beta.5 cut (2026-08-03)
 

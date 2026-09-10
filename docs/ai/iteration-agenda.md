@@ -169,7 +169,10 @@ Implementation: `src/projectIntelligence/process/vocabulary.js`,
 `tests/project-intelligence-process-vocabulary.test.js`. Delivered in PR #318
 after protected-branch verification. No credentials, private system
 identifiers, or environment-specific values are part of the implementation.
-The next active roadmap item is Iteration 15.
+The public release candidate [`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.1)
+was published from main SHA `7435637…` after PR #321; the release workflow and
+fresh-download verification completed successfully. The next active roadmap
+item is Iteration 15.
 
 ## Business Process Intelligence roadmap
 
