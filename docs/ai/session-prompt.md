@@ -1,7 +1,7 @@
 ---
 Title: AI Session Prompt
 Description: CLI-first, evidence-first session contract for AI agents working with Zeus RPG PromptKit.
-Last Updated: 2026-09-07
+Last Updated: 2026-09-10
 ---
 
 # Zeus RPG PromptKit - AI Session Prompt (v3.0)
@@ -13,6 +13,7 @@ Related:
 - [`iteration-agenda.md`](iteration-agenda.md) — current improvement agenda and iteration status
 - [`agent-start-here.md`](agent-start-here.md) — compact orientation and intent map
 - [`cli-agent-guide.md`](cli-agent-guide.md) — detailed CLI workflow and intent map
+- [`process-intelligence.md`](process-intelligence.md) — process catalogs, business glossaries, and evidence-backed process questions
 - [`../tool-catalog.md`](../tool-catalog.md) — authoritative command purpose, scope, and safety
 - [`agent-failure-playbook.md`](agent-failure-playbook.md) — recovery codes and CLI fallbacks
 - [`../quickstart/5-minutes.md`](../quickstart/5-minutes.md) — local demo golden path
@@ -68,6 +69,7 @@ Choose the smallest valid route:
 - Existing IBM-i spool output required: run `doctor`, then use the bounded read-only `spool-read` command with the exact job and spool identity.
 - New or unknown IBM i: use `onboarding` or `discover-environment`; do not guess source libraries or schemas.
 - Legacy vocabulary: map RPG/RPGLE, CL/CLLE, DDS, Db2, IBM i jobs, spoolfiles, libraries, schemas, source files, and members to the explicit `legacyConcepts` and `inputRequirements` returned by preflight/suggest.
+- Business-process question: use `process list|describe|query|impact|diff` with an explicit process catalog and, when needed, a scoped glossary; preserve evidence, freshness, confidence, and unknowns in the answer.
 
 Typical evidence flow:
 1. Establish goal, project root, source root, program/member, profile, output root, and whether remote access is allowed.

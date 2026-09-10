@@ -1,28 +1,28 @@
 ---
 Title: Next Release Checklist
 Description: Maintainer checklist for releases after the unified Apache-2.0 consolidation. Historical beta cut records remain below for provenance.
-Last Updated: 2026-08-17
+Last Updated: 2026-09-10
 ---
 
 # Next release checklist (unified public package)
 
-Current package version on main: **0.2.0** (published baseline; consolidation changes are unreleased).
+Current package version on main: **0.3.0-rc.1** (release candidate for the next Community feature cut).
 
-Last published prerelease: [`v0.2.0-beta.4`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.4)
-@ `6a4789a…`. **Do not re-tag** beta.4.
+Last published stable: [`v0.2.0`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0)
+@ `84822a6…`. **Do not re-tag** `v0.2.0`.
 
 This checklist prepares public releases. Tag/publish still require the Release
 `workflow_dispatch` after merge to `main`.
 
-**Track F freeze package:** [`freeze-readiness-0.2.0.md`](./freeze-readiness-0.2.0.md)  
-(beta.5 contains the agent-surface tracks; next non-beta cut remains owner-gated).
+**Historical Track F freeze package:** [`freeze-readiness-0.2.0.md`](./freeze-readiness-0.2.0.md)
+(`v0.2.0` is already published; this checklist covers the `0.3.0-rc.1` feature cut.)
 
-## Recommended next version (after beta.5)
+## Current release target
 
-| Candidate | When                                                        |
-| --------- | ----------------------------------------------------------- |
-| `0.2.0`   | Only after owner decision that beta surface is freeze-ready |
-| Hold      | Owner wants more soak or product work before non-beta       |
+| Candidate    | Rationale                                                              |
+| ------------ | ---------------------------------------------------------------------- |
+| `0.3.0-rc.1` | Public process intelligence, scoped legacy vocabulary, and AI guidance |
+| `0.3.0`      | Follow-up stable release after RC validation and owner approval        |
 
 ## Preflight (local)
 
@@ -43,8 +43,7 @@ npm run demo:run
 npm audit --omit=dev --audit-level=high
 ```
 
-**Track F preflight (2026-07-25 on `0e3c86b…`):** all of the above **pass** (see freeze-readiness
-doc). Re-run after any further commits before a cut.
+Re-run all gates after the release-preparation commit and before dispatching the Release workflow.
 
 When the version is bumped and CHANGELOG / release notes exist:
 

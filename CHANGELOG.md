@@ -5,6 +5,34 @@ All notable changes to Zeus RPG PromptKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-rc.1] - 2026-09-10
+
+Release candidate for the next Community feature release. This cut makes the
+evidence-backed Business Process Intelligence surface discoverable and usable
+from the CLI and public API.
+
+### Added
+
+- versioned business-process contracts and neutral process fixtures;
+- deterministic process retrieval for `list`, `describe`, `query`, `impact`, and `diff`;
+- reusable scoped Business Glossary / Legacy Vocabulary catalogs with explicit
+  ambiguity handling and no-guess resolution;
+- process-aware AI guidance with evidence, freshness, confidence, and unknowns
+  preserved in answers.
+
+### Changed
+
+- README, AI session guidance, documentation navigation, and the generated tool
+  catalog now lead agents through the CLI-first process and glossary routes;
+- package metadata is aligned to the `0.3.0-rc.1` release candidate.
+
+### Security
+
+- public examples and documentation remain project-neutral and contain no
+  credentials, customer data, private paths, or private system identifiers;
+- process answers remain evidence-backed and fail closed for stale, unknown, or
+  ambiguous knowledge.
+
 ## [Unreleased]
 
 ### Added
