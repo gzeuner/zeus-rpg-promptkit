@@ -245,6 +245,17 @@ uncertainty in the answer. The implementation is complete; follow-up work
 belongs to Iteration 15 and must reuse this glossary and process-query
 contract.
 
+### Cross-cutting knowledge slice — completed in current integration round
+
+The project-neutral PUI knowledge path now supports recursive `.dds` batch
+extraction, controlled structural widget categories, deterministic read-only
+catalog filtering, and an additive `zeus.queryKnowledge()` API. Batch mode
+requires separate general and local-only output roots. The local inventory may
+contain source-relative paths, hashes, and decoded projections for review, but
+it is sensitive project data and is never committed, packaged, exposed through
+MCP, or promoted into the final catalog. Only synthetic fixtures and
+project-neutral contracts belong in the public repository.
+
 ### Iteration 15 — Role-based views and optional chat adapter
 
 Build role-specific projections from the same process facts:

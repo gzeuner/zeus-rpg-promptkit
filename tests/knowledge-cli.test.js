@@ -66,3 +66,44 @@ test('knowledge CLI fails closed for unsupported extraction modes', async () => 
     process.exitCode = previousExitCode;
   }
 });
+
+test('knowledge CLI batch extraction requires and reports a separate private output root', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-knowledge-cli-batch-'));
+  const source = path.join(root, 'source');
+  const output = path.join(root, 'output');
+  const privateOutput = path.join(root, 'private');
+  fs.mkdirSync(source, { recursive: true });
+  fs.writeFileSync(path.join(source, 'synthetic.dds'), `${member()}\n* PUI`, 'utf8');
+  const previousExitCode = process.exitCode;
+  process.exitCode = undefined;
+  try {
+    const missingPrivate = await run({
+      _: ['extract'],
+      mode: 'ui-patterns',
+      source,
+      out: output,
+      'run-id': 'synthetic-cli-batch-001',
+      json: true,
+    });
+    assert.equal(missingPrivate.ok, false);
+    assert.match(missingPrivate.reason, /private-out/);
+
+    process.exitCode = undefined;
+    const extracted = await run({
+      _: ['extract'],
+      mode: 'ui-patterns',
+      source,
+      out: output,
+      'private-out': privateOutput,
+      'run-id': 'synthetic-cli-batch-001',
+      json: true,
+    });
+    assert.equal(extracted.ok, true);
+    assert.equal(extracted.fileCount, 1);
+    assert.equal(fs.existsSync(extracted.path), true);
+    assert.equal(fs.existsSync(extracted.privatePath), true);
+  } finally {
+    process.exitCode = previousExitCode;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

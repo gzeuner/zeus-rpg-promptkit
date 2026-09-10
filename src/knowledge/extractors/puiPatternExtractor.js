@@ -15,9 +15,14 @@ function countHeadings(grid) {
   return asArray(grid && grid.columns).filter(column => column && column.heading).length;
 }
 
-function buildNeutralGridPattern(grid, index) {
+function boundedCount(value) {
+  const count = Number(value);
+  return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
+}
+
+function buildNeutralGridPattern(grid, index, recordFormatCount) {
   const columns = asArray(grid && grid.columns);
-  const columnCount = Number(grid && grid.numberOfColumns) || columns.length;
+  const columnCount = boundedCount(grid && grid.numberOfColumns) || columns.length;
   const boundColumnCount = countBoundColumns(grid);
   const headingCount = countHeadings(grid);
   const features = ['tabular-layout'];
@@ -48,7 +53,7 @@ function buildNeutralGridPattern(grid, index) {
       score: Math.min(1, 0.6 + (columnCount > 0 ? 0.1 : 0) + (boundColumnCount > 0 ? 0.1 : 0)),
     },
     evidenceSummary: {
-      recordFormatCount: 1,
+      recordFormatCount: boundedCount(recordFormatCount) || 1,
       gridCount: 1,
       columnCount,
       boundColumnCount,
@@ -62,6 +67,102 @@ function buildNeutralGridPattern(grid, index) {
   };
 }
 
+const WIDGET_TAXONOMY = Object.freeze([
+  {
+    kind: 'ui.selection',
+    feature: 'selection-control-layout',
+    role: 'selection-control',
+    intent: 'select-options',
+    pattern: /checkbox|radio|select|dropdown|combobox|choice|list/i,
+  },
+  {
+    kind: 'ui.validation',
+    feature: 'validation-feedback',
+    role: 'validation-feedback',
+    intent: 'communicate-validation',
+    pattern: /valid|error|warning|message|feedback|alert/i,
+  },
+  {
+    kind: 'ui.dialog',
+    feature: 'dialog-surface',
+    role: 'dialog-surface',
+    intent: 'present-focused-interaction',
+    pattern: /dialog|modal|popup|overlay/i,
+  },
+  {
+    kind: 'ui.navigation',
+    feature: 'navigation-control-layout',
+    role: 'navigation-control',
+    intent: 'navigate-between-views',
+    pattern: /tab|link|menu|nav|navigation/i,
+  },
+  {
+    kind: 'ui.toolbar',
+    feature: 'action-control-layout',
+    role: 'action-control',
+    intent: 'trigger-action',
+    pattern: /button|action|command|toolbar|submit|cancel|icon/i,
+  },
+]);
+
+function classifyWidget(widget) {
+  const fieldType = String((widget && widget.fieldType) || '');
+  return (
+    WIDGET_TAXONOMY.find(category => category.pattern.test(fieldType)) || {
+      kind: 'ui.form',
+      feature: 'form-control-layout',
+      role: 'form-control',
+      intent: 'capture-input',
+    }
+  );
+}
+
+function buildNeutralWidgetPattern(widget, index, recordFormatCount) {
+  const category = classifyWidget(widget);
+  const hasBinding = Boolean(widget && widget.boundField);
+  const hasStaticValue = Boolean(
+    widget && typeof widget.staticValue === 'string' && widget.staticValue.trim()
+  );
+  const features = [category.feature];
+  if (hasBinding) features.push('data-binding-shape');
+  if (hasStaticValue) features.push('static-value-shape');
+
+  return {
+    id: `${category.kind}-${index + 1}`,
+    kind: category.kind,
+    domain: 'ui',
+    technology: ['pui-structural'],
+    features,
+    elements: [
+      {
+        role: category.role,
+        intent: category.intent,
+        layoutHints: ['widget-control'],
+        behaviorHints: [
+          ...(hasBinding ? ['supports-data-binding'] : []),
+          ...(hasStaticValue ? ['supports-static-value'] : []),
+        ],
+      },
+    ],
+    confidence: {
+      level: 'low',
+      score: Math.min(1, 0.55 + (hasBinding ? 0.1 : 0) + (hasStaticValue ? 0.05 : 0)),
+    },
+    evidenceSummary: {
+      recordFormatCount: boundedCount(recordFormatCount) || 1,
+      widgetCount: 1,
+      boundWidgetCount: hasBinding ? 1 : 0,
+      staticValueCount: hasStaticValue ? 1 : 0,
+      classification: category.kind.slice(3),
+    },
+    privacyAssessment: {
+      status: 'passed',
+      notes: ['Controlled taxonomy and counts only.'],
+    },
+    limitations: ['Heuristic widget classification.', 'Source values omitted.'],
+  };
+}
+
 function buildNeutralPuiKnowledgeCatalog(projection, options = {}) {
   if (!projection || typeof projection !== 'object') {
     throw new Error('PUI projection is required');
@@ -69,14 +170,22 @@ function buildNeutralPuiKnowledgeCatalog(projection, options = {}) {
 
   const recordFormats = asArray(projection.recordFormats);
   const grids = recordFormats.flatMap(recordFormat => asArray(recordFormat && recordFormat.grids));
-  const patterns = grids.map((grid, index) => buildNeutralGridPattern(grid, index));
+  const widgets = recordFormats.flatMap(recordFormat =>
+    asArray(recordFormat && recordFormat.widgets)
+  );
+  const patterns = [
+    ...grids.map((grid, index) => buildNeutralGridPattern(grid, index, recordFormats.length)),
+    ...widgets.map((widget, index) =>
+      buildNeutralWidgetPattern(widget, index, recordFormats.length)
+    ),
+  ];
 
   return createFinalKnowledgeCatalog({
     generatedAt: options.generatedAt,
     generatorName: 'zeus-pui-neutral-extractor',
     generatorVersion: options.generatorVersion || '0.2.0',
     privacyMode: 'strict',
-    taxonomyVersion: 'draft-1',
+    taxonomyVersion: 'draft-2',
     patterns,
   });
 }

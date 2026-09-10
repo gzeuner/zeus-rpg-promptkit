@@ -4,7 +4,14 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { analyze, listRuns, readKnowledge, runWorkflow, zeus } = require('../src/api/zeusApi');
+const {
+  analyze,
+  listRuns,
+  queryKnowledge,
+  readKnowledge,
+  runWorkflow,
+  zeus,
+} = require('../src/api/zeusApi');
 const { REPRODUCIBLE_TIMESTAMP } = require('../src/reproducibility/reproducibility');
 
 const fixtureRoot = path.join(__dirname, 'fixtures', 'v1-smoke', 'src');
@@ -256,6 +263,68 @@ test('zeusApi reads only an explicitly supplied privacy-gated final catalog', ()
     assert.equal(knowledge.available, true);
     assert.equal(knowledge.status, 'ready');
     assert.deepEqual(knowledge.catalog.patterns, []);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('zeusApi queryKnowledge exposes only filtered final-catalog patterns', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-api-knowledge-query-'));
+  const catalogPath = path.join(
+    tempRoot,
+    'knowledge',
+    'synthetic-api-query-001',
+    'project-neutral-knowledge.json'
+  );
+  try {
+    fs.mkdirSync(path.dirname(catalogPath), { recursive: true });
+    fs.writeFileSync(
+      catalogPath,
+      JSON.stringify({
+        schemaVersion: '1.0.0',
+        generatedAt: '2026-08-04T12:00:00.000Z',
+        generator: { name: 'synthetic-test', version: '1.0.0' },
+        privacyMode: 'strict',
+        taxonomyVersion: 'draft-2',
+        patterns: [
+          {
+            id: 'pattern-form',
+            kind: 'ui.form',
+            domain: 'ui',
+            technology: ['pui-structural'],
+            features: ['form-control-layout'],
+            elements: [{ role: 'form-control', intent: 'capture-input' }],
+            confidence: { level: 'low', score: 0.55 },
+            evidenceSummary: { widgetCount: 1 },
+            privacyAssessment: { status: 'passed' },
+            limitations: ['synthetic fixture'],
+          },
+          {
+            id: 'pattern-grid',
+            kind: 'ui.grid',
+            domain: 'ui',
+            technology: ['pui-structural'],
+            features: ['tabular-layout'],
+            elements: [{ role: 'grid', intent: 'display-records' }],
+            confidence: { level: 'medium', score: 0.7 },
+            evidenceSummary: { gridCount: 1 },
+            privacyAssessment: { status: 'passed' },
+            limitations: ['synthetic fixture'],
+          },
+        ],
+      }),
+      'utf8'
+    );
+    const result = queryKnowledge({
+      catalogPath,
+      kinds: ['ui.form'],
+      features: ['form-control-layout'],
+      domain: 'ui',
+    });
+    assert.equal(result.available, true);
+    assert.equal(result.matchedPatternCount, 1);
+    assert.equal(result.catalog.patterns[0].kind, 'ui.form');
+    assert.equal(zeus.queryKnowledge({ catalogPath, kinds: 'ui.grid' }).matchedPatternCount, 1);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

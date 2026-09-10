@@ -339,9 +339,9 @@ const COMMAND_METADATA = Object.freeze({
     scope: 'Local',
     subcommands: ['extract', 'validate', 'inspect'],
     purpose:
-      'Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local PUI structure.',
+      'Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local PUI structure. Directory extraction requires a separate --private-out root for the local-only inventory.',
     example:
-      'node cli/zeus.js knowledge extract --mode ui-patterns --file ./display/DSPFILE.MBR --out ./output --run-id run-001',
+      'node cli/zeus.js knowledge extract --mode ui-patterns --source ./display --out ./output --private-out ./local-only --run-id run-001 --json',
   }),
   'pui-inspect': Object.freeze({
     safety: 'S0',

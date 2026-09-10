@@ -183,3 +183,7 @@ analyses/
 # -----------------------------
 
 .zeus/
+# Generated knowledge artifacts are local outputs, even when the operator
+# chooses a custom output root instead of the conventional ./output directory.
+**/project-neutral-knowledge.json
+**/pui-private-inventory.json
