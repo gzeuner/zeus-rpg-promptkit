@@ -24,4 +24,6 @@ module.exports = Object.freeze({
   PROCESS_RELATIONSHIP: 'zeus.project-knowledge-process-relationship',
   GLOSSARY_ENTRY: 'zeus.project-knowledge-glossary-entry',
   PROCESS_QUERY_RESULT: 'zeus.project-knowledge-process-query-result',
+  PROCESS_ROLE_VIEW: 'zeus.project-knowledge-process-role-view',
+  PROCESS_EVALUATION_RESULT: 'zeus.project-knowledge-process-evaluation-result',
 });

@@ -8,6 +8,7 @@ const CONTRACT_IDS = require('../contractIds');
 const { PROCESS_STATUSES } = require('../constants');
 const { processQueryResultSchema } = require('./contracts');
 const { resolveGlossaryMentions } = require('./vocabulary');
+const { assessProcessFreshness } = require('./freshness');
 
 const STATUS_RANK = Object.freeze({
   [PROCESS_STATUSES.PUBLISHED]: 5,
@@ -121,30 +122,7 @@ function uniqueReferences(values) {
 }
 
 function normalizeFreshness(catalog, options = {}) {
-  const supplied = options.freshness || catalog.freshness || catalog.snapshot || {};
-  const status = String(
-    supplied.status ||
-      supplied.state ||
-      catalog.snapshotStatus ||
-      catalog.freshnessStatus ||
-      'unknown'
-  )
-    .trim()
-    .toLowerCase();
-  const freshness = {
-    status: status || 'unknown',
-    snapshotId:
-      String(options.snapshotId || catalog.snapshotId || supplied.snapshotId || '').trim() || null,
-  };
-  for (const field of ['asOf', 'checkedAt', 'sourceHash', 'reason']) {
-    if (supplied[field] != null && String(supplied[field]).trim()) {
-      freshness[field] = String(supplied[field]).trim();
-    }
-  }
-  if (freshness.status === 'unknown' && !freshness.reason) {
-    freshness.reason = 'catalog-freshness-not-supplied';
-  }
-  return freshness;
+  return assessProcessFreshness(catalog, options);
 }
 
 function assertCatalog(catalog) {
@@ -594,6 +572,27 @@ function impactProcess(catalog, requestedId, options = {}) {
       .flatMap(relationship => [relationship.fromId, relationship.toId])
       .filter(id => !ids.has(id))
   );
+  const freshness = normalizeFreshness(catalog, options);
+  const changedEvidenceIds = new Set(
+    (options.changedEvidenceIds || []).map(value => String(value).trim()).filter(Boolean)
+  );
+  const affectedEvidenceReferences = recordReferences(record).filter(reference =>
+    changedEvidenceIds.has(reference.id)
+  );
+  const freshnessChanged = freshness.status === 'stale';
+  const freshnessImpact = {
+    status: freshness.status,
+    reason: freshness.reason || null,
+    affectedEvidenceReferences,
+    scope:
+      freshnessChanged && changedEvidenceIds.size === 0
+        ? 'whole-process-version'
+        : 'matched-evidence',
+    requiresReanalysis: freshnessChanged,
+  };
+  if (freshnessChanged && changedEvidenceIds.size === 0) {
+    freshnessImpact.affectedEvidenceReferences = recordReferences(record);
+  }
   return {
     ok: true,
     schemaVersion: 1,
@@ -601,7 +600,7 @@ function impactProcess(catalog, requestedId, options = {}) {
     operation: 'impact',
     projectId: String(catalog.projectId || record.process.projectId || '').trim() || null,
     snapshotId: String(catalog.snapshotId || record.process.snapshotId || '').trim() || null,
-    freshness: normalizeFreshness(catalog, options),
+    freshness,
     processId: record.process.processId,
     processVersionId: record.version && record.version.processVersionId,
     status: recordStatus(record),
@@ -613,6 +612,7 @@ function impactProcess(catalog, requestedId, options = {}) {
       relatedIds,
     },
     evidenceReferences: recordReferences(record),
+    freshnessImpact,
     unknowns: recordUnknowns(record),
   };
 }
@@ -781,4 +781,5 @@ module.exports = {
   diffProcess,
   readProcessCatalog,
   resolveCatalogPath,
+  assessProcessFreshness,
 };

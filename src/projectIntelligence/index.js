@@ -61,6 +61,8 @@ module.exports = {
   processRelationshipSchema: contracts.processRelationshipSchema,
   glossaryEntrySchema: contracts.glossaryEntrySchema,
   processQueryResultSchema: contracts.processQueryResultSchema,
+  processRoleViewSchema: contracts.processRoleViewSchema,
+  processEvaluationResultSchema: contracts.processEvaluationResultSchema,
 
   // Helpers
   isSafeRelativePath: helpers.isSafeRelativePath,
@@ -88,6 +90,10 @@ module.exports = {
   listProcesses: processIntelligence.listProcesses,
   describeProcess: processIntelligence.describeProcess,
   queryProcesses: processIntelligence.queryProcesses,
+  assessProcessFreshness: processIntelligence.assessProcessFreshness,
+  buildProcessRoleView: processIntelligence.buildProcessRoleView,
+  chatProcess: processIntelligence.chatProcess,
+  evaluateProcessCatalog: processIntelligence.evaluateProcessCatalog,
   impactProcess: processIntelligence.impactProcess,
   diffProcess: processIntelligence.diffProcess,
   readProcessCatalog: processIntelligence.readProcessCatalog,

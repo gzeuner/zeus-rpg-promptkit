@@ -30,6 +30,16 @@ The public package export is `zeus-rpg-promptkit/project-intelligence`:
 - `queryProcesses(catalog, question, options)` returns the versioned
   `PROCESS_QUERY_RESULT` contract. Exact identifiers and reviewed/published
   facts rank ahead of derived summaries; a no-match answer remains explicit.
+- `buildProcessRoleView(catalog, id, role, options)` returns a versioned,
+  read-only projection for `product-owner`, `architect`, `developer`, or
+  `tester`. The projection changes the presentation, not the evidence or the
+  lifecycle status.
+- `chatProcess(catalog, question, options)` is a local chat-shaped adapter to
+  the same deterministic query contract. It does not call a model, use a
+  network, persist state, or invent an answer.
+- `evaluateProcessCatalog(catalog, scenarios, options)` produces a deterministic
+  quality result with evidence coverage, unresolved relationships, freshness,
+  review needs, and optional query-scenario checks.
 - `impactProcess(catalog, id)` expands the process relationships without
   changing the catalog.
 - `diffProcess(catalog, id)` compares two versions when both are present and
@@ -43,7 +53,8 @@ The public package export is `zeus-rpg-promptkit/project-intelligence`:
 The contracts are exported as `BUSINESS_PROCESS`, `PROCESS_VERSION`,
 `PROCESS_STEP`, `PROCESS_CLAIM`, `PROCESS_RELATIONSHIP`, `GLOSSARY_ENTRY`, and
 `PROCESS_QUERY_RESULT` in the existing `CONTRACT_IDS` map. They are also
-registered in the core schema registry.
+registered in the core schema registry. Role views use
+`PROCESS_ROLE_VIEW`; quality checks use `PROCESS_EVALUATION_RESULT`.
 
 ## CLI retrieval
 
@@ -54,8 +65,11 @@ It never searches arbitrary directories and never publishes a candidate:
 node cli/zeus.js process list --catalog ./output/process-candidates.json --json
 node cli/zeus.js process describe --catalog ./output/process-candidates.json --id <process-id> --json
 node cli/zeus.js process query --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json
-node cli/zeus.js process impact --catalog ./output/process-candidates.json --id <process-id> --json
+node cli/zeus.js process chat --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json
+node cli/zeus.js process view --catalog ./output/process-candidates.json --id <process-id> --role architect --json
+node cli/zeus.js process impact --catalog ./output/process-candidates.json --id <process-id> --changed-evidence-id <evidence-id> --json
 node cli/zeus.js process diff --catalog ./output/process-candidates.json --id <process-id> --json
+node cli/zeus.js process evaluate --catalog ./output/process-candidates.json --scenarios ./output/process-scenarios.json --json
 node cli/zeus.js process glossary list --glossary ./output/process-glossary.json --only-applicable --json
 node cli/zeus.js process glossary resolve --glossary ./output/process-glossary.json --term "<legacy-term>" --json
 node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht <legacy-term>?" --json
@@ -67,6 +81,31 @@ freshness, matches, unknowns, and next questions. If the catalog does not
 declare freshness, the result says `unknown` instead of implying that the
 process is current. A process identifier or interface/program identifier is
 preferred over a vague natural-language question when available.
+
+When the current source identity is available, add
+`--current-snapshot-id <id>` or `--current-source-hash <sha256>` to `list`,
+`describe`, `query`, `chat`, `view`, `impact`, `diff`, or `evaluate`. A changed
+identity turns the result stale; an incomparable identity turns it unknown.
+The agent must then re-analyze or confirm the source before treating the
+projection as current. `impact` additionally reports whether the complete
+process version is affected or only explicitly supplied evidence identifiers.
+
+Role views are intentionally bounded and source-backed:
+
+- `product-owner`: goal/trigger when explicitly described, actors, outcomes,
+  decisions, exceptions, business claims, and open questions;
+- `architect`: systems, interfaces, data objects, entry points, relationships,
+  decisions, and exceptions;
+- `developer`: ordered technical steps, claims, references, interfaces, data,
+  relationships, and unresolved questions;
+- `tester`: scenario-shaped steps, decision points, error paths, claims, and
+  acceptance evidence.
+
+An optional scenario file is a JSON array or `{ "scenarios": [...] }` with
+`id`, `question`, optional `expectedProcessIds`, `requireEvidence`, and
+`maxFreshness`. The evaluation output contains scenario ids and outcomes, not
+the question text, so private questions do not become part of a committed
+quality artifact.
 
 ## Scoped business glossary
 

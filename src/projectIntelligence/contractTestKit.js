@@ -87,6 +87,8 @@ async function runProjectIntelligenceContractTests() {
       [CONTRACT_IDS.PROCESS_RELATIONSHIP, fixtures.processRelationship()],
       [CONTRACT_IDS.GLOSSARY_ENTRY, fixtures.glossaryEntry()],
       [CONTRACT_IDS.PROCESS_QUERY_RESULT, fixtures.processQueryResult()],
+      [CONTRACT_IDS.PROCESS_ROLE_VIEW, fixtures.processRoleView()],
+      [CONTRACT_IDS.PROCESS_EVALUATION_RESULT, fixtures.processEvaluationResult()],
     ];
     for (const [id, value] of cases) {
       const result = validateProjectIntelligenceContract(id, value);

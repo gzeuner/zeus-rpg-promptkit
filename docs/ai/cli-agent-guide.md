@@ -50,6 +50,9 @@ read-only CLI retrieval routes:
 ```text
 node cli/zeus.js process list --catalog ./output/process-candidates.json --json
 node cli/zeus.js process query --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json
+node cli/zeus.js process chat --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json
+node cli/zeus.js process view --catalog ./output/process-candidates.json --id <process-id> --role architect --json
+node cli/zeus.js process evaluate --catalog ./output/process-candidates.json --json
 node cli/zeus.js process glossary resolve --glossary ./output/process-glossary.json --term "<legacy-term>" --json
 node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht <legacy-term>?" --json
 ```

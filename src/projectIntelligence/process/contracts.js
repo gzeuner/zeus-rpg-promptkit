@@ -347,6 +347,86 @@ function processQueryResultSchema(value) {
   return errors;
 }
 
+function requireFreshness(errors, value) {
+  if (!h.requireObject(errors, value, '/freshness')) return;
+  h.requireNonEmptyString(errors, value.status, '/freshness/status');
+  if (value.snapshotId != null) h.optionalString(errors, value.snapshotId, '/freshness/snapshotId');
+  if (value.currentSnapshotId != null) {
+    h.optionalString(errors, value.currentSnapshotId, '/freshness/currentSnapshotId');
+  }
+  if (value.sourceHash != null) h.optionalString(errors, value.sourceHash, '/freshness/sourceHash');
+  if (value.currentSourceHash != null) {
+    h.optionalString(errors, value.currentSourceHash, '/freshness/currentSourceHash');
+  }
+  if (value.reason != null) h.optionalString(errors, value.reason, '/freshness/reason');
+}
+
+function processRoleViewSchema(value) {
+  const errors = [];
+  if (!header(errors, value, 'project-knowledge-process-role-view', CONTRACT_IDS.PROCESS_ROLE_VIEW))
+    return errors;
+  requireProjectSnapshotIds(errors, value);
+  h.requireNonEmptyString(errors, value.processId, '/processId');
+  h.requireNonEmptyString(errors, value.processVersionId, '/processVersionId');
+  h.requireClosedEnum(
+    errors,
+    value.role,
+    '/role',
+    ['product-owner', 'architect', 'developer', 'tester'],
+    'role'
+  );
+  requireStatus(errors, value.status);
+  requireConfidence(errors, value.confidence);
+  requireFreshness(errors, value.freshness);
+  h.requireObject(errors, value.view, '/view');
+  requireEvidenceReferences(errors, value.evidenceReferences);
+  requireStringArray(errors, value.unknowns, '/unknowns');
+  requireStringArray(errors, value.nextQuestions, '/nextQuestions');
+  if (value.sourceOfTruth !== false)
+    h.push(errors, '/sourceOfTruth', 'sourceOfTruth must be false');
+  if (value.advisory !== true) h.push(errors, '/advisory', 'advisory must be true');
+  return errors;
+}
+
+function processEvaluationResultSchema(value) {
+  const errors = [];
+  if (
+    !header(
+      errors,
+      value,
+      'project-knowledge-process-evaluation-result',
+      CONTRACT_IDS.PROCESS_EVALUATION_RESULT
+    )
+  )
+    return errors;
+  requireProjectSnapshotIds(errors, value);
+  h.requireNonEmptyString(errors, value.evaluationId, '/evaluationId');
+  h.requireClosedEnum(errors, value.status, '/status', ['pass', 'needs-review', 'fail'], 'status');
+  requireFreshness(errors, value.freshness);
+  h.requireObject(errors, value.metrics, '/metrics');
+  requireStringArray(errors, value.findings, '/findings');
+  if (!h.requireArray(errors, value.scenarios, '/scenarios')) return errors;
+  value.scenarios.forEach((scenario, index) => {
+    const base = `/scenarios/${index}`;
+    if (!h.requireObject(errors, scenario, base)) return;
+    h.requireNonEmptyString(errors, scenario.id, `${base}/id`);
+    h.requireClosedEnum(
+      errors,
+      scenario.status,
+      `${base}/status`,
+      ['pass', 'needs-review', 'fail'],
+      'scenario status'
+    );
+    requireStringArray(errors, scenario.matchedProcessIds, `${base}/matchedProcessIds`);
+    requireStringArray(errors, scenario.unknowns, `${base}/unknowns`);
+  });
+  requireEvidenceReferences(errors, value.evidenceReferences);
+  if (value.sourceOfTruth !== false)
+    h.push(errors, '/sourceOfTruth', 'sourceOfTruth must be false');
+  if (value.advisory !== true) h.push(errors, '/advisory', 'advisory must be true');
+  return errors;
+}
+
 module.exports = {
   businessProcessSchema,
   processVersionSchema,
@@ -355,4 +435,6 @@ module.exports = {
   processRelationshipSchema,
   glossaryEntrySchema,
   processQueryResultSchema,
+  processRoleViewSchema,
+  processEvaluationResultSchema,
 };

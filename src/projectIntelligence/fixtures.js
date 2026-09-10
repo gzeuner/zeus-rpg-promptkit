@@ -439,6 +439,56 @@ function processQueryResult(overrides = {}) {
   };
 }
 
+function processRoleView(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    kind: 'project-knowledge-process-role-view',
+    contractId: CONTRACT_IDS.PROCESS_ROLE_VIEW,
+    projectId: 'proj-demo',
+    snapshotId: 'snap-001',
+    processId: 'process:demo-flow',
+    processVersionId: 'process:demo-flow:v1',
+    role: 'architect',
+    status: 'candidate',
+    confidence: 'medium',
+    freshness: { status: 'published', snapshotId: 'snap-001' },
+    view: { systems: [{ id: 'system:demo', name: 'Synthetic application' }] },
+    evidenceReferences: [{ id: 'ev-1', kind: 'source' }],
+    unknowns: ['Business meaning is not established'],
+    nextQuestions: ['Review the technical boundary with an owner'],
+    sourceOfTruth: false,
+    advisory: true,
+    ...overrides,
+  };
+}
+
+function processEvaluationResult(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    kind: 'project-knowledge-process-evaluation-result',
+    contractId: CONTRACT_IDS.PROCESS_EVALUATION_RESULT,
+    projectId: 'proj-demo',
+    snapshotId: 'snap-001',
+    evaluationId: 'evaluation:demo-1',
+    status: 'needs-review',
+    freshness: { status: 'published', snapshotId: 'snap-001' },
+    metrics: { processCount: 1, evidenceCoverage: 1 },
+    findings: ['FRESHNESS_REVIEW_REQUIRED'],
+    scenarios: [
+      {
+        id: 'scenario:demo-1',
+        status: 'pass',
+        matchedProcessIds: ['process:demo-flow'],
+        unknowns: [],
+      },
+    ],
+    evidenceReferences: [{ id: 'ev-1', kind: 'source' }],
+    sourceOfTruth: false,
+    advisory: true,
+    ...overrides,
+  };
+}
+
 module.exports = {
   HASH_A,
   HASH_B,
@@ -464,4 +514,6 @@ module.exports = {
   processRelationship,
   glossaryEntry,
   processQueryResult,
+  processRoleView,
+  processEvaluationResult,
 };

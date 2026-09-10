@@ -69,7 +69,7 @@ Choose the smallest valid route:
 - Existing IBM-i spool output required: run `doctor`, then use the bounded read-only `spool-read` command with the exact job and spool identity.
 - New or unknown IBM i: use `onboarding` or `discover-environment`; do not guess source libraries or schemas.
 - Legacy vocabulary: map RPG/RPGLE, CL/CLLE, DDS, Db2, IBM i jobs, spoolfiles, libraries, schemas, source files, and members to the explicit `legacyConcepts` and `inputRequirements` returned by preflight/suggest.
-- Business-process question: use `process list|describe|query|impact|diff` with an explicit process catalog and, when needed, a scoped glossary; preserve evidence, freshness, confidence, and unknowns in the answer.
+- Business-process question: use `process list|describe|query|chat|view|impact|diff|evaluate` with an explicit process catalog and, when needed, a scoped glossary; preserve evidence, freshness, confidence, and unknowns in the answer. Use `chat` for the local conversational adapter, `view --role product-owner|architect|developer|tester` for a bounded audience projection, and `evaluate` before relying on a catalog broadly.
 
 Typical evidence flow:
 1. Establish goal, project root, source root, program/member, profile, output root, and whether remote access is allowed.
