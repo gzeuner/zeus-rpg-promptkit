@@ -1,7 +1,7 @@
 ---
 Title: CLI Agent Guide
 Description: Practical CLI-first contract for AI agents working with IBM i legacy systems through Zeus.
-Last Updated: 2026-09-07
+Last Updated: 2026-09-10
 ---
 
 # CLI Agent Guide

@@ -6,6 +6,9 @@ Last Updated: 2026-08-03
 
 # Freeze readiness toward Community `0.2.0` (Track F)
 
+> Historical assessment: `v0.2.0` was subsequently published on 2026-08-08.
+> The current release status is maintained in [`next-release-checklist.md`](next-release-checklist.md).
+
 **Classification:** maintainer / owner  
 **Date assessed:** 2026-08-03
 **Community tip assessed:** `487cca7b06d287b7d5cb53024ca54747500dd584` (`main`)

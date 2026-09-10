@@ -182,21 +182,21 @@ npm run demo:run
 Scripts und Release-Prozess: `package.json`, `CONTRIBUTING.md`, `CHANGELOG.md` und
 `.github/workflows/release.yml`.
 
-**Beta-Status (0.2.0-beta.5):** Vorabversion nach Tracks B–E (Loader-Profile-UX, PI-Export/Corpora,
-Embeddings default off, ADR-Hygiene) auf der PI-Baseline von Beta.3. Kernverträge stabilisieren sich,
-einzelne Oberflächen bleiben experimentell. Details in den GitHub-Release-Notes und im CHANGELOG.
-Vor produktiver Nutzung von Artefakten lokal `npm run docs:check` und `npm run package:smoke`
-ausführen sowie den Golden-Path beachten.
+**Release-Status (0.3.0-rc.1):** Release Candidate für den nächsten Community-Feature-Release.
+Die stabile Basis bleibt `0.2.0`; `0.3.0-rc.1` ergänzt die evidence-basierte Business Process
+Intelligence, Prozessabfragen und scoped Business Glossary / Legacy Vocabulary. Vor produktiver
+Nutzung von Artefakten lokal `npm run docs:check` und `npm run package:smoke` ausführen sowie den
+Golden Path beachten.
 
-Veröffentlichte Prerelease-Assets: [`v0.2.0-beta.5`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.5)
-(Tarball, SBOM, SHA256SUMS, Build-Provenance-Attestation). Nutzt den gehärteten
-Single-Artifact-Release-Workflow. Die historische Attestations-Ausnahme von Beta.2 gilt **nicht**.
-Policy: [`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
+Release-Assets: [`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.1)
+(Tarball, SBOM, SHA256SUMS, Build-Provenance-Attestation). Für den stabilen Stand siehe
+[`v0.2.0`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0). Policy:
+[`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
 
 Empfohlene Installation vom GitHub-Release-Tarball:
 
 ```bash
-npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.2.0-beta.5/zeus-rpg-promptkit-0.2.0-beta.5.tgz
+npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.3.0-rc.1/zeus-rpg-promptkit-0.3.0-rc.1.tgz
 ```
 
 ### Golden Corpus und Qualitätsmetriken
@@ -412,20 +412,21 @@ Details: [`docs/quickstart/secrets-and-overrides.md`](docs/quickstart/secrets-an
 
 Der automatisch erzeugte [`docs/tool-catalog.md`](docs/tool-catalog.md) ist die **verbindliche Referenz** für Befehle, Optionen, Safety-Level und Beispiele.
 
-| Aufgabe              | Befehle                                                              |                Safety |
-| -------------------- | -------------------------------------------------------------------- | --------------------: |
-| Setup & Profile      | `doctor`, `profiles`, `resources`, `secret`                          |               `S0/S1` |
-| Discovery            | `discover-environment`, `resolve-object`, `inspect-object`, `joblog` |               `S0/S2` |
-| Quellen              | `fetch`, `fetch-member`, `spool-read`, `copy-to-workspace`, `diff`   |               `S1/S2` |
-| Analyse              | `analyze`, `investigate`, `workflow`, `workflow run`                 |               `S0/S1` |
-| Suche & Beziehungen  | `search-source`, `field-search`, `trace`, `xref`, `impact`           |               `S0–S2` |
-| Db2 read-only        | `query-table`, `query-sql`, `sql`                                    |                  `S2` |
-| Journalauswertung    | `journal-row-diff`                                                   |                  `S2` |
-| Review & Planung     | `assess-risk`, `generate-test`, `generate-checklist`, `qa`           |                  `S1` |
-| Artefakte            | `bundle`, `analyses`, `serve`                                        |               `S0/S1` |
-| Kontrollierte Writes | `write-sql`, `upsert`, `insert`, `update`, `delete`                  |                  `S3` |
-| Operator-gated       | `bridge`                                                             |                  `S4` |
-| Integrationen        | `mcp`, `docs:generate-catalog`, `pui-inspect`, `pui-edit`            | abhängig vom Kommando |
+| Aufgabe              | Befehle                                                                               |                Safety |
+| -------------------- | ------------------------------------------------------------------------------------- | --------------------: |
+| Setup & Profile      | `doctor`, `profiles`, `resources`, `secret`                                           |               `S0/S1` |
+| Discovery            | `discover-environment`, `resolve-object`, `inspect-object`, `joblog`                  |               `S0/S2` |
+| Quellen              | `fetch`, `fetch-member`, `spool-read`, `copy-to-workspace`, `diff`                    |               `S1/S2` |
+| Analyse              | `analyze`, `investigate`, `workflow`, `workflow run`                                  |               `S0/S1` |
+| Suche & Beziehungen  | `search-source`, `field-search`, `trace`, `xref`, `impact`                            |               `S0–S2` |
+| Geschäftsprozesse    | `process list`, `process describe`, `process query`, `process impact`, `process diff` |               `S0/S1` |
+| Db2 read-only        | `query-table`, `query-sql`, `sql`                                                     |                  `S2` |
+| Journalauswertung    | `journal-row-diff`                                                                    |                  `S2` |
+| Review & Planung     | `assess-risk`, `generate-test`, `generate-checklist`, `qa`                            |                  `S1` |
+| Artefakte            | `bundle`, `analyses`, `serve`                                                         |               `S0/S1` |
+| Kontrollierte Writes | `write-sql`, `upsert`, `insert`, `update`, `delete`                                   |                  `S3` |
+| Operator-gated       | `bridge`                                                                              |                  `S4` |
+| Integrationen        | `mcp`, `docs:generate-catalog`, `pui-inspect`, `pui-edit`                             | abhängig vom Kommando |
 
 Beispiele:
 
@@ -462,6 +463,28 @@ node .\cli\zeus.js context show --json
 ```
 
 Der Agentenvertrag und die Entscheidungslogik stehen in [`docs/ai/session-prompt.md`](docs/ai/session-prompt.md) und [`docs/ai/cli-agent-guide.md`](docs/ai/cli-agent-guide.md).
+
+## 🧭 Business Process Intelligence
+
+Die Process-Intelligence-Oberfläche beschreibt Geschäftsprozesse aus vorhandener,
+belegbarer Evidenz. Sie ist projektneutral aufgebaut: lokale Prozesskataloge und
+Glossare werden explizit angegeben und nicht automatisch veröffentlicht.
+
+```bash
+node cli/zeus.js process list --catalog ./output/process-candidates.json --json
+node cli/zeus.js process describe --catalog ./output/process-candidates.json --id <process-id> --json
+node cli/zeus.js process query \
+  --catalog ./output/process-candidates.json \
+  --glossary ./output/process-glossary.json \
+  --question "Was macht Schnittstelle <id>?" \
+  --json
+node cli/zeus.js process impact --catalog ./output/process-candidates.json --id <process-id> --json
+node cli/zeus.js process diff --catalog ./output/process-candidates.json --id <process-id> --json
+```
+
+Antworten enthalten Quellen, Freshness, Konfidenz und offene Punkte. Veraltete,
+unbekannte oder mehrdeutige Begriffe werden sichtbar gemacht und nicht erraten.
+Details: [`docs/ai/process-intelligence.md`](docs/ai/process-intelligence.md).
 
 ## 🤖 Lokale MCP-Integration (optional, experimentell)
 
@@ -864,22 +887,20 @@ Key guardrails:
 
 ### Install and run
 
-**Beta status (0.2.0-beta.5):** prerelease after Tracks B–E (loader profile UX, PI export/corpora,
-embeddings default off, ADR hygiene) on the beta.3 Project Intelligence baseline. Core contracts
-are stabilizing; some surfaces remain experimental. Details:
-[release notes](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.5) and
-`CHANGELOG.md`. Before relying on artifacts locally, run `npm run docs:check` and
-`npm run package:smoke` and follow the golden path.
+**Release status (0.3.0-rc.1):** release candidate for the next Community feature release.
+The stable baseline remains `0.2.0`; `0.3.0-rc.1` adds evidence-backed Business Process
+Intelligence, process queries, and scoped Business Glossary / Legacy Vocabulary. Before relying
+on artifacts locally, run `npm run docs:check` and `npm run package:smoke` and follow the golden path.
 
-Published prerelease assets (tarball, SBOM, SHA256SUMS, build-provenance attestation):
-[`v0.2.0-beta.5`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0-beta.5).
-The beta.2 historical attestation exception does **not** apply. Policy:
-[`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
+Release assets (tarball, SBOM, SHA256SUMS, build-provenance attestation):
+[`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.1).
+For the stable baseline, see [`v0.2.0`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0).
+Policy: [`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
 
 Recommended install from the GitHub release tarball:
 
 ```bash
-npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.2.0-beta.5/zeus-rpg-promptkit-0.2.0-beta.5.tgz
+npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.3.0-rc.1/zeus-rpg-promptkit-0.3.0-rc.1.tgz
 ```
 
 From a source checkout:
@@ -1125,20 +1146,21 @@ Details: [`docs/quickstart/secrets-and-overrides.md`](docs/quickstart/secrets-an
 
 The generated [`docs/tool-catalog.md`](docs/tool-catalog.md) is the **authoritative reference** for commands, options, safety levels, and examples.
 
-| Task                     | Commands                                                             |           Safety |
-| ------------------------ | -------------------------------------------------------------------- | ---------------: |
-| Setup and profiles       | `doctor`, `profiles`, `resources`, `secret`                          |          `S0/S1` |
-| Discovery                | `discover-environment`, `resolve-object`, `inspect-object`, `joblog` |          `S0/S2` |
-| Sources                  | `fetch`, `fetch-member`, `spool-read`, `copy-to-workspace`, `diff`   |          `S1/S2` |
-| Analysis                 | `analyze`, `investigate`, `workflow`, `workflow run`                 |          `S0/S1` |
-| Search and relationships | `search-source`, `field-search`, `trace`, `xref`, `impact`           |          `S0–S2` |
-| Db2 read-only            | `query-table`, `query-sql`, `sql`                                    |             `S2` |
-| Journal analysis         | `journal-row-diff`                                                   |             `S2` |
-| Review and planning      | `assess-risk`, `generate-test`, `generate-checklist`, `qa`           |             `S1` |
-| Artifacts                | `bundle`, `analyses`, `serve`                                        |          `S0/S1` |
-| Controlled writes        | `write-sql`, `upsert`, `insert`, `update`, `delete`                  |             `S3` |
-| Operator-gated           | `bridge`                                                             |             `S4` |
-| Integrations             | `mcp`, `docs:generate-catalog`, `pui-inspect`, `pui-edit`            | command-specific |
+| Task                     | Commands                                                                              |           Safety |
+| ------------------------ | ------------------------------------------------------------------------------------- | ---------------: |
+| Setup and profiles       | `doctor`, `profiles`, `resources`, `secret`                                           |          `S0/S1` |
+| Discovery                | `discover-environment`, `resolve-object`, `inspect-object`, `joblog`                  |          `S0/S2` |
+| Sources                  | `fetch`, `fetch-member`, `spool-read`, `copy-to-workspace`, `diff`                    |          `S1/S2` |
+| Analysis                 | `analyze`, `investigate`, `workflow`, `workflow run`                                  |          `S0/S1` |
+| Search and relationships | `search-source`, `field-search`, `trace`, `xref`, `impact`                            |          `S0–S2` |
+| Business processes       | `process list`, `process describe`, `process query`, `process impact`, `process diff` |          `S0/S1` |
+| Db2 read-only            | `query-table`, `query-sql`, `sql`                                                     |             `S2` |
+| Journal analysis         | `journal-row-diff`                                                                    |             `S2` |
+| Review and planning      | `assess-risk`, `generate-test`, `generate-checklist`, `qa`                            |             `S1` |
+| Artifacts                | `bundle`, `analyses`, `serve`                                                         |          `S0/S1` |
+| Controlled writes        | `write-sql`, `upsert`, `insert`, `update`, `delete`                                   |             `S3` |
+| Operator-gated           | `bridge`                                                                              |             `S4` |
+| Integrations             | `mcp`, `docs:generate-catalog`, `pui-inspect`, `pui-edit`                             | command-specific |
 
 Examples:
 
@@ -1179,6 +1201,28 @@ node .\cli\zeus.js context show --json
 See [`docs/ai/cli-agent-guide.md`](docs/ai/cli-agent-guide.md) for the agent
 contract and intent-based workflow selection. MCP is an optional adapter for
 clients that explicitly support it.
+
+## 🧭 Business Process Intelligence
+
+The Process Intelligence surface describes business processes from existing,
+traceable evidence. It is project-neutral: local process catalogs and glossaries
+are supplied explicitly and are never published automatically.
+
+```bash
+node cli/zeus.js process list --catalog ./output/process-candidates.json --json
+node cli/zeus.js process describe --catalog ./output/process-candidates.json --id <process-id> --json
+node cli/zeus.js process query \
+  --catalog ./output/process-candidates.json \
+  --glossary ./output/process-glossary.json \
+  --question "What does interface <id> do?" \
+  --json
+node cli/zeus.js process impact --catalog ./output/process-candidates.json --id <process-id> --json
+node cli/zeus.js process diff --catalog ./output/process-candidates.json --id <process-id> --json
+```
+
+Answers preserve sources, freshness, confidence, and open questions. Stale,
+unknown, or ambiguous terms are made visible instead of being guessed.
+Details: [`docs/ai/process-intelligence.md`](docs/ai/process-intelligence.md).
 
 ## 🤖 Local MCP integration (experimental)
 
