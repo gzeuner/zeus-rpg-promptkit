@@ -329,6 +329,7 @@ Typical mappings:
 - backend failure → `doctor`, then continue locally if possible;
 - path outside workspace → use an explicitly contained path;
 - optional Project Intelligence absent → use local analysis and evidence tools;
+- registry busy → wait for the current local writer and retry once; never delete an active lock;
 - approval required → show the exact command and wait.
 
 ## Agent output contract

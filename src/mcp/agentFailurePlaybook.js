@@ -49,6 +49,20 @@ const FAILURE_ENTRIES = Object.freeze([
     nextTools: ['zeus.analyze', 'zeus.analyses', 'zeus.workflow.suggest'],
   }),
   Object.freeze({
+    code: 'REGISTRY_BUSY',
+    summary: 'Another local process is updating the shared analysis registry.',
+    do: [
+      'Let the current local writer finish and retry the same mutation once.',
+      'Use zeus.analyses for a read-only status check when the condition persists.',
+      'Only investigate stale locks after confirming that the recorded owner process is gone.',
+    ],
+    dont: [
+      'Do not delete an active registry lock.',
+      'Do not edit the registry file while another process owns the lock.',
+    ],
+    nextTools: ['zeus.analyses', 'zeus.agent.bootstrap'],
+  }),
+  Object.freeze({
     code: 'UNRESOLVED_REFS',
     summary: 'Symbols, bindings, or references could not be resolved from evidence.',
     do: [

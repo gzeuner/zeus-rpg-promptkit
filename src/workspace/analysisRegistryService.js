@@ -18,6 +18,10 @@ const path = require('path');
 const REGISTRY_SCHEMA_VERSION = 1;
 const WORKSPACE_ID_PATTERN = /^[a-z0-9_-]+$/;
 const WORKSPACE_PATH_ENCODING = 'base64utf8';
+const REGISTRY_LOCK_SUFFIX = '.lock';
+const DEFAULT_REGISTRY_LOCK_WAIT_MS = 10_000;
+const DEFAULT_REGISTRY_LOCK_RETRY_MS = 25;
+const DEFAULT_REGISTRY_LOCK_STALE_MS = 30_000;
 
 function normalizeWorkspaceId(value) {
   return String(value || '')
@@ -126,6 +130,164 @@ function validateRegistryPath(registryPath) {
   return resolved;
 }
 
+function normalizeDuration(value, fallback, name, minimum) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < minimum) {
+    throw new Error(`Invalid registry lock option: ${name} must be a number >= ${minimum}.`);
+  }
+  return Math.floor(parsed);
+}
+
+function resolveRegistryLockOptions(options = {}) {
+  const source = options && typeof options === 'object' ? options : {};
+  return {
+    waitMs: normalizeDuration(source.waitMs, DEFAULT_REGISTRY_LOCK_WAIT_MS, 'waitMs', 0),
+    retryMs: normalizeDuration(source.retryMs, DEFAULT_REGISTRY_LOCK_RETRY_MS, 'retryMs', 1),
+    staleMs: normalizeDuration(source.staleMs, DEFAULT_REGISTRY_LOCK_STALE_MS, 'staleMs', 1),
+  };
+}
+
+function sleepSync(milliseconds) {
+  if (milliseconds <= 0) {
+    return;
+  }
+  const buffer = new SharedArrayBuffer(4);
+  Atomics.wait(new Int32Array(buffer), 0, 0, milliseconds);
+}
+
+function getRegistryLockPath(registryPath) {
+  return `${validateRegistryPath(registryPath)}${REGISTRY_LOCK_SUFFIX}`;
+}
+
+function readRegistryLockOwner(lockPath) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(path.join(lockPath, 'owner.json'), 'utf8'));
+    if (!Number.isInteger(parsed.pid) || parsed.pid <= 0) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function isProcessAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error && error.code !== 'ESRCH';
+  }
+}
+
+function tryReclaimStaleRegistryLock(lockPath, staleMs) {
+  let stats;
+  try {
+    stats = fs.statSync(lockPath);
+  } catch {
+    return false;
+  }
+
+  if (!stats.isDirectory() || Date.now() - stats.mtimeMs < staleMs) {
+    return false;
+  }
+
+  const owner = readRegistryLockOwner(lockPath);
+  if (!owner || isProcessAlive(owner.pid)) {
+    return false;
+  }
+
+  const reclaimPath = `${lockPath}.stale-${process.pid}-${Date.now()}`;
+  try {
+    fs.renameSync(lockPath, reclaimPath);
+    fs.rmSync(reclaimPath, { recursive: true, force: true });
+    return true;
+  } catch (error) {
+    if (error && error.code === 'ENOENT') {
+      return true;
+    }
+    try {
+      fs.rmSync(reclaimPath, { recursive: true, force: true });
+    } catch {
+      // Another contender may have reclaimed the same lock directory.
+    }
+    return false;
+  }
+}
+
+function acquireRegistryLock(registryPath, options = {}) {
+  const resolvedPath = validateRegistryPath(registryPath);
+  const lockPath = getRegistryLockPath(resolvedPath);
+  const { waitMs, retryMs, staleMs } = resolveRegistryLockOptions(options);
+  const startedAt = Date.now();
+
+  fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
+
+  while (true) {
+    try {
+      fs.mkdirSync(lockPath);
+      try {
+        fs.writeFileSync(
+          path.join(lockPath, 'owner.json'),
+          `${JSON.stringify({ pid: process.pid, acquiredAt: new Date().toISOString() })}\n`,
+          { encoding: 'utf8', flag: 'wx' }
+        );
+      } catch (error) {
+        fs.rmSync(lockPath, { recursive: true, force: true });
+        throw error;
+      }
+
+      let released = false;
+      return {
+        path: lockPath,
+        release() {
+          if (released) {
+            return;
+          }
+          released = true;
+          fs.rmSync(lockPath, { recursive: true, force: true });
+        },
+      };
+    } catch (error) {
+      if (!error || error.code !== 'EEXIST') {
+        throw error;
+      }
+    }
+
+    if (tryReclaimStaleRegistryLock(lockPath, staleMs)) {
+      continue;
+    }
+
+    const elapsed = Date.now() - startedAt;
+    if (elapsed >= waitMs) {
+      const busyError = new Error(
+        'Analysis registry is busy because another process is updating it. Retry the command.'
+      );
+      busyError.code = 'REGISTRY_BUSY';
+      throw busyError;
+    }
+
+    sleepSync(Math.min(retryMs, waitMs - elapsed));
+  }
+}
+
+function withRegistryLock(registryPath, operation, options = {}) {
+  if (typeof operation !== 'function') {
+    throw new TypeError('Registry lock operation must be a function.');
+  }
+
+  const lock = acquireRegistryLock(registryPath, options);
+  try {
+    return operation();
+  } finally {
+    lock.release();
+  }
+}
+
 function readRegistry(registryPath) {
   const resolvedPath = validateRegistryPath(registryPath);
   if (!fs.existsSync(resolvedPath)) {
@@ -170,8 +332,7 @@ function writeRegistry(registryPath, data) {
   return payload;
 }
 
-function registerWorkspace(registryPath, workspaceEntry) {
-  const registry = readRegistry(registryPath);
+function registerWorkspace(registryPath, workspaceEntry, options = {}) {
   const normalized = normalizeWorkspaceEntry(workspaceEntry);
 
   if (
@@ -182,36 +343,49 @@ function registerWorkspace(registryPath, workspaceEntry) {
     throw new Error(`Workspace path not found: ${normalized.path}`);
   }
 
-  const byIdIndex = registry.workspaces.findIndex(entry => entry.id === normalized.id);
-  const byPathIndex = registry.workspaces.findIndex(entry => entry.path === normalized.path);
-  const existingIndex = byIdIndex !== -1 ? byIdIndex : byPathIndex;
+  return withRegistryLock(
+    registryPath,
+    () => {
+      const registry = readRegistry(registryPath);
+      const byIdIndex = registry.workspaces.findIndex(entry => entry.id === normalized.id);
+      const byPathIndex = registry.workspaces.findIndex(entry => entry.path === normalized.path);
+      const existingIndex = byIdIndex !== -1 ? byIdIndex : byPathIndex;
 
-  if (existingIndex >= 0) {
-    const existing = registry.workspaces[existingIndex];
-    registry.workspaces[existingIndex] = {
-      ...existing,
-      ...normalized,
-      registeredAt: existing.registeredAt || normalized.registeredAt,
-      lastAccessedAt: new Date().toISOString(),
-    };
-  } else {
-    registry.workspaces.push(normalized);
-  }
+      if (existingIndex >= 0) {
+        const existing = registry.workspaces[existingIndex];
+        registry.workspaces[existingIndex] = {
+          ...existing,
+          ...normalized,
+          registeredAt: existing.registeredAt || normalized.registeredAt,
+          lastAccessedAt: new Date().toISOString(),
+        };
+      } else {
+        registry.workspaces.push(normalized);
+      }
 
-  writeRegistry(registryPath, registry);
-  return normalized;
+      writeRegistry(registryPath, registry);
+      return normalized;
+    },
+    options
+  );
 }
 
-function unregisterWorkspace(registryPath, workspaceId) {
+function unregisterWorkspace(registryPath, workspaceId, options = {}) {
   const normalizedId = validateWorkspaceId(workspaceId);
-  const registry = readRegistry(registryPath);
-  const previousCount = registry.workspaces.length;
-  registry.workspaces = registry.workspaces.filter(entry => entry.id !== normalizedId);
-  if (registry.workspaces.length === previousCount) {
-    return false;
-  }
-  writeRegistry(registryPath, registry);
-  return true;
+  return withRegistryLock(
+    registryPath,
+    () => {
+      const registry = readRegistry(registryPath);
+      const previousCount = registry.workspaces.length;
+      registry.workspaces = registry.workspaces.filter(entry => entry.id !== normalizedId);
+      if (registry.workspaces.length === previousCount) {
+        return false;
+      }
+      writeRegistry(registryPath, registry);
+      return true;
+    },
+    options
+  );
 }
 
 function listWorkspaces(registryPath) {
@@ -226,16 +400,22 @@ function listWorkspaces(registryPath) {
   });
 }
 
-function touchWorkspace(registryPath, workspaceId) {
+function touchWorkspace(registryPath, workspaceId, options = {}) {
   const normalizedId = validateWorkspaceId(workspaceId);
-  const registry = readRegistry(registryPath);
-  const workspace = registry.workspaces.find(entry => entry.id === normalizedId);
-  if (!workspace) {
-    throw new Error(`Workspace not found: ${normalizedId}`);
-  }
-  workspace.lastAccessedAt = new Date().toISOString();
-  writeRegistry(registryPath, registry);
-  return workspace;
+  return withRegistryLock(
+    registryPath,
+    () => {
+      const registry = readRegistry(registryPath);
+      const workspace = registry.workspaces.find(entry => entry.id === normalizedId);
+      if (!workspace) {
+        throw new Error(`Workspace not found: ${normalizedId}`);
+      }
+      workspace.lastAccessedAt = new Date().toISOString();
+      writeRegistry(registryPath, registry);
+      return workspace;
+    },
+    options
+  );
 }
 
 function readWorkspaceById(registryPath, workspaceId) {
@@ -245,11 +425,17 @@ function readWorkspaceById(registryPath, workspaceId) {
 
 module.exports = {
   REGISTRY_SCHEMA_VERSION,
+  REGISTRY_LOCK_SUFFIX,
+  DEFAULT_REGISTRY_LOCK_WAIT_MS,
+  DEFAULT_REGISTRY_LOCK_RETRY_MS,
+  DEFAULT_REGISTRY_LOCK_STALE_MS,
   WORKSPACE_PATH_ENCODING,
   WORKSPACE_ID_PATTERN,
   decodeWorkspacePath,
   deriveWorkspaceId,
   encodeWorkspacePath,
+  acquireRegistryLock,
+  getRegistryLockPath,
   listWorkspaces,
   normalizeWorkspaceEntry,
   readRegistry,
@@ -259,5 +445,6 @@ module.exports = {
   touchWorkspace,
   unregisterWorkspace,
   validateWorkspaceId,
+  withRegistryLock,
   writeRegistry,
 };

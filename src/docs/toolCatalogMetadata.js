@@ -307,7 +307,8 @@ const COMMAND_METADATA = Object.freeze({
     safety: 'S1',
     scope: 'Local',
     subcommands: ['list', 'register', 'index', 'open', 'show', 'unregister'],
-    purpose: 'List, register, inspect, and open locally tracked analysis artifacts.',
+    purpose:
+      'List, register, inspect, and open locally tracked analysis artifacts; registry mutations are serialized with a local lock and return REGISTRY_BUSY when contention exceeds the bounded wait.',
     example: 'node cli/zeus.js analyses list --profile default',
   }),
   bridge: Object.freeze({
