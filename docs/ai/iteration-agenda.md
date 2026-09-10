@@ -292,9 +292,10 @@ and secret/private-content checks:
 
 Implementation: `src/projectIntelligence/process/views.js`,
 `freshness.js`, `evaluation.js`, the process CLI, and
-`tests/project-intelligence-process-agent-views.test.js`. The feature branch
-is ready for protected-branch verification; no credentials, private system
-identifiers, host paths, or environment-specific values are part of it.
+`tests/project-intelligence-process-agent-views.test.js`. Tracked in PR #327;
+the merge remains gated by the protected-branch pipeline. No credentials,
+private system identifiers, host paths, or environment-specific values are
+part of it.
 
 ### Iteration 15 — Role-based views and optional chat adapter (completed)
 
