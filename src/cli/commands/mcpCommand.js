@@ -99,13 +99,16 @@ async function runMcp(args = {}, dependencies = {}) {
   try {
     const createServer = dependencies.createMcpServer || createMcpServer;
     const cwd = dependencies.cwd || process.cwd();
-    const subcommand = String((Array.isArray(args._) && args._[0]) || 'serve')
+    const positional = String((Array.isArray(args._) && args._[0]) || '')
       .trim()
       .toLowerCase();
-    if (!subcommand || subcommand === 'help') {
+    const helpRequested =
+      args.help === true || args.h === true || positional === 'help' || positional === '-h';
+    if (helpRequested) {
       printMcpHelp();
       return;
     }
+    const subcommand = positional || 'serve';
     if (subcommand !== 'serve') {
       throw new Error(`Unknown mcp subcommand: ${subcommand}`);
     }

@@ -50,6 +50,24 @@ test('known command help remains successful', () => {
   assert.match(result.stdout, /Bridge commands/);
 });
 
+test('MCP help flags print help without starting the stdio server', () => {
+  for (const args of [
+    ['mcp', '--help'],
+    ['mcp', '-h'],
+    ['mcp', 'help'],
+  ]) {
+    const result = spawnSync(process.execPath, [CLI, ...args], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      timeout: 5000,
+    });
+    assert.equal(result.error, undefined, `${args.join(' ')} should finish within the timeout`);
+    assert.equal(result.status, 0, `${args.join(' ')} stderr: ${result.stderr}`);
+    assert.match(result.stdout, /MCP commands:/, args.join(' '));
+    assert.equal(result.stderr, '', args.join(' '));
+  }
+});
+
 test('tools guide provides a machine-readable AI first point to check', () => {
   const result = run(['tools', 'guide', '--json']);
   assert.equal(result.status, 0, result.stderr);

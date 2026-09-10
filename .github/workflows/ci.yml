@@ -35,6 +35,7 @@ jobs:
       - run: npm run test:release-integrity
       - run: npm run test:cli-help
       - run: npm run check:repo-portability
+      - run: npm run check:tracked-fixtures
       - run: npm run check:public-knowledge-claims
       - run: npm run check:consolidated-hygiene
       - run: npm run test:quality

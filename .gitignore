@@ -144,6 +144,17 @@ bundles/
 rpg_sources/
 java/lib/
 
+# Intentionally tracked neutral fixtures and demo artifacts.
+# Keep these exceptions narrow so real analysis output remains ignored.
+!docs/ai/ai-knowledge-projection.md
+!tests/fixtures/sanitized-corpus/prompt/workflow-ai-knowledge.json
+!tests/fixtures/prompt-contracts/orderpgm-ai-knowledge.json
+!examples/demo-rpg-mini-system/rpg_sources/
+!examples/demo-rpg-mini-system/rpg_sources/**
+!examples/demo-rpg-mini-system/output-baseline/
+!examples/demo-rpg-mini-system/output-baseline/**
+!examples/demo-rpg-mini-system/templates/ai-session-prompt.template.md
+
 # -----------------------------
 # Local planning
 # -----------------------------
