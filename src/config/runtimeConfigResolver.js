@@ -276,8 +276,13 @@ function resolveAnalyzeConfig(
     connections: buildAnalyzeConnectionRoles(profile, analyzeDbRoles),
     ibmi: {
       host: args.host || env.ZEUS_FETCH_HOST || fetchProfile.host || null,
-      user: args.user || env.ZEUS_FETCH_USER || fetchProfile.user || null,
-      password: args.password || env.ZEUS_FETCH_PASSWORD || fetchProfile.password || null,
+      user: resolveSecretValue(args.user || env.ZEUS_FETCH_USER || fetchProfile.user || null, {
+        env,
+      }),
+      password: resolveSecretValue(
+        args.password || env.ZEUS_FETCH_PASSWORD || fetchProfile.password || null,
+        { env }
+      ),
     },
     contextOptimizer: readContextOptimizerConfig(profiles, profile, env),
     analysisLimits: readAnalysisLimitConfig(profiles, profile, env),
@@ -361,11 +366,13 @@ function resolveFetchConfig(
       (fetchSystemOverride.config && fetchSystemOverride.config.host) ||
       env.ZEUS_FETCH_HOST ||
       fetchProfile.host,
-    user:
+    user: resolveSecretValue(
       args.user ||
-      (fetchSystemOverride.config && fetchSystemOverride.config.user) ||
-      env.ZEUS_FETCH_USER ||
-      fetchProfile.user,
+        (fetchSystemOverride.config && fetchSystemOverride.config.user) ||
+        env.ZEUS_FETCH_USER ||
+        fetchProfile.user,
+      { env }
+    ),
     password: resolveSecretValue(
       args.password ||
         (fetchSystemOverride.config && fetchSystemOverride.config.password) ||
