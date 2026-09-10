@@ -624,9 +624,18 @@ Why:
 
 ## 22. Recommended next incremental task
 
-The safe catalog slice is implemented. The next useful hardening step is to
-make shared local registries fail safely under concurrent writers, then to
-reuse the validated catalog in role-specific process views. Neither step may
+The safe catalog slice is implemented. Shared local registries now fail safely
+under concurrent writers:
+
+- registry mutations hold a local cross-process lock across read-modify-write
+  and retain atomic replacement for the JSON file
+- waiting is bounded and returns the stable `REGISTRY_BUSY` recovery code
+  instead of allowing silent last-writer-wins loss
+- stale locks are reclaimed only after the recorded owner process is gone
+- read-only listing and lookup remain lock-free and unchanged
+
+The next useful task is to reuse the validated catalog and process contracts in
+role-specific process views. Neither this hardening nor that follow-up may
 weaken the raw/sanitized/final boundary or make the private inventory a public
 knowledge source.
 

@@ -256,6 +256,22 @@ it is sensitive project data and is never committed, packaged, exposed through
 MCP, or promoted into the final catalog. Only synthetic fixtures and
 project-neutral contracts belong in the public repository.
 
+### Cross-cutting hardening — concurrent analysis registry writers
+
+- Protected every registry mutation's read-modify-write sequence with a local,
+  cross-process lock while keeping list/read operations unchanged.
+- Used a bounded wait and stable `REGISTRY_BUSY` recovery code instead of
+  silently overwriting another writer's update.
+- Added dead-owner reclamation after a stale threshold; active locks are never
+  reclaimed solely because they are old.
+- Added a narrow ignore rule for temporary registry lock directories and
+  cross-process regression tests using only synthetic workspaces.
+
+Implementation: `src/workspace/analysisRegistryService.js` and
+`tests/analysis-registry-service.test.js`. No credentials, private paths, or
+project-specific identifiers are part of the implementation. The next active
+roadmap item remains Iteration 15.
+
 ### Iteration 15 — Role-based views and optional chat adapter
 
 Build role-specific projections from the same process facts:

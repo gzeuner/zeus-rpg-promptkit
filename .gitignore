@@ -175,6 +175,8 @@ local/
 
 # Optional local registry file (if kept inside this repository)
 config/analyses-registry.json
+# Cross-process registry locks are temporary local directories.
+**/*.json.lock/
 # Optional in-repo analyses workspaces
 analyses/
 

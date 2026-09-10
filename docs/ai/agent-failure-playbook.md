@@ -1,7 +1,7 @@
 ---
 Title: Agent Failure Playbook
 Description: Stable CLI and MCP recovery guidance for AI agents working with Zeus.
-Last Updated: 2026-09-06
+Last Updated: 2026-09-10
 ---
 
 # Agent Failure Playbook
@@ -35,7 +35,7 @@ node cli/zeus.js agent log suggest --goal "<goal>" --json
 node cli/zeus.js agent log --outcome failed --command "<safe-command>" --failure-code <CODE> --symptom "<what happened>" --workaround "<what helped>" --lesson "<reusable lesson>" --next-step "<next safe command>" --json
 ```
 
-Use stable codes such as `MISSING_PROFILE`, `ANALYZE_REQUIRED`, or `PATH_OUTSIDE_WORKSPACE`. The log is stored at `.zeus/agent-experience.jsonl` and accepts structured redacted fields only. Do not copy raw stdout/stderr, environment dumps, credentials, or credential-bearing URLs into it. A lesson should describe the reusable contract, not merely repeat the error text.
+Use stable codes such as `MISSING_PROFILE`, `ANALYZE_REQUIRED`, `PATH_OUTSIDE_WORKSPACE`, or `REGISTRY_BUSY`. The log is stored at `.zeus/agent-experience.jsonl` and accepts structured redacted fields only. Do not copy raw stdout/stderr, environment dumps, credentials, or credential-bearing URLs into it. A lesson should describe the reusable contract, not merely repeat the error text.
 
 For a non-trivial proposed response, run the matching corpus scenario before
 executing any suggested route:
@@ -95,6 +95,24 @@ Next CLI commands:
 node cli/zeus.js analyze --source <source-root> --program <program> --out <output-root> --json
 node cli/zeus.js analyses list --json
 node cli/zeus.js impact --target <target> --program <program> --out <output-root> --json
+```
+
+### REGISTRY_BUSY
+
+Another local process is updating the shared analysis registry. Registry
+mutations use a short-lived cross-process lock so a read-modify-write sequence
+cannot silently discard another writer's update.
+
+- Do: let the current local command finish and retry the same command once.
+- Do: if the condition persists, verify that no Zeus process is still active;
+  an abandoned lock is reclaimed only when its recorded owner process is gone.
+- Do not: delete an active lock or edit the registry while another process owns
+  it.
+
+Next CLI command:
+
+```text
+node cli/zeus.js analyses list --json
 ```
 
 ### UNRESOLVED_REFS
