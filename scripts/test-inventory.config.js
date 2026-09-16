@@ -82,6 +82,7 @@ module.exports = {
       'tests/fetch-member-service.test.js',
       'tests/project-intelligence-process-retrieval.test.js',
       'tests/project-intelligence-process-vocabulary.test.js',
+      'tests/project-intelligence-process-experience.test.js',
     ],
   },
   exclusions: [],

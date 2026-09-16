@@ -8,7 +8,9 @@ Description: How an AI agent discovers, reviews, and consumes evidence-backed le
 The process projection is an evidence-backed view above the existing Project
 Intelligence graph. It does not replace source analysis, snapshots, freshness,
 or technical evidence. CLI remains the canonical integration surface; the
-library API exposes the same read-only retrieval service for integrations.
+library API exposes the same read-only retrieval service for integrations. The
+optional process experience route writes only a bounded, sanitized local
+learning event.
 
 ## Current vertical slice
 
@@ -70,6 +72,8 @@ node cli/zeus.js process view --catalog ./output/process-candidates.json --id <p
 node cli/zeus.js process impact --catalog ./output/process-candidates.json --id <process-id> --changed-evidence-id <evidence-id> --json
 node cli/zeus.js process diff --catalog ./output/process-candidates.json --id <process-id> --json
 node cli/zeus.js process evaluate --catalog ./output/process-candidates.json --scenarios ./output/process-scenarios.json --json
+node cli/zeus.js process experience --question "Was macht <legacy-term>?" --outcome ambiguous --glossary-term "<legacy-term>" --json
+node cli/zeus.js process improvements --out .zeus/process-improvements.json --json
 node cli/zeus.js process glossary list --glossary ./output/process-glossary.json --only-applicable --json
 node cli/zeus.js process glossary resolve --glossary ./output/process-glossary.json --term "<legacy-term>" --json
 node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht <legacy-term>?" --json
@@ -106,6 +110,31 @@ An optional scenario file is a JSON array or `{ "scenarios": [...] }` with
 `maxFreshness`. The evaluation output contains scenario ids and outcomes, not
 the question text, so private questions do not become part of a committed
 quality artifact.
+
+## Process experience loop
+
+Process retrieval is read-only by default. When a question is blocked,
+ambiguous, incomplete, stale, or corrected, record one concise sanitized event
+in the existing local experience log:
+
+```text
+node cli/zeus.js process experience --question "<question>" --outcome <blocked|ambiguous|incomplete|stale|corrected> --process-id <id> --json
+node cli/zeus.js process improvements --json
+```
+
+Optional `--target-surface` values are `glossary-entry`, `extraction-rule`,
+`prompt`, and `contract`. Use `--correction`, `--evidence-summary`, and
+`--glossary-term` only with sanitized, bounded text. The event is appended to
+`.zeus/agent-experience.jsonl`, which is local-only and Git-ignored. Raw source,
+credentials, environment dumps, and credential-bearing URLs do not belong in
+the event.
+
+`process improvements` groups repeated signals into bounded candidates. A
+candidate is reviewable after two matching sanitized signals; every candidate
+requires a domain review and a sanitized regression fixture. The report never
+publishes process knowledge, changes a glossary, edits an extractor, or
+modifies an authoritative contract automatically. `--out` may write only a
+workspace-contained `.zeus/*.json` review artifact.
 
 ## Scoped business glossary
 
@@ -159,5 +188,5 @@ still advisory and is not a source of truth.
    when resolution is ambiguous.
 
 When a process query is incomplete, record the sanitized failure or correction
-with `agent log`; never copy credentials, private runtime values, or raw source
-content into the experience record.
+with `process experience`; use `agent log` for non-process failures. Never copy
+credentials, private runtime values, or raw source content into either record.
