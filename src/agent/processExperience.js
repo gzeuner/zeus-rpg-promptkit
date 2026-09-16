@@ -180,6 +180,12 @@ function candidateId(key) {
   return `process-improvement:${crypto.createHash('sha256').update(key).digest('hex').slice(0, 16)}`;
 }
 
+function catalogFingerprint(value) {
+  const normalized = redactAgentText(value);
+  if (!normalized) return null;
+  return `catalog:${crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 16)}`;
+}
+
 function buildProcessImprovementCandidates(events) {
   const groups = new Map();
   for (const event of events) {
@@ -201,6 +207,7 @@ function buildProcessImprovementCandidates(events) {
       processIds: new Set(),
       processVersionIds: new Set(),
       glossaryTerms: new Set(),
+      catalogFingerprints: new Set(),
       questions: [],
       corrections: [],
       lastRecordedAt: null,
@@ -210,6 +217,8 @@ function buildProcessImprovementCandidates(events) {
     if (event.processId) group.processIds.add(event.processId);
     if (event.processVersionId) group.processVersionIds.add(event.processVersionId);
     if (event.glossaryTerm) group.glossaryTerms.add(event.glossaryTerm);
+    const fingerprint = catalogFingerprint(event.catalog);
+    if (fingerprint) group.catalogFingerprints.add(fingerprint);
     if (event.question && group.questions.length < MAX_PROCESS_EXAMPLES) {
       group.questions.push(event.question);
     }
@@ -234,6 +243,8 @@ function buildProcessImprovementCandidates(events) {
       processIds: [...group.processIds].sort(),
       processVersionIds: [...group.processVersionIds].sort(),
       glossaryTerms: [...group.glossaryTerms].sort(),
+      catalogFingerprints: [...group.catalogFingerprints].sort(),
+      catalogCount: group.catalogFingerprints.size,
       questionExamples: group.questions.map(redactAgentText),
       correctionExamples: group.corrections.map(redactAgentText),
       eventIds: group.eventIds.slice(-MAX_PROCESS_EXAMPLES),

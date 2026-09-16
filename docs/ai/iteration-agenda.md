@@ -353,6 +353,21 @@ knowledge or modify an authoritative contract automatically.
 The next active roadmap item is Iteration 19: use reviewed process-improvement
 candidates to strengthen cross-catalog learning and promotion readiness.
 
+### Iteration 19 — Cross-catalog learning and promotion readiness
+
+Use review-only process-improvement reports as bounded learning inputs across
+separate catalogs or environments. Combine only stable candidate dimensions and
+short catalog fingerprints; never copy raw catalog names, source content, or
+private runtime values into a shared readiness artifact.
+
+The `process promotion-check` CLI route requires at least two distinct catalog
+fingerprints and an explicitly sanitized regression fixture before reporting a
+candidate as `ready-for-human-review`. Missing evidence produces stable blocker
+codes. The result is read-only, keeps `automaticPromotion` and
+`promotionAllowed` false, and still requires domain-owner review plus an
+explicit change to the authoritative glossary, extraction rule, prompt, or
+contract.
+
 ## Business Process Intelligence vertical slice
 
 Iterations 10–13 should first deliver one complete neutral example process:
