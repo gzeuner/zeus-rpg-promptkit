@@ -172,7 +172,7 @@ identifiers, or environment-specific values are part of the implementation.
 The public release candidate [`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.1)
 was published from main SHA `7435637…` after PR #321; the release workflow and
 fresh-download verification completed successfully. The next active roadmap
-item is now Iteration 18.
+item at that time was Iteration 18; it is now completed in PR #328.
 
 ## Business Process Intelligence roadmap
 
@@ -269,8 +269,8 @@ project-neutral contracts belong in the public repository.
 
 Implementation: `src/workspace/analysisRegistryService.js` and
 `tests/analysis-registry-service.test.js`. No credentials, private paths, or
-project-specific identifiers are part of the implementation. The next active
-roadmap item is Iteration 18.
+project-specific identifiers are part of the implementation. Iteration 18
+followed this hardening work and is now completed in PR #328.
 
 ### Iterations 15–17 — completed in the current integration block
 
@@ -292,10 +292,9 @@ and secret/private-content checks:
 
 Implementation: `src/projectIntelligence/process/views.js`,
 `freshness.js`, `evaluation.js`, the process CLI, and
-`tests/project-intelligence-process-agent-views.test.js`. Tracked in PR #327;
-the merge remains gated by the protected-branch pipeline. No credentials,
-private system identifiers, host paths, or environment-specific values are
-part of it.
+`tests/project-intelligence-process-agent-views.test.js`. Delivered in PR #327
+after protected-branch verification. No credentials, private system
+identifiers, host paths, or environment-specific values are part of it.
 
 ### Iteration 15 — Role-based views and optional chat adapter (completed)
 
@@ -331,10 +330,10 @@ Add deterministic fixtures and evaluation scenarios for:
 
 Track coverage, evidence ratio, unresolved count, freshness, and answer
 reproducibility as reviewable metrics. The first deterministic evaluation
-surface is now available through `process evaluate`; broader experience-driven
-scenario growth remains part of Iteration 18.
+surface is now available through `process evaluate`; the experience-driven
+scenario and improvement loop was delivered in Iteration 18.
 
-### Iteration 18 — Experience-driven process improvement (implemented; pipeline pending)
+### Iteration 18 — Experience-driven process improvement (completed in PR #328)
 
 Extend the existing sanitized experience loop to record process questions that
 were blocked, ambiguous, incomplete, stale, or corrected. Produce reviewable
@@ -347,7 +346,12 @@ Implementation: `src/agent/processExperience.js`, the `process experience` and
 `tests/project-intelligence-process-experience.test.js`. The implementation
 reuses the local `.zeus/agent-experience.jsonl` log, applies secret/path
 hygiene, groups repeated signals deterministically, and requires human review
-plus a sanitized regression fixture before promotion.
+plus a sanitized regression fixture before promotion. Delivered in PR #328
+after protected-branch verification. No process experience can publish
+knowledge or modify an authoritative contract automatically.
+
+The next active roadmap item is Iteration 19: use reviewed process-improvement
+candidates to strengthen cross-catalog learning and promotion readiness.
 
 ## Business Process Intelligence vertical slice
 
