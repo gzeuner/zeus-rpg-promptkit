@@ -190,3 +190,25 @@ still advisory and is not a source of truth.
 When a process query is incomplete, record the sanitized failure or correction
 with `process experience`; use `agent log` for non-process failures. Never copy
 credentials, private runtime values, or raw source content into either record.
+
+## Cross-catalog learning and promotion readiness
+
+Process improvement reports are intentionally local and review-only. When the
+same sanitized finding is observed in separate catalogs, combine the reports
+without copying raw catalog names or process questions into a shared artifact:
+
+```powershell
+node cli/zeus.js process promotion-check `
+  --candidate .zeus/process-improvements-a.json `
+  --candidate .zeus/process-improvements-b.json `
+  --fixture .zeus/process-regression-fixture.json `
+  --out .zeus/process-promotion-readiness.json --json
+```
+
+The readiness report uses short SHA-256 catalog fingerprints, requires at
+least two sanitized signals from distinct catalogs, and requires a fixture
+with `sanitized: true`, `containsCredentials: false`, and
+`containsPrivateProjectIdentifiers: false`. It reports `not-ready` blockers or
+`ready-for-human-review`; `promotionAllowed` and `automaticPromotion` remain
+false in every result. A domain owner must verify the evidence and change the
+authoritative glossary, extraction rule, prompt, or contract explicitly.

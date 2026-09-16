@@ -55,6 +55,7 @@ node cli/zeus.js process view --catalog ./output/process-candidates.json --id <p
 node cli/zeus.js process evaluate --catalog ./output/process-candidates.json --json
 node cli/zeus.js process experience --question "<question>" --outcome <blocked|ambiguous|incomplete|stale|corrected> --json
 node cli/zeus.js process improvements --json
+node cli/zeus.js process promotion-check --candidate .zeus/report-a.json --candidate .zeus/report-b.json --fixture .zeus/process-regression-fixture.json --json
 node cli/zeus.js process glossary resolve --glossary ./output/process-glossary.json --term "<legacy-term>" --json
 node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht <legacy-term>?" --json
 ```
@@ -75,6 +76,14 @@ This reuses the local `.zeus/agent-experience.jsonl` log. Run
 candidates for `glossary-entry`, `extraction-rule`, `prompt`, or `contract`.
 Two matching signals make a candidate; human review and a sanitized regression
 fixture are still required, and no candidate is auto-promoted.
+
+When the signal should be reusable across environments or catalogs, combine
+review reports with `process promotion-check`. It counts only anonymized
+catalog fingerprints and accepts fixtures only when they explicitly declare
+`sanitized: true`, `containsCredentials: false`, and
+`containsPrivateProjectIdentifiers: false`. A candidate is merely
+`ready-for-human-review`; the command is read-only and never edits a glossary,
+extractor, prompt, or contract.
 
 ## Stable agent response contract
 

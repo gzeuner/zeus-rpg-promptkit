@@ -26,6 +26,10 @@ const {
   writeProcessImprovementArtifact,
 } = require('../../agent/processExperience');
 const {
+  buildProcessPromotionReadiness,
+  writeProcessPromotionArtifact,
+} = require('../../agent/processPromotion');
+const {
   listGlossaryEntries,
   resolveGlossaryTerm,
   readGlossaryCatalog,
@@ -42,6 +46,7 @@ const OPERATIONS = new Set([
   'evaluate',
   'experience',
   'improvements',
+  'promotion-check',
   'glossary',
 ]);
 
@@ -73,6 +78,9 @@ function printHelp() {
   );
   console.log(
     '  zeus process improvements [--experience-log <.zeus/file.jsonl>] [--out <.zeus/file.json>] [--json]'
+  );
+  console.log(
+    '  zeus process promotion-check --candidate <.zeus/process-improvements.json> [--candidate <.zeus/file.json>] [--fixture <.zeus/file.json>] [--out <.zeus/file.json>] [--json]'
   );
   console.log(
     '  zeus process glossary list --glossary <relative-path> [--only-applicable] [--json]'
@@ -165,6 +173,15 @@ function changedEvidenceOptions(args) {
   };
 }
 
+function repeatedOptions(args, key) {
+  const supplied = args[key];
+  if (supplied == null || supplied === true) return [];
+  return (Array.isArray(supplied) ? supplied : [supplied])
+    .flatMap(value => String(value).split(','))
+    .map(value => value.trim())
+    .filter(Boolean);
+}
+
 function printHuman(operation, result) {
   if (operation === 'list') {
     console.log(`Processes: ${result.total} (freshness: ${result.freshness.status})`);
@@ -237,6 +254,18 @@ function printHuman(operation, result) {
     if (result.artifact) console.log(`Artifact: ${result.artifact}`);
     return;
   }
+  if (operation === 'promotion-check') {
+    console.log(
+      `Process promotion readiness: ${result.review.readyForHumanReview} ready, ${result.review.blocked} blocked`
+    );
+    for (const candidate of result.candidates) {
+      console.log(
+        `- ${candidate.status} ${candidate.issue} -> ${candidate.targetSurface} (signals=${candidate.signalCount}, catalogs=${candidate.catalogCount})`
+      );
+    }
+    if (result.artifact) console.log(`Artifact: ${result.artifact}`);
+    return;
+  }
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -292,6 +321,18 @@ function runProcess(args = {}) {
       });
       if (args.out) {
         result.artifact = writeProcessImprovementArtifact(result, {
+          cwd: process.cwd(),
+          out: args.out,
+        });
+      }
+    } else if (operation === 'promotion-check') {
+      result = buildProcessPromotionReadiness({
+        cwd: process.cwd(),
+        candidatePaths: repeatedOptions(args, 'candidate'),
+        fixturePaths: repeatedOptions(args, 'fixture'),
+      });
+      if (args.out) {
+        result.artifact = writeProcessPromotionArtifact(result, {
           cwd: process.cwd(),
           out: args.out,
         });

@@ -246,7 +246,7 @@ function printHelp() {
     '  zeus project-knowledge <discover|status|create-project|full-index|query|...> [options] [--json]  # thin PI adapter; commercial ops when registered'
   );
   console.log(
-    '  zeus process <list|describe|query|impact|diff|glossary> --catalog <relative-path> [--glossary <relative-path>] [--id|--term|--question <value>] [scope options] [--json]  # local read-only process and vocabulary retrieval'
+    '  zeus process <list|describe|query|impact|diff|glossary|experience|improvements|promotion-check> [options] [--json]  # local process retrieval and review-only learning'
   );
   console.log(
     '  Global module wiring (optional, explicit only): --built-in-modules <list|professional|enterprise> or --commercial-module <package-or-path>'
@@ -258,7 +258,7 @@ function printHelp() {
 
 function parseArgs(argv) {
   const args = { _: [] };
-  const multiValueKeys = new Set(['require-column', 'sfl-field', 'tag']);
+  const multiValueKeys = new Set(['require-column', 'sfl-field', 'tag', 'candidate', 'fixture']);
 
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];

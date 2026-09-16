@@ -46,6 +46,13 @@ Then use `process improvements --json` to produce review-only candidates for a
 glossary entry, extraction rule, prompt, or contract. These commands never
 publish process knowledge or change authoritative files automatically.
 
+For a candidate seen in more than one local catalog, combine the reports with
+`process promotion-check --candidate <.zeus/report-a.json> --candidate
+<.zeus/report-b.json> --fixture <.zeus/process-regression-fixture.json> --json`.
+The result uses anonymized catalog fingerprints and reports explicit blockers;
+even a ready candidate still requires domain-owner review and an explicit
+authoritative change.
+
 For project-specific legacy vocabulary, resolve the term first or pass an
 explicit glossary catalog to the query:
 `node cli/zeus.js process glossary resolve --glossary <relative-path> --term "<legacy-term>" --json`.
