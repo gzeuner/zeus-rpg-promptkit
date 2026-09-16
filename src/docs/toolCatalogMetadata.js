@@ -430,8 +430,8 @@ const COMMAND_METADATA = Object.freeze({
       'node cli/zeus.js project-knowledge locate --knowledge-root $KNOWLEDGE_ROOT --project-id demo --relative-path QRPGLESRC/ORDER.rpgle --json',
   }),
   process: Object.freeze({
-    safety: 'S0',
-    scope: 'Local read-only',
+    safety: 'S1',
+    scope: 'Local read-mostly',
     subcommands: [
       'list',
       'describe',
@@ -441,11 +441,13 @@ const COMMAND_METADATA = Object.freeze({
       'impact',
       'diff',
       'evaluate',
+      'experience',
+      'improvements',
       'glossary list',
       'glossary resolve',
     ],
     purpose:
-      'Retrieve evidence-backed business-process projections, role-specific views, a local read-only chat adapter, deterministic quality evaluations, and project-specific legacy vocabulary from explicit local catalogs. Exact identifiers, scoped glossary mappings, and reviewed facts are ranked ahead of derived summaries; ambiguity, freshness, evidence, confidence, and unknowns remain visible.',
+      'Retrieve evidence-backed business-process projections, role-specific views, a local read-only chat adapter, deterministic quality evaluations, and project-specific legacy vocabulary from explicit local catalogs. Record sanitized process learnings and produce review-only improvement candidates without publishing or mutating knowledge. Exact identifiers, scoped glossary mappings, and reviewed facts are ranked ahead of derived summaries; ambiguity, freshness, evidence, confidence, and unknowns remain visible.',
     example:
       'node cli/zeus.js process chat --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json',
   }),

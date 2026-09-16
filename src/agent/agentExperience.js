@@ -24,6 +24,7 @@ const MAX_SUGGESTION_LIMIT = 8;
 const OUTCOMES = Object.freeze(['success', 'partial', 'failed', 'blocked']);
 const EVENT_TYPES = Object.freeze(['failure', 'outcome', 'lesson']);
 const SAFE_TEXT_FIELDS = Object.freeze([
+  'topic',
   'goal',
   'command',
   'failureCode',
@@ -34,6 +35,15 @@ const SAFE_TEXT_FIELDS = Object.freeze([
   'sessionId',
   'profile',
   'program',
+  'question',
+  'processId',
+  'processVersionId',
+  'catalog',
+  'processIssue',
+  'targetSurface',
+  'glossaryTerm',
+  'correction',
+  'evidenceSummary',
 ]);
 
 const SECRET_OPTION_PATTERN =
@@ -153,6 +163,7 @@ function normalizeExperienceEvent(input = {}) {
     recordedAt: normalizeRecordedAt(input.recordedAt),
     event,
     outcome,
+    topic: normalizeEnum(input.topic, ['agent', 'process'], 'topic', 'agent'),
     failureCode: normalizeCode(input.failureCode, outcome === 'success' ? 'NONE' : 'UNCLASSIFIED'),
     goal: redactAgentText(input.goal) || null,
     command,
@@ -163,6 +174,15 @@ function normalizeExperienceEvent(input = {}) {
     sessionId: redactAgentText(input.sessionId) || null,
     profile: redactAgentText(input.profile) || null,
     program: redactAgentText(input.program) || null,
+    question: redactAgentText(input.question) || null,
+    processId: redactAgentText(input.processId) || null,
+    processVersionId: redactAgentText(input.processVersionId) || null,
+    catalog: redactAgentText(input.catalog) || null,
+    processIssue: normalizeCode(input.processIssue, null),
+    targetSurface: redactAgentText(input.targetSurface) || null,
+    glossaryTerm: redactAgentText(input.glossaryTerm) || null,
+    correction: redactAgentText(input.correction) || null,
+    evidenceSummary: redactAgentText(input.evidenceSummary) || null,
     tags: normalizeTags(input.tags || input.tag),
     redaction: {
       applied: true,
@@ -208,10 +228,14 @@ function normalizeStoredEvent(parsed) {
   event.recordedAt = normalizeRecordedAt(parsed.recordedAt);
   event.event = eventType;
   event.outcome = outcome;
+  event.topic = ['agent', 'process'].includes(String(parsed.topic || '').toLowerCase())
+    ? String(parsed.topic).toLowerCase()
+    : 'agent';
   event.failureCode = normalizeCode(
     parsed.failureCode,
     outcome === 'success' ? 'NONE' : 'UNCLASSIFIED'
   );
+  event.processIssue = normalizeCode(parsed.processIssue, null);
   event.tags = normalizeTags(parsed.tags);
   event.redaction = {
     applied: true,
@@ -223,8 +247,17 @@ function normalizeStoredEvent(parsed) {
 function buildExperienceSummary(events) {
   const byOutcome = Object.fromEntries(OUTCOMES.map(outcome => [outcome, 0]));
   const byFailureCode = new Map();
+  const processByIssue = new Map();
+  let processEventCount = 0;
   for (const event of events) {
     byOutcome[event.outcome] += 1;
+    if (event.topic === 'process') {
+      processEventCount += 1;
+      if (event.processIssue) {
+        processByIssue.set(event.processIssue, (processByIssue.get(event.processIssue) || 0) + 1);
+      }
+      continue;
+    }
     if (event.outcome !== 'success') {
       byFailureCode.set(event.failureCode, (byFailureCode.get(event.failureCode) || 0) + 1);
     }
@@ -242,7 +275,16 @@ function buildExperienceSummary(events) {
       failureCode: event.failureCode,
       lesson: event.lesson,
     }));
-  return { total: events.length, byOutcome, recurringFailureCodes, lessons };
+  const processIssues = [...processByIssue.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .map(([processIssue, count]) => ({ processIssue, count }));
+  return {
+    total: events.length,
+    byOutcome,
+    recurringFailureCodes,
+    lessons,
+    process: { total: processEventCount, issues: processIssues },
+  };
 }
 
 function tokenizeExperienceGoal(goal) {

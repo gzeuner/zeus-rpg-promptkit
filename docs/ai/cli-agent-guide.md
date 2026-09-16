@@ -53,6 +53,8 @@ node cli/zeus.js process query --catalog ./output/process-candidates.json --ques
 node cli/zeus.js process chat --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json
 node cli/zeus.js process view --catalog ./output/process-candidates.json --id <process-id> --role architect --json
 node cli/zeus.js process evaluate --catalog ./output/process-candidates.json --json
+node cli/zeus.js process experience --question "<question>" --outcome <blocked|ambiguous|incomplete|stale|corrected> --json
+node cli/zeus.js process improvements --json
 node cli/zeus.js process glossary resolve --glossary ./output/process-glossary.json --term "<legacy-term>" --json
 node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht <legacy-term>?" --json
 ```
@@ -65,6 +67,14 @@ behavior. A result remains advisory and candidate knowledge until explicit
 review and publication. For glossary-backed queries, verify `glossaryResolutions`:
 only `resolved` mappings may expand retrieval; `ambiguous` and `unknown`
 mappings remain visible as uncertainty.
+
+When a process question is blocked, ambiguous, incomplete, stale, or later
+corrected, record one sanitized learning signal with `process experience`.
+This reuses the local `.zeus/agent-experience.jsonl` log. Run
+`process improvements --json` to group repeated signals into reviewable
+candidates for `glossary-entry`, `extraction-rule`, `prompt`, or `contract`.
+Two matching signals make a candidate; human review and a sanitized regression
+fixture are still required, and no candidate is auto-promoted.
 
 ## Stable agent response contract
 

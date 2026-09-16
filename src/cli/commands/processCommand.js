@@ -19,6 +19,13 @@ const {
   readProcessEvaluationScenarios,
 } = require('../../projectIntelligence/process/evaluation');
 const {
+  PROCESS_ISSUES,
+  TARGET_SURFACES,
+  buildProcessImprovementReport,
+  recordProcessExperience,
+  writeProcessImprovementArtifact,
+} = require('../../agent/processExperience');
+const {
   listGlossaryEntries,
   resolveGlossaryTerm,
   readGlossaryCatalog,
@@ -33,11 +40,13 @@ const OPERATIONS = new Set([
   'impact',
   'diff',
   'evaluate',
+  'experience',
+  'improvements',
   'glossary',
 ]);
 
 function printHelp() {
-  console.log('Process Intelligence (local, read-only) commands:');
+  console.log('Process Intelligence (local, read-mostly) commands:');
   console.log('  zeus process list --catalog <relative-path> [--status <status>] [--json]');
   console.log('  zeus process describe --catalog <relative-path> --id <process-id> [--json]');
   console.log(
@@ -60,6 +69,12 @@ function printHelp() {
     '  zeus process evaluate --catalog <relative-path> [--scenarios <relative-path>] [--json]'
   );
   console.log(
+    `  zeus process experience --question "<question>" --outcome <${PROCESS_ISSUES.join('|')}> [--process-id <id>] [--target-surface <${TARGET_SURFACES.join('|')}>] [--json]`
+  );
+  console.log(
+    '  zeus process improvements [--experience-log <.zeus/file.jsonl>] [--out <.zeus/file.json>] [--json]'
+  );
+  console.log(
     '  zeus process glossary list --glossary <relative-path> [--only-applicable] [--json]'
   );
   console.log(
@@ -73,7 +88,7 @@ function printHelp() {
     'The optional glossary is a local workspace-relative process-glossary-catalog JSON file with global, environment, organization, project, or task scope.'
   );
   console.log(
-    'Results preserve lifecycle status, freshness, evidence references, confidence, and unknowns. View and chat are local read-only projections; evaluate is deterministic and never calls a model.'
+    'Results preserve lifecycle status, freshness, evidence references, confidence, and unknowns. View and chat are local read-only projections; evaluate is deterministic and never calls a model. Experience is local and sanitized; improvements are review-only and never auto-promote.'
   );
 }
 
@@ -206,12 +221,28 @@ function printHuman(operation, result) {
     if (result.unknowns.length > 0) console.log(`Unknowns: ${result.unknowns.join('; ')}`);
     return;
   }
+  if (operation === 'experience') {
+    console.log(`Process experience recorded: ${result.event.eventId}`);
+    console.log(`Outcome: ${result.event.processIssue}; target: ${result.event.targetSurface}`);
+    console.log(`Log: ${result.path}`);
+    return;
+  }
+  if (operation === 'improvements') {
+    console.log(`Process improvement candidates: ${result.candidates.length}`);
+    for (const candidate of result.candidates) {
+      console.log(
+        `- ${candidate.status} ${candidate.issue} -> ${candidate.targetSurface} (${candidate.count})`
+      );
+    }
+    if (result.artifact) console.log(`Artifact: ${result.artifact}`);
+    return;
+  }
   console.log(JSON.stringify(result, null, 2));
 }
 
 /**
- * Run the process retrieval/query family. Every operation is local read-only
- * and consumes an explicitly named process-candidate catalog.
+ * Run the process retrieval/query family. Retrieval remains local read-only;
+ * experience recording is an explicit bounded local write.
  */
 function runProcess(args = {}) {
   const positional = Array.isArray(args._) ? args._ : [];
@@ -237,7 +268,35 @@ function runProcess(args = {}) {
     const scope = scopeOptions(args);
     const freshness = freshnessOptions(args);
     const changedEvidence = changedEvidenceOptions(args);
-    if (operation === 'glossary') {
+    if (operation === 'experience') {
+      result = recordProcessExperience({
+        cwd: process.cwd(),
+        experienceLog: args['experience-log'],
+        question: requireValue(args, 'question'),
+        outcome: requireValue(args, 'outcome'),
+        processId: args['process-id'] || args.processId || null,
+        processVersionId: args['process-version-id'] || args.processVersionId || null,
+        catalog: args.catalog || null,
+        glossaryTerm: args['glossary-term'] || args.term || null,
+        targetSurface: args['target-surface'] || args.targetSurface || null,
+        correction: args.correction || null,
+        evidenceSummary: args['evidence-summary'] || null,
+        lesson: args.lesson || null,
+        nextStep: args['next-step'] || args.nextStep || null,
+      });
+    } else if (operation === 'improvements') {
+      result = buildProcessImprovementReport({
+        cwd: process.cwd(),
+        experienceLog: args['experience-log'],
+        limit: args.limit,
+      });
+      if (args.out) {
+        result.artifact = writeProcessImprovementArtifact(result, {
+          cwd: process.cwd(),
+          out: args.out,
+        });
+      }
+    } else if (operation === 'glossary') {
       const suboperation = String(positional[1] || 'help')
         .trim()
         .toLowerCase();

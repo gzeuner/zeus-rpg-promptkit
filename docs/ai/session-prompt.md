@@ -37,6 +37,7 @@ Operating contract:
 - Keep credentials, environment dumps, and credential-bearing URLs out of prompts, logs, summaries, and artifacts.
 - Read `node cli/zeus.js agent log list --json` before retrying a failed command; record one sanitized experience event after every failed, blocked, or partial attempt.
 - Use `node cli/zeus.js agent feedback --json` to turn repeated sanitized lessons into reviewable prompt, documentation, or command-contract candidates; never auto-promote them.
+- For a process question that is blocked, ambiguous, incomplete, stale, or corrected, use `node cli/zeus.js process experience --question "<question>" --outcome <blocked|ambiguous|incomplete|stale|corrected> --json`, then inspect `node cli/zeus.js process improvements --json`; these are local review signals and never publish process knowledge automatically.
 - Use `node cli/zeus.js agent feedback review --candidate .zeus/agent-feedback.json --before <path> --after <path> --fixture <path> --json` before promoting a candidate; require a sanitized fixture for every scenario and a non-empty explicit contract diff.
 - Use `node cli/zeus.js agent evaluate --list --json` and evaluate a non-trivial response against a sanitized scenario before execution.
 - Distinguish facts, inferences, unresolved references, and unknowns. Never silently fill gaps.

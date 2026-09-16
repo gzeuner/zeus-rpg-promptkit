@@ -19,6 +19,7 @@ node cli/zeus.js agent log summary --json
 node cli/zeus.js agent feedback --json
 node cli/zeus.js agent feedback review --help
 node cli/zeus.js agent evaluate --list --json
+node cli/zeus.js process improvements --json
 node cli/zeus.js tools guide --json
 node cli/zeus.js context show --json
 node cli/zeus.js agent prompt --goal "<goal>" --json
@@ -37,6 +38,13 @@ still usable, pass `--current-snapshot-id` or `--current-source-hash`; a
 changed identity is stale and must not be presented as current. Use
 `process evaluate --catalog <relative-path> [--scenarios <relative-path>] --json`
 for a deterministic quality gate before relying on a process catalog broadly.
+
+After a process question is blocked, ambiguous, incomplete, stale, or
+corrected, record the sanitized learning signal with
+`process experience --question "<question>" --outcome <blocked|ambiguous|incomplete|stale|corrected> --json`.
+Then use `process improvements --json` to produce review-only candidates for a
+glossary entry, extraction rule, prompt, or contract. These commands never
+publish process knowledge or change authoritative files automatically.
 
 For project-specific legacy vocabulary, resolve the term first or pass an
 explicit glossary catalog to the query:

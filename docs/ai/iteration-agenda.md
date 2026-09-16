@@ -1,7 +1,7 @@
 ---
 Title: Promptkit AI Iteration Agenda
 Description: Living backlog for making Zeus immediately understandable and usable by CLI-based AI agents.
-Last Updated: 2026-09-10
+Last Updated: 2026-09-16
 ---
 
 # Promptkit AI Iteration Agenda
@@ -334,13 +334,20 @@ reproducibility as reviewable metrics. The first deterministic evaluation
 surface is now available through `process evaluate`; broader experience-driven
 scenario growth remains part of Iteration 18.
 
-### Iteration 18 — Experience-driven process improvement
+### Iteration 18 — Experience-driven process improvement (implemented; pipeline pending)
 
 Extend the existing sanitized experience loop to record process questions that
 were blocked, ambiguous, incomplete, stale, or corrected. Produce reviewable
 improvement candidates for glossary entries, extraction rules, prompts, and
 contracts. No experience record may directly publish process knowledge or
 modify authoritative contracts.
+
+Implementation: `src/agent/processExperience.js`, the `process experience` and
+`process improvements` CLI routes, and
+`tests/project-intelligence-process-experience.test.js`. The implementation
+reuses the local `.zeus/agent-experience.jsonl` log, applies secret/path
+hygiene, groups repeated signals deterministically, and requires human review
+plus a sanitized regression fixture before promotion.
 
 ## Business Process Intelligence vertical slice
 
