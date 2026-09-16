@@ -350,10 +350,7 @@ plus a sanitized regression fixture before promotion. Delivered in PR #328
 after protected-branch verification. No process experience can publish
 knowledge or modify an authoritative contract automatically.
 
-The next active roadmap item is Iteration 19: use reviewed process-improvement
-candidates to strengthen cross-catalog learning and promotion readiness.
-
-### Iteration 19 — Cross-catalog learning and promotion readiness
+### Iteration 19 — Cross-catalog learning and promotion readiness (completed in PR #330)
 
 Use review-only process-improvement reports as bounded learning inputs across
 separate catalogs or environments. Combine only stable candidate dimensions and
@@ -367,6 +364,19 @@ codes. The result is read-only, keeps `automaticPromotion` and
 `promotionAllowed` false, and still requires domain-owner review plus an
 explicit change to the authoritative glossary, extraction rule, prompt, or
 contract.
+
+Implementation: `src/agent/processPromotion.js`, the `process
+promotion-check` CLI route, the anonymized catalog fingerprint projection in
+`src/agent/processExperience.js`, and
+`tests/project-intelligence-process-promotion.test.js`. The implementation
+combines bounded local reports, validates sanitized regression-fixture
+metadata, emits stable blockers, and never publishes or promotes process
+knowledge automatically. Delivered in PR #330 after protected-branch
+verification; all required checks passed.
+
+The next active roadmap item is Iteration 20: build a versioned process-answer
+regression corpus and explicit reviewer decisions so repeated business-process
+questions can be evaluated before a catalog or prompt change is accepted.
 
 ## Business Process Intelligence vertical slice
 
