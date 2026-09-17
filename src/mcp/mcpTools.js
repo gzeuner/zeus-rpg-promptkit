@@ -89,7 +89,11 @@ const {
 } = require('../db2/readOnlyQueryService');
 const { resolveObjectsByName } = require('../db2/tableNameResolutionService');
 const { runWriteDb2Query } = require('../db2/writeQueryService');
-const { executeQuerySql, executeQueryTable } = require('../core/queryService');
+const {
+  executeDescribeJdbcTable,
+  executeQuerySql,
+  executeQueryTable,
+} = require('../core/queryService');
 const { executeSearchSource, normalizeFilePattern } = require('../core/searchSourceService');
 const { analyzeImpactFromGraph, normalizeId } = require('../impact/impactAnalyzer');
 const { assessCanonicalModel } = require('../impact/riskAssessmentAnalyzer');
@@ -1886,6 +1890,11 @@ let listMcpTools = function listMcpTools() {
             minLength: 1,
             description: 'Read-only SQL statement (SELECT/WITH only).',
           },
+          connection: {
+            type: 'string',
+            minLength: 1,
+            description: 'Optional named external JDBC connection from profile.jdbcConnections.',
+          },
           maxRows: {
             type: 'integer',
             minimum: 1,
@@ -1901,6 +1910,22 @@ let listMcpTools = function listMcpTools() {
             minLength: 1,
             description: 'Optional comma-separated library list override.',
           },
+        },
+      },
+    },
+    {
+      name: 'zeus.describe-table',
+      description: 'Reads schema-qualified column metadata from a named external JDBC connection.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['profile', 'connection', 'table'],
+        properties: {
+          profile: { type: 'string', minLength: 1 },
+          connection: { type: 'string', minLength: 1 },
+          table: { type: 'string', minLength: 1, description: 'schema.table' },
+          schema: { type: 'string', minLength: 1 },
+          includeRowCount: { type: 'boolean' },
         },
       },
     },
@@ -2936,6 +2961,22 @@ function executeReadOnlyProfiles(args = {}, context = {}) {
             passwordSet: Boolean(fetch.password),
           }
         : null,
+      jdbcConnections:
+        resolved.jdbcConnections && typeof resolved.jdbcConnections === 'object'
+          ? Object.entries(resolved.jdbcConnections).map(([name, connection]) => ({
+              name,
+              driver: connection && connection.driver ? String(connection.driver) : null,
+              environment:
+                connection && connection.environment ? String(connection.environment) : null,
+              configured: Boolean(
+                connection &&
+                connection.driver &&
+                connection.url &&
+                connection.user &&
+                connection.password
+              ),
+            }))
+          : [],
     };
   });
 
@@ -6071,6 +6112,8 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
             metadataDb: profile && profile.metadataDb ? profile.metadataDb : null,
             testDataDb: profile && profile.testDataDb ? profile.testDataDb : null,
             fetch: profile && profile.fetch ? profile.fetch : null,
+            jdbcConnections:
+              profile && Array.isArray(profile.jdbcConnections) ? profile.jdbcConnections : [],
           }))
         : [],
       timestamp: new Date().toISOString(),
@@ -7042,6 +7085,9 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     const runnerArgs = {
       profile,
       sql,
+      ...(args && typeof args.connection === 'string' && args.connection.trim()
+        ? { connection: args.connection.trim() }
+        : {}),
       ...(args && args.maxRows !== undefined ? { 'max-rows': args.maxRows } : {}),
       ...(args && typeof args.defaultSchema === 'string' && args.defaultSchema.trim()
         ? { 'default-schema': args.defaultSchema.trim() }
@@ -7055,6 +7101,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     try {
       execution = querySqlRunner(runnerArgs, {
         cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
       });
     } catch (error) {
       const invalidArgCodes = new Set([
@@ -7062,6 +7109,10 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         'SQL_REQUIRED',
         'SQL_FILE_NOT_FOUND',
         'DB2_CONFIG_INCOMPLETE',
+        'JDBC_CONFIG_INCOMPLETE',
+        'JDBC_CONNECTION_REQUIRED',
+        'JDBC_CONNECTION_NOT_FOUND',
+        'JDBC_OPTION_UNSUPPORTED',
       ]);
       if (
         (error && error.code && invalidArgCodes.has(error.code)) ||
@@ -7079,12 +7130,72 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
       ok: true,
       service: 'zeus-rpg-promptkit',
       profile,
+      connection: execution.connection || null,
+      databaseKind: execution.databaseKind || 'db2',
       defaultSchema: execution.defaultSchema || null,
       libraryList: Array.isArray(execution.libraryList) ? execution.libraryList : [],
       workingContext: buildWorkingContextView({ cwd: context.cwd || process.cwd() }),
       columns: Array.isArray(execution.columns) ? execution.columns : [],
       rows: Array.isArray(execution.rows) ? execution.rows : [],
       rowCount: Number(execution.rowCount || 0),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  if (name === 'zeus.describe-table') {
+    const describeTableRunner =
+      typeof context.describeTableRunner === 'function'
+        ? context.describeTableRunner
+        : executeDescribeJdbcTable;
+    const runnerArgs = {
+      profile: args && args.profile,
+      connection: args && args.connection,
+      table: args && args.table,
+      ...(args && args.schema ? { schema: args.schema } : {}),
+      ...(args && args.includeRowCount ? { 'include-row-count': true } : {}),
+    };
+    let execution;
+    try {
+      execution = describeTableRunner(runnerArgs, {
+        cwd: context.cwd || process.cwd(),
+        env: context.env || process.env,
+      });
+    } catch (error) {
+      if (
+        (error &&
+          error.code &&
+          new Set([
+            'PROFILE_REQUIRED',
+            'JDBC_CONNECTION_REQUIRED',
+            'JDBC_CONNECTION_NOT_FOUND',
+            'JDBC_CONFIG_INCOMPLETE',
+          ]).has(error.code)) ||
+        /jdbc table|invalid identifier|missing required option/i.test(
+          String(error && error.message ? error.message : '')
+        )
+      ) {
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+      }
+      throw error;
+    }
+    return {
+      ok: true,
+      service: 'zeus-rpg-promptkit',
+      profile: String(runnerArgs.profile || ''),
+      connection: execution.connection || null,
+      schema: execution.schema || null,
+      table: execution.table || null,
+      includeRowCount: Boolean(execution.includeRowCount),
+      tableRowCount: execution.tableRowCount ?? null,
+      columns: Array.isArray(execution.columns && execution.columns.columns)
+        ? execution.columns.columns
+        : [],
+      rows: Array.isArray(execution.columns && execution.columns.rows)
+        ? execution.columns.rows
+        : [],
+      rowCount: Number(
+        execution.columns && execution.columns.rowCount ? execution.columns.rowCount : 0
+      ),
       timestamp: new Date().toISOString(),
     };
   }

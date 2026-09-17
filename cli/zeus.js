@@ -24,6 +24,7 @@ const { runServe } = require('../src/cli/commands/serveCommand');
 const { runDoctor } = require('../src/cli/commands/doctorCommand');
 const { runQueryTable } = require('../src/cli/commands/queryTableCommand');
 const { runQuerySql } = require('../src/cli/commands/querySqlCommand');
+const { runDescribeTable } = require('../src/cli/commands/describeTableCommand');
 const { runCopyToWorkspace } = require('../src/cli/commands/copyToWorkspaceCommand');
 const { runDiff } = require('../src/cli/commands/diffCommand');
 const { runFieldSearch } = require('../src/cli/commands/fieldSearchCommand');
@@ -127,7 +128,7 @@ function printHelp() {
     '  zeus [--config <path>] analyses <list|register|index|open|show|unregister> [options]'
   );
   console.log(
-    '  zeus [--config <path>] doctor --profile <name> [--probe] [--show-resolved] [--strict]'
+    '  zeus [--config <path>] doctor --profile <name> [--connection <name>] [--probe] [--show-resolved] [--strict]'
   );
   console.log(
     '    --strict: Hygiene-Probleme (Klartext-Secrets) als kritischer Fehler behandeln (spiegelt "secret check" Exit-Verhalten)'
@@ -155,7 +156,10 @@ function printHelp() {
     '  zeus [--config <path>] query-table --profile <name> --table <name> [--schema <name>] [--library <name>] [--filter <pattern>] [--save <datei.csv|datei.json>] [--json]'
   );
   console.log(
-    '  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ...[; SELECT ...]" | --file <path>) [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--save <datei.csv|datei.json>] [--watch <sek>] [--repl] [--json]'
+    '  zeus [--config <path>] query-sql --profile <name> (--sql "SELECT ...[; SELECT ...]" | --file <path>) [--connection <name>] [--default-schema <schema>] [--liblist <lib1,lib2,...>] [--max-rows <n>] [--output table|csv] [--wide] [--save <datei.csv|datei.json>] [--watch <sek>] [--repl] [--json]'
+  );
+  console.log(
+    '  zeus [--config <path>] describe-table --profile <name> --connection <name> --table <schema.table> [--include-row-count] [--output table|csv|json] [--json]'
   );
   console.log('  zeus sql (alias for query-sql, implies --repl if no --sql/--file)');
   console.log(
@@ -342,6 +346,7 @@ function splitCommandArgs(argv) {
 // Befehle die DB2 oder IBM i Verbindung brauchen ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Env-Check wird nur fÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼r diese ausgefÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼hrt
 const COMMANDS_NEEDING_ENV = new Set([
   'query-sql',
+  'describe-table',
   'query-table',
   'fetch',
   'fetch-member',
@@ -374,6 +379,7 @@ const FETCH_ENV_VARS = ['ZEUS_FETCH_USER', 'ZEUS_FETCH_PASSWORD', 'ZEUS_FETCH_HO
 const COMMANDS_AUTO_ENV = new Set([
   'doctor',
   'query-sql',
+  'describe-table',
   'query-table',
   'resolve-object',
   'joblog',
@@ -513,9 +519,12 @@ function autoLoadEnvironment(command, args) {
   }
 }
 
-function checkEnvLoaded(command) {
+function checkEnvLoaded(command, args = {}) {
   if (!COMMANDS_NEEDING_ENV.has(command)) return;
-  const missingDb = collectMissingDbEnvVars();
+  const jdbcOnlyCommand =
+    isFlagDisabled(process.env.ZEUS_JDBC_ONLY) &&
+    (command === 'query-sql' || command === 'describe-table' || Boolean(args.connection));
+  const missingDb = jdbcOnlyCommand ? [] : collectMissingDbEnvVars();
   const missingFetch =
     command.startsWith('fetch') || command === 'spool-read'
       ? FETCH_ENV_VARS.filter(envVar => !hasNonEmptyEnvVar(envVar))
@@ -563,7 +572,7 @@ async function main() {
   normalizeJsonArgs(args);
 
   autoLoadEnvironment(command, args);
-  checkEnvLoaded(command);
+  checkEnvLoaded(command, args);
 
   if (command === 'analyze') {
     await runAnalyze(args);
@@ -626,6 +635,11 @@ async function main() {
 
   if (command === 'query-table') {
     await runQueryTable(args);
+    return;
+  }
+
+  if (command === 'describe-table') {
+    await runDescribeTable(args);
     return;
   }
 

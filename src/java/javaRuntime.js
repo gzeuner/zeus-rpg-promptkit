@@ -21,6 +21,7 @@ const { spawnSync } = require('child_process');
 // process list. Kept in sync with java/ZeusSecrets.java.
 const SECRET_ENV_VAR = 'ZEUS_JV_PASSWORD';
 const SECRET_ENV_SENTINEL = '@ZEUS_SECRET_ENV@';
+const JAVA_UTF8_OPTION = '-Dfile.encoding=UTF-8';
 
 function resolveJavaPaths({ cwd = process.cwd() } = {}) {
   const sourceDir = path.resolve(cwd, 'java');
@@ -70,6 +71,10 @@ function resolveJavaClasspathEntries({ cwd = process.cwd() } = {}) {
 
 function resolveJavaClasspath(options) {
   return resolveJavaClasspathEntries(options).join(path.delimiter);
+}
+
+function buildJavaClassArgs(className, args, { cwd = process.cwd() } = {}) {
+  return [JAVA_UTF8_OPTION, '-cp', resolveJavaClasspath({ cwd }), className, ...args];
 }
 
 function getClassFilePath(binDir, sourceFilePath) {
@@ -179,7 +184,6 @@ function runJavaClass(
   args,
   { cwd = process.cwd(), heartbeat = false, password, timeout } = {}
 ) {
-  const classpath = resolveJavaClasspath({ cwd });
   const showHeartbeat = heartbeat || HEARTBEAT_CLASSES.has(className);
   if (showHeartbeat) {
     process.stderr.write(`[zeus] ${className}: Verbindung aufbauen...\n`);
@@ -196,7 +200,7 @@ function runJavaClass(
       : undefined;
   const result = runProcess(
     'java',
-    ['-cp', classpath, className, ...args],
+    buildJavaClassArgs(className, args, { cwd }),
     `Failed to run Java helper ${className}`,
     childEnv,
     timeout
@@ -211,6 +215,8 @@ function runJavaClass(
 module.exports = {
   SECRET_ENV_SENTINEL,
   SECRET_ENV_VAR,
+  JAVA_UTF8_OPTION,
+  buildJavaClassArgs,
   resolveJavaPaths,
   resolveJavaClasspathEntries,
   resolveJavaClasspath,

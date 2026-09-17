@@ -161,6 +161,54 @@ function validateDbRoleConfig(value, label) {
   }
 }
 
+const JDBC_CONNECTION_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const JDBC_CONNECTION_FIELDS = new Set([
+  'driver',
+  'url',
+  'user',
+  'password',
+  'probeSql',
+  'environment',
+  '_comment',
+]);
+
+function validateJdbcConnectionsConfig(value, label) {
+  if (!isPlainObject(value)) {
+    failValidation(`${label} must be an object`);
+  }
+
+  const names = new Set();
+  for (const [name, connection] of Object.entries(value)) {
+    if (!JDBC_CONNECTION_NAME_PATTERN.test(name)) {
+      failValidation(
+        `${label}.${name} must use only letters, numbers, dots, underscores, or hyphens`
+      );
+    }
+    const normalizedName = name.toLowerCase();
+    if (names.has(normalizedName)) {
+      failValidation(`${label} must not define duplicate connection names ignoring case`);
+    }
+    names.add(normalizedName);
+
+    if (!isPlainObject(connection)) {
+      failValidation(`${label}.${name} must be an object`);
+    }
+    for (const key of Object.keys(connection)) {
+      if (!JDBC_CONNECTION_FIELDS.has(key)) {
+        failValidation(
+          `${label}.${name}.${key} is not supported; valid fields are driver, url, user, password, probeSql, environment`
+        );
+      }
+    }
+    assertOptionalString(connection.driver, `${label}.${name}.driver`);
+    assertOptionalString(connection.url, `${label}.${name}.url`);
+    assertOptionalString(connection.user, `${label}.${name}.user`);
+    assertOptionalString(connection.password, `${label}.${name}.password`);
+    assertOptionalString(connection.probeSql, `${label}.${name}.probeSql`);
+    assertOptionalString(connection.environment, `${label}.${name}.environment`);
+  }
+}
+
 const RESOURCE_KIND_FIELD_RULES = Object.freeze({
   sourceCode: Object.freeze(['libraries', 'sourceFiles', 'members', 'ifsPaths']),
   objects: Object.freeze(['libraries', 'objectTypes']),
@@ -571,6 +619,9 @@ function validateNamedProfile(profile, label) {
   }
   if (profile.dbRoles !== undefined) {
     validateDbRoleConfig(profile.dbRoles, `${label}.dbRoles`);
+  }
+  if (profile.jdbcConnections !== undefined) {
+    validateJdbcConnectionsConfig(profile.jdbcConnections, `${label}.jdbcConnections`);
   }
   if (profile.systems !== undefined) {
     validateSystemsConfig(profile.systems, `${label}.systems`);

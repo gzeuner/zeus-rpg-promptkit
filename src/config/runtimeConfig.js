@@ -57,9 +57,11 @@ const {
 const { getRuntimeConfigMetadata } = require('./dbRuntimeConfigDiagnostics');
 const {
   buildAnalyzeConnectionRoles: buildAnalyzeConnectionRolesModule,
+  getJdbcConnectionNames: getJdbcConnectionNamesModule,
   resolveAnalyzeConfig: resolveAnalyzeConfigModule,
   resolveAnalyzeDbConfig: resolveAnalyzeDbConfigModule,
   resolveAnalyzeDbRoleConfigs: resolveAnalyzeDbRoleConfigsModule,
+  resolveJdbcConnection: resolveJdbcConnectionModule,
   resolveBundleConfig: resolveBundleConfigModule,
   resolveFetchConfig: resolveFetchConfigModule,
 } = require('./runtimeConfigResolver');
@@ -274,6 +276,14 @@ function resolveAnalyzeDbConfig(config, role = 'metadata') {
   return resolveAnalyzeDbConfigModule(config, role);
 }
 
+function getJdbcConnectionNames(profile) {
+  return getJdbcConnectionNamesModule(profile);
+}
+
+function resolveJdbcConnection(profile, connectionName) {
+  return resolveJdbcConnectionModule(profile, connectionName);
+}
+
 function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
   return resolveAnalyzeConfigModule(
     args,
@@ -360,6 +370,7 @@ module.exports = {
   DEFAULT_WORKFLOW_ANALYZE_MODES,
   DEFAULT_WORKFLOW_STEPS,
   describeProfilesLocation,
+  getJdbcConnectionNames,
   getProfilesMetadata,
   loadProfiles,
   normalizeTokenBudgetKey,
@@ -370,6 +381,7 @@ module.exports = {
   resolveAnalyzeConfig,
   resolveBundleConfig,
   resolveFetchConfig,
+  resolveJdbcConnection,
   resolveProfileResources,
   resolveWorkflowPresetConfig,
   resolveProfilesConfigPaths,

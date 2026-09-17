@@ -83,6 +83,27 @@ function describeProfileEntry(name, profile) {
     const sourceLib = fetch.sourceLib || fetch.sourceLibrary || '(keine Source-Library)';
     lines.push(`    Fetch:       ${describeConnectionTarget(fetch)}  SourceLib=${sourceLib}`);
   }
+  const jdbcConnections =
+    profile.jdbcConnections && typeof profile.jdbcConnections === 'object'
+      ? Object.entries(profile.jdbcConnections)
+      : [];
+  if (jdbcConnections.length > 0) {
+    lines.push(
+      `    JDBC read-only: ${jdbcConnections
+        .map(([connectionName, connection]) => {
+          const status =
+            connection &&
+            connection.driver &&
+            connection.url &&
+            connection.user &&
+            connection.password
+              ? 'configured'
+              : 'incomplete';
+          return `${connectionName} (${status})`;
+        })
+        .join(', ')}`
+    );
+  }
   const commercial = profile.commercial;
   if (commercial && typeof commercial === 'object') {
     const moduleSpec =

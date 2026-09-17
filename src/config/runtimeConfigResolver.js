@@ -204,6 +204,41 @@ function resolveAnalyzeDbConfig(config, role = 'metadata') {
   return config.db || null;
 }
 
+function getJdbcConnectionNames(profile) {
+  const connections =
+    profile && profile.jdbcConnections && typeof profile.jdbcConnections === 'object'
+      ? profile.jdbcConnections
+      : {};
+  return Object.keys(connections).sort((left, right) => left.localeCompare(right));
+}
+
+function resolveJdbcConnection(profile, connectionName) {
+  const requestedName = String(connectionName || '').trim();
+  if (!requestedName) {
+    const error = new Error('JDBC connection name is required.');
+    error.code = 'JDBC_CONNECTION_REQUIRED';
+    throw error;
+  }
+
+  const connections =
+    profile && profile.jdbcConnections && typeof profile.jdbcConnections === 'object'
+      ? profile.jdbcConnections
+      : {};
+  const selectedName = Object.keys(connections).find(
+    name => name.toLowerCase() === requestedName.toLowerCase()
+  );
+  if (!selectedName) {
+    const error = new Error(
+      `JDBC connection "${requestedName}" not found in selected profile. ` +
+        `Available connections: ${getJdbcConnectionNames(profile).join(', ') || '(none)'}`
+    );
+    error.code = 'JDBC_CONNECTION_NOT_FOUND';
+    throw error;
+  }
+
+  return { name: selectedName, config: connections[selectedName] };
+}
+
 // Uebersteuert defaultSchema/defaultLibrary aller aufgeloesten DB-Rollen mit den
 // CLI-Werten (falls gesetzt). Mutiert die uebergebenen Rollen-Objekte in place.
 function applyAnalyzeResourceOverrides(analyzeDbRoles, { schema = null, library = null } = {}) {
@@ -481,6 +516,8 @@ module.exports = {
   resolveAnalyzeConfig,
   resolveAnalyzeDbConfig,
   resolveAnalyzeDbRoleConfigs,
+  getJdbcConnectionNames,
+  resolveJdbcConnection,
   resolveBundleConfig,
   resolveFetchConfig,
 };

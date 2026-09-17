@@ -151,6 +151,14 @@ const COMMAND_METADATA = Object.freeze({
     example:
       'node cli/zeus.js query-table --profile default --table APP_TABLE_00 --schema APPDATA --json',
   }),
+  'describe-table': Object.freeze({
+    safety: 'S2',
+    scope: 'Configured JDBC read',
+    purpose:
+      'Read schema-qualified column metadata from a named external JDBC connection; row counts are opt-in.',
+    example:
+      'node cli/zeus.js describe-table --profile external-readonly --connection reporting --table APPDATA.ORDERS --json',
+  }),
   'resolve-object': Object.freeze({
     safety: 'S2',
     scope: 'DB2 read',
@@ -160,9 +168,9 @@ const COMMAND_METADATA = Object.freeze({
   }),
   'query-sql': Object.freeze({
     safety: 'S2',
-    scope: 'DB2 read',
+    scope: 'DB2 or configured JDBC read',
     purpose:
-      'Run one or more read-only SQL statements (SELECT/WITH). Semicolon-separated --sql and --file batches execute through one DB2 runner call.',
+      'Run one or more read-only SQL statements (SELECT/WITH). Use --connection for a named external JDBC target; DB2 schema/library overrides remain DB2-only.',
     example:
       'node cli/zeus.js query-sql --profile default --sql "SELECT * FROM QSYS2.SYSTABLES FETCH FIRST 10 ROWS ONLY; SELECT CURRENT_USER FROM SYSIBM.SYSDUMMY1"',
   }),
@@ -605,6 +613,13 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: ['remote-read'],
     capabilityId: null,
   }),
+  'describe-table': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_MCP,
+    sideEffects: ['remote-read'],
+    capabilityId: null,
+  }),
   'resolve-object': catalogContract({
     aliases: [],
     status: 'stable',
@@ -859,6 +874,7 @@ const COMMAND_ORDER = Object.freeze([
   'generate-test',
   'generate-checklist',
   'query-table',
+  'describe-table',
   'resolve-object',
   'query-sql',
   'joblog',

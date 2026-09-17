@@ -523,6 +523,19 @@
       }
     }
   },
+  "external-readonly": {
+    "_comment": "Optional vendor-neutral example for read-only external JDBC access. Supply driver, URL, user, and password through the named environment file.",
+    "jdbcConnections": {
+      "reporting": {
+        "driver": "${env:ZEUS_JDBC_REPORTING_DRIVER}",
+        "url": "${env:ZEUS_JDBC_REPORTING_URL}",
+        "user": "${env:ZEUS_JDBC_REPORTING_USER}",
+        "password": "${env:ZEUS_JDBC_REPORTING_PASSWORD}",
+        "environment": "external-readonly",
+        "probeSql": "SELECT 1 AS HEALTHCHECK"
+      }
+    }
+  },
   "sample-db2": {
     "_comment": "Backward-compatible alias for documentation that expects a DB2-enabled example profile.",
     "extends": "combined-fetch-and-query"
