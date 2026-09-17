@@ -298,6 +298,7 @@ module.exports = {
   escapeSqlLiteral,
   extractSqlState,
   parseReadOnlyQueryResult,
+  normalizeReadOnlyBatchResult,
   runReadOnlyDb2Query,
   runReadOnlyDb2Queries,
   executeReadOnlyDb2QueryRaw,

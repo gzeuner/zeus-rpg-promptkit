@@ -271,6 +271,11 @@ Empfohlene Startprofile:
 - `readonly-db2` – geschützte read-only Db2-Zugriffe
 - `combined-fetch-and-query` – End-to-End-Beispiel
 
+Für optionale externe, schreibgeschützte JDBC-Abfragen siehe
+[`docs/quickstart/external-readonly-jdbc.md`](docs/quickstart/external-readonly-jdbc.md).
+Externe Verbindungen werden über benannte Profileinträge gewählt; URL, Treiber
+und Zugangsdaten bleiben in der lokalen Konfiguration.
+
 ### 2. Umgebung laden und prüfen
 
 Linux/macOS:

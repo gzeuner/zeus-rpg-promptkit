@@ -20,7 +20,9 @@ const {
   resolveAnalyzeDbConfig,
   resolveAnalyzeConfig,
   resolveFetchConfig,
+  getJdbcConnectionNames,
   resolveProfile,
+  resolveJdbcConnection,
   resolveProfilesConfigPaths,
 } = require('../../config/runtimeConfig');
 const {
@@ -40,6 +42,12 @@ const {
 const { executeClCommandRaw } = require('../../fetch/jt400CommandRunner');
 const { isDbConfigured, resolveDefaultSchema } = require('../../db2/db2Config');
 const { runReadOnlyDb2Query } = require('../../db2/readOnlyQueryService');
+const {
+  getJdbcEnvironmentLoadHint,
+  isJdbcConnectionConfigured,
+  resolveJdbcProbeSql,
+  runReadOnlyJdbcQuery,
+} = require('../../jdbc/readOnlyJdbcQueryService');
 const { getIbmiOsVersion } = require('../../db2/ibmiPlatformInfo');
 const { renderAsciiTable } = require('../helpers/asciiTable');
 const {
@@ -523,6 +531,100 @@ function buildProbeRow({ system, profile, functionName, status, details }) {
   };
 }
 
+function appendJdbcConnectionChecks(
+  checks,
+  probeRows,
+  { profile, profileName, requestedConnection, probeEnabled, runJdbcQuery }
+) {
+  const names = getJdbcConnectionNames(profile);
+  if (names.length === 0) return false;
+
+  let selectedNames = names;
+  if (requestedConnection) {
+    try {
+      const selected = resolveJdbcConnection(profile, requestedConnection);
+      selectedNames = [selected.name];
+    } catch (error) {
+      checks.push({
+        name: `JDBC Connection: ${requestedConnection}`,
+        status: 'FAIL',
+        details: error.message,
+      });
+      return true;
+    }
+  }
+
+  for (const name of selectedNames) {
+    const jdbcConfig = profile.jdbcConnections[name];
+    if (!isJdbcConnectionConfigured(jdbcConfig)) {
+      const missing = ['driver', 'url', 'user', 'password'].filter(
+        key => !isSet(jdbcConfig && jdbcConfig[key])
+      );
+      checks.push({
+        name: `JDBC Connection: ${name}`,
+        status: 'FAIL',
+        details: `Missing required configuration: ${missing.join(', ') || 'unknown'}.${getJdbcEnvironmentLoadHint(jdbcConfig)}`,
+      });
+      continue;
+    }
+
+    checks.push({
+      name: `JDBC Connection: ${name}`,
+      status: 'PASS',
+      details: `Named read-only JDBC connection is configured.${getJdbcEnvironmentLoadHint(jdbcConfig)}`,
+    });
+
+    if (!probeEnabled) {
+      checks.push({
+        name: `JDBC Probe: ${name}`,
+        status: 'SKIP',
+        details: 'Skipped because --probe was not requested.',
+      });
+      continue;
+    }
+
+    try {
+      runJdbcQuery({
+        jdbcConfig,
+        query: resolveJdbcProbeSql(jdbcConfig),
+        maxRows: 1,
+        runtime: { scopeLabel: `doctor JDBC probe connection ${name}` },
+      });
+      checks.push({
+        name: `JDBC Probe: ${name}`,
+        status: 'PASS',
+        details: 'Configured read-only JDBC probe succeeded.',
+      });
+      probeRows.push(
+        buildProbeRow({
+          system: `JDBC connection ${name}`,
+          profile: profileName,
+          functionName: 'jdbc',
+          status: 'OK',
+          details: 'Read-only probe succeeded.',
+        })
+      );
+    } catch (error) {
+      checks.push({
+        name: `JDBC Probe: ${name}`,
+        status: 'FAIL',
+        details: error.message,
+      });
+      probeRows.push(
+        buildProbeRow({
+          system: `JDBC connection ${name}`,
+          profile: profileName,
+          functionName: 'jdbc',
+          status: 'FAIL',
+          details: error.message,
+        })
+      );
+    }
+  }
+
+  return true;
+}
+
 function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, services = {} } = {}) {
   const checks = [];
   const diagnostics = [];
@@ -534,6 +636,7 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
   let resolvedProfile = null;
   const probeEnabled = Boolean(args.probe);
   const runReadOnlyDb2QueryFn = services.runReadOnlyDb2Query || runReadOnlyDb2Query;
+  const runReadOnlyJdbcQueryFn = services.runReadOnlyJdbcQuery || runReadOnlyJdbcQuery;
   const executeClCommandRawFn = services.executeClCommandRaw || executeClCommandRaw;
   const getIbmiOsVersionFn = services.getIbmiOsVersion || getIbmiOsVersion;
 
@@ -625,6 +728,19 @@ function runDoctorChecks(args, { cwd = process.cwd(), env = process.env, service
   }
   appendSecretVaultChecks(checks, { env });
   appendPlaintextSecretWarnings(checks, { env, cwd });
+
+  if (resolvedProfile) {
+    appendJdbcConnectionChecks(checks, probeRows, {
+      profile: resolvedProfile,
+      profileName: args.profile,
+      requestedConnection: args.connection,
+      probeEnabled,
+      runJdbcQuery: runReadOnlyJdbcQueryFn,
+    });
+    if (checks.some(entry => entry.name.startsWith('JDBC ') && entry.status === 'FAIL')) {
+      hasCriticalFailure = true;
+    }
+  }
 
   if (strict) {
     const hygiene = checks.find(c => c.name === 'Secret Hygiene');

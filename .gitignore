@@ -58,6 +58,7 @@ scripts/create_issues_from_roadmap.py
 config/.env
 config/.env.*
 !config/.env.example
+!config/.env.external-readonly.example
 .env.local
 .env.*.local
 *Kopie.local

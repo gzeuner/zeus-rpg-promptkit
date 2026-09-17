@@ -59,6 +59,7 @@
     "check:tracked-fixtures": "node scripts/check-tracked-fixtures.js",
     "release:preflight": "node scripts/release-preflight.js",
     "sbom:validate": "node scripts/validate-sbom.js",
+    "sbom:jdbc-runtime": "node scripts/generate-jdbc-runtime-sbom.js",
     "repo:control": "node scripts/repository-control.js",
     "test:repository-control": "node --test tests/repository-control.test.js",
     "test:deployment:community": "node --test tests/community-deployment.test.js",

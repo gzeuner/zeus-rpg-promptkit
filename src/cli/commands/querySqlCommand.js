@@ -138,7 +138,7 @@ function renderQueryExecution(execution, output) {
       if (matrix.length === 0) {
         console.log('0 row(s) returned');
       } else {
-        console.log(renderAsciiTable(columns, matrix, { maxCellWidth: 40 }));
+        console.log(renderAsciiTable(columns, matrix, { maxCellWidth: execution.wide ? 0 : 40 }));
         console.log(`${matrix.length} row(s) returned`);
       }
     });
@@ -160,6 +160,9 @@ function renderQueryExecution(execution, output) {
   if (defaultSchema) {
     console.log(`Default Schema: ${defaultSchema}`);
   }
+  if (execution.connection) {
+    console.log(`Connection: ${execution.connection}`);
+  }
   if (execution.libraryList && execution.libraryList.length > 0) {
     console.log(`Library List: ${execution.libraryList.join(', ')}`);
   }
@@ -171,7 +174,7 @@ function renderQueryExecution(execution, output) {
     return;
   }
 
-  console.log(renderAsciiTable(columns, matrix, { maxCellWidth: 40 }));
+  console.log(renderAsciiTable(columns, matrix, { maxCellWidth: execution.wide ? 0 : 40 }));
   console.log(`${matrix.length} row(s) returned`);
 }
 

@@ -7,6 +7,7 @@ const FETCH_PROBE_COMMAND = 'CHKOBJ OBJ(QSYS/QSYS) OBJTYPE(*LIB)';
 
 const dbGuardState = new Map();
 const fetchGuardState = new Map();
+const jdbcGuardState = new Map();
 
 const AUTH_OR_CONNECTION_ERROR_PATTERN =
   /SQL30082|SQLSTATE\s*[=:]?\s*(08001|08004|08S01)|CPF22E2|CPF2204|CPF2203|invalid password|authentication|authorization|not authorized|signon|user profile|disabled|connection refused|timed out|timeout|unknown host|unknownhost|communication link failure|socket|ssl/i;
@@ -29,6 +30,14 @@ function buildDbGuardKey(dbConfig = {}) {
 
 function buildFetchGuardKey(fetchConfig = {}) {
   return [normalizeKeyPart(fetchConfig.host), normalizeKeyPart(fetchConfig.user)].join('|');
+}
+
+function buildJdbcGuardKey(jdbcConfig = {}) {
+  return [
+    normalizeKeyPart(jdbcConfig.driver),
+    normalizeKeyPart(jdbcConfig.url),
+    normalizeKeyPart(jdbcConfig.user),
+  ].join('|');
 }
 
 function sanitizeProbeError(error, env = process.env) {
@@ -139,9 +148,36 @@ function ensureFetchConnectionGuard({
   }
 }
 
+function ensureJdbcConnectionGuard({
+  jdbcConfig,
+  probe,
+  probeSql,
+  scopeLabel = 'JDBC connection',
+  env = process.env,
+} = {}) {
+  const cacheKey = buildJdbcGuardKey(jdbcConfig);
+  if (!cacheKey.replace(/\|/g, '')) {
+    return;
+  }
+
+  ensureCachedGuardState(jdbcGuardState, cacheKey, scopeLabel);
+
+  try {
+    probe({
+      jdbcConfig,
+      query: probeSql || 'SELECT 1 AS HEALTHCHECK',
+      maxRows: 1,
+    });
+    markGuardSuccess(jdbcGuardState, cacheKey);
+  } catch (error) {
+    markGuardFailure(jdbcGuardState, cacheKey, scopeLabel, error, env);
+  }
+}
+
 function resetConnectionGuardState() {
   dbGuardState.clear();
   fetchGuardState.clear();
+  jdbcGuardState.clear();
 }
 
 module.exports = {
@@ -149,7 +185,9 @@ module.exports = {
   FETCH_PROBE_COMMAND,
   buildDbGuardKey,
   buildFetchGuardKey,
+  buildJdbcGuardKey,
   ensureDb2ConnectionGuard,
   ensureFetchConnectionGuard,
+  ensureJdbcConnectionGuard,
   resetConnectionGuardState,
 };

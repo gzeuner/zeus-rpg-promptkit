@@ -13,7 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
-const { resolveAnalyzeConfig, resolveAnalyzeDbConfig } = require('../config/runtimeConfig');
+const {
+  loadProfiles,
+  resolveAnalyzeConfig,
+  resolveAnalyzeDbConfig,
+  resolveJdbcConnection,
+  resolveProfile,
+} = require('../config/runtimeConfig');
 const { isDbConfigured } = require('../db2/db2Config');
 const {
   escapeSqlLiteral,
@@ -25,6 +31,7 @@ const {
 } = require('../db2/readOnlyQueryService');
 const { normalizeSqlStatements } = require('../db2/sqlBatch');
 const { discoverSchema } = require('../db2/schemaDiscovery');
+const { runReadOnlyJdbcQueries } = require('../jdbc/readOnlyJdbcQueryService');
 
 const DEFAULT_MAX_ROWS = 200;
 
@@ -77,6 +84,58 @@ ORDER BY TABLE_SCHEMA, TABLE_NAME`,
 FROM QSYS2.SYSCOLUMNS
 WHERE ${columnClauses.join(' AND ')}
 ORDER BY TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION`,
+  };
+}
+
+function buildJdbcDescribeTableQueries({ schema, table, includeRowCount = false }) {
+  const whereClause = [
+    `TABLE_SCHEMA = ${escapeSqlLiteral(schema)}`,
+    `TABLE_NAME = ${escapeSqlLiteral(table)}`,
+  ].join(' AND ');
+  return {
+    columns: `SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, IS_NULLABLE, ORDINAL_POSITION
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE ${whereClause}
+ORDER BY ORDINAL_POSITION`,
+    rowCount: includeRowCount ? `SELECT COUNT(*) AS ROW_COUNT FROM ${schema}.${table}` : null,
+  };
+}
+
+function isOptionEnabled(value) {
+  return (
+    value === true ||
+    ['true', '1', 'yes', 'on'].includes(
+      String(value || '')
+        .trim()
+        .toLowerCase()
+    )
+  );
+}
+
+function parseJdbcTableReference({ table: tableValue, schema: schemaValue } = {}) {
+  const rawTable = String(tableValue || '').trim();
+  if (!rawTable) throw new Error('Missing required option: --table <schema.table>');
+
+  const explicitSchema = String(schemaValue || '').trim();
+  if (explicitSchema) {
+    if (rawTable.includes('.')) {
+      throw new Error(
+        'Use either --table <schema.table> or --schema <schema> --table <table>, not both.'
+      );
+    }
+    return {
+      schema: validateSqlIdentifier(explicitSchema, '--schema'),
+      table: validateSqlIdentifier(rawTable, '--table'),
+    };
+  }
+
+  const parts = rawTable.split('.').map(part => part.trim());
+  if (parts.length !== 2 || parts.some(part => !part)) {
+    throw new Error('JDBC table must be qualified as --table <schema.table>.');
+  }
+  return {
+    schema: validateSqlIdentifier(parts[0], '--table schema'),
+    table: validateSqlIdentifier(parts[1], '--table'),
   };
 }
 
@@ -219,6 +278,54 @@ function executeQueryTable(args, { cwd = process.cwd() } = {}) {
   };
 }
 
+function executeDescribeJdbcTable(
+  args,
+  { cwd = process.cwd(), env = process.env, runJdbcQueries = runReadOnlyJdbcQueries } = {}
+) {
+  if (!args.profile || !String(args.profile).trim()) {
+    const error = new Error('Missing required option: --profile <name>');
+    error.code = 'PROFILE_REQUIRED';
+    throw error;
+  }
+  if (!args.connection || !String(args.connection).trim()) {
+    const error = new Error('Missing required option: --connection <name>');
+    error.code = 'JDBC_CONNECTION_REQUIRED';
+    throw error;
+  }
+
+  const { schema, table } = parseJdbcTableReference({
+    table: args.table,
+    schema: args.schema,
+  });
+  const profiles = loadProfiles({ cwd, env, args });
+  const profile = resolveProfile(profiles, args.profile, { env });
+  const selectedConnection = resolveJdbcConnection(profile, args.connection);
+  const includeRowCount = isOptionEnabled(args['include-row-count']);
+  const queries = buildJdbcDescribeTableQueries({ schema, table, includeRowCount });
+  const statementQueries = [queries.columns, ...(queries.rowCount ? [queries.rowCount] : [])];
+  const result = runJdbcQueries({
+    jdbcConfig: selectedConnection.config,
+    queries: statementQueries,
+    maxRows: includeRowCount ? 1 : 500,
+  });
+  const statements = Array.isArray(result.statements) ? result.statements : [];
+  const rowCountResult = statements[1] || null;
+  const rowCountRow =
+    rowCountResult && Array.isArray(rowCountResult.rows) ? rowCountResult.rows[0] : null;
+
+  return {
+    connection: selectedConnection.name,
+    schema,
+    table,
+    columns: statements[0] || { columns: [], rows: [], rowCount: 0 },
+    includeRowCount,
+    tableRowCount:
+      rowCountRow && typeof rowCountRow === 'object'
+        ? (rowCountRow.ROW_COUNT ?? rowCountRow.row_count ?? Object.values(rowCountRow)[0] ?? null)
+        : null,
+  };
+}
+
 function resolveQuerySqlText(args, { cwd = process.cwd() } = {}) {
   if (args.file && String(args.file).trim()) {
     const filePath = path.resolve(cwd, String(args.file).trim());
@@ -238,7 +345,10 @@ function resolveQuerySqlText(args, { cwd = process.cwd() } = {}) {
   throw error;
 }
 
-function executeQuerySql(args, { cwd = process.cwd() } = {}) {
+function executeQuerySql(
+  args,
+  { cwd = process.cwd(), env = process.env, runJdbcQueries = runReadOnlyJdbcQueries } = {}
+) {
   if (!args.profile || !String(args.profile).trim()) {
     const error = new Error('Missing required option: --profile <name>');
     error.code = 'PROFILE_REQUIRED';
@@ -248,20 +358,63 @@ function executeQuerySql(args, { cwd = process.cwd() } = {}) {
   const sqlText = resolveQuerySqlText(args, { cwd });
   const maxRows = parseMaxRows(args['max-rows']);
   const output = normalizeOutput(args.output);
+  const statements = normalizeSqlStatements({ sql: sqlText });
+  if (statements.length === 0) {
+    throw new Error('Read-only SQL query is empty.');
+  }
+  statements.forEach(validateReadOnlySql);
+
+  const connectionName = String(args.connection || '').trim();
+  if (connectionName) {
+    if (args['default-schema'] || args.liblist) {
+      const error = new Error(
+        '--default-schema and --liblist are DB2-only options; qualify JDBC table names in SQL instead.'
+      );
+      error.code = 'JDBC_OPTION_UNSUPPORTED';
+      throw error;
+    }
+    const profiles = loadProfiles({ cwd, env, args });
+    const profile = resolveProfile(profiles, args.profile, { env });
+    const selectedConnection = resolveJdbcConnection(profile, connectionName);
+    const batchResult = runJdbcQueries({
+      jdbcConfig: selectedConnection.config,
+      queries: statements,
+      maxRows,
+    });
+    const result = batchResult.statements[0] || { columns: [], rows: [], rowCount: 0 };
+    const columns = Array.isArray(result.columns) ? result.columns : [];
+    return {
+      config: null,
+      connection: selectedConnection.name,
+      databaseKind: 'jdbc',
+      sql: statements[0],
+      statements: batchResult.statements,
+      statementCount: Number(
+        batchResult.statementCount || batchResult.statements.length || statements.length
+      ),
+      batch: statements.length > 1,
+      defaultSchema: null,
+      libraryList: [],
+      maxRows,
+      output,
+      wide: isOptionEnabled(args.wide),
+      dbConfig: null,
+      columns,
+      rows: result.rows || [],
+      rowCount: Number(result.rowCount || (result.rows || []).length || 0),
+      matrix: toRowMatrix(columns, result.rows),
+    };
+  }
+
   const defaultSchema = validateDefaultSchema(args['default-schema']);
   const libraryList = normalizeLibraryList(args.liblist);
-  const config = resolveAnalyzeConfig(args, { cwd });
+  const config = resolveAnalyzeConfig(args, { cwd, env });
   const dbConfig = requireDbConfig(config);
   const effectiveDbConfig = {
     ...dbConfig,
     ...(defaultSchema ? { defaultSchema } : {}),
     ...(libraryList.length > 0 ? { libraryList: libraryList.join(',') } : {}),
   };
-  const statements = normalizeSqlStatements({ sql: sqlText });
-  if (statements.length === 0) {
-    throw new Error('Read-only SQL query is empty.');
-  }
-  statements.forEach(validateReadOnlySql);
 
   const batchResult = runReadOnlyDb2Queries({
     dbConfig: effectiveDbConfig,
@@ -283,6 +436,7 @@ function executeQuerySql(args, { cwd = process.cwd() } = {}) {
     libraryList,
     maxRows,
     output,
+    wide: isOptionEnabled(args.wide),
     dbConfig: effectiveDbConfig,
     columns,
     rows: result.rows || [],
@@ -294,8 +448,11 @@ function executeQuerySql(args, { cwd = process.cwd() } = {}) {
 module.exports = {
   DEFAULT_MAX_ROWS,
   buildQueryTableQueries,
+  buildJdbcDescribeTableQueries,
+  executeDescribeJdbcTable,
   executeQuerySql,
   executeQueryTable,
+  isOptionEnabled,
   normalizeOutput,
   parseMaxRows,
   prependSchemaDirective,
@@ -304,4 +461,5 @@ module.exports = {
   normalizeLibraryList,
   validateDefaultSchema,
   validateFilterPattern,
+  parseJdbcTableReference,
 };
