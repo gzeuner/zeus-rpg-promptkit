@@ -456,11 +456,12 @@ const COMMAND_METADATA = Object.freeze({
       'drift-check',
       'drift-review',
       'drift-review-summary',
+      'drift-review-retention',
       'glossary list',
       'glossary resolve',
     ],
     purpose:
-      'Retrieve evidence-backed business-process projections, role-specific views, a local read-only chat adapter, deterministic quality evaluations, versioned process-answer regression checks with explicit reviewer decisions, bounded drift reports, reviewer-friendly explanations, review-history summaries across drift identities, and project-specific legacy vocabulary from explicit local catalogs. Record sanitized process learnings, combine anonymized signals across catalogs, and produce review-only improvement, promotion-readiness, regression-gate, drift, and approval-history reports without publishing or mutating knowledge. Exact identifiers, scoped glossary mappings, and reviewed facts are ranked ahead of derived summaries; ambiguity, freshness, evidence, confidence, and unknowns remain visible.',
+      'Retrieve evidence-backed business-process projections, role-specific views, a local read-only chat adapter, deterministic quality evaluations, versioned process-answer regression checks with explicit reviewer decisions, bounded drift reports, reviewer-friendly explanations, review-history summaries and freshness/retention previews across drift identities, and project-specific legacy vocabulary from explicit local catalogs. Record sanitized process learnings, combine anonymized signals across catalogs, and produce review-only improvement, promotion-readiness, regression-gate, drift, approval-history, and retention reports without publishing, deleting, or mutating knowledge. Exact identifiers, scoped glossary mappings, and reviewed facts are ranked ahead of derived summaries; ambiguity, freshness, evidence, confidence, and unknowns remain visible.',
     example:
       'node cli/zeus.js process chat --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json',
   }),

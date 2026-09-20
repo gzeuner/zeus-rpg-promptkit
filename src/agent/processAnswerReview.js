@@ -10,6 +10,11 @@ const { validateWorkspacePath } = require('../generationValidation/pathSafety');
 const PROCESS_ANSWER_REVIEW_SCHEMA_VERSION = 1;
 const DEFAULT_PROCESS_ANSWER_REVIEW_ARTIFACT = '.zeus/process-answer-review.json';
 const DEFAULT_PROCESS_ANSWER_REVIEW_SUMMARY_ARTIFACT = '.zeus/process-answer-review-summary.json';
+const DEFAULT_PROCESS_ANSWER_REVIEW_RETENTION_ARTIFACT =
+  '.zeus/process-answer-review-retention.json';
+const DEFAULT_REVIEW_FRESHNESS_DAYS = 30;
+const DEFAULT_REVIEW_RETENTION_DAYS = 90;
+const MAX_REVIEW_POLICY_DAYS = 3650;
 const MAX_DRIFT_BYTES = 512 * 1024;
 const MAX_HISTORY_BYTES = 256 * 1024;
 const MAX_ENTRIES = 100;
@@ -643,6 +648,212 @@ function buildProcessAnswerReviewSummary({ cwd = process.cwd(), history } = {}) 
   };
 }
 
+function parseReviewPolicyDays(value, label, fallback) {
+  if (value == null || value === '') return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_REVIEW_POLICY_DAYS) {
+    throw reviewError(
+      'PROCESS_ANSWER_REVIEW_POLICY_INVALID',
+      `${label} must be an integer between 1 and ${MAX_REVIEW_POLICY_DAYS}.`
+    );
+  }
+  return parsed;
+}
+
+function normalizeReviewPolicy({ asOf, freshDays, retentionDays } = {}) {
+  const reviewedAt = asOf == null || asOf === '' ? new Date() : new Date(String(asOf));
+  if (Number.isNaN(reviewedAt.getTime())) {
+    throw reviewError(
+      'PROCESS_ANSWER_REVIEW_AS_OF_INVALID',
+      'Review-history --as-of must be a valid ISO timestamp.'
+    );
+  }
+  const freshnessDays = parseReviewPolicyDays(
+    freshDays,
+    'Review-history --fresh-days',
+    DEFAULT_REVIEW_FRESHNESS_DAYS
+  );
+  const retentionAfterDays = parseReviewPolicyDays(
+    retentionDays,
+    'Review-history --retention-days',
+    DEFAULT_REVIEW_RETENTION_DAYS
+  );
+  if (freshnessDays >= retentionAfterDays) {
+    throw reviewError(
+      'PROCESS_ANSWER_REVIEW_POLICY_INVALID',
+      'Review-history --fresh-days must be lower than --retention-days.'
+    );
+  }
+  return {
+    asOf: reviewedAt.toISOString(),
+    asOfMs: reviewedAt.getTime(),
+    freshDays: freshnessDays,
+    retentionDays: retentionAfterDays,
+  };
+}
+
+function classifyReviewFreshness(reviewedAt, policy) {
+  const reviewedAtMs = new Date(reviewedAt).getTime();
+  const ageMs = policy.asOfMs - reviewedAtMs;
+  if (ageMs < 0) {
+    return { status: 'future', ageDays: 0, reviewedAt };
+  }
+  const ageDays = Math.floor(ageMs / 86_400_000);
+  return {
+    status:
+      ageDays <= policy.freshDays
+        ? 'fresh'
+        : ageDays <= policy.retentionDays
+          ? 'aging'
+          : 'historical',
+    ageDays,
+    reviewedAt,
+  };
+}
+
+function buildProcessAnswerReviewRetention({
+  cwd = process.cwd(),
+  history,
+  asOf,
+  freshDays,
+  retentionDays,
+} = {}) {
+  const historyLocation = resolveJsonPath({ cwd, input: history, label: '--history' });
+  const normalizedHistory = normalizeHistory(
+    readJsonFile(historyLocation.absolutePath, 'Process-answer review history', MAX_HISTORY_BYTES)
+  );
+  const policy = normalizeReviewPolicy({ asOf, freshDays, retentionDays });
+  const byDriftId = new Map();
+  for (const entry of normalizedHistory) {
+    const entries = byDriftId.get(entry.driftId) || [];
+    entries.push(entry);
+    byDriftId.set(entry.driftId, entries);
+  }
+
+  const identities = [...byDriftId.keys()].sort().map(driftId => {
+    const entries = byDriftId.get(driftId);
+    const latest = entries[entries.length - 1];
+    const latestFreshness = classifyReviewFreshness(latest.reviewedAt, policy);
+    const entryFreshness = entries.map(entry => ({
+      decisionId: entry.decisionId,
+      freshness: classifyReviewFreshness(entry.reviewedAt, policy),
+    }));
+    const retentionCandidateDecisionIds = entryFreshness
+      .filter(
+        item => item.freshness.status === 'historical' && item.decisionId !== latest.decisionId
+      )
+      .map(item => item.decisionId);
+    return {
+      driftId,
+      historyEntryCount: entries.length,
+      latestDecision: lastDecisionFor(entries),
+      latestFreshness,
+      freshnessCounts: entryFreshness.reduce(
+        (counts, item) => ({
+          ...counts,
+          [item.freshness.status]: counts[item.freshness.status] + 1,
+        }),
+        { fresh: 0, aging: 0, historical: 0, future: 0 }
+      ),
+      retention: {
+        status:
+          latestFreshness.status === 'future'
+            ? 'review-required'
+            : latestFreshness.status === 'historical'
+              ? 'review-required'
+              : retentionCandidateDecisionIds.length > 0
+                ? 'candidate'
+                : 'none',
+        candidateDecisionIds: retentionCandidateDecisionIds,
+      },
+    };
+  });
+
+  const retentionCandidates = identities
+    .flatMap(identity =>
+      identity.retention.candidateDecisionIds.length > 0
+        ? [
+            {
+              driftId: identity.driftId,
+              decisionIds: identity.retention.candidateDecisionIds,
+              reasonCode: 'REVIEW_HISTORY_RETENTION_CANDIDATE',
+            },
+          ]
+        : []
+    )
+    .slice(0, MAX_ENTRIES);
+  const reviewRequired = identities
+    .filter(identity => identity.retention.status === 'review-required')
+    .map(identity => ({
+      driftId: identity.driftId,
+      latestDecision: identity.latestDecision,
+      latestFreshness: identity.latestFreshness,
+      reasonCode:
+        identity.latestFreshness.status === 'future'
+          ? 'REVIEW_TIMESTAMP_IN_FUTURE'
+          : 'REVIEW_HISTORY_LATEST_HISTORICAL',
+    }));
+  const freshnessCounts = normalizedHistory.reduce(
+    (counts, entry) => {
+      const status = classifyReviewFreshness(entry.reviewedAt, policy).status;
+      counts[status] += 1;
+      return counts;
+    },
+    { fresh: 0, aging: 0, historical: 0, future: 0 }
+  );
+  const status =
+    reviewRequired.length > 0 || retentionCandidates.length > 0
+      ? 'needs-review'
+      : normalizedHistory.length > 0
+        ? 'stable'
+        : 'pending';
+  return {
+    ok: true,
+    operation: 'drift-review-retention',
+    kind: 'process-answer-review-retention-result',
+    schemaVersion: PROCESS_ANSWER_REVIEW_SCHEMA_VERSION,
+    readOnly: true,
+    status,
+    historyPath: historyLocation.relativePath,
+    policy: {
+      asOf: policy.asOf,
+      freshWithinDays: policy.freshDays,
+      retentionAfterDays: policy.retentionDays,
+    },
+    metrics: {
+      historyEntryCount: normalizedHistory.length,
+      driftIdentityCount: identities.length,
+      freshDecisionCount: freshnessCounts.fresh,
+      agingDecisionCount: freshnessCounts.aging,
+      historicalDecisionCount: freshnessCounts.historical,
+      futureDecisionCount: freshnessCounts.future,
+      retentionCandidateCount: retentionCandidates.reduce(
+        (total, candidate) => total + candidate.decisionIds.length,
+        0
+      ),
+      reviewRequiredDriftCount: reviewRequired.length,
+    },
+    freshnessCounts,
+    identities,
+    retentionCandidates,
+    reviewRequired,
+    nextSafeStep:
+      reviewRequired.length > 0
+        ? 'Review historical or future-dated latest decisions before relying on them; do not delete the history automatically.'
+        : retentionCandidates.length > 0
+          ? 'Review the listed superseded decision IDs and archive or delete them only through an explicit local policy-approved action.'
+          : normalizedHistory.length === 0
+            ? 'Record a sanitized decision for an exact drift identity before relying on review history.'
+            : 'Review history is within the configured freshness and retention window; keep the bounded record together with its drift artifacts.',
+    nextCommand:
+      'node cli/zeus.js process drift-review-retention --history .zeus/process-answer-review-history.json --json',
+    automaticPromotion: false,
+    promotionAllowed: false,
+    automaticDeletion: false,
+    deletionAllowed: false,
+  };
+}
+
 function buildProcessAnswerReview({ cwd = process.cwd(), drift, history } = {}) {
   const driftLocation = resolveJsonPath({ cwd, input: drift, label: '--drift' });
   const historyLocation = resolveJsonPath({
@@ -726,6 +937,13 @@ function resolveProcessAnswerReviewSummaryArtifactPath({
   return resolveJsonPath({ cwd, input: out, label: '--out' });
 }
 
+function resolveProcessAnswerReviewRetentionArtifactPath({
+  cwd = process.cwd(),
+  out = DEFAULT_PROCESS_ANSWER_REVIEW_RETENTION_ARTIFACT,
+} = {}) {
+  return resolveJsonPath({ cwd, input: out, label: '--out' });
+}
+
 function writeProcessAnswerReviewArtifact(payload, options = {}) {
   const location = resolveProcessAnswerReviewArtifactPath(options);
   fs.mkdirSync(path.dirname(location.absolutePath), { recursive: true });
@@ -756,14 +974,33 @@ function writeProcessAnswerReviewSummaryArtifact(payload, options = {}) {
   return location.relativePath;
 }
 
+function writeProcessAnswerReviewRetentionArtifact(payload, options = {}) {
+  const location = resolveProcessAnswerReviewRetentionArtifactPath(options);
+  fs.mkdirSync(path.dirname(location.absolutePath), { recursive: true });
+  fs.writeFileSync(location.absolutePath, `${JSON.stringify(payload, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  try {
+    fs.chmodSync(location.absolutePath, 0o600);
+  } catch {
+    // chmod is not supported or meaningful on every platform.
+  }
+  return location.relativePath;
+}
+
 module.exports = {
   DEFAULT_PROCESS_ANSWER_REVIEW_ARTIFACT,
   DEFAULT_PROCESS_ANSWER_REVIEW_SUMMARY_ARTIFACT,
+  DEFAULT_PROCESS_ANSWER_REVIEW_RETENTION_ARTIFACT,
   PROCESS_ANSWER_REVIEW_SCHEMA_VERSION,
   buildProcessAnswerReview,
   buildProcessAnswerReviewSummary,
+  buildProcessAnswerReviewRetention,
   resolveProcessAnswerReviewArtifactPath,
   resolveProcessAnswerReviewSummaryArtifactPath,
+  resolveProcessAnswerReviewRetentionArtifactPath,
   writeProcessAnswerReviewArtifact,
   writeProcessAnswerReviewSummaryArtifact,
+  writeProcessAnswerReviewRetentionArtifact,
 };

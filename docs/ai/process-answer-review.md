@@ -110,3 +110,26 @@ severity explanation requires checking the authoritative catalog, evidence,
 freshness, or retrieval contract and rerunning the regression gate after an
 explicit change. Record a sanitized experience event when a drift explanation
 was unexpected, ambiguous, incomplete, stale, or corrected.
+
+## Freshness and retention preview
+
+Use the retention preview when an agent must decide whether a review record is
+current evidence or only historical context:
+
+```powershell
+node cli/zeus.js process drift-review-retention `
+  --history .zeus/process-answer-review-history.json `
+  --as-of 2026-09-20T00:00:00.000Z `
+  --fresh-days 30 `
+  --retention-days 90 `
+  --json
+```
+
+The result classifies each bounded decision as `fresh`, `aging`, `historical`,
+or `future`. Only historical decisions that are superseded by a newer decision
+for the same hashed `driftId` are listed as retention candidates. A historical
+latest decision remains `review-required`; it is never suggested for automatic
+deletion. The result exposes hashed decision and drift IDs only and keeps
+`automaticDeletion`, `deletionAllowed`, `automaticPromotion`, and
+`promotionAllowed` false. Pass `--as-of` for reproducible reports; omitted
+timestamps use the local current time.

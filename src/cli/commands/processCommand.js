@@ -40,8 +40,10 @@ const {
 const {
   buildProcessAnswerReview,
   buildProcessAnswerReviewSummary,
+  buildProcessAnswerReviewRetention,
   writeProcessAnswerReviewArtifact,
   writeProcessAnswerReviewSummaryArtifact,
+  writeProcessAnswerReviewRetentionArtifact,
 } = require('../../agent/processAnswerReview');
 const {
   listGlossaryEntries,
@@ -65,6 +67,7 @@ const OPERATIONS = new Set([
   'drift-check',
   'drift-review',
   'drift-review-summary',
+  'drift-review-retention',
   'glossary',
 ]);
 
@@ -111,6 +114,9 @@ function printHelp() {
   );
   console.log(
     '  zeus process drift-review-summary --history <.zeus/file.json> [--out <.zeus/file.json>] [--json]'
+  );
+  console.log(
+    '  zeus process drift-review-retention --history <.zeus/file.json> [--as-of <ISO-timestamp>] [--fresh-days <n>] [--retention-days <n>] [--out <.zeus/file.json>] [--json]'
   );
   console.log(
     '  zeus process glossary list --glossary <relative-path> [--only-applicable] [--json]'
@@ -336,6 +342,17 @@ function printHuman(operation, result) {
     if (result.artifact) console.log(`Artifact: ${result.artifact}`);
     return;
   }
+  if (operation === 'drift-review-retention') {
+    console.log(`Process-answer review retention: ${result.status}`);
+    console.log(
+      `Fresh: ${result.metrics.freshDecisionCount}; aging: ${result.metrics.agingDecisionCount}; historical: ${result.metrics.historicalDecisionCount}; retention candidates: ${result.metrics.retentionCandidateCount}`
+    );
+    if (result.reviewRequired.length > 0) {
+      console.log(`Review required for ${result.reviewRequired.length} drift identities.`);
+    }
+    if (result.artifact) console.log(`Artifact: ${result.artifact}`);
+    return;
+  }
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -452,6 +469,20 @@ function runProcess(args = {}) {
       });
       if (args.out) {
         result.artifact = writeProcessAnswerReviewSummaryArtifact(result, {
+          cwd: process.cwd(),
+          out: args.out,
+        });
+      }
+    } else if (operation === 'drift-review-retention') {
+      result = buildProcessAnswerReviewRetention({
+        cwd: process.cwd(),
+        history: requireValue(args, 'history'),
+        asOf: args['as-of'],
+        freshDays: args['fresh-days'],
+        retentionDays: args['retention-days'],
+      });
+      if (args.out) {
+        result.artifact = writeProcessAnswerReviewRetentionArtifact(result, {
           cwd: process.cwd(),
           out: args.out,
         });
