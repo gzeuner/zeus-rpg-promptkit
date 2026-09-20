@@ -37,6 +37,22 @@ validates that the drift artifact is read-only and promotion-disabled. The
 projection keeps only bounded identities, metrics, stable blocker codes,
 static explanations, and a hashed `driftId`.
 
+To scan a complete sanitized review history across multiple drift identities,
+use the read-only summary command:
+
+```text
+node cli/zeus.js process drift-review-summary \
+  --history .zeus/process-answer-review-history.json \
+  --out .zeus/process-answer-review-summary.json --json
+```
+
+The summary groups only by hashed `driftId`, reports bounded decision and
+finding counts, and lists unresolved identities with their latest bounded
+decision. It never copies questions, answers, source content, process IDs,
+reviewer identities, or free-text notes. A summary with `needs-review` must be
+resolved with the exact `drift-review` projection before an agent relies on a
+decision.
+
 ## Approval-history contract
 
 If a team wants a durable local review trail, create a sanitized history file

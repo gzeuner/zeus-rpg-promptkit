@@ -39,7 +39,9 @@ const {
 } = require('../../agent/processAnswerDrift');
 const {
   buildProcessAnswerReview,
+  buildProcessAnswerReviewSummary,
   writeProcessAnswerReviewArtifact,
+  writeProcessAnswerReviewSummaryArtifact,
 } = require('../../agent/processAnswerReview');
 const {
   listGlossaryEntries,
@@ -62,6 +64,7 @@ const OPERATIONS = new Set([
   'regression-check',
   'drift-check',
   'drift-review',
+  'drift-review-summary',
   'glossary',
 ]);
 
@@ -105,6 +108,9 @@ function printHelp() {
   );
   console.log(
     '  zeus process drift-review --drift <.zeus/file.json> [--history <.zeus/file.json>] [--out <.zeus/file.json>] [--json]'
+  );
+  console.log(
+    '  zeus process drift-review-summary --history <.zeus/file.json> [--out <.zeus/file.json>] [--json]'
   );
   console.log(
     '  zeus process glossary list --glossary <relative-path> [--only-applicable] [--json]'
@@ -319,6 +325,17 @@ function printHuman(operation, result) {
     if (result.artifact) console.log(`Artifact: ${result.artifact}`);
     return;
   }
+  if (operation === 'drift-review-summary') {
+    console.log(`Process-answer review summary: ${result.status}`);
+    console.log(
+      `Drift identities: ${result.metrics.driftIdentityCount}; unresolved: ${result.metrics.unresolvedDriftCount}; stale decisions: ${result.metrics.staleDecisionCount}`
+    );
+    for (const finding of result.findings) {
+      console.log(`- ${finding.code}: ${finding.driftCount} drift identities`);
+    }
+    if (result.artifact) console.log(`Artifact: ${result.artifact}`);
+    return;
+  }
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -424,6 +441,17 @@ function runProcess(args = {}) {
       });
       if (args.out) {
         result.artifact = writeProcessAnswerReviewArtifact(result, {
+          cwd: process.cwd(),
+          out: args.out,
+        });
+      }
+    } else if (operation === 'drift-review-summary') {
+      result = buildProcessAnswerReviewSummary({
+        cwd: process.cwd(),
+        history: requireValue(args, 'history'),
+      });
+      if (args.out) {
+        result.artifact = writeProcessAnswerReviewSummaryArtifact(result, {
           cwd: process.cwd(),
           out: args.out,
         });
