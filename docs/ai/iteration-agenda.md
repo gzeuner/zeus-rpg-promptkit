@@ -395,12 +395,31 @@ also raised to `0.6.1` while closing the CI audit gate. Delivered in PR #333
 after local verification, secret/private-content scanning, protected-branch
 verification, and a green main pipeline at merge commit `0e3ae94`.
 
-The next active roadmap item is Iteration 21: compare versioned regression
-results across catalog revisions and produce a bounded drift report with
-stable blocker codes and a smallest safe follow-up command. The report must
-remain review-only and must distinguish catalog drift, corpus drift, evidence
-loss, freshness changes, and answer-contract changes without exposing source
-content or private runtime values.
+Iteration 21 is completed in PR #335 after local verification, secret/private-
+content scanning, protected-branch verification, and a green PR pipeline. The
+merge commit is `627ff7e`.
+
+### Iteration 21 — Process-answer drift reports (completed in PR #335)
+
+Compare two versioned process-answer regression results across catalog
+revisions and produce a bounded, review-only drift report. The report keeps
+catalog, corpus, evaluation, and review identities separate; detects scenario
+set changes, regressions, evidence/freshness/status/match drift, answer
+contract changes, reproducibility changes, and pending review; emits stable
+blocker codes; and provides the smallest safe follow-up command.
+
+Implementation: `src/agent/processAnswerDrift.js`, the `process drift-check`
+CLI route, generated tool-catalog metadata, and
+`tests/project-intelligence-process-answer-drift.test.js`. The output is
+workspace-relative, bounded, hashed where scenario identity is needed, and
+does not expose questions, answer text, matched process identifiers, source
+content, absolute paths, credentials, or private runtime values.
+
+The next active roadmap item is Iteration 22: make drift explanations
+reviewer-friendly without weakening the machine contract. It should add a
+bounded explanation projection and approval-history linkage that reuses the
+existing drift and regression artifacts, keeps raw answer text out of shared
+reports, and remains read-only until an explicit human decision is recorded.
 
 ## Business Process Intelligence vertical slice
 
