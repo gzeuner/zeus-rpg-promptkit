@@ -465,6 +465,27 @@ summary that lets an agent find unresolved conflicts and stale decisions across
 multiple drift identities without exposing questions, answers, source content,
 or private project identifiers.
 
+### Iteration 24 — Review-history summary (completed in PR #341)
+
+Add the read-only `process drift-review-summary` operation for a sanitized
+review history. It aggregates bounded conflict and stale-decision findings
+across multiple hashed drift identities, exposes the latest bounded decision
+for each identity, and keeps questions, answers, source content, process IDs,
+private identifiers, and automatic promotion out of the result.
+
+Implementation: `src/agent/processAnswerReview.js`, the `process
+drift-review-summary` CLI route, generated tool-catalog metadata, the AI
+workflow documentation, and
+`tests/project-intelligence-process-answer-review.test.js`. Delivered in PR
+#341 with 968 passing tests, 3 skipped tests, a clean dependency audit, a
+green PR and main pipeline, and no credentials or private runtime values in
+the staged change. The merge commit is `df5c60f`.
+
+The next active roadmap item is Iteration 25: make review-history freshness
+and retention explicit, so an agent can distinguish current evidence from
+bounded historical context and receive a safe local cleanup/review step
+without deleting or mutating review records automatically.
+
 ## Business Process Intelligence vertical slice
 
 Iterations 10–13 should first deliver one complete neutral example process:
