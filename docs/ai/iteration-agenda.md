@@ -415,11 +415,31 @@ workspace-relative, bounded, hashed where scenario identity is needed, and
 does not expose questions, answer text, matched process identifiers, source
 content, absolute paths, credentials, or private runtime values.
 
-The next active roadmap item is Iteration 22: make drift explanations
-reviewer-friendly without weakening the machine contract. It should add a
-bounded explanation projection and approval-history linkage that reuses the
-existing drift and regression artifacts, keeps raw answer text out of shared
-reports, and remains read-only until an explicit human decision is recorded.
+Iteration 22 is completed in PR #337 after local verification, secret/private-
+content scanning, protected-branch verification, and a green main pipeline.
+The merge commit is `bb58cdd`.
+
+### Iteration 22 — Reviewer explanations and approval history (completed in PR #337)
+
+Add the read-only `process drift-review` projection on top of a persisted
+`process-answer-drift-result`. The projection explains stable blocker codes in
+bounded reviewer language, links optional sanitized decisions to the exact
+hashed `driftId`, hashes reviewer identities, and keeps raw questions, answer
+content, process IDs, source content, and free-text notes out of the shared
+result. Explicit `approve`, `reject`, and `defer` decisions remain evidence of
+review only; `automaticPromotion` and `promotionAllowed` stay false.
+
+Implementation: `src/agent/processAnswerReview.js`, the `process drift-review`
+CLI route, generated tool-catalog metadata, the AI workflow documentation,
+and `tests/project-intelligence-process-answer-review.test.js`. Delivered in
+PR #337 with 966 passing tests, 3 skipped tests, a clean dependency audit, and
+no credentials or private runtime values in the staged change.
+
+The next active roadmap item is Iteration 23: validate approval-history
+consistency across repeated reviews. It should detect contradictory or stale
+decisions for the same drift identity, keep the latest decision explainable,
+and remain a bounded read-only diagnostic without changing catalog or review
+state automatically.
 
 ## Business Process Intelligence vertical slice
 
