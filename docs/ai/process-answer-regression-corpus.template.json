@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "kind": "process-answer-regression-corpus",
+  "corpusId": "<environment-process-answers>",
+  "corpusVersion": "1.0.0",
+  "description": "Sanitized, versioned questions whose evidence-backed process answers must remain stable.",
+  "sanitized": true,
+  "containsCredentials": false,
+  "containsPrivateProjectIdentifiers": false,
+  "scenarios": [
+    {
+      "id": "<stable-scenario-id>",
+      "question": "Was macht <exact-process-or-interface>?",
+      "expectedProcessIds": ["<process-id>"],
+      "expectedStatus": "reviewed",
+      "requiredAnswerTerms": ["<neutral-business-term>"],
+      "requireEvidence": true,
+      "requiredEvidenceKinds": ["source-span"],
+      "maxFreshness": "published",
+      "limit": 5
+    }
+  ]
+}

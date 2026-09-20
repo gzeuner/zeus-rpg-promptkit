@@ -72,6 +72,7 @@ node cli/zeus.js process view --catalog ./output/process-candidates.json --id <p
 node cli/zeus.js process impact --catalog ./output/process-candidates.json --id <process-id> --changed-evidence-id <evidence-id> --json
 node cli/zeus.js process diff --catalog ./output/process-candidates.json --id <process-id> --json
 node cli/zeus.js process evaluate --catalog ./output/process-candidates.json --scenarios ./output/process-scenarios.json --json
+node cli/zeus.js process regression-check --catalog ./output/process-candidates.json --corpus ./.local/process-answer-regression-corpus.json --decision .zeus/process-answer-review.json --json
 node cli/zeus.js process experience --question "Was macht <legacy-term>?" --outcome ambiguous --glossary-term "<legacy-term>" --json
 node cli/zeus.js process improvements --out .zeus/process-improvements.json --json
 node cli/zeus.js process glossary list --glossary ./output/process-glossary.json --only-applicable --json
@@ -110,6 +111,14 @@ An optional scenario file is a JSON array or `{ "scenarios": [...] }` with
 `maxFreshness`. The evaluation output contains scenario ids and outcomes, not
 the question text, so private questions do not become part of a committed
 quality artifact.
+
+For a stronger answer contract, use the versioned
+`process-answer-regression-corpus` described in
+[`process-answer-regression.md`](process-answer-regression.md). It adds
+expected lifecycle status, answer terms, evidence kinds, and a reviewer
+decision bound to the exact corpus version, catalog fingerprint, and
+evaluation ID. Keep the corpus and decision environment-local unless they are
+fully sanitized.
 
 ## Process experience loop
 

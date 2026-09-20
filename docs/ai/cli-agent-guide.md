@@ -56,6 +56,7 @@ node cli/zeus.js process evaluate --catalog ./output/process-candidates.json --j
 node cli/zeus.js process experience --question "<question>" --outcome <blocked|ambiguous|incomplete|stale|corrected> --json
 node cli/zeus.js process improvements --json
 node cli/zeus.js process promotion-check --candidate .zeus/report-a.json --candidate .zeus/report-b.json --fixture .zeus/process-regression-fixture.json --json
+node cli/zeus.js process regression-check --catalog ./output/process-candidates.json --corpus ./.local/process-answer-regression-corpus.json --out .zeus/process-answer-regression.json --json
 node cli/zeus.js process glossary resolve --glossary ./output/process-glossary.json --term "<legacy-term>" --json
 node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht <legacy-term>?" --json
 ```
@@ -143,6 +144,23 @@ and only then change the authoritative prompt, documentation, or command
 metadata. The command is local and read-only unless `--out` is supplied; even
 then it writes only the bounded, workspace-contained feedback artifact and
 never changes a prompt or remote system.
+
+### Process-answer regression gate
+
+Use a versioned, sanitized corpus when a catalog, prompt, glossary, or
+retrieval rule changes. Start with
+[`process-answer-regression.md`](process-answer-regression.md) and run
+`process regression-check` once without a decision to obtain the anonymous
+catalog fingerprint and evaluation ID. A domain owner then writes the matching
+decision described in
+[`process-answer-review-decision.template.json`](process-answer-review-decision.template.json)
+under `.zeus/` and the command is run again with `--decision`.
+
+The gate checks expected process IDs, lifecycle status, answer terms, evidence
+kinds, and freshness. The result is read-only; `automaticPromotion` and
+`promotionAllowed` are always false. An approved review is no permission for a
+remote or automatic change, but gives the operator a bounded basis for the
+smallest explicit authoritative update and a repeatable post-change check.
 
 ### Promotion review
 

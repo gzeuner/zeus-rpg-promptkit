@@ -30,6 +30,10 @@ const {
   writeProcessPromotionArtifact,
 } = require('../../agent/processPromotion');
 const {
+  buildProcessAnswerRegression,
+  writeProcessAnswerRegressionArtifact,
+} = require('../../agent/processAnswerRegression');
+const {
   listGlossaryEntries,
   resolveGlossaryTerm,
   readGlossaryCatalog,
@@ -47,6 +51,7 @@ const OPERATIONS = new Set([
   'experience',
   'improvements',
   'promotion-check',
+  'regression-check',
   'glossary',
 ]);
 
@@ -81,6 +86,9 @@ function printHelp() {
   );
   console.log(
     '  zeus process promotion-check --candidate <.zeus/process-improvements.json> [--candidate <.zeus/file.json>] [--fixture <.zeus/file.json>] [--out <.zeus/file.json>] [--json]'
+  );
+  console.log(
+    '  zeus process regression-check --catalog <relative-path> --corpus <relative-path> [--decision <.zeus/file.json>] [--out <.zeus/file.json>] [--json]'
   );
   console.log(
     '  zeus process glossary list --glossary <relative-path> [--only-applicable] [--json]'
@@ -266,6 +274,15 @@ function printHuman(operation, result) {
     if (result.artifact) console.log(`Artifact: ${result.artifact}`);
     return;
   }
+  if (operation === 'regression-check') {
+    console.log(`Process-answer regression: ${result.status}`);
+    console.log(
+      `Scenarios: ${result.metrics.passedScenarioCount}/${result.metrics.scenarioCount} passed; reviewer: ${result.review.status}`
+    );
+    if (result.blockers.length > 0) console.log(`Blockers: ${result.blockers.join('; ')}`);
+    if (result.artifact) console.log(`Artifact: ${result.artifact}`);
+    return;
+  }
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -333,6 +350,20 @@ function runProcess(args = {}) {
       });
       if (args.out) {
         result.artifact = writeProcessPromotionArtifact(result, {
+          cwd: process.cwd(),
+          out: args.out,
+        });
+      }
+    } else if (operation === 'regression-check') {
+      const catalog = readProcessCatalog(requireValue(args, 'catalog'));
+      result = buildProcessAnswerRegression({
+        cwd: process.cwd(),
+        catalog,
+        corpus: requireValue(args, 'corpus'),
+        decision: args.decision,
+      });
+      if (args.out) {
+        result.artifact = writeProcessAnswerRegressionArtifact(result, {
           cwd: process.cwd(),
           out: args.out,
         });

@@ -8,6 +8,7 @@ const vocabulary = require('./vocabulary');
 const freshness = require('./freshness');
 const views = require('./views');
 const evaluation = require('./evaluation');
+const answerRegression = require('../../agent/processAnswerRegression');
 
 module.exports = {
   ...contracts,
@@ -18,4 +19,5 @@ module.exports = {
   ...freshness,
   ...views,
   ...evaluation,
+  ...answerRegression,
 };

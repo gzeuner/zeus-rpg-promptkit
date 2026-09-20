@@ -452,11 +452,12 @@ const COMMAND_METADATA = Object.freeze({
       'experience',
       'improvements',
       'promotion-check',
+      'regression-check',
       'glossary list',
       'glossary resolve',
     ],
     purpose:
-      'Retrieve evidence-backed business-process projections, role-specific views, a local read-only chat adapter, deterministic quality evaluations, and project-specific legacy vocabulary from explicit local catalogs. Record sanitized process learnings, combine anonymized signals across catalogs, and produce review-only improvement and promotion-readiness reports without publishing or mutating knowledge. Exact identifiers, scoped glossary mappings, and reviewed facts are ranked ahead of derived summaries; ambiguity, freshness, evidence, confidence, and unknowns remain visible.',
+      'Retrieve evidence-backed business-process projections, role-specific views, a local read-only chat adapter, deterministic quality evaluations, versioned process-answer regression checks with explicit reviewer decisions, and project-specific legacy vocabulary from explicit local catalogs. Record sanitized process learnings, combine anonymized signals across catalogs, and produce review-only improvement, promotion-readiness, and regression-gate reports without publishing or mutating knowledge. Exact identifiers, scoped glossary mappings, and reviewed facts are ranked ahead of derived summaries; ambiguity, freshness, evidence, confidence, and unknowns remain visible.',
     example:
       'node cli/zeus.js process chat --catalog ./output/process-candidates.json --question "Was macht Schnittstelle XY?" --json',
   }),

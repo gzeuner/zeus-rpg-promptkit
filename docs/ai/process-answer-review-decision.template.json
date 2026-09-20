@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "kind": "process-answer-review-decision",
+  "corpusId": "<same-corpus-id>",
+  "corpusVersion": "<same-corpus-version>",
+  "catalogFingerprint": "catalog:<16-hex-digits>",
+  "evaluationId": "process-answer-evaluation:<16-hex-digits>",
+  "reviewerId": "<domain-owner-or-reviewer-id>",
+  "approved": true,
+  "decision": "approve",
+  "reviewedAt": "2026-01-01T00:00:00.000Z",
+  "rationale": "The expected process answers and evidence references were reviewed.",
+  "sanitized": true,
+  "containsCredentials": false,
+  "containsPrivateProjectIdentifiers": false
+}

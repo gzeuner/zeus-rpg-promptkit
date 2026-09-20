@@ -94,6 +94,8 @@ module.exports = {
   buildProcessRoleView: processIntelligence.buildProcessRoleView,
   chatProcess: processIntelligence.chatProcess,
   evaluateProcessCatalog: processIntelligence.evaluateProcessCatalog,
+  buildProcessAnswerRegression: processIntelligence.buildProcessAnswerRegression,
+  readProcessAnswerRegressionCorpus: processIntelligence.readProcessAnswerRegressionCorpus,
   impactProcess: processIntelligence.impactProcess,
   diffProcess: processIntelligence.diffProcess,
   readProcessCatalog: processIntelligence.readProcessCatalog,
