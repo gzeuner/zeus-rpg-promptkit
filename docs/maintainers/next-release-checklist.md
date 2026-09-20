@@ -6,10 +6,10 @@ Last Updated: 2026-09-20
 
 # Next release checklist (unified public package)
 
-Current package version on main: **0.3.0-rc.2** (release candidate prepared on the current feature cut).
+Current package version on main: **0.3.0-rc.2** (published prerelease; the current cut is closed below).
 
-Published prerelease source: [`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.1)
-@ `7435637…`. **Do not re-tag** `v0.3.0-rc.1`.
+Published prerelease source: [`v0.3.0-rc.2`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.2)
+@ `f05a079…`. **Do not re-tag** `v0.3.0-rc.2`.
 
 Last published stable: [`v0.2.0`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0)
 @ `84822a6…`. **Do not re-tag** `v0.2.0`.
@@ -18,15 +18,14 @@ This checklist prepares public releases. Tag/publish still require the Release
 `workflow_dispatch` after merge to `main`.
 
 **Historical Track F freeze package:** [`freeze-readiness-0.2.0.md`](./freeze-readiness-0.2.0.md)
-(`v0.2.0` is already published; the `0.3.0-rc.1` feature cut is closed below.)
+(`v0.2.0` is already published; the `0.3.0-rc.2` feature cut is closed below.)
 
 ## Next release target
 
-| Candidate    | Rationale                                                      |
-| ------------ | -------------------------------------------------------------- |
-| `0.3.0`      | Stable follow-up after RC validation and owner approval        |
-| `0.3.0-rc.2` | Current candidate containing the neutral display-file UI cut   |
-| Hold         | Keep the RC available while additional feedback or soak occurs |
+| Candidate | Rationale                                               |
+| --------- | ------------------------------------------------------- |
+| `0.3.0`   | Stable follow-up after RC validation and owner approval |
+| Hold      | Keep the roadmap paused until the next release decision |
 
 ## Preflight (local)
 
@@ -54,6 +53,18 @@ When the version is bumped and CHANGELOG / release notes exist:
 ```bash
 npm run release:preflight -- --version <target-version>
 ```
+
+## Closed cut: 0.3.0-rc.2 (2026-09-20)
+
+| Gate                    | Result                                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| Prep PR                 | [#347](https://github.com/gzeuner/zeus-rpg-promptkit/pull/347)                            |
+| Release workflow        | [run 35531534610](https://github.com/gzeuner/zeus-rpg-promptkit/actions/runs/35531534610) |
+| Tag / assets            | [`v0.3.0-rc.2`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.2)   |
+| Source SHA              | `f05a0797460b9ade72879b32efbd0ec4e1f41123`                                                |
+| Assets                  | tarball + SBOM + SHA256SUMS + attestation; fresh-download verification green              |
+| Release type            | prerelease / release candidate                                                            |
+| Credential/private scan | clean; no credentials or private runtime identifiers committed                            |
 
 ## Closed cut: 0.3.0-rc.1 (2026-09-10)
 

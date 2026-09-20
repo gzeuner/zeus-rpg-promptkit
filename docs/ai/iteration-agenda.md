@@ -522,11 +522,11 @@ workflow documentation, and
 audit, a green PR and main pipeline, and no credentials or private runtime
 values in the staged change. The merge commit is `d6a59f9`.
 
-The roadmap is paused after Iteration 26 until an explicit follow-up. The
-following naming iteration is now being prepared locally; it is not yet
-committed or published.
+The roadmap is paused after Iteration 27 until an explicit follow-up. The
+next proposed item is intentionally planning-only and is not being implemented
+without explicit approval.
 
-### Iteration 27 — Neutral display-UI terminology (release candidate 0.3.0-rc.2)
+### Iteration 27 — Neutral display-UI terminology (published 0.3.0-rc.2)
 
 Replace vendor-specific abbreviations and product labels in the public
 Promptkit surface with neutral display-file UI terminology while preserving the
@@ -543,9 +543,13 @@ technical behavior:
 - the change is treated as a public naming change and requires release-note and
   migration documentation before publication.
 
-The implementation is prepared for the `0.3.0-rc.2` release candidate. The
-release workflow remains the final source-of-truth gate for the merged `main`
-commit, package artifact, provenance, and fresh-download verification.
+The implementation was published as [`v0.3.0-rc.2`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.2)
+from merged `main` commit `f05a0797460b9ade72879b32efbd0ec4e1f41123` after
+[PR #347](https://github.com/gzeuner/zeus-rpg-promptkit/pull/347). The
+[release workflow](https://github.com/gzeuner/zeus-rpg-promptkit/actions/runs/35531534610)
+completed successfully, including quality gates, package, SBOM, checksums,
+attestation, exact-SHA tagging, and fresh-download verification. This closes
+Iteration 27; the release tag and assets must not be re-created or re-tagged.
 
 ### Iteration 28 — Confidential legacy-source boundary and inventory (planned, not started)
 
@@ -585,7 +589,7 @@ Possible follow-up iterations, still inactive until explicitly approved, are:
 3. reviewed process descriptions and safe process-query answers built only from
    anonymized, evidence-linked artifacts.
 
-The roadmap remains paused after Iteration 26. Iteration 28 is a planning item
+The roadmap remains paused after Iteration 27. Iteration 28 is a planning item
 only and must not be implemented without explicit follow-up.
 
 ## Business Process Intelligence vertical slice
