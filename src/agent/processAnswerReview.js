@@ -12,6 +12,7 @@ const DEFAULT_PROCESS_ANSWER_REVIEW_ARTIFACT = '.zeus/process-answer-review.json
 const DEFAULT_PROCESS_ANSWER_REVIEW_SUMMARY_ARTIFACT = '.zeus/process-answer-review-summary.json';
 const DEFAULT_PROCESS_ANSWER_REVIEW_RETENTION_ARTIFACT =
   '.zeus/process-answer-review-retention.json';
+const DEFAULT_PROCESS_ANSWER_REVIEW_RECEIPT_ARTIFACT = '.zeus/process-answer-review-receipt.json';
 const DEFAULT_REVIEW_FRESHNESS_DAYS = 30;
 const DEFAULT_REVIEW_RETENTION_DAYS = 90;
 const MAX_REVIEW_POLICY_DAYS = 3650;
@@ -815,6 +816,7 @@ function buildProcessAnswerReviewRetention({
     readOnly: true,
     status,
     historyPath: historyLocation.relativePath,
+    historyFingerprint: `history:${stableHash(JSON.stringify(normalizedHistory)).slice(0, 16)}`,
     policy: {
       asOf: policy.asOf,
       freshWithinDays: policy.freshDays,
@@ -851,6 +853,75 @@ function buildProcessAnswerReviewRetention({
     promotionAllowed: false,
     automaticDeletion: false,
     deletionAllowed: false,
+  };
+}
+
+function buildProcessAnswerReviewReceipt({
+  cwd = process.cwd(),
+  history,
+  asOf,
+  freshDays,
+  retentionDays,
+} = {}) {
+  const retention = buildProcessAnswerReviewRetention({
+    cwd,
+    history,
+    asOf,
+    freshDays,
+    retentionDays,
+  });
+  const reviewRequired = retention.reviewRequired.map(item => ({
+    driftId: item.driftId,
+    decision: item.latestDecision
+      ? {
+          decisionId: item.latestDecision.decisionId,
+          decision: item.latestDecision.decision,
+          reviewerHash: item.latestDecision.reviewerHash,
+          reviewedAt: item.latestDecision.reviewedAt,
+          rationaleCode: item.latestDecision.rationaleCode,
+        }
+      : null,
+    latestFreshness: item.latestFreshness,
+    reasonCode: item.reasonCode,
+  }));
+  const inspection = {
+    historyFingerprint: retention.historyFingerprint,
+    policy: retention.policy,
+    metrics: retention.metrics,
+    freshnessCounts: retention.freshnessCounts,
+    retentionCandidates: retention.retentionCandidates,
+    reviewRequired,
+  };
+  const receiptId = `receipt:${stableHash(JSON.stringify(inspection)).slice(0, 16)}`;
+  const decisionRequired =
+    retention.metrics.retentionCandidateCount > 0 || retention.metrics.reviewRequiredDriftCount > 0;
+  return {
+    ok: true,
+    operation: 'drift-review-receipt',
+    kind: 'process-answer-review-receipt',
+    schemaVersion: PROCESS_ANSWER_REVIEW_SCHEMA_VERSION,
+    readOnly: true,
+    status: retention.status,
+    receiptId,
+    inspectedAt: retention.policy.asOf,
+    source: {
+      historyPath: retention.historyPath,
+      historyFingerprint: retention.historyFingerprint,
+    },
+    inspection,
+    decision: {
+      required: decisionRequired,
+      recorded: false,
+      automaticDeletion: false,
+      deletionAllowed: false,
+      automaticPromotion: false,
+      promotionAllowed: false,
+    },
+    nextSafeStep: decisionRequired
+      ? 'Preserve this receipt with the bounded review artifacts and obtain an explicit local decision for every candidate or review-required latest decision.'
+      : 'Preserve this receipt with the bounded review artifacts; no retention decision is currently required.',
+    nextCommand:
+      'node cli/zeus.js process drift-review-receipt --history .zeus/process-answer-review-history.json --as-of 2026-09-20T00:00:00.000Z --json',
   };
 }
 
@@ -944,6 +1015,13 @@ function resolveProcessAnswerReviewRetentionArtifactPath({
   return resolveJsonPath({ cwd, input: out, label: '--out' });
 }
 
+function resolveProcessAnswerReviewReceiptArtifactPath({
+  cwd = process.cwd(),
+  out = DEFAULT_PROCESS_ANSWER_REVIEW_RECEIPT_ARTIFACT,
+} = {}) {
+  return resolveJsonPath({ cwd, input: out, label: '--out' });
+}
+
 function writeProcessAnswerReviewArtifact(payload, options = {}) {
   const location = resolveProcessAnswerReviewArtifactPath(options);
   fs.mkdirSync(path.dirname(location.absolutePath), { recursive: true });
@@ -989,18 +1067,37 @@ function writeProcessAnswerReviewRetentionArtifact(payload, options = {}) {
   return location.relativePath;
 }
 
+function writeProcessAnswerReviewReceiptArtifact(payload, options = {}) {
+  const location = resolveProcessAnswerReviewReceiptArtifactPath(options);
+  fs.mkdirSync(path.dirname(location.absolutePath), { recursive: true });
+  fs.writeFileSync(location.absolutePath, `${JSON.stringify(payload, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  try {
+    fs.chmodSync(location.absolutePath, 0o600);
+  } catch {
+    // chmod is not supported or meaningful on every platform.
+  }
+  return location.relativePath;
+}
+
 module.exports = {
   DEFAULT_PROCESS_ANSWER_REVIEW_ARTIFACT,
   DEFAULT_PROCESS_ANSWER_REVIEW_SUMMARY_ARTIFACT,
   DEFAULT_PROCESS_ANSWER_REVIEW_RETENTION_ARTIFACT,
+  DEFAULT_PROCESS_ANSWER_REVIEW_RECEIPT_ARTIFACT,
   PROCESS_ANSWER_REVIEW_SCHEMA_VERSION,
   buildProcessAnswerReview,
   buildProcessAnswerReviewSummary,
   buildProcessAnswerReviewRetention,
+  buildProcessAnswerReviewReceipt,
   resolveProcessAnswerReviewArtifactPath,
   resolveProcessAnswerReviewSummaryArtifactPath,
   resolveProcessAnswerReviewRetentionArtifactPath,
+  resolveProcessAnswerReviewReceiptArtifactPath,
   writeProcessAnswerReviewArtifact,
   writeProcessAnswerReviewSummaryArtifact,
   writeProcessAnswerReviewRetentionArtifact,
+  writeProcessAnswerReviewReceiptArtifact,
 };

@@ -12,6 +12,7 @@ const {
   buildProcessAnswerReview,
   buildProcessAnswerReviewSummary,
   buildProcessAnswerReviewRetention,
+  buildProcessAnswerReviewReceipt,
   writeProcessAnswerReviewArtifact,
 } = require('../src/agent/processAnswerReview');
 
@@ -400,6 +401,33 @@ test('review history retention classifies freshness and exposes only safe supers
     assert.equal(result.deletionAllowed, false);
     assert.equal(result.automaticPromotion, false);
     assert.equal(result.promotionAllowed, false);
+    assert.match(result.historyFingerprint, /^history:[a-f0-9]{16}$/);
+
+    const receipt = buildProcessAnswerReviewReceipt({
+      cwd: workspace,
+      history: historyPath,
+      asOf: '2026-09-20T00:00:00.000Z',
+      freshDays: 30,
+      retentionDays: 90,
+    });
+    assert.equal(receipt.operation, 'drift-review-receipt');
+    assert.equal(receipt.status, 'needs-review');
+    assert.match(receipt.receiptId, /^receipt:[a-f0-9]{16}$/);
+    assert.equal(receipt.inspectedAt, '2026-09-20T00:00:00.000Z');
+    assert.equal(receipt.source.historyFingerprint, result.historyFingerprint);
+    assert.deepEqual(receipt.inspection.policy, result.policy);
+    assert.deepEqual(receipt.inspection.retentionCandidates, result.retentionCandidates);
+    assert.deepEqual(
+      receipt.inspection.reviewRequired.map(item => item.reasonCode),
+      ['REVIEW_HISTORY_LATEST_HISTORICAL', 'REVIEW_TIMESTAMP_IN_FUTURE']
+    );
+    assert.equal(receipt.decision.required, true);
+    assert.equal(receipt.decision.recorded, false);
+    assert.equal(receipt.decision.automaticDeletion, false);
+    assert.equal(receipt.decision.deletionAllowed, false);
+    assert.equal(receipt.decision.automaticPromotion, false);
+    assert.equal(receipt.decision.promotionAllowed, false);
+    assert.doesNotMatch(JSON.stringify(receipt), /older-reviewer|current-reviewer/);
 
     const run = spawnSync(
       process.execPath,
@@ -422,6 +450,28 @@ test('review history retention classifies freshness and exposes only safe supers
     assert.equal(payload.result.operation, 'drift-review-retention');
     assert.equal(payload.result.metrics.historicalDecisionCount, 2);
     assert.equal(fs.existsSync(path.join(workspace, '.zeus', 'retention.json')), true);
+
+    const receiptRun = spawnSync(
+      process.execPath,
+      [
+        CLI,
+        'process',
+        'drift-review-receipt',
+        '--history',
+        historyPath,
+        '--as-of',
+        '2026-09-20T00:00:00.000Z',
+        '--out',
+        '.zeus/receipt.json',
+        '--json',
+      ],
+      { cwd: workspace, encoding: 'utf8' }
+    );
+    assert.equal(receiptRun.status, 0, receiptRun.stderr);
+    const receiptPayload = JSON.parse(receiptRun.stdout);
+    assert.equal(receiptPayload.result.operation, 'drift-review-receipt');
+    assert.equal(receiptPayload.result.decision.recorded, false);
+    assert.equal(fs.existsSync(path.join(workspace, '.zeus', 'receipt.json')), true);
   } finally {
     fs.rmSync(workspace, { recursive: true, force: true });
   }

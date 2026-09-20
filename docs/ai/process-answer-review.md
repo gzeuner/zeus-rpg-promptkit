@@ -133,3 +133,23 @@ deletion. The result exposes hashed decision and drift IDs only and keeps
 `automaticDeletion`, `deletionAllowed`, `automaticPromotion`, and
 `promotionAllowed` false. Pass `--as-of` for reproducible reports; omitted
 timestamps use the local current time.
+
+When the retention result must be preserved as a reproducible review record,
+create a receipt from the same sanitized history and explicit policy:
+
+```powershell
+node cli/zeus.js process drift-review-receipt `
+  --history .zeus/process-answer-review-history.json `
+  --as-of 2026-09-20T00:00:00.000Z `
+  --fresh-days 30 `
+  --retention-days 90 `
+  --out .zeus/process-answer-review-receipt.json `
+  --json
+```
+
+The receipt contains a stable `receiptId`, a bounded `historyFingerprint`,
+the applied policy, freshness metrics, hashed retention candidates, and
+review-required reason codes. Its inspection timestamp is the explicit
+`--as-of` value, so the record can be compared or attached to a later review.
+The receipt is evidence of inspection only: `decision.recorded` is false and
+automatic deletion and promotion remain disabled.

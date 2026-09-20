@@ -41,9 +41,11 @@ const {
   buildProcessAnswerReview,
   buildProcessAnswerReviewSummary,
   buildProcessAnswerReviewRetention,
+  buildProcessAnswerReviewReceipt,
   writeProcessAnswerReviewArtifact,
   writeProcessAnswerReviewSummaryArtifact,
   writeProcessAnswerReviewRetentionArtifact,
+  writeProcessAnswerReviewReceiptArtifact,
 } = require('../../agent/processAnswerReview');
 const {
   listGlossaryEntries,
@@ -68,6 +70,7 @@ const OPERATIONS = new Set([
   'drift-review',
   'drift-review-summary',
   'drift-review-retention',
+  'drift-review-receipt',
   'glossary',
 ]);
 
@@ -117,6 +120,9 @@ function printHelp() {
   );
   console.log(
     '  zeus process drift-review-retention --history <.zeus/file.json> [--as-of <ISO-timestamp>] [--fresh-days <n>] [--retention-days <n>] [--out <.zeus/file.json>] [--json]'
+  );
+  console.log(
+    '  zeus process drift-review-receipt --history <.zeus/file.json> [--as-of <ISO-timestamp>] [--fresh-days <n>] [--retention-days <n>] [--out <.zeus/file.json>] [--json]'
   );
   console.log(
     '  zeus process glossary list --glossary <relative-path> [--only-applicable] [--json]'
@@ -353,6 +359,14 @@ function printHuman(operation, result) {
     if (result.artifact) console.log(`Artifact: ${result.artifact}`);
     return;
   }
+  if (operation === 'drift-review-receipt') {
+    console.log(`Process-answer review receipt: ${result.status}`);
+    console.log(
+      `Receipt: ${result.receiptId}; history: ${result.source.historyFingerprint}; retention candidates: ${result.inspection.metrics.retentionCandidateCount}; review required: ${result.inspection.metrics.reviewRequiredDriftCount}`
+    );
+    if (result.artifact) console.log(`Artifact: ${result.artifact}`);
+    return;
+  }
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -483,6 +497,20 @@ function runProcess(args = {}) {
       });
       if (args.out) {
         result.artifact = writeProcessAnswerReviewRetentionArtifact(result, {
+          cwd: process.cwd(),
+          out: args.out,
+        });
+      }
+    } else if (operation === 'drift-review-receipt') {
+      result = buildProcessAnswerReviewReceipt({
+        cwd: process.cwd(),
+        history: requireValue(args, 'history'),
+        asOf: args['as-of'],
+        freshDays: args['fresh-days'],
+        retentionDays: args['retention-days'],
+      });
+      if (args.out) {
+        result.artifact = writeProcessAnswerReviewReceiptArtifact(result, {
           cwd: process.cwd(),
           out: args.out,
         });
