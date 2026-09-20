@@ -57,6 +57,7 @@ node cli/zeus.js process experience --question "<question>" --outcome <blocked|a
 node cli/zeus.js process improvements --json
 node cli/zeus.js process promotion-check --candidate .zeus/report-a.json --candidate .zeus/report-b.json --fixture .zeus/process-regression-fixture.json --json
 node cli/zeus.js process regression-check --catalog ./output/process-candidates.json --corpus ./.local/process-answer-regression-corpus.json --out .zeus/process-answer-regression.json --json
+node cli/zeus.js process drift-check --baseline .zeus/process-answer-regression-baseline.json --current .zeus/process-answer-regression.json --out .zeus/process-answer-drift.json --json
 node cli/zeus.js process glossary resolve --glossary ./output/process-glossary.json --term "<legacy-term>" --json
 node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht <legacy-term>?" --json
 ```
@@ -85,6 +86,13 @@ catalog fingerprints and accepts fixtures only when they explicitly declare
 `containsPrivateProjectIdentifiers: false`. A candidate is merely
 `ready-for-human-review`; the command is read-only and never edits a glossary,
 extractor, prompt, or contract.
+
+When a new regression result exists, compare it with the last known-good
+`.zeus/` result using `process drift-check`. The report compares only bounded
+metadata and scenario outcomes. It emits hashed scenario keys, stable drift
+codes, evidence/freshness/status metrics, and a safe follow-up command; it does
+not emit questions, answer text, matched process IDs, source content, or
+absolute paths. See [`process-answer-drift.md`](process-answer-drift.md).
 
 ## Stable agent response contract
 

@@ -221,3 +221,24 @@ with `sanitized: true`, `containsCredentials: false`, and
 `ready-for-human-review`; `promotionAllowed` and `automaticPromotion` remain
 false in every result. A domain owner must verify the evidence and change the
 authoritative glossary, extraction rule, prompt, or contract explicitly.
+
+## Regression drift between catalog revisions
+
+Store a known-good result and the current result under `.zeus/`, then compare
+them with the bounded drift command:
+
+```text
+node cli/zeus.js process drift-check \
+  --baseline .zeus/process-answer-regression-baseline.json \
+  --current .zeus/process-answer-regression.json \
+  --out .zeus/process-answer-drift.json --json
+```
+
+The command requires two workspace-relative `.zeus/*.json` regression results.
+It reports catalog/corpus identity changes, scenario additions/removals,
+introduced or resolved regressions, evidence loss, freshness changes, status
+changes, process-match changes, and answer-contract changes. It uses hashed
+scenario keys and never copies questions, answer text, matched process IDs,
+source content, or absolute paths. See
+[`process-answer-drift.md`](process-answer-drift.md) for the stable blocker
+codes and safe follow-up.

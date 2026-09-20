@@ -34,6 +34,10 @@ const {
   writeProcessAnswerRegressionArtifact,
 } = require('../../agent/processAnswerRegression');
 const {
+  buildProcessAnswerDrift,
+  writeProcessAnswerDriftArtifact,
+} = require('../../agent/processAnswerDrift');
+const {
   listGlossaryEntries,
   resolveGlossaryTerm,
   readGlossaryCatalog,
@@ -52,6 +56,7 @@ const OPERATIONS = new Set([
   'improvements',
   'promotion-check',
   'regression-check',
+  'drift-check',
   'glossary',
 ]);
 
@@ -89,6 +94,9 @@ function printHelp() {
   );
   console.log(
     '  zeus process regression-check --catalog <relative-path> --corpus <relative-path> [--decision <.zeus/file.json>] [--out <.zeus/file.json>] [--json]'
+  );
+  console.log(
+    '  zeus process drift-check --baseline <.zeus/file.json> --current <.zeus/file.json> [--out <.zeus/file.json>] [--json]'
   );
   console.log(
     '  zeus process glossary list --glossary <relative-path> [--only-applicable] [--json]'
@@ -283,6 +291,15 @@ function printHuman(operation, result) {
     if (result.artifact) console.log(`Artifact: ${result.artifact}`);
     return;
   }
+  if (operation === 'drift-check') {
+    console.log(`Process-answer drift: ${result.status}`);
+    console.log(
+      `Compared scenarios: ${result.metrics.comparedScenarioCount}; introduced regressions: ${result.metrics.introducedRegressionCount}`
+    );
+    if (result.blockers.length > 0) console.log(`Blockers: ${result.blockers.join('; ')}`);
+    if (result.artifact) console.log(`Artifact: ${result.artifact}`);
+    return;
+  }
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -364,6 +381,18 @@ function runProcess(args = {}) {
       });
       if (args.out) {
         result.artifact = writeProcessAnswerRegressionArtifact(result, {
+          cwd: process.cwd(),
+          out: args.out,
+        });
+      }
+    } else if (operation === 'drift-check') {
+      result = buildProcessAnswerDrift({
+        cwd: process.cwd(),
+        baseline: requireValue(args, 'baseline'),
+        current: requireValue(args, 'current'),
+      });
+      if (args.out) {
+        result.artifact = writeProcessAnswerDriftArtifact(result, {
           cwd: process.cwd(),
           out: args.out,
         });

@@ -59,6 +59,12 @@ For a catalog, prompt, glossary, or retrieval-rule change, run the versioned
 explicit reviewer decision to the exact corpus version, catalog fingerprint,
 and evaluation ID without changing the authoritative surface.
 
+After producing a new regression result, compare it with the last known-good
+`.zeus/` result using the bounded `process drift-check` described in
+[`process-answer-drift.md`](process-answer-drift.md). Inspect stable drift
+codes such as `CATALOG_DRIFT`, `EVIDENCE_LOSS`, `FRESHNESS_DRIFT`, and
+`REGRESSION_INTRODUCED`; the report is review-only and never auto-promotes.
+
 For project-specific legacy vocabulary, resolve the term first or pass an
 explicit glossary catalog to the query:
 `node cli/zeus.js process glossary resolve --glossary <relative-path> --term "<legacy-term>" --json`.
