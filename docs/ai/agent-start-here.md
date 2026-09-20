@@ -53,6 +53,12 @@ The result uses anonymized catalog fingerprints and reports explicit blockers;
 even a ready candidate still requires domain-owner review and an explicit
 authoritative change.
 
+For a catalog, prompt, glossary, or retrieval-rule change, run the versioned
+`process regression-check` gate described in
+[`process-answer-regression.md`](process-answer-regression.md). It binds an
+explicit reviewer decision to the exact corpus version, catalog fingerprint,
+and evaluation ID without changing the authoritative surface.
+
 For project-specific legacy vocabulary, resolve the term first or pass an
 explicit glossary catalog to the query:
 `node cli/zeus.js process glossary resolve --glossary <relative-path> --term "<legacy-term>" --json`.

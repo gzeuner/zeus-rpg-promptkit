@@ -95,9 +95,12 @@ function createTempBundleProject(program = 'ORDERPGM') {
 
 test('installed adm-zip satisfies the GHSA-xcpc-8h2w-3j85 patched range', () => {
   const version = installedAdmZipVersion();
-  const [major, minor] = version.split('.').map(part => Number(part));
-  assert.ok(major > 0 || (major === 0 && minor >= 6), `expected adm-zip >= 0.6.0, got ${version}`);
-  assert.equal(require('../package.json').dependencies['adm-zip'], '^0.6.0');
+  const [major, minor, patch] = version.split('.').map(part => Number(part));
+  assert.ok(
+    major > 0 || (major === 0 && (minor > 6 || (minor === 6 && patch >= 1))),
+    `expected adm-zip >= 0.6.1, got ${version}`
+  );
+  assert.equal(require('../package.json').dependencies['adm-zip'], '^0.6.1');
 });
 
 test('CVE-2026-39244: crafted STORED bomb does not allocate declared size', () => {

@@ -457,6 +457,8 @@ const COMMAND_UI_METADATA = Object.freeze([
       '--experience-log',
       '--candidate',
       '--fixture',
+      '--corpus',
+      '--decision',
       '--out',
     ]),
     outputArtifacts: Object.freeze([
@@ -464,6 +466,7 @@ const COMMAND_UI_METADATA = Object.freeze([
       'local .zeus/agent-experience.jsonl process-learning events',
       'reviewable .zeus/process-improvements.json candidate report',
       'review-only .zeus/process-promotion-readiness.json cross-catalog readiness report',
+      'review-only .zeus/process-answer-regression.json versioned answer regression result',
     ]),
     recommendedNextCommands: Object.freeze(['analyze', 'agent']),
   }),

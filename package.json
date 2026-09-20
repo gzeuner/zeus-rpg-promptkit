@@ -68,7 +68,7 @@
     "test:built-in": "node --test tests/consolidated-entitlement.test.js tests/consolidated-registration.test.js tests/consolidated-generationAssurance.test.js tests/consolidated-db2TestIntelligence.test.js tests/consolidated-ibmiValidation.test.js tests/consolidated-projectIntelligence.test.js tests/consolidated-productSurface.test.js"
   },
   "dependencies": {
-    "adm-zip": "^0.6.0",
+    "adm-zip": "^0.6.1",
     "basic-ftp": "^5.0.5",
     "glob": "^13.0.6",
     "ssh2-sftp-client": "^11.0.0",
