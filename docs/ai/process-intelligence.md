@@ -10,7 +10,8 @@ Intelligence graph. It does not replace source analysis, snapshots, freshness,
 or technical evidence. CLI remains the canonical integration surface; the
 library API exposes the same read-only retrieval service for integrations. The
 optional process experience route writes only a bounded, sanitized local
-learning event.
+learning event. Regression drift has a separate reviewer projection with an
+optional exact-drift approval history; neither route publishes knowledge.
 
 ## Current vertical slice
 

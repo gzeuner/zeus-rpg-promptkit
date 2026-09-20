@@ -68,3 +68,17 @@ node cli/zeus.js process regression-check \
 Only after explicit domain-owner review should an authoritative change be
 made. Record a sanitized experience event when the drift was unexpected,
 ambiguous, incomplete, stale, or corrected.
+
+For reviewer-friendly explanations and an optional sanitized approval trail,
+run the separate read-only projection after writing the drift artifact:
+
+```text
+node cli/zeus.js process drift-review \
+  --drift .zeus/process-answer-drift.json \
+  --history .zeus/process-answer-review-history.json \
+  --out .zeus/process-answer-review.json --json
+```
+
+See [`process-answer-review.md`](process-answer-review.md) for the bounded
+history contract. An approved review is evidence that a human reviewed the
+exact drift identity; it never authorizes automatic promotion or mutation.

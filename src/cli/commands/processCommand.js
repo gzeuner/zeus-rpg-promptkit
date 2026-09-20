@@ -38,6 +38,10 @@ const {
   writeProcessAnswerDriftArtifact,
 } = require('../../agent/processAnswerDrift');
 const {
+  buildProcessAnswerReview,
+  writeProcessAnswerReviewArtifact,
+} = require('../../agent/processAnswerReview');
+const {
   listGlossaryEntries,
   resolveGlossaryTerm,
   readGlossaryCatalog,
@@ -57,6 +61,7 @@ const OPERATIONS = new Set([
   'promotion-check',
   'regression-check',
   'drift-check',
+  'drift-review',
   'glossary',
 ]);
 
@@ -97,6 +102,9 @@ function printHelp() {
   );
   console.log(
     '  zeus process drift-check --baseline <.zeus/file.json> --current <.zeus/file.json> [--out <.zeus/file.json>] [--json]'
+  );
+  console.log(
+    '  zeus process drift-review --drift <.zeus/file.json> [--history <.zeus/file.json>] [--out <.zeus/file.json>] [--json]'
   );
   console.log(
     '  zeus process glossary list --glossary <relative-path> [--only-applicable] [--json]'
@@ -300,6 +308,17 @@ function printHuman(operation, result) {
     if (result.artifact) console.log(`Artifact: ${result.artifact}`);
     return;
   }
+  if (operation === 'drift-review') {
+    console.log(`Process-answer review: ${result.status}`);
+    console.log(
+      `Drift: ${result.driftStatus}; review: ${result.approval.status}; explanations: ${result.explanations.length}`
+    );
+    for (const explanation of result.explanations) {
+      console.log(`- ${explanation.severity} ${explanation.code}: ${explanation.summary}`);
+    }
+    if (result.artifact) console.log(`Artifact: ${result.artifact}`);
+    return;
+  }
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -393,6 +412,18 @@ function runProcess(args = {}) {
       });
       if (args.out) {
         result.artifact = writeProcessAnswerDriftArtifact(result, {
+          cwd: process.cwd(),
+          out: args.out,
+        });
+      }
+    } else if (operation === 'drift-review') {
+      result = buildProcessAnswerReview({
+        cwd: process.cwd(),
+        drift: requireValue(args, 'drift'),
+        history: args.history,
+      });
+      if (args.out) {
+        result.artifact = writeProcessAnswerReviewArtifact(result, {
           cwd: process.cwd(),
           out: args.out,
         });
