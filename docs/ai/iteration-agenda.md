@@ -486,6 +486,29 @@ and retention explicit, so an agent can distinguish current evidence from
 bounded historical context and receive a safe local cleanup/review step
 without deleting or mutating review records automatically.
 
+### Iteration 25 — Review-history retention preview (completed in PR #343)
+
+Add the read-only `process drift-review-retention` operation for a sanitized
+review history. It classifies decisions as `fresh`, `aging`, `historical`, or
+`future` using explicit reproducible policy inputs, reports bounded freshness
+metrics, and exposes only superseded historical decisions as retention
+candidates. The latest historical decision and every future-dated decision
+remain review-required. Automatic deletion and promotion are explicitly
+disabled, and output contains only hashed identities and reason codes.
+
+Implementation: `src/agent/processAnswerReview.js`, the `process
+drift-review-retention` CLI route, generated tool-catalog metadata, the AI
+workflow documentation, and
+`tests/project-intelligence-process-answer-review.test.js`. Delivered in PR
+#343 with 969 passing tests, 3 skipped contract tests, a clean dependency
+audit, a green PR and main pipeline, and no credentials or private runtime
+values in the staged change. The merge commit is `6bd14fc`.
+
+The next active roadmap item is Iteration 26: create a bounded, reproducible
+review receipt from retention findings so an agent or reviewer can preserve
+what was inspected, under which policy, and what still requires an explicit
+decision—without deleting, promoting, or changing review history.
+
 ## Business Process Intelligence vertical slice
 
 Iterations 10–13 should first deliver one complete neutral example process:
