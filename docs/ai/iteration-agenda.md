@@ -1,7 +1,7 @@
 ---
 Title: Promptkit AI Iteration Agenda
 Description: Living backlog for making Zeus immediately understandable and usable by CLI-based AI agents.
-Last Updated: 2026-09-16
+Last Updated: 2026-09-20
 ---
 
 # Promptkit AI Iteration Agenda
@@ -374,9 +374,33 @@ metadata, emits stable blockers, and never publishes or promotes process
 knowledge automatically. Delivered in PR #330 after protected-branch
 verification; all required checks passed.
 
-The next active roadmap item is Iteration 20: build a versioned process-answer
-regression corpus and explicit reviewer decisions so repeated business-process
-questions can be evaluated before a catalog or prompt change is accepted.
+### Iteration 20 — Versioned process-answer regression gate (completed in PR #333)
+
+Build a versioned, sanitized process-answer regression corpus and explicit
+reviewer decisions so repeated business-process questions can be evaluated
+before a catalog or prompt change is accepted. Keep catalog fingerprints,
+scenario outcomes, evidence expectations, freshness limits, and reviewer
+decisions bound to the exact corpus and evaluation run. The result is
+review-only: it must never publish process knowledge or promote a change by
+itself.
+
+Implementation: `src/agent/processAnswerRegression.js`, the
+`process regression-check` CLI route, the neutral corpus and reviewer-decision
+templates under `docs/ai/`, and
+`tests/project-intelligence-process-answer-regression.test.js`. The feature
+provides deterministic scenario checks, bounded catalog fingerprints, stable
+evaluation identifiers, explicit sanitized reviewer decisions, and safe
+`.zeus/` output handling. The existing `adm-zip` production dependency was
+also raised to `0.6.1` while closing the CI audit gate. Delivered in PR #333
+after local verification, secret/private-content scanning, protected-branch
+verification, and a green main pipeline at merge commit `0e3ae94`.
+
+The next active roadmap item is Iteration 21: compare versioned regression
+results across catalog revisions and produce a bounded drift report with
+stable blocker codes and a smallest safe follow-up command. The report must
+remain review-only and must distinguish catalog drift, corpus drift, evidence
+loss, freshness changes, and answer-contract changes without exposing source
+content or private runtime values.
 
 ## Business Process Intelligence vertical slice
 
