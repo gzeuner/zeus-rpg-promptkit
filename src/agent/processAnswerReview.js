@@ -9,6 +9,7 @@ const { validateWorkspacePath } = require('../generationValidation/pathSafety');
 
 const PROCESS_ANSWER_REVIEW_SCHEMA_VERSION = 1;
 const DEFAULT_PROCESS_ANSWER_REVIEW_ARTIFACT = '.zeus/process-answer-review.json';
+const DEFAULT_PROCESS_ANSWER_REVIEW_SUMMARY_ARTIFACT = '.zeus/process-answer-review-summary.json';
 const MAX_DRIFT_BYTES = 512 * 1024;
 const MAX_HISTORY_BYTES = 256 * 1024;
 const MAX_ENTRIES = 100;
@@ -505,8 +506,20 @@ function buildExplanations(drift, approval) {
     });
 }
 
-function resolveApproval(driftId, history, historyPath) {
-  const matches = (history || []).filter(entry => entry.driftId === driftId);
+function lastDecisionFor(matches) {
+  const last = matches.length > 0 ? matches[matches.length - 1] : null;
+  return last
+    ? {
+        decisionId: last.decisionId,
+        decision: last.decision,
+        reviewerHash: last.reviewerHash,
+        reviewedAt: last.reviewedAt,
+        rationaleCode: last.rationaleCode,
+      }
+    : null;
+}
+
+function resolveHistoryConsistency(matches, historyProvided = false) {
   const last = matches.length > 0 ? matches[matches.length - 1] : null;
   const statusByDecision = { approve: 'approved', reject: 'rejected', defer: 'deferred' };
   const decisionKinds = [...new Set(matches.map(entry => entry.decision))].sort();
@@ -518,7 +531,6 @@ function resolveApproval(driftId, history, historyPath) {
   if (conflictingDecisionCount > 1) findings.push('REVIEW_HISTORY_CONFLICT');
   if (staleDecisionCount > 0) findings.push('REVIEW_DECISION_STALE');
   return {
-    historyPath,
     status: last ? statusByDecision[last.decision] : 'pending',
     matchedDecisionCount: matches.length,
     consistency: {
@@ -527,7 +539,7 @@ function resolveApproval(driftId, history, historyPath) {
           ? 'contradictory'
           : matches.length > 0
             ? 'consistent'
-            : historyPath
+            : historyProvided
               ? 'no-matching-decision'
               : 'not-provided',
       decisionKinds,
@@ -538,16 +550,96 @@ function resolveApproval(driftId, history, historyPath) {
         last && last.decision && last.reviewedAt && last.rationaleCode
       ),
     },
-    lastDecision: last
-      ? {
-          decisionId: last.decisionId,
-          decision: last.decision,
-          reviewerHash: last.reviewerHash,
-          reviewedAt: last.reviewedAt,
-          rationaleCode: last.rationaleCode,
-        }
-      : null,
+    lastDecision: lastDecisionFor(matches),
+  };
+}
+
+function resolveApproval(driftId, history, historyPath) {
+  const matches = (history || []).filter(entry => entry.driftId === driftId);
+  const resolved = resolveHistoryConsistency(matches, Boolean(historyPath));
+  return {
+    historyPath,
+    ...resolved,
     decisionIsNotPromotion: true,
+  };
+}
+
+function buildProcessAnswerReviewSummary({ cwd = process.cwd(), history } = {}) {
+  const historyLocation = resolveJsonPath({ cwd, input: history, label: '--history' });
+  const normalizedHistory = normalizeHistory(
+    readJsonFile(historyLocation.absolutePath, 'Process-answer review history', MAX_HISTORY_BYTES)
+  );
+  const byDriftId = new Map();
+  for (const entry of normalizedHistory) {
+    const entries = byDriftId.get(entry.driftId) || [];
+    entries.push(entry);
+    byDriftId.set(entry.driftId, entries);
+  }
+  const driftIdentities = [...byDriftId.keys()].sort().map(driftId => {
+    const resolved = resolveHistoryConsistency(byDriftId.get(driftId));
+    return {
+      driftId,
+      status: resolved.status,
+      matchedDecisionCount: resolved.matchedDecisionCount,
+      consistency: resolved.consistency,
+      lastDecision: resolved.lastDecision,
+    };
+  });
+  const unresolved = driftIdentities.filter(identity => identity.consistency.findings.length > 0);
+  const decisionCounts = { approve: 0, defer: 0, reject: 0 };
+  for (const entry of normalizedHistory) decisionCounts[entry.decision] += 1;
+  const findingCounts = ['REVIEW_HISTORY_CONFLICT', 'REVIEW_DECISION_STALE']
+    .map(code => ({
+      code,
+      driftCount: unresolved.filter(identity => identity.consistency.findings.includes(code))
+        .length,
+      decisionCount: unresolved.reduce(
+        (total, identity) =>
+          total +
+          (identity.consistency.findings.includes(code)
+            ? code === 'REVIEW_DECISION_STALE'
+              ? identity.consistency.staleDecisionCount
+              : identity.consistency.conflictingDecisionCount
+            : 0),
+        0
+      ),
+    }))
+    .filter(finding => finding.driftCount > 0);
+  const status =
+    unresolved.length > 0 ? 'needs-review' : normalizedHistory.length > 0 ? 'stable' : 'pending';
+  return {
+    ok: true,
+    operation: 'drift-review-summary',
+    kind: 'process-answer-review-summary-result',
+    schemaVersion: PROCESS_ANSWER_REVIEW_SCHEMA_VERSION,
+    readOnly: true,
+    status,
+    historyPath: historyLocation.relativePath,
+    metrics: {
+      historyEntryCount: normalizedHistory.length,
+      driftIdentityCount: driftIdentities.length,
+      unresolvedDriftCount: unresolved.length,
+      conflictingDriftCount:
+        findingCounts.find(finding => finding.code === 'REVIEW_HISTORY_CONFLICT')?.driftCount || 0,
+      staleDecisionCount: driftIdentities.reduce(
+        (total, identity) => total + identity.consistency.staleDecisionCount,
+        0
+      ),
+      decisionCounts,
+    },
+    findings: findingCounts,
+    unresolved,
+    driftIdentities,
+    nextSafeStep:
+      unresolved.length > 0
+        ? 'Resolve the bounded conflicts for the listed drift identities, then rerun drift-review for the affected artifacts.'
+        : normalizedHistory.length === 0
+          ? 'Record a sanitized decision for an exact drift identity before relying on review history.'
+          : 'Use the exact drift-review projection for a specific comparison before accepting a decision; review history never promotes knowledge automatically.',
+    nextCommand:
+      'node cli/zeus.js process drift-review-summary --history .zeus/process-answer-review-history.json --out .zeus/process-answer-review-summary.json --json',
+    automaticPromotion: false,
+    promotionAllowed: false,
   };
 }
 
@@ -627,6 +719,13 @@ function resolveProcessAnswerReviewArtifactPath({
   return resolveJsonPath({ cwd, input: out, label: '--out' });
 }
 
+function resolveProcessAnswerReviewSummaryArtifactPath({
+  cwd = process.cwd(),
+  out = DEFAULT_PROCESS_ANSWER_REVIEW_SUMMARY_ARTIFACT,
+} = {}) {
+  return resolveJsonPath({ cwd, input: out, label: '--out' });
+}
+
 function writeProcessAnswerReviewArtifact(payload, options = {}) {
   const location = resolveProcessAnswerReviewArtifactPath(options);
   fs.mkdirSync(path.dirname(location.absolutePath), { recursive: true });
@@ -642,10 +741,29 @@ function writeProcessAnswerReviewArtifact(payload, options = {}) {
   return location.relativePath;
 }
 
+function writeProcessAnswerReviewSummaryArtifact(payload, options = {}) {
+  const location = resolveProcessAnswerReviewSummaryArtifactPath(options);
+  fs.mkdirSync(path.dirname(location.absolutePath), { recursive: true });
+  fs.writeFileSync(location.absolutePath, `${JSON.stringify(payload, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  try {
+    fs.chmodSync(location.absolutePath, 0o600);
+  } catch {
+    // chmod is not supported or meaningful on every platform.
+  }
+  return location.relativePath;
+}
+
 module.exports = {
   DEFAULT_PROCESS_ANSWER_REVIEW_ARTIFACT,
+  DEFAULT_PROCESS_ANSWER_REVIEW_SUMMARY_ARTIFACT,
   PROCESS_ANSWER_REVIEW_SCHEMA_VERSION,
   buildProcessAnswerReview,
+  buildProcessAnswerReviewSummary,
   resolveProcessAnswerReviewArtifactPath,
+  resolveProcessAnswerReviewSummaryArtifactPath,
   writeProcessAnswerReviewArtifact,
+  writeProcessAnswerReviewSummaryArtifact,
 };

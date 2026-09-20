@@ -10,6 +10,7 @@ const test = require('node:test');
 const { buildProcessAnswerDrift } = require('../src/agent/processAnswerDrift');
 const {
   buildProcessAnswerReview,
+  buildProcessAnswerReviewSummary,
   writeProcessAnswerReviewArtifact,
 } = require('../src/agent/processAnswerReview');
 
@@ -235,6 +236,89 @@ test('review history flags contradictory decisions and keeps the latest decision
     assert.doesNotMatch(JSON.stringify(result), /first-reviewer|second-reviewer/);
     assert.equal(result.automaticPromotion, false);
     assert.equal(result.promotionAllowed, false);
+  } finally {
+    fs.rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('review history summary finds unresolved drift identities without private content', () => {
+  const workspace = createWorkspace();
+  try {
+    const drift = driftFixture(workspace);
+    const driftPath = writeJson(workspace, 'drift.json', drift);
+    const pending = buildProcessAnswerReview({ cwd: workspace, drift: driftPath });
+    const historyPath = writeJson(workspace, 'history.json', {
+      schemaVersion: 1,
+      kind: 'process-answer-review-history',
+      sanitized: true,
+      containsCredentials: false,
+      containsPrivateProjectIdentifiers: false,
+      entries: [
+        {
+          decisionId: 'decision:7777777777777777',
+          driftId: pending.driftId,
+          decision: 'approve',
+          reviewerId: 'first-reviewer',
+          reviewedAt: '2026-09-20T12:30:00.000Z',
+          rationaleCode: 'CATALOG_CONFIRMED',
+        },
+        {
+          decisionId: 'decision:8888888888888888',
+          driftId: pending.driftId,
+          decision: 'reject',
+          reviewerId: 'second-reviewer',
+          reviewedAt: '2026-09-20T12:31:00.000Z',
+          rationaleCode: 'EVIDENCE_REVIEW_REQUIRED',
+        },
+        {
+          decisionId: 'decision:9999999999999999',
+          driftId: 'drift:9999999999999999',
+          decision: 'approve',
+          reviewerId: 'stable-reviewer',
+          reviewedAt: '2026-09-20T12:32:00.000Z',
+          rationaleCode: 'CATALOG_CONFIRMED',
+        },
+      ],
+    });
+    const result = buildProcessAnswerReviewSummary({ cwd: workspace, history: historyPath });
+    assert.equal(result.status, 'needs-review');
+    assert.equal(result.metrics.historyEntryCount, 3);
+    assert.equal(result.metrics.driftIdentityCount, 2);
+    assert.equal(result.metrics.unresolvedDriftCount, 1);
+    assert.equal(result.metrics.conflictingDriftCount, 1);
+    assert.equal(result.metrics.staleDecisionCount, 1);
+    assert.deepEqual(result.metrics.decisionCounts, { approve: 2, defer: 0, reject: 1 });
+    assert.equal(result.unresolved.length, 1);
+    assert.equal(result.unresolved[0].lastDecision.decision, 'reject');
+    assert.equal(result.unresolved[0].consistency.latestDecisionIsExplainable, true);
+    assert.deepEqual(
+      result.findings.map(finding => finding.code),
+      ['REVIEW_HISTORY_CONFLICT', 'REVIEW_DECISION_STALE']
+    );
+    assert.doesNotMatch(JSON.stringify(result), /first-reviewer|second-reviewer|stable-reviewer/);
+    assert.doesNotMatch(JSON.stringify(result), /dispatch-interface-answer|process:private/);
+    assert.equal(result.automaticPromotion, false);
+    assert.equal(result.promotionAllowed, false);
+
+    const run = spawnSync(
+      process.execPath,
+      [
+        CLI,
+        'process',
+        'drift-review-summary',
+        '--history',
+        historyPath,
+        '--out',
+        '.zeus/summary.json',
+        '--json',
+      ],
+      { cwd: workspace, encoding: 'utf8' }
+    );
+    assert.equal(run.status, 0, run.stderr);
+    const payload = JSON.parse(run.stdout);
+    assert.equal(payload.result.operation, 'drift-review-summary');
+    assert.equal(payload.result.metrics.unresolvedDriftCount, 1);
+    assert.equal(fs.existsSync(path.join(workspace, '.zeus', 'summary.json')), true);
   } finally {
     fs.rmSync(workspace, { recursive: true, force: true });
   }

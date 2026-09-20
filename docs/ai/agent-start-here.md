@@ -69,6 +69,11 @@ For reviewer-friendly explanations, run `process drift-review --drift
 .zeus/process-answer-review-history.json --out .zeus/process-answer-review.json
 --json`. The optional history links only a sanitized, exact `driftId`; the
 projection hashes reviewer identities and never authorizes promotion.
+For a bounded overview across all drift identities in that history, run
+`process drift-review-summary --history
+.zeus/process-answer-review-history.json --out
+.zeus/process-answer-review-summary.json --json`; resolve every reported
+conflict before relying on the latest decision.
 
 For project-specific legacy vocabulary, resolve the term first or pass an
 explicit glossary catalog to the query:
