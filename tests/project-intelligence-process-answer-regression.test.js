@@ -41,7 +41,11 @@ function catalogFixture() {
     stepIds: [],
     claimIds: process.claimIds,
     relationshipIds: process.relationshipIds,
-    review: { reviewerId: 'domain-reviewer', approved: true, reviewedAt: '2026-09-20T12:00:00.000Z' },
+    review: {
+      reviewerId: 'domain-reviewer',
+      approved: true,
+      reviewedAt: '2026-09-20T12:00:00.000Z',
+    },
   });
   const claim = zpi.fixtures.processClaim({
     processId: process.processId,
@@ -209,8 +213,7 @@ test('regression-check CLI writes only a bounded .zeus artifact', () => {
   assert.equal(payload.result.review.status, 'missing');
   assert.equal(fs.existsSync(path.join(workspace, '.zeus/process-answer-regression.json')), true);
   assert.throws(
-    () =>
-      writeProcessAnswerRegressionArtifact({}, { cwd: workspace, out: '../outside.json' }),
+    () => writeProcessAnswerRegressionArtifact({}, { cwd: workspace, out: '../outside.json' }),
     error => error.code === 'PATH_OUTSIDE_WORKSPACE'
   );
 });
