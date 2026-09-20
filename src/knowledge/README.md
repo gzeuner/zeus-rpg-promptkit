@@ -5,7 +5,7 @@ This directory contains the privacy-gated project-neutral knowledge pipeline.
 Current status:
 
 - raw, sanitized, and final catalog contracts with a fail-closed privacy gate
-- a neutral PUI structural extractor with synthetic test coverage
+- a neutral Display UI structural extractor with synthetic test coverage
 - recursive `.dds` batch extraction with a separate local-only inventory
 - final catalog persistence is available through `knowledgePipeline.js`
 - read-only catalog filtering is available through `zeus.queryKnowledge()`
@@ -29,7 +29,7 @@ Safety rules:
   `output/knowledge/<run-id>/project-neutral-knowledge.json`
 - batch extraction writes decoded projections, source-relative paths, and hashes only
   to a separately supplied local root:
-  `private/<run-id>/pui-private-inventory.json`
+  `private/<run-id>/display-ui-private-inventory.json`
 - the private inventory is sensitive local work data; it must not be committed,
   packaged, or exposed through MCP
 - tests and examples in this area must stay synthetic
@@ -65,7 +65,7 @@ node cli/zeus.js knowledge extract \
 The final catalog contains only controlled structural UI patterns such as grids,
 forms, selection controls, validation feedback, dialogs, navigation, and
 toolbar/action controls. It never contains source paths, field identifiers,
-labels, tooltips, or decoded PUI values. The batch classifier is heuristic and
+labels, tooltips, or decoded Display UI values. The batch classifier is heuristic and
 describes structure, not business meaning.
 
 The API provides deterministic, read-only filtering after the same validation

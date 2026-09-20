@@ -6,7 +6,7 @@ const path = require('path');
 
 const { createMcpServer, DEFAULT_MCP_SAFE_TOOL_NAMES } = require('../src/mcp/mcpServer');
 const { listMcpTools } = require('../src/mcp/mcpTools');
-const { buildHtmlLines } = require('../src/pui/puiDdsParser');
+const { buildHtmlLines } = require('../src/displayUi/displayUiDdsParser');
 
 const ALL_TOOL_NAMES = listMcpTools().map(tool => tool.name);
 
@@ -44,20 +44,20 @@ function writeSyntheticDisplay(filePath) {
   fs.writeFileSync(filePath, lines.join('\n'), 'utf8');
 }
 
-test('listMcpTools exposes zeus.pui-inspect with file required', () => {
+test('listMcpTools exposes zeus.display-ui-inspect with file required', () => {
   const byName = new Map(listMcpTools().map(tool => [tool.name, tool]));
-  const tool = byName.get('zeus.pui-inspect');
-  assert.ok(tool, 'zeus.pui-inspect should be registered');
+  const tool = byName.get('zeus.display-ui-inspect');
+  assert.ok(tool, 'zeus.display-ui-inspect should be registered');
   assert.deepEqual(tool.inputSchema.required, ['file']);
   assert.ok(tool.inputSchema.properties.trace, 'trace property should exist');
 });
 
-test('zeus.pui-inspect is opt-in only (not part of the default MCP-safe surface)', () => {
-  assert.equal(DEFAULT_MCP_SAFE_TOOL_NAMES.includes('zeus.pui-inspect'), false);
+test('zeus.display-ui-inspect is opt-in only (not part of the default MCP-safe surface)', () => {
+  assert.equal(DEFAULT_MCP_SAFE_TOOL_NAMES.includes('zeus.display-ui-inspect'), false);
 });
 
-test('mcp tools call zeus.pui-inspect returns a projection', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-puiins-'));
+test('mcp tools call zeus.display-ui-inspect returns a projection', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-displayUiins-'));
   const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
 
   try {
@@ -73,7 +73,7 @@ test('mcp tools call zeus.pui-inspect returns a projection', async () => {
       id: 801,
       method: 'tools/call',
       params: {
-        name: 'zeus.pui-inspect',
+        name: 'zeus.display-ui-inspect',
         arguments: { file: 'DISPLAY_SAMPLE.MBR' },
       },
     });
@@ -83,7 +83,7 @@ test('mcp tools call zeus.pui-inspect returns a projection', async () => {
     assert.equal(payload.readOnly, true);
     assert.equal(payload.mode, 'projection');
     assert.equal(payload.recordFormatCount, 1);
-    assert.equal(payload.cliEquivalent, 'node cli/zeus.js pui-inspect');
+    assert.equal(payload.cliEquivalent, 'node cli/zeus.js display-ui-inspect');
 
     const rf = payload.recordFormats[0];
     assert.equal(rf.recordFormat, 'GRIDFMT');
@@ -96,8 +96,8 @@ test('mcp tools call zeus.pui-inspect returns a projection', async () => {
   }
 });
 
-test('mcp tools call zeus.pui-inspect trace locates a field binding', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-puiins-'));
+test('mcp tools call zeus.display-ui-inspect trace locates a field binding', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-displayUiins-'));
   const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
 
   try {
@@ -113,7 +113,7 @@ test('mcp tools call zeus.pui-inspect trace locates a field binding', async () =
       id: 802,
       method: 'tools/call',
       params: {
-        name: 'zeus.pui-inspect',
+        name: 'zeus.display-ui-inspect',
         arguments: { file: 'DISPLAY_SAMPLE.MBR', trace: 'statuscode' },
       },
     });
@@ -130,8 +130,8 @@ test('mcp tools call zeus.pui-inspect trace locates a field binding', async () =
   }
 });
 
-test('mcp tools call zeus.pui-inspect rejects file outside workspace root', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-puiins-'));
+test('mcp tools call zeus.display-ui-inspect rejects file outside workspace root', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-displayUiins-'));
   const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-out-'));
   const outsideFile = path.join(outsideDir, 'DISPLAY_OUTSIDE.MBR');
 
@@ -149,7 +149,7 @@ test('mcp tools call zeus.pui-inspect rejects file outside workspace root', asyn
         id: 803,
         method: 'tools/call',
         params: {
-          name: 'zeus.pui-inspect',
+          name: 'zeus.display-ui-inspect',
           arguments: { file: outsideFile },
         },
       }),

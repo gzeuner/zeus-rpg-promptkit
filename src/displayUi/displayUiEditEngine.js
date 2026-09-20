@@ -1044,7 +1044,7 @@ function applyChangeSetToJson(json, changeSet) {
         applyCreateLayoutContainer(json, operation, summaryLines);
         break;
       default:
-        throw new Error(`Unsupported PUI change operation: ${operation.type}`);
+        throw new Error(`Unsupported Display UI change operation: ${operation.type}`);
     }
   }
 

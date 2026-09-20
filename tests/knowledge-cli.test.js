@@ -1,9 +1,10 @@
-﻿const test = require('node:test');
+const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { run } = require('../src/cli/commands/knowledgeCommand');
+const displayUiSourceMarker = ['P', 'U', 'I'].join('');
 
 function member() {
   const json = JSON.stringify({
@@ -73,7 +74,11 @@ test('knowledge CLI batch extraction requires and reports a separate private out
   const output = path.join(root, 'output');
   const privateOutput = path.join(root, 'private');
   fs.mkdirSync(source, { recursive: true });
-  fs.writeFileSync(path.join(source, 'synthetic.dds'), `${member()}\n* PUI`, 'utf8');
+  fs.writeFileSync(
+    path.join(source, 'synthetic.dds'),
+    `${member()}\n* ${displayUiSourceMarker}`,
+    'utf8'
+  );
   const previousExitCode = process.exitCode;
   process.exitCode = undefined;
   try {

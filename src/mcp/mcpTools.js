@@ -63,8 +63,10 @@ const { readWorkspaceIndex } = require('../workspace/workspaceIndexBuilder');
 const { findImpactGraph } = require('../cli/helpers/impactGraphResolver');
 const { readAnalyzeRunManifest } = require('../analyze/analyzeRunManifest');
 const { executeAnalyze } = require('../core/analyzeService');
-const { executePuiEdit: executePuiEditAction } = require('../pui/puiEditService');
-const { buildPuiProjection, traceFieldBinding } = require('../pui/puiProjection');
+const {
+  executeDisplayUiEdit: executeDisplayUiEditAction,
+} = require('../displayUi/displayUiEditService');
+const { buildDisplayUiProjection, traceFieldBinding } = require('../displayUi/displayUiProjection');
 const {
   getProfilesMetadata,
   loadProfiles,
@@ -1333,9 +1335,9 @@ let listMcpTools = function listMcpTools() {
       },
     },
     {
-      name: 'zeus.pui-edit',
+      name: 'zeus.display-ui-edit',
       description:
-        'Edits ProfoundUI Display File (DDS) members inside the workspace: read actions (dump-json, validate-json, roundtrip-check, plan) and confirmed write actions (export-json, import-json, apply, grid-add-column). All file paths must resolve inside the workspace root; mutating actions require confirm=true.',
+        'Edits display-file UI (DDS) members inside the workspace: read actions (dump-json, validate-json, roundtrip-check, plan) and confirmed write actions (export-json, import-json, apply, grid-add-column). All file paths must resolve inside the workspace root; mutating actions require confirm=true.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1353,7 +1355,7 @@ let listMcpTools = function listMcpTools() {
               'apply',
               'grid-add-column',
             ],
-            description: 'pui-edit action to run.',
+            description: 'display-ui-edit action to run.',
           },
           file: {
             type: 'string',
@@ -1409,7 +1411,7 @@ let listMcpTools = function listMcpTools() {
           'field-id': {
             type: 'string',
             minLength: 1,
-            description: 'grid-add-column: ID of the new PUI field element.',
+            description: 'grid-add-column: ID of the new Display UI field element.',
           },
           'field-name': {
             type: 'string',
@@ -1418,11 +1420,11 @@ let listMcpTools = function listMcpTools() {
           },
           'field-type': {
             type: 'string',
-            description: 'grid-add-column: PUI field type (default "output field").',
+            description: 'grid-add-column: Display UI field type (default "output field").',
           },
           'field-data-type': {
             type: 'string',
-            description: 'grid-add-column: PUI data type (default "char").',
+            description: 'grid-add-column: Display UI data type (default "char").',
           },
           'field-length': {
             type: ['integer', 'string'],
@@ -1448,9 +1450,9 @@ let listMcpTools = function listMcpTools() {
       },
     },
     {
-      name: 'zeus.pui-inspect',
+      name: 'zeus.display-ui-inspect',
       description:
-        'LOCAL read-only projection of a ProfoundUI Display File (DDS) member: reassembles column-72 continuation lines, decodes the per-record-format JSON and projects grids -> columns -> field bindings + tooltips, standalone bound widgets and consistency signals. Optionally traces where a DDS field is bound. Reads a local workspace file only; never connects to IBM i and never writes. Decoded PUI JSON is customer content, so this tool is opt-in (not part of the default MCP-safe surface).',
+        'LOCAL read-only projection of a display-file UI (DDS) member: reassembles column-72 continuation lines, decodes the per-record-format JSON and projects grids -> columns -> field bindings + tooltips, standalone bound widgets and consistency signals. Optionally traces where a DDS field is bound. Reads a local workspace file only; never connects to IBM i and never writes. Decoded display UI JSON is customer content, so this tool is opt-in (not part of the default MCP-safe surface).',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -1460,7 +1462,7 @@ let listMcpTools = function listMcpTools() {
             type: 'string',
             minLength: 1,
             description:
-              'Path to the DDS/PUI display member. Must resolve inside the workspace root.',
+              'Path to the DDS/Display UI display member. Must resolve inside the workspace root.',
           },
           trace: {
             type: 'string',
@@ -3315,7 +3317,7 @@ function executeDocsGenerateCatalog(args = {}, context = {}) {
   };
 }
 
-function executePuiEditMcp(args = {}, context = {}) {
+function executeDisplayUiEditMcp(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
 
   const pathOptions = [
@@ -3330,7 +3332,7 @@ function executePuiEditMcp(args = {}, context = {}) {
       continue;
     }
     assertPathWithinCwd({
-      toolName: 'zeus.pui-edit',
+      toolName: 'zeus.display-ui-edit',
       optionName,
       rawValue,
       resolvedPath: path.resolve(cwd, rawValue.trim()),
@@ -3339,10 +3341,13 @@ function executePuiEditMcp(args = {}, context = {}) {
   }
 
   try {
-    return executePuiEditAction(args, { cwd, allowWrites: true });
+    return executeDisplayUiEditAction(args, { cwd, allowWrites: true });
   } catch (error) {
-    if (error && (error.code === 'PUI_EDIT_INVALID' || error.code === 'PUI_EDIT_WRITE_BLOCKED')) {
-      const invalid = new Error(`Invalid arguments for zeus.pui-edit: ${error.message}`);
+    if (
+      error &&
+      (error.code === 'DISPLAY_UI_EDIT_INVALID' || error.code === 'DISPLAY_UI_EDIT_WRITE_BLOCKED')
+    ) {
+      const invalid = new Error(`Invalid arguments for zeus.display-ui-edit: ${error.message}`);
       invalid.code = 'TOOL_INVALID_ARGUMENTS';
       throw invalid;
     }
@@ -3350,19 +3355,19 @@ function executePuiEditMcp(args = {}, context = {}) {
   }
 }
 
-function executePuiInspectMcp(args = {}, context = {}) {
+function executeDisplayUiInspectMcp(args = {}, context = {}) {
   const cwd = context.cwd || process.cwd();
 
   const rawFile = args && typeof args.file === 'string' ? args.file.trim() : '';
   if (!rawFile) {
-    const error = new Error('Invalid arguments for zeus.pui-inspect: file is required.');
+    const error = new Error('Invalid arguments for zeus.display-ui-inspect: file is required.');
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
   const resolvedPath = path.resolve(cwd, rawFile);
   assertPathWithinCwd({
-    toolName: 'zeus.pui-inspect',
+    toolName: 'zeus.display-ui-inspect',
     optionName: '--file',
     rawValue: rawFile,
     resolvedPath,
@@ -3370,14 +3375,16 @@ function executePuiInspectMcp(args = {}, context = {}) {
   });
 
   if (!fs.existsSync(resolvedPath) || !fs.statSync(resolvedPath).isFile()) {
-    const error = new Error(`Invalid arguments for zeus.pui-inspect: file not found: ${rawFile}`);
+    const error = new Error(
+      `Invalid arguments for zeus.display-ui-inspect: file not found: ${rawFile}`
+    );
     error.code = 'TOOL_INVALID_ARGUMENTS';
     throw error;
   }
 
   const content = fs.readFileSync(resolvedPath, 'utf8');
   const relFile = path.relative(cwd, resolvedPath) || rawFile;
-  const projection = buildPuiProjection(content, { file: relFile });
+  const projection = buildDisplayUiProjection(content, { file: relFile });
 
   const traceValue = args && typeof args.trace === 'string' ? args.trace.trim() : '';
   if (traceValue) {
@@ -6226,35 +6233,37 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     });
   }
 
-  if (name === 'zeus.pui-edit') {
-    const puiEditRunner =
-      typeof context.puiEditRunner === 'function' ? context.puiEditRunner : executePuiEditMcp;
+  if (name === 'zeus.display-ui-edit') {
+    const displayUiEditRunner =
+      typeof context.displayUiEditRunner === 'function'
+        ? context.displayUiEditRunner
+        : executeDisplayUiEditMcp;
 
     let execution;
     try {
-      execution = puiEditRunner(args, {
+      execution = displayUiEditRunner(args, {
         cwd: context.cwd || process.cwd(),
         env: context.env || process.env,
       });
     } catch (error) {
       if (
         (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
-        /invalid arguments for zeus\.pui-edit/i.test(
+        /invalid arguments for zeus\.display-ui-edit/i.test(
           String(error && error.message ? error.message : '')
         )
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
         throw error;
       }
-      throw normalizeMcpRuntimeToolError('zeus.pui-edit', error);
+      throw normalizeMcpRuntimeToolError('zeus.display-ui-edit', error);
     }
 
     return normalizeMcpResult(
-      'zeus.pui-edit',
+      'zeus.display-ui-edit',
       {
         ok: execution && execution.ok !== false,
         service: 'zeus-rpg-promptkit',
-        puiAction: execution && execution.action ? String(execution.action) : null,
+        displayUiAction: execution && execution.action ? String(execution.action) : null,
         file: execution && execution.file ? String(execution.file) : null,
         messages: Array.isArray(execution && execution.messages)
           ? execution.messages.map(message => String(message))
@@ -6269,39 +6278,39 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         timestamp: new Date().toISOString(),
       },
       {
-        cliEquivalent: 'node cli/zeus.js pui-edit',
+        cliEquivalent: 'node cli/zeus.js display-ui-edit',
       }
     );
   }
 
-  if (name === 'zeus.pui-inspect') {
-    const puiInspectRunner =
-      typeof context.puiInspectRunner === 'function'
-        ? context.puiInspectRunner
-        : executePuiInspectMcp;
+  if (name === 'zeus.display-ui-inspect') {
+    const displayUiInspectRunner =
+      typeof context.displayUiInspectRunner === 'function'
+        ? context.displayUiInspectRunner
+        : executeDisplayUiInspectMcp;
 
     let execution;
     try {
-      execution = puiInspectRunner(args, {
+      execution = displayUiInspectRunner(args, {
         cwd: context.cwd || process.cwd(),
         env: context.env || process.env,
       });
     } catch (error) {
       if (
         (error && error.code === 'TOOL_INVALID_ARGUMENTS') ||
-        /invalid arguments for zeus\.pui-inspect/i.test(
+        /invalid arguments for zeus\.display-ui-inspect/i.test(
           String(error && error.message ? error.message : '')
         )
       ) {
         error.code = 'TOOL_INVALID_ARGUMENTS';
         throw error;
       }
-      throw normalizeMcpRuntimeToolError('zeus.pui-inspect', error);
+      throw normalizeMcpRuntimeToolError('zeus.display-ui-inspect', error);
     }
 
     const projection = execution && execution.projection ? execution.projection : {};
     return normalizeMcpResult(
-      'zeus.pui-inspect',
+      'zeus.display-ui-inspect',
       {
         ok: true,
         service: 'zeus-rpg-promptkit',
@@ -6321,7 +6330,7 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
         timestamp: new Date().toISOString(),
       },
       {
-        cliEquivalent: 'node cli/zeus.js pui-inspect',
+        cliEquivalent: 'node cli/zeus.js display-ui-inspect',
       }
     );
   }

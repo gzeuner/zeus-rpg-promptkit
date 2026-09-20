@@ -1,18 +1,18 @@
 <!-- 
 AUTO-GENERATED FILE – do not edit manually!
 Regenerate with: zeus docs:generate-catalog
-Last generated: 2026-09-10T00:00:00.000Z
+Last generated: 2026-09-20T00:00:00.000Z
 -->
 
 ---
 Title: Zeus RPG PromptKit Tool Catalog
 Description: Verbindlicher, sicherheitsklassifizierter Katalog aller CLI-Befehle und Workflow-Presets fuer Menschen und KI-Assistenten.
-Last Updated: 2026-09-10
+Last Updated: 2026-09-20
 ---
 
 # Zeus RPG PromptKit Tool Catalog
 
-Package: `zeus-rpg-promptkit@0.3.0-rc.1`
+Package: `zeus-rpg-promptkit@0.3.0-rc.2`
 
 This document is the authoritative tool reference for Zeus RPG PromptKit.
 All AI assistants (GPT, Claude, Grok, Copilot, local agents) should treat this file as the single source of truth for command purpose, risk level, and usage.
@@ -88,9 +88,9 @@ Related:
 | `delete` | — | — | `stable` | `S3` | DB2 write | remote-write | cli | — | Strict delete-only DML command with the shared write-safety guardrails. | `node cli/zeus.js delete --profile default --sql "DELETE FROM APPDATA.APP_TABLE_00 WHERE STATUS='X'" --confirm --backup` |
 | `analyses` | — | `list`, `register`, `index`, `open`, `show`, `unregister` | `stable` | `S1` | Local | local-artifact-write | cli, mcp | — | List, register, inspect, and open locally tracked analysis artifacts; registry mutations are serialized with a local lock and return REGISTRY_BUSY when contention exceeds the bounded wait. | `node cli/zeus.js analyses list --profile default` |
 | `bridge` | — | `plan`, `stage`, `apply`, `compile-plan`, `compile-run`, `report` | `experimental` | `S4` | Operator-gated | operator-gated | cli, mcp | — | Bridge planning/staging/apply/compile/report flow; never implicit. | `node cli/zeus.js bridge plan --profile default --help` |
-| `pui-edit` | — | `roundtrip-check`, `dump-json`, `validate-json`, `export-json`, `import-json`, `plan`, `apply`, `grid-add-column` | `experimental` | `S1` | Local | local-artifact-write | cli, mcp | — | Apply structured UI edit operations to local display artifacts. | `node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json` |
-| `pui-inspect` | — | — | `experimental` | `S0` | Local | local-read | cli, mcp | — | Inspect a local Profound UI display-file projection and optionally trace field bindings. | `node cli/zeus.js pui-inspect --file ./display/DSPFILE.MBR --json` |
-| `knowledge` | — | `extract`, `validate`, `inspect` | `experimental` | `S1` | Local | local-artifact-write, local-read | cli | — | Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local PUI structure. Directory extraction requires a separate --private-out root for the local-only inventory. | `node cli/zeus.js knowledge extract --mode ui-patterns --source ./display --out ./output --private-out ./local-only --run-id run-001 --json` |
+| `display-ui-edit` | — | `roundtrip-check`, `dump-json`, `validate-json`, `export-json`, `import-json`, `plan`, `apply`, `grid-add-column` | `experimental` | `S1` | Local | local-artifact-write | cli, mcp | — | Apply structured display-file UI edit operations to local artifacts. | `node cli/zeus.js display-ui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json` |
+| `display-ui-inspect` | — | — | `experimental` | `S0` | Local | local-read | cli, mcp | — | Inspect a local display-file UI projection and optionally trace field bindings. | `node cli/zeus.js display-ui-inspect --file ./display/DSPFILE.MBR --json` |
+| `knowledge` | — | `extract`, `validate`, `inspect` | `experimental` | `S1` | Local | local-artifact-write, local-read | cli | — | Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local display-file UI structure. Directory extraction requires a separate --private-out root for the local-only inventory. | `node cli/zeus.js knowledge extract --mode ui-patterns --source ./display --out ./output --private-out ./local-only --run-id run-001 --json` |
 | `docs:generate-catalog` | `docs generate-catalog` | — | `stable` | `S1` | Local | local-artifact-write | cli, mcp | — | Regenerate docs/tool-catalog.md (and optional JSON projection) from the CLI command surface; also callable as `zeus docs generate-catalog`. | `node cli/zeus.js docs:generate-catalog` |
 | `mcp` | — | `serve`, `help` | `stable` | `S0` | Local read-mostly | local-process-stdio | cli | — | Start local MCP stdio server for safe read-mostly Zeus tool exposure with allowlist policy gating, guarded write controls, and opaque cursor pagination on supported tools. | `node cli/zeus.js mcp serve --verbose --allow-tools zeus.health,zeus.version,zeus.profiles,zeus.doctor,zeus.help,zeus.onboarding,zeus.analyze,zeus.workflow,zeus.bundle,zeus.search-source,zeus.field-search,zeus.resolve-object,zeus.inspect-object,zeus.query-table,zeus.query-sql,zeus.impact,zeus.assess-risk,zeus.generate-test,zeus.generate-checklist,zeus.qa,zeus.validate-rpg-sql,zeus.analyses,zeus.fetch-member,zeus.diff,zeus.copy-to-workspace,zeus.joblog,zeus.docs-generate-catalog,zeus.serve,zeus.test-run,zeus.project-knowledge.discover,zeus.project-knowledge.status,zeus.project-knowledge.check,zeus.project-knowledge.locate,zeus.project-knowledge.lookup` |
 | `tools` | — | `list`, `describe`, `guide` | `stable` | `S0` | Local | none | cli | — | List and describe canonical command-help records as stable JSON for CLI and MCP parity. | `node cli/zeus.js tools list --json` |

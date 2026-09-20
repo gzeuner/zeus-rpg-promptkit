@@ -16,12 +16,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { buildPuiProjection, traceFieldBinding } = require('../src/pui/puiProjection');
-const { buildHtmlLines } = require('../src/pui/puiDdsParser');
+const {
+  buildDisplayUiProjection,
+  traceFieldBinding,
+} = require('../src/displayUi/displayUiProjection');
+const { buildHtmlLines } = require('../src/displayUi/displayUiDdsParser');
 
 const DDS_PREFIX_FIRST = "     A                                  1  2HTML('";
 
-// Synthetic PUI record formats (no customer data).
+// Synthetic Display UI record formats (no customer data).
 const GRID_FORMAT_JSON = JSON.stringify({
   'record format name': 'GRIDFMT',
   items: [
@@ -91,10 +94,10 @@ function buildMember() {
   return lines.join('\n');
 }
 
-test('buildPuiProjection decodes multiple record formats deterministically', () => {
-  const projection = buildPuiProjection(buildMember(), { file: 'DEMOFMT.dds' });
+test('buildDisplayUiProjection decodes multiple record formats deterministically', () => {
+  const projection = buildDisplayUiProjection(buildMember(), { file: 'DEMOFMT.dds' });
 
-  assert.equal(projection.kind, 'zeus-pui-projection');
+  assert.equal(projection.kind, 'zeus-display-ui-projection');
   assert.equal(projection.recordFormatCount, 2);
   assert.deepEqual(
     projection.recordFormats.map(rf => rf.recordFormat),
@@ -103,7 +106,7 @@ test('buildPuiProjection decodes multiple record formats deterministically', () 
 });
 
 test('grid columns expose heading, field binding and tooltip', () => {
-  const projection = buildPuiProjection(buildMember(), { file: 'DEMOFMT.dds' });
+  const projection = buildDisplayUiProjection(buildMember(), { file: 'DEMOFMT.dds' });
   const gridFmt = projection.recordFormats.find(rf => rf.recordFormat === 'GRIDFMT');
   const grid = gridFmt.grids.find(g => g.id === 'grid1');
 
@@ -126,7 +129,7 @@ test('grid columns expose heading, field binding and tooltip', () => {
 });
 
 test('unbound columns and heading/column mismatches surface as signals', () => {
-  const projection = buildPuiProjection(buildMember(), { file: 'DEMOFMT.dds' });
+  const projection = buildDisplayUiProjection(buildMember(), { file: 'DEMOFMT.dds' });
 
   const unbound = projection.signals.find(s => s.type === 'UNBOUND_COLUMN');
   assert.ok(unbound, 'expected UNBOUND_COLUMN signal');
@@ -139,7 +142,7 @@ test('unbound columns and heading/column mismatches surface as signals', () => {
 });
 
 test('standalone bound widgets are projected', () => {
-  const projection = buildPuiProjection(buildMember(), { file: 'DEMOFMT.dds' });
+  const projection = buildDisplayUiProjection(buildMember(), { file: 'DEMOFMT.dds' });
   const gridFmt = projection.recordFormats.find(rf => rf.recordFormat === 'GRIDFMT');
   const widget = gridFmt.widgets.find(w => w.id === 'w1');
 
@@ -149,7 +152,7 @@ test('standalone bound widgets are projected', () => {
 });
 
 test('traceFieldBinding locates a grid-column binding case-insensitively', () => {
-  const projection = buildPuiProjection(buildMember(), { file: 'DEMOFMT.dds' });
+  const projection = buildDisplayUiProjection(buildMember(), { file: 'DEMOFMT.dds' });
   const hits = traceFieldBinding(projection, 'statuscode');
 
   assert.equal(hits.length, 1);
@@ -163,12 +166,12 @@ test('traceFieldBinding locates a grid-column binding case-insensitively', () =>
 });
 
 test('column-72 continuation lines are reassembled before decoding', () => {
-  // Split the JSON exactly like the ProfoundUI Designer would (multi-line block).
+  // Split the JSON exactly like the display-file UI designer would (multi-line block).
   const splitLines = buildHtmlLines(GRID_FORMAT_JSON);
   assert.ok(splitLines.length > 1, 'fixture should span multiple continuation lines');
 
   const member = ['     A          R GRIDFMT', ...splitLines].join('\n');
-  const projection = buildPuiProjection(member, { file: 'SPLIT.dds' });
+  const projection = buildDisplayUiProjection(member, { file: 'SPLIT.dds' });
 
   assert.equal(projection.recordFormatCount, 1);
   const grid = projection.recordFormats[0].grids.find(g => g.id === 'grid1');
@@ -176,7 +179,7 @@ test('column-72 continuation lines are reassembled before decoding', () => {
   assert.equal(grid.columns[0].tooltip, 'I=Import Z=Category');
 });
 
-// Real ProfoundUI binds grid columns/widgets through an object-valued "value"
+// Display-file UI binds grid columns/widgets through an object-valued "value"
 // property carrying "fieldName" (not a top-level "field name" key). A string
 // "value" is a static literal instead.
 const VALUE_BINDING_JSON = JSON.stringify({
@@ -220,8 +223,8 @@ function buildValueBindingMember() {
   return ['     A          R VALFMT', singleLineHtmlBlock(VALUE_BINDING_JSON)].join('\n');
 }
 
-test('object-valued "value" binds a grid column to its fieldName (real ProfoundUI)', () => {
-  const projection = buildPuiProjection(buildValueBindingMember(), { file: 'VALFMT.dds' });
+test('object-valued "value" binds a grid column to its fieldName (display-file UI)', () => {
+  const projection = buildDisplayUiProjection(buildValueBindingMember(), { file: 'VALFMT.dds' });
   const grid = projection.recordFormats[0].grids.find(g => g.id === 'grid3');
 
   const col1 = grid.columns[0];
@@ -238,7 +241,7 @@ test('object-valued "value" binds a grid column to its fieldName (real ProfoundU
 });
 
 test('object-valued "value" binds a standalone widget and is traceable', () => {
-  const projection = buildPuiProjection(buildValueBindingMember(), { file: 'VALFMT.dds' });
+  const projection = buildDisplayUiProjection(buildValueBindingMember(), { file: 'VALFMT.dds' });
   const widget = projection.recordFormats[0].widgets.find(w => w.id === 'vw1');
 
   assert.ok(widget, 'expected widget vw1');
@@ -250,7 +253,7 @@ test('object-valued "value" binds a standalone widget and is traceable', () => {
   assert.equal(hits[0].column, 1);
 });
 
-// Real ProfoundUI input widgets (image / checkbox / radio) bind their DDS field
+// Display-file UI input widgets (image / checkbox / radio) bind their DDS field
 // through an object-valued "response" property carrying "fieldName" — they have
 // no display "value" binding but are genuinely bound columns/widgets.
 const RESPONSE_BINDING_JSON = JSON.stringify({
@@ -283,8 +286,8 @@ function buildResponseBindingMember() {
   return ['     A          R RSPFMT', singleLineHtmlBlock(RESPONSE_BINDING_JSON)].join('\n');
 }
 
-test('object-valued "response" binds a grid image column (real ProfoundUI)', () => {
-  const projection = buildPuiProjection(buildResponseBindingMember(), { file: 'RSPFMT.dds' });
+test('object-valued "response" binds a grid image column (display-file UI)', () => {
+  const projection = buildDisplayUiProjection(buildResponseBindingMember(), { file: 'RSPFMT.dds' });
   const grid = projection.recordFormats[0].grids.find(g => g.id === 'grid4');
 
   const col1 = grid.columns[0];
@@ -299,7 +302,7 @@ test('object-valued "response" binds a grid image column (real ProfoundUI)', () 
 });
 
 test('object-valued "response" binds a standalone widget and is traceable', () => {
-  const projection = buildPuiProjection(buildResponseBindingMember(), { file: 'RSPFMT.dds' });
+  const projection = buildDisplayUiProjection(buildResponseBindingMember(), { file: 'RSPFMT.dds' });
   const widget = projection.recordFormats[0].widgets.find(w => w.id === 'rw1');
 
   assert.ok(widget, 'expected widget rw1');

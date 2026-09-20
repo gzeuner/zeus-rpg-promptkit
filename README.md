@@ -182,13 +182,14 @@ npm run demo:run
 Scripts und Release-Prozess: `package.json`, `CONTRIBUTING.md`, `CHANGELOG.md` und
 `.github/workflows/release.yml`.
 
-**Release-Status (0.3.0-rc.1):** Release Candidate für den nächsten Community-Feature-Release.
-Die stabile Basis bleibt `0.2.0`; `0.3.0-rc.1` ergänzt die evidence-basierte Business Process
-Intelligence, Prozessabfragen und scoped Business Glossary / Legacy Vocabulary. Vor produktiver
+**Release-Status (0.3.0-rc.2):** Release Candidate für den nächsten Community-Feature-Release.
+Die stabile Basis bleibt `0.2.0`; `0.3.0-rc.2` ergänzt die neutrale Display-File-UI-Oberfläche
+und hält die evidence-basierte Business Process Intelligence, Prozessabfragen und scoped Business
+Glossary / Legacy Vocabulary bereit. Vor produktiver
 Nutzung von Artefakten lokal `npm run docs:check` und `npm run package:smoke` ausführen sowie den
 Golden Path beachten.
 
-Release-Assets: [`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.1)
+Release-Assets: [`v0.3.0-rc.2`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.2)
 (Tarball, SBOM, SHA256SUMS, Build-Provenance-Attestation). Für den stabilen Stand siehe
 [`v0.2.0`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0). Policy:
 [`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
@@ -196,7 +197,7 @@ Release-Assets: [`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/re
 Empfohlene Installation vom GitHub-Release-Tarball:
 
 ```bash
-npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.3.0-rc.1/zeus-rpg-promptkit-0.3.0-rc.1.tgz
+npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.3.0-rc.2/zeus-rpg-promptkit-0.3.0-rc.2.tgz
 ```
 
 ### Golden Corpus und Qualitätsmetriken
@@ -431,7 +432,7 @@ Der automatisch erzeugte [`docs/tool-catalog.md`](docs/tool-catalog.md) ist die 
 | Artefakte            | `bundle`, `analyses`, `serve`                                                         |               `S0/S1` |
 | Kontrollierte Writes | `write-sql`, `upsert`, `insert`, `update`, `delete`                                   |                  `S3` |
 | Operator-gated       | `bridge`                                                                              |                  `S4` |
-| Integrationen        | `mcp`, `docs:generate-catalog`, `pui-inspect`, `pui-edit`                             | abhängig vom Kommando |
+| Integrationen        | `mcp`, `docs:generate-catalog`, `display-ui-inspect`, `display-ui-edit`               | abhängig vom Kommando |
 
 Beispiele:
 
@@ -718,7 +719,7 @@ Mit MCP ist `zeus.agent.bootstrap` der erste Einstiegspunkt; die laufzeitnahe Or
 | `src/api/`                                              | Programmierschnittstelle und Registries                     |
 | `src/modules/`                                          | Moduldeskriptor-Verträge und atomarer Registrar             |
 | `src/projectIntelligence/`                              | Projektwissen-Verträge, Store, Suche, Engine, Retrieval     |
-| `src/viewer/`, `src/ui/`, `src/pui/`                    | optionale lokale Ansichten und experimentelle UI-Funktionen |
+| `src/viewer/`, `src/ui/`, `src/displayUi/`              | optionale lokale Ansichten und experimentelle UI-Funktionen |
 | `vscode-extension/`                                     | experimentelle Editor-Integration                           |
 | `tests/`                                                | Unit-, Contract-, Smoke-, Corpus- und Benchmark-Tests       |
 
@@ -892,20 +893,21 @@ Key guardrails:
 
 ### Install and run
 
-**Release status (0.3.0-rc.1):** release candidate for the next Community feature release.
-The stable baseline remains `0.2.0`; `0.3.0-rc.1` adds evidence-backed Business Process
-Intelligence, process queries, and scoped Business Glossary / Legacy Vocabulary. Before relying
-on artifacts locally, run `npm run docs:check` and `npm run package:smoke` and follow the golden path.
+**Release status (0.3.0-rc.2):** release candidate for the next Community feature release.
+The stable baseline remains `0.2.0`; `0.3.0-rc.2` adds the neutral display-file UI surface while
+retaining evidence-backed Business Process Intelligence, process queries, and scoped Business
+Glossary / Legacy Vocabulary. Before relying on artifacts locally, run `npm run docs:check` and
+`npm run package:smoke` and follow the golden path.
 
 Release assets (tarball, SBOM, SHA256SUMS, build-provenance attestation):
-[`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.1).
+[`v0.3.0-rc.2`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.2).
 For the stable baseline, see [`v0.2.0`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.2.0).
 Policy: [`docs/maintainers/release-integrity.md`](docs/maintainers/release-integrity.md).
 
 Recommended install from the GitHub release tarball:
 
 ```bash
-npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.3.0-rc.1/zeus-rpg-promptkit-0.3.0-rc.1.tgz
+npm install https://github.com/gzeuner/zeus-rpg-promptkit/releases/download/v0.3.0-rc.2/zeus-rpg-promptkit-0.3.0-rc.2.tgz
 ```
 
 From a source checkout:
@@ -1165,7 +1167,7 @@ The generated [`docs/tool-catalog.md`](docs/tool-catalog.md) is the **authoritat
 | Artifacts                | `bundle`, `analyses`, `serve`                                                         |          `S0/S1` |
 | Controlled writes        | `write-sql`, `upsert`, `insert`, `update`, `delete`                                   |             `S3` |
 | Operator-gated           | `bridge`                                                                              |             `S4` |
-| Integrations             | `mcp`, `docs:generate-catalog`, `pui-inspect`, `pui-edit`                             | command-specific |
+| Integrations             | `mcp`, `docs:generate-catalog`, `display-ui-inspect`, `display-ui-edit`               | command-specific |
 
 Examples:
 
@@ -1464,7 +1466,7 @@ type-safety claim; the scope guard prevents these declared files from silently d
 | `src/api/`                                              | programmatic API and registries                               |
 | `src/modules/`                                          | module descriptor contracts and atomic registrar              |
 | `src/projectIntelligence/`                              | project-knowledge contracts, store, search, engine, retrieval |
-| `src/viewer/`, `src/ui/`, `src/pui/`                    | optional local views and experimental UI features             |
+| `src/viewer/`, `src/ui/`, `src/displayUi/`              | optional local views and experimental UI features             |
 | `vscode-extension/`                                     | experimental editor integration                               |
 | `tests/`                                                | unit, contract, smoke, corpus, and benchmark tests            |
 

@@ -4,10 +4,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { buildHtmlLines } = require('../src/pui/puiDdsParser');
-const { exportPuiDddlBatch } = require('../src/pui/puiDddlExportService');
+const { buildHtmlLines } = require('../src/displayUi/displayUiDdsParser');
+const { exportDisplayUiDddlBatch } = require('../src/displayUi/displayUiDddlExportService');
 
-function writeDisplayWithPuiJson(filePath, json) {
+function writeDisplayWithDisplayUiJson(filePath, json) {
   const lines = [
     '     A          R HEADER',
     ...buildHtmlLines(JSON.stringify(json)),
@@ -17,24 +17,24 @@ function writeDisplayWithPuiJson(filePath, json) {
   fs.writeFileSync(filePath, lines.join('\n'), 'utf8');
 }
 
-test('exportPuiDddlBatch exports strict-valid dddl files and report', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-dddl-export-'));
+test('exportDisplayUiDddlBatch exports strict-valid dddl files and report', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-display-ui-dddl-export-'));
   const sourceRoot = path.join(tempRoot, 'src');
   const outRoot = path.join(tempRoot, 'out');
   const reportPath = path.join(tempRoot, 'report.json');
 
   try {
-    writeDisplayWithPuiJson(path.join(sourceRoot, 'QDDSSRC', 'DISPLAY_A_DF'), {
+    writeDisplayWithDisplayUiJson(path.join(sourceRoot, 'QDDSSRC', 'DISPLAY_A_DF'), {
       screen: { 'record format name': 'R1' },
       items: [{ id: 'A', 'field type': 'output field' }],
     });
-    writeDisplayWithPuiJson(path.join(sourceRoot, 'QDDSSRC', 'DISPLAY_B_DF'), {
+    writeDisplayWithDisplayUiJson(path.join(sourceRoot, 'QDDSSRC', 'DISPLAY_B_DF'), {
       screen: { 'record format name': 'R2' },
       items: [{ id: 'B', 'field type': 'grid' }],
     });
-    fs.writeFileSync(path.join(sourceRoot, 'README.txt'), 'no pui', 'utf8');
+    fs.writeFileSync(path.join(sourceRoot, 'README.txt'), 'no display-ui', 'utf8');
 
-    const report = exportPuiDddlBatch({
+    const report = exportDisplayUiDddlBatch({
       sourceRoot,
       outRoot,
       reportPath,

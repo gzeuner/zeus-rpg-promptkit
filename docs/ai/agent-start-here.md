@@ -95,7 +95,8 @@ an ambiguous alias into a guessed process.
 
 Use `agent evaluate --list --json` to see the sanitized self-evaluation corpus. After drafting a response, evaluate it with `--scenario <id> --response-file <relative-path>` before taking a non-trivial route. The score checks command selection, scope, evidence, safety gating, and experience logging without executing the response.
 
-For business-process questions, read [`process-intelligence.md`](process-intelligence.md)
+For display-file UI migration and command discovery, read
+[`neutral-display-ui-migration.md`](neutral-display-ui-migration.md). For business-process questions, read [`process-intelligence.md`](process-intelligence.md)
 after preflight. The current vertical slice derives deterministic, reviewable
 process candidates from the existing analysis graph; it does not auto-publish
 business meaning. When a local glossary is available, use its explicit

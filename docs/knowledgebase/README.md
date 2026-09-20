@@ -26,7 +26,7 @@ Non-negotiable rules:
 Current implementation status:
 
 - `src/knowledge/` contains the `raw/`, `sanitized/`, `final/`, and `privacy/` boundaries
-- the neutral PUI structural extractor, recursive batch extraction, final-catalog persistence,
+- the neutral Display UI structural extractor, recursive batch extraction, final-catalog persistence,
   validation, and read-only inspection/query are implemented
 - the privacy gate is fail-closed and rejects malformed or suspicious final-catalog candidates
 - **ZPI-02 (contracts):** `src/projectIntelligence/` versioned project-knowledge contracts, closed
@@ -54,7 +54,7 @@ Local risk handling:
 
 - old extracted data must not be migrated
 - `.local` audit/session-note files that preserve removed knowledge paths are local risk artifacts and should be purged unless proven synthetic
-- raw exports outside `.zeus/knowledge` (for example old `output/pui-dddl/*`) must be treated as unsafe local evidence, not reusable knowledge
+- raw exports outside `.zeus/knowledge` (for example old `output/display-ui-dddl/*`) must be treated as unsafe local evidence, not reusable knowledge
 - DDDL is local raw interchange only and must not be promoted to final project-neutral knowledge
 
 Internal knowledge-lab note:

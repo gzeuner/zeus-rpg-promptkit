@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const { parseDds, findJsonSegmentGroup, parseJsonFromGroup } = require('./puiDdsParser');
-const { buildPuiDddlPayloadV1, parsePuiDddlPayload } = require('./puiDddl');
+const { parseDds, findJsonSegmentGroup, parseJsonFromGroup } = require('./displayUiDdsParser');
+const { buildDisplayUiDddlPayloadV1, parseDisplayUiDddlPayload } = require('./displayUiDddl');
 
 function listFilesRecursive(rootDir) {
   const files = [];
@@ -37,11 +37,11 @@ function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
-function candidateHasPuiMarkers(content) {
+function candidateHasDisplayUiMarkers(content) {
   return content.includes("HTML('") && content.includes('{"screen"');
 }
 
-function exportPuiDddlBatch(options = {}) {
+function exportDisplayUiDddlBatch(options = {}) {
   const sourceRoot = options.sourceRoot ? path.resolve(String(options.sourceRoot)) : null;
   if (!sourceRoot) {
     throw new Error('sourceRoot is required');
@@ -52,10 +52,10 @@ function exportPuiDddlBatch(options = {}) {
 
   const outRoot = options.outRoot
     ? path.resolve(String(options.outRoot))
-    : path.resolve('./output/pui-dddl/by-source');
+    : path.resolve('./output/display-ui-dddl/by-source');
   const reportPath = options.reportPath
     ? path.resolve(String(options.reportPath))
-    : path.resolve('./output/pui-dddl/export-report.json');
+    : path.resolve('./output/display-ui-dddl/export-report.json');
 
   const allFiles = listFilesRecursive(sourceRoot);
   const candidates = [];
@@ -66,7 +66,7 @@ function exportPuiDddlBatch(options = {}) {
     } catch (_error) {
       continue;
     }
-    if (candidateHasPuiMarkers(content)) {
+    if (candidateHasDisplayUiMarkers(content)) {
       candidates.push({ filePath, content });
     }
   }
@@ -98,14 +98,14 @@ function exportPuiDddlBatch(options = {}) {
       }
 
       const compactSource = group.segments.map(segment => segment.content).join('');
-      const dddl = buildPuiDddlPayloadV1({
+      const dddl = buildDisplayUiDddlPayloadV1({
         filePath,
         group,
-        puiJson: json,
+        displayUiJson: json,
         compactSource,
       });
 
-      const validation = parsePuiDddlPayload(dddl, {
+      const validation = parseDisplayUiDddlPayload(dddl, {
         strict: true,
         allowMigration: false,
       });
@@ -153,5 +153,5 @@ function exportPuiDddlBatch(options = {}) {
 }
 
 module.exports = {
-  exportPuiDddlBatch,
+  exportDisplayUiDddlBatch,
 };

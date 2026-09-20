@@ -5,6 +5,47 @@ All notable changes to Zeus RPG PromptKit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-rc.2] - 2026-09-20
+
+Release candidate for the next Community feature release. This cut keeps the
+evidence-backed process and glossary surface and adds a fully neutral,
+CLI-first display-file UI surface.
+
+### Added
+
+- neutral display-file UI migration guidance for agents and maintainers;
+- canonical `display-ui-inspect` and `display-ui-edit` CLI/MCP discovery records;
+- privacy-preserving terminology and source-boundary checks for the display-file
+  UI extraction path.
+
+### Changed
+
+- display-file UI parsers, projections, editors, extractors, tests, and paths now
+  use neutral terminology while preserving behavior;
+- README, AI start guidance, migration notes, generated tool catalogs, and
+  example artifacts are synchronized with the neutral command surface;
+- package metadata is aligned to the `0.3.0-rc.2` release candidate;
+- the unified public tree continues to expose the built-in modules and the
+  read-only evidence workflows from the previous candidate.
+
+### Security
+
+- no credentials, customer data, private paths, or private system identifiers
+  are introduced by this cut;
+- public knowledge and shareable artifacts remain privacy-gated and evidence-first;
+- release validation includes secret hygiene, portability, package, and audit
+  checks.
+
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Security
+
 ## [0.3.0-rc.1] - 2026-09-10
 
 Release candidate for the next Community feature release. This cut makes the
@@ -32,31 +73,6 @@ from the CLI and public API.
   credentials, customer data, private paths, or private system identifiers;
 - process answers remain evidence-backed and fail closed for stale, unknown, or
   ambiguous knowledge.
-
-## [Unreleased]
-
-### Added
-
-- integrated Generation Assurance, Db2 Test Intelligence, IBM i Validation, entitlement, and
-  entitled Project Intelligence under one public Apache-2.0 package;
-- added the generic read-only `journal-row-diff` command with caller-defined row layouts,
-  independent audit-query validation, and aggregate-only results;
-- integrated the read-only `spool-read` command for bounded IBM-i spoolfile evidence via JT400;
-- explicit `--built-in-modules` / `ZEUS_BUILT_IN_MODULES` selection and unified package smoke coverage;
-- ADR-014 and a consolidated migration quickstart.
-
-### Changed
-
-- the public repository is now the only active codebase; the former external loader remains only
-  as an explicit compatibility hook for separately supplied extensions;
-- package exports, CLI help, product-surface metadata, tests, and docs now describe the unified tree.
-
-### Fixed
-
-### Security
-
-- spoolfile text is bounded and configured sensitive terms, credential-bearing URLs, and detected
-  credential assignments are masked before CLI output; the IBM-i password stays out of Java arguments.
 
 ## [0.2.0] - 2026-08-08
 
@@ -270,7 +286,7 @@ This is the first governed prerelease after completing the implementation pack (
 ### Known Limitations (Beta)
 
 - Some advanced Db2 catalog and remote features are best-effort or require explicit profile/credentials.
-- Certain investigation features (full remote xref, PUI editing) remain experimental.
+- Certain investigation features (full remote xref, Display UI editing) remain experimental.
 - MCP server is local-only (stdio transport); no remote transport in this release.
 - The project does not yet publish to npm by default (GitHub prerelease + tarball is the supported distribution for beta).
 - Versioned contracts are in place; some surfaces may evolve during the 0.2 beta series.

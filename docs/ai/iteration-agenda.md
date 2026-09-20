@@ -247,7 +247,7 @@ contract.
 
 ### Cross-cutting knowledge slice — completed in current integration round
 
-The project-neutral PUI knowledge path now supports recursive `.dds` batch
+The project-neutral Display UI knowledge path now supports recursive `.dds` batch
 extraction, controlled structural widget categories, deterministic read-only
 catalog filtering, and an additive `zeus.queryKnowledge()` API. Batch mode
 requires separate general and local-only output roots. The local inventory may
@@ -522,8 +522,71 @@ workflow documentation, and
 audit, a green PR and main pipeline, and no credentials or private runtime
 values in the staged change. The merge commit is `d6a59f9`.
 
-The roadmap is paused after Iteration 26 until an explicit follow-up. No
-further implementation iteration is active.
+The roadmap is paused after Iteration 26 until an explicit follow-up. The
+following naming iteration is now being prepared locally; it is not yet
+committed or published.
+
+### Iteration 27 — Neutral display-UI terminology (release candidate 0.3.0-rc.2)
+
+Replace vendor-specific abbreviations and product labels in the public
+Promptkit surface with neutral display-file UI terminology while preserving the
+technical behavior:
+
+- canonical CLI and MCP names describe display-file UI inspection and editing;
+- internal modules, paths, schemas, result fields, tests, generated catalogs,
+  examples, and documentation use neutral names consistently;
+- local parsing and editing behavior remains unchanged, including the ability
+  to read and write the supported display-file UI format;
+- no product affiliation, sponsorship, endorsement, or ownership is implied;
+- the public surface contains no vendor-specific product name or abbreviation;
+- generated artifacts and privacy checks are regenerated and verified;
+- the change is treated as a public naming change and requires release-note and
+  migration documentation before publication.
+
+The implementation is prepared for the `0.3.0-rc.2` release candidate. The
+release workflow remains the final source-of-truth gate for the merged `main`
+commit, package artifact, provenance, and fresh-download verification.
+
+### Iteration 28 — Confidential legacy-source boundary and inventory (planned, not started)
+
+The next proposed iteration uses real legacy source material only as a local
+learning input. It must establish a hard confidentiality boundary before any
+process discovery is attempted:
+
+- source files are read-only inputs and never leave the local workspace;
+- standard output contains no source lines, original paths, source identifiers,
+  business names, or environment-specific values;
+- the local inventory exposes only bounded counts, language/type coverage,
+  parser status, anonymized evidence identifiers, and stable reason codes;
+- private-to-anonymized mappings remain local, are not exportable, and are not
+  committed to the public Promptkit repository;
+- supported evidence patterns cover RPGLE/RPGLE includes, CLLE orchestration,
+  DDS structures, SQL objects/statements, copy/include edges, calls, file
+  access, transactions, and error handling;
+- inventory is deterministic and incremental, using local fingerprints so a
+  multi-million-line source set does not need full reprocessing every time;
+- unsupported syntax, decoding failures, unresolved references, and parser
+  limitations are reported explicitly instead of being silently guessed;
+- export and fixture guards reject raw source content, source names, private
+  paths, credentials, and project-specific identifiers before an artifact can
+  be shared or committed.
+
+The iteration produces an anonymized, machine-readable source inventory and a
+bounded evidence manifest only. It does not publish process knowledge, infer
+business meaning without evidence, or modify source files. Completion requires
+local-only tests with synthetic canaries, secret/private-content scanning,
+portable path checks, deterministic rerun verification, and documentation of
+the safe handoff to the next iteration.
+
+Possible follow-up iterations, still inactive until explicitly approved, are:
+
+1. a cross-language legacy evidence graph;
+2. process-candidate extraction from job, program, data, and transaction flows;
+3. reviewed process descriptions and safe process-query answers built only from
+   anonymized, evidence-linked artifacts.
+
+The roadmap remains paused after Iteration 26. Iteration 28 is a planning item
+only and must not be implemented without explicit follow-up.
 
 ## Business Process Intelligence vertical slice
 

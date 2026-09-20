@@ -10,7 +10,13 @@ test('runAnalyzeCore does not auto-load local knowledge artifacts after reset', 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-knowledge-reset-'));
   const sourceRoot = path.join(tempRoot, 'src');
   const outputRoot = path.join(tempRoot, 'output');
-  const staleKnowledgeDir = path.join(tempRoot, '.zeus', 'knowledge', 'pui-patterns', 'catalogs');
+  const staleKnowledgeDir = path.join(
+    tempRoot,
+    '.zeus',
+    'knowledge',
+    'display-ui-patterns',
+    'catalogs'
+  );
   const localKnownFactsDir = path.join(tempRoot, 'config', 'local-only', 'known-facts');
 
   fs.mkdirSync(sourceRoot, { recursive: true });
@@ -68,12 +74,12 @@ test('runAnalyzeCore does not auto-load local knowledge artifacts after reset', 
       logVerbose() {},
     });
 
-    assert.equal(coreResult.context.puiPatterns.enabled, false);
+    assert.equal(coreResult.context.displayUiPatterns.enabled, false);
     assert.equal(coreResult.context.knownFacts.enabled, false);
     assert.equal(coreResult.context.knownFacts.factCount, 0);
     assert.equal(
       coreResult.context.notes.some(note =>
-        /PUI pattern|known facts|knowledge/i.test(String(note))
+        /Display UI pattern|known facts|knowledge/i.test(String(note))
       ),
       false
     );

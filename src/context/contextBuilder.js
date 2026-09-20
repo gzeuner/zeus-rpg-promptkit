@@ -22,7 +22,7 @@ const {
   defaultIfsPathReport,
   defaultKnownFacts,
   defaultNativeFileUsage,
-  defaultPuiPatterns,
+  defaultDisplayUiPatterns,
   defaultSearchResults,
   defaultSqlAnalysis,
   summarizeSqlStatements,
@@ -310,10 +310,10 @@ function projectContextFromCanonicalAnalysis(canonicalAnalysis) {
       canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.diagnosticPacks
         ? canonicalAnalysis.enrichments.diagnosticPacks
         : defaultDiagnosticPackReport(),
-    puiPatterns:
-      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.puiPatterns
-        ? canonicalAnalysis.enrichments.puiPatterns
-        : defaultPuiPatterns(),
+    displayUiPatterns:
+      canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.displayUiPatterns
+        ? canonicalAnalysis.enrichments.displayUiPatterns
+        : defaultDisplayUiPatterns(),
     knownFacts:
       canonicalAnalysis.enrichments && canonicalAnalysis.enrichments.knownFacts
         ? canonicalAnalysis.enrichments.knownFacts

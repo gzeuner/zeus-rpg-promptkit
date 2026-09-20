@@ -119,7 +119,7 @@ function updateOptimizedContext(optimizedContext, context, patch = {}) {
     ifsPaths: context.ifsPaths,
     searchResults: context.searchResults,
     diagnosticPacks: context.diagnosticPacks,
-    puiPatterns: context.puiPatterns,
+    displayUiPatterns: context.displayUiPatterns,
     knownFacts: context.knownFacts,
     db2Metadata: context.db2Metadata,
     testData: context.testData,

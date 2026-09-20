@@ -4,9 +4,9 @@ const path = require('path');
 
 // Local raw interchange format only. This payload must not become toolkit knowledge
 // and must never be exposed as a project-neutral catalog or MCP-safe artifact.
-const PUI_DDDL_KIND = 'zeus-pui-dddl';
-const PUI_DDDL_VERSION = 1;
-const LEGACY_KINDS = new Set(['zeus-pui-dddl-v0']);
+const DISPLAY_UI_DDDL_KIND = 'zeus-display-ui-dddl';
+const DISPLAY_UI_DDDL_VERSION = 1;
+const LEGACY_KINDS = new Set(['zeus-display-ui-dddl-v0']);
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -20,7 +20,7 @@ function collectUnknownKeys(payload, allowedKeys) {
   return Object.keys(payload).filter(key => !allowedKeys.has(key));
 }
 
-function validatePuiDddlV1(payload, { strict = true } = {}) {
+function validateDisplayUiDddlV1(payload, { strict = true } = {}) {
   const errors = [];
 
   if (!isPlainObject(payload)) {
@@ -28,12 +28,12 @@ function validatePuiDddlV1(payload, { strict = true } = {}) {
     return { valid: false, errors };
   }
 
-  if (String(payload.kind || '') !== PUI_DDDL_KIND) {
-    errors.push(`kind must be "${PUI_DDDL_KIND}"`);
+  if (String(payload.kind || '') !== DISPLAY_UI_DDDL_KIND) {
+    errors.push(`kind must be "${DISPLAY_UI_DDDL_KIND}"`);
   }
 
-  if (!Number.isInteger(payload.version) || payload.version !== PUI_DDDL_VERSION) {
-    errors.push(`version must be integer ${PUI_DDDL_VERSION}`);
+  if (!Number.isInteger(payload.version) || payload.version !== DISPLAY_UI_DDDL_VERSION) {
+    errors.push(`version must be integer ${DISPLAY_UI_DDDL_VERSION}`);
   }
 
   if (payload.exportedAt !== undefined && typeof payload.exportedAt !== 'string') {
@@ -87,8 +87,8 @@ function validatePuiDddlV1(payload, { strict = true } = {}) {
     }
   }
 
-  if (!isPlainObject(payload.puiJson)) {
-    errors.push('puiJson must be an object');
+  if (!isPlainObject(payload.displayUiJson)) {
+    errors.push('displayUiJson must be an object');
   }
 
   if (strict) {
@@ -98,7 +98,7 @@ function validatePuiDddlV1(payload, { strict = true } = {}) {
       'exportedAt',
       'source',
       'ddsJsonGroup',
-      'puiJson',
+      'displayUiJson',
     ]);
     const unknown = collectUnknownKeys(payload, allowedTopLevel);
     for (const key of unknown) {
@@ -112,27 +112,27 @@ function validatePuiDddlV1(payload, { strict = true } = {}) {
   };
 }
 
-function migrateLegacyPuiDddl(payload) {
+function migrateLegacyDisplayUiDddl(payload) {
   const migrated = cloneObject(payload);
   const migrations = [];
 
-  if (String(migrated.kind || '') === 'zeus-pui-dddl-v0') {
-    migrated.kind = PUI_DDDL_KIND;
+  if (String(migrated.kind || '') === 'zeus-display-ui-dddl-v0') {
+    migrated.kind = DISPLAY_UI_DDDL_KIND;
     migrations.push('legacy_kind_v0_to_v1_kind');
   }
 
   const version = migrated.version;
   if (version === undefined || version === null) {
-    migrated.version = PUI_DDDL_VERSION;
+    migrated.version = DISPLAY_UI_DDDL_VERSION;
     migrations.push('missing_version_defaulted_to_v1');
   } else if (Number(version) === 0) {
-    migrated.version = PUI_DDDL_VERSION;
+    migrated.version = DISPLAY_UI_DDDL_VERSION;
     migrations.push('version_0_upgraded_to_v1');
   }
 
-  if (!migrated.puiJson && isPlainObject(migrated.json)) {
-    migrated.puiJson = migrated.json;
-    migrations.push('json_field_renamed_to_puiJson');
+  if (!migrated.displayUiJson && isPlainObject(migrated.json)) {
+    migrated.displayUiJson = migrated.json;
+    migrations.push('json_field_renamed_to_displayUiJson');
   }
   if (Object.prototype.hasOwnProperty.call(migrated, 'json')) {
     delete migrated.json;
@@ -144,7 +144,7 @@ function migrateLegacyPuiDddl(payload) {
   };
 }
 
-function parsePuiDddlPayload(payload, { strict = true, allowMigration = true } = {}) {
+function parseDisplayUiDddlPayload(payload, { strict = true, allowMigration = true } = {}) {
   if (!isPlainObject(payload)) {
     return {
       recognized: false,
@@ -158,7 +158,7 @@ function parsePuiDddlPayload(payload, { strict = true, allowMigration = true } =
   }
 
   const kind = String(payload.kind || '');
-  const recognized = kind === PUI_DDDL_KIND || LEGACY_KINDS.has(kind);
+  const recognized = kind === DISPLAY_UI_DDDL_KIND || LEGACY_KINDS.has(kind);
   if (!recognized) {
     return {
       recognized: false,
@@ -172,9 +172,9 @@ function parsePuiDddlPayload(payload, { strict = true, allowMigration = true } =
   }
 
   const migration = allowMigration
-    ? migrateLegacyPuiDddl(payload)
+    ? migrateLegacyDisplayUiDddl(payload)
     : { payload: cloneObject(payload), migrations: [] };
-  const validation = validatePuiDddlV1(migration.payload, { strict });
+  const validation = validateDisplayUiDddlV1(migration.payload, { strict });
 
   return {
     recognized: true,
@@ -184,21 +184,21 @@ function parsePuiDddlPayload(payload, { strict = true, allowMigration = true } =
   };
 }
 
-function assertValidPuiDddlPayload(payload, options = {}) {
-  const parsed = parsePuiDddlPayload(payload, options);
+function assertValidDisplayUiDddlPayload(payload, options = {}) {
+  const parsed = parseDisplayUiDddlPayload(payload, options);
   if (!parsed.recognized) {
-    throw new Error('Payload is not a recognized zeus-pui-dddl object.');
+    throw new Error('Payload is not a recognized zeus-display-ui-dddl object.');
   }
   if (!parsed.validation.valid) {
-    throw new Error(`Invalid zeus-pui-dddl payload: ${parsed.validation.errors.join('; ')}`);
+    throw new Error(`Invalid zeus-display-ui-dddl payload: ${parsed.validation.errors.join('; ')}`);
   }
   return parsed;
 }
 
-function buildPuiDddlPayloadV1({ filePath, group, puiJson, compactSource }) {
+function buildDisplayUiDddlPayloadV1({ filePath, group, displayUiJson, compactSource }) {
   const payload = {
-    kind: PUI_DDDL_KIND,
-    version: PUI_DDDL_VERSION,
+    kind: DISPLAY_UI_DDDL_KIND,
+    version: DISPLAY_UI_DDDL_VERSION,
     exportedAt: new Date().toISOString(),
     source: {
       file: path.basename(String(filePath || '')),
@@ -208,22 +208,24 @@ function buildPuiDddlPayloadV1({ filePath, group, puiJson, compactSource }) {
       segmentCount: Array.isArray(group && group.segments) ? group.segments.length : 0,
       compactSourceLength: String(compactSource || '').length,
     },
-    puiJson,
+    displayUiJson,
   };
 
-  const validation = validatePuiDddlV1(payload, { strict: true });
+  const validation = validateDisplayUiDddlV1(payload, { strict: true });
   if (!validation.valid) {
-    throw new Error(`Could not build zeus-pui-dddl payload: ${validation.errors.join('; ')}`);
+    throw new Error(
+      `Could not build zeus-display-ui-dddl payload: ${validation.errors.join('; ')}`
+    );
   }
 
   return payload;
 }
 
 module.exports = {
-  PUI_DDDL_KIND,
-  PUI_DDDL_VERSION,
-  assertValidPuiDddlPayload,
-  buildPuiDddlPayloadV1,
-  parsePuiDddlPayload,
-  validatePuiDddlV1,
+  DISPLAY_UI_DDDL_KIND,
+  DISPLAY_UI_DDDL_VERSION,
+  assertValidDisplayUiDddlPayload,
+  buildDisplayUiDddlPayloadV1,
+  parseDisplayUiDddlPayload,
+  validateDisplayUiDddlV1,
 };

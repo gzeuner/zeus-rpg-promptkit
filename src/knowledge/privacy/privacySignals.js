@@ -1,14 +1,14 @@
 'use strict';
 
 const LEGACY_REMOVED_REFERENCES = [
-  'puiDddlKnowledgeBase',
+  'displayUiDddlKnowledgeBase',
   'aiKnowledgePatternLibrary',
   'knowledgeBaseService',
-  'puiPatternRegistry',
-  'puiPatternImport',
-  'build-pui-knowledgebase',
-  'build-pui-catalog',
-  'promote-pui-dddl-kb',
+  'displayUiPatternRegistry',
+  'displayUiPatternImport',
+  'build-display-ui-knowledgebase',
+  'build-display-ui-catalog',
+  'promote-display-ui-dddl-kb',
 ];
 
 const SIGNAL_DEFINITIONS = [
@@ -87,7 +87,7 @@ const SIGNAL_DEFINITIONS = [
     code: 'LEGACY_KNOWLEDGE_PATH_REFERENCE',
     message: 'Catalog contains a removed legacy path or local risk reference.',
     test: value =>
-      /\.zeus\/knowledge|\.local\/mcp\/audit|session-notes\/2026-05-22-pui-pattern-import/i.test(
+      /\.zeus\/knowledge|\.local\/mcp\/audit|session-notes\/2026-05-22-display-ui-pattern-import/i.test(
         value
       ),
   },

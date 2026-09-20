@@ -114,7 +114,8 @@ function createMcpServer(runtime = {}) {
     joblogRunner: typeof runtime.joblogRunner === 'function' ? runtime.joblogRunner : undefined,
     profilesRunner:
       typeof runtime.profilesRunner === 'function' ? runtime.profilesRunner : undefined,
-    puiEditRunner: typeof runtime.puiEditRunner === 'function' ? runtime.puiEditRunner : undefined,
+    displayUiEditRunner:
+      typeof runtime.displayUiEditRunner === 'function' ? runtime.displayUiEditRunner : undefined,
     qaRunner: typeof runtime.qaRunner === 'function' ? runtime.qaRunner : undefined,
     resolveObjectRunner:
       typeof runtime.resolveObjectRunner === 'function' ? runtime.resolveObjectRunner : undefined,

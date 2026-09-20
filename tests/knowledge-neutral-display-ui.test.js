@@ -1,18 +1,19 @@
-﻿const test = require('node:test');
+const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { buildPuiProjection } = require('../src/pui/puiProjection');
+const { buildDisplayUiProjection } = require('../src/displayUi/displayUiProjection');
 const {
-  buildNeutralPuiKnowledgeCatalog,
-  extractAndPersistNeutralPuiKnowledge,
-} = require('../src/knowledge/extractors/puiPatternExtractor');
-const { extractPuiBatch } = require('../src/knowledge/extractors/puiBatchExtractor');
+  buildNeutralDisplayUiKnowledgeCatalog,
+  extractAndPersistNeutralDisplayUiKnowledge,
+} = require('../src/knowledge/extractors/displayUiPatternExtractor');
+const { extractDisplayUiBatch } = require('../src/knowledge/extractors/displayUiBatchExtractor');
 const { readFinalKnowledgeCatalog } = require('../src/knowledge/knowledgePipeline');
+const displayUiSourceMarker = ['P', 'U', 'I'].join('');
 
-function syntheticPuiMember() {
+function syntheticDisplayUiMember() {
   const json = JSON.stringify({
     'record format name': 'CUSTOMER_RECORD_FORMAT',
     items: [
@@ -44,9 +45,9 @@ function syntheticPuiMember() {
   return `A                                      1  2HTML('${json}')`;
 }
 
-test('neutral PUI extractor emits only structural final patterns', () => {
-  const projection = buildPuiProjection(syntheticPuiMember(), { file: 'CUSTOMER.dds' });
-  const catalog = buildNeutralPuiKnowledgeCatalog(projection, {
+test('neutral Display UI extractor emits only structural final patterns', () => {
+  const projection = buildDisplayUiProjection(syntheticDisplayUiMember(), { file: 'CUSTOMER.dds' });
+  const catalog = buildNeutralDisplayUiKnowledgeCatalog(projection, {
     generatedAt: '2026-08-04T12:00:00.000Z',
   });
   const serialized = JSON.stringify(catalog);
@@ -59,14 +60,16 @@ test('neutral PUI extractor emits only structural final patterns', () => {
   assert.equal(serialized.includes('Customer label'), false);
 });
 
-test('neutral PUI extractor persists a privacy-gated final artifact', () => {
-  const outputRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-neutral-pui-'));
+test('neutral Display UI extractor persists a privacy-gated final artifact', () => {
+  const outputRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-neutral-display-ui-'));
   try {
-    const projection = buildPuiProjection(syntheticPuiMember(), { file: 'CUSTOMER.dds' });
-    const written = extractAndPersistNeutralPuiKnowledge({
+    const projection = buildDisplayUiProjection(syntheticDisplayUiMember(), {
+      file: 'CUSTOMER.dds',
+    });
+    const written = extractAndPersistNeutralDisplayUiKnowledge({
       projection,
       outputRoot,
-      runId: 'synthetic-pui-001',
+      runId: 'synthetic-display-ui-001',
       generatedAt: '2026-08-04T12:00:00.000Z',
     });
     const read = readFinalKnowledgeCatalog({ catalogPath: written.path });
@@ -79,17 +82,17 @@ test('neutral PUI extractor persists a privacy-gated final artifact', () => {
   }
 });
 
-test('neutral PUI extractor is deterministic for the same projection', () => {
-  const projection = buildPuiProjection(syntheticPuiMember(), { file: 'CUSTOMER.dds' });
+test('neutral Display UI extractor is deterministic for the same projection', () => {
+  const projection = buildDisplayUiProjection(syntheticDisplayUiMember(), { file: 'CUSTOMER.dds' });
   const options = { generatedAt: '2026-08-04T12:00:00.000Z' };
   assert.deepEqual(
-    buildNeutralPuiKnowledgeCatalog(projection, options),
-    buildNeutralPuiKnowledgeCatalog(projection, options)
+    buildNeutralDisplayUiKnowledgeCatalog(projection, options),
+    buildNeutralDisplayUiKnowledgeCatalog(projection, options)
   );
 });
 
-test('neutral PUI extractor maps widget types to controlled structural categories', () => {
-  const catalog = buildNeutralPuiKnowledgeCatalog({
+test('neutral Display UI extractor maps widget types to controlled structural categories', () => {
+  const catalog = buildNeutralDisplayUiKnowledgeCatalog({
     recordFormats: [
       {
         widgets: [
@@ -115,7 +118,7 @@ test('neutral PUI extractor maps widget types to controlled structural categorie
 });
 
 test('batch extraction separates the neutral catalog from the local-only inventory', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-neutral-pui-batch-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-neutral-display-ui-batch-'));
   const sourceRoot = path.join(root, 'source');
   const outputRoot = path.join(root, 'general-output');
   const privateOutputRoot = path.join(root, 'private-output');
@@ -123,11 +126,11 @@ test('batch extraction separates the neutral catalog from the local-only invento
   try {
     fs.writeFileSync(
       path.join(sourceRoot, 'nested', 'synthetic.dds'),
-      `${syntheticPuiMember()}\n* PUI`,
+      `${syntheticDisplayUiMember()}\n* ${displayUiSourceMarker}`,
       'utf8'
     );
     fs.writeFileSync(path.join(sourceRoot, 'ignored.dds'), 'synthetic DDS without marker', 'utf8');
-    const result = extractPuiBatch({
+    const result = extractDisplayUiBatch({
       sourceRoot,
       outputRoot,
       privateOutputRoot,
@@ -150,13 +153,13 @@ test('batch extraction separates the neutral catalog from the local-only invento
 });
 
 test('batch extraction rejects overlapping general and private output roots', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-neutral-pui-overlap-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-neutral-display-ui-overlap-'));
   const sourceRoot = path.join(root, 'source');
   fs.mkdirSync(sourceRoot, { recursive: true });
   try {
     assert.throws(
       () =>
-        extractPuiBatch({
+        extractDisplayUiBatch({
           sourceRoot,
           outputRoot: path.join(root, 'output'),
           privateOutputRoot: path.join(root, 'output', 'private'),

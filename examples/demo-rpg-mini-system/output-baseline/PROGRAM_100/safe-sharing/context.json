@@ -627,7 +627,7 @@
     "schemaVersion": 1,
     "kind": "diagnostic-query-pack-report"
   },
-  "puiPatterns": {
+  "displayUiPatterns": {
     "enabled": false,
     "importedAt": null,
     "sourceFile": null,
@@ -636,8 +636,8 @@
     "generatedAt": null,
     "scope": {
       "scannedFiles": 0,
-      "puiCandidateDdsFiles": 0,
-      "parsedPuiJsonFiles": 0,
+      "displayUiCandidateDdsFiles": 0,
+      "parsedDisplayUiJsonFiles": 0,
       "jsonParseErrors": 0
     },
     "summary": {
@@ -648,7 +648,7 @@
       "dialogPatternCount": 0,
       "handlerBindings": 0,
       "runtimeGateChecks": 0,
-      "profoundUiLibraryBindings": 0
+      "displayUiLibraryBindings": 0
     },
     "elements": {
       "familiesTop": [],

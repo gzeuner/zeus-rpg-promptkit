@@ -4,13 +4,13 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { run } = require('../src/cli/commands/puiEditCommand');
+const { run } = require('../src/cli/commands/displayUiEditCommand');
 const {
   buildHtmlLines,
   findJsonSegmentGroup,
   parseDds,
   parseJsonFromGroup,
-} = require('../src/pui/puiDdsParser');
+} = require('../src/displayUi/displayUiDdsParser');
 
 function writeSyntheticDisplay(filePath) {
   const uiJson = {
@@ -61,8 +61,8 @@ function readDisplayJson(filePath) {
   return json;
 }
 
-test('pui-edit apply updates JSON via synthetic change set', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-edit-'));
+test('display-ui-edit apply updates JSON via synthetic change set', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-display-ui-edit-'));
   const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
   const changeSetPath = path.join(tempDir, 'changes.json');
 
@@ -104,8 +104,8 @@ test('pui-edit apply updates JSON via synthetic change set', async () => {
   }
 });
 
-test('pui-edit grid-add-column appends a column on synthetic display data', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-grid-'));
+test('display-ui-edit grid-add-column appends a column on synthetic display data', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-display-ui-grid-'));
   const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
 
   try {
@@ -140,8 +140,8 @@ test('pui-edit grid-add-column appends a column on synthetic display data', asyn
   }
 });
 
-test('pui-edit inserts DDS lines into requested --sfl-record', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-sfl-'));
+test('display-ui-edit inserts DDS lines into requested --sfl-record', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-display-ui-sfl-'));
   const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
 
   try {
@@ -179,8 +179,8 @@ test('pui-edit inserts DDS lines into requested --sfl-record', async () => {
   }
 });
 
-test('pui-edit export-json writes DDDL wrapper with embedded puiJson', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-export-dddl-'));
+test('display-ui-edit export-json writes DDDL wrapper with embedded displayUiJson', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-display-ui-export-dddl-'));
   const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
   const outPath = path.join(tempDir, 'display.dddl.json');
 
@@ -194,18 +194,18 @@ test('pui-edit export-json writes DDDL wrapper with embedded puiJson', async () 
     });
 
     const exported = JSON.parse(fs.readFileSync(outPath, 'utf8'));
-    assert.equal(exported.kind, 'zeus-pui-dddl');
+    assert.equal(exported.kind, 'zeus-display-ui-dddl');
     assert.equal(typeof exported.version, 'number');
-    assert.ok(exported.puiJson);
-    assert.ok(Array.isArray(exported.puiJson.items));
+    assert.ok(exported.displayUiJson);
+    assert.ok(Array.isArray(exported.displayUiJson.items));
     assert.ok(exported.ddsJsonGroup.segmentCount > 0);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 });
 
-test('pui-edit import-json applies pretty JSON back into DDS', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-import-pretty-'));
+test('display-ui-edit import-json applies pretty JSON back into DDS', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-display-ui-import-pretty-'));
   const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
   const inPath = path.join(tempDir, 'pretty.json');
 
@@ -231,8 +231,8 @@ test('pui-edit import-json applies pretty JSON back into DDS', async () => {
   }
 });
 
-test('pui-edit import-json migrates legacy dddl payload and applies it', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-import-legacy-dddl-'));
+test('display-ui-edit import-json migrates legacy dddl payload and applies it', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-display-ui-import-legacy-dddl-'));
   const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
   const inPath = path.join(tempDir, 'legacy.dddl.json');
 
@@ -246,7 +246,7 @@ test('pui-edit import-json migrates legacy dddl payload and applies it', async (
       inPath,
       JSON.stringify(
         {
-          kind: 'zeus-pui-dddl-v0',
+          kind: 'zeus-display-ui-dddl-v0',
           version: 0,
           source: {
             file: 'DISPLAY_SAMPLE.MBR',
@@ -278,8 +278,8 @@ test('pui-edit import-json migrates legacy dddl payload and applies it', async (
   }
 });
 
-test('pui-edit validate-json accepts plain PUI JSON without --file', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-validate-plain-'));
+test('display-ui-edit validate-json accepts plain Display UI JSON without --file', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-display-ui-validate-plain-'));
   const inPath = path.join(tempDir, 'plain.json');
   const logs = [];
   const originalLog = console.log;
@@ -294,7 +294,7 @@ test('pui-edit validate-json accepts plain PUI JSON without --file', async () =>
     });
 
     assert.equal(
-      logs.some(line => line.includes('Valid plain PUI JSON object')),
+      logs.some(line => line.includes('Valid plain Display UI JSON object')),
       true
     );
   } finally {
@@ -303,8 +303,8 @@ test('pui-edit validate-json accepts plain PUI JSON without --file', async () =>
   }
 });
 
-test('pui-edit validate-json accepts legacy dddl and reports migrations', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-pui-validate-dddl-'));
+test('display-ui-edit validate-json accepts legacy dddl and reports migrations', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-display-ui-validate-dddl-'));
   const inPath = path.join(tempDir, 'legacy.dddl.json');
   const logs = [];
   const originalLog = console.log;
@@ -314,7 +314,7 @@ test('pui-edit validate-json accepts legacy dddl and reports migrations', async 
       inPath,
       JSON.stringify(
         {
-          kind: 'zeus-pui-dddl-v0',
+          kind: 'zeus-display-ui-dddl-v0',
           version: 0,
           source: {
             file: 'DISPLAY_SAMPLE.MBR',

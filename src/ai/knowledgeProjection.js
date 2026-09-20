@@ -1,4 +1,4 @@
-﻿/*
+/*
 Copyright 2026 gzeuner - tiny-tool.de
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -331,11 +331,11 @@ function projectNativeFiles(context, canonicalAnalysis, evidenceIndex) {
 }
 
 function projectUiPatterns(context) {
-  const puiPatterns =
-    context && context.puiPatterns && typeof context.puiPatterns === 'object'
-      ? context.puiPatterns
+  const displayUiPatterns =
+    context && context.displayUiPatterns && typeof context.displayUiPatterns === 'object'
+      ? context.displayUiPatterns
       : null;
-  if (!puiPatterns || !puiPatterns.enabled) {
+  if (!displayUiPatterns || !displayUiPatterns.enabled) {
     return {
       enabled: false,
       summary: {},
@@ -364,27 +364,27 @@ function projectUiPatterns(context) {
 
   return {
     enabled: true,
-    sourceFile: puiPatterns.sourceFile || null,
-    sourceVersion: puiPatterns.sourceVersion || null,
-    generatedAt: puiPatterns.generatedAt || null,
-    summary: puiPatterns.summary || {},
-    elements: puiPatterns.elements || {
+    sourceFile: displayUiPatterns.sourceFile || null,
+    sourceVersion: displayUiPatterns.sourceVersion || null,
+    generatedAt: displayUiPatterns.generatedAt || null,
+    summary: displayUiPatterns.summary || {},
+    elements: displayUiPatterns.elements || {
       familiesTop: [],
       typesTop: [],
       usageMatrix: [],
     },
-    interactionModel: puiPatterns.interactionModel || {
+    interactionModel: displayUiPatterns.interactionModel || {
       runtimePatterns: [],
       responseSignals: [],
       backendActions: [],
       flowPatterns: [],
     },
-    subfileLifecycleModel: puiPatterns.subfileLifecycleModel || {
+    subfileLifecycleModel: displayUiPatterns.subfileLifecycleModel || {
       phases: [],
       controls: [],
       gridCapabilities: [],
     },
-    stateMachineModel: puiPatterns.stateMachineModel || {
+    stateMachineModel: displayUiPatterns.stateMachineModel || {
       states: [],
       transitions: [],
     },
