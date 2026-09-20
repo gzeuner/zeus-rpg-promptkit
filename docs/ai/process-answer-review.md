@@ -1,12 +1,12 @@
 ---
 Title: Process-answer review projection
-Description: Reviewer-friendly, bounded explanations and approval-history linkage for process-answer drift.
+Description: Reviewer-friendly, bounded explanations, approval-history linkage, and consistency diagnostics for process-answer drift.
 Last Updated: 2026-09-20
 ---
 
 # Process-answer review projection
 
-Iteration 22 adds a human-facing projection on top of the existing
+Iterations 22 and 23 add a human-facing projection on top of the existing
 `process-answer-drift-result`. It explains stable blocker codes, their impact,
 and the smallest safe follow-up without copying scenario questions, answer
 content, matched process IDs, source content, or absolute paths.
@@ -66,6 +66,22 @@ Only `approve`, `reject`, and `defer` are accepted. `rationaleCode` is a
 bounded vocabulary; free-text notes are intentionally not part of the shared
 projection. The output exposes only a short hash of `reviewerId` and the last
 matching decision for the exact `driftId`.
+
+The `approval.consistency` projection makes repeated reviews explainable:
+
+- `not-provided` means no history file was supplied.
+- `no-matching-decision` means the supplied history contains no entry for this
+  exact drift identity.
+- `consistent` means all matching decisions have the same decision kind.
+- `contradictory` means matching decisions disagree. The latest entry is still
+  exposed as `lastDecision`, but the result remains `needs-review` until the
+  conflict is resolved.
+
+An older matching decision with a different decision kind is counted as
+`staleDecisionCount` and emits `REVIEW_DECISION_STALE`. A disagreement also
+emits `REVIEW_HISTORY_CONFLICT`. The latest entry remains explainable through
+its bounded decision, timestamp, and rationale code; neither the history nor
+the projection changes catalog or review state automatically.
 
 An `approved` review means that a human reviewed this exact comparison. It is
 not permission to modify a catalog, prompt, glossary, or remote system:

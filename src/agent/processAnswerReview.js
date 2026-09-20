@@ -134,6 +134,25 @@ const EXPLANATION_DEFINITIONS = Object.freeze({
     safeNextStep:
       'Review the current decision artifact and ensure it matches the exact evaluation identity.',
   },
+  REVIEW_HISTORY_CONFLICT: {
+    severity: 'high',
+    title: 'Review decisions conflict',
+    summary: 'Different reviewer decisions exist for the same drift identity.',
+    whyItMatters:
+      'The latest decision is not sufficient evidence until the earlier conflicting review is understood.',
+    safeNextStep:
+      'Compare the bounded decision timestamps and rationale codes, then record one explicit follow-up decision.',
+  },
+  REVIEW_DECISION_STALE: {
+    severity: 'medium',
+    title: 'Earlier review decision is superseded',
+    summary:
+      'An older opposing decision was superseded by a later decision for the same drift identity.',
+    whyItMatters:
+      'A stale approval or rejection can mislead an agent if it is treated as the current review outcome.',
+    safeNextStep:
+      'Use only the latest bounded decision after resolving the review conflict and keep the history together.',
+  },
   SCENARIO_SET_CHANGED: {
     severity: 'high',
     title: 'Scenario set changed',
@@ -433,7 +452,7 @@ function driftIdFor(drift) {
   ).slice(0, 16)}`;
 }
 
-function countFor(code, drift) {
+function countFor(code, drift, approval) {
   const metricMap = {
     REGRESSION_INTRODUCED: 'introducedRegressionCount',
     REGRESSION_RESOLVED: 'resolvedRegressionCount',
@@ -452,11 +471,18 @@ function countFor(code, drift) {
         entry.changeKinds.includes('SCENARIO_REMOVED')
     ).length;
   }
+  if (code === 'REVIEW_HISTORY_CONFLICT') {
+    return approval.consistency.conflictingDecisionCount;
+  }
+  if (code === 'REVIEW_DECISION_STALE') {
+    return approval.consistency.staleDecisionCount;
+  }
   return 1;
 }
 
-function buildExplanations(drift) {
-  return drift.blockers
+function buildExplanations(drift, approval) {
+  const historyCodes = approval.consistency.findings || [];
+  return [...new Set([...drift.blockers, ...historyCodes])]
     .filter(code => EXPLANATION_DEFINITIONS[code])
     .sort((left, right) => {
       const severity =
@@ -471,7 +497,7 @@ function buildExplanations(drift) {
         code,
         severity: definition.severity,
         title: definition.title,
-        count: countFor(code, drift),
+        count: countFor(code, drift, approval),
         summary: definition.summary,
         whyItMatters: definition.whyItMatters,
         safeNextStep: definition.safeNextStep,
@@ -483,10 +509,35 @@ function resolveApproval(driftId, history, historyPath) {
   const matches = (history || []).filter(entry => entry.driftId === driftId);
   const last = matches.length > 0 ? matches[matches.length - 1] : null;
   const statusByDecision = { approve: 'approved', reject: 'rejected', defer: 'deferred' };
+  const decisionKinds = [...new Set(matches.map(entry => entry.decision))].sort();
+  const conflictingDecisionCount = decisionKinds.length;
+  const staleDecisionCount = last
+    ? matches.slice(0, -1).filter(entry => entry.decision !== last.decision).length
+    : 0;
+  const findings = [];
+  if (conflictingDecisionCount > 1) findings.push('REVIEW_HISTORY_CONFLICT');
+  if (staleDecisionCount > 0) findings.push('REVIEW_DECISION_STALE');
   return {
     historyPath,
     status: last ? statusByDecision[last.decision] : 'pending',
     matchedDecisionCount: matches.length,
+    consistency: {
+      status:
+        conflictingDecisionCount > 1
+          ? 'contradictory'
+          : matches.length > 0
+            ? 'consistent'
+            : historyPath
+              ? 'no-matching-decision'
+              : 'not-provided',
+      decisionKinds,
+      conflictingDecisionCount,
+      staleDecisionCount,
+      findings,
+      latestDecisionIsExplainable: Boolean(
+        last && last.decision && last.reviewedAt && last.rationaleCode
+      ),
+    },
     lastDecision: last
       ? {
           decisionId: last.decisionId,
@@ -521,14 +572,15 @@ function buildProcessAnswerReview({ cwd = process.cwd(), drift, history } = {}) 
       )
     : null;
   const driftId = driftIdFor(normalizedDrift);
-  const explanations = buildExplanations(normalizedDrift);
   const approval = resolveApproval(
     driftId,
     normalizedHistory,
     historyLocation ? historyLocation.relativePath : null
   );
+  const explanations = buildExplanations(normalizedDrift, approval);
+  const historyNeedsReview = approval.consistency.findings.length > 0;
   const status =
-    approval.status === 'approved'
+    approval.status === 'approved' && !historyNeedsReview
       ? 'reviewed'
       : normalizedDrift.status === 'stable' && explanations.length === 0
         ? 'stable'
@@ -554,8 +606,9 @@ function buildProcessAnswerReview({ cwd = process.cwd(), drift, history } = {}) 
     metrics: normalizedDrift.metrics,
     explanations,
     approval,
-    nextSafeStep:
-      explanations.length > 0
+    nextSafeStep: historyNeedsReview
+      ? 'Resolve the bounded review-history conflict, confirm the latest rationale, and rerun drift-review; no decision promotes knowledge automatically.'
+      : explanations.length > 0
         ? 'Review the bounded explanations, verify the authoritative catalog and evidence, then rerun regression-check and drift-check after any explicit change.'
         : approval.status === 'pending'
           ? 'Record a matching sanitized reviewer decision if this comparison is ready to be accepted; approval never promotes knowledge automatically.'
