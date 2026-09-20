@@ -504,10 +504,26 @@ workflow documentation, and
 audit, a green PR and main pipeline, and no credentials or private runtime
 values in the staged change. The merge commit is `6bd14fc`.
 
-The next active roadmap item is Iteration 26: create a bounded, reproducible
-review receipt from retention findings so an agent or reviewer can preserve
-what was inspected, under which policy, and what still requires an explicit
-decision—without deleting, promoting, or changing review history.
+### Iteration 26 — Reproducible review receipts (completed in PR #345)
+
+Add the read-only `process drift-review-receipt` operation for a sanitized
+review history. It recomputes the retention projection, records a stable
+receipt identifier and history fingerprint, preserves the explicit policy and
+inspection timestamp, and exposes only bounded metrics, hashed candidates,
+and reason codes. The receipt deliberately records no decision: automatic
+deletion and promotion remain disabled, and the safe next step is an explicit
+human or agent review.
+
+Implementation: `src/agent/processAnswerReview.js`, the `process
+drift-review-receipt` CLI route, generated tool-catalog metadata, the AI
+workflow documentation, and
+`tests/project-intelligence-process-answer-review.test.js`. Delivered in PR
+#345 with 969 passing tests, 3 skipped contract tests, a clean dependency
+audit, a green PR and main pipeline, and no credentials or private runtime
+values in the staged change. The merge commit is `d6a59f9`.
+
+The roadmap is paused after Iteration 26 until an explicit follow-up. No
+further implementation iteration is active.
 
 ## Business Process Intelligence vertical slice
 
