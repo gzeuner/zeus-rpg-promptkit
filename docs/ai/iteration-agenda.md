@@ -441,6 +441,30 @@ decisions for the same drift identity, keep the latest decision explainable,
 and remain a bounded read-only diagnostic without changing catalog or review
 state automatically.
 
+Iteration 23 is completed in PR #339 after local verification, secret/private-
+content scanning, protected-branch verification, and a green PR and main
+pipeline. The merge commit is `1a7153d`.
+
+### Iteration 23 — Approval-history consistency (completed in PR #339)
+
+Extend `process drift-review` with a deterministic `approval.consistency`
+projection. It distinguishes missing history, no matching decision, consistent
+repeated decisions, and contradictory decisions for the exact drift identity.
+Older opposing decisions are counted as stale, the latest bounded decision
+remains explainable, and conflicts keep the result in `needs-review`. The
+projection stays read-only; `automaticPromotion` and `promotionAllowed` remain
+false.
+
+Implementation: `src/agent/processAnswerReview.js`,
+`tests/project-intelligence-process-answer-review.test.js`, and the reviewer
+projection documentation. Delivered with 967 passing tests, a clean dependency
+audit, and no credentials or private runtime values in the staged change.
+
+The next active roadmap item is Iteration 24: add a bounded review-history
+summary that lets an agent find unresolved conflicts and stale decisions across
+multiple drift identities without exposing questions, answers, source content,
+or private project identifiers.
+
 ## Business Process Intelligence vertical slice
 
 Iterations 10–13 should first deliver one complete neutral example process:
