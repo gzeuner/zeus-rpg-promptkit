@@ -80,6 +80,12 @@ For freshness and retention triage, run `process drift-review-retention
 decisions as fresh, aging, historical, or future-dated and lists only
 superseded hashed decision IDs as retention candidates; it never deletes or
 promotes history automatically.
+When that triage must be retained as an auditable local record, run
+`process drift-review-receipt --history .zeus/process-answer-review-history.json
+--as-of <ISO-timestamp> --out .zeus/process-answer-review-receipt.json --json`.
+The receipt preserves only the policy, a history fingerprint, bounded metrics,
+hashed candidates, and review-required reason codes; it records inspection, not
+an approval, deletion, or promotion decision.
 
 For project-specific legacy vocabulary, resolve the term first or pass an
 explicit glossary catalog to the query:
