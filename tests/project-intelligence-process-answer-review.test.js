@@ -176,6 +176,70 @@ test('review history links only to the exact drift and hashes reviewer identity'
   }
 });
 
+test('review history flags contradictory decisions and keeps the latest decision explainable', () => {
+  const workspace = createWorkspace();
+  try {
+    const drift = driftFixture(workspace);
+    const driftPath = writeJson(workspace, 'drift.json', drift);
+    const pending = buildProcessAnswerReview({ cwd: workspace, drift: driftPath });
+    const historyPath = writeJson(workspace, 'history.json', {
+      schemaVersion: 1,
+      kind: 'process-answer-review-history',
+      sanitized: true,
+      containsCredentials: false,
+      containsPrivateProjectIdentifiers: false,
+      entries: [
+        {
+          decisionId: 'decision:5555555555555555',
+          driftId: pending.driftId,
+          decision: 'approve',
+          reviewerId: 'first-reviewer',
+          reviewedAt: '2026-09-20T12:30:00.000Z',
+          rationaleCode: 'CATALOG_CONFIRMED',
+        },
+        {
+          decisionId: 'decision:6666666666666666',
+          driftId: pending.driftId,
+          decision: 'reject',
+          reviewerId: 'second-reviewer',
+          reviewedAt: '2026-09-20T12:31:00.000Z',
+          rationaleCode: 'EVIDENCE_REVIEW_REQUIRED',
+        },
+      ],
+    });
+    const result = buildProcessAnswerReview({
+      cwd: workspace,
+      drift: driftPath,
+      history: historyPath,
+    });
+    assert.equal(result.status, 'needs-review');
+    assert.equal(result.approval.status, 'rejected');
+    assert.equal(result.approval.consistency.status, 'contradictory');
+    assert.deepEqual(result.approval.consistency.decisionKinds, ['approve', 'reject']);
+    assert.equal(result.approval.consistency.conflictingDecisionCount, 2);
+    assert.equal(result.approval.consistency.staleDecisionCount, 1);
+    assert.equal(result.approval.consistency.latestDecisionIsExplainable, true);
+    assert.deepEqual(result.approval.consistency.findings, [
+      'REVIEW_HISTORY_CONFLICT',
+      'REVIEW_DECISION_STALE',
+    ]);
+    assert.equal(result.approval.lastDecision.decision, 'reject');
+    assert.equal(
+      result.explanations.some(item => item.code === 'REVIEW_HISTORY_CONFLICT'),
+      true
+    );
+    assert.equal(
+      result.explanations.some(item => item.code === 'REVIEW_DECISION_STALE'),
+      true
+    );
+    assert.doesNotMatch(JSON.stringify(result), /first-reviewer|second-reviewer/);
+    assert.equal(result.automaticPromotion, false);
+    assert.equal(result.promotionAllowed, false);
+  } finally {
+    fs.rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
 test('drift-review CLI writes bounded output and rejects unsafe history', () => {
   const workspace = createWorkspace();
   try {
