@@ -74,6 +74,12 @@ For a bounded overview across all drift identities in that history, run
 .zeus/process-answer-review-history.json --out
 .zeus/process-answer-review-summary.json --json`; resolve every reported
 conflict before relying on the latest decision.
+For freshness and retention triage, run `process drift-review-retention
+--history .zeus/process-answer-review-history.json --json` with an explicit
+`--as-of` timestamp when reproducibility matters. It classifies bounded
+decisions as fresh, aging, historical, or future-dated and lists only
+superseded hashed decision IDs as retention candidates; it never deletes or
+promotes history automatically.
 
 For project-specific legacy vocabulary, resolve the term first or pass an
 explicit glossary catalog to the query:

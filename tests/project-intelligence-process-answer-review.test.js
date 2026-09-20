@@ -11,6 +11,7 @@ const { buildProcessAnswerDrift } = require('../src/agent/processAnswerDrift');
 const {
   buildProcessAnswerReview,
   buildProcessAnswerReviewSummary,
+  buildProcessAnswerReviewRetention,
   writeProcessAnswerReviewArtifact,
 } = require('../src/agent/processAnswerReview');
 
@@ -319,6 +320,108 @@ test('review history summary finds unresolved drift identities without private c
     assert.equal(payload.result.operation, 'drift-review-summary');
     assert.equal(payload.result.metrics.unresolvedDriftCount, 1);
     assert.equal(fs.existsSync(path.join(workspace, '.zeus', 'summary.json')), true);
+  } finally {
+    fs.rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('review history retention classifies freshness and exposes only safe superseded candidates', () => {
+  const workspace = createWorkspace();
+  try {
+    const historyPath = writeJson(workspace, 'history.json', {
+      schemaVersion: 1,
+      kind: 'process-answer-review-history',
+      sanitized: true,
+      containsCredentials: false,
+      containsPrivateProjectIdentifiers: false,
+      entries: [
+        {
+          decisionId: 'decision:1111111111111111',
+          driftId: 'drift:1111111111111111',
+          decision: 'reject',
+          reviewerId: 'older-reviewer',
+          reviewedAt: '2026-03-01T00:00:00.000Z',
+          rationaleCode: 'EVIDENCE_REVIEW_REQUIRED',
+        },
+        {
+          decisionId: 'decision:2222222222222222',
+          driftId: 'drift:1111111111111111',
+          decision: 'approve',
+          reviewerId: 'current-reviewer',
+          reviewedAt: '2026-09-01T00:00:00.000Z',
+          rationaleCode: 'CATALOG_CONFIRMED',
+        },
+        {
+          decisionId: 'decision:3333333333333333',
+          driftId: 'drift:2222222222222222',
+          decision: 'defer',
+          reviewerId: 'historical-reviewer',
+          reviewedAt: '2026-04-01T00:00:00.000Z',
+          rationaleCode: 'FRESHNESS_REVIEW_REQUIRED',
+        },
+        {
+          decisionId: 'decision:4444444444444444',
+          driftId: 'drift:3333333333333333',
+          decision: 'approve',
+          reviewerId: 'future-reviewer',
+          reviewedAt: '2026-09-25T00:00:00.000Z',
+          rationaleCode: 'CATALOG_CONFIRMED',
+        },
+      ],
+    });
+    const result = buildProcessAnswerReviewRetention({
+      cwd: workspace,
+      history: historyPath,
+      asOf: '2026-09-20T00:00:00.000Z',
+      freshDays: 30,
+      retentionDays: 90,
+    });
+    assert.equal(result.status, 'needs-review');
+    assert.deepEqual(result.freshnessCounts, { fresh: 1, aging: 0, historical: 2, future: 1 });
+    assert.equal(result.metrics.retentionCandidateCount, 1);
+    assert.equal(result.metrics.reviewRequiredDriftCount, 2);
+    assert.deepEqual(result.retentionCandidates, [
+      {
+        driftId: 'drift:1111111111111111',
+        decisionIds: ['decision:1111111111111111'],
+        reasonCode: 'REVIEW_HISTORY_RETENTION_CANDIDATE',
+      },
+    ]);
+    assert.deepEqual(
+      result.reviewRequired.map(item => item.reasonCode),
+      ['REVIEW_HISTORY_LATEST_HISTORICAL', 'REVIEW_TIMESTAMP_IN_FUTURE']
+    );
+    assert.equal(result.policy.asOf, '2026-09-20T00:00:00.000Z');
+    assert.doesNotMatch(
+      JSON.stringify(result),
+      /older-reviewer|current-reviewer|historical-reviewer/
+    );
+    assert.equal(result.automaticDeletion, false);
+    assert.equal(result.deletionAllowed, false);
+    assert.equal(result.automaticPromotion, false);
+    assert.equal(result.promotionAllowed, false);
+
+    const run = spawnSync(
+      process.execPath,
+      [
+        CLI,
+        'process',
+        'drift-review-retention',
+        '--history',
+        historyPath,
+        '--as-of',
+        '2026-09-20T00:00:00.000Z',
+        '--out',
+        '.zeus/retention.json',
+        '--json',
+      ],
+      { cwd: workspace, encoding: 'utf8' }
+    );
+    assert.equal(run.status, 0, run.stderr);
+    const payload = JSON.parse(run.stdout);
+    assert.equal(payload.result.operation, 'drift-review-retention');
+    assert.equal(payload.result.metrics.historicalDecisionCount, 2);
+    assert.equal(fs.existsSync(path.join(workspace, '.zeus', 'retention.json')), true);
   } finally {
     fs.rmSync(workspace, { recursive: true, force: true });
   }
