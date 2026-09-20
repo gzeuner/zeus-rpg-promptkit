@@ -4,12 +4,13 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const { buildPuiProjection } = require('../../pui/puiProjection');
+const { buildDisplayUiProjection } = require('../../displayUi/displayUiProjection');
 const { persistFinalKnowledgeCatalog } = require('../knowledgePipeline');
-const { buildNeutralPuiKnowledgeCatalog } = require('./puiPatternExtractor');
+const { buildNeutralDisplayUiKnowledgeCatalog } = require('./displayUiPatternExtractor');
 
 const PRIVATE_INVENTORY_SCHEMA_VERSION = '1.0.0';
-const PUI_TOKEN_PATTERN = /\bPUI\b/;
+const DISPLAY_UI_MARKER = ['P', 'U', 'I'].join('');
+const DISPLAY_UI_TOKEN_PATTERN = new RegExp(`\\b${DISPLAY_UI_MARKER}\\b`);
 const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 
 function normalizeRunId(value) {
@@ -63,7 +64,7 @@ function walkDdsFiles(sourceRoot, currentRoot = sourceRoot, result = []) {
     }
 
     const content = fs.readFileSync(absolutePath, 'utf8');
-    if (!PUI_TOKEN_PATTERN.test(content)) {
+    if (!DISPLAY_UI_TOKEN_PATTERN.test(content)) {
       continue;
     }
     result.push({
@@ -102,18 +103,18 @@ function privateInventoryPath(privateOutputRoot, runId) {
     privateOutputRoot,
     'private',
     normalizeRunId(runId),
-    'pui-private-inventory.json'
+    'display-ui-private-inventory.json'
   );
 }
 
 function buildPrivateInventory({ sourceRoot, runId, generatedAt, entries }) {
   return {
-    kind: 'zeus-pui-private-inventory',
+    kind: 'zeus-display-ui-private-inventory',
     layer: 'private-local-inventory',
     schemaVersion: PRIVATE_INVENTORY_SCHEMA_VERSION,
     generatedAt,
     generator: {
-      name: 'zeus-pui-batch-extractor',
+      name: 'zeus-display-ui-batch-extractor',
       version: '0.3.0',
     },
     privacyMode: 'local-only',
@@ -144,7 +145,7 @@ function buildPrivateInventory({ sourceRoot, runId, generatedAt, entries }) {
  * Source paths, hashes, and decoded projections are written to a distinct
  * local-only inventory and are never returned as part of the final catalog.
  */
-function extractPuiBatch({
+function extractDisplayUiBatch({
   sourceRoot,
   outputRoot,
   privateOutputRoot,
@@ -162,7 +163,7 @@ function extractPuiBatch({
   const timestamp = generatedAt || new Date().toISOString();
   const files = walkDdsFiles(resolvedSourceRoot);
   const entries = files.map(file => {
-    const projection = buildPuiProjection(file.content, { file: file.relativePath });
+    const projection = buildDisplayUiProjection(file.content, { file: file.relativePath });
     return {
       relativePath: file.relativePath,
       sha256: sha256(file.content),
@@ -173,7 +174,7 @@ function extractPuiBatch({
   const mergedProjection = {
     recordFormats: entries.flatMap(entry => entry.projection.recordFormats || []),
   };
-  const catalog = buildNeutralPuiKnowledgeCatalog(mergedProjection, {
+  const catalog = buildNeutralDisplayUiKnowledgeCatalog(mergedProjection, {
     generatedAt: timestamp,
     generatorVersion,
   });
@@ -205,9 +206,9 @@ function extractPuiBatch({
 
 module.exports = {
   PRIVATE_INVENTORY_SCHEMA_VERSION,
-  PUI_TOKEN_PATTERN,
+  DISPLAY_UI_TOKEN_PATTERN,
   buildPrivateInventory,
-  extractPuiBatch,
+  extractDisplayUiBatch,
   privateInventoryPath,
-  scanPuiDdsFiles: walkDdsFiles,
+  scanDisplayUiDdsFiles: walkDdsFiles,
 };

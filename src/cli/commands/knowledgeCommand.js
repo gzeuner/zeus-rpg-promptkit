@@ -1,12 +1,12 @@
-﻿'use strict';
+'use strict';
 
 const fs = require('fs');
 const path = require('path');
-const { buildPuiProjection } = require('../../pui/puiProjection');
+const { buildDisplayUiProjection } = require('../../displayUi/displayUiProjection');
 const {
-  extractAndPersistNeutralPuiKnowledge,
-} = require('../../knowledge/extractors/puiPatternExtractor');
-const { extractPuiBatch } = require('../../knowledge/extractors/puiBatchExtractor');
+  extractAndPersistNeutralDisplayUiKnowledge,
+} = require('../../knowledge/extractors/displayUiPatternExtractor');
+const { extractDisplayUiBatch } = require('../../knowledge/extractors/displayUiBatchExtractor');
 const { readFinalKnowledgeCatalog } = require('../../knowledge/knowledgePipeline');
 const { createJsonOutput } = require('../helpers/jsonOutput');
 
@@ -81,7 +81,7 @@ async function run(args = {}) {
       let written;
       if (hasSource) {
         const privateOutputRoot = requiredString(args, 'private-out');
-        written = extractPuiBatch({
+        written = extractDisplayUiBatch({
           sourceRoot: path.resolve(process.cwd(), args.source.trim()),
           outputRoot: path.resolve(process.cwd(), outputRoot),
           privateOutputRoot: path.resolve(process.cwd(), privateOutputRoot),
@@ -90,10 +90,10 @@ async function run(args = {}) {
       } else {
         const file = requiredString(args, 'file');
         const input = readLocalFile(file);
-        const projection = buildPuiProjection(input.content, {
+        const projection = buildDisplayUiProjection(input.content, {
           file: path.relative(process.cwd(), input.resolved) || file,
         });
-        written = extractAndPersistNeutralPuiKnowledge({
+        written = extractAndPersistNeutralDisplayUiKnowledge({
           projection,
           outputRoot: path.resolve(process.cwd(), outputRoot),
           runId,

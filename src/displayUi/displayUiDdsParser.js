@@ -1,11 +1,11 @@
 /**
- * PUI DDS Parser — Liest IBM i DDS Display File Member (*.MBR / *.dds)
+ * Display UI DDS Parser — Liest IBM i DDS Display File Member (*.MBR / *.dds)
  * und extrahiert die Struktur: DDS-Zeilen, HTML-Blöcke, Felder, Record Formats.
  *
- * Das Profound UI Format besteht aus:
+ * Das display-file UI Format besteht aus:
  *  - Normalen DDS-Zeilen (Spalten 1-80, col 6 = 'A')
  *  - HTML('...') Keyword-Blöcken, die über mehrere Zeilen mit '-'-Continuation verteilt sind
- *  - Im HTML-Block: entweder PUI-Steuerstring (QPUI...) oder JSON-Objektdefinition
+ *  - Im HTML-Block: entweder DISPLAY-UI-Steuerstring (QDisplay UI...) oder JSON-Objektdefinition
  *
  * Zeilenformat:
  *   Pos 1-5:  Sequenz/Leerzeichen
@@ -19,7 +19,7 @@
 
 'use strict';
 
-// Zeilenanfang für HTML-Keyword-Zeilen (genau wie PUI Designer schreibt)
+// Zeilenanfang für HTML-Keyword-Zeilen (genau wie Display UI Designer schreibt)
 const DDS_PREFIX_FIRST = "     A                                  1  2HTML('";
 const DDS_PREFIX_CONT = '     A                                      ';
 const DDS_LINE_MAX_COL = 80; // IBM i Quelldatei: 80 Zeichen je Zeile (ohne Zeilenende)
@@ -30,7 +30,7 @@ const DDS_LINE_MAX_COL = 80; // IBM i Quelldatei: 80 Zeichen je Zeile (ohne Zeil
 const CONTENT_WIDTH_FIRST = DDS_LINE_MAX_COL - DDS_PREFIX_FIRST.length; // 80 - 48 = 32? → s.u.
 // Tatsächliche Messung aus der Datei:
 //   DDS_PREFIX_FIRST.length = 48, verbleibend bis col 80 = 32 Zeichen + Continuation-'-'
-//   Aber PUI schreibt 63 Zeichen Inhalt pro Zeile → Prefix muss kürzer sein.
+//   Aber Display UI schreibt 63 Zeichen Inhalt pro Zeile → Prefix muss kürzer sein.
 // → Messen der tatsächlichen Prefix-Länge:
 //   '     A                                  1  2HTML(\'' = 48 Zeichen
 //   Inhalt erste Zeile: '{"screen":{"record format nam-' = 30 Zeichen + '-' = Position 79
@@ -40,7 +40,7 @@ const CONTENT_WIDTH_FIRST = DDS_LINE_MAX_COL - DDS_PREFIX_FIRST.length; // 80 - 
 //   '     A                                      ' = 45 Zeichen
 //   45 + 34 + 1 = 80 → CONTENT_CONT = 34 Zeichen
 
-// Gemessene Werte aus echter PUI-Datei:
+// Gemessene Werte aus echter DISPLAY-UI-Datei:
 const HTML_CONTENT_PER_FIRST_LINE = DDS_LINE_MAX_COL - DDS_PREFIX_FIRST.length - 1; // 80 - 48 - 1 = 31
 const HTML_CONTENT_PER_CONT_LINE = DDS_LINE_MAX_COL - DDS_PREFIX_CONT.length - 1; // 80 - 45 - 1 = 34
 
@@ -163,7 +163,7 @@ function extractHtmlContent(blockLines) {
 /**
  * Serialisiert den geparsten DDS zurück in den Dateitext.
  * Dabei werden HTML-Blöcke korrekt auf 80-Zeichen-Zeilen aufgeteilt — exakt
- * wie der PUI Designer es tut, damit er die Datei weiter bearbeiten kann.
+ * wie der Display UI Designer es tut, damit er die Datei weiter bearbeiten kann.
  */
 function serializeDds(parsed) {
   const outputLines = [];
@@ -184,7 +184,7 @@ function serializeDds(parsed) {
 
 /**
  * Baut HTML(...)  DDS-Zeilen aus dem rohen Inhalt-String auf.
- * Exakt das Format, das der PUI Designer erzeugt:
+ * Exakt das Format, das der Display UI Designer erzeugt:
  *   Erste Zeile:  '     A                                  1  2HTML(\'<CONTENT>-'
  *   Folgezeilen:  '     A                                      <CONTENT>-'
  *   Letzte Zeile endet mit: '<CONTENT>\')'
@@ -229,7 +229,7 @@ function buildHtmlLines(content) {
 /**
  * Hilfsfunktion: Findet einen HTML-Segment der ein JSON-Objekt enthält
  * (beginnt mit '{').
- * Da PUI den JSON auf mehrere HTML()-Blöcke à max 2500 Zeichen aufteilt,
+ * Da Display UI den JSON auf mehrere HTML()-Blöcke à max 2500 Zeichen aufteilt,
  * gibt dies NUR das erste JSON-Segment zurück.
  * Für den vollständigen JSON → findJsonSegmentGroup() verwenden.
  */
@@ -239,7 +239,7 @@ function findJsonSegment(parsed) {
 
 /**
  * Findet alle zusammenhängenden HTML-Segmente die gemeinsam ein JSON-Objekt bilden.
- * PUI teilt den JSON auf mehrere HTML()-Blöcke (je max 2500 Zeichen) auf.
+ * Display UI teilt den JSON auf mehrere HTML()-Blöcke (je max 2500 Zeichen) auf.
  * Zusammenhängend = aufeinanderfolgende HTML-Segmente, das erste beginnt mit '{',
  * das letzte endet mit '}'.
  *
@@ -355,7 +355,7 @@ function parseJsonSegment(segment) {
  * Schreibt ein JavaScript-Objekt als JSON zurück in den content eines Segments (Legacy).
  */
 function serializeJsonToSegment(segment, obj) {
-  // PUI Designer schreibt kompaktes JSON (kein Pretty-Print, keine Leerzeichen nach : oder ,)
+  // Display UI Designer schreibt kompaktes JSON (kein Pretty-Print, keine Leerzeichen nach : oder ,)
   segment.content = JSON.stringify(obj);
 }
 

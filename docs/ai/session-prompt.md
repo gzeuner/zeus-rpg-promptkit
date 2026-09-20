@@ -14,6 +14,7 @@ Related:
 - [`agent-start-here.md`](agent-start-here.md) — compact orientation and intent map
 - [`cli-agent-guide.md`](cli-agent-guide.md) — detailed CLI workflow and intent map
 - [`process-intelligence.md`](process-intelligence.md) — process catalogs, business glossaries, and evidence-backed process questions
+- [`neutral-display-ui-migration.md`](neutral-display-ui-migration.md) — neutral display-file UI commands, modules, and migration notes
 - [`../tool-catalog.md`](../tool-catalog.md) — authoritative command purpose, scope, and safety
 - [`agent-failure-playbook.md`](agent-failure-playbook.md) — recovery codes and CLI fallbacks
 - [`../quickstart/5-minutes.md`](../quickstart/5-minutes.md) — local demo golden path

@@ -114,7 +114,7 @@ module.exports = [
       'src/core/**',
       'src/db2/**',
       'src/mcp/**',
-      'src/pui/**',
+      'src/displayUi/**',
       'src/prompt/**',
       'src/scanner/**',
       'src/context/**',

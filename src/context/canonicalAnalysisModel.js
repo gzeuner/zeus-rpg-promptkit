@@ -1716,7 +1716,7 @@ function defaultDiagnosticPackReport() {
   };
 }
 
-function defaultPuiPatterns() {
+function defaultDisplayUiPatterns() {
   return {
     enabled: false,
     importedAt: null,
@@ -1726,8 +1726,8 @@ function defaultPuiPatterns() {
     generatedAt: null,
     scope: {
       scannedFiles: 0,
-      puiCandidateDdsFiles: 0,
-      parsedPuiJsonFiles: 0,
+      displayUiCandidateDdsFiles: 0,
+      parsedDisplayUiJsonFiles: 0,
       jsonParseErrors: 0,
     },
     summary: {
@@ -1738,7 +1738,7 @@ function defaultPuiPatterns() {
       dialogPatternCount: 0,
       handlerBindings: 0,
       runtimeGateChecks: 0,
-      profoundUiLibraryBindings: 0,
+      displayUiLibraryBindings: 0,
     },
     elements: {
       familiesTop: [],
@@ -2036,7 +2036,7 @@ function buildCanonicalAnalysisModel({
       ifsPaths: defaultIfsPathReport(),
       searchResults: defaultSearchResults(),
       diagnosticPacks: defaultDiagnosticPackReport(),
-      puiPatterns: defaultPuiPatterns(),
+      displayUiPatterns: defaultDisplayUiPatterns(),
       knownFacts: defaultKnownFacts(),
       analysisCache: defaultAnalysisCache(),
       db2Metadata: null,
@@ -2191,8 +2191,13 @@ function enrichCanonicalAnalysisModel(model, updates = {}) {
             ),
           }
         : {}),
-      ...(updates.puiPatterns !== undefined
-        ? { puiPatterns: mergeObject(model.enrichments.puiPatterns, updates.puiPatterns) }
+      ...(updates.displayUiPatterns !== undefined
+        ? {
+            displayUiPatterns: mergeObject(
+              model.enrichments.displayUiPatterns,
+              updates.displayUiPatterns
+            ),
+          }
         : {}),
       ...(updates.knownFacts !== undefined
         ? { knownFacts: mergeObject(model.enrichments.knownFacts, updates.knownFacts) }
@@ -2345,7 +2350,7 @@ module.exports = {
   defaultGraphSummary,
   defaultIfsPathReport,
   defaultDiagnosticPackReport,
-  defaultPuiPatterns,
+  defaultDisplayUiPatterns,
   defaultKnownFacts,
   defaultAnalysisCache,
   defaultNativeFileUsage,

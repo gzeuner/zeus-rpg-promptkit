@@ -13,28 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 
 /**
- * pui-inspect — LOCAL, read-only review of a ProfoundUI Display File member.
+ * display-ui-inspect — LOCAL, read-only review of a display-file UI member.
  *
  * Usage:
- *   node cli/zeus.js pui-inspect --file <path> [--json] [--trace <fieldName>]  (global --json normalization supported)
+ *   node cli/zeus.js display-ui-inspect --file <path> [--json] [--trace <fieldName>]  (global --json normalization supported)
+ *   Legacy alias: display-ui-inspect
  *
  * Reassembles the column-72 continuation lines, decodes the per-record-format
- * PUI JSON and prints a reviewable projection: grids -> columns -> field
+ * display UI JSON and prints a reviewable projection: grids -> columns -> field
  * bindings + tooltips, standalone bound widgets, and consistency signals.
  *
  * This command reads a LOCAL workspace file only. It never connects to IBM i and
- * never writes. The decoded PUI JSON is customer content and stays local.
+ * never writes. The decoded Display UI JSON is customer content and stays local.
  */
 
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
-const { buildPuiProjection, traceFieldBinding } = require('../../pui/puiProjection');
+const {
+  buildDisplayUiProjection,
+  traceFieldBinding,
+} = require('../../displayUi/displayUiProjection');
 const { createJsonOutput } = require('../helpers/jsonOutput');
 
 function printProjectionSummary(projection) {
-  console.log(`PUI Display File: ${projection.file}`);
+  console.log(`Display UI file: ${projection.file}`);
   console.log(`Record formats: ${projection.recordFormatCount}`);
 
   for (const rf of projection.recordFormats) {
@@ -88,7 +92,7 @@ function printProjectionSummary(projection) {
 async function run(args) {
   const fileArg = args.file || args.source || args.f;
   if (!fileArg || typeof fileArg !== 'string') {
-    console.error('Missing required option: --file <path> (lokaler DDS/PUI-Member)');
+    console.error('Missing required option: --file <path> (lokaler DDS/display-UI-Member)');
     process.exit(2);
   }
 
@@ -106,7 +110,7 @@ async function run(args) {
     process.exit(2);
   }
 
-  const projection = buildPuiProjection(content, {
+  const projection = buildDisplayUiProjection(content, {
     file: path.relative(process.cwd(), resolved) || fileArg,
   });
 

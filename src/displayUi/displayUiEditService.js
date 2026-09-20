@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 
 /**
- * puiEditService — pure orchestration for ProfoundUI Display File editing.
+ * displayUiEditService — pure orchestration for display-file UI editing.
  *
- * This module contains the action logic shared by the `pui-edit` CLI command
- * and the `zeus.pui-edit` MCP tool. It performs no console output and never
+ * This module contains the action logic shared by the `display-ui-edit` CLI command
+ * and the `zeus.display-ui-edit` MCP tool. It performs no console output and never
  * calls process.exit; every action returns a structured result:
  *
  *   {
@@ -29,7 +29,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *     data: object,           // action-specific structured payload
  *   }
  *
- * Argument errors throw an Error with `.code = 'PUI_EDIT_INVALID'`.
+ * Argument errors throw an Error with `.code = 'DISPLAY_UI_EDIT_INVALID'`.
  */
 
 'use strict';
@@ -42,9 +42,9 @@ const {
   findJsonSegmentGroup,
   parseJsonFromGroup,
   serializeJsonToGroup,
-} = require('./puiDdsParser');
-const { applyChangeSetToJson, cloneJson, normalizeChangeSet } = require('./puiEditEngine');
-const { buildPuiDddlPayloadV1, parsePuiDddlPayload } = require('./puiDddl');
+} = require('./displayUiDdsParser');
+const { applyChangeSetToJson, cloneJson, normalizeChangeSet } = require('./displayUiEditEngine');
+const { buildDisplayUiDddlPayloadV1, parseDisplayUiDddlPayload } = require('./displayUiDddl');
 
 const READ_ONLY_ACTIONS = Object.freeze(['roundtrip-check', 'dump-json', 'validate-json', 'plan']);
 const WRITE_ACTIONS = Object.freeze(['export-json', 'import-json', 'apply', 'grid-add-column']);
@@ -52,7 +52,7 @@ const ALL_ACTIONS = Object.freeze([...READ_ONLY_ACTIONS, ...WRITE_ACTIONS]);
 
 function invalid(message) {
   const error = new Error(message);
-  error.code = 'PUI_EDIT_INVALID';
+  error.code = 'DISPLAY_UI_EDIT_INVALID';
   return error;
 }
 
@@ -73,13 +73,13 @@ function createResult(action, file) {
 }
 
 /**
- * Executes a pui-edit action and returns a structured result.
+ * Executes a display-ui-edit action and returns a structured result.
  * @param {object} args  CLI/MCP-style argument object.
  * @param {object} [options]
  * @param {string} [options.cwd] Base directory for resolving relative paths.
  * @param {boolean} [options.allowWrites] When false, mutating actions are rejected.
  */
-function executePuiEdit(args = {}, options = {}) {
+function executeDisplayUiEdit(args = {}, options = {}) {
   const cwd = options.cwd || process.cwd();
   const allowWrites = options.allowWrites !== false;
 
@@ -96,7 +96,7 @@ function executePuiEdit(args = {}, options = {}) {
     const error = new Error(
       `Action "${action}" is a write operation and is not permitted in this context.`
     );
-    error.code = 'PUI_EDIT_WRITE_BLOCKED';
+    error.code = 'DISPLAY_UI_EDIT_WRITE_BLOCKED';
     throw error;
   }
 
@@ -207,7 +207,7 @@ function actionValidateJson(args, cwd) {
   }
 
   const payload = JSON.parse(fs.readFileSync(resolvedInput, 'utf8'));
-  const parsedDddl = parsePuiDddlPayload(payload, {
+  const parsedDddl = parseDisplayUiDddlPayload(payload, {
     strict: true,
     allowMigration: true,
   });
@@ -234,11 +234,11 @@ function actionValidateJson(args, cwd) {
   }
 
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    throw invalid('JSON file must be either a valid DDDL object or a PUI root object.');
+    throw invalid('JSON file must be either a valid DDDL object or a Display UI root object.');
   }
 
-  result.messages.push('Valid plain PUI JSON object');
-  result.data = { valid: true, kind: 'pui-json', inputPath: resolvedInput };
+  result.messages.push('Valid plain Display UI JSON object');
+  result.data = { valid: true, kind: 'display-ui-json', inputPath: resolvedInput };
   return result;
 }
 
@@ -300,9 +300,9 @@ function actionImportJson(parsed, args, filePath, cwd) {
   }
 
   const payload = JSON.parse(fs.readFileSync(resolvedInput, 'utf8'));
-  const importedJson = unwrapImportedPuiJson(payload);
+  const importedJson = unwrapImportedDisplayUiJson(payload);
   if (!importedJson || typeof importedJson !== 'object' || Array.isArray(importedJson)) {
-    throw invalid('Import JSON must be an object (PUI root object).');
+    throw invalid('Import JSON must be an object (Display UI root object).');
   }
 
   const group = findJsonSegmentGroup(parsed);
@@ -312,26 +312,26 @@ function actionImportJson(parsed, args, filePath, cwd) {
   serializeJsonToGroup(parsed, group, importedJson);
   const output = serializeDds(parsed);
   writeDisplayWithBackup(filePath, output, result);
-  result.messages.push(`PUI JSON imported from: ${resolvedInput}`);
+  result.messages.push(`Display UI JSON imported from: ${resolvedInput}`);
   result.data = { inputPath: resolvedInput };
   return result;
 }
 
 function buildDddlPayload({ filePath, group, obj, compactSource }) {
-  return buildPuiDddlPayloadV1({
+  return buildDisplayUiDddlPayloadV1({
     filePath,
     group,
-    puiJson: obj,
+    displayUiJson: obj,
     compactSource,
   });
 }
 
-function unwrapImportedPuiJson(payload) {
+function unwrapImportedDisplayUiJson(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     return null;
   }
 
-  const parsedDddl = parsePuiDddlPayload(payload, {
+  const parsedDddl = parseDisplayUiDddlPayload(payload, {
     strict: true,
     allowMigration: true,
   });
@@ -339,7 +339,7 @@ function unwrapImportedPuiJson(payload) {
     if (!parsedDddl.validation.valid) {
       throw invalid(`Invalid DDDL format: ${parsedDddl.validation.errors.join('; ')}`);
     }
-    return parsedDddl.payload.puiJson;
+    return parsedDddl.payload.displayUiJson;
   }
   return payload;
 }
@@ -650,7 +650,7 @@ function parsePx(val) {
   return parseInt(String(val).replace('px', ''), 10) || 0;
 }
 
-/** Builds a PUI field definition for a new output field in the grid. */
+/** Builds a Display UI field definition for a new output field in the grid. */
 function buildFieldDefinition(
   id,
   fieldName,
@@ -763,7 +763,7 @@ function insertSflFields(parsed, sflFieldLines, preferredRecordName = '', result
 }
 
 module.exports = {
-  executePuiEdit,
+  executeDisplayUiEdit,
   READ_ONLY_ACTIONS,
   WRITE_ACTIONS,
   ALL_ACTIONS,

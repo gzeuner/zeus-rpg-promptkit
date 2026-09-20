@@ -43,8 +43,8 @@ const {
 const { runInspectObject } = require('../src/cli/commands/inspectObjectCommand');
 const { run: runTestRun } = require('../src/cli/commands/testRunCommand');
 const { runBridge } = require('../src/cli/commands/bridgeCommand');
-const { run: runPuiEdit } = require('../src/cli/commands/puiEditCommand');
-const { run: runPuiInspect } = require('../src/cli/commands/puiInspectCommand');
+const { run: runDisplayUiEdit } = require('../src/cli/commands/displayUiEditCommand');
+const { run: runDisplayUiInspect } = require('../src/cli/commands/displayUiInspectCommand');
 const { runSearchSource } = require('../src/cli/commands/searchSourceCommand');
 const { runJoblog } = require('../src/cli/commands/joblogCommand');
 const { run: runSpoolRead } = require('../src/cli/commands/spoolReadCommand');
@@ -228,10 +228,10 @@ function printHelp() {
     '  zeus [--config <path>] bridge <plan|stage|apply|compile-plan|compile-run|report> --profile <name> [options]'
   );
   console.log(
-    '  zeus pui-edit --file <path> --action <roundtrip-check|dump-json|validate-json|export-json|import-json|plan|apply|grid-add-column> [--changes-file <path>] [--out <path>] [--in <path>] [--format pretty|compact|dddl] [--confirm] [--sfl-record <name>] [--sfl-field "<DDS line>"]'
+    '  zeus display-ui-edit --file <path> --action <roundtrip-check|dump-json|validate-json|export-json|import-json|plan|apply|grid-add-column> [--changes-file <path>] [--out <path>] [--in <path>] [--format pretty|compact|dddl] [--confirm] [--sfl-record <name>] [--sfl-field "<DDS line>"]'
   );
   console.log(
-    '  zeus pui-inspect --file <path> [--json] [--trace <fieldName>]  # LOKAL: Grid-Spalten -> Feldbindung -> Tooltip einer PUI-Display-Datei sichtbar machen'
+    '  zeus display-ui-inspect --file <path> [--json] [--trace <fieldName>]  # LOKAL: Display-UI-Projektion und Feldbindungen prüfen'
   );
   console.log(
     '  zeus [--config <path>] docs:generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]'
@@ -777,13 +777,13 @@ async function main() {
     return;
   }
 
-  if (command === 'pui-edit') {
-    await runPuiEdit(args);
+  if (command === 'display-ui-edit') {
+    await runDisplayUiEdit(args);
     return;
   }
 
-  if (command === 'pui-inspect') {
-    await runPuiInspect(args);
+  if (command === 'display-ui-inspect') {
+    await runDisplayUiInspect(args);
     return;
   }
 

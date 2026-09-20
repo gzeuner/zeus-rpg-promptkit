@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "package": {
     "name": "zeus-rpg-promptkit",
-    "version": "0.3.0-rc.1"
+    "version": "0.3.0-rc.2"
   },
-  "generatedAt": "2026-09-10T00:00:00.000Z",
+  "generatedAt": "2026-09-20T00:00:00.000Z",
   "cliFile": "cli/zeus.js",
   "commandRows": [
     {
@@ -887,7 +887,7 @@
       "example": "node cli/zeus.js bridge plan --profile default --help"
     },
     {
-      "command": "pui-edit",
+      "command": "display-ui-edit",
       "aliases": [],
       "status": "experimental",
       "safety": "S1",
@@ -911,11 +911,11 @@
         "apply",
         "grid-add-column"
       ],
-      "purpose": "Apply structured UI edit operations to local display artifacts.",
-      "example": "node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json"
+      "purpose": "Apply structured display-file UI edit operations to local artifacts.",
+      "example": "node cli/zeus.js display-ui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json"
     },
     {
-      "command": "pui-inspect",
+      "command": "display-ui-inspect",
       "aliases": [],
       "status": "experimental",
       "safety": "S0",
@@ -930,8 +930,8 @@
       },
       "capabilityId": null,
       "subcommands": [],
-      "purpose": "Inspect a local Profound UI display-file projection and optionally trace field bindings.",
-      "example": "node cli/zeus.js pui-inspect --file ./display/DSPFILE.MBR --json"
+      "purpose": "Inspect a local display-file UI projection and optionally trace field bindings.",
+      "example": "node cli/zeus.js display-ui-inspect --file ./display/DSPFILE.MBR --json"
     },
     {
       "command": "knowledge",
@@ -954,7 +954,7 @@
         "validate",
         "inspect"
       ],
-      "purpose": "Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local PUI structure. Directory extraction requires a separate --private-out root for the local-only inventory.",
+      "purpose": "Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local display-file UI structure. Directory extraction requires a separate --private-out root for the local-only inventory.",
       "example": "node cli/zeus.js knowledge extract --mode ui-patterns --source ./display --out ./output --private-out ./local-only --run-id run-001 --json"
     },
     {

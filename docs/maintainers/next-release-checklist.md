@@ -1,12 +1,12 @@
 ---
 Title: Next Release Checklist
 Description: Maintainer checklist for releases after the unified Apache-2.0 consolidation. Historical beta cut records remain below for provenance.
-Last Updated: 2026-09-10
+Last Updated: 2026-09-20
 ---
 
 # Next release checklist (unified public package)
 
-Current package version on main: **0.3.0-rc.1** (published prerelease; current cut closed below).
+Current package version on main: **0.3.0-rc.2** (release candidate prepared on the current feature cut).
 
 Published prerelease source: [`v0.3.0-rc.1`](https://github.com/gzeuner/zeus-rpg-promptkit/releases/tag/v0.3.0-rc.1)
 @ `7435637…`. **Do not re-tag** `v0.3.0-rc.1`.
@@ -22,10 +22,11 @@ This checklist prepares public releases. Tag/publish still require the Release
 
 ## Next release target
 
-| Candidate | Rationale                                                      |
-| --------- | -------------------------------------------------------------- |
-| `0.3.0`   | Stable follow-up after RC validation and owner approval        |
-| Hold      | Keep the RC available while additional feedback or soak occurs |
+| Candidate    | Rationale                                                      |
+| ------------ | -------------------------------------------------------------- |
+| `0.3.0`      | Stable follow-up after RC validation and owner approval        |
+| `0.3.0-rc.2` | Current candidate containing the neutral display-file UI cut   |
+| Hold         | Keep the RC available while additional feedback or soak occurs |
 
 ## Preflight (local)
 

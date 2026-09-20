@@ -13,24 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 
 /**
- * PUI Projection — read-only, LOCAL-ONLY analysis view of a ProfoundUI Display
+ * Display UI Projection — read-only, LOCAL-ONLY analysis view of a display-file UI
  * File member. It reassembles the column-72 continuation lines (via
- * puiDdsParser), decodes the per-record-format JSON and projects a reviewable
+ * displayUiDdsParser), decodes the per-record-format JSON and projects a reviewable
  * structure: grids -> columns -> field bindings + tooltips, plus standalone
  * bound widgets.
  *
- * Privacy boundary: the decoded PUI JSON is customer content. This projection is
- * a local review aid only. It may be exposed through the opt-in `zeus.pui-inspect`
+ * Privacy boundary: the decoded display-file UI JSON is customer content. This projection is
+ * a local review aid only. It may be exposed through the opt-in `zeus.display-ui-inspect`
  * MCP tool (requires explicit --allow-tools), but it must never be part of the
  * default MCP-safe surface, a project-neutral catalog, or a shareable bundle.
  */
 
 'use strict';
 
-const { parseDds, parseJsonFromGroup } = require('./puiDdsParser');
+const { parseDds, parseJsonFromGroup } = require('./displayUiDdsParser');
 
-const PUI_PROJECTION_KIND = 'zeus-pui-projection';
-const PUI_PROJECTION_VERSION = 1;
+const DISPLAY_UI_PROJECTION_KIND = 'zeus-display-ui-projection';
+const DISPLAY_UI_PROJECTION_VERSION = 1;
 
 function toStringValue(value) {
   return typeof value === 'string' ? value : '';
@@ -58,9 +58,9 @@ function isPlainObject(value) {
 }
 
 /**
- * Finds every JSON segment group in the parsed DDS. ProfoundUI stores one JSON
+ * Finds every JSON segment group in the parsed DDS. Display-file UI stores one JSON
  * blob per record format, each split across HTML('...') continuation blocks.
- * puiDdsParser exposes only the first group, so we walk the segments and greedily
+ * displayUiDdsParser exposes only the first group, so we walk the segments and greedily
  * accumulate consecutive HTML segments until a valid JSON object is formed.
  */
 function collectJsonGroups(parsed) {
@@ -167,7 +167,7 @@ function boundFieldOf(item) {
   if (direct) {
     return direct;
   }
-  // Convention B (real ProfoundUI): the "value" property is an object that
+  // Convention B (display-file UI): the "value" property is an object that
   // carries the bound DDS field in "fieldName" (alongside dataLength/dataType/
   // designValue). A string "value" is a static literal, not a binding.
   if (isPlainObject(item && item.value)) {
@@ -176,7 +176,7 @@ function boundFieldOf(item) {
       return fieldName;
     }
   }
-  // Convention C (real ProfoundUI): input widgets (image / checkbox / radio)
+  // Convention C (display-file UI): input widgets (image / checkbox / radio)
   // bind their DDS field through the "response" property, an object carrying
   // "fieldName" (alongside customTrue/customFalse/dataType/indFormat). These are
   // genuinely bound columns even though they have no display "value" binding.
@@ -340,7 +340,7 @@ function projectRecordFormat(group, file) {
         {
           type: 'JSON_DECODE_FAILED',
           recordFormat: '',
-          detail: `PUI JSON block at lines ${range.startLine}-${range.endLine} could not be decoded`,
+          detail: `Display UI JSON block at lines ${range.startLine}-${range.endLine} could not be decoded`,
         },
       ],
     };
@@ -385,11 +385,11 @@ function sortSignals(signals) {
 }
 
 /**
- * Builds a reviewable projection of a ProfoundUI Display File member.
+ * Builds a reviewable projection of a display-file UI member.
  * @param {string} content - raw DDS member content
  * @param {{ file?: string }} [options]
  */
-function buildPuiProjection(content, options = {}) {
+function buildDisplayUiProjection(content, options = {}) {
   const file = toStringValue(options.file);
   const parsed = parseDds(String(content || ''));
   const groups = collectJsonGroups(parsed);
@@ -406,8 +406,8 @@ function buildPuiProjection(content, options = {}) {
   const signals = sortSignals(recordFormats.reduce((acc, rf) => acc.concat(rf.signals), []));
 
   return {
-    kind: PUI_PROJECTION_KIND,
-    schemaVersion: PUI_PROJECTION_VERSION,
+    kind: DISPLAY_UI_PROJECTION_KIND,
+    schemaVersion: DISPLAY_UI_PROJECTION_VERSION,
     file,
     recordFormatCount: recordFormats.length,
     recordFormats,
@@ -418,7 +418,7 @@ function buildPuiProjection(content, options = {}) {
 /**
  * Traces where a given field name is bound in the projection. Answers
  * "is this field actually rendered, and where?".
- * @param {object} projection - result of buildPuiProjection
+ * @param {object} projection - result of buildDisplayUiProjection
  * @param {string} fieldName
  * @returns {Array<object>} deterministic list of binding locations
  */
@@ -470,9 +470,9 @@ function traceFieldBinding(projection, fieldName) {
 }
 
 module.exports = {
-  buildPuiProjection,
+  buildDisplayUiProjection,
   traceFieldBinding,
   collectJsonGroups,
-  PUI_PROJECTION_KIND,
-  PUI_PROJECTION_VERSION,
+  DISPLAY_UI_PROJECTION_KIND,
+  DISPLAY_UI_PROJECTION_VERSION,
 };

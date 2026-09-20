@@ -6,7 +6,7 @@ const path = require('path');
 
 const { createMcpServer } = require('../src/mcp/mcpServer');
 const { listMcpTools } = require('../src/mcp/mcpTools');
-const { buildHtmlLines } = require('../src/pui/puiDdsParser');
+const { buildHtmlLines } = require('../src/displayUi/displayUiDdsParser');
 
 const ALL_TOOL_NAMES = listMcpTools().map(tool => tool.name);
 
@@ -36,10 +36,10 @@ function writeSyntheticDisplay(filePath) {
   fs.writeFileSync(filePath, lines.join('\n'), 'utf8');
 }
 
-test('listMcpTools exposes zeus.pui-edit with action required', () => {
+test('listMcpTools exposes zeus.display-ui-edit with action required', () => {
   const byName = new Map(listMcpTools().map(tool => [tool.name, tool]));
-  const tool = byName.get('zeus.pui-edit');
-  assert.ok(tool, 'zeus.pui-edit should be registered');
+  const tool = byName.get('zeus.display-ui-edit');
+  assert.ok(tool, 'zeus.display-ui-edit should be registered');
   assert.deepEqual(tool.inputSchema.required, ['action']);
   assert.ok(
     tool.inputSchema.properties.action.enum.includes('grid-add-column'),
@@ -51,8 +51,8 @@ test('listMcpTools exposes zeus.pui-edit with action required', () => {
   );
 });
 
-test('mcp tools call zeus.pui-edit dump-json returns parsed JSON', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-pui-'));
+test('mcp tools call zeus.display-ui-edit dump-json returns parsed JSON', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-display-ui-'));
   const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
 
   try {
@@ -68,23 +68,23 @@ test('mcp tools call zeus.pui-edit dump-json returns parsed JSON', async () => {
       id: 701,
       method: 'tools/call',
       params: {
-        name: 'zeus.pui-edit',
+        name: 'zeus.display-ui-edit',
         arguments: { action: 'dump-json', file: 'DISPLAY_SAMPLE.MBR' },
       },
     });
 
     const payload = response.result.structuredContent;
     assert.equal(payload.ok, true);
-    assert.equal(payload.puiAction, 'dump-json');
+    assert.equal(payload.displayUiAction, 'dump-json');
     assert.ok(payload.data && payload.data.json, 'expected data.json');
-    assert.equal(payload.cliEquivalent, 'node cli/zeus.js pui-edit');
+    assert.equal(payload.cliEquivalent, 'node cli/zeus.js display-ui-edit');
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 });
 
-test('mcp tools call zeus.pui-edit rejects file outside workspace root', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-pui-'));
+test('mcp tools call zeus.display-ui-edit rejects file outside workspace root', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-display-ui-'));
   const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-out-'));
   const outsideFile = path.join(outsideDir, 'DISPLAY_OUTSIDE.MBR');
 
@@ -102,7 +102,7 @@ test('mcp tools call zeus.pui-edit rejects file outside workspace root', async (
         id: 702,
         method: 'tools/call',
         params: {
-          name: 'zeus.pui-edit',
+          name: 'zeus.display-ui-edit',
           arguments: { action: 'dump-json', file: outsideFile },
         },
       }),
@@ -118,8 +118,8 @@ test('mcp tools call zeus.pui-edit rejects file outside workspace root', async (
   }
 });
 
-test('mcp tools call zeus.pui-edit blocks apply without confirm', async () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-pui-'));
+test('mcp tools call zeus.display-ui-edit blocks apply without confirm', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-mcp-display-ui-'));
   const filePath = path.join(tempDir, 'DISPLAY_SAMPLE.MBR');
   const changeSetPath = path.join(tempDir, 'changes.json');
 
@@ -138,7 +138,7 @@ test('mcp tools call zeus.pui-edit blocks apply without confirm', async () => {
         id: 703,
         method: 'tools/call',
         params: {
-          name: 'zeus.pui-edit',
+          name: 'zeus.display-ui-edit',
           arguments: {
             action: 'apply',
             file: 'DISPLAY_SAMPLE.MBR',

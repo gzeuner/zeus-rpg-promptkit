@@ -326,7 +326,7 @@ const COMMAND_METADATA = Object.freeze({
     purpose: 'Bridge planning/staging/apply/compile/report flow; never implicit.',
     example: 'node cli/zeus.js bridge plan --profile default --help',
   }),
-  'pui-edit': Object.freeze({
+  'display-ui-edit': Object.freeze({
     safety: 'S1',
     scope: 'Local',
     subcommands: [
@@ -339,25 +339,24 @@ const COMMAND_METADATA = Object.freeze({
       'apply',
       'grid-add-column',
     ],
-    purpose: 'Apply structured UI edit operations to local display artifacts.',
+    purpose: 'Apply structured display-file UI edit operations to local artifacts.',
     example:
-      'node cli/zeus.js pui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json',
+      'node cli/zeus.js display-ui-edit --file ./display/DSPFILE.MBR --action plan --changes-file ./changes.json',
   }),
   knowledge: Object.freeze({
     safety: 'S1',
     scope: 'Local',
     subcommands: ['extract', 'validate', 'inspect'],
     purpose:
-      'Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local PUI structure. Directory extraction requires a separate --private-out root for the local-only inventory.',
+      'Extract, validate, and inspect privacy-gated project-neutral knowledge catalogs from local display-file UI structure. Directory extraction requires a separate --private-out root for the local-only inventory.',
     example:
       'node cli/zeus.js knowledge extract --mode ui-patterns --source ./display --out ./output --private-out ./local-only --run-id run-001 --json',
   }),
-  'pui-inspect': Object.freeze({
+  'display-ui-inspect': Object.freeze({
     safety: 'S0',
     scope: 'Local',
-    purpose:
-      'Inspect a local Profound UI display-file projection and optionally trace field bindings.',
-    example: 'node cli/zeus.js pui-inspect --file ./display/DSPFILE.MBR --json',
+    purpose: 'Inspect a local display-file UI projection and optionally trace field bindings.',
+    example: 'node cli/zeus.js display-ui-inspect --file ./display/DSPFILE.MBR --json',
   }),
   'docs:generate-catalog': Object.freeze({
     safety: 'S1',
@@ -794,7 +793,7 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: ['operator-gated'],
     capabilityId: null,
   }),
-  'pui-edit': catalogContract({
+  'display-ui-edit': catalogContract({
     aliases: [],
     status: 'experimental',
     availability: CLI_MCP,
@@ -808,7 +807,7 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: ['local-artifact-write', 'local-read'],
     capabilityId: null,
   }),
-  'pui-inspect': catalogContract({
+  'display-ui-inspect': catalogContract({
     aliases: [],
     status: 'experimental',
     availability: CLI_MCP,
@@ -905,8 +904,8 @@ const COMMAND_ORDER = Object.freeze([
   'delete',
   'analyses',
   'bridge',
-  'pui-edit',
-  'pui-inspect',
+  'display-ui-edit',
+  'display-ui-inspect',
   'knowledge',
   'docs:generate-catalog',
   'mcp',

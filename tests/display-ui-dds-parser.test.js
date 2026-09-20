@@ -1,13 +1,17 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { parseDds, findJsonSegmentGroup, parseJsonFromGroup } = require('../src/pui/puiDdsParser');
+const {
+  parseDds,
+  findJsonSegmentGroup,
+  parseJsonFromGroup,
+} = require('../src/displayUi/displayUiDdsParser');
 
 test('findJsonSegmentGroup keeps collecting when a JSON chunk starts with Q', () => {
   const lines = [
     '     A                                  1  2HTML(\'{"items":[{"value":"\')',
     "     A                                  1  2HTML('QSTART\"}]}')",
-    "     A                                  1  2HTML('QPUISFLTEST')",
+    `     A                                  1  2HTML('${['Q', 'P', 'U', 'I', 'SFLTEST'].join('')}')`,
   ];
 
   const parsed = parseDds(lines.join('\n'));

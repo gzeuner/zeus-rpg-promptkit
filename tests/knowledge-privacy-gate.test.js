@@ -106,7 +106,7 @@ test('privacy gate rejects source-like RPG/DDS/CL syntax', () => {
 
 test('privacy gate rejects legacy .zeus knowledge path references', () => {
   const catalog = buildGenericCatalog();
-  catalog.patterns[0].limitations.push('.zeus/knowledge/pui-dddl/templates/sample.json');
+  catalog.patterns[0].limitations.push('.zeus/knowledge/display-ui-dddl/templates/sample.json');
 
   const result = evaluateFinalCatalogPrivacy(catalog);
   assert.equal(result.passed, false);
@@ -117,7 +117,7 @@ test('privacy gate rejects .local MCP audit/session-note path references', () =>
   const catalog = buildGenericCatalog();
   catalog.patterns[0].limitations.push('.local/mcp/audit/mcp-audit.jsonl');
   catalog.patterns[0].limitations.push(
-    '.local/session-notes/2026-05-22-pui-pattern-import/docs/runbook.md'
+    '.local/session-notes/2026-05-22-display-ui-pattern-import/docs/runbook.md'
   );
 
   const result = evaluateFinalCatalogPrivacy(catalog);

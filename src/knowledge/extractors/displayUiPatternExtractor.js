@@ -35,7 +35,7 @@ function buildNeutralGridPattern(grid, index, recordFormatCount) {
     id: `ui-grid-${index + 1}`,
     kind: 'ui.grid',
     domain: 'ui',
-    technology: ['pui-structural'],
+    technology: ['display-ui-structural'],
     features,
     elements: [
       {
@@ -131,7 +131,7 @@ function buildNeutralWidgetPattern(widget, index, recordFormatCount) {
     id: `${category.kind}-${index + 1}`,
     kind: category.kind,
     domain: 'ui',
-    technology: ['pui-structural'],
+    technology: ['display-ui-structural'],
     features,
     elements: [
       {
@@ -163,9 +163,9 @@ function buildNeutralWidgetPattern(widget, index, recordFormatCount) {
   };
 }
 
-function buildNeutralPuiKnowledgeCatalog(projection, options = {}) {
+function buildNeutralDisplayUiKnowledgeCatalog(projection, options = {}) {
   if (!projection || typeof projection !== 'object') {
-    throw new Error('PUI projection is required');
+    throw new Error('Display UI projection is required');
   }
 
   const recordFormats = asArray(projection.recordFormats);
@@ -182,7 +182,7 @@ function buildNeutralPuiKnowledgeCatalog(projection, options = {}) {
 
   return createFinalKnowledgeCatalog({
     generatedAt: options.generatedAt,
-    generatorName: 'zeus-pui-neutral-extractor',
+    generatorName: 'zeus-display-ui-neutral-extractor',
     generatorVersion: options.generatorVersion || '0.2.0',
     privacyMode: 'strict',
     taxonomyVersion: 'draft-2',
@@ -190,12 +190,12 @@ function buildNeutralPuiKnowledgeCatalog(projection, options = {}) {
   });
 }
 
-function extractAndPersistNeutralPuiKnowledge({ projection, outputRoot, runId, ...options }) {
-  const catalog = buildNeutralPuiKnowledgeCatalog(projection, options);
+function extractAndPersistNeutralDisplayUiKnowledge({ projection, outputRoot, runId, ...options }) {
+  const catalog = buildNeutralDisplayUiKnowledgeCatalog(projection, options);
   return persistFinalKnowledgeCatalog({ outputRoot, runId, catalog });
 }
 
 module.exports = {
-  buildNeutralPuiKnowledgeCatalog,
-  extractAndPersistNeutralPuiKnowledge,
+  buildNeutralDisplayUiKnowledgeCatalog,
+  extractAndPersistNeutralDisplayUiKnowledge,
 };
