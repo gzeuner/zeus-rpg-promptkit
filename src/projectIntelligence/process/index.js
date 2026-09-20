@@ -10,6 +10,7 @@ const views = require('./views');
 const evaluation = require('./evaluation');
 const answerRegression = require('../../agent/processAnswerRegression');
 const answerDrift = require('../../agent/processAnswerDrift');
+const answerReview = require('../../agent/processAnswerReview');
 
 module.exports = {
   ...contracts,
@@ -22,4 +23,5 @@ module.exports = {
   ...evaluation,
   ...answerRegression,
   ...answerDrift,
+  ...answerReview,
 };

@@ -64,6 +64,11 @@ After producing a new regression result, compare it with the last known-good
 [`process-answer-drift.md`](process-answer-drift.md). Inspect stable drift
 codes such as `CATALOG_DRIFT`, `EVIDENCE_LOSS`, `FRESHNESS_DRIFT`, and
 `REGRESSION_INTRODUCED`; the report is review-only and never auto-promotes.
+For reviewer-friendly explanations, run `process drift-review --drift
+.zeus/process-answer-drift.json --history
+.zeus/process-answer-review-history.json --out .zeus/process-answer-review.json
+--json`. The optional history links only a sanitized, exact `driftId`; the
+projection hashes reviewer identities and never authorizes promotion.
 
 For project-specific legacy vocabulary, resolve the term first or pass an
 explicit glossary catalog to the query:

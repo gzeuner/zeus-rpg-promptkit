@@ -58,6 +58,7 @@ node cli/zeus.js process improvements --json
 node cli/zeus.js process promotion-check --candidate .zeus/report-a.json --candidate .zeus/report-b.json --fixture .zeus/process-regression-fixture.json --json
 node cli/zeus.js process regression-check --catalog ./output/process-candidates.json --corpus ./.local/process-answer-regression-corpus.json --out .zeus/process-answer-regression.json --json
 node cli/zeus.js process drift-check --baseline .zeus/process-answer-regression-baseline.json --current .zeus/process-answer-regression.json --out .zeus/process-answer-drift.json --json
+node cli/zeus.js process drift-review --drift .zeus/process-answer-drift.json --history .zeus/process-answer-review-history.json --out .zeus/process-answer-review.json --json
 node cli/zeus.js process glossary resolve --glossary ./output/process-glossary.json --term "<legacy-term>" --json
 node cli/zeus.js process query --catalog ./output/process-candidates.json --glossary ./output/process-glossary.json --question "Was macht <legacy-term>?" --json
 ```
