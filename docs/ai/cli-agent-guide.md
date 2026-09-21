@@ -1,7 +1,7 @@
 ---
 Title: CLI Agent Guide
 Description: Practical CLI-first contract for AI agents working with IBM i legacy systems through Zeus.
-Last Updated: 2026-09-10
+Last Updated: 2026-09-21
 ---
 
 # CLI Agent Guide
@@ -55,7 +55,17 @@ evidence, anonymized IDs, fingerprints, and warning codes only. It does not
 contain source text, original paths, file names, credentials, business terms,
 or private mappings. A `needs-attention` result is handled through its warning
 codes and one sanitized experience record; parser limitations are never filled
-with guesses. See [`legacy-source-boundary.md`](legacy-source-boundary.md).
+with guesses. After the inventory, create the technical-only cross-language
+projection with:
+
+```text
+node cli/zeus.js legacy-source graph --source-root <approved-local-root> --inventory .local/legacy-source-inventory/inventory.json --out .local/legacy-source-inventory/evidence-graph.json --json
+```
+
+The graph contains only HMAC IDs, generic edge kinds, bounded counts, and
+fingerprints. It is not a process catalog and must not be used to publish
+business meaning. See [`legacy-source-boundary.md`](legacy-source-boundary.md)
+and [`legacy-evidence-graph.md`](legacy-evidence-graph.md).
 
 ## Business-process projection
 

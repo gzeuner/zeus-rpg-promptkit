@@ -18,11 +18,19 @@ const {
   DEFAULT_OUTPUT,
   runLegacySourceInventory,
 } = require('../../legacySource/confidentialInventory');
+const {
+  DEFAULT_INVENTORY,
+  DEFAULT_OUTPUT: DEFAULT_GRAPH_OUTPUT,
+  runLegacySourceEvidenceGraph,
+} = require('../../legacySource/confidentialEvidenceGraph');
 
 function printHelp() {
   console.log('Confidential legacy-source commands (local-only):');
   console.log(
     `  zeus legacy-source inventory --source-root <local-root> [--out ${DEFAULT_OUTPUT}] [--json]`
+  );
+  console.log(
+    `  zeus legacy-source graph --source-root <local-root> [--inventory ${DEFAULT_INVENTORY}] [--out ${DEFAULT_GRAPH_OUTPUT}] [--json]`
   );
   console.log('');
   console.log(
@@ -31,11 +39,11 @@ function printHelp() {
   console.log('The output must stay inside .local/legacy-source-inventory/.');
 }
 
-function resultForError(error) {
+function resultForError(error, operation = 'inventory') {
   const reasonCode = error && error.code ? String(error.code) : 'LEGACY_SOURCE_INVENTORY_FAILED';
   return {
     ok: false,
-    kind: 'legacy-source-inventory-result',
+    kind: `legacy-source-${operation}-result`,
     status: 'failed',
     reasonCode,
     readOnly: true,
@@ -52,8 +60,20 @@ function resultForError(error) {
 function printHumanSummary(result) {
   const summary = result.summary || {};
   console.log(`Status: ${result.status}`);
-  console.log(`Candidate files: ${summary.candidateFiles || 0}`);
-  console.log(`Evidence entries: ${result.evidence ? result.evidence.count : 0}`);
+  console.log(
+    `${result.kind.includes('graph') ? 'Graph nodes' : 'Candidate files'}: ${
+      result.kind.includes('graph') ? summary.nodeCount || 0 : summary.candidateFiles || 0
+    }`
+  );
+  console.log(
+    `${result.kind.includes('graph') ? 'Graph edges' : 'Evidence entries'}: ${
+      result.kind.includes('graph')
+        ? summary.edgeCount || 0
+        : result.evidence
+          ? result.evidence.count
+          : 0
+    }`
+  );
   console.log(`Artifact: ${(result.artifacts || [])[0] || '(none)'}`);
   if (result.warnings && result.warnings.length > 0)
     console.log(`Warnings: ${result.warnings.join(', ')}`);
@@ -69,26 +89,37 @@ async function runLegacySource(args = {}) {
     printHelp();
     return { ok: true, operation: 'help' };
   }
-  if (subcommand !== 'inventory') {
+  if (subcommand !== 'inventory' && subcommand !== 'graph') {
     const result = resultForError({ code: 'LEGACY_SOURCE_INVALID_ARGUMENTS' });
     if (json.isJsonMode) json.print(result);
-    else console.error(`[${result.reasonCode}] legacy-source inventory arguments are required.`);
+    else
+      console.error(
+        `[${result.reasonCode}] legacy-source inventory or graph arguments are required.`
+      );
     process.exitCode = 2;
     return result;
   }
   try {
-    const result = runLegacySourceInventory({
-      sourceRoot: args['source-root'],
-      workspaceRoot: process.cwd(),
-      out: args.out || DEFAULT_OUTPUT,
-    });
+    const result =
+      subcommand === 'inventory'
+        ? runLegacySourceInventory({
+            sourceRoot: args['source-root'],
+            workspaceRoot: process.cwd(),
+            out: args.out || DEFAULT_OUTPUT,
+          })
+        : runLegacySourceEvidenceGraph({
+            sourceRoot: args['source-root'],
+            workspaceRoot: process.cwd(),
+            inventory: args.inventory || DEFAULT_INVENTORY,
+            out: args.out || DEFAULT_GRAPH_OUTPUT,
+          });
     if (json.isJsonMode) json.print(result);
     else printHumanSummary(result);
     return result;
   } catch (error) {
-    const result = resultForError(error);
+    const result = resultForError(error, subcommand);
     if (json.isJsonMode) json.print(result);
-    else console.error(`[${result.reasonCode}] local legacy-source inventory was not created.`);
+    else console.error(`[${result.reasonCode}] local legacy-source ${subcommand} was not created.`);
     process.exitCode = 2;
     return result;
   }

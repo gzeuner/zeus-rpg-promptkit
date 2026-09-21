@@ -218,10 +218,14 @@ const COMMAND_UI_METADATA = Object.freeze([
     primaryUseCase:
       'Establish a privacy-preserving local source boundary before any further analysis or handoff.',
     requiredCapabilities: Object.freeze(['workspace']),
-    commonOptions: Object.freeze(['--source-root', '--out']),
+    commonOptions: Object.freeze(['--source-root', '--inventory', '--out']),
+    subcommands: Object.freeze(['inventory', 'graph']),
     advancedOptions: Object.freeze(['--json']),
-    outputArtifacts: Object.freeze(['.local/legacy-source-inventory/inventory.json']),
-    recommendedNextCommands: Object.freeze(['agent', 'analyze']),
+    outputArtifacts: Object.freeze([
+      '.local/legacy-source-inventory/inventory.json',
+      '.local/legacy-source-inventory/evidence-graph.json',
+    ]),
+    recommendedNextCommands: Object.freeze(['legacy-source', 'agent']),
   }),
   Object.freeze({
     name: 'impact',
