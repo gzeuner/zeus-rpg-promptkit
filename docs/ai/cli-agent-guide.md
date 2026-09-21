@@ -47,11 +47,11 @@ When local legacy sources are available but must not leave the machine, use the
 experimental, CLI-only inventory route before analysis or process discovery:
 
 ```text
-node cli/zeus.js legacy-source inventory --source-root <approved-local-root> --out .local/legacy-source-inventory/inventory.json --json
+node cli/zeus.js legacy-source inventory --help
 ```
 
-The input is read-only. The artifact contains generic counts, bounded aggregate
-evidence, anonymized IDs, fingerprints, and warning codes only. It does not
+The input is read-only. The local artifact contains only generic bounded
+technical evidence. It does not
 contain source text, original paths, file names, credentials, business terms,
 or private mappings. A `needs-attention` result is handled through its warning
 codes and one sanitized experience record; parser limitations are never filled
@@ -59,12 +59,12 @@ with guesses. After the inventory, create the technical-only cross-language
 projection with:
 
 ```text
-node cli/zeus.js legacy-source graph --source-root <approved-local-root> --inventory .local/legacy-source-inventory/inventory.json --out .local/legacy-source-inventory/evidence-graph.json --json
+node cli/zeus.js legacy-source graph --help
 ```
 
-The graph contains only HMAC IDs, generic edge kinds, bounded counts, and
-fingerprints. It is not a process catalog and must not be used to publish
-business meaning. See [`legacy-source-boundary.md`](legacy-source-boundary.md)
+The graph contains only local generic technical evidence. It is not a process
+catalog and must not be used to publish business meaning. See
+[`legacy-source-boundary.md`](legacy-source-boundary.md)
 and [`legacy-evidence-graph.md`](legacy-evidence-graph.md).
 
 ## Business-process projection

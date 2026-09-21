@@ -207,7 +207,7 @@ Process intelligence must not be the first consumer of private legacy source.
 Establish the local-only boundary with:
 
 ```text
-node cli/zeus.js legacy-source inventory --source-root <approved-local-root> --out .local/legacy-source-inventory/inventory.json --json
+node cli/zeus.js legacy-source inventory --help
 ```
 
 The inventory is a bounded, anonymized evidence artifact. It contains no raw
@@ -217,7 +217,7 @@ business meaning without a separate sanitized, evidence-linked review flow. The
 next technical-only step is the local cross-language evidence graph:
 
 ```text
-node cli/zeus.js legacy-source graph --source-root <approved-local-root> --inventory .local/legacy-source-inventory/inventory.json --out .local/legacy-source-inventory/evidence-graph.json --json
+node cli/zeus.js legacy-source graph --help
 ```
 
 The graph links only HMAC IDs and generic technical edge kinds. It is not a

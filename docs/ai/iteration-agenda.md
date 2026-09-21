@@ -592,12 +592,14 @@ process is generated or published.
 
 The implementation and protected-branch verification are tracked in [PR #350](https://github.com/gzeuner/zeus-rpg-promptkit/pull/350).
 
-Iteration 29 is completed. Later process-candidate extraction and reviewed
-process answers remain inactive until this technical evidence handoff is
-explicitly approved:
+Iteration 29 is completed. The next active roadmap item is Iteration 30:
+reusable technical evidence contracts and a prompt-context boundary. Later
+process-candidate extraction and reviewed process answers remain inactive until
+the reusable technical contract is complete and explicitly approved:
 
-1. process-candidate extraction from job, program, data, and transaction flows;
-2. reviewed process descriptions and safe process-query answers built only from
+1. reusable technical evidence adapters and prompt-context contracts;
+2. process-candidate extraction from job, program, data, and transaction flows;
+3. reviewed process descriptions and safe process-query answers built only from
    anonymized, evidence-linked artifacts.
 
 ### Iteration 29 — Cross-language anonymized legacy evidence graph (completed in PR #351)
@@ -625,12 +627,35 @@ Protected PR and main CI checks passed, main was synchronized at merge commit
 removed locally and remotely. The contract is documented in
 [`legacy-evidence-graph.md`](legacy-evidence-graph.md).
 
-The local verification run produced a read-only graph for 13,299 candidate
-files with 52,379 anonymized nodes and 134,028 anonymized edges. Privacy checks
-found no raw source, source paths, source names, credentials, or business terms.
-The result is explicitly incomplete because one stable
-`SCANNER_PARTIAL_FAILURE` warning was recorded; no process knowledge was
-generated or published.
+The public repository records only the generic contract, synthetic fixtures,
+and structural privacy checks. Runtime-derived evidence, metrics, fingerprints,
+and warning instances remain local-only and are not part of public
+documentation, CI artifacts, commits, or releases.
+
+### Iteration 30 — Reusable technical evidence contract and prompt-context boundary (planned)
+
+Extract the reusable Promptkit capability from the local technical evidence
+boundary without carrying source-derived details into public artifacts:
+
+- define a source-neutral evidence schema and adapter contract for technical
+  parsers and graph producers;
+- separate local source ingestion from evidence projection, prompt-context
+  selection, dependency views, and impact views;
+- expose only generic entity kinds, relation kinds, bounded evidence metadata,
+  stable anonymous identifiers, and explicit uncertainty to downstream local
+  tools;
+- keep all source-derived artifacts, runtime metrics, fingerprints, warning
+  instances, and local references outside the public repository and release
+  surface;
+- use synthetic fixtures and negative privacy/credential canaries for all
+  committed tests and public examples;
+- verify CLI discoverability, deterministic projections, portability, release
+  integrity, and clean public-artifact scans.
+
+The completion gate is a reusable technical contract that improves Promptkit
+context and investigation features while keeping source-derived material
+local-only. No process catalog or business interpretation is part of this
+iteration.
 
 ## Business Process Intelligence vertical slice
 
