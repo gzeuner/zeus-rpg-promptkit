@@ -89,6 +89,9 @@ function printHelp() {
     '  zeus legacy-source inventory --source-root <local-root> [--out .local/legacy-source-inventory/inventory.json] [--json]  # local-only anonymized inventory'
   );
   console.log(
+    '  zeus legacy-source graph --source-root <local-root> [--inventory .local/legacy-source-inventory/inventory.json] [--out .local/legacy-source-inventory/evidence-graph.json] [--json]  # local-only anonymized evidence graph'
+  );
+  console.log(
     '  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list] [--focus "<scope>"] [--search "<term>"] [--generate-prompt]  # Investigation session (focus, search, prompt gen)'
   );
   // Note: --dense now performs rank-aware selection + compaction (see Phase 1-3 impl)

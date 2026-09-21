@@ -213,8 +213,17 @@ node cli/zeus.js legacy-source inventory --source-root <approved-local-root> --o
 The inventory is a bounded, anonymized evidence artifact. It contains no raw
 source, original paths, file names, business terms, credentials, or reversible
 mapping. It is not a process catalog and must not be published or used to infer
-business meaning without a separate sanitized, evidence-linked review flow. See
-[`legacy-source-boundary.md`](legacy-source-boundary.md) for the full contract.
+business meaning without a separate sanitized, evidence-linked review flow. The
+next technical-only step is the local cross-language evidence graph:
+
+```text
+node cli/zeus.js legacy-source graph --source-root <approved-local-root> --inventory .local/legacy-source-inventory/inventory.json --out .local/legacy-source-inventory/evidence-graph.json --json
+```
+
+The graph links only HMAC IDs and generic technical edge kinds. It is not a
+process catalog and must pass the same privacy boundary before any reviewed
+process-candidate work. See [`legacy-source-boundary.md`](legacy-source-boundary.md)
+and [`legacy-evidence-graph.md`](legacy-evidence-graph.md) for the full contract.
 
 ## Cross-catalog learning and promotion readiness
 

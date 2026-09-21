@@ -88,9 +88,9 @@ const COMMAND_METADATA = Object.freeze({
   'legacy-source': Object.freeze({
     safety: 'S1',
     scope: 'Local source boundary',
-    subcommands: ['inventory'],
+    subcommands: ['inventory', 'graph'],
     purpose:
-      'Read a local legacy-source tree without changing it and emit only anonymized inventory and evidence aggregates. Raw paths, source text, credentials, and business terms are never emitted.',
+      'Read a local legacy-source tree without changing it and emit only anonymized inventory and technical evidence-graph aggregates. Raw paths, source text, credentials, and business terms are never emitted.',
     example:
       'node cli/zeus.js legacy-source inventory --source-root <local-root> --out .local/legacy-source-inventory/inventory.json --json',
   }),

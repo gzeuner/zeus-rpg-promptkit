@@ -592,15 +592,47 @@ process is generated or published.
 
 The implementation and protected-branch verification are tracked in [PR #350](https://github.com/gzeuner/zeus-rpg-promptkit/pull/350).
 
-Possible follow-up iterations, still inactive until explicitly approved, are:
+The next active roadmap item is Iteration 29: a cross-language legacy evidence
+graph. Later process-candidate extraction and reviewed process answers remain
+inactive until this technical evidence handoff is complete and explicitly
+approved:
 
 1. a cross-language legacy evidence graph;
 2. process-candidate extraction from job, program, data, and transaction flows;
 3. reviewed process descriptions and safe process-query answers built only from
    anonymized, evidence-linked artifacts.
 
-After protected-branch verification, the roadmap will remain paused after
-Iteration 28. The next proposed items stay inactive until explicit approval:
+### Iteration 29 — Cross-language anonymized legacy evidence graph (in progress)
+
+Build the smallest technical projection that can link RPG/RPGLE, CL, DDS,
+binder, and SQL evidence without exporting private identifiers or inferring
+business processes:
+
+- require a privacy-safe Iteration 28 inventory for the same HMAC-bound source
+  root;
+- re-read the approved local source root only as a read-only parser input;
+- project source files and technical entities to HMAC IDs and generic,
+  whitelisted edge kinds;
+- preserve source-family coverage, bounded counts, fingerprints, parser warning
+  codes, and an explicit incomplete flag;
+- reject unsafe or mismatched inventory/artifact boundaries;
+- verify deterministic reruns, synthetic cross-language canaries, source
+  immutability, credential/privacy scans, portability, and release integrity;
+- keep the graph local-only and separate from process-candidate or process-query
+  publication.
+
+Implementation is on the current feature branch through the CLI-only
+`legacy-source graph` route, with the contract documented in
+[`legacy-evidence-graph.md`](legacy-evidence-graph.md). The iteration remains
+in progress until the branch, protected checks, administrative merge, and main
+synchronization are complete.
+
+The local verification run produced a read-only graph for 13,299 candidate
+files with 52,379 anonymized nodes and 134,028 anonymized edges. Privacy checks
+found no raw source, source paths, source names, credentials, or business terms.
+The result is explicitly incomplete because one stable
+`SCANNER_PARTIAL_FAILURE` warning was recorded; no process knowledge was
+generated or published.
 
 ## Business Process Intelligence vertical slice
 

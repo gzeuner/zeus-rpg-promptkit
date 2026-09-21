@@ -1,6 +1,6 @@
 ---
 Title: Confidential Legacy Source Boundary
-Description: Local-only contract for anonymized legacy-source inventory and evidence.
+Description: Local-only contract for anonymized legacy-source inventory and evidence graphs.
 Last Updated: 2026-09-21
 ---
 
@@ -25,6 +25,20 @@ node cli/zeus.js legacy-source inventory \
 The source root may be outside the repository, but it is read-only. The output
 must stay below `.local/legacy-source-inventory/`. MCP is not required.
 
+After a successful inventory, the next bounded technical projection is:
+
+```text
+node cli/zeus.js legacy-source graph \
+  --source-root <approved-local-root> \
+  --inventory .local/legacy-source-inventory/inventory.json \
+  --out .local/legacy-source-inventory/evidence-graph.json \
+  --json
+```
+
+The graph command re-reads the same local source boundary only to obtain parser
+evidence. It requires the matching anonymized inventory fingerprint and never
+reuses a public or exported mapping.
+
 ## Export contract
 
 The inventory artifact contains only:
@@ -40,6 +54,12 @@ It contains no raw source text, original paths, file names, business terms,
 credentials, environment values, or reversible private-to-anonymous mapping.
 The local salt and cache are ignored local state and are never public artifacts.
 
+The graph artifact contains only HMAC IDs for source-file and technical entity
+nodes, generic edge kinds, bounded counts, source-family labels, parser warning
+codes, and inventory/source fingerprints. It contains no entity names, SQL text,
+source paths, or inferred process meaning. A graph with warnings is explicitly
+incomplete and must not be treated as a process catalog.
+
 ## Parser and cache behavior
 
 Known RPG/RPGLE/include, CLLE, DDS, binder, and SQL extensions are classified
@@ -53,12 +73,18 @@ Incremental cache entries contain only an anonymized file ID, a content hash,
 source type, parser version, and aggregate summary. Cache hit/reprocess metrics
 remain transient CLI evidence and are not part of the persisted artifact.
 
+Graph nodes and edges are sorted before persistence. Repeating the graph command
+with identical source bytes, inventory, and local salt produces the same graph
+fingerprint. The graph is bounded; a limit warning is a safe incomplete result,
+not permission to emit additional source detail.
+
 ## Safe handoff
 
 The artifact is an inventory and evidence boundary, not a process description.
-Do not infer or publish business processes from it. Any later extraction must
-use a separate sanitized fixture, preserve evidence and unknowns, and pass an
-explicit review gate. Before sharing or committing any derived artifact, run
+The graph is a technical evidence projection, not a process description. Do not
+infer or publish business processes from either artifact. Any later extraction
+must use a separate sanitized fixture, preserve evidence and unknowns, and pass
+an explicit review gate. Before sharing or committing any derived artifact, run
 the repository privacy, credential, portability, tracked-fixture, and release
 integrity checks.
 

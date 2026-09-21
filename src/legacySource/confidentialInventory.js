@@ -522,4 +522,18 @@ function runLegacySourceInventory(options = {}) {
   };
 }
 
-module.exports = { DEFAULT_OUTPUT, InventoryError, runLegacySourceInventory };
+module.exports = {
+  DEFAULT_OUTPUT,
+  InventoryError,
+  SAFE_SOURCE_TYPES,
+  familyFor,
+  hmac,
+  loadSalt,
+  pathsOverlap,
+  readUtf8,
+  resolveOutput,
+  resolveSourceRoot,
+  runLegacySourceInventory,
+  scanContent,
+  walkSourceRoot,
+};
