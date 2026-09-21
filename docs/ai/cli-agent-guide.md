@@ -67,6 +67,20 @@ catalog and must not be used to publish business meaning. See
 [`legacy-source-boundary.md`](legacy-source-boundary.md)
 and [`legacy-evidence-graph.md`](legacy-evidence-graph.md).
 
+For a reusable promptkit handoff, project an already-anonymized graph through
+the generic context boundary:
+
+```text
+node cli/zeus.js technical-evidence context --help
+```
+
+This route does not inspect source material. It accepts only the closed
+anonymized technical-evidence contract, rejects paths, names, source text,
+credentials, business terms, and unsupported fields, and applies deterministic
+node, edge, and token bounds. The result is local-only prompt context with
+opaque identifiers, generic technical relations, explicit warning codes, and
+bounded omissions. It is not a process catalog or a business interpretation.
+
 ## Business-process projection
 
 For the process-intelligence vertical slice, first locate or generate an

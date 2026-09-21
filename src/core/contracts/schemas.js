@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 
 const CONTRACT_IDS = require('./contractIds');
+const {
+  TECHNICAL_EVIDENCE_CONTEXT_SCHEMA_VERSION,
+  validateTechnicalEvidenceContext,
+} = require('../../context/technicalEvidenceContext');
 
 /**
  * Basic header validator used by all initial shells.
@@ -305,6 +309,11 @@ const INITIAL_SCHEMAS = Object.freeze({
   [CONTRACT_IDS.EVIDENCE_MODEL]: { version: 1, schema: evidenceModelSchema },
   [CONTRACT_IDS.EVIDENCE_GRAPH]: { version: 1, schema: evidenceGraphSchema },
   [CONTRACT_IDS.CONTEXT_PLAN]: { version: 1, schema: contextPlanSchema },
+  [CONTRACT_IDS.TECHNICAL_EVIDENCE_CONTEXT]: {
+    version: TECHNICAL_EVIDENCE_CONTEXT_SCHEMA_VERSION,
+    schema: value =>
+      validateTechnicalEvidenceContext(value).map(message => ({ path: '', message })),
+  },
   [CONTRACT_IDS.RUN_MANIFEST]: { version: 1, schema: runManifestSchema },
   [CONTRACT_IDS.ARTIFACT_REFERENCE]: { version: 1, schema: artifactReferenceSchema },
   [CONTRACT_IDS.INVESTIGATION_SESSION]: { version: 1, schema: investigationSessionSchema },

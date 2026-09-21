@@ -61,3 +61,14 @@ publish it, or use it as a process catalog. Any later process-candidate work
 must consume a separate sanitized fixture, preserve uncertainty, link only to
 anonymized evidence IDs, and pass the repository privacy, credential,
 portability, tracked-fixture, and release-integrity checks.
+
+For local prompt construction, use the generic handoff instead of passing graph
+data directly to a prompt:
+
+```text
+node cli/zeus.js technical-evidence context --help
+```
+
+That contract accepts only an already-anonymized graph, applies deterministic
+budgets, preserves uncertainty, and emits bounded local context. It never
+turns technical relationships into business meaning.

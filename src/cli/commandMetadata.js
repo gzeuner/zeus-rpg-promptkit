@@ -228,6 +228,26 @@ const COMMAND_UI_METADATA = Object.freeze([
     recommendedNextCommands: Object.freeze(['legacy-source', 'agent']),
   }),
   Object.freeze({
+    name: 'technical-evidence',
+    title: 'Technical Evidence Context',
+    summary: 'Project already-anonymized technical evidence into bounded local prompt context.',
+    category: 'context',
+    primaryUseCase:
+      'Reuse privacy-preserving technical relationships in prompts without accepting source text, paths, names, credentials, or business terms.',
+    requiredCapabilities: Object.freeze(['workspace']),
+    commonOptions: Object.freeze(['--input', '--out', '--goal-code']),
+    advancedOptions: Object.freeze([
+      '--target-id',
+      '--max-nodes',
+      '--max-edges',
+      '--token-budget',
+      '--json',
+    ]),
+    subcommands: Object.freeze(['context']),
+    outputArtifacts: Object.freeze(['.local/technical-evidence/context.json']),
+    recommendedNextCommands: Object.freeze(['context', 'agent']),
+  }),
+  Object.freeze({
     name: 'impact',
     title: 'Impact Analysis',
     summary: 'Build reverse-impact evidence for target programs or fields.',

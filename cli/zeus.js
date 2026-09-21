@@ -16,6 +16,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
 const { runAnalyze } = require('../src/cli/commands/analyzeCommand');
 const { runLegacySource } = require('../src/cli/commands/legacySourceCommand');
+const { runTechnicalEvidence } = require('../src/cli/commands/technicalEvidenceCommand');
 const { runImpact } = require('../src/cli/commands/impactCommand');
 const { runBundle } = require('../src/cli/commands/bundleCommand');
 const { runFetch } = require('../src/cli/commands/fetchCommand');
@@ -90,6 +91,9 @@ function printHelp() {
   );
   console.log(
     '  zeus legacy-source graph --source-root <local-root> [--inventory .local/legacy-source-inventory/inventory.json] [--out .local/legacy-source-inventory/evidence-graph.json] [--json]  # local-only anonymized evidence graph'
+  );
+  console.log(
+    '  zeus technical-evidence context --input <relative-anonymized-graph> [--out .local/technical-evidence/context.json] [--goal-code <code>] [--target-id <opaque-id[,opaque-id...]>] [--max-nodes <n>] [--max-edges <n>] [--token-budget <n>] [--json]  # local-only bounded prompt context'
   );
   console.log(
     '  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list] [--focus "<scope>"] [--search "<term>"] [--generate-prompt]  # Investigation session (focus, search, prompt gen)'
@@ -583,6 +587,11 @@ async function main() {
 
   if (command === 'legacy-source') {
     await runLegacySource(args);
+    return;
+  }
+
+  if (command === 'technical-evidence') {
+    await runTechnicalEvidence(args);
     return;
   }
 

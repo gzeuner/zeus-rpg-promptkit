@@ -228,6 +228,28 @@
       "example": "node cli/zeus.js legacy-source inventory --help"
     },
     {
+      "command": "technical-evidence",
+      "aliases": [],
+      "status": "stable",
+      "safety": "S1",
+      "scope": "Local anonymized evidence",
+      "sideEffects": [
+        "local-read",
+        "local-artifact-write"
+      ],
+      "availability": {
+        "cli": true,
+        "api": false,
+        "mcp": false
+      },
+      "capabilityId": null,
+      "subcommands": [
+        "context"
+      ],
+      "purpose": "Project an already-anonymized technical evidence graph into bounded local prompt context. The boundary rejects source text, paths, names, credentials, business terms, and unsupported fields.",
+      "example": "node cli/zeus.js technical-evidence context --help"
+    },
+    {
       "command": "investigate",
       "aliases": [
         "investigation"

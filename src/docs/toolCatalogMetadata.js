@@ -93,6 +93,14 @@ const COMMAND_METADATA = Object.freeze({
       'Read a local legacy-source tree without changing it and emit only anonymized inventory and technical evidence-graph aggregates. Raw paths, source text, credentials, and business terms are never emitted.',
     example: 'node cli/zeus.js legacy-source inventory --help',
   }),
+  'technical-evidence': Object.freeze({
+    safety: 'S1',
+    scope: 'Local anonymized evidence',
+    subcommands: ['context'],
+    purpose:
+      'Project an already-anonymized technical evidence graph into bounded local prompt context. The boundary rejects source text, paths, names, credentials, business terms, and unsupported fields.',
+    example: 'node cli/zeus.js technical-evidence context --help',
+  }),
   workflow: Object.freeze({
     safety: 'S1',
     scope: 'Local',
@@ -570,6 +578,13 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: ['local-read', 'local-artifact-write'],
     capabilityId: null,
   }),
+  'technical-evidence': catalogContract({
+    aliases: [],
+    status: 'stable',
+    availability: CLI_ONLY,
+    sideEffects: ['local-read', 'local-artifact-write'],
+    capabilityId: null,
+  }),
   workflow: catalogContract({
     aliases: [],
     status: 'stable',
@@ -886,6 +901,7 @@ const COMMAND_ORDER = Object.freeze([
   'spool-read',
   'analyze',
   'legacy-source',
+  'technical-evidence',
   'investigate',
   'workflow',
   'workflow run',
