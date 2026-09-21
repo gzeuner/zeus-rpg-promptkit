@@ -592,17 +592,15 @@ process is generated or published.
 
 The implementation and protected-branch verification are tracked in [PR #350](https://github.com/gzeuner/zeus-rpg-promptkit/pull/350).
 
-The next active roadmap item is Iteration 29: a cross-language legacy evidence
-graph. Later process-candidate extraction and reviewed process answers remain
-inactive until this technical evidence handoff is complete and explicitly
-approved:
+Iteration 29 is completed. Later process-candidate extraction and reviewed
+process answers remain inactive until this technical evidence handoff is
+explicitly approved:
 
-1. a cross-language legacy evidence graph;
-2. process-candidate extraction from job, program, data, and transaction flows;
-3. reviewed process descriptions and safe process-query answers built only from
+1. process-candidate extraction from job, program, data, and transaction flows;
+2. reviewed process descriptions and safe process-query answers built only from
    anonymized, evidence-linked artifacts.
 
-### Iteration 29 — Cross-language anonymized legacy evidence graph (in progress)
+### Iteration 29 — Cross-language anonymized legacy evidence graph (completed in PR #351)
 
 Build the smallest technical projection that can link RPG/RPGLE, CL, DDS,
 binder, and SQL evidence without exporting private identifiers or inferring
@@ -621,11 +619,11 @@ business processes:
 - keep the graph local-only and separate from process-candidate or process-query
   publication.
 
-Implementation is on the current feature branch through the CLI-only
-`legacy-source graph` route, with the contract documented in
-[`legacy-evidence-graph.md`](legacy-evidence-graph.md). The iteration remains
-in progress until the branch, protected checks, administrative merge, and main
-synchronization are complete.
+Implementation was delivered through [PR #351](https://github.com/gzeuner/zeus-rpg-promptkit/pull/351).
+Protected PR and main CI checks passed, main was synchronized at merge commit
+`2c7466324ed92d851314f31d6f12d1b6a6340fd7`, and the own feature branch was
+removed locally and remotely. The contract is documented in
+[`legacy-evidence-graph.md`](legacy-evidence-graph.md).
 
 The local verification run produced a read-only graph for 13,299 candidate
 files with 52,379 anonymized nodes and 134,028 anonymized edges. Privacy checks
