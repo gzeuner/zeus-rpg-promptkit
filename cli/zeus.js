@@ -15,6 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 
 const { runAnalyze } = require('../src/cli/commands/analyzeCommand');
+const { runLegacySource } = require('../src/cli/commands/legacySourceCommand');
 const { runImpact } = require('../src/cli/commands/impactCommand');
 const { runBundle } = require('../src/cli/commands/bundleCommand');
 const { runFetch } = require('../src/cli/commands/fetchCommand');
@@ -83,6 +84,9 @@ function printHelp() {
   console.log('Usage:');
   console.log(
     '  zeus [--config <path>] analyze --source <path> (--program <name> | --member <name>) [--profile <name>] [--out <path>] [--source-root <path>] [--schema <name>] [--library <name>] [--extensions .rpgle,.rpg] [--mode <name>] [--list-modes] [--list-diagnostic-packs] [--optimize-context] [--dense [lite|full|ultra]] [--prompt-max-tokens <n>] [--skip-db2-metadata] [--scan-ifs-paths] [--search-terms a,b] [--search-ignore path1,path2] [--search-max-results <n>] [--diagnostic-packs a,b] [--diagnostic-params k=v] [--host <hostname>] [--user <username>] [--password <password>] [--safe-sharing] [--with-known-facts] [--known-facts-profile <name>] [--known-facts-path <path>] [--emit-diagnostics] [--reproducible] [--test-data-limit <n>] [--skip-test-data] [--verbose] [--json]'
+  );
+  console.log(
+    '  zeus legacy-source inventory --source-root <local-root> [--out .local/legacy-source-inventory/inventory.json] [--json]  # local-only anonymized inventory'
   );
   console.log(
     '  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list] [--focus "<scope>"] [--search "<term>"] [--generate-prompt]  # Investigation session (focus, search, prompt gen)'
@@ -573,6 +577,11 @@ async function main() {
 
   autoLoadEnvironment(command, args);
   checkEnvLoaded(command, args);
+
+  if (command === 'legacy-source') {
+    await runLegacySource(args);
+    return;
+  }
 
   if (command === 'analyze') {
     await runAnalyze(args);

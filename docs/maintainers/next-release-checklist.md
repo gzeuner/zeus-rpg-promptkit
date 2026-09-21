@@ -102,6 +102,7 @@ Commercial re-pin complete.
 - [ ] Tool catalog regenerated if CLI surface or package version changed (`zeus docs:generate-catalog`)
 - [ ] Public claims guard still green
 - [ ] No private paths, secrets, customer data, or unapproved external-only code in the public tree
+- [ ] Confidential legacy-source artifacts contain only anonymized inventory/evidence and remain ignored local state
 - [ ] Release workflow builds **one** artifact and attests that artifact (no historical exception)
 - [ ] `gh attestation verify` uses only one of `--signer-workflow` / `--signer-repo` (mutually exclusive)
 

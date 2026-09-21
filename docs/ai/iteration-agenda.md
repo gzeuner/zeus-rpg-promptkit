@@ -1,7 +1,7 @@
 ---
 Title: Promptkit AI Iteration Agenda
 Description: Living backlog for making Zeus immediately understandable and usable by CLI-based AI agents.
-Last Updated: 2026-09-20
+Last Updated: 2026-09-21
 ---
 
 # Promptkit AI Iteration Agenda
@@ -522,9 +522,9 @@ workflow documentation, and
 audit, a green PR and main pipeline, and no credentials or private runtime
 values in the staged change. The merge commit is `d6a59f9`.
 
-The roadmap is paused after Iteration 27 until an explicit follow-up. The
-next proposed item is intentionally planning-only and is not being implemented
-without explicit approval.
+The roadmap was paused after Iteration 27. Iteration 28 is now active under an
+explicit follow-up and remains local-only until its protected-branch checks are
+complete.
 
 ### Iteration 27 — Neutral display-UI terminology (published 0.3.0-rc.2)
 
@@ -551,7 +551,7 @@ completed successfully, including quality gates, package, SBOM, checksums,
 attestation, exact-SHA tagging, and fresh-download verification. This closes
 Iteration 27; the release tag and assets must not be re-created or re-tagged.
 
-### Iteration 28 — Confidential legacy-source boundary and inventory (planned, not started)
+### Iteration 28 — Confidential legacy-source boundary and inventory (implemented in PR #350)
 
 The next proposed iteration uses real legacy source material only as a local
 learning input. It must establish a hard confidentiality boundary before any
@@ -582,6 +582,16 @@ local-only tests with synthetic canaries, secret/private-content scanning,
 portable path checks, deterministic rerun verification, and documentation of
 the safe handoff to the next iteration.
 
+Implementation in the current feature branch includes the CLI-only
+`legacy-source inventory` route, an HMAC-based local identity boundary,
+read-only traversal with strict decoding and symlink avoidance, metadata-only
+fallback for parser limitations, an incremental ignored cache, deterministic
+anonymized artifacts, synthetic privacy/credential canaries, generated catalog
+metadata, and the safe handoff documentation. No process catalog or business
+process is generated or published.
+
+The implementation and protected-branch verification are tracked in [PR #350](https://github.com/gzeuner/zeus-rpg-promptkit/pull/350).
+
 Possible follow-up iterations, still inactive until explicitly approved, are:
 
 1. a cross-language legacy evidence graph;
@@ -589,8 +599,8 @@ Possible follow-up iterations, still inactive until explicitly approved, are:
 3. reviewed process descriptions and safe process-query answers built only from
    anonymized, evidence-linked artifacts.
 
-The roadmap remains paused after Iteration 27. Iteration 28 is a planning item
-only and must not be implemented without explicit follow-up.
+After protected-branch verification, the roadmap will remain paused after
+Iteration 28. The next proposed items stay inactive until explicit approval:
 
 ## Business Process Intelligence vertical slice
 

@@ -85,6 +85,15 @@ const COMMAND_METADATA = Object.freeze({
     example:
       'node cli/zeus.js analyze --source ./rpg_sources --program ORDERPGM --out ./output --optimize-context --dense ultra --prompt-max-tokens 4000',
   }),
+  'legacy-source': Object.freeze({
+    safety: 'S1',
+    scope: 'Local source boundary',
+    subcommands: ['inventory'],
+    purpose:
+      'Read a local legacy-source tree without changing it and emit only anonymized inventory and evidence aggregates. Raw paths, source text, credentials, and business terms are never emitted.',
+    example:
+      'node cli/zeus.js legacy-source inventory --source-root <local-root> --out .local/legacy-source-inventory/inventory.json --json',
+  }),
   workflow: Object.freeze({
     safety: 'S1',
     scope: 'Local',
@@ -555,6 +564,13 @@ const COMMAND_CATALOG_CONTRACTS = Object.freeze({
     sideEffects: ['local-artifact-write'],
     capabilityId: 'analysis.analyze',
   }),
+  'legacy-source': catalogContract({
+    aliases: [],
+    status: 'experimental',
+    availability: CLI_ONLY,
+    sideEffects: ['local-read', 'local-artifact-write'],
+    capabilityId: null,
+  }),
   workflow: catalogContract({
     aliases: [],
     status: 'stable',
@@ -870,6 +886,7 @@ const COMMAND_ORDER = Object.freeze([
   'fetch-member',
   'spool-read',
   'analyze',
+  'legacy-source',
   'investigate',
   'workflow',
   'workflow run',

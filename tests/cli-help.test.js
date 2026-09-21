@@ -6,6 +6,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
+const { COMMAND_ORDER } = require('../src/docs/toolCatalogMetadata');
+
 const ROOT = path.resolve(__dirname, '..');
 const CLI = path.join(ROOT, 'cli', 'zeus.js');
 
@@ -83,7 +85,7 @@ test('tools guide provides a machine-readable AI first point to check', () => {
     'member',
     'sourceRoot',
   ]);
-  assert.equal(payload.commands.length, 53);
+  assert.equal(payload.commands.length, COMMAND_ORDER.length);
 });
 
 test('help lookalikes are not accepted as explicit top-level help', () => {

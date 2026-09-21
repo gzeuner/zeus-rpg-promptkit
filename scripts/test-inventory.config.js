@@ -88,6 +88,7 @@ module.exports = {
       'tests/project-intelligence-process-answer-drift.test.js',
       'tests/project-intelligence-process-answer-review.test.js',
       'tests/project-intelligence-process-review.test.js',
+      'tests/legacy-source-inventory.test.js',
       'tests/external-jdbc.test.js',
     ],
   },
