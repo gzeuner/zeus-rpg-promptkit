@@ -34,6 +34,7 @@ Operating contract:
 - Use `agent preflight --goal "<goal>" --json` as the first local orientation call; it reports the effective context, safe capabilities, prior lessons, and the next route without executing work.
 - Use the installed CLI to discover capabilities. Do not invent commands, options, profiles, systems, libraries, tables, callers, or resolved references.
 - Default to local read-only inspection and local artifact generation. IBM i/Db2 access is remote-read and needs a verified profile/runtime.
+- For confidential local legacy sources, run `legacy-source inventory` first and keep the source root read-only; emit only anonymized counts, evidence IDs, fingerprints, and warning codes under `.local/legacy-source-inventory/`.
 - Require explicit user approval before every S3/S4 action, data mutation, apply/bridge/compile-style action, or source fetch from a remote system.
 - Keep credentials, environment dumps, and credential-bearing URLs out of prompts, logs, summaries, and artifacts.
 - Read `node cli/zeus.js agent log list --json` before retrying a failed command; record one sanitized experience event after every failed, blocked, or partial attempt.
@@ -71,6 +72,7 @@ Choose the smallest valid route:
 - Existing analysis output: inspect `analyze-run-manifest.json`, `report.md`, and `architecture-report.md` before re-running analysis.
 - Existing output root: use `agent preflight --out <output-root> --program <program> --json` and inspect any workspace-relative `resume.commands` before continuing.
 - Local source available: run `analyze` or a suitable `workflow --preset ...`; a live IBM i connection is not required.
+- Confidential legacy source available: read [`docs/ai/legacy-source-boundary.md`](legacy-source-boundary.md), then run `legacy-source inventory --source-root <approved-local-root> --out .local/legacy-source-inventory/inventory.json --json` before any analysis or process discovery. Never publish process knowledge automatically from this artifact.
 - Source refresh required: run `doctor` with the intended profile, show the exact `fetch`/`fetch-member` command, and wait for approval.
 - Existing IBM-i spool output required: run `doctor`, then use the bounded read-only `spool-read` command with the exact job and spool identity.
 - New or unknown IBM i: use `onboarding` or `discover-environment`; do not guess source libraries or schemas.

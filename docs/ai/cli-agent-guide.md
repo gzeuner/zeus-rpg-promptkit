@@ -41,6 +41,22 @@ node cli/zeus.js tools describe <command> --json
 
 The bootstrap and command catalog are generated from the same command metadata that supports the other public surfaces. Documentation explains intent and safety; it does not override the installed CLI contract.
 
+## Confidential local legacy-source boundary
+
+When local legacy sources are available but must not leave the machine, use the
+experimental, CLI-only inventory route before analysis or process discovery:
+
+```text
+node cli/zeus.js legacy-source inventory --source-root <approved-local-root> --out .local/legacy-source-inventory/inventory.json --json
+```
+
+The input is read-only. The artifact contains generic counts, bounded aggregate
+evidence, anonymized IDs, fingerprints, and warning codes only. It does not
+contain source text, original paths, file names, credentials, business terms,
+or private mappings. A `needs-attention` result is handled through its warning
+codes and one sanitized experience record; parser limitations are never filled
+with guesses. See [`legacy-source-boundary.md`](legacy-source-boundary.md).
+
 ## Business-process projection
 
 For the process-intelligence vertical slice, first locate or generate an

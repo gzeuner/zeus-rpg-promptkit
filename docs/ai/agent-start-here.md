@@ -93,6 +93,19 @@ explicit glossary catalog to the query:
 The resolver distinguishes `resolved`, `ambiguous`, and `unknown`; never turn
 an ambiguous alias into a guessed process.
 
+For a local legacy-source tree that must remain confidential, establish the
+boundary before any analysis or process discovery:
+
+```text
+node cli/zeus.js legacy-source inventory --source-root <approved-local-root> --out .local/legacy-source-inventory/inventory.json --json
+```
+
+This route reads the source root without changing it and emits only anonymized
+counts, bounded feature evidence, fingerprints, and warning codes. It never
+prints source text, original paths, file names, credentials, business terms, or
+private mappings. Read [`legacy-source-boundary.md`](legacy-source-boundary.md)
+before using the artifact; it is an inventory boundary, not a process catalog.
+
 Use `agent evaluate --list --json` to see the sanitized self-evaluation corpus. After drafting a response, evaluate it with `--scenario <id> --response-file <relative-path>` before taking a non-trivial route. The score checks command selection, scope, evidence, safety gating, and experience logging without executing the response.
 
 For display-file UI migration and command discovery, read

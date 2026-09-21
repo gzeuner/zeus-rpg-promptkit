@@ -201,6 +201,21 @@ When a process query is incomplete, record the sanitized failure or correction
 with `process experience`; use `agent log` for non-process failures. Never copy
 credentials, private runtime values, or raw source content into either record.
 
+## Confidential source handoff
+
+Process intelligence must not be the first consumer of private legacy source.
+Establish the local-only boundary with:
+
+```text
+node cli/zeus.js legacy-source inventory --source-root <approved-local-root> --out .local/legacy-source-inventory/inventory.json --json
+```
+
+The inventory is a bounded, anonymized evidence artifact. It contains no raw
+source, original paths, file names, business terms, credentials, or reversible
+mapping. It is not a process catalog and must not be published or used to infer
+business meaning without a separate sanitized, evidence-linked review flow. See
+[`legacy-source-boundary.md`](legacy-source-boundary.md) for the full contract.
+
 ## Cross-catalog learning and promotion readiness
 
 Process improvement reports are intentionally local and review-only. When the

@@ -13,6 +13,12 @@ Only after those gates succeed may the workflow create a release tag targeting t
 source SHA and publish the verified tarball, SBOM, and checksum file. Required integrity failures
 are not suppressed, and an existing tag or release is never replaced.
 
+Confidential legacy-source inventories are local-only ignored artifacts. They
+must not be included in a package, release asset, public fixture, or process
+catalog. Any future release containing the boundary implementation must pass
+the anonymized-inventory, credential, private-content, tracked-fixture, and
+package-integrity checks on the same immutable source commit.
+
 ## Historical release-integrity exception: v0.2.0-beta.2
 
 Status: **ACCEPTED HISTORICAL EXCEPTION**

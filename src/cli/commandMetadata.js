@@ -210,6 +210,20 @@ const COMMAND_UI_METADATA = Object.freeze([
     recommendedNextCommands: Object.freeze(['serve', 'bundle', 'impact']),
   }),
   Object.freeze({
+    name: 'legacy-source',
+    title: 'Confidential Legacy Source Inventory',
+    summary:
+      'Read a local legacy-source tree and emit only bounded anonymized inventory and evidence artifacts.',
+    category: 'analyze',
+    primaryUseCase:
+      'Establish a privacy-preserving local source boundary before any further analysis or handoff.',
+    requiredCapabilities: Object.freeze(['workspace']),
+    commonOptions: Object.freeze(['--source-root', '--out']),
+    advancedOptions: Object.freeze(['--json']),
+    outputArtifacts: Object.freeze(['.local/legacy-source-inventory/inventory.json']),
+    recommendedNextCommands: Object.freeze(['agent', 'analyze']),
+  }),
+  Object.freeze({
     name: 'impact',
     title: 'Impact Analysis',
     summary: 'Build reverse-impact evidence for target programs or fields.',

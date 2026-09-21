@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const { createMcpServer } = require('../src/mcp/mcpServer');
 const { listMcpTools } = require('../src/mcp/mcpTools');
+const { COMMAND_ORDER } = require('../src/docs/toolCatalogMetadata');
 
 const ALL_TOOL_NAMES = listMcpTools().map(tool => tool.name);
 
@@ -80,7 +81,7 @@ test('mcp resources expose the same live AI orientation used by the CLI guide', 
   const orientation = JSON.parse(response.result.contents[0].text);
   assert.equal(orientation.schemaVersion, 1);
   assert.equal(orientation.firstPoint.mcp, 'zeus.agent.bootstrap (optional adapter)');
-  assert.equal(orientation.commands.length, 53);
+  assert.equal(orientation.commands.length, COMMAND_ORDER.length);
   assert.ok(orientation.workingContext.fields.includes('sourceFile'));
   assert.ok(orientation.intents.some(intent => intent.intent === 'remote-read'));
 });
