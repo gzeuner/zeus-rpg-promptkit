@@ -11,29 +11,19 @@ the public Promptkit repository. The source root is an explicitly supplied local
 directory. It is read-only input; it is never copied, published, committed, or
 included in a public process catalog.
 
-## Canonical CLI route
+## Canonical CLI discovery
 
-Use the CLI as the only required entrypoint:
-
-```text
-node cli/zeus.js legacy-source inventory \
-  --source-root <approved-local-root> \
-  --out .local/legacy-source-inventory/inventory.json \
-  --json
-```
-
-The source root may be outside the repository, but it is read-only. The output
-must stay below `.local/legacy-source-inventory/`. MCP is not required.
-
-After a successful inventory, the next bounded technical projection is:
+Use the CLI as the only required entrypoint and discover local argument details
+from its help output:
 
 ```text
-node cli/zeus.js legacy-source graph \
-  --source-root <approved-local-root> \
-  --inventory .local/legacy-source-inventory/inventory.json \
-  --out .local/legacy-source-inventory/evidence-graph.json \
-  --json
+node cli/zeus.js legacy-source inventory --help
+node cli/zeus.js legacy-source graph --help
 ```
+
+The source boundary is read-only and generated artifacts remain local ignored
+state. MCP is not required. Never copy local argument values into prompts,
+issues, documentation, PRs, or releases.
 
 The graph command re-reads the same local source boundary only to obtain parser
 evidence. It requires the matching anonymized inventory fingerprint and never
@@ -68,12 +58,12 @@ failure is isolated to that file and becomes a bounded warning; it never causes
 the agent to print the source or guess missing meaning. Strict UTF-8 decoding,
 symlink avoidance, and source/output non-overlap are enforced.
 
-The persisted inventory is deterministic for identical source bytes and salt.
+The persisted local inventory is deterministic for identical source bytes and salt.
 Incremental cache entries contain only an anonymized file ID, a content hash,
 source type, parser version, and aggregate summary. Cache hit/reprocess metrics
 remain transient CLI evidence and are not part of the persisted artifact.
 
-Graph nodes and edges are sorted before persistence. Repeating the graph command
+Graph nodes and edges are sorted before local persistence. Repeating the graph command
 with identical source bytes, inventory, and local salt produces the same graph
 fingerprint. The graph is bounded; a limit warning is a safe incomplete result,
 not permission to emit additional source detail.
@@ -84,9 +74,10 @@ The artifact is an inventory and evidence boundary, not a process description.
 The graph is a technical evidence projection, not a process description. Do not
 infer or publish business processes from either artifact. Any later extraction
 must use a separate sanitized fixture, preserve evidence and unknowns, and pass
-an explicit review gate. Before sharing or committing any derived artifact, run
-the repository privacy, credential, portability, tracked-fixture, and release
-integrity checks.
+an explicit review gate. The public repository contains only generic contracts,
+synthetic fixtures, and structural guards. Real-run derived artifacts are never
+shared or committed. Before using any local derived artifact, run the repository
+privacy, credential, portability, tracked-fixture, and release-integrity checks.
 
 If the command returns `needs-attention`, inspect only the stable warning codes
 and record one sanitized experience event. Do not retry an invalid command with
