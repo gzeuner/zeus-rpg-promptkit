@@ -250,7 +250,7 @@ function printHelp() {
     '  zeus project-knowledge <discover|status|create-project|full-index|query|...> [options] [--json]  # thin PI adapter; commercial ops when registered'
   );
   console.log(
-    '  zeus process <list|describe|query|impact|diff|glossary|experience|improvements|promotion-check> [options] [--json]  # local process retrieval and review-only learning'
+    '  zeus process <list|describe|query|impact|diff|glossary|experience|improvements|promotion-check|regression-check|drift-check|review> [options] [--json]  # local process retrieval and review-only learning'
   );
   console.log(
     '  Global module wiring (optional, explicit only): --built-in-modules <list|professional|enterprise> or --commercial-module <package-or-path>'
