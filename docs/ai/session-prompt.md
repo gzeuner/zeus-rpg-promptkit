@@ -34,7 +34,7 @@ Operating contract:
 - Use `agent preflight --goal "<goal>" --json` as the first local orientation call; it reports the effective context, safe capabilities, prior lessons, and the next route without executing work.
 - Use the installed CLI to discover capabilities. Do not invent commands, options, profiles, systems, libraries, tables, callers, or resolved references.
 - Default to local read-only inspection and local artifact generation. IBM i/Db2 access is remote-read and needs a verified profile/runtime.
-- For confidential local legacy sources, run `legacy-source inventory` first and keep the source boundary read-only; emit only generic anonymized technical evidence in local ignored state. The next technical-only step is `legacy-source graph`, which emits only HMAC IDs and generic evidence edges locally. Discover local argument values only in the CLI session; never copy them into prompts, logs, documentation, issues, PRs, or releases.
+- For confidential local legacy sources, run `legacy-source inventory` first and keep the source boundary read-only; emit only generic anonymized technical evidence in local ignored state. The next technical-only step is `legacy-source graph`, followed by `technical-evidence context` when a bounded prompt projection is needed. Discover local argument values only in the CLI session; never copy them into prompts, logs, documentation, issues, PRs, or releases.
 - Require explicit user approval before every S3/S4 action, data mutation, apply/bridge/compile-style action, or source fetch from a remote system.
 - Keep credentials, environment dumps, and credential-bearing URLs out of prompts, logs, summaries, and artifacts.
 - Read `node cli/zeus.js agent log list --json` before retrying a failed command; record one sanitized experience event after every failed, blocked, or partial attempt.
@@ -72,7 +72,7 @@ Choose the smallest valid route:
 - Existing analysis output: inspect `analyze-run-manifest.json`, `report.md`, and `architecture-report.md` before re-running analysis.
 - Existing output root: use `agent preflight --out <output-root> --program <program> --json` and inspect any workspace-relative `resume.commands` before continuing.
 - Local source available: run `analyze` or a suitable `workflow --preset ...`; a live IBM i connection is not required.
-- Confidential legacy source available: read [`docs/ai/legacy-source-boundary.md`](legacy-source-boundary.md), then use the CLI help for `legacy-source inventory` before any analysis or process discovery. After a safe inventory, use `legacy-source graph` only for local technical evidence linkage. Never publish process knowledge automatically from either artifact.
+- Confidential legacy source available: read [`docs/ai/legacy-source-boundary.md`](legacy-source-boundary.md), then use the CLI help for `legacy-source inventory` before any analysis or process discovery. After a safe inventory, use `legacy-source graph` only for local technical evidence linkage and `technical-evidence context` for a bounded prompt projection. Never publish process knowledge automatically from either artifact.
 - Source refresh required: run `doctor` with the intended profile, show the exact `fetch`/`fetch-member` command, and wait for approval.
 - Existing IBM-i spool output required: run `doctor`, then use the bounded read-only `spool-read` command with the exact job and spool identity.
 - New or unknown IBM i: use `onboarding` or `discover-environment`; do not guess source libraries or schemas.

@@ -134,6 +134,12 @@ const providers = createProviderNamespace();
 const { createSchemaRegistry } = require('../core/contracts');
 const { buildEvidenceGraph } = require('../analyze/evidenceGraphBuilder');
 const { buildContextPlan } = require('../analyze/graphGuidedContextPlanner');
+const {
+  buildTechnicalEvidenceContext,
+  validateTechnicalEvidenceContext,
+  TECHNICAL_EVIDENCE_CONTEXT_CONTRACT_ID,
+  TECHNICAL_EVIDENCE_CONTEXT_SCHEMA_VERSION,
+} = require('../context/technicalEvidenceContext');
 const schemaRegistry = createSchemaRegistry();
 
 // Seed the initial metadata shells from package 02 (additive, no migration)
@@ -857,6 +863,12 @@ const zeus = {
 
   // Evidence graph (typed projection foundation)
   buildEvidenceGraph,
+  buildTechnicalEvidenceContext,
+  validateTechnicalEvidenceContext,
+  technicalEvidenceContextContract: {
+    id: TECHNICAL_EVIDENCE_CONTEXT_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_CONTEXT_SCHEMA_VERSION,
+  },
 
   analyzers,
   mcpTools,
@@ -938,6 +950,12 @@ module.exports = {
 
   // Evidence graph builder (additive)
   buildEvidenceGraph,
+  buildTechnicalEvidenceContext,
+  validateTechnicalEvidenceContext,
+  technicalEvidenceContextContract: {
+    id: TECHNICAL_EVIDENCE_CONTEXT_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_CONTEXT_SCHEMA_VERSION,
+  },
 
   // Schema / contract foundation (package 02)
   createSchemaRegistry,

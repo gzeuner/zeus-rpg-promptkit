@@ -116,6 +116,16 @@ The graph exports only generic technical evidence locally. Read
 [`legacy-evidence-graph.md`](legacy-evidence-graph.md) before using it; it links
 technical evidence but does not publish process knowledge.
 
+For the reusable Promptkit projection, discover the generic local handoff:
+
+```text
+node cli/zeus.js technical-evidence context --help
+```
+
+It consumes only an already-anonymized graph and produces bounded local prompt
+context. It preserves uncertainty and opaque evidence identifiers but never
+accepts or emits source text, paths, names, credentials, or business meaning.
+
 Use `agent evaluate --list --json` to see the sanitized self-evaluation corpus. After drafting a response, evaluate it with `--scenario <id> --response-file <relative-path>` before taking a non-trivial route. The score checks command selection, scope, evidence, safety gating, and experience logging without executing the response.
 
 For display-file UI migration and command discovery, read

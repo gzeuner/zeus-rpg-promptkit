@@ -90,6 +90,7 @@ module.exports = {
       'tests/project-intelligence-process-review.test.js',
       'tests/legacy-source-inventory.test.js',
       'tests/legacy-source-evidence-graph.test.js',
+      'tests/technical-evidence-context.test.js',
       'tests/external-jdbc.test.js',
     ],
   },

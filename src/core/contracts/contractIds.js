@@ -20,6 +20,7 @@ module.exports = Object.freeze({
   EVIDENCE_MODEL: 'zeus.evidence-model',
   EVIDENCE_GRAPH: 'zeus.evidence-graph',
   CONTEXT_PLAN: 'zeus.context-plan',
+  TECHNICAL_EVIDENCE_CONTEXT: 'zeus.technical-evidence-context',
   RUN_MANIFEST: 'zeus.run-manifest',
   ARTIFACT_REFERENCE: 'zeus.artifact-reference',
   INVESTIGATION_SESSION: 'zeus.investigation-session',
