@@ -243,3 +243,36 @@ scenario keys and never copies questions, answer text, matched process IDs,
 source content, or absolute paths. See
 [`process-answer-drift.md`](process-answer-drift.md) for the stable blocker
 codes and safe follow-up.
+
+## Result-bound human review receipts
+
+Regression and evaluation artifacts can be checked against an optional local
+review receipt. Receipts are identity-bound to the corpus (when present),
+catalog fingerprint, evaluation ID, and the exact result fingerprint. They
+contain a hashed reviewer identity and never promote, deploy, or mutate the
+authoritative catalog.
+
+Record an explicit decision below `.zeus/`:
+
+```text
+node cli/zeus.js process review record \
+  --result .zeus/process-answer-regression.json \
+  --decision approve --reviewer <reviewer-id> \
+  --out .zeus/process-review-receipt.json --json
+```
+
+Check the receipt with one of three policies:
+
+```text
+node cli/zeus.js process review check \
+  --result .zeus/process-answer-regression.json \
+  --receipt .zeus/process-review-receipt.json \
+  --policy required --json
+```
+
+`off` is the default and reports that review is not required. `advisory`
+returns a warning for a missing, mismatched, rejected, future-dated, or stale
+receipt while keeping the command successful. `required` returns a blocked
+gate and a non-zero CLI result until a fresh approved receipt matches the exact
+result identity. Freshness defaults to 30 days and bounded retention to 90
+days; both windows can be overridden for local policy checks.

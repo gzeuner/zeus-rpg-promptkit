@@ -48,6 +48,12 @@ const {
   writeProcessAnswerReviewReceiptArtifact,
 } = require('../../agent/processAnswerReview');
 const {
+  DEFAULT_PROCESS_REVIEW_RECEIPT,
+  buildProcessReviewRecord,
+  checkProcessReview,
+  writeProcessReviewReceipt,
+} = require('../../agent/processReview');
+const {
   listGlossaryEntries,
   resolveGlossaryTerm,
   readGlossaryCatalog,
@@ -71,6 +77,7 @@ const OPERATIONS = new Set([
   'drift-review-summary',
   'drift-review-retention',
   'drift-review-receipt',
+  'review',
   'glossary',
 ]);
 
@@ -123,6 +130,12 @@ function printHelp() {
   );
   console.log(
     '  zeus process drift-review-receipt --history <.zeus/file.json> [--as-of <ISO-timestamp>] [--fresh-days <n>] [--retention-days <n>] [--out <.zeus/file.json>] [--json]'
+  );
+  console.log(
+    '  zeus process review record --result <.zeus/file.json> --decision <approve|reject|defer> --reviewer <id> [--reviewed-at <ISO-timestamp>] [--fresh-days <n>] [--retention-days <n>] [--out <.zeus/file.json>] [--json]'
+  );
+  console.log(
+    '  zeus process review check --result <.zeus/file.json> --receipt <.zeus/file.json> [--policy <off|advisory|required>] [--as-of <ISO-timestamp>] [--fresh-days <n>] [--retention-days <n>] [--json]'
   );
   console.log(
     '  zeus process glossary list --glossary <relative-path> [--only-applicable] [--json]'
@@ -367,6 +380,18 @@ function printHuman(operation, result) {
     if (result.artifact) console.log(`Artifact: ${result.artifact}`);
     return;
   }
+  if (operation === 'review record') {
+    console.log(`Process review receipt recorded: ${result.receiptId}`);
+    console.log(`Decision: ${result.decision}; result: ${result.resultPath}`);
+    if (result.artifact) console.log(`Artifact: ${result.artifact}`);
+    return;
+  }
+  if (operation === 'review check') {
+    console.log(`Process review check: ${result.status} (${result.policy})`);
+    console.log(`Gate passed: ${result.gatePassed}; result: ${result.resultPath}`);
+    if (result.blockers.length > 0) console.log(`Findings: ${result.blockers.join('; ')}`);
+    return;
+  }
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -398,7 +423,43 @@ function runProcess(args = {}) {
     const scope = scopeOptions(args);
     const freshness = freshnessOptions(args);
     const changedEvidence = changedEvidenceOptions(args);
-    if (operation === 'experience') {
+    if (operation === 'review') {
+      const suboperation = String(positional[1] || 'help')
+        .trim()
+        .toLowerCase();
+      outputOperation = `review ${suboperation}`;
+      if (!['record', 'check'].includes(suboperation)) {
+        printHelp();
+        const error = new Error(`unknown process review operation: ${suboperation}`);
+        error.code = 'PROCESS_REVIEW_OPERATION_UNKNOWN';
+        throw error;
+      }
+      if (suboperation === 'record') {
+        result = buildProcessReviewRecord({
+          cwd: process.cwd(),
+          result: requireValue(args, 'result'),
+          decision: requireValue(args, 'decision'),
+          reviewer: requireValue(args, 'reviewer'),
+          reviewedAt: args['reviewed-at'],
+          freshDays: args['fresh-days'],
+          retentionDays: args['retention-days'],
+        });
+        result.artifact = writeProcessReviewReceipt(result, {
+          cwd: process.cwd(),
+          out: args.out || DEFAULT_PROCESS_REVIEW_RECEIPT,
+        });
+      } else {
+        result = checkProcessReview({
+          cwd: process.cwd(),
+          result: requireValue(args, 'result'),
+          receipt: requireValue(args, 'receipt'),
+          policy: args.policy,
+          asOf: args['as-of'],
+          freshDays: args['fresh-days'],
+          retentionDays: args['retention-days'],
+        });
+      }
+    } else if (operation === 'experience') {
       result = recordProcessExperience({
         cwd: process.cwd(),
         experienceLog: args['experience-log'],
@@ -602,7 +663,9 @@ function runProcess(args = {}) {
     if (json.isJsonMode) json.print(outcome);
     else if (result.ok === false) console.error(`[${result.reasonCode}] ${result.message}`);
     else printHuman(outputOperation, result);
-    if (!outcome.ok) process.exitCode = 2;
+    if (!outcome.ok || (outputOperation === 'review check' && result.gatePassed === false)) {
+      process.exitCode = 2;
+    }
     return outcome;
   } catch (error) {
     const outcome = errorOutcome(operation, error);
