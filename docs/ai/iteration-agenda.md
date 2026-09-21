@@ -551,7 +551,7 @@ completed successfully, including quality gates, package, SBOM, checksums,
 attestation, exact-SHA tagging, and fresh-download verification. This closes
 Iteration 27; the release tag and assets must not be re-created or re-tagged.
 
-### Iteration 28 — Confidential legacy-source boundary and inventory (implemented, pending merge)
+### Iteration 28 — Confidential legacy-source boundary and inventory (implemented in PR #350)
 
 The next proposed iteration uses real legacy source material only as a local
 learning input. It must establish a hard confidentiality boundary before any
@@ -589,6 +589,8 @@ fallback for parser limitations, an incremental ignored cache, deterministic
 anonymized artifacts, synthetic privacy/credential canaries, generated catalog
 metadata, and the safe handoff documentation. No process catalog or business
 process is generated or published.
+
+The implementation and protected-branch verification are tracked in [PR #350](https://github.com/gzeuner/zeus-rpg-promptkit/pull/350).
 
 Possible follow-up iterations, still inactive until explicitly approved, are:
 
