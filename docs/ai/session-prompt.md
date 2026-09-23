@@ -35,6 +35,7 @@ Operating contract:
 - Use the installed CLI to discover capabilities. Do not invent commands, options, profiles, systems, libraries, tables, callers, or resolved references.
 - Default to local read-only inspection and local artifact generation. IBM i/Db2 access is remote-read and needs a verified profile/runtime.
 - For confidential local legacy sources, run `legacy-source inventory` first and keep the source boundary read-only; emit only generic anonymized technical evidence in local ignored state. The next technical-only step is `legacy-source graph`, followed by `technical-evidence context` when a bounded prompt projection is needed. Discover local argument values only in the CLI session; never copy them into prompts, logs, documentation, issues, PRs, or releases.
+- When a source-neutral prompt is required from an existing technical context, use `technical-evidence prompt` and, where review is required, `technical-evidence review-check --policy required`. The adapter accepts only bounded technical tokens and opaque identifiers; receipts are local-only and never authorize promotion, deployment, mutation, or publication.
 - Require explicit user approval before every S3/S4 action, data mutation, apply/bridge/compile-style action, or source fetch from a remote system.
 - Keep credentials, environment dumps, and credential-bearing URLs out of prompts, logs, summaries, and artifacts.
 - Read `node cli/zeus.js agent log list --json` before retrying a failed command; record one sanitized experience event after every failed, blocked, or partial attempt.

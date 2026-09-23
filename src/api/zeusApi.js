@@ -140,6 +140,19 @@ const {
   TECHNICAL_EVIDENCE_CONTEXT_CONTRACT_ID,
   TECHNICAL_EVIDENCE_CONTEXT_SCHEMA_VERSION,
 } = require('../context/technicalEvidenceContext');
+const {
+  buildTechnicalEvidencePrompt,
+  validateTechnicalEvidencePrompt,
+  TECHNICAL_EVIDENCE_PROMPT_CONTRACT_ID,
+  TECHNICAL_EVIDENCE_PROMPT_SCHEMA_VERSION,
+} = require('../prompt/technicalEvidencePromptAdapter');
+const {
+  buildTechnicalEvidenceReviewReceipt,
+  checkTechnicalEvidenceReview,
+  validateTechnicalEvidenceReviewReceipt,
+  TECHNICAL_EVIDENCE_REVIEW_CONTRACT_ID,
+  TECHNICAL_EVIDENCE_REVIEW_SCHEMA_VERSION,
+} = require('../context/technicalEvidenceReview');
 const schemaRegistry = createSchemaRegistry();
 
 // Seed the initial metadata shells from package 02 (additive, no migration)
@@ -869,6 +882,19 @@ const zeus = {
     id: TECHNICAL_EVIDENCE_CONTEXT_CONTRACT_ID,
     version: TECHNICAL_EVIDENCE_CONTEXT_SCHEMA_VERSION,
   },
+  buildTechnicalEvidencePrompt,
+  validateTechnicalEvidencePrompt,
+  technicalEvidencePromptContract: {
+    id: TECHNICAL_EVIDENCE_PROMPT_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_PROMPT_SCHEMA_VERSION,
+  },
+  buildTechnicalEvidenceReviewReceipt,
+  checkTechnicalEvidenceReview,
+  validateTechnicalEvidenceReviewReceipt,
+  technicalEvidenceReviewContract: {
+    id: TECHNICAL_EVIDENCE_REVIEW_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_REVIEW_SCHEMA_VERSION,
+  },
 
   analyzers,
   mcpTools,
@@ -955,6 +981,19 @@ module.exports = {
   technicalEvidenceContextContract: {
     id: TECHNICAL_EVIDENCE_CONTEXT_CONTRACT_ID,
     version: TECHNICAL_EVIDENCE_CONTEXT_SCHEMA_VERSION,
+  },
+  buildTechnicalEvidencePrompt,
+  validateTechnicalEvidencePrompt,
+  technicalEvidencePromptContract: {
+    id: TECHNICAL_EVIDENCE_PROMPT_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_PROMPT_SCHEMA_VERSION,
+  },
+  buildTechnicalEvidenceReviewReceipt,
+  checkTechnicalEvidenceReview,
+  validateTechnicalEvidenceReviewReceipt,
+  technicalEvidenceReviewContract: {
+    id: TECHNICAL_EVIDENCE_REVIEW_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_REVIEW_SCHEMA_VERSION,
   },
 
   // Schema / contract foundation (package 02)

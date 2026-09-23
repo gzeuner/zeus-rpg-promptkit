@@ -96,6 +96,15 @@ function printHelp() {
     '  zeus technical-evidence context --input <relative-anonymized-graph> [--out .local/technical-evidence/context.json] [--goal-code <code>] [--target-id <opaque-id[,opaque-id...]>] [--max-nodes <n>] [--max-edges <n>] [--token-budget <n>] [--json]  # local-only bounded prompt context'
   );
   console.log(
+    '  zeus technical-evidence prompt --context <relative-context> [--out .local/technical-evidence/prompt.json] [--max-tokens <n>] [--json]  # local-only source-neutral prompt'
+  );
+  console.log(
+    '  zeus technical-evidence review --context <relative-context> --prompt <relative-prompt> --decision <approve|reject|defer> --reviewer <local-reviewer> [--reviewed-at <ISO>] [--fresh-days <n>] [--out .local/technical-evidence/review.json] [--json]  # local-only receipt'
+  );
+  console.log(
+    '  zeus technical-evidence review-check --context <relative-context> --prompt <relative-prompt> --receipt <relative-receipt> [--policy <off|advisory|required>] [--as-of <ISO>] [--fresh-days <n>] [--json]  # local-only review gate'
+  );
+  console.log(
     '  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list] [--focus "<scope>"] [--search "<term>"] [--generate-prompt]  # Investigation session (focus, search, prompt gen)'
   );
   // Note: --dense now performs rank-aware selection + compaction (see Phase 1-3 impl)
