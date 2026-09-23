@@ -23,6 +23,8 @@ module.exports = Object.freeze({
   TECHNICAL_EVIDENCE_CONTEXT: 'zeus.technical-evidence-context',
   TECHNICAL_EVIDENCE_PROMPT: 'zeus.technical-evidence-prompt',
   TECHNICAL_EVIDENCE_REVIEW: 'zeus.technical-evidence-review',
+  TECHNICAL_EVIDENCE_PROMPT_REGRESSION: 'zeus.technical-evidence-prompt-regression',
+  TECHNICAL_EVIDENCE_EGRESS_CHECK: 'zeus.technical-evidence-egress-check',
   RUN_MANIFEST: 'zeus.run-manifest',
   ARTIFACT_REFERENCE: 'zeus.artifact-reference',
   INVESTIGATION_SESSION: 'zeus.investigation-session',

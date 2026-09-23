@@ -64,3 +64,33 @@ receipt is missing, mismatched, rejected, future-dated, or stale.
 
 Use synthetic fixtures for tests and examples. Keep local runtime artifacts
 outside committed or shared documentation.
+
+## Regression and egress gates
+
+Compare two local prompt envelopes before accepting a candidate:
+
+```text
+node cli/zeus.js technical-evidence regression \
+  --baseline <relative-prompt> \
+  --candidate <relative-prompt> \
+  --out <relative-regression> --json
+```
+
+The result is `pass` when the envelopes are equivalent, `changed` when a
+bounded difference requires local review, and `blocked` when a completeness
+regression, discarded warning, or missing boundary guard is detected. The
+result contains fingerprints and stable codes, never prompt content.
+
+Before any handoff, run the local-only egress check:
+
+```text
+node cli/zeus.js technical-evidence policy-check \
+  --prompt <relative-prompt> \
+  --trust-zone local \
+  --destination local-workspace \
+  --out <relative-egress-check> --json
+```
+
+Only the local workspace is allowed. Private-network and external destinations
+are blocked by the contract; provider handoff and external publication remain
+disabled.

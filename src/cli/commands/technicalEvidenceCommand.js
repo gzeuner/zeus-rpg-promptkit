@@ -27,11 +27,17 @@ const {
   buildTechnicalEvidenceReviewReceipt,
   checkTechnicalEvidenceReview,
 } = require('../../context/technicalEvidenceReview');
+const {
+  checkTechnicalEvidencePromptEgress,
+  evaluateTechnicalEvidencePromptRegression,
+} = require('../../prompt/technicalEvidencePolicy');
 
 const DEFAULT_INPUT = '.local/technical-evidence/evidence-graph.json';
 const DEFAULT_OUTPUT = '.local/technical-evidence/context.json';
 const DEFAULT_PROMPT_OUTPUT = '.local/technical-evidence/prompt.json';
 const DEFAULT_REVIEW_OUTPUT = '.local/technical-evidence/review.json';
+const DEFAULT_REGRESSION_OUTPUT = '.local/technical-evidence/regression.json';
+const DEFAULT_EGRESS_OUTPUT = '.local/technical-evidence/egress-check.json';
 
 function printHelp() {
   console.log('Technical evidence context commands (local-only):');
@@ -46,6 +52,12 @@ function printHelp() {
   );
   console.log(
     '  zeus technical-evidence review-check --context <relative-context> --prompt <relative-prompt> --receipt <relative-receipt> [--policy <off|advisory|required>] [--as-of <ISO>] [--fresh-days <n>] [--json]'
+  );
+  console.log(
+    `  zeus technical-evidence regression --baseline <relative-prompt> --candidate <relative-prompt> [--out ${DEFAULT_REGRESSION_OUTPUT}] [--json]`
+  );
+  console.log(
+    `  zeus technical-evidence policy-check --prompt <relative-prompt> [--trust-zone <local|private-network|external>] [--destination <local-workspace|private-network|external-provider>] [--out ${DEFAULT_EGRESS_OUTPUT}] [--json]`
   );
   console.log('');
   console.log('The input must already satisfy the anonymized technical-evidence boundary.');
@@ -159,7 +171,11 @@ async function runTechnicalEvidence(args = {}) {
     printHelp();
     return { ok: true, operation: 'help' };
   }
-  if (!['context', 'prompt', 'review', 'review-check'].includes(subcommand)) {
+  if (
+    !['context', 'prompt', 'review', 'review-check', 'regression', 'policy-check'].includes(
+      subcommand
+    )
+  ) {
     const result = resultForError({ code: 'TECHNICAL_EVIDENCE_INVALID_ARGUMENTS' });
     if (json.isJsonMode) json.print(result);
     else console.error(`[${result.reasonCode}] technical-evidence subcommand is required.`);
@@ -274,6 +290,82 @@ async function runTechnicalEvidence(args = {}) {
       };
       if (json.isJsonMode) json.print(result);
       else printHumanSummary(result);
+      return result;
+    }
+
+    if (subcommand === 'regression') {
+      const baselinePath = resolveWorkspaceFile(args.baseline, DEFAULT_PROMPT_OUTPUT);
+      const candidatePath = resolveWorkspaceFile(args.candidate, DEFAULT_PROMPT_OUTPUT);
+      const output = resolveWorkspaceFile(args.out, DEFAULT_REGRESSION_OUTPUT);
+      const regression = evaluateTechnicalEvidencePromptRegression({
+        baseline: readJsonArtifact(
+          baselinePath,
+          'TECHNICAL_EVIDENCE_REGRESSION_BASELINE_UNAVAILABLE'
+        ),
+        candidate: readJsonArtifact(
+          candidatePath,
+          'TECHNICAL_EVIDENCE_REGRESSION_CANDIDATE_UNAVAILABLE'
+        ),
+      });
+      writeLocalArtifact(output, regression);
+      const result = {
+        ok: true,
+        kind: 'technical-evidence-regression-result',
+        status: regression.status,
+        readOnly: true,
+        safety: {
+          level: 'S1',
+          approvalRequired: false,
+          sideEffects: ['local-read', 'local-artifact-write'],
+        },
+        scope: {
+          origin: 'local-anonymized-evidence',
+          pathDisclosure: 'none',
+          contentDisclosure: 'none',
+        },
+        regression,
+        artifacts: [output.relative],
+        warnings: [...regression.warnings, ...regression.blockers],
+        approvalRequired: false,
+      };
+      if (json.isJsonMode) json.print(result);
+      else printHumanSummary(result);
+      if (!regression.gatePassed) process.exitCode = 2;
+      return result;
+    }
+
+    if (subcommand === 'policy-check') {
+      const promptPath = resolveWorkspaceFile(args.prompt, DEFAULT_PROMPT_OUTPUT);
+      const output = resolveWorkspaceFile(args.out, DEFAULT_EGRESS_OUTPUT);
+      const egress = checkTechnicalEvidencePromptEgress({
+        prompt: readJsonArtifact(promptPath, 'TECHNICAL_EVIDENCE_EGRESS_PROMPT_UNAVAILABLE'),
+        trustZone: args['trust-zone'],
+        destination: args.destination,
+      });
+      writeLocalArtifact(output, egress);
+      const result = {
+        ok: true,
+        kind: 'technical-evidence-egress-result',
+        status: egress.status,
+        readOnly: true,
+        safety: {
+          level: 'S1',
+          approvalRequired: false,
+          sideEffects: ['local-read', 'local-artifact-write'],
+        },
+        scope: {
+          origin: 'local-anonymized-evidence',
+          pathDisclosure: 'none',
+          contentDisclosure: 'none',
+        },
+        egress,
+        artifacts: [output.relative],
+        warnings: egress.blockers,
+        approvalRequired: false,
+      };
+      if (json.isJsonMode) json.print(result);
+      else printHumanSummary(result);
+      if (!egress.gatePassed) process.exitCode = 2;
       return result;
     }
 

@@ -96,10 +96,10 @@ const COMMAND_METADATA = Object.freeze({
   'technical-evidence': Object.freeze({
     safety: 'S1',
     scope: 'Local anonymized evidence',
-    subcommands: ['context', 'prompt', 'review', 'review-check'],
+    subcommands: ['context', 'prompt', 'review', 'review-check', 'regression', 'policy-check'],
     purpose:
-      'Project already-anonymized technical evidence into a bounded source-neutral prompt and record/check local review receipts. The boundary rejects raw content, paths, names, credentials, business terms, and unsupported fields.',
-    example: 'node cli/zeus.js technical-evidence prompt --help',
+      'Project already-anonymized technical evidence into a bounded source-neutral prompt, check prompt regressions, and enforce a local-only egress gate. The boundary rejects raw content, paths, names, credentials, business terms, and unsupported fields.',
+    example: 'node cli/zeus.js technical-evidence policy-check --help',
   }),
   workflow: Object.freeze({
     safety: 'S1',
