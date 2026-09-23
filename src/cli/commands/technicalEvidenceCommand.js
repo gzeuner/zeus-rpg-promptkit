@@ -22,14 +22,30 @@ const {
   buildTechnicalEvidenceContext,
   TechnicalEvidenceContextError,
 } = require('../../context/technicalEvidenceContext');
+const { buildTechnicalEvidencePrompt } = require('../../prompt/technicalEvidencePromptAdapter');
+const {
+  buildTechnicalEvidenceReviewReceipt,
+  checkTechnicalEvidenceReview,
+} = require('../../context/technicalEvidenceReview');
 
 const DEFAULT_INPUT = '.local/technical-evidence/evidence-graph.json';
 const DEFAULT_OUTPUT = '.local/technical-evidence/context.json';
+const DEFAULT_PROMPT_OUTPUT = '.local/technical-evidence/prompt.json';
+const DEFAULT_REVIEW_OUTPUT = '.local/technical-evidence/review.json';
 
 function printHelp() {
   console.log('Technical evidence context commands (local-only):');
   console.log(
     `  zeus technical-evidence context --input <relative-anonymized-graph> [--out ${DEFAULT_OUTPUT}] [--goal-code <code>] [--target-id <opaque-id[,opaque-id...]>] [--max-nodes <n>] [--max-edges <n>] [--token-budget <n>] [--json]`
+  );
+  console.log(
+    `  zeus technical-evidence prompt --context <relative-context> [--out ${DEFAULT_PROMPT_OUTPUT}] [--max-tokens <n>] [--json]`
+  );
+  console.log(
+    `  zeus technical-evidence review --context <relative-context> --prompt <relative-prompt> --decision <approve|reject|defer> --reviewer <local-reviewer> [--reviewed-at <ISO>] [--fresh-days <n>] [--out ${DEFAULT_REVIEW_OUTPUT}] [--json]`
+  );
+  console.log(
+    '  zeus technical-evidence review-check --context <relative-context> --prompt <relative-prompt> --receipt <relative-receipt> [--policy <off|advisory|required>] [--as-of <ISO>] [--fresh-days <n>] [--json]'
   );
   console.log('');
   console.log('The input must already satisfy the anonymized technical-evidence boundary.');
@@ -78,6 +94,28 @@ function readEvidence(inputPath) {
   }
 }
 
+function readJsonArtifact(inputPath, code) {
+  let text;
+  try {
+    text = fs.readFileSync(inputPath.absolute, 'utf8');
+  } catch (_) {
+    throw new TechnicalEvidenceContextError(code, 'the required local artifact is unavailable');
+  }
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    throw new TechnicalEvidenceContextError(code, 'the required local artifact is not valid JSON');
+  }
+}
+
+function writeLocalArtifact(output, value) {
+  fs.mkdirSync(path.dirname(output.absolute), { recursive: true });
+  fs.writeFileSync(output.absolute, `${JSON.stringify(value, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+}
+
 function resultForError(error) {
   const reasonCode = error && error.code ? String(error.code) : 'TECHNICAL_EVIDENCE_CONTEXT_FAILED';
   return {
@@ -121,53 +159,139 @@ async function runTechnicalEvidence(args = {}) {
     printHelp();
     return { ok: true, operation: 'help' };
   }
-  if (subcommand !== 'context') {
+  if (!['context', 'prompt', 'review', 'review-check'].includes(subcommand)) {
     const result = resultForError({ code: 'TECHNICAL_EVIDENCE_INVALID_ARGUMENTS' });
     if (json.isJsonMode) json.print(result);
-    else console.error(`[${result.reasonCode}] technical-evidence context is required.`);
+    else console.error(`[${result.reasonCode}] technical-evidence subcommand is required.`);
     process.exitCode = 2;
     return result;
   }
 
   try {
-    const input = resolveWorkspaceFile(args.input, DEFAULT_INPUT);
-    const output = resolveWorkspaceFile(args.out, DEFAULT_OUTPUT);
-    const context = buildTechnicalEvidenceContext({
-      evidence: readEvidence(input),
-      goalCode: args['goal-code'],
-      targetIds: args['target-id'],
-      maxNodes: args['max-nodes'],
-      maxEdges: args['max-edges'],
-      tokenBudget: args['token-budget'],
-    });
-    fs.mkdirSync(path.dirname(output.absolute), { recursive: true });
-    fs.writeFileSync(output.absolute, `${JSON.stringify(context, null, 2)}\n`, {
-      encoding: 'utf8',
-      mode: 0o600,
-    });
-    const result = {
-      ok: true,
-      kind: 'technical-evidence-context-result',
-      status: context.uncertainty.complete ? 'ready' : 'needs-attention',
-      readOnly: true,
-      safety: {
-        level: 'S1',
+    if (subcommand === 'context') {
+      const input = resolveWorkspaceFile(args.input, DEFAULT_INPUT);
+      const output = resolveWorkspaceFile(args.out, DEFAULT_OUTPUT);
+      const context = buildTechnicalEvidenceContext({
+        evidence: readEvidence(input),
+        goalCode: args['goal-code'],
+        targetIds: args['target-id'],
+        maxNodes: args['max-nodes'],
+        maxEdges: args['max-edges'],
+        tokenBudget: args['token-budget'],
+      });
+      writeLocalArtifact(output, context);
+      const result = {
+        ok: true,
+        kind: 'technical-evidence-context-result',
+        status: context.uncertainty.complete ? 'ready' : 'needs-attention',
+        readOnly: true,
+        safety: {
+          level: 'S1',
+          approvalRequired: false,
+          sideEffects: ['local-read', 'local-artifact-write'],
+        },
+        scope: {
+          origin: 'local-anonymized-evidence',
+          pathDisclosure: 'none',
+          contentDisclosure: 'none',
+        },
+        context,
+        artifacts: [output.relative],
+        warnings: context.uncertainty.warningCodes,
+        nextCommands: ['node cli/zeus.js agent log summary --json'],
         approvalRequired: false,
-        sideEffects: ['local-read', 'local-artifact-write'],
-      },
-      scope: {
-        origin: 'local-anonymized-evidence',
-        pathDisclosure: 'none',
-        contentDisclosure: 'none',
-      },
-      context,
-      artifacts: [output.relative],
-      warnings: context.uncertainty.warningCodes,
-      nextCommands: ['node cli/zeus.js agent log summary --json'],
-      approvalRequired: false,
-    };
+      };
+      if (json.isJsonMode) json.print(result);
+      else printHumanSummary(result);
+      return result;
+    }
+
+    if (subcommand === 'prompt') {
+      const contextPath = resolveWorkspaceFile(args.context, DEFAULT_OUTPUT);
+      const output = resolveWorkspaceFile(args.out, DEFAULT_PROMPT_OUTPUT);
+      const prompt = buildTechnicalEvidencePrompt({
+        context: readJsonArtifact(contextPath, 'TECHNICAL_EVIDENCE_PROMPT_INPUT_UNAVAILABLE'),
+        maxTokens: args['max-tokens'],
+      });
+      writeLocalArtifact(output, prompt);
+      const result = {
+        ok: true,
+        kind: 'technical-evidence-prompt-result',
+        status: prompt.uncertainty.complete ? 'ready' : 'needs-attention',
+        readOnly: true,
+        safety: {
+          level: 'S1',
+          approvalRequired: false,
+          sideEffects: ['local-read', 'local-artifact-write'],
+        },
+        scope: {
+          origin: 'local-anonymized-evidence',
+          pathDisclosure: 'none',
+          contentDisclosure: 'none',
+        },
+        prompt,
+        artifacts: [output.relative],
+        warnings: prompt.uncertainty.warningCodes,
+        approvalRequired: false,
+      };
+      if (json.isJsonMode) json.print(result);
+      else printHumanSummary(result);
+      return result;
+    }
+
+    if (subcommand === 'review') {
+      const contextPath = resolveWorkspaceFile(args.context, DEFAULT_OUTPUT);
+      const promptPath = resolveWorkspaceFile(args.prompt, DEFAULT_PROMPT_OUTPUT);
+      const output = resolveWorkspaceFile(args.out, DEFAULT_REVIEW_OUTPUT);
+      const receipt = buildTechnicalEvidenceReviewReceipt({
+        context: readJsonArtifact(contextPath, 'TECHNICAL_EVIDENCE_REVIEW_CONTEXT_UNAVAILABLE'),
+        prompt: readJsonArtifact(promptPath, 'TECHNICAL_EVIDENCE_REVIEW_PROMPT_UNAVAILABLE'),
+        decision: args.decision,
+        reviewer: args.reviewer,
+        reviewedAt: args['reviewed-at'],
+        freshDays: args['fresh-days'],
+      });
+      writeLocalArtifact(output, receipt);
+      const result = {
+        ok: true,
+        kind: 'technical-evidence-review-result',
+        status: receipt.decision === 'approve' ? 'approved' : 'needs-attention',
+        readOnly: true,
+        safety: {
+          level: 'S1',
+          approvalRequired: false,
+          sideEffects: ['local-read', 'local-artifact-write'],
+        },
+        scope: {
+          origin: 'local-anonymized-evidence',
+          pathDisclosure: 'none',
+          contentDisclosure: 'none',
+        },
+        receipt,
+        artifacts: [output.relative],
+        warnings: receipt.decision === 'approve' ? [] : ['TECHNICAL_EVIDENCE_REVIEW_NOT_APPROVED'],
+        approvalRequired: false,
+      };
+      if (json.isJsonMode) json.print(result);
+      else printHumanSummary(result);
+      return result;
+    }
+
+    const contextPath = resolveWorkspaceFile(args.context, DEFAULT_OUTPUT);
+    const promptPath = resolveWorkspaceFile(args.prompt, DEFAULT_PROMPT_OUTPUT);
+    const receiptPath = resolveWorkspaceFile(args.receipt, DEFAULT_REVIEW_OUTPUT);
+    const receipt = readJsonArtifact(receiptPath, 'TECHNICAL_EVIDENCE_REVIEW_RECEIPT_UNAVAILABLE');
+    const result = checkTechnicalEvidenceReview({
+      context: readJsonArtifact(contextPath, 'TECHNICAL_EVIDENCE_REVIEW_CONTEXT_UNAVAILABLE'),
+      prompt: readJsonArtifact(promptPath, 'TECHNICAL_EVIDENCE_REVIEW_PROMPT_UNAVAILABLE'),
+      receipt,
+      policy: args.policy,
+      asOf: args['as-of'],
+      freshDays: args['fresh-days'],
+    });
     if (json.isJsonMode) json.print(result);
     else printHumanSummary(result);
+    if (!result.gatePassed) process.exitCode = 2;
     return result;
   } catch (error) {
     const result = resultForError(error);

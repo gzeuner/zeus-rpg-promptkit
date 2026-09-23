@@ -287,6 +287,25 @@ node cli/zeus.js analyze --source <source-root> --program <program> --out <outpu
 
 Use `--dense lite` for a smaller context, `full` for the normal balance, and `ultra` when prompt size is the primary constraint. Use `--skip-db2-metadata` when the task is explicitly local-only.
 
+### Source-neutral technical evidence prompts
+
+When a bounded technical evidence context already exists, use the dedicated
+adapter instead of a source-oriented prompt template:
+
+```text
+node cli/zeus.js technical-evidence prompt \
+  --context <relative-context> --out <relative-prompt> --json
+node cli/zeus.js technical-evidence review-check \
+  --context <relative-context> --prompt <relative-prompt> \
+  --receipt <relative-receipt> --policy required --json
+```
+
+The adapter accepts only opaque identifiers, generic technical tokens,
+relationship kinds, warning codes, and uncertainty. It rejects unsupported
+free-form fields and keeps all files inside the current workspace. Review
+receipts are exact-fingerprint, local-only gates; they never promote,
+deploy, mutate, or publish anything.
+
 ### Remote IBM i or Db2 evidence
 
 First validate the intended profile and routing:

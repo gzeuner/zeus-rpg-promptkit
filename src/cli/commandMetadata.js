@@ -230,7 +230,8 @@ const COMMAND_UI_METADATA = Object.freeze([
   Object.freeze({
     name: 'technical-evidence',
     title: 'Technical Evidence Context',
-    summary: 'Project already-anonymized technical evidence into bounded local prompt context.',
+    summary:
+      'Project already-anonymized technical evidence into bounded local prompt context and local review receipts.',
     category: 'context',
     primaryUseCase:
       'Reuse privacy-preserving technical relationships in prompts without accepting source text, paths, names, credentials, or business terms.',
@@ -241,11 +242,24 @@ const COMMAND_UI_METADATA = Object.freeze([
       '--max-nodes',
       '--max-edges',
       '--token-budget',
+      '--context',
+      '--prompt',
+      '--decision',
+      '--reviewer',
+      '--receipt',
+      '--policy',
+      '--as-of',
+      '--fresh-days',
+      '--max-tokens',
       '--json',
     ]),
-    subcommands: Object.freeze(['context']),
-    outputArtifacts: Object.freeze(['.local/technical-evidence/context.json']),
-    recommendedNextCommands: Object.freeze(['context', 'agent']),
+    subcommands: Object.freeze(['context', 'prompt', 'review', 'review-check']),
+    outputArtifacts: Object.freeze([
+      '.local/technical-evidence/context.json',
+      '.local/technical-evidence/prompt.json',
+      '.local/technical-evidence/review.json',
+    ]),
+    recommendedNextCommands: Object.freeze(['technical-evidence', 'agent']),
   }),
   Object.freeze({
     name: 'impact',
