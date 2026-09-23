@@ -689,8 +689,33 @@ The implementation provides `zeus.technical-evidence-prompt` and
 tokens, opaque identifiers, fingerprints, stable reason codes, and explicit
 uncertainty. No process catalog or business interpretation is generated.
 
-The next planned item is Iteration 32: local prompt regression and egress
-policy checks for the source-neutral technical evidence surface.
+### Iteration 32 — Local prompt regression and egress policy checks (implemented)
+
+Add deterministic local gates around the source-neutral technical evidence
+prompt surface:
+
+- compare baseline and candidate prompt envelopes by opaque fingerprints and
+  bounded metadata only;
+- classify prompt changes as pass, review-required change, or blocked
+  regression;
+- block completeness regressions, discarded warning codes, and missing prompt
+  boundary guards;
+- allow only local workspace destinations and block private-network or external
+  handoff targets;
+- expose both checks through the CLI and programmatic API with registered
+  contracts;
+- cover synthetic regression, privacy, credential, path-safety, and contract
+  registration tests.
+
+The implementation provides `zeus.technical-evidence-prompt-regression` and
+`zeus.technical-evidence-egress-check`. The CLI routes are
+`technical-evidence regression` and `technical-evidence policy-check`. Results
+contain only fingerprints, stable reason codes, bounded technical metadata,
+and explicit local-only decisions. No provider call, process publication,
+promotion, or deployment is performed.
+
+The next planned item is Iteration 33: local prompt bundle integrity and
+handoff receipts.
 
 ## Business Process Intelligence vertical slice
 

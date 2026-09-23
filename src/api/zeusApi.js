@@ -153,6 +153,16 @@ const {
   TECHNICAL_EVIDENCE_REVIEW_CONTRACT_ID,
   TECHNICAL_EVIDENCE_REVIEW_SCHEMA_VERSION,
 } = require('../context/technicalEvidenceReview');
+const {
+  checkTechnicalEvidencePromptEgress,
+  evaluateTechnicalEvidencePromptRegression,
+  validateTechnicalEvidencePromptEgress,
+  validateTechnicalEvidencePromptRegression,
+  TECHNICAL_EVIDENCE_EGRESS_CONTRACT_ID,
+  TECHNICAL_EVIDENCE_EGRESS_SCHEMA_VERSION,
+  TECHNICAL_EVIDENCE_REGRESSION_CONTRACT_ID,
+  TECHNICAL_EVIDENCE_REGRESSION_SCHEMA_VERSION,
+} = require('../prompt/technicalEvidencePolicy');
 const schemaRegistry = createSchemaRegistry();
 
 // Seed the initial metadata shells from package 02 (additive, no migration)
@@ -895,6 +905,18 @@ const zeus = {
     id: TECHNICAL_EVIDENCE_REVIEW_CONTRACT_ID,
     version: TECHNICAL_EVIDENCE_REVIEW_SCHEMA_VERSION,
   },
+  evaluateTechnicalEvidencePromptRegression,
+  validateTechnicalEvidencePromptRegression,
+  technicalEvidencePromptRegressionContract: {
+    id: TECHNICAL_EVIDENCE_REGRESSION_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_REGRESSION_SCHEMA_VERSION,
+  },
+  checkTechnicalEvidencePromptEgress,
+  validateTechnicalEvidencePromptEgress,
+  technicalEvidenceEgressContract: {
+    id: TECHNICAL_EVIDENCE_EGRESS_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_EGRESS_SCHEMA_VERSION,
+  },
 
   analyzers,
   mcpTools,
@@ -994,6 +1016,18 @@ module.exports = {
   technicalEvidenceReviewContract: {
     id: TECHNICAL_EVIDENCE_REVIEW_CONTRACT_ID,
     version: TECHNICAL_EVIDENCE_REVIEW_SCHEMA_VERSION,
+  },
+  evaluateTechnicalEvidencePromptRegression,
+  validateTechnicalEvidencePromptRegression,
+  technicalEvidencePromptRegressionContract: {
+    id: TECHNICAL_EVIDENCE_REGRESSION_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_REGRESSION_SCHEMA_VERSION,
+  },
+  checkTechnicalEvidencePromptEgress,
+  validateTechnicalEvidencePromptEgress,
+  technicalEvidenceEgressContract: {
+    id: TECHNICAL_EVIDENCE_EGRESS_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_EGRESS_SCHEMA_VERSION,
   },
 
   // Schema / contract foundation (package 02)

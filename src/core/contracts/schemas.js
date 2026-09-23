@@ -25,6 +25,12 @@ const {
   TECHNICAL_EVIDENCE_REVIEW_SCHEMA_VERSION,
   validateTechnicalEvidenceReviewReceipt,
 } = require('../../context/technicalEvidenceReview');
+const {
+  TECHNICAL_EVIDENCE_EGRESS_SCHEMA_VERSION,
+  TECHNICAL_EVIDENCE_REGRESSION_SCHEMA_VERSION,
+  validateTechnicalEvidencePromptEgress,
+  validateTechnicalEvidencePromptRegression,
+} = require('../../prompt/technicalEvidencePolicy');
 
 /**
  * Basic header validator used by all initial shells.
@@ -330,6 +336,16 @@ const INITIAL_SCHEMAS = Object.freeze({
     version: TECHNICAL_EVIDENCE_REVIEW_SCHEMA_VERSION,
     schema: value =>
       validateTechnicalEvidenceReviewReceipt(value).map(message => ({ path: '', message })),
+  },
+  [CONTRACT_IDS.TECHNICAL_EVIDENCE_PROMPT_REGRESSION]: {
+    version: TECHNICAL_EVIDENCE_REGRESSION_SCHEMA_VERSION,
+    schema: value =>
+      validateTechnicalEvidencePromptRegression(value).map(message => ({ path: '', message })),
+  },
+  [CONTRACT_IDS.TECHNICAL_EVIDENCE_EGRESS_CHECK]: {
+    version: TECHNICAL_EVIDENCE_EGRESS_SCHEMA_VERSION,
+    schema: value =>
+      validateTechnicalEvidencePromptEgress(value).map(message => ({ path: '', message })),
   },
   [CONTRACT_IDS.RUN_MANIFEST]: { version: 1, schema: runManifestSchema },
   [CONTRACT_IDS.ARTIFACT_REFERENCE]: { version: 1, schema: artifactReferenceSchema },

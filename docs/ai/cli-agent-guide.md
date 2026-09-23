@@ -306,6 +306,17 @@ free-form fields and keeps all files inside the current workspace. Review
 receipts are exact-fingerprint, local-only gates; they never promote,
 deploy, mutate, or publish anything.
 
+Before accepting a changed prompt envelope, run the local regression gate:
+
+```text
+node cli/zeus.js technical-evidence regression \
+  --baseline <relative-prompt> --candidate <relative-prompt> --json
+```
+
+Use `technical-evidence policy-check` with `--destination local-workspace`
+before any handoff. Non-local destinations are blocked and the result exposes
+only fingerprints and stable reason codes.
+
 ### Remote IBM i or Db2 evidence
 
 First validate the intended profile and routing:
