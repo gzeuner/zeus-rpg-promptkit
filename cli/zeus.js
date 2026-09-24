@@ -117,6 +117,9 @@ function printHelp() {
     '  zeus technical-evidence handoff --bundle <relative-bundle> --context <relative-context> --prompt <relative-prompt> --receipt <relative-review-receipt> [--policy required] [--as-of <ISO>] [--fresh-days <n>] [--out .local/technical-evidence/handoff-receipt.json] [--json]  # local-only handoff receipt'
   );
   console.log(
+    '  zeus technical-evidence bundle-check --bundle <relative-bundle> --context <relative-context> --prompt <relative-prompt> --regression <relative-regression> --egress <relative-egress> [--out .local/technical-evidence/bundle-check.json] [--json]  # local-only replay gate'
+  );
+  console.log(
     '  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list] [--focus "<scope>"] [--search "<term>"] [--generate-prompt]  # Investigation session (focus, search, prompt gen)'
   );
   // Note: --dense now performs rank-aware selection + compaction (see Phase 1-3 impl)

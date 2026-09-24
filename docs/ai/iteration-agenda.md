@@ -735,8 +735,25 @@ The implementation provides `zeus.technical-evidence-prompt-bundle` and
 only opaque fingerprints, gate decisions, stable blocker codes, and local-only
 constraints.
 
-The next planned item is Iteration 34: local bundle integrity and replay
-verification.
+### Iteration 34 — Local bundle integrity and replay verification (implemented)
+
+Add a deterministic local replay gate for prompt bundles:
+
+- rebuild the fingerprint-only bundle from the exact context, prompt, regression,
+  and egress artifacts;
+- compare bundle identity, artifact references, and bounded gate projections;
+- return stable mismatch codes and block tampered or stale bundle state;
+- keep the check read-only, local-only, source-neutral, and free of provider or
+  publication side effects;
+- cover deterministic replay, changed-input detection, contract registration,
+  CLI path safety, and synthetic privacy/credential canaries.
+
+The implementation provides `zeus.technical-evidence-bundle-check`. The CLI
+route is `technical-evidence bundle-check`. The result contains only bundle
+fingerprints, identity fingerprints, stable mismatch codes, and fixed local
+constraints.
+
+The next planned item is Iteration 35: deterministic local acceptance matrix.
 
 ## Business Process Intelligence vertical slice
 

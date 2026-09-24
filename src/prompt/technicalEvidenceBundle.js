@@ -31,6 +31,8 @@ const TECHNICAL_EVIDENCE_BUNDLE_SCHEMA_VERSION = 1;
 const TECHNICAL_EVIDENCE_BUNDLE_CONTRACT_ID = 'zeus.technical-evidence-prompt-bundle';
 const TECHNICAL_EVIDENCE_HANDOFF_SCHEMA_VERSION = 1;
 const TECHNICAL_EVIDENCE_HANDOFF_CONTRACT_ID = 'zeus.technical-evidence-handoff-receipt';
+const TECHNICAL_EVIDENCE_BUNDLE_CHECK_SCHEMA_VERSION = 1;
+const TECHNICAL_EVIDENCE_BUNDLE_CHECK_CONTRACT_ID = 'zeus.technical-evidence-bundle-check';
 const HANDOFF_DESTINATION = 'local-review';
 
 class TechnicalEvidenceBundleError extends Error {
@@ -302,6 +304,100 @@ function validateTechnicalEvidencePromptBundle(value) {
   return errors;
 }
 
+function bundleCheckFingerprint(bundle) {
+  return bundle && typeof bundle.bundleFingerprint === 'string' ? bundle.bundleFingerprint : null;
+}
+
+function buildTechnicalEvidencePromptBundleCheck({
+  bundle,
+  context,
+  prompt,
+  regression,
+  egress,
+} = {}) {
+  validatePromptInputs(context, prompt);
+  const bundleErrors = validateTechnicalEvidencePromptBundle(bundle);
+  if (bundleErrors.length > 0)
+    fail('TECHNICAL_EVIDENCE_BUNDLE_CHECK_BUNDLE_INVALID', 'prompt bundle is invalid');
+  const expected = buildTechnicalEvidencePromptBundle({
+    context,
+    prompt,
+    regression,
+    egress,
+  });
+  const mismatches = [];
+  if (bundle.identity.contextFingerprint !== expected.identity.contextFingerprint)
+    mismatches.push('CONTEXT_FINGERPRINT_MISMATCH');
+  if (bundle.identity.promptFingerprint !== expected.identity.promptFingerprint)
+    mismatches.push('PROMPT_FINGERPRINT_MISMATCH');
+  if (bundle.bundleFingerprint !== expected.bundleFingerprint)
+    mismatches.push('BUNDLE_FINGERPRINT_MISMATCH');
+  if (stableStringify(bundle.identity.artifacts) !== stableStringify(expected.identity.artifacts))
+    mismatches.push('ARTIFACT_REFERENCE_MISMATCH');
+  if (stableStringify(bundle.gates) !== stableStringify(expected.gates))
+    mismatches.push('GATE_PROJECTION_MISMATCH');
+  const uniqueMismatches = [...new Set(mismatches)].sort();
+  const verified = uniqueMismatches.length === 0;
+  return {
+    schemaVersion: TECHNICAL_EVIDENCE_BUNDLE_CHECK_SCHEMA_VERSION,
+    kind: 'zeus-technical-evidence-bundle-check',
+    contractId: TECHNICAL_EVIDENCE_BUNDLE_CHECK_CONTRACT_ID,
+    contractVersion: TECHNICAL_EVIDENCE_BUNDLE_CHECK_SCHEMA_VERSION,
+    readOnly: true,
+    localOnly: true,
+    status: verified ? 'pass' : 'blocked',
+    gatePassed: verified,
+    bundleFingerprint: bundleCheckFingerprint(bundle),
+    replayedBundleFingerprint: expected.bundleFingerprint,
+    identity: {
+      contextFingerprint: context.contextFingerprint,
+      promptFingerprint: prompt.promptFingerprint,
+    },
+    mismatches: uniqueMismatches,
+    externalPublicationAllowed: false,
+    providerHandoffAllowed: false,
+    automaticPromotion: false,
+    promotionAllowed: false,
+    nextSafeStep: verified
+      ? 'Keep the verified local check with the exact bundle inputs and rerun after any change.'
+      : 'Restore the exact local bundle inputs, rebuild the bundle, and rerun the local check.',
+  };
+}
+
+function validateTechnicalEvidencePromptBundleCheck(value) {
+  const errors = [];
+  if (!isObject(value)) return ['bundle check must be an object'];
+  if (value.schemaVersion !== TECHNICAL_EVIDENCE_BUNDLE_CHECK_SCHEMA_VERSION)
+    errors.push('schemaVersion is unsupported');
+  if (value.kind !== 'zeus-technical-evidence-bundle-check') errors.push('kind is invalid');
+  if (value.contractId !== TECHNICAL_EVIDENCE_BUNDLE_CHECK_CONTRACT_ID)
+    errors.push('contractId is invalid');
+  if (value.readOnly !== true || value.localOnly !== true)
+    errors.push('bundle check must be local-only and read-only');
+  if (!['pass', 'blocked'].includes(value.status)) errors.push('status is invalid');
+  if (value.gatePassed !== (value.status === 'pass'))
+    errors.push('gatePassed does not match status');
+  if (!/^bundle:[a-f0-9]{32}$/i.test(value.bundleFingerprint || ''))
+    errors.push('bundle fingerprint is invalid');
+  if (!/^bundle:[a-f0-9]{32}$/i.test(value.replayedBundleFingerprint || ''))
+    errors.push('replayed bundle fingerprint is invalid');
+  if (!isObject(value.identity)) errors.push('identity is required');
+  else {
+    if (!isFingerprint(value.identity.contextFingerprint))
+      errors.push('context fingerprint is invalid');
+    if (!isFingerprint(value.identity.promptFingerprint))
+      errors.push('prompt fingerprint is invalid');
+  }
+  if (!Array.isArray(value.mismatches) || value.mismatches.some(item => typeof item !== 'string'))
+    errors.push('mismatches are invalid');
+  if (value.externalPublicationAllowed !== false)
+    errors.push('external publication must be disabled');
+  if (value.providerHandoffAllowed !== false) errors.push('provider handoff must be disabled');
+  if (value.automaticPromotion !== false || value.promotionAllowed !== false)
+    errors.push('promotion must be disabled');
+  return errors;
+}
+
 function validateReviewCheck(review) {
   if (!isObject(review))
     fail('TECHNICAL_EVIDENCE_HANDOFF_REVIEW_INVALID', 'review check is required');
@@ -427,13 +523,17 @@ function validateTechnicalEvidenceHandoffReceipt(value) {
 
 module.exports = {
   HANDOFF_DESTINATION,
+  TECHNICAL_EVIDENCE_BUNDLE_CHECK_CONTRACT_ID,
+  TECHNICAL_EVIDENCE_BUNDLE_CHECK_SCHEMA_VERSION,
   TECHNICAL_EVIDENCE_BUNDLE_CONTRACT_ID,
   TECHNICAL_EVIDENCE_BUNDLE_SCHEMA_VERSION,
   TECHNICAL_EVIDENCE_HANDOFF_CONTRACT_ID,
   TECHNICAL_EVIDENCE_HANDOFF_SCHEMA_VERSION,
   TechnicalEvidenceBundleError,
   buildTechnicalEvidenceHandoffReceipt,
+  buildTechnicalEvidencePromptBundleCheck,
   buildTechnicalEvidencePromptBundle,
   validateTechnicalEvidenceHandoffReceipt,
+  validateTechnicalEvidencePromptBundleCheck,
   validateTechnicalEvidencePromptBundle,
 };

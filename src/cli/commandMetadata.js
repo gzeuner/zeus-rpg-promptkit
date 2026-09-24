@@ -269,6 +269,7 @@ const COMMAND_UI_METADATA = Object.freeze([
       'policy-check',
       'bundle',
       'handoff',
+      'bundle-check',
     ]),
     outputArtifacts: Object.freeze([
       '.local/technical-evidence/context.json',
@@ -278,6 +279,7 @@ const COMMAND_UI_METADATA = Object.freeze([
       '.local/technical-evidence/egress-check.json',
       '.local/technical-evidence/bundle.json',
       '.local/technical-evidence/handoff-receipt.json',
+      '.local/technical-evidence/bundle-check.json',
     ]),
     recommendedNextCommands: Object.freeze(['technical-evidence', 'agent']),
   }),

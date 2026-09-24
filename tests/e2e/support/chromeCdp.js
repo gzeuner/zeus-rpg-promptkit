@@ -86,7 +86,7 @@ async function stopChrome(child, userDataDir) {
   }
 }
 
-async function startChrome() {
+async function startChrome(retryAttempt = 0) {
   const browserPath = findChrome();
   if (!browserPath) {
     const error = new Error('Chrome/Chromium is not available for the GUI E2E module.');
@@ -225,6 +225,10 @@ async function startChrome() {
     };
   } catch (error) {
     await stopChrome(child, userDataDir);
+    if (retryAttempt === 0) {
+      await new Promise(resolve => setTimeout(resolve, 250));
+      return startChrome(retryAttempt + 1);
+    }
     throw error;
   }
 }
