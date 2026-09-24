@@ -550,7 +550,7 @@ function validateTechnicalEvidenceAcceptanceCheck(value) {
         errors.push('handoff status is invalid');
       if (typeof value.checks.handoff.handoffAllowed !== 'boolean')
         errors.push('handoff gate is invalid');
-      if (value.checks.handoff.reviewPolicy !== 'required')
+      if (!['off', 'advisory', 'required'].includes(value.checks.handoff.reviewPolicy))
         errors.push('handoff review policy is invalid');
       if (typeof value.checks.handoff.reviewStatus !== 'string')
         errors.push('handoff review status is invalid');

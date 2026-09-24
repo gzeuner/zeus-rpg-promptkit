@@ -40,6 +40,7 @@ Operating contract:
 - After both gates pass, use a fingerprint-only `technical-evidence bundle` and require `technical-evidence handoff --policy required`; never publish their contents or private runtime details.
 - Before relying on a retained bundle, run `technical-evidence bundle-check`; any mismatch is a local blocker and never a reason to expose the underlying content.
 - Before relying on the complete local evidence chain, run `technical-evidence acceptance-check`; require `accepted` with matching opaque fingerprints and treat every blocker as local-only review evidence.
+- When a bounded local review trail is needed, use `technical-evidence acceptance-history` with an explicit timestamp and limit; retain only fingerprints, statuses, and stable blocker codes.
 - Require explicit user approval before every S3/S4 action, data mutation, apply/bridge/compile-style action, or source fetch from a remote system.
 - Keep credentials, environment dumps, and credential-bearing URLs out of prompts, logs, summaries, and artifacts.
 - Read `node cli/zeus.js agent log list --json` before retrying a failed command; record one sanitized experience event after every failed, blocked, or partial attempt.

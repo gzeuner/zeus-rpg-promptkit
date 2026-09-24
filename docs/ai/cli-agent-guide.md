@@ -430,6 +430,15 @@ Require `accepted` and matching opaque fingerprints. This is a local decision
 only; it never authorizes provider handoff, publication, promotion, or
 deployment.
 
+When a bounded local review trail is useful, retain only acceptance metadata:
+
+```powershell
+node cli/zeus.js technical-evidence acceptance-history --help
+```
+
+Use an explicit timestamp and entry limit. Revalidate the history before reuse;
+it contains no underlying prompt or evidence content.
+
 After recording a failure or correction, inspect the reviewable improvement
 report:
 

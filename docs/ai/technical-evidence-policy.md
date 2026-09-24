@@ -93,3 +93,15 @@ stable blocker codes, and fixed local constraints. It never contains prompt or
 source content, private paths, names, credentials, or business terms, and it
 never authorizes provider handoff, external publication, promotion, or
 deployment.
+
+## Bounded local acceptance history
+
+`technical-evidence acceptance-history` records a bounded sequence of exact
+acceptance decisions for local review. Each entry contains only opaque
+fingerprints, identity fingerprints, status, an explicit timestamp, and stable
+blocker codes. Retention is oldest-first and bounded by an explicit limit.
+
+The history is local review evidence, not approval. It contains no prompt or
+source content, private paths, names, credentials, or business terms, and it
+never authorizes provider handoff, external publication, promotion, or
+deployment.

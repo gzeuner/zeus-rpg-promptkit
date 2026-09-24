@@ -151,3 +151,17 @@ node cli/zeus.js technical-evidence acceptance-check \
 The result is `accepted` only when the local regression, egress, replay, and
 required review gates agree on the same opaque identity. Otherwise it is
 `blocked` with stable codes and no underlying content.
+
+Retain a bounded local history when a review trail is useful:
+
+```text
+node cli/zeus.js technical-evidence acceptance-history \
+  --current .local/technical-evidence/acceptance-check.json \
+  --history .local/technical-evidence/acceptance-history.json \
+  --as-of 2026-09-24T15:00:00.000Z \
+  --max-entries 10 \
+  --out .local/technical-evidence/acceptance-history.json --json
+```
+
+The history retains only bounded fingerprints, statuses, timestamps, and
+stable blocker codes. It is local review evidence and never external approval.
