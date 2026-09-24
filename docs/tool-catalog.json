@@ -249,10 +249,12 @@
         "review",
         "review-check",
         "regression",
-        "policy-check"
+        "policy-check",
+        "bundle",
+        "handoff"
       ],
-      "purpose": "Project already-anonymized technical evidence into a bounded source-neutral prompt, check prompt regressions, and enforce a local-only egress gate. The boundary rejects raw content, paths, names, credentials, business terms, and unsupported fields.",
-      "example": "node cli/zeus.js technical-evidence policy-check --help"
+      "purpose": "Project already-anonymized technical evidence into a bounded source-neutral prompt, check prompt regressions, enforce a local-only egress gate, and create fingerprint-only bundles and local handoff receipts. The boundary rejects raw content, paths, names, credentials, business terms, and unsupported fields.",
+      "example": "node cli/zeus.js technical-evidence bundle --help"
     },
     {
       "command": "investigate",

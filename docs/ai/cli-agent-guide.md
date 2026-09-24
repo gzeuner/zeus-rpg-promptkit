@@ -399,6 +399,18 @@ node cli/zeus.js agent log --outcome failed --command "<safe-command>" --failure
 
 The default `.zeus/agent-experience.jsonl` is local and ignored by Git. The command stores structured, redacted fields only; never pass raw stdout/stderr, environment dumps, credentials, or credential-bearing URLs. Use stable failure codes so repeated problems can be identified and converted into better prompts, documentation, tests, or command contracts.
 
+For source-neutral technical evidence, create a fingerprint-only bundle only
+after the regression and local egress gates pass. Require an explicit local
+review before creating a handoff receipt:
+
+```powershell
+node cli/zeus.js technical-evidence bundle --help
+node cli/zeus.js technical-evidence handoff --help
+```
+
+These routes emit bounded local metadata only; they do not authorize provider
+handoff or publication.
+
 After recording a failure or correction, inspect the reviewable improvement
 report:
 

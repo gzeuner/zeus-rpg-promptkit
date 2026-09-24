@@ -163,6 +163,16 @@ const {
   TECHNICAL_EVIDENCE_REGRESSION_CONTRACT_ID,
   TECHNICAL_EVIDENCE_REGRESSION_SCHEMA_VERSION,
 } = require('../prompt/technicalEvidencePolicy');
+const {
+  buildTechnicalEvidenceHandoffReceipt,
+  buildTechnicalEvidencePromptBundle,
+  validateTechnicalEvidenceHandoffReceipt,
+  validateTechnicalEvidencePromptBundle,
+  TECHNICAL_EVIDENCE_BUNDLE_CONTRACT_ID,
+  TECHNICAL_EVIDENCE_BUNDLE_SCHEMA_VERSION,
+  TECHNICAL_EVIDENCE_HANDOFF_CONTRACT_ID,
+  TECHNICAL_EVIDENCE_HANDOFF_SCHEMA_VERSION,
+} = require('../prompt/technicalEvidenceBundle');
 const schemaRegistry = createSchemaRegistry();
 
 // Seed the initial metadata shells from package 02 (additive, no migration)
@@ -917,6 +927,18 @@ const zeus = {
     id: TECHNICAL_EVIDENCE_EGRESS_CONTRACT_ID,
     version: TECHNICAL_EVIDENCE_EGRESS_SCHEMA_VERSION,
   },
+  buildTechnicalEvidencePromptBundle,
+  validateTechnicalEvidencePromptBundle,
+  technicalEvidencePromptBundleContract: {
+    id: TECHNICAL_EVIDENCE_BUNDLE_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_BUNDLE_SCHEMA_VERSION,
+  },
+  buildTechnicalEvidenceHandoffReceipt,
+  validateTechnicalEvidenceHandoffReceipt,
+  technicalEvidenceHandoffContract: {
+    id: TECHNICAL_EVIDENCE_HANDOFF_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_HANDOFF_SCHEMA_VERSION,
+  },
 
   analyzers,
   mcpTools,
@@ -1028,6 +1050,18 @@ module.exports = {
   technicalEvidenceEgressContract: {
     id: TECHNICAL_EVIDENCE_EGRESS_CONTRACT_ID,
     version: TECHNICAL_EVIDENCE_EGRESS_SCHEMA_VERSION,
+  },
+  buildTechnicalEvidencePromptBundle,
+  validateTechnicalEvidencePromptBundle,
+  technicalEvidencePromptBundleContract: {
+    id: TECHNICAL_EVIDENCE_BUNDLE_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_BUNDLE_SCHEMA_VERSION,
+  },
+  buildTechnicalEvidenceHandoffReceipt,
+  validateTechnicalEvidenceHandoffReceipt,
+  technicalEvidenceHandoffContract: {
+    id: TECHNICAL_EVIDENCE_HANDOFF_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_HANDOFF_SCHEMA_VERSION,
   },
 
   // Schema / contract foundation (package 02)

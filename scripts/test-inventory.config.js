@@ -93,6 +93,7 @@ module.exports = {
       'tests/technical-evidence-context.test.js',
       'tests/technical-evidence-prompt-review.test.js',
       'tests/technical-evidence-policy.test.js',
+      'tests/technical-evidence-bundle.test.js',
       'tests/external-jdbc.test.js',
     ],
   },

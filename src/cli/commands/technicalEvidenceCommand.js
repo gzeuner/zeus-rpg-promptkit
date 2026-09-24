@@ -31,6 +31,10 @@ const {
   checkTechnicalEvidencePromptEgress,
   evaluateTechnicalEvidencePromptRegression,
 } = require('../../prompt/technicalEvidencePolicy');
+const {
+  buildTechnicalEvidenceHandoffReceipt,
+  buildTechnicalEvidencePromptBundle,
+} = require('../../prompt/technicalEvidenceBundle');
 
 const DEFAULT_INPUT = '.local/technical-evidence/evidence-graph.json';
 const DEFAULT_OUTPUT = '.local/technical-evidence/context.json';
@@ -38,6 +42,8 @@ const DEFAULT_PROMPT_OUTPUT = '.local/technical-evidence/prompt.json';
 const DEFAULT_REVIEW_OUTPUT = '.local/technical-evidence/review.json';
 const DEFAULT_REGRESSION_OUTPUT = '.local/technical-evidence/regression.json';
 const DEFAULT_EGRESS_OUTPUT = '.local/technical-evidence/egress-check.json';
+const DEFAULT_BUNDLE_OUTPUT = '.local/technical-evidence/bundle.json';
+const DEFAULT_HANDOFF_OUTPUT = '.local/technical-evidence/handoff-receipt.json';
 
 function printHelp() {
   console.log('Technical evidence context commands (local-only):');
@@ -58,6 +64,12 @@ function printHelp() {
   );
   console.log(
     `  zeus technical-evidence policy-check --prompt <relative-prompt> [--trust-zone <local|private-network|external>] [--destination <local-workspace|private-network|external-provider>] [--out ${DEFAULT_EGRESS_OUTPUT}] [--json]`
+  );
+  console.log(
+    `  zeus technical-evidence bundle --context <relative-context> --prompt <relative-prompt> --regression <relative-regression> --egress <relative-egress> [--out ${DEFAULT_BUNDLE_OUTPUT}] [--json]`
+  );
+  console.log(
+    `  zeus technical-evidence handoff --bundle <relative-bundle> --context <relative-context> --prompt <relative-prompt> --receipt <relative-review-receipt> [--policy required] [--as-of <ISO>] [--fresh-days <n>] [--out ${DEFAULT_HANDOFF_OUTPUT}] [--json]`
   );
   console.log('');
   console.log('The input must already satisfy the anonymized technical-evidence boundary.');
@@ -172,9 +184,16 @@ async function runTechnicalEvidence(args = {}) {
     return { ok: true, operation: 'help' };
   }
   if (
-    !['context', 'prompt', 'review', 'review-check', 'regression', 'policy-check'].includes(
-      subcommand
-    )
+    ![
+      'context',
+      'prompt',
+      'review',
+      'review-check',
+      'regression',
+      'policy-check',
+      'bundle',
+      'handoff',
+    ].includes(subcommand)
   ) {
     const result = resultForError({ code: 'TECHNICAL_EVIDENCE_INVALID_ARGUMENTS' });
     if (json.isJsonMode) json.print(result);
@@ -366,6 +385,100 @@ async function runTechnicalEvidence(args = {}) {
       if (json.isJsonMode) json.print(result);
       else printHumanSummary(result);
       if (!egress.gatePassed) process.exitCode = 2;
+      return result;
+    }
+
+    if (subcommand === 'bundle') {
+      const contextPath = resolveWorkspaceFile(args.context, DEFAULT_OUTPUT);
+      const promptPath = resolveWorkspaceFile(args.prompt, DEFAULT_PROMPT_OUTPUT);
+      const regressionPath = resolveWorkspaceFile(args.regression, DEFAULT_REGRESSION_OUTPUT);
+      const egressPath = resolveWorkspaceFile(args.egress, DEFAULT_EGRESS_OUTPUT);
+      const output = resolveWorkspaceFile(args.out, DEFAULT_BUNDLE_OUTPUT);
+      const bundle = buildTechnicalEvidencePromptBundle({
+        context: readJsonArtifact(contextPath, 'TECHNICAL_EVIDENCE_BUNDLE_CONTEXT_UNAVAILABLE'),
+        prompt: readJsonArtifact(promptPath, 'TECHNICAL_EVIDENCE_BUNDLE_PROMPT_UNAVAILABLE'),
+        regression: readJsonArtifact(
+          regressionPath,
+          'TECHNICAL_EVIDENCE_BUNDLE_REGRESSION_UNAVAILABLE'
+        ),
+        egress: readJsonArtifact(egressPath, 'TECHNICAL_EVIDENCE_BUNDLE_EGRESS_UNAVAILABLE'),
+      });
+      writeLocalArtifact(output, bundle);
+      const result = {
+        ok: true,
+        kind: 'technical-evidence-bundle-result',
+        status: bundle.status,
+        readOnly: true,
+        safety: {
+          level: 'S1',
+          approvalRequired: false,
+          sideEffects: ['local-read', 'local-artifact-write'],
+        },
+        scope: {
+          origin: 'local-anonymized-evidence',
+          pathDisclosure: 'none',
+          contentDisclosure: 'none',
+        },
+        bundle,
+        artifacts: [output.relative],
+        warnings: [
+          ...bundle.gates.regression.blockers,
+          ...bundle.gates.regression.warnings,
+          ...bundle.gates.egress.blockers,
+        ],
+        approvalRequired: false,
+      };
+      if (json.isJsonMode) json.print(result);
+      else printHumanSummary(result);
+      if (bundle.status !== 'ready') process.exitCode = 2;
+      return result;
+    }
+
+    if (subcommand === 'handoff') {
+      const bundlePath = resolveWorkspaceFile(args.bundle, DEFAULT_BUNDLE_OUTPUT);
+      const contextPath = resolveWorkspaceFile(args.context, DEFAULT_OUTPUT);
+      const promptPath = resolveWorkspaceFile(args.prompt, DEFAULT_PROMPT_OUTPUT);
+      const receiptPath = resolveWorkspaceFile(args.receipt, DEFAULT_REVIEW_OUTPUT);
+      const output = resolveWorkspaceFile(args.out, DEFAULT_HANDOFF_OUTPUT);
+      const bundle = readJsonArtifact(bundlePath, 'TECHNICAL_EVIDENCE_HANDOFF_BUNDLE_UNAVAILABLE');
+      const context = readJsonArtifact(
+        contextPath,
+        'TECHNICAL_EVIDENCE_HANDOFF_CONTEXT_UNAVAILABLE'
+      );
+      const prompt = readJsonArtifact(promptPath, 'TECHNICAL_EVIDENCE_HANDOFF_PROMPT_UNAVAILABLE');
+      const review = checkTechnicalEvidenceReview({
+        context,
+        prompt,
+        receipt: readJsonArtifact(receiptPath, 'TECHNICAL_EVIDENCE_HANDOFF_RECEIPT_UNAVAILABLE'),
+        policy: args.policy || 'required',
+        asOf: args['as-of'],
+        freshDays: args['fresh-days'],
+      });
+      const handoff = buildTechnicalEvidenceHandoffReceipt({ bundle, review });
+      writeLocalArtifact(output, handoff);
+      const result = {
+        ok: true,
+        kind: 'technical-evidence-handoff-result',
+        status: handoff.status,
+        readOnly: true,
+        safety: {
+          level: 'S1',
+          approvalRequired: false,
+          sideEffects: ['local-read', 'local-artifact-write'],
+        },
+        scope: {
+          origin: 'local-anonymized-evidence',
+          pathDisclosure: 'none',
+          contentDisclosure: 'none',
+        },
+        handoff,
+        artifacts: [output.relative],
+        warnings: handoff.blockers,
+        approvalRequired: false,
+      };
+      if (json.isJsonMode) json.print(result);
+      else printHumanSummary(result);
+      if (!handoff.handoffAllowed) process.exitCode = 2;
       return result;
     }
 
