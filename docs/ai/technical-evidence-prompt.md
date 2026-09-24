@@ -137,3 +137,17 @@ node cli/zeus.js technical-evidence bundle-check \
 
 The replay result is `pass` only for the exact local input set. Mismatches are
 stable, reviewable blockers and never disclose the changed content.
+
+Evaluate the complete local acceptance matrix only after the replay succeeds:
+
+```text
+node cli/zeus.js technical-evidence acceptance-check \
+  --bundle .local/technical-evidence/bundle.json \
+  --bundle-check .local/technical-evidence/bundle-check.json \
+  --handoff .local/technical-evidence/handoff-receipt.json \
+  --out .local/technical-evidence/acceptance-check.json --json
+```
+
+The result is `accepted` only when the local regression, egress, replay, and
+required review gates agree on the same opaque identity. Otherwise it is
+`blocked` with stable codes and no underlying content.
