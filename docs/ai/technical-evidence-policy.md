@@ -80,3 +80,16 @@ The check returns `pass` only when the replay is byte-independent but
 contract-equivalent. Any changed input or tampered projection returns stable
 mismatch codes and blocks the gate. The check never authorizes publication,
 provider handoff, promotion, or deployment.
+
+## Local acceptance matrix
+
+`technical-evidence acceptance-check` composes the ready bundle, passing replay
+check, local regression and egress gates, and accepted handoff receipt into one
+deterministic local decision. It returns `accepted` only when every required
+gate is satisfied and the fingerprints agree.
+
+The result contains only identity and bundle fingerprints, gate projections,
+stable blocker codes, and fixed local constraints. It never contains prompt or
+source content, private paths, names, credentials, or business terms, and it
+never authorizes provider handoff, external publication, promotion, or
+deployment.

@@ -164,12 +164,16 @@ const {
   TECHNICAL_EVIDENCE_REGRESSION_SCHEMA_VERSION,
 } = require('../prompt/technicalEvidencePolicy');
 const {
+  buildTechnicalEvidenceAcceptanceCheck,
   buildTechnicalEvidencePromptBundleCheck,
   buildTechnicalEvidenceHandoffReceipt,
   buildTechnicalEvidencePromptBundle,
+  validateTechnicalEvidenceAcceptanceCheck,
   validateTechnicalEvidencePromptBundleCheck,
   validateTechnicalEvidenceHandoffReceipt,
   validateTechnicalEvidencePromptBundle,
+  TECHNICAL_EVIDENCE_ACCEPTANCE_CONTRACT_ID,
+  TECHNICAL_EVIDENCE_ACCEPTANCE_SCHEMA_VERSION,
   TECHNICAL_EVIDENCE_BUNDLE_CHECK_CONTRACT_ID,
   TECHNICAL_EVIDENCE_BUNDLE_CHECK_SCHEMA_VERSION,
   TECHNICAL_EVIDENCE_BUNDLE_CONTRACT_ID,
@@ -949,6 +953,12 @@ const zeus = {
     id: TECHNICAL_EVIDENCE_BUNDLE_CHECK_CONTRACT_ID,
     version: TECHNICAL_EVIDENCE_BUNDLE_CHECK_SCHEMA_VERSION,
   },
+  buildTechnicalEvidenceAcceptanceCheck,
+  validateTechnicalEvidenceAcceptanceCheck,
+  technicalEvidenceAcceptanceContract: {
+    id: TECHNICAL_EVIDENCE_ACCEPTANCE_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_ACCEPTANCE_SCHEMA_VERSION,
+  },
 
   analyzers,
   mcpTools,
@@ -1078,6 +1088,12 @@ module.exports = {
   technicalEvidenceBundleCheckContract: {
     id: TECHNICAL_EVIDENCE_BUNDLE_CHECK_CONTRACT_ID,
     version: TECHNICAL_EVIDENCE_BUNDLE_CHECK_SCHEMA_VERSION,
+  },
+  buildTechnicalEvidenceAcceptanceCheck,
+  validateTechnicalEvidenceAcceptanceCheck,
+  technicalEvidenceAcceptanceContract: {
+    id: TECHNICAL_EVIDENCE_ACCEPTANCE_CONTRACT_ID,
+    version: TECHNICAL_EVIDENCE_ACCEPTANCE_SCHEMA_VERSION,
   },
 
   // Schema / contract foundation (package 02)

@@ -35,6 +35,8 @@ const {
   TECHNICAL_EVIDENCE_BUNDLE_CHECK_SCHEMA_VERSION,
   TECHNICAL_EVIDENCE_BUNDLE_SCHEMA_VERSION,
   TECHNICAL_EVIDENCE_HANDOFF_SCHEMA_VERSION,
+  TECHNICAL_EVIDENCE_ACCEPTANCE_SCHEMA_VERSION,
+  validateTechnicalEvidenceAcceptanceCheck,
   validateTechnicalEvidencePromptBundleCheck,
   validateTechnicalEvidenceHandoffReceipt,
   validateTechnicalEvidencePromptBundle,
@@ -369,6 +371,11 @@ const INITIAL_SCHEMAS = Object.freeze({
     version: TECHNICAL_EVIDENCE_BUNDLE_CHECK_SCHEMA_VERSION,
     schema: value =>
       validateTechnicalEvidencePromptBundleCheck(value).map(message => ({ path: '', message })),
+  },
+  [CONTRACT_IDS.TECHNICAL_EVIDENCE_ACCEPTANCE_CHECK]: {
+    version: TECHNICAL_EVIDENCE_ACCEPTANCE_SCHEMA_VERSION,
+    schema: value =>
+      validateTechnicalEvidenceAcceptanceCheck(value).map(message => ({ path: '', message })),
   },
   [CONTRACT_IDS.RUN_MANIFEST]: { version: 1, schema: runManifestSchema },
   [CONTRACT_IDS.ARTIFACT_REFERENCE]: { version: 1, schema: artifactReferenceSchema },

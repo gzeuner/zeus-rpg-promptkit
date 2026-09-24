@@ -753,7 +753,27 @@ route is `technical-evidence bundle-check`. The result contains only bundle
 fingerprints, identity fingerprints, stable mismatch codes, and fixed local
 constraints.
 
-The next planned item is Iteration 35: deterministic local acceptance matrix.
+### Iteration 35 — Deterministic local acceptance matrix (implemented)
+
+Add a final local acceptance gate that composes the existing fingerprint-only
+contracts without reading or emitting underlying content:
+
+- require a ready bundle with passing regression and local egress gates;
+- require a passing bundle replay check bound to the exact bundle fingerprint;
+- require an accepted handoff receipt with a required approved local review;
+- return only stable blocker codes, identity fingerprints, and fixed local
+  constraints;
+- keep provider handoff, external publication, promotion, and deployment
+  disabled;
+- cover accepted and blocked matrices, contract registration, CLI path safety,
+  and synthetic privacy/credential canaries.
+
+The implementation provides `zeus.technical-evidence-acceptance-check`. The CLI
+route is `technical-evidence acceptance-check`. It is a local acceptance
+decision for exact anonymized artifacts, not authorization for any external
+action.
+
+The next planned item is Iteration 36: bounded local acceptance history.
 
 ## Business Process Intelligence vertical slice
 

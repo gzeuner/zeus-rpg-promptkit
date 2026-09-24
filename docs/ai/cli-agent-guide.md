@@ -419,6 +419,17 @@ node cli/zeus.js technical-evidence bundle-check --help
 
 Treat any mismatch as a blocking local integrity finding.
 
+Before relying on the complete local evidence chain, evaluate its final
+acceptance matrix:
+
+```powershell
+node cli/zeus.js technical-evidence acceptance-check --help
+```
+
+Require `accepted` and matching opaque fingerprints. This is a local decision
+only; it never authorizes provider handoff, publication, promotion, or
+deployment.
+
 After recording a failure or correction, inspect the reviewable improvement
 report:
 

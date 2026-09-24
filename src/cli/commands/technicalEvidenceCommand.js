@@ -32,6 +32,7 @@ const {
   evaluateTechnicalEvidencePromptRegression,
 } = require('../../prompt/technicalEvidencePolicy');
 const {
+  buildTechnicalEvidenceAcceptanceCheck,
   buildTechnicalEvidencePromptBundleCheck,
   buildTechnicalEvidenceHandoffReceipt,
   buildTechnicalEvidencePromptBundle,
@@ -46,6 +47,7 @@ const DEFAULT_EGRESS_OUTPUT = '.local/technical-evidence/egress-check.json';
 const DEFAULT_BUNDLE_OUTPUT = '.local/technical-evidence/bundle.json';
 const DEFAULT_HANDOFF_OUTPUT = '.local/technical-evidence/handoff-receipt.json';
 const DEFAULT_BUNDLE_CHECK_OUTPUT = '.local/technical-evidence/bundle-check.json';
+const DEFAULT_ACCEPTANCE_OUTPUT = '.local/technical-evidence/acceptance-check.json';
 
 function printHelp() {
   console.log('Technical evidence context commands (local-only):');
@@ -75,6 +77,9 @@ function printHelp() {
   );
   console.log(
     `  zeus technical-evidence bundle-check --bundle <relative-bundle> --context <relative-context> --prompt <relative-prompt> --regression <relative-regression> --egress <relative-egress> [--out ${DEFAULT_BUNDLE_CHECK_OUTPUT}] [--json]`
+  );
+  console.log(
+    `  zeus technical-evidence acceptance-check --bundle <relative-bundle> --bundle-check <relative-bundle-check> --handoff <relative-handoff> [--out ${DEFAULT_ACCEPTANCE_OUTPUT}] [--json]`
   );
   console.log('');
   console.log('The input must already satisfy the anonymized technical-evidence boundary.');
@@ -199,6 +204,7 @@ async function runTechnicalEvidence(args = {}) {
       'bundle',
       'handoff',
       'bundle-check',
+      'acceptance-check',
     ].includes(subcommand)
   ) {
     const result = resultForError({ code: 'TECHNICAL_EVIDENCE_INVALID_ARGUMENTS' });
@@ -532,6 +538,49 @@ async function runTechnicalEvidence(args = {}) {
       if (json.isJsonMode) json.print(result);
       else printHumanSummary(result);
       if (!check.gatePassed) process.exitCode = 2;
+      return result;
+    }
+
+    if (subcommand === 'acceptance-check') {
+      const bundlePath = resolveWorkspaceFile(args.bundle, DEFAULT_BUNDLE_OUTPUT);
+      const bundleCheckPath = resolveWorkspaceFile(
+        args['bundle-check'],
+        DEFAULT_BUNDLE_CHECK_OUTPUT
+      );
+      const handoffPath = resolveWorkspaceFile(args.handoff, DEFAULT_HANDOFF_OUTPUT);
+      const output = resolveWorkspaceFile(args.out, DEFAULT_ACCEPTANCE_OUTPUT);
+      const acceptance = buildTechnicalEvidenceAcceptanceCheck({
+        bundle: readJsonArtifact(bundlePath, 'TECHNICAL_EVIDENCE_ACCEPTANCE_BUNDLE_UNAVAILABLE'),
+        bundleCheck: readJsonArtifact(
+          bundleCheckPath,
+          'TECHNICAL_EVIDENCE_ACCEPTANCE_BUNDLE_CHECK_UNAVAILABLE'
+        ),
+        handoff: readJsonArtifact(handoffPath, 'TECHNICAL_EVIDENCE_ACCEPTANCE_HANDOFF_UNAVAILABLE'),
+      });
+      writeLocalArtifact(output, acceptance);
+      const result = {
+        ok: true,
+        kind: 'technical-evidence-acceptance-check-result',
+        status: acceptance.status,
+        readOnly: true,
+        safety: {
+          level: 'S1',
+          approvalRequired: false,
+          sideEffects: ['local-read', 'local-artifact-write'],
+        },
+        scope: {
+          origin: 'local-anonymized-evidence',
+          pathDisclosure: 'none',
+          contentDisclosure: 'none',
+        },
+        acceptance,
+        artifacts: [output.relative],
+        warnings: acceptance.blockers,
+        approvalRequired: false,
+      };
+      if (json.isJsonMode) json.print(result);
+      else printHumanSummary(result);
+      if (!acceptance.gatePassed) process.exitCode = 2;
       return result;
     }
 

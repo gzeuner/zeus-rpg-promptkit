@@ -18,9 +18,11 @@ const {
   evaluateTechnicalEvidencePromptRegression,
 } = require('../src/prompt/technicalEvidencePolicy');
 const {
+  buildTechnicalEvidenceAcceptanceCheck,
   buildTechnicalEvidencePromptBundleCheck,
   buildTechnicalEvidenceHandoffReceipt,
   buildTechnicalEvidencePromptBundle,
+  validateTechnicalEvidenceAcceptanceCheck,
   validateTechnicalEvidenceHandoffReceipt,
   validateTechnicalEvidencePromptBundleCheck,
   validateTechnicalEvidencePromptBundle,
@@ -187,6 +189,37 @@ test('handoff receipt requires a required approved local review', () => {
   assert.ok(advisory.blockers.includes('REVIEW_POLICY_REQUIRED'));
 });
 
+test('acceptance matrix requires matching local gates and stays source-neutral', () => {
+  const input = artifacts();
+  const bundle = buildTechnicalEvidencePromptBundle(input);
+  const bundleCheck = buildTechnicalEvidencePromptBundleCheck({ ...input, bundle });
+  const handoff = buildTechnicalEvidenceHandoffReceipt({ bundle, review: input.review });
+  const accepted = buildTechnicalEvidenceAcceptanceCheck({ bundle, bundleCheck, handoff });
+
+  assert.equal(accepted.status, 'accepted');
+  assert.equal(accepted.gatePassed, true);
+  assert.deepEqual(validateTechnicalEvidenceAcceptanceCheck(accepted), []);
+  assert.equal(accepted.externalPublicationAllowed, false);
+  assert.equal(accepted.providerHandoffAllowed, false);
+  assert.doesNotMatch(
+    JSON.stringify(accepted),
+    /synthetic-reviewer|private-name-canary|C:\\|SELECT\s+\*/i
+  );
+
+  const blockedHandoff = buildTechnicalEvidenceHandoffReceipt({
+    bundle,
+    review: { ...input.review, policy: 'advisory' },
+  });
+  const blocked = buildTechnicalEvidenceAcceptanceCheck({
+    bundle,
+    bundleCheck,
+    handoff: blockedHandoff,
+  });
+  assert.equal(blocked.status, 'blocked');
+  assert.equal(blocked.gatePassed, false);
+  assert.ok(blocked.blockers.includes('HANDOFF_BLOCKED'));
+});
+
 test('bundle and handoff contracts are registered and public', () => {
   const registry = createSchemaRegistry();
   for (const [id, definition] of Object.entries(INITIAL_SCHEMAS))
@@ -208,12 +241,21 @@ test('bundle and handoff contracts are registered and public', () => {
     registry.validate(CONTRACT_IDS.TECHNICAL_EVIDENCE_BUNDLE_CHECK, 1, bundleCheck).ok,
     true
   );
+  const acceptance = buildTechnicalEvidenceAcceptanceCheck({ bundle, bundleCheck, handoff });
+  assert.equal(
+    registry.validate(CONTRACT_IDS.TECHNICAL_EVIDENCE_ACCEPTANCE_CHECK, 1, acceptance).ok,
+    true
+  );
   assert.deepEqual(zeusApi.technicalEvidencePromptBundleContract, {
     id: 'zeus.technical-evidence-prompt-bundle',
     version: 1,
   });
   assert.deepEqual(zeusApi.technicalEvidenceHandoffContract, {
     id: 'zeus.technical-evidence-handoff-receipt',
+    version: 1,
+  });
+  assert.deepEqual(zeusApi.technicalEvidenceAcceptanceContract, {
+    id: 'zeus.technical-evidence-acceptance-check',
     version: 1,
   });
 });
@@ -301,6 +343,26 @@ test('CLI writes only local bundle and handoff metadata artifacts', () => {
     assert.equal(checkRun.status, 0, checkRun.stderr);
     assert.equal(JSON.parse(checkRun.stdout).status, 'pass');
     assert.deepEqual(JSON.parse(checkRun.stdout).artifacts, ['.local/bundle-check.json']);
+
+    const acceptanceRun = runCli(
+      [
+        'technical-evidence',
+        'acceptance-check',
+        '--bundle',
+        '.local/bundle.json',
+        '--bundle-check',
+        '.local/bundle-check.json',
+        '--handoff',
+        '.local/handoff.json',
+        '--out',
+        '.local/acceptance-check.json',
+        '--json',
+      ],
+      cwd
+    );
+    assert.equal(acceptanceRun.status, 0, acceptanceRun.stderr);
+    assert.equal(JSON.parse(acceptanceRun.stdout).status, 'accepted');
+    assert.deepEqual(JSON.parse(acceptanceRun.stdout).artifacts, ['.local/acceptance-check.json']);
 
     const unsafeRun = runCli(
       ['technical-evidence', 'handoff', '--bundle', path.join(cwd, 'bundle.json'), '--json'],
