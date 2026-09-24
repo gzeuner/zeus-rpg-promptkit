@@ -14,6 +14,10 @@ const {
 } = require('../src/context/technicalEvidenceReview');
 const { buildTechnicalEvidencePrompt } = require('../src/prompt/technicalEvidencePromptAdapter');
 const {
+  buildTechnicalEvidenceAcceptanceHistory,
+  validateTechnicalEvidenceAcceptanceHistory,
+} = require('../src/prompt/technicalEvidenceAcceptanceHistory');
+const {
   checkTechnicalEvidencePromptEgress,
   evaluateTechnicalEvidencePromptRegression,
 } = require('../src/prompt/technicalEvidencePolicy');
@@ -258,6 +262,71 @@ test('bundle and handoff contracts are registered and public', () => {
     id: 'zeus.technical-evidence-acceptance-check',
     version: 1,
   });
+  const history = buildTechnicalEvidenceAcceptanceHistory({
+    current: acceptance,
+    asOf: REVIEWED_AT,
+    maxEntries: 2,
+  });
+  assert.equal(
+    registry.validate(CONTRACT_IDS.TECHNICAL_EVIDENCE_ACCEPTANCE_HISTORY, 1, history).ok,
+    true
+  );
+  assert.deepEqual(zeusApi.technicalEvidenceAcceptanceHistoryContract, {
+    id: 'zeus.technical-evidence-acceptance-history',
+    version: 1,
+  });
+});
+
+test('acceptance history is deterministic, bounded, and tamper-evident', () => {
+  const input = artifacts();
+  const bundle = buildTechnicalEvidencePromptBundle(input);
+  const bundleCheck = buildTechnicalEvidencePromptBundleCheck({ ...input, bundle });
+  const handoff = buildTechnicalEvidenceHandoffReceipt({ bundle, review: input.review });
+  const acceptance = buildTechnicalEvidenceAcceptanceCheck({ bundle, bundleCheck, handoff });
+  const first = buildTechnicalEvidenceAcceptanceHistory({
+    current: acceptance,
+    asOf: REVIEWED_AT,
+    maxEntries: 1,
+  });
+  const repeat = buildTechnicalEvidenceAcceptanceHistory({
+    current: acceptance,
+    asOf: REVIEWED_AT,
+    maxEntries: 1,
+  });
+  assert.deepEqual(first, repeat);
+  assert.equal(first.entries.length, 1);
+  assert.equal(first.retention.truncatedCount, 0);
+  assert.deepEqual(validateTechnicalEvidenceAcceptanceHistory(first), []);
+
+  const blockedHandoff = buildTechnicalEvidenceHandoffReceipt({
+    bundle,
+    review: { ...input.review, policy: 'advisory' },
+  });
+  const blockedAcceptance = buildTechnicalEvidenceAcceptanceCheck({
+    bundle,
+    bundleCheck,
+    handoff: blockedHandoff,
+  });
+  const second = buildTechnicalEvidenceAcceptanceHistory({
+    current: blockedAcceptance,
+    previous: first,
+    asOf: '2026-09-25T12:00:00.000Z',
+    maxEntries: 1,
+  });
+  assert.equal(second.entries.length, 1);
+  assert.equal(second.retention.truncatedCount, 1);
+  assert.equal(second.latest.status, 'blocked');
+  assert.notDeepEqual(
+    validateTechnicalEvidenceAcceptanceHistory({
+      ...second,
+      latest: { ...second.latest, status: 'accepted' },
+    }),
+    []
+  );
+  assert.doesNotMatch(
+    JSON.stringify(second),
+    /synthetic-reviewer|private-name-canary|C:\\|SELECT\s+\*/i
+  );
 });
 
 test('CLI writes only local bundle and handoff metadata artifacts', () => {
@@ -363,6 +432,26 @@ test('CLI writes only local bundle and handoff metadata artifacts', () => {
     assert.equal(acceptanceRun.status, 0, acceptanceRun.stderr);
     assert.equal(JSON.parse(acceptanceRun.stdout).status, 'accepted');
     assert.deepEqual(JSON.parse(acceptanceRun.stdout).artifacts, ['.local/acceptance-check.json']);
+
+    const historyRun = runCli(
+      [
+        'technical-evidence',
+        'acceptance-history',
+        '--current',
+        '.local/acceptance-check.json',
+        '--as-of',
+        REVIEWED_AT,
+        '--max-entries',
+        '2',
+        '--out',
+        '.local/acceptance-history.json',
+        '--json',
+      ],
+      cwd
+    );
+    assert.equal(historyRun.status, 0, historyRun.stderr);
+    assert.equal(JSON.parse(historyRun.stdout).status, 'recorded');
+    assert.deepEqual(JSON.parse(historyRun.stdout).artifacts, ['.local/acceptance-history.json']);
 
     const unsafeRun = runCli(
       ['technical-evidence', 'handoff', '--bundle', path.join(cwd, 'bundle.json'), '--json'],

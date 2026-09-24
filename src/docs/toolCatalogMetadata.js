@@ -107,10 +107,11 @@ const COMMAND_METADATA = Object.freeze({
       'handoff',
       'bundle-check',
       'acceptance-check',
+      'acceptance-history',
     ],
     purpose:
-      'Project already-anonymized technical evidence into a bounded source-neutral prompt, check prompt regressions, enforce a local-only egress gate, create fingerprint-only bundles and local handoff receipts, replay bundles for integrity verification, and evaluate a final local acceptance matrix. The boundary rejects raw content, paths, names, credentials, business terms, and unsupported fields.',
-    example: 'node cli/zeus.js technical-evidence acceptance-check --help',
+      'Project already-anonymized technical evidence into a bounded source-neutral prompt, check prompt regressions, enforce a local-only egress gate, create fingerprint-only bundles and local handoff receipts, replay bundles for integrity verification, evaluate a final local acceptance matrix, and retain a bounded local acceptance history. The boundary rejects raw content, paths, names, credentials, business terms, and unsupported fields.',
+    example: 'node cli/zeus.js technical-evidence acceptance-history --help',
   }),
   workflow: Object.freeze({
     safety: 'S1',

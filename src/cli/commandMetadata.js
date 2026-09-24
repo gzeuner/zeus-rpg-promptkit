@@ -260,6 +260,9 @@ const COMMAND_UI_METADATA = Object.freeze([
       '--bundle',
       '--bundle-check',
       '--handoff',
+      '--current',
+      '--history',
+      '--max-entries',
       '--json',
     ]),
     subcommands: Object.freeze([
@@ -273,6 +276,7 @@ const COMMAND_UI_METADATA = Object.freeze([
       'handoff',
       'bundle-check',
       'acceptance-check',
+      'acceptance-history',
     ]),
     outputArtifacts: Object.freeze([
       '.local/technical-evidence/context.json',
@@ -284,6 +288,7 @@ const COMMAND_UI_METADATA = Object.freeze([
       '.local/technical-evidence/handoff-receipt.json',
       '.local/technical-evidence/bundle-check.json',
       '.local/technical-evidence/acceptance-check.json',
+      '.local/technical-evidence/acceptance-history.json',
     ]),
     recommendedNextCommands: Object.freeze(['technical-evidence', 'agent']),
   }),

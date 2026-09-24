@@ -24,6 +24,9 @@ const {
 } = require('../../context/technicalEvidenceContext');
 const { buildTechnicalEvidencePrompt } = require('../../prompt/technicalEvidencePromptAdapter');
 const {
+  buildTechnicalEvidenceAcceptanceHistory,
+} = require('../../prompt/technicalEvidenceAcceptanceHistory');
+const {
   buildTechnicalEvidenceReviewReceipt,
   checkTechnicalEvidenceReview,
 } = require('../../context/technicalEvidenceReview');
@@ -48,6 +51,7 @@ const DEFAULT_BUNDLE_OUTPUT = '.local/technical-evidence/bundle.json';
 const DEFAULT_HANDOFF_OUTPUT = '.local/technical-evidence/handoff-receipt.json';
 const DEFAULT_BUNDLE_CHECK_OUTPUT = '.local/technical-evidence/bundle-check.json';
 const DEFAULT_ACCEPTANCE_OUTPUT = '.local/technical-evidence/acceptance-check.json';
+const DEFAULT_ACCEPTANCE_HISTORY_OUTPUT = '.local/technical-evidence/acceptance-history.json';
 
 function printHelp() {
   console.log('Technical evidence context commands (local-only):');
@@ -80,6 +84,9 @@ function printHelp() {
   );
   console.log(
     `  zeus technical-evidence acceptance-check --bundle <relative-bundle> --bundle-check <relative-bundle-check> --handoff <relative-handoff> [--out ${DEFAULT_ACCEPTANCE_OUTPUT}] [--json]`
+  );
+  console.log(
+    `  zeus technical-evidence acceptance-history --current <relative-acceptance-check> [--history <relative-history>] [--as-of <ISO>] [--max-entries <n>] [--out ${DEFAULT_ACCEPTANCE_HISTORY_OUTPUT}] [--json]`
   );
   console.log('');
   console.log('The input must already satisfy the anonymized technical-evidence boundary.');
@@ -205,6 +212,7 @@ async function runTechnicalEvidence(args = {}) {
       'handoff',
       'bundle-check',
       'acceptance-check',
+      'acceptance-history',
     ].includes(subcommand)
   ) {
     const result = resultForError({ code: 'TECHNICAL_EVIDENCE_INVALID_ARGUMENTS' });
@@ -581,6 +589,52 @@ async function runTechnicalEvidence(args = {}) {
       if (json.isJsonMode) json.print(result);
       else printHumanSummary(result);
       if (!acceptance.gatePassed) process.exitCode = 2;
+      return result;
+    }
+
+    if (subcommand === 'acceptance-history') {
+      const currentPath = resolveWorkspaceFile(args.current, DEFAULT_ACCEPTANCE_OUTPUT);
+      const previousPath = args.history
+        ? resolveWorkspaceFile(args.history, DEFAULT_ACCEPTANCE_HISTORY_OUTPUT)
+        : null;
+      const output = resolveWorkspaceFile(args.out, DEFAULT_ACCEPTANCE_HISTORY_OUTPUT);
+      const history = buildTechnicalEvidenceAcceptanceHistory({
+        current: readJsonArtifact(
+          currentPath,
+          'TECHNICAL_EVIDENCE_ACCEPTANCE_HISTORY_CURRENT_UNAVAILABLE'
+        ),
+        previous: previousPath
+          ? readJsonArtifact(
+              previousPath,
+              'TECHNICAL_EVIDENCE_ACCEPTANCE_HISTORY_PREVIOUS_UNAVAILABLE'
+            )
+          : undefined,
+        asOf: args['as-of'],
+        maxEntries: args['max-entries'],
+      });
+      writeLocalArtifact(output, history);
+      const result = {
+        ok: true,
+        kind: 'technical-evidence-acceptance-history-result',
+        status: history.status,
+        readOnly: true,
+        safety: {
+          level: 'S1',
+          approvalRequired: false,
+          sideEffects: ['local-read', 'local-artifact-write'],
+        },
+        scope: {
+          origin: 'local-anonymized-evidence',
+          pathDisclosure: 'none',
+          contentDisclosure: 'none',
+        },
+        history,
+        artifacts: [output.relative],
+        warnings: history.latest.blockers,
+        approvalRequired: false,
+      };
+      if (json.isJsonMode) json.print(result);
+      else printHumanSummary(result);
       return result;
     }
 

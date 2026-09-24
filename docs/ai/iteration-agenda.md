@@ -773,7 +773,25 @@ route is `technical-evidence acceptance-check`. It is a local acceptance
 decision for exact anonymized artifacts, not authorization for any external
 action.
 
-The next planned item is Iteration 36: bounded local acceptance history.
+### Iteration 36 — Bounded local acceptance history (implemented)
+
+Retain a bounded, local-only history of exact acceptance decisions without
+retaining the underlying prompt or evidence content:
+
+- record only opaque acceptance and bundle fingerprints, identities, status,
+  timestamps, and stable blocker codes;
+- support deterministic append and oldest-first bounded retention;
+- validate every retained entry and the history fingerprint before reuse;
+- keep provider handoff, external publication, promotion, and deployment
+  disabled;
+- cover append, truncation, tamper detection, contract registration, CLI path
+  safety, and synthetic privacy/credential canaries.
+
+The implementation provides `zeus.technical-evidence-acceptance-history`. The
+CLI route is `technical-evidence acceptance-history`. History is review
+evidence only and never constitutes external approval or automatic promotion.
+
+No further iteration is currently scheduled in this agenda.
 
 ## Business Process Intelligence vertical slice
 

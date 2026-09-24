@@ -41,6 +41,10 @@ const {
   validateTechnicalEvidenceHandoffReceipt,
   validateTechnicalEvidencePromptBundle,
 } = require('../../prompt/technicalEvidenceBundle');
+const {
+  TECHNICAL_EVIDENCE_ACCEPTANCE_HISTORY_SCHEMA_VERSION,
+  validateTechnicalEvidenceAcceptanceHistory,
+} = require('../../prompt/technicalEvidenceAcceptanceHistory');
 
 /**
  * Basic header validator used by all initial shells.
@@ -376,6 +380,11 @@ const INITIAL_SCHEMAS = Object.freeze({
     version: TECHNICAL_EVIDENCE_ACCEPTANCE_SCHEMA_VERSION,
     schema: value =>
       validateTechnicalEvidenceAcceptanceCheck(value).map(message => ({ path: '', message })),
+  },
+  [CONTRACT_IDS.TECHNICAL_EVIDENCE_ACCEPTANCE_HISTORY]: {
+    version: TECHNICAL_EVIDENCE_ACCEPTANCE_HISTORY_SCHEMA_VERSION,
+    schema: value =>
+      validateTechnicalEvidenceAcceptanceHistory(value).map(message => ({ path: '', message })),
   },
   [CONTRACT_IDS.RUN_MANIFEST]: { version: 1, schema: runManifestSchema },
   [CONTRACT_IDS.ARTIFACT_REFERENCE]: { version: 1, schema: artifactReferenceSchema },
