@@ -68,3 +68,15 @@ artifact set was reviewed. Advisory or missing review state remains blocked.
 The receipt contains no reviewer name and no prompt content. Its destination
 is the fixed local review boundary; external publication and provider handoff
 remain disabled.
+
+## Bundle replay verification
+
+`technical-evidence bundle-check` rebuilds the fingerprint-only bundle from the
+exact local context, prompt, regression, and egress artifacts. It compares the
+bundle fingerprint, artifact references, and bounded gate projections without
+emitting any artifact content.
+
+The check returns `pass` only when the replay is byte-independent but
+contract-equivalent. Any changed input or tampered projection returns stable
+mismatch codes and blocks the gate. The check never authorizes publication,
+provider handoff, promotion, or deployment.

@@ -122,3 +122,18 @@ node cli/zeus.js technical-evidence handoff \
 
 Both artifacts are fingerprint-only and local-only. They contain no prompt
 text, source-derived values, private paths, credentials, or business terms.
+
+Replay the bundle before retaining it as a local handoff basis:
+
+```text
+node cli/zeus.js technical-evidence bundle-check \
+  --bundle .local/technical-evidence/bundle.json \
+  --context .local/technical-evidence/context.json \
+  --prompt .local/technical-evidence/prompt.json \
+  --regression .local/technical-evidence/regression.json \
+  --egress .local/technical-evidence/egress-check.json \
+  --out .local/technical-evidence/bundle-check.json --json
+```
+
+The replay result is `pass` only for the exact local input set. Mismatches are
+stable, reviewable blockers and never disclose the changed content.

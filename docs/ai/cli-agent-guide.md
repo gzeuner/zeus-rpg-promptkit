@@ -411,6 +411,14 @@ node cli/zeus.js technical-evidence handoff --help
 These routes emit bounded local metadata only; they do not authorize provider
 handoff or publication.
 
+Before relying on a retained local bundle, rerun its bounded replay check:
+
+```powershell
+node cli/zeus.js technical-evidence bundle-check --help
+```
+
+Treat any mismatch as a blocking local integrity finding.
+
 After recording a failure or correction, inspect the reviewable improvement
 report:
 

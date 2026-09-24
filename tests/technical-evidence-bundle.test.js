@@ -18,9 +18,11 @@ const {
   evaluateTechnicalEvidencePromptRegression,
 } = require('../src/prompt/technicalEvidencePolicy');
 const {
+  buildTechnicalEvidencePromptBundleCheck,
   buildTechnicalEvidenceHandoffReceipt,
   buildTechnicalEvidencePromptBundle,
   validateTechnicalEvidenceHandoffReceipt,
+  validateTechnicalEvidencePromptBundleCheck,
   validateTechnicalEvidencePromptBundle,
 } = require('../src/prompt/technicalEvidenceBundle');
 const { createSchemaRegistry } = require('../src/core/contracts');
@@ -144,6 +146,26 @@ test('bundle binds exact gates and fails closed on tampering', () => {
   );
 });
 
+test('bundle replay check is deterministic and detects changed gate inputs', () => {
+  const input = artifacts();
+  const bundle = buildTechnicalEvidencePromptBundle(input);
+  const verified = buildTechnicalEvidencePromptBundleCheck({ ...input, bundle });
+  assert.equal(verified.status, 'pass');
+  assert.equal(verified.gatePassed, true);
+  assert.deepEqual(validateTechnicalEvidencePromptBundleCheck(verified), []);
+  assert.equal(verified.bundleFingerprint, verified.replayedBundleFingerprint);
+
+  const changed = buildTechnicalEvidencePromptBundleCheck({
+    ...input,
+    bundle,
+    regression: { ...input.regression, warnings: ['TOKEN_LIMIT_INCREASED'] },
+  });
+  assert.equal(changed.status, 'blocked');
+  assert.equal(changed.gatePassed, false);
+  assert.ok(changed.mismatches.includes('BUNDLE_FINGERPRINT_MISMATCH'));
+  assert.doesNotMatch(JSON.stringify(changed), /private-name-canary|C:\\|SELECT\s+\*/i);
+});
+
 test('handoff receipt requires a required approved local review', () => {
   const input = artifacts();
   const bundle = buildTechnicalEvidencePromptBundle(input);
@@ -179,6 +201,11 @@ test('bundle and handoff contracts are registered and public', () => {
   );
   assert.equal(
     registry.validate(CONTRACT_IDS.TECHNICAL_EVIDENCE_HANDOFF_RECEIPT, 1, handoff).ok,
+    true
+  );
+  const bundleCheck = buildTechnicalEvidencePromptBundleCheck({ ...input, bundle });
+  assert.equal(
+    registry.validate(CONTRACT_IDS.TECHNICAL_EVIDENCE_BUNDLE_CHECK, 1, bundleCheck).ok,
     true
   );
   assert.deepEqual(zeusApi.technicalEvidencePromptBundleContract, {
@@ -250,6 +277,30 @@ test('CLI writes only local bundle and handoff metadata artifacts', () => {
     assert.equal(handoffRun.status, 0, handoffRun.stderr);
     assert.equal(JSON.parse(handoffRun.stdout).status, 'accepted');
     assert.deepEqual(JSON.parse(handoffRun.stdout).artifacts, ['.local/handoff.json']);
+
+    const checkRun = runCli(
+      [
+        'technical-evidence',
+        'bundle-check',
+        '--bundle',
+        '.local/bundle.json',
+        '--context',
+        'context.json',
+        '--prompt',
+        'prompt.json',
+        '--regression',
+        'regression.json',
+        '--egress',
+        'egress.json',
+        '--out',
+        '.local/bundle-check.json',
+        '--json',
+      ],
+      cwd
+    );
+    assert.equal(checkRun.status, 0, checkRun.stderr);
+    assert.equal(JSON.parse(checkRun.stdout).status, 'pass');
+    assert.deepEqual(JSON.parse(checkRun.stdout).artifacts, ['.local/bundle-check.json']);
 
     const unsafeRun = runCli(
       ['technical-evidence', 'handoff', '--bundle', path.join(cwd, 'bundle.json'), '--json'],

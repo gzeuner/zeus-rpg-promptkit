@@ -27,6 +27,7 @@ module.exports = Object.freeze({
   TECHNICAL_EVIDENCE_EGRESS_CHECK: 'zeus.technical-evidence-egress-check',
   TECHNICAL_EVIDENCE_PROMPT_BUNDLE: 'zeus.technical-evidence-prompt-bundle',
   TECHNICAL_EVIDENCE_HANDOFF_RECEIPT: 'zeus.technical-evidence-handoff-receipt',
+  TECHNICAL_EVIDENCE_BUNDLE_CHECK: 'zeus.technical-evidence-bundle-check',
   RUN_MANIFEST: 'zeus.run-manifest',
   ARTIFACT_REFERENCE: 'zeus.artifact-reference',
   INVESTIGATION_SESSION: 'zeus.investigation-session',

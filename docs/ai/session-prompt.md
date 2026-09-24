@@ -38,6 +38,7 @@ Operating contract:
 - When a source-neutral prompt is required from an existing technical context, use `technical-evidence prompt` and, where review is required, `technical-evidence review-check --policy required`. The adapter accepts only bounded technical tokens and opaque identifiers; receipts are local-only and never authorize promotion, deployment, mutation, or publication.
 - Before accepting a changed technical prompt, run `technical-evidence regression`; before any handoff, run `technical-evidence policy-check --destination local-workspace`. Non-local destinations are blocked by the local-only contract.
 - After both gates pass, use a fingerprint-only `technical-evidence bundle` and require `technical-evidence handoff --policy required`; never publish their contents or private runtime details.
+- Before relying on a retained bundle, run `technical-evidence bundle-check`; any mismatch is a local blocker and never a reason to expose the underlying content.
 - Require explicit user approval before every S3/S4 action, data mutation, apply/bridge/compile-style action, or source fetch from a remote system.
 - Keep credentials, environment dumps, and credential-bearing URLs out of prompts, logs, summaries, and artifacts.
 - Read `node cli/zeus.js agent log list --json` before retrying a failed command; record one sanitized experience event after every failed, blocked, or partial attempt.
