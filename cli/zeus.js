@@ -111,6 +111,12 @@ function printHelp() {
     '  zeus technical-evidence policy-check --prompt <relative-prompt> [--trust-zone <local|private-network|external>] [--destination <local-workspace|private-network|external-provider>] [--out .local/technical-evidence/egress-check.json] [--json]  # local-only egress gate'
   );
   console.log(
+    '  zeus technical-evidence bundle --context <relative-context> --prompt <relative-prompt> --regression <relative-regression> --egress <relative-egress> [--out .local/technical-evidence/bundle.json] [--json]  # local-only fingerprint manifest'
+  );
+  console.log(
+    '  zeus technical-evidence handoff --bundle <relative-bundle> --context <relative-context> --prompt <relative-prompt> --receipt <relative-review-receipt> [--policy required] [--as-of <ISO>] [--fresh-days <n>] [--out .local/technical-evidence/handoff-receipt.json] [--json]  # local-only handoff receipt'
+  );
+  console.log(
     '  zeus [--config <path>] investigate --program <name> [--profile <name>] [--out <path>] [--goal "<text>"] [--list] [--focus "<scope>"] [--search "<term>"] [--generate-prompt]  # Investigation session (focus, search, prompt gen)'
   );
   // Note: --dense now performs rank-aware selection + compaction (see Phase 1-3 impl)

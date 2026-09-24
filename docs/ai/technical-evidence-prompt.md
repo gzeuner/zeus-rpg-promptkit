@@ -1,7 +1,7 @@
 ---
 Title: Technical Evidence Prompt Adapter
 Description: Local-only, source-neutral prompt construction and review receipts.
-Last Updated: 2026-09-23
+Last Updated: 2026-09-24
 ---
 
 # Technical Evidence Prompt Adapter
@@ -94,3 +94,31 @@ node cli/zeus.js technical-evidence policy-check \
 Only the local workspace is allowed. Private-network and external destinations
 are blocked by the contract; provider handoff and external publication remain
 disabled.
+
+## Bundle and handoff boundary
+
+After the regression and egress checks, agents can create a fingerprint-only
+bundle:
+
+```text
+node cli/zeus.js technical-evidence bundle \
+  --context .local/technical-evidence/context.json \
+  --prompt .local/technical-evidence/prompt.json \
+  --regression .local/technical-evidence/regression.json \
+  --egress .local/technical-evidence/egress-check.json \
+  --out .local/technical-evidence/bundle.json --json
+```
+
+The local handoff receipt requires an explicit required review policy:
+
+```text
+node cli/zeus.js technical-evidence handoff \
+  --bundle .local/technical-evidence/bundle.json \
+  --context .local/technical-evidence/context.json \
+  --prompt .local/technical-evidence/prompt.json \
+  --receipt .local/technical-evidence/review.json \
+  --policy required --out .local/technical-evidence/handoff-receipt.json --json
+```
+
+Both artifacts are fingerprint-only and local-only. They contain no prompt
+text, source-derived values, private paths, credentials, or business terms.

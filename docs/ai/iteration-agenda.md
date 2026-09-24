@@ -1,7 +1,7 @@
 ---
 Title: Promptkit AI Iteration Agenda
 Description: Living backlog for making Zeus immediately understandable and usable by CLI-based AI agents.
-Last Updated: 2026-09-21
+Last Updated: 2026-09-24
 ---
 
 # Promptkit AI Iteration Agenda
@@ -714,8 +714,29 @@ contain only fingerprints, stable reason codes, bounded technical metadata,
 and explicit local-only decisions. No provider call, process publication,
 promotion, or deployment is performed.
 
-The next planned item is Iteration 33: local prompt bundle integrity and
-handoff receipts.
+### Iteration 33 — Local prompt bundle integrity and handoff receipts (implemented)
+
+Add a local-only bundle boundary for the technical evidence prompt flow:
+
+- bind the exact context, prompt, regression, and egress results by opaque
+  fingerprints;
+- keep bundle manifests fingerprint-only and exclude prompt content, source
+  text, paths, names, credentials, and business terms;
+- require an explicit local review with policy `required` before an accepted
+  handoff receipt can be created;
+- keep provider handoff, external publication, promotion, and deployment
+  disabled;
+- verify deterministic bundle identities, tamper rejection, contract
+  registration, CLI path safety, and synthetic privacy/credential canaries.
+
+The implementation provides `zeus.technical-evidence-prompt-bundle` and
+`zeus.technical-evidence-handoff-receipt`. The CLI routes are
+`technical-evidence bundle` and `technical-evidence handoff`. Results contain
+only opaque fingerprints, gate decisions, stable blocker codes, and local-only
+constraints.
+
+The next planned item is Iteration 34: local bundle integrity and replay
+verification.
 
 ## Business Process Intelligence vertical slice
 

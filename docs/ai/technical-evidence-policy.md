@@ -1,7 +1,7 @@
 ---
 Title: Technical Evidence Prompt Policy Gates
 Description: Local regression and egress checks for source-neutral technical prompts.
-Last Updated: 2026-09-23
+Last Updated: 2026-09-24
 ---
 
 # Technical Evidence Prompt Policy Gates
@@ -45,3 +45,26 @@ node cli/zeus.js technical-evidence policy-check \
 Both results are read-only, workspace-bounded, and fingerprint-only. They do
 not call providers and never authorize publication, promotion, deployment, or
 mutation.
+
+## Fingerprint-only bundles
+
+`technical-evidence bundle` creates a local manifest that binds the exact
+context, prompt, regression result, and egress result. The manifest contains
+only contract references, schema versions, opaque fingerprints, bounded gate
+projections, and fixed privacy constraints. It never copies prompt content or
+source-derived values.
+
+The bundle is ready only when the regression and local egress gates pass. The
+bundle itself never enables provider handoff, publication, promotion, or
+deployment.
+
+## Local handoff receipts
+
+`technical-evidence handoff` combines a ready bundle with a fresh review check
+whose policy is `required`. An accepted receipt is bound to the bundle and
+review fingerprints and can be retained as local evidence that the exact
+artifact set was reviewed. Advisory or missing review state remains blocked.
+
+The receipt contains no reviewer name and no prompt content. Its destination
+is the fixed local review boundary; external publication and provider handoff
+remain disabled.
