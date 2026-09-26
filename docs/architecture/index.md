@@ -12,26 +12,27 @@ All subsequent implementation and agent guidance must be consistent with these d
 
 ## Accepted Architecture Decision Records (ADRs)
 
-| ADR                                                 | Title                                 | Status                                                         |
-| --------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------- |
-| [001](adr-001-product-kernel.md)                    | Product Kernel                        | Accepted                                                       |
-| [002](adr-002-dependency-direction.md)              | Dependency Direction                  | Accepted                                                       |
-| [003](adr-003-versioned-contracts.md)               | Versioned Contracts                   | Accepted                                                       |
-| [004](adr-004-capability-registry.md)               | Capability Registry                   | Accepted                                                       |
-| [005](adr-005-safety-trust-zones.md)                | Safety Trust Zones                    | Accepted                                                       |
-| [006](adr-006-commercial-extension-architecture.md) | Commercial Extension Architecture     | Accepted; executable registrar shipped                         |
-| [007](adr-007-provider-neutral-contracts.md)        | Provider-Neutral AI Contracts         | Accepted                                                       |
-| [008](adr-008-generation-validation-foundation.md)  | Generation Validation Foundation      | Accepted                                                       |
-| [009](adr-009-project-intelligence-ownership.md)    | Project Intelligence Ownership Split  | Accepted; Community baseline delivered (ZPI-02…12 + Track C)   |
-| [010](adr-010-default-store-and-search.md)          | Default Store and Search Architecture | Accepted; Community backends delivered; embeddings default off |
-| [011](adr-011-evidence-and-provenance.md)           | Evidence and Provenance Model         | Accepted; enforced in Community PI contracts + portable export |
-| [012](adr-012-snapshots-and-migrations.md)          | Snapshots and Migrations              | Accepted; snapshot engine delivered                            |
-| [013](adr-013-retrieval-and-context-policy.md)      | Retrieval and Context Policy          | Accepted; retrieval/context delivered                          |
-| [014](adr-014-unified-capability-consolidation.md)  | Unified Capability Consolidation      | Accepted                                                       |
-| [015](adr-015-knowledge-first-freshness.md)         | Knowledge-First Freshness             | Accepted                                                       |
-| [016](adr-016-mcp-adapter-boundary.md)              | MCP Adapter Boundary                  | Accepted                                                       |
-| [015](adr-015-optional-vscode-adapter-boundary.md)  | Optional VS Code Adapter Boundary     | Accepted                                                       |
-| [017](adr-017-process-intelligence-projection.md)   | Evidence-backed Process Projection    | Accepted; vertical slice delivered                             |
+| ADR                                                         | Title                                     | Status                                                                                                                                                                |
+| ----------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [001](adr-001-product-kernel.md)                            | Product Kernel                            | Accepted                                                                                                                                                              |
+| [002](adr-002-dependency-direction.md)                      | Dependency Direction                      | Accepted                                                                                                                                                              |
+| [003](adr-003-versioned-contracts.md)                       | Versioned Contracts                       | Accepted                                                                                                                                                              |
+| [004](adr-004-capability-registry.md)                       | Capability Registry                       | Accepted                                                                                                                                                              |
+| [005](adr-005-safety-trust-zones.md)                        | Safety Trust Zones                        | Accepted                                                                                                                                                              |
+| [006](adr-006-commercial-extension-architecture.md)         | Commercial Extension Architecture         | Accepted; executable registrar shipped                                                                                                                                |
+| [007](adr-007-provider-neutral-contracts.md)                | Provider-Neutral AI Contracts             | Accepted                                                                                                                                                              |
+| [008](adr-008-generation-validation-foundation.md)          | Generation Validation Foundation          | Accepted                                                                                                                                                              |
+| [009](adr-009-project-intelligence-ownership.md)            | Project Intelligence Ownership Split      | Accepted; Community baseline delivered (ZPI-02…12 + Track C)                                                                                                          |
+| [010](adr-010-default-store-and-search.md)                  | Default Store and Search Architecture     | Accepted; Community backends delivered; embeddings default off                                                                                                        |
+| [011](adr-011-evidence-and-provenance.md)                   | Evidence and Provenance Model             | Accepted; enforced in Community PI contracts + portable export                                                                                                        |
+| [012](adr-012-snapshots-and-migrations.md)                  | Snapshots and Migrations                  | Accepted; snapshot engine delivered                                                                                                                                   |
+| [013](adr-013-retrieval-and-context-policy.md)              | Retrieval and Context Policy              | Accepted; retrieval/context delivered                                                                                                                                 |
+| [014](adr-014-unified-capability-consolidation.md)          | Unified Capability Consolidation          | Accepted                                                                                                                                                              |
+| [015](adr-015-knowledge-first-freshness.md)                 | Knowledge-First Freshness                 | Accepted                                                                                                                                                              |
+| [016](adr-016-mcp-adapter-boundary.md)                      | MCP Adapter Boundary                      | Accepted                                                                                                                                                              |
+| [015](adr-015-optional-vscode-adapter-boundary.md)          | Optional VS Code Adapter Boundary         | Accepted                                                                                                                                                              |
+| [017](adr-017-process-intelligence-projection.md)           | Evidence-backed Process Projection        | Accepted; vertical slice delivered                                                                                                                                    |
+| [018](adr-018-federated-knowledge-contribution-packages.md) | Federated Knowledge Contribution Packages | Accepted; package, validation, staging, reconciliation, local exchange, receipt-bound publication boundary, provider bridge and verification receipt slices delivered |
 
 ## Related Reviews
 

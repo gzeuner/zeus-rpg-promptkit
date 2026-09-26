@@ -121,7 +121,8 @@ function createSnapshotEngine(options = {}) {
       'SQLite driver unavailable (requires Node.js node:sqlite / DatabaseSync)'
     );
   }
-  const { knowledgeRoot, projectId, displayName, trustedRoots, analyzer } = options;
+  const { knowledgeRoot, projectId, displayName, trustedRoots, analyzer, searchProviderFactory } =
+    options;
   if (!knowledgeRoot || !projectId) {
     fail(REASON_CODES.PROJECT_ID_INVALID, 'knowledgeRoot and projectId are required');
   }
@@ -146,6 +147,7 @@ function createSnapshotEngine(options = {}) {
     projectId,
     trustedRoots,
     analyzer: analyzer || createRpgAnalyzer(),
+    searchProviderFactory: searchProviderFactory || createSearchProvider,
     readOnly: false,
   });
 }
@@ -160,7 +162,14 @@ function openSnapshotEngine(options = {}) {
       'SQLite driver unavailable (requires Node.js node:sqlite / DatabaseSync)'
     );
   }
-  const { knowledgeRoot, projectId, trustedRoots, analyzer, readOnly = false } = options;
+  const {
+    knowledgeRoot,
+    projectId,
+    trustedRoots,
+    analyzer,
+    searchProviderFactory,
+    readOnly = false,
+  } = options;
   if (!knowledgeRoot) {
     fail(REASON_CODES.PATH_UNSAFE, 'knowledgeRoot is required');
   }
@@ -176,11 +185,20 @@ function openSnapshotEngine(options = {}) {
     projectId: project.projectId,
     trustedRoots: trustedRoots || [],
     analyzer: analyzer || createRpgAnalyzer(),
+    searchProviderFactory: searchProviderFactory || createSearchProvider,
     readOnly,
   });
 }
 
-function wrapEngine({ store, knowledgeRoot, projectId, trustedRoots, analyzer, readOnly }) {
+function wrapEngine({
+  store,
+  knowledgeRoot,
+  projectId,
+  trustedRoots,
+  analyzer,
+  searchProviderFactory,
+  readOnly,
+}) {
   let closed = false;
 
   function assertOpen() {
@@ -200,7 +218,7 @@ function wrapEngine({ store, knowledgeRoot, projectId, trustedRoots, analyzer, r
   }
 
   function openSearch(ro = readOnly) {
-    return createSearchProvider({
+    return searchProviderFactory({
       knowledgeRoot,
       projectId,
       readOnly: ro,
@@ -525,9 +543,9 @@ function wrapEngine({ store, knowledgeRoot, projectId, trustedRoots, analyzer, r
         analyzerRunIds: [analyzerRunId],
       };
 
-      // Atomic store transaction for metadata writes + publish pointer.
-      // Search index is rebuilt only after pointer advances so a failed publish
-      // cannot leave search ahead of the current snapshot.
+      // Store metadata and pointer are one transaction. The search index is
+      // rebuilt after the pointer advance; read paths independently verify the
+      // index snapshot identity and fail closed on a mixed generation.
       store.withTransaction(() => {
         store.putSnapshot(building);
 
@@ -601,7 +619,8 @@ function wrapEngine({ store, knowledgeRoot, projectId, trustedRoots, analyzer, r
       } catch {
         // ignore
       }
-      // Failed publish must not leave a new current pointer — publishSnapshot is last step.
+      // A search failure may follow the store commit. Readers refuse the
+      // resulting mixed generation through the retriever alignment gate.
       if (err instanceof KnowledgeStoreError) throw err;
       fail(REASON_CODES.PUBLISH_INCOMPLETE, 'snapshot publish failed', {
         message: err && err.message ? String(err.message) : undefined,

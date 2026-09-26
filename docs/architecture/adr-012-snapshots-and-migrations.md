@@ -36,6 +36,9 @@ ZPI uses these terms:
 - Publish is atomic across SQLite metadata, content-addressed evidence, Lucene index generation, and
   current-pointer update.
 - Readers must never observe a mixed-generation current state.
+- Read paths must compare the search-index snapshot identity with the selected
+  current snapshot and fail closed with a mixed-generation reason when they
+  differ.
 - Failed publish leaves the previous current snapshot intact or yields a fail-closed unavailable
   state. It must not advance the current pointer partially.
 
