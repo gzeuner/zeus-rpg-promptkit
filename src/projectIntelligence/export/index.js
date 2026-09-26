@@ -1,6 +1,14 @@
 'use strict';
 
 const portable = require('./portableSnapshotPackage');
+const contribution = require('./contributionPackage');
+const validation = require('./contributionValidation');
+const reconciliation = require('./contributionReconciliation');
+const staging = require('./contributionStaging');
+const exchange = require('./contributionExchange');
+const publication = require('./contributionPublication');
+const providerContribution = require('./providerContribution');
+const verificationReceipt = require('./verificationReceipt');
 
 module.exports = {
   PORTABLE_PACKAGE_SCHEMA: portable.PORTABLE_PACKAGE_SCHEMA,
@@ -8,4 +16,65 @@ module.exports = {
   exportPortableSnapshotPackage: portable.exportPortableSnapshotPackage,
   openPortableSnapshotPackage: portable.openPortableSnapshotPackage,
   stripAbsolutePathsDeep: portable.stripAbsolutePathsDeep,
+  CONTRIBUTION_PACKAGE_SCHEMA: contribution.CONTRIBUTION_PACKAGE_SCHEMA,
+  CONTRIBUTION_PACKAGE_KIND: contribution.CONTRIBUTION_PACKAGE_KIND,
+  CONTRIBUTION_PACKAGE_FILES: contribution.CONTRIBUTION_PACKAGE_FILES,
+  CONTRIBUTION_PACKAGE_MAX_FILE_BYTES: contribution.CONTRIBUTION_PACKAGE_MAX_FILE_BYTES,
+  CONTRIBUTION_STATUSES: contribution.CONTRIBUTION_STATUSES,
+  ContributionPackageError: contribution.ContributionPackageError,
+  canonicalJson: contribution.canonicalJson,
+  canonicalizeContribution: contribution.canonicalizeContribution,
+  sha256Hex: contribution.sha256Hex,
+  createContributionPackage: contribution.createContributionPackage,
+  writeContributionPackage: contribution.writeContributionPackage,
+  openContributionPackage: contribution.openContributionPackage,
+  CONTRIBUTION_GATE_STATUSES: validation.CONTRIBUTION_GATE_STATUSES,
+  CONTRIBUTION_GATE_CODES: validation.CONTRIBUTION_GATE_CODES,
+  GATE_ORDER: validation.GATE_ORDER,
+  validateContributionPackage: validation.validateContributionPackage,
+  CONTRIBUTION_RECONCILIATION_SCHEMA: reconciliation.CONTRIBUTION_RECONCILIATION_SCHEMA,
+  RECONCILIATION_FINDING_TYPES: reconciliation.RECONCILIATION_FINDING_TYPES,
+  RECONCILIATION_ACTIONS: reconciliation.RECONCILIATION_ACTIONS,
+  ContributionReconciliationError: reconciliation.ContributionReconciliationError,
+  reconcileContribution: reconciliation.reconcileContribution,
+  STAGING_KIND: staging.STAGING_KIND,
+  STAGING_SCHEMA: staging.STAGING_SCHEMA,
+  STAGING_LAYOUT: staging.STAGING_LAYOUT,
+  STAGING_REASON_CODES: staging.STAGING_REASON_CODES,
+  STAGING_STATUSES: staging.STAGING_STATUSES,
+  LIFECYCLE_TRANSITIONS: staging.LIFECYCLE_TRANSITIONS,
+  ContributionStagingError: staging.ContributionStagingError,
+  getStagingPaths: staging.getStagingPaths,
+  stageContributionPackage: staging.stageContributionPackage,
+  readStagedContribution: staging.readStagedContribution,
+  transitionStagedContribution: staging.transitionStagedContribution,
+  listStagedContributions: staging.listStagedContributions,
+  planStagingCleanup: staging.planStagingCleanup,
+  cleanupStagedContributions: staging.cleanupStagedContributions,
+  EXCHANGE_SCHEMA: exchange.EXCHANGE_SCHEMA,
+  EXCHANGE_KIND: exchange.EXCHANGE_KIND,
+  EXCHANGE_LAYOUT: exchange.EXCHANGE_LAYOUT,
+  EXCHANGE_REASON_CODES: exchange.EXCHANGE_REASON_CODES,
+  ContributionExchangeError: exchange.ContributionExchangeError,
+  createContributionAcceptanceReceipt: exchange.createContributionAcceptanceReceipt,
+  writeContributionExchange: exchange.writeContributionExchange,
+  openContributionExchange: exchange.openContributionExchange,
+  PUBLICATION_SCHEMA: publication.PUBLICATION_SCHEMA,
+  PUBLICATION_KIND: publication.PUBLICATION_KIND,
+  PUBLICATION_REASON_CODES: publication.PUBLICATION_REASON_CODES,
+  ContributionPublicationError: publication.ContributionPublicationError,
+  publishContributionExchange: publication.publishContributionExchange,
+  PROVIDER_CONTRIBUTION_SCHEMA: providerContribution.PROVIDER_CONTRIBUTION_SCHEMA,
+  PROVIDER_CONTRIBUTION_KIND: providerContribution.PROVIDER_CONTRIBUTION_KIND,
+  PROVIDER_CONTRIBUTION_REASON_CODES: providerContribution.PROVIDER_CONTRIBUTION_REASON_CODES,
+  ProviderContributionError: providerContribution.ProviderContributionError,
+  createProviderContribution: providerContribution.createProviderContribution,
+  createProviderContributionPackage: providerContribution.createProviderContributionPackage,
+  REQUIRED_GATES: verificationReceipt.REQUIRED_GATES,
+  VERIFICATION_RECEIPT_SCHEMA: verificationReceipt.VERIFICATION_RECEIPT_SCHEMA,
+  VERIFICATION_RECEIPT_KIND: verificationReceipt.VERIFICATION_RECEIPT_KIND,
+  VERIFICATION_RECEIPT_REASON_CODES: verificationReceipt.VERIFICATION_RECEIPT_REASON_CODES,
+  VerificationReceiptError: verificationReceipt.VerificationReceiptError,
+  createVerificationReceipt: verificationReceipt.createVerificationReceipt,
+  validateVerificationReceipt: verificationReceipt.validateVerificationReceipt,
 };

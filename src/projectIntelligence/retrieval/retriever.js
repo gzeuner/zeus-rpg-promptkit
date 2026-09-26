@@ -72,6 +72,13 @@ function createProjectRetriever(options = {}) {
     return store.getCurrentSnapshot(resolvedProjectId);
   }
 
+  function assertIndexAligned(snapshot) {
+    const status = search.getStatus();
+    if (status.projectId !== resolvedProjectId || status.snapshotId !== snapshot.snapshotId) {
+      fail(REASON_CODES.MIXED_GENERATION, 'search index and current snapshot are not aligned');
+    }
+  }
+
   /**
    * Lexical retrieval against published snapshot index (filtered by snapshotId).
    */
@@ -81,6 +88,7 @@ function createProjectRetriever(options = {}) {
       fail(REASON_CODES.SCHEMA_INVALID, 'query is required');
     }
     const snap = resolveSnapshotId(snapshotId);
+    assertIndexAligned(snap);
     const result = search.search({
       query,
       limit: limit == null ? DEFAULT_RETRIEVAL_LIMIT : limit,
