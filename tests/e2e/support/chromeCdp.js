@@ -188,6 +188,28 @@ async function startChrome(retryAttempt = 0) {
     await send('Runtime.enable');
     await send('Page.enable');
     return {
+      async pressKey(key, code, windowsVirtualKeyCode) {
+        const text = key === 'Enter' ? '\r' : key === ' ' ? ' ' : undefined;
+        await send('Input.dispatchKeyEvent', {
+          type: 'keyDown',
+          key,
+          code,
+          windowsVirtualKeyCode,
+          text,
+        });
+        await send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode });
+      },
+      async emulateMedia(features) {
+        await send('Emulation.setEmulatedMedia', { features });
+      },
+      async setViewport(width, height) {
+        await send('Emulation.setDeviceMetricsOverride', {
+          width,
+          height,
+          deviceScaleFactor: 1,
+          mobile: false,
+        });
+      },
       async navigate(url) {
         await send('Page.navigate', { url }, 30000);
         try {

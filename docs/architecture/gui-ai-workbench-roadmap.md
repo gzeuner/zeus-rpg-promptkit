@@ -509,16 +509,26 @@ Prüfstand:
 - die synthetische Fixture enthält keine Credentials, privaten Schlüssel,
   Kundendaten oder realen Systemnamen.
 
-Nächstes To-do nach Iteration 15: die übrigen Setup-/Workbench-Aktionen (Templates,
-Kontextimport und Wizard-Speicherpfade) im befüllten Browserlauf mit positiven und
-negativen sichtbaren Ergebnissen ergänzen.
+Offener Übergabepunkt nach Iteration 15: Die übrigen Setup-/Workbench-Aktionen
+(Templates, Kontextimport und Wizard-Speicherpfade) benötigen weiterhin einen
+Browserlauf mit positiven und negativen sichtbaren Ergebnissen. Der vorhandene
+E2E-Lauf belegt Preview, Copy-Feedback, Export, Kontext-Refresh und Wizard-Preview,
+aber nicht diese vollständigen Speicher-/Importpfade.
 
 ## Weitere geplante Iterationen
 
-1. Source-Fingerprint und Freshness-/Change-Check für Fetch-Ergebnisse
-2. Read-only GUI-Preview für Metadata, Data, Objects und Journals
-3. Manuellen Accessibility-Walkthrough mit Tastatur, Screenreader und Forced-Colors-Prüfung wiederholen
-4. Katalog-Erweiterungsdokumentation und sichere Authoring-Vorlage für neutrale Metadaten
+1. **Offen, optional:** Source-Fingerprint und Freshness-/Change-Check für Fetch-Ergebnisse.
+2. **Bewusst zurückgestellt:** Read-only GUI-Preview für Metadata, Data, Objects und Journals.
+3. **Für diesen Release gestrichen (Owner-Entscheidung, 2026-09-27):** Formaler Screenreader-/visueller Hochkontrast-Walkthrough. Der Owner hat einen informellen Smoke-Durchlauf gemeldet; dies ist kein vollständiger Accessibility-Nachweis. Automatisierte Tastatur- und Forced-Colors-Regressionstests bleiben erhalten. Siehe [Prüfprotokoll](gui-accessibility-walkthrough.md).
+4. **Optional:** Katalog-Erweiterungsdokumentation und sichere Authoring-Vorlage für neutrale Metadaten.
+
+Die optionalen Produkterweiterungen sind keine Voraussetzung für den aktuellen
+CLI/MCP-Produktpfad. Ihre Umsetzung sollte nach konkretem Nutzerbedarf priorisiert
+werden; insbesondere Punkt 2 erweitert die lokale GUI deutlich in Richtung eines
+DB2-Frontends. Punkt 3 ist nach der aktuellen Owner-Entscheidung kein offener
+Release-Blocker mehr; frühere manuelle Follow-ups in den historischen Iterationen
+sind damit für diesen Release überholt. Eine WCAG- oder Screenreader-Freigabe wird
+daraus nicht abgeleitet.
 
 ## Update-Regel für jede Iteration
 

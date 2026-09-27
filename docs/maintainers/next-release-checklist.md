@@ -1,7 +1,7 @@
 ---
 Title: Next Release Checklist
 Description: Maintainer checklist for releases after the unified Apache-2.0 consolidation. Historical beta cut records remain below for provenance.
-Last Updated: 2026-09-20
+Last Updated: 2026-09-27
 ---
 
 # Next release checklist (unified public package)
@@ -22,10 +22,32 @@ This checklist prepares public releases. Tag/publish still require the Release
 
 ## Next release target
 
-| Candidate | Rationale                                               |
-| --------- | ------------------------------------------------------- |
-| `0.3.0`   | Stable follow-up after RC validation and owner approval |
-| Hold      | Keep the roadmap paused until the next release decision |
+| Candidate | Rationale                                                                         |
+| --------- | --------------------------------------------------------------------------------- |
+| `0.3.0`   | Stable follow-up after RC validation and owner approval                           |
+| Hold      | Defer stable publication until candidate evidence and owner decision are complete |
+
+### Architecture recommendation — 2026-09-27
+
+**The manual accessibility gate is waived by the owner; stable publication still awaits candidate integration, release preparation, and the owner's release decision.**
+This is not a blanket feature freeze or a claim that the current CLI/MCP path is unusable.
+
+The reviewed base is `261324af4c633ad35a306ed9c5b28efa209ab51a`, synchronized with
+`origin/main`. Its required CI checks are green. Local accessibility fixes and the
+earlier API changes are not yet committed or covered by that remote CI result.
+The [accessibility record](../architecture/gui-accessibility-walkthrough.md)
+distinguishes passing keyboard/browser-emulation checks from the owner's informal
+smoke walkthrough. On 2026-09-27 the owner cancelled the formal screenreader and
+visual high-contrast walkthrough for this release. It is no longer a Hold reason;
+no formal screenreader pass or WCAG conformance is claimed.
+
+Exit criteria for reconsidering `0.3.0`:
+
+- [x] Owner scope decision recorded (2026-09-27): formal screenreader/visual forced-colors walkthrough removed from this release's required checks; informal owner smoke walkthrough reported, not a formal accessibility pass.
+- [ ] Integrate the reviewed local changes and rerun the release gates on the exact candidate commit.
+- [ ] Obtain the owner's stable-release decision; a technical recommendation does not authorize publication.
+- [ ] Prepare the target version, changelog, release notes, and catalog, then pass `release:preflight -- --version 0.3.0`.
+- [ ] Obtain authorization for this release's tag/publish workflow. Historical checked authorization below applies only to its named cut.
 
 ## Preflight (local)
 
@@ -108,7 +130,7 @@ Commercial re-pin complete.
 
 ## Owner gates (not automated)
 
-- [ ] Version number decision (`0.2.0` vs hold)
+- [ ] Stable-release decision (`0.3.0` vs hold)
 - [x] Tag + publish authorization via `workflow_dispatch` Release on `main` (Beta.5)
 - [x] Commercial pin bump to the released Community SHA after the release commit is on `main` (Commercial PR #33)
 - [x] Confirm beta.2 historical attestation exception is **not** reused

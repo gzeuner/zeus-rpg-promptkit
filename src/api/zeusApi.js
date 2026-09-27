@@ -187,6 +187,16 @@ const {
   TECHNICAL_EVIDENCE_HANDOFF_CONTRACT_ID,
   TECHNICAL_EVIDENCE_HANDOFF_SCHEMA_VERSION,
 } = require('../prompt/technicalEvidenceBundle');
+const {
+  resolveAnalyzeConfig,
+  resolveAnalyzeDbConfig,
+  resolveProfileResources,
+} = require('../config/runtimeConfig');
+const { isDbConfigured } = require('../db2/db2Config');
+const {
+  discoverEnvironment,
+  suggestResourcesConfig,
+} = require('../config/environmentDiscoveryService');
 const schemaRegistry = createSchemaRegistry();
 
 // Seed the initial metadata shells from package 02 (additive, no migration)
@@ -201,6 +211,84 @@ try {
 
 const { createCapabilityRegistry, TINY_VERSION_CAPABILITY } = require('../core/capabilityRegistry');
 const capabilityRegistry = createCapabilityRegistry();
+
+function mergeCapabilityArgs(context, input) {
+  return {
+    ...((context && context.args) || {}),
+    ...(input && typeof input === 'object' && !Array.isArray(input) ? input : {}),
+  };
+}
+
+function parseCapabilityCsv(value) {
+  if (value === undefined || value === null || value === true) return [];
+  const values = Array.isArray(value) ? value : [value];
+  return values
+    .flatMap(entry => String(entry).split(','))
+    .map(entry => entry.trim())
+    .filter(Boolean);
+}
+
+function capabilityFlagEnabled(value) {
+  if (value === undefined || value === null) return false;
+  if (value === true) return true;
+  return !['false', '0', 'no', 'off'].includes(String(value).trim().toLowerCase());
+}
+
+async function executeResourcesCapability(context, input) {
+  const args = mergeCapabilityArgs(context, input);
+  return resolveProfileResources(args, {
+    cwd: (context && context.cwd) || process.cwd(),
+    env: (context && context.env) || process.env,
+  });
+}
+
+async function executeDiscoverEnvironmentCapability(context, input) {
+  const args = mergeCapabilityArgs(context, input);
+  const runtime = {
+    cwd: (context && context.cwd) || process.cwd(),
+    env: (context && context.env) || process.env,
+  };
+  const config = resolveAnalyzeConfig(args, runtime);
+  const role =
+    String(args.role || 'metadata')
+      .trim()
+      .toLowerCase() === 'data'
+      ? 'testData'
+      : 'metadata';
+  const dbConfig = resolveAnalyzeDbConfig(config, role);
+
+  if (!isDbConfigured(dbConfig)) {
+    const error = new Error(
+      'DB2 connection configuration is incomplete for the selected profile. ' +
+        'Discovery is read-only and requires DB2 catalog (QSYS2) access. Load the environment first.'
+    );
+    error.code = 'INCOMPLETE_DB_CONFIGURATION';
+    throw error;
+  }
+
+  const includeMembers = capabilityFlagEnabled(args['include-members']);
+  const scope = {
+    libraries: parseCapabilityCsv(args.libraries),
+    schemas: parseCapabilityCsv(args.schemas),
+    includeMembers,
+  };
+  const report = await discoverEnvironment({
+    dbConfig,
+    scope,
+    options: {
+      includeMembers,
+      includeTables: !capabilityFlagEnabled(args['no-tables']),
+    },
+  });
+
+  return {
+    profile: String(args.profile).trim(),
+    report,
+    suggestedResources: suggestResourcesConfig(report, {
+      system: args.system,
+    }),
+  };
+}
 
 try {
   capabilityRegistry.register(TINY_VERSION_CAPABILITY);
@@ -264,8 +352,6 @@ try {
     },
   });
 
-  // For resources and discover, use the command run for data
-  const { runResources } = require('../cli/commands/resourcesCommand');
   capabilityRegistry.register({
     id: 'configure.resources',
     version: 1,
@@ -278,16 +364,9 @@ try {
     outputContract: null,
     availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
     docs: { examples: ['zeus resources --profile dev --json'], notes: [] },
-    execute: async (context, input) => {
-      // Since runResources prints, for cap we simulate by calling internal, but for foundation return placeholder structured
-      // To keep simple and correct, the cap will be used for metadata; execution for API will be added in later
-      const args = { ...(context && context.args ? context.args : {}), ...input };
-      // For now, to support direct API, we can invoke a wrapped
-      return { message: 'resources capability - see CLI for full', args };
-    },
+    execute: executeResourcesCapability,
   });
 
-  const { runDiscoverEnvironment } = require('../cli/commands/discoverEnvironmentCommand');
   capabilityRegistry.register({
     id: 'configure.discover-environment',
     version: 1,
@@ -305,10 +384,7 @@ try {
     outputContract: null,
     availability: { cli: true, mcp: true, api: true, viewer: false, vscode: true },
     docs: { examples: ['zeus discover-environment --profile dev --json'], notes: [] },
-    execute: async (context, input) => {
-      const args = { ...(context && context.args ? context.args : {}), ...input };
-      return { message: 'discover-environment capability', args };
-    },
+    execute: executeDiscoverEnvironmentCapability,
   });
 
   capabilityRegistry.register({
