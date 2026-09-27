@@ -597,6 +597,7 @@ button:disabled{cursor:not-allowed;opacity:.62}
 @media (forced-colors: active){
   .panel,.card,.home-card,.workflow-card,.item,.run,.hint-item{border:1px solid CanvasText}
   .status-ok,.status-warn,.status-err{color:CanvasText}
+  .tab[aria-selected="true"]{border-bottom:3px solid Highlight;font-weight:700}
 }
 @media(max-width:1200px){
   .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -657,14 +658,18 @@ button:disabled{cursor:not-allowed;opacity:.62}
     <div id="metrics" class="metrics"><div class="panel metric"><div>Primary Tab</div><strong>Setup</strong></div><div class="panel metric"><div>First Action</div><strong>Check Readiness</strong></div><div class="panel metric"><div>Reports</div><strong>After Output</strong></div><div class="panel metric"><div>Secrets</div><strong>Hidden</strong></div></div>
     <div id="tabs" class="panel tabs" role="tablist" aria-label="Main views"><button class="tab active" role="tab" aria-selected="true">Setup</button><button class="tab" role="tab" aria-selected="false">Reports</button><button class="tab" role="tab" aria-selected="false">Advanced / Tools</button></div>
 
-    <div id="home" class="panel view two"></div>
-    <div id="configure" class="panel view two active"></div>
-    <div id="graph" class="panel view two"></div>
-    <div id="db2" class="panel view two"></div>
-    <div id="prompts" class="panel view three"></div>
-    <div id="evidence" class="panel view two"></div>
-    <div id="workbench" class="panel view two"></div>
-    <div id="artifacts" class="panel view two"></div>
+    <div id="advanced" role="tabpanel" aria-labelledby="main-tab-home" hidden>
+      <div id="home" class="panel view two"></div>
+      <div id="workbench" class="panel view two"></div>
+    </div>
+    <div id="configure" class="panel view two active" role="tabpanel" aria-labelledby="main-tab-configure"></div>
+    <div id="reports" role="tabpanel" aria-labelledby="main-tab-reports" hidden>
+      <div id="graph" class="panel view two" role="tabpanel" aria-label="Graph"></div>
+      <div id="db2" class="panel view two" role="tabpanel" aria-label="DB2 / Test Data"></div>
+      <div id="prompts" class="panel view three" role="tabpanel" aria-label="Prompt Compare"></div>
+      <div id="evidence" class="panel view two" role="tabpanel" aria-label="Evidence Explorer"></div>
+      <div id="artifacts" class="panel view two" role="tabpanel" aria-label="Overview"></div>
+    </div>
   </div>
 </div>
 
@@ -1011,11 +1016,13 @@ function renderMetrics(){
 }
 
 function renderTabs(){
+  q('reports').hidden=!isReportsTab(s.tab);
+  q('advanced').hidden=s.tab!=='home'&&s.tab!=='workbench';
   q('tabs').setAttribute('role','tablist');
   q('tabs').setAttribute('aria-label','Main views');
   q('tabs').innerHTML=tabs.map(([id,label])=>{
     const active=(id==='reports'&&isReportsTab(s.tab))||(s.tab===id)||(id==='home'&&s.tab==='workbench');
-    return '<button class="tab'+(active?' active':'')+'" role="tab" aria-selected="'+String(active)+'" aria-controls="'+id+'" tabindex="'+(active?'0':'-1')+'" data-tab="'+id+'">'+label+'</button>';
+    return '<button id="main-tab-'+id+'" class="tab'+(active?' active':'')+'" role="tab" aria-selected="'+String(active)+'" aria-controls="'+(id==='home'?'advanced':id)+'" tabindex="'+(active?'0':'-1')+'" data-tab="'+id+'">'+label+'</button>';
   }).join('');
   for(const b of q('tabs').querySelectorAll('[data-tab]')) b.onclick=()=>selectTab(b.dataset.tab);
   bindRovingTabKeyboard(q('tabs'),'[data-tab]');
@@ -1048,11 +1055,8 @@ function bindRovingTabKeyboard(tablist,selector){
   for(const [index,button] of buttons.entries()){
     button.onkeydown=(event)=>{
       const key=String(event.key||'');
-      if(key==='Enter'||key===' '){
-        event.preventDefault();
-        button.click();
-        return;
-      }
+      // Native buttons already activate with Enter and Space. Synthesizing a
+      // click here can activate a replacement button twice on Space keyup.
       if(!['ArrowRight','ArrowDown','ArrowLeft','ArrowUp','Home','End'].includes(key)) return;
       event.preventDefault();
       const nextIndex=key==='Home'
@@ -4627,6 +4631,9 @@ async function selectTab(tab){
 }
 
 async function render(){
+  const previousFocus=document.activeElement;
+  const mainTab=previousFocus&&previousFocus.dataset.tab;
+  const reportTab=previousFocus&&previousFocus.dataset.reportView;
   renderTabs();
   renderAiWorkbenchBar();
   renderHome();
@@ -4638,6 +4645,13 @@ async function render(){
   renderWorkbench();
   renderArtifacts();
   await renderArtifactPreview();
+  // Navigation may be replaced or hidden; never override a newer user focus.
+  if(previousFocus&&(document.activeElement===document.body||document.activeElement===previousFocus)){
+    const target=mainTab
+      ? q('tabs').querySelector('[data-tab="'+mainTab+'"]')
+      : (reportTab&&isReportsTab(s.tab)?q(s.tab).querySelector('[data-report-view="'+reportTab+'"]'):null);
+    if(target) target.focus();
+  }
 }
 
 async function selectRun(program){
@@ -4673,6 +4687,7 @@ async function boot(){
 }
 
 boot().catch((e)=>{
+  q('reports').hidden=false;
   q('artifacts').classList.add('active');
   q('artifacts').innerHTML='<div class="sub"><div class="empty">'+esc(e.message||String(e))+'</div></div>';
 });

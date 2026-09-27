@@ -15,6 +15,109 @@ const {
 } = require('./support/e2eHarness');
 const { startChrome } = require('./support/chromeCdp');
 const { createPopulatedGuiRun } = require('./support/guiFixture');
+const { waitFor } = require('./support/e2eHarness');
+
+test('browser keyboard navigation preserves focus and forced-colors affordances', async t => {
+  const workspace = createE2eWorkspace('zeus-gui-a11y-e2e-');
+  createPopulatedGuiRun(workspace.path('output'));
+  let started;
+  let browser;
+  t.after(async () => {
+    if (browser) await browser.close();
+    if (started) await new Promise(resolve => started.server.close(resolve));
+    workspace.cleanup();
+  });
+  try {
+    started = await startLocalUiServer({
+      outputRoot: workspace.path('output'),
+      host: '127.0.0.1',
+      port: 0,
+      actionServiceOptions: { cwd: workspace.root, env: {} },
+    });
+    browser = await startChrome();
+  } catch (error) {
+    if (error?.code === 'E2E_PREREQUISITE_MISSING') {
+      skipOrFailPrerequisite(t, error.message);
+      return;
+    }
+    throw error;
+  }
+  await browser.navigate(started.url);
+  await waitFor(() =>
+    browser.evaluate(
+      `Boolean(document.querySelector('[data-run]') && document.querySelector('[data-setup-checklist]'))`
+    )
+  );
+  await browser.evaluate(`document.querySelector('[data-tab="configure"]').focus()`);
+  await browser.pressKey('ArrowRight', 'ArrowRight', 39);
+  assert.equal(await browser.evaluate('document.activeElement.dataset.tab'), 'reports');
+  await browser.pressKey('Enter', 'Enter', 13);
+  await waitFor(() =>
+    browser.evaluate(`Boolean(document.querySelector('#artifacts.active [data-report-view]'))`)
+  );
+  await waitFor(() => browser.evaluate(`document.activeElement.dataset.tab === 'reports'`), {
+    message: 'main tab focus was lost after activation',
+  });
+  assert.equal(
+    await browser.evaluate('document.activeElement.dataset.tab'),
+    'reports',
+    'main tab retains focus after activation'
+  );
+  assert.deepEqual(
+    await browser.evaluate(
+      `Array.from(document.querySelectorAll('[role="tab"]')).filter(tab => tab.getClientRects().length).map(tab => tab.getAttribute('aria-controls')).filter(id => !document.getElementById(id))`
+    ),
+    [],
+    'visible tabs control real panels'
+  );
+  await browser.pressKey('Tab', 'Tab', 9);
+  assert.equal(await browser.evaluate('document.activeElement.dataset.reportView'), 'artifacts');
+  await browser.pressKey('End', 'End', 35);
+  assert.equal(await browser.evaluate('document.activeElement.dataset.reportView'), 'evidence');
+  await browser.pressKey(' ', 'Space', 32);
+  await waitFor(() => browser.evaluate(`Boolean(document.querySelector('#evidence.active'))`));
+  await waitFor(
+    () =>
+      browser.evaluate(
+        `document.activeElement === document.querySelector('#evidence [data-report-view="evidence"]')`
+      ),
+    { message: 'report tab focus was lost after activation' }
+  );
+  assert.equal(
+    await browser.evaluate('document.activeElement.dataset.reportView'),
+    'evidence',
+    'report tab retains focus after activation'
+  );
+  await browser.pressKey('Home', 'Home', 36);
+  assert.equal(await browser.evaluate('document.activeElement.dataset.reportView'), 'artifacts');
+  await browser.pressKey('ArrowLeft', 'ArrowLeft', 37);
+  assert.equal(await browser.evaluate('document.activeElement.dataset.reportView'), 'evidence');
+  await browser.emulateMedia([
+    { name: 'forced-colors', value: 'active' },
+    { name: 'prefers-reduced-motion', value: 'reduce' },
+  ]);
+  const visual = await browser.evaluate(`(() => {
+    const selected = document.querySelector('#evidence [aria-selected="true"]');
+    const focused = getComputedStyle(document.activeElement);
+    const style = getComputedStyle(selected);
+    return { forced: matchMedia('(forced-colors: active)').matches, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      outline: focused.outlineStyle, outlineWidth: focused.outlineWidth, selectedBorder: style.borderBottomWidth,
+      borderContrast: style.borderBottomColor !== style.backgroundColor, transition: style.transitionDuration };
+  })()`);
+  assert.equal(visual.forced, true);
+  assert.equal(visual.reduced, true);
+  assert.equal(visual.outline, 'solid');
+  assert.equal(visual.outlineWidth, '3px');
+  assert.equal(visual.selectedBorder, '3px');
+  assert.equal(visual.borderContrast, true);
+  assert.equal(Number.parseFloat(visual.transition) <= 0.00001, true);
+  await browser.setViewport(390, 844);
+  assert.equal(
+    await browser.evaluate('document.documentElement.scrollWidth <= innerWidth'),
+    true,
+    'no horizontal page overflow at 390px'
+  );
+});
 
 test('real browser can operate the secure GUI setup and report navigation', async t => {
   const workspace = createE2eWorkspace('zeus-gui-e2e-');
@@ -94,7 +197,7 @@ test('real browser can operate the secure GUI setup and report navigation', asyn
       check();
     });
 
-    document.querySelector('[aria-controls="home"]')?.click();
+    document.querySelector('[data-tab="home"]')?.click();
     const advancedOpened = await waitFor(() =>
       document.querySelector('#home.active') && document.body.innerText.includes('Advanced / Tools')
     );
@@ -114,7 +217,7 @@ test('real browser can operate the secure GUI setup and report navigation', asyn
       return Boolean(pane && pane.querySelector('pre')?.textContent?.trim());
     });
 
-    document.querySelector('[aria-controls="home"]')?.click();
+    document.querySelector('[data-tab="home"]')?.click();
     await waitFor(() => document.querySelector('#home.active'));
     document.querySelector('#home [data-home-target="analyze-workspace"]')?.click();
     const analyzeOpened = await waitFor(() =>
@@ -321,7 +424,7 @@ test('real browser can inspect populated reports and complete Workbench actions'
       };
       check();
     });
-    document.querySelector('[aria-controls="home"]')?.click();
+    document.querySelector('[data-tab="home"]')?.click();
     await waitFor(() => document.querySelector('#home.active'));
     document.querySelector('#home [data-home-target="workbench"]')?.click();
     await waitFor(() => document.querySelector('#workbench.active #wbPreviewRefresh'));

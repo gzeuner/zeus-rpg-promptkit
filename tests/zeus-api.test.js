@@ -10,6 +10,7 @@ const {
   queryKnowledge,
   readKnowledge,
   runWorkflow,
+  capabilities,
   zeus,
 } = require('../src/api/zeusApi');
 const { REPRODUCIBLE_TIMESTAMP } = require('../src/reproducibility/reproducibility');
@@ -21,6 +22,54 @@ const KNOWN_FACTS_EXPIRES_AT = '2000-01-15T00:00:00.000Z';
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
+
+test('configuration capabilities execute their real structured operations', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-api-capabilities-'));
+  const configRoot = path.join(tempRoot, 'config');
+  fs.mkdirSync(configRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(configRoot, 'profiles.json'),
+    `${JSON.stringify(
+      {
+        local: {
+          resources: {
+            sourceCode: {
+              libraries: ['APPLIB'],
+              sourceFiles: ['QRPGLESRC'],
+            },
+            metadata: { schemas: ['APPMETA'] },
+          },
+        },
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+
+  try {
+    const resourceResult = await capabilities.execute(
+      'configure.resources',
+      { cwd: tempRoot, env: {} },
+      { profile: 'local' }
+    );
+    assert.equal(resourceResult.ok, true);
+    assert.equal(resourceResult.result.profile, 'local');
+    assert.equal(resourceResult.result.model.kind, 'resource-model');
+    assert.deepEqual(resourceResult.result.model.resources.sourceCode.libraries, ['APPLIB']);
+
+    const discoveryResult = await capabilities.execute(
+      'configure.discover-environment',
+      { cwd: tempRoot, env: {} },
+      { profile: 'local' }
+    );
+    assert.equal(discoveryResult.ok, false);
+    assert.equal(discoveryResult.error.code, 'INCOMPLETE_DB_CONFIGURATION');
+    assert.match(discoveryResult.error.message, /incomplete for the selected profile/i);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
 
 test('zeusApi exposes reusable analyze and workflow entry points', async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-api-'));

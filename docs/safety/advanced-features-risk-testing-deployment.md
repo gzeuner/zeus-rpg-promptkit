@@ -1,10 +1,14 @@
 ---
 Title: Zeus Advanced Features: Risk, Testing & Deployment Planning
 Description: Safety-First- und Governance-Dokumentation fuer risikoarme Zeus-Nutzung.
-Last Updated: 2026-05-17
+Last Updated: 2026-09-27
 ---
 
 # Zeus Advanced Features: Risk, Testing & Deployment Planning
+
+> Historical planning note: This document records the original feature planning for
+> the risk/testing/deployment helpers. It is not an active roadmap; current release
+> and capability documentation is authoritative.
 
 **Neue Toolkit-Erweiterungen für CHANGE-1234 und ähnliche Change-Szenarien**
 
@@ -431,13 +435,18 @@ node cli/zeus.js workflow --preset change-planning \
 
 ---
 
-## Zukünftige Erweiterungen
+## Zukünftige Erweiterungen (nicht beauftragt)
 
-- [ ] Pattern Registry erweitern (Decorator-Pattern, Strategy-Pattern erkennen)
-- [ ] Interactive UAT CLI (Before/After Queries side-by-side)
-- [ ] Integration mit JIRA für Auto-Ticket-Generierung
-- [ ] Diff-Report als strukturierte JSON (nicht nur ASCII Table)
-- [ ] Performance-Impact Analysis (Query-Kosten vor/nach)
+Die folgenden Ideen sind bewusst kein offener Projektauftrag und werden erst bei
+konkretem Bedarf neu bewertet:
+
+- Pattern Registry erweitern (Decorator-Pattern, Strategy-Pattern erkennen)
+- Interactive UAT CLI (Before/After Queries side-by-side)
+- Integration mit JIRA für Auto-Ticket-Generierung
+- Performance-Impact Analysis (Query-Kosten vor/nach)
+
+Der frühere Punkt „Diff-Report als strukturierte JSON“ ist bereits erledigt
+(`journal-row-diff --json`) und bleibt daher kein offenes To-do.
 
 ---
 

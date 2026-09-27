@@ -1,7 +1,7 @@
 ---
 Title: Prompt Workbench Quality Gates
 Description: Testmatrix, Regression-Schutz und negative Validierungsfaelle fuer die experimentelle lokale Prompt Workbench.
-Last Updated: 2026-06-19
+Last Updated: 2026-09-27
 ---
 
 # Prompt Workbench Quality Gates
@@ -52,6 +52,7 @@ They do not change the supported CLI/MCP-first product path.
 
 ## Empfohlene naechste Gates
 
-- UI-E2E smoke test for Prompt Canvas interactions.
-- Snapshot-style rendering check for preview composition.
-- Load test for large local template catalogs.
+- UI-E2E smoke test for Prompt Canvas interactions: covered by the populated browser run in
+  `tests/e2e/gui-workbench.e2e.test.js`; keep it as a regression gate.
+- Snapshot-style rendering check for preview composition: optional, not a release blocker.
+- Load test for large local template catalogs: optional until catalog sizes justify it; not a release blocker.
