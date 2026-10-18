@@ -219,7 +219,7 @@ test('scanRpgFile extracts fixed-form native file I/O semantics', () => {
       result.nativeFiles.map(
         entry => `${entry.name}:${entry.kind}:${entry.keyed}:${entry.declaredAccess.join('/')}`
       ),
-      ['INPUT:DISK:true:READ', 'QPRINT:PRINTER:false:WRITE', 'SCREEN:WORKSTN:false:']
+      ['INPUT:DISK:true:READ', 'QPRINT:PRINTER:false:WRITE', 'SCREEN:WORKSTN:false:READ/WRITE']
     );
     assert.deepEqual(
       result.nativeFileAccesses.map(

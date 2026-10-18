@@ -160,7 +160,7 @@ function buildOverview(
       hasSql
         ? `sql r=${sqlSummary.readStatementCount || 0} w=${sqlSummary.writeStatementCount || 0} d=${sqlSummary.dynamicStatementCount || 0}`
         : 'no-sql',
-      `nat f=${nativeSummary.fileCount || 0} m=${nativeSummary.mutatingFileCount || 0} i=${nativeSummary.interactiveFileCount || 0}`,
+      `nat f=${nativeSummary.fileCount || 0} m=${nativeSummary.mutatingFileCount || 0} i=${nativeSummary.interactiveFileCount || 0} unresolved=${nativeSummary.unresolvedAccessCount || 0}`,
       `bind m=${bindingSummary.moduleCount || 0} s=${bindingSummary.serviceProgramCount || 0}`,
     ].join(' ');
     if (denseLevel === 'ultra') {
@@ -172,6 +172,11 @@ function buildOverview(
     `Program ${program} interacts with ${tables.length} database table${tables.length === 1 ? '' : 's'} and calls ${calls.length} external program${calls.length === 1 ? '' : 's'}.`,
     `The program ${hasSql ? `contains embedded SQL statements (${sqlSummary.readStatementCount || 0} read, ${sqlSummary.writeStatementCount || 0} write, ${sqlSummary.dynamicStatementCount || 0} dynamic)` : 'does not contain embedded SQL statements'} and includes ${copies.length} copy member${copies.length === 1 ? '' : 's'}.`,
     `Native file usage covers ${nativeSummary.fileCount || 0} file${(nativeSummary.fileCount || 0) === 1 ? '' : 's'}, including ${nativeSummary.mutatingFileCount || 0} mutating and ${nativeSummary.interactiveFileCount || 0} interactive file${(nativeSummary.interactiveFileCount || 0) === 1 ? '' : 's'}.`,
+    ...(nativeSummary.unresolvedAccessCount > 0
+      ? [
+          'Native mutation assessment is incomplete: unresolved targets are not evidence of no writes.',
+        ]
+      : []),
     `Bind-time modeling covers ${bindingSummary.moduleCount || 0} module${(bindingSummary.moduleCount || 0) === 1 ? '' : 's'}, ${bindingSummary.serviceProgramCount || 0} service program${(bindingSummary.serviceProgramCount || 0) === 1 ? '' : 's'}, and ${bindingSummary.bindingDirectoryCount || 0} binding director${(bindingSummary.bindingDirectoryCount || 0) === 1 ? 'y' : 'ies'}.`,
   ].join(' ');
 }
@@ -217,6 +222,9 @@ function buildDataFlow(program, tables, calls, sqlSummary, nativeFileUsage, bind
   if ((nativeSummary.mutatingFileCount || 0) > 0) {
     parts.push('updates native files');
   }
+  if ((nativeSummary.unresolvedMutationCount || 0) > 0) {
+    parts.push('has mutating native operations with unresolved targets');
+  }
 
   if ((bindingSummary.boundModuleCount || 0) > 0) {
     parts.push('has explicit bind-time dependencies');
@@ -249,7 +257,11 @@ function nativeFileSection(nativeFileUsage) {
           .join('\n')
       : '- None detected';
 
-  return `- Native Files: ${summary.fileCount || 0}\n- Mutating Files: ${summary.mutatingFileCount || 0}\n- Interactive Files: ${summary.interactiveFileCount || 0}\n- Workstation Files: ${summary.workstationFileCount || 0}\n- Printer Files: ${summary.printerFileCount || 0}\n- Keyed Files: ${summary.keyedFileCount || 0}\n- Record Formats: ${summary.recordFormatCount || 0}\n\n${details}`;
+  const unresolved = (nativeFileUsage.accesses || [])
+    .filter(access => !access.fileName)
+    .map(access => `- ${access.opcode} ${access.targetName || '<missing>'} [${access.resolution}]`)
+    .join('\n');
+  return `- Native Files: ${summary.fileCount || 0}\n- Mutating Files: ${summary.mutatingFileCount || 0}\n- Mutating Accesses: ${summary.mutatingAccessCount || 0}\n- Unresolved Accesses: ${summary.unresolvedAccessCount || 0}\n- Unresolved Mutating Accesses: ${summary.unresolvedMutationCount || 0}\n- Interactive Files: ${summary.interactiveFileCount || 0}\n- Workstation Files: ${summary.workstationFileCount || 0}\n- Printer Files: ${summary.printerFileCount || 0}\n- Keyed Files: ${summary.keyedFileCount || 0}\n- Record Formats: ${summary.recordFormatCount || 0}\n\n${details}\n${unresolved}`;
 }
 
 function bindingSection(bindingAnalysis) {

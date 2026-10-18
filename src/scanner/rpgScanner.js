@@ -35,6 +35,7 @@ const NATIVE_IO_OPCODES = new Set([
   'UPDATE',
   'DELETE',
   'EXFMT',
+  'UNLOCK',
 ]);
 const BINDER_SOURCE_EXTENSIONS = new Set(['.BND', '.BINDER', '.BNDSRC']);
 const SQL_ALIAS_STOP_WORDS = new Set([
@@ -651,6 +652,8 @@ function createNativeFileDeclaration({
   lineNo,
   declaredAccess,
   keyed,
+  recordFormats = [],
+  fileType = null,
   text,
 }) {
   return {
@@ -660,6 +663,8 @@ function createNativeFileDeclaration({
     kind: normalizeName(kind || 'FILE') || 'FILE',
     declaredAccess: uniqueSortedStrings(declaredAccess),
     keyed: Boolean(keyed),
+    fileType,
+    recordFormats,
     evidence: [
       {
         file: filePath,
@@ -685,9 +690,19 @@ function createNativeFileAccess({
   keyed = false,
   interactive = false,
   mutating = false,
+  targetName = null,
+  resolution = 'FILE',
+  candidateFiles = [],
+  opcodeExtenders = [],
+  lockBehavior = 'DEFAULT',
 }) {
   return {
-    fileName: normalizeName(fileName),
+    fileName: fileName ? normalizeName(fileName) : null,
+    targetName: normalizeName(targetName || fileName),
+    resolution,
+    candidateFiles: uniqueSortedStrings(candidateFiles),
+    opcodeExtenders: uniqueSortedStrings(opcodeExtenders),
+    lockBehavior,
     fileKind: normalizeName(fileKind || 'FILE') || 'FILE',
     opcode: normalizeName(opcode),
     accessKind: normalizeName(accessKind),
@@ -841,6 +856,7 @@ function collectControlOptionBlocks(lines) {
   let collecting = false;
   let buffer = [];
   let startLine = 0;
+  let fixedHeader = null;
 
   for (let i = 0; i < (lines || []).length; i += 1) {
     const rawLine = lines[i];
@@ -849,6 +865,7 @@ function collectControlOptionBlocks(lines) {
     const trimmed = String(rawLine || '').trim();
 
     if (!collecting && /^ctl-opt\b/i.test(trimmed)) {
+      fixedHeader = null;
       collecting = true;
       startLine = lineNo;
       buffer = [trimmed];
@@ -870,9 +887,14 @@ function collectControlOptionBlocks(lines) {
       continue;
     }
 
-    if (/^\s*H\b/i.test(rawLine) && /\b(BNDDIR|BNDSRVPGM|NOMAIN)\b/i.test(rawLine)) {
-      blocks.push({ lineNo, text: normalizeWhitespace(trimmed) });
-    }
+    const headerText = rawLine[5]?.toUpperCase() === 'H' ? rawLine.slice(6) : '';
+    if (headerText) {
+      if (fixedHeader) fixedHeader.text = normalizeWhitespace(fixedHeader.text + ' ' + headerText);
+      else {
+        fixedHeader = { lineNo, text: normalizeWhitespace(headerText) };
+        blocks.push(fixedHeader);
+      }
+    } else if (trimmed) fixedHeader = null;
   }
 
   if (collecting && buffer.length > 0) {
@@ -1072,8 +1094,7 @@ function parseDeclaredAccess(detail) {
 }
 
 function parseFixedDeclaredAccess(rawLine) {
-  const match = rawLine.match(/^\s*F[A-Z0-9_#$@]+\s+([A-Z]{1,3})\b/i);
-  const token = match ? normalizeName(match[1]) : '';
+  const token = normalizeName(rawLine.slice(16, 17));
   const modes = new Set();
 
   if (token.includes('I')) {
@@ -1085,6 +1106,10 @@ function parseFixedDeclaredAccess(rawLine) {
   if (token.includes('U')) {
     modes.add('READ');
     modes.add('UPDATE');
+  }
+  if (token === 'C') {
+    modes.add('READ');
+    modes.add('WRITE');
   }
 
   return Array.from(modes).sort((a, b) => a.localeCompare(b));
@@ -1642,9 +1667,23 @@ function collectDataDeclarations(filePath, lines) {
   };
 }
 
+function parseNativeRecordFormats(detail) {
+  return [
+    ...String(detail || '').matchAll(
+      /\bRENAME\s*\(\s*['"]?([A-Z0-9_#$@]+)['"]?\s*:\s*['"]?([A-Z0-9_#$@]+)['"]?\s*\)/gi
+    ),
+  ]
+    .map(match => ({ externalName: normalizeName(match[1]), name: normalizeName(match[2]) }))
+    .sort(
+      (left, right) =>
+        left.name.localeCompare(right.name) || left.externalName.localeCompare(right.externalName)
+    );
+}
+
 function collectNativeFileDeclarations(filePath, lines) {
   const ownerProgram = toRelativeProgramName(filePath);
   const nativeFilesMap = new Map();
+  let previousFixedDeclaration = null;
 
   for (let i = 0; i < lines.length; i += 1) {
     const rawLine = lines[i];
@@ -1656,22 +1695,40 @@ function collectNativeFileDeclarations(filePath, lines) {
     const trimmed = rawLine.trim();
     const dclFMatch = rawLine.match(/^\s*dcl-f\s+([A-Z0-9_#$@]+)\b(.*)$/i);
     if (dclFMatch) {
+      previousFixedDeclaration = null;
+      const startIndex = i;
+      let detail = dclFMatch[2] || '';
+      while (!detail.includes(';') && i + 1 < lines.length) {
+        if (/^\s*(?:dcl-|ctl-opt|\*\*FREE)/i.test(lines[i + 1])) break;
+        i += 1;
+        if (!isCommentLine(lines[i])) detail += ' ' + lines[i].trim();
+      }
       const declaration = createNativeFileDeclaration({
         filePath,
         ownerProgram,
         name: dclFMatch[1],
-        kind: inferNativeFileKind(dclFMatch[2] || ''),
+        kind: inferNativeFileKind(detail),
         lineNo,
-        declaredAccess: parseDeclaredAccess(dclFMatch[2] || ''),
-        keyed: /\bKEYED\b/i.test(dclFMatch[2] || ''),
+        declaredAccess: parseDeclaredAccess(detail),
+        keyed: /\bKEYED\b/i.test(detail),
+        recordFormats: parseNativeRecordFormats(detail),
         text: trimmed,
       });
+      for (let continuationIndex = startIndex + 1; continuationIndex <= i; continuationIndex += 1) {
+        if (!isCommentLine(lines[continuationIndex]))
+          declaration.evidence.push({
+            file: filePath,
+            line: continuationIndex + 1,
+            text: normalizeWhitespace(lines[continuationIndex]),
+          });
+      }
       addStructuredItem(nativeFilesMap, declaration.name, declaration);
       continue;
     }
 
-    const fixedFSpecMatch = rawLine.match(/^\s*F[A-Z0-9_#$@]/i);
+    const fixedFSpecMatch = rawLine[5]?.toUpperCase() === 'F';
     if (!fixedFSpecMatch) {
+      previousFixedDeclaration = null;
       continue;
     }
 
@@ -1680,12 +1737,21 @@ function collectNativeFileDeclarations(filePath, lines) {
       continue;
     }
 
-    const tokenMatch = rawLine.match(/^\s*F([A-Z0-9_#$@]+)/i);
-    const fIndex = rawLine.search(/F/i);
-    const fixedColName =
-      fIndex >= 0 ? rawLine.slice(fIndex + 1, fIndex + 11).replace(/\s+/g, '') : '';
-    const tableName = ((tokenMatch ? tokenMatch[1] : '') || fixedColName).trim();
-    if (!tableName) {
+    const tableName = rawLine.slice(6, 16).trim();
+    if (!tableName && previousFixedDeclaration) {
+      previousFixedDeclaration.recordFormats.push(...parseNativeRecordFormats(rawLine.slice(16)));
+      previousFixedDeclaration.recordFormats.sort((left, right) =>
+        left.name.localeCompare(right.name)
+      );
+      previousFixedDeclaration.evidence.push({
+        file: filePath,
+        line: lineNo,
+        text: normalizeWhitespace(rawLine),
+      });
+      continue;
+    }
+    if (!/^[A-Z_#$@][A-Z0-9_#$@]{0,9}$/i.test(tableName)) {
+      previousFixedDeclaration = null;
       continue;
     }
 
@@ -1693,13 +1759,16 @@ function collectNativeFileDeclarations(filePath, lines) {
       filePath,
       ownerProgram,
       name: tableName,
-      kind: inferNativeFileKind(rawLine),
+      kind: inferNativeFileKind(rawLine.slice(16)),
       lineNo,
       declaredAccess: parseFixedDeclaredAccess(rawLine),
       keyed: /\bK\b/i.test(rawLine),
+      recordFormats: parseNativeRecordFormats(rawLine.slice(16)),
+      fileType: normalizeName(rawLine.slice(16, 17)),
       text: trimmed,
     });
     addStructuredItem(nativeFilesMap, declaration.name, declaration);
+    previousFixedDeclaration = nativeFilesMap.get(declaration.name);
   }
 
   return Array.from(nativeFilesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -1848,23 +1917,44 @@ function mapNativeOpcode(opcode) {
       mutating: false,
     };
   }
+  if (normalized === 'UNLOCK') {
+    return { accessKind: 'LOCK_RELEASE', keyed: false, interactive: false, mutating: false };
+  }
   return null;
 }
 
-function extractTargetToken(text) {
-  const matches = String(text || '').match(/[A-Z0-9_#$@*]+/gi);
-  if (!matches || matches.length === 0) return '';
-  return matches[matches.length - 1];
+function splitNativeOperands(text) {
+  const operands = [];
+  let depth = 0;
+  let quote = null;
+  let operand = '';
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (quote) {
+      operand += character;
+      if (character === quote && text[index + 1] === quote) operand += text[++index];
+      else if (character === quote) quote = null;
+      continue;
+    }
+    if (character === "'" || character === '"') quote = character;
+    if (character === '(') depth += 1;
+    if (character === ')') depth -= 1;
+    if (depth === 0 && (character === ';' || text.slice(index, index + 2) === '//')) break;
+    if (depth === 0 && /\s/.test(character)) {
+      if (operand) operands.push(operand);
+      operand = '';
+    } else operand += character;
+  }
+  if (operand) operands.push(operand);
+  return depth === 0 && !quote ? operands : [];
 }
 
-function parseFreeFormNativeIo(trimmed) {
+function parseFreeFormNativeIo(trimmed, nativeFiles) {
   if (!trimmed || looksLikeStandaloneSql(trimmed)) {
     return null;
   }
 
-  const opcodeMatch = trimmed.match(
-    /^(CHAIN|SETLL|SETGT|READPE|READP|READE|READ|WRITE|UPDATE|DELETE|EXFMT)\b(?:\s*\([^)]*\))?\s+(.+)$/i
-  );
+  const opcodeMatch = trimmed.match(/^([A-Z]+)(?:\(([A-Z]+)\))?(?=\s|;|$)\s*(.*)$/i);
   if (!opcodeMatch) {
     return null;
   }
@@ -1874,21 +1964,29 @@ function parseFreeFormNativeIo(trimmed) {
     return null;
   }
 
-  const target = extractTargetToken(opcodeMatch[2].replace(/[;)]\s*$/, ''));
-  if (!target) {
-    return null;
-  }
+  const operands = splitNativeOperands(opcodeMatch[3]);
+  const keyed = ['CHAIN', 'SETLL', 'SETGT'].includes(opcode);
+  const optionalKey = ['READE', 'READPE', 'DELETE'].includes(opcode);
+  const firstIsFile = (nativeFiles || []).some(
+    file =>
+      file.name === normalizeName(operands[0]) ||
+      (file.recordFormats || []).some(format => format.name === normalizeName(operands[0]))
+  );
+  const targetIndex = keyed || (optionalKey && operands.length > 1 && !firstIsFile) ? 1 : 0;
 
   return {
     opcode,
-    target: normalizeName(target),
+    target: normalizeName(operands[targetIndex]),
+    opcodeExtenders: uniqueSortedStrings((opcodeMatch[2] || '').toUpperCase().split('')),
   };
 }
 
 function parseFixedFormNativeIo(rawLine) {
-  const match = rawLine.match(
-    /^\s*C\b.*?\b(CHAIN|SETLL|SETGT|READPE|READP|READE|READ|WRITE|UPDATE|DELETE|EXFMT)\b\s+([A-Z0-9_#$@*]+)/i
-  );
+  if (rawLine[5]?.toUpperCase() !== 'C') return null;
+  const match = rawLine
+    .slice(25, 35)
+    .trim()
+    .match(/^([A-Z]+)(?:\(([A-Z]+)\))?$/i);
   if (!match) {
     return null;
   }
@@ -1900,23 +1998,37 @@ function parseFixedFormNativeIo(rawLine) {
 
   return {
     opcode,
-    target: normalizeName(match[2]),
+    target: normalizeName(rawLine.slice(35, 49).trim()),
+    opcodeExtenders: uniqueSortedStrings((match[2] || '').toUpperCase().split('')),
   };
 }
 
 function resolveNativeFileTarget(targetName, opcode, nativeFiles) {
   const normalizedTarget = normalizeName(targetName);
   if (!normalizedTarget) {
-    return null;
+    return { resolution: 'UNRESOLVED', fileName: null };
   }
 
-  const direct = (nativeFiles || []).find(entry => entry.name === normalizedTarget);
+  const candidates = (nativeFiles || []).filter(
+    entry =>
+      entry.name === normalizedTarget ||
+      (normalizeName(opcode) !== 'UNLOCK' &&
+        (entry.recordFormats || []).some(format => format.name === normalizedTarget))
+  );
+  if (candidates.length > 1)
+    return {
+      resolution: 'AMBIGUOUS',
+      fileName: null,
+      candidateFiles: candidates.map(entry => entry.name),
+    };
+  const direct = candidates[0];
   if (direct) {
     return {
       fileName: direct.name,
       fileKind: direct.kind || 'FILE',
       keyed: Boolean(direct.keyed),
-      recordFormat: null,
+      recordFormat: direct.name === normalizedTarget ? null : normalizedTarget,
+      resolution: direct.name === normalizedTarget ? 'FILE' : 'RECORD_FORMAT',
     };
   }
 
@@ -1954,7 +2066,7 @@ function resolveNativeFileTarget(targetName, opcode, nativeFiles) {
     }
   }
 
-  return null;
+  return { resolution: 'UNRESOLVED', fileName: null };
 }
 
 function scanContent(filePath, content) {
@@ -1998,6 +2110,12 @@ function scanContent(filePath, content) {
 
   const { ownerProgram, procedures, prototypes } = collectDefinitions(filePath, lines);
   const nativeFiles = collectNativeFileDeclarations(filePath, lines);
+  const nativeIoDiagnostics = [];
+  for (const declaration of nativeFiles) {
+    for (const evidence of declaration.evidence) {
+      addEntity(tablesMap, declaration.name, { kind: declaration.kind, evidence });
+    }
+  }
   const bindingSemantics = collectModuleBindingSemantics(filePath, lines, ownerProgram, prototypes);
   const bifUsages = collectBifUsages(filePath, lines);
   const indicatorUsages = collectIndicatorUsages(filePath, lines);
@@ -2080,42 +2198,6 @@ function scanContent(filePath, content) {
     const trimmed = rawLine.trim();
     const owner = findCurrentOwner(lineNo, ownerProgram, procedures);
 
-    const dclFMatch = rawLine.match(/^\s*dcl-f\s+([A-Z0-9_#$@]+)/i);
-    if (dclFMatch) {
-      const upperLine = rawLine.toUpperCase();
-      let kind = 'FILE';
-      if (upperLine.includes('WORKSTN')) kind = 'WORKSTN';
-      if (upperLine.includes('PRINTER')) kind = 'PRINTER';
-      if (upperLine.includes('DISK')) kind = 'DISK';
-      addEntity(tablesMap, dclFMatch[1], {
-        kind,
-        evidence: { file: filePath, line: lineNo, text: trimmed },
-      });
-    }
-
-    const fixedFSpecMatch = rawLine.match(/^\s*F[A-Z0-9_#$@]/i);
-    if (fixedFSpecMatch) {
-      const trimmedUpper = trimmed.toUpperCase();
-      if (!trimmedUpper.startsWith('FROM ')) {
-        const tokenMatch = rawLine.match(/^\s*F([A-Z0-9_#$@]+)/i);
-        const fIndex = rawLine.search(/F/i);
-        const fixedColName =
-          fIndex >= 0 ? rawLine.slice(fIndex + 1, fIndex + 11).replace(/\s+/g, '') : '';
-        const tableName = ((tokenMatch ? tokenMatch[1] : '') || fixedColName).trim();
-        if (tableName) {
-          const upperLine = rawLine.toUpperCase();
-          let kind = 'FILE';
-          if (upperLine.includes('WORKSTN')) kind = 'WORKSTN';
-          if (upperLine.includes('PRINTER')) kind = 'PRINTER';
-          if (upperLine.includes('DISK')) kind = 'DISK';
-          addEntity(tablesMap, tableName, {
-            kind,
-            evidence: { file: filePath, line: lineNo, text: trimmed },
-          });
-        }
-      }
-    }
-
     const copyMatch =
       rawLine.match(/^\s*\/(?:COPY|INCLUDE)\s+(.+)$/i) || rawLine.match(/^\s*COPY\s+(.+)$/i);
     if (copyMatch) {
@@ -2127,7 +2209,8 @@ function scanContent(filePath, content) {
       }
     }
 
-    const nativeIoMatch = parseFreeFormNativeIo(trimmed) || parseFixedFormNativeIo(rawLine);
+    const nativeIoMatch =
+      parseFreeFormNativeIo(trimmed, nativeFiles) || parseFixedFormNativeIo(rawLine);
     if (nativeIoMatch) {
       const resolvedTarget = resolveNativeFileTarget(
         nativeIoMatch.target,
@@ -2152,8 +2235,28 @@ function scanContent(filePath, content) {
             keyed: opcodeAttributes.keyed || resolvedTarget.keyed,
             interactive: opcodeAttributes.interactive || resolvedTarget.fileKind === 'WORKSTN',
             mutating: opcodeAttributes.mutating,
+            targetName: nativeIoMatch.target,
+            resolution: resolvedTarget.resolution,
+            candidateFiles: resolvedTarget.candidateFiles,
+            opcodeExtenders: nativeIoMatch.opcodeExtenders,
+            lockBehavior:
+              nativeIoMatch.opcode === 'UNLOCK'
+                ? 'RELEASE'
+                : nativeIoMatch.opcodeExtenders.includes('N')
+                  ? 'NO_LOCK'
+                  : 'DEFAULT',
           })
         );
+        if (!resolvedTarget.fileName)
+          nativeIoDiagnostics.push({
+            code:
+              resolvedTarget.resolution === 'AMBIGUOUS'
+                ? 'NATIVE_IO_TARGET_AMBIGUOUS'
+                : 'NATIVE_IO_TARGET_UNRESOLVED',
+            severity: 'warning',
+            message: `${nativeIoMatch.opcode} target ${nativeIoMatch.target || '<missing>'} is ${resolvedTarget.resolution.toLowerCase()} at ${filePath}:${lineNo}.`,
+            evidence: [{ file: filePath, line: lineNo, text: trimmed }],
+          });
       }
     }
 
@@ -2336,7 +2439,8 @@ function scanContent(filePath, content) {
     }),
     nativeFiles,
     nativeFileAccesses: Array.from(nativeFileAccessesMap.values()).sort((a, b) => {
-      if (a.fileName !== b.fileName) return a.fileName.localeCompare(b.fileName);
+      if (a.fileName !== b.fileName)
+        return String(a.fileName || a.targetName).localeCompare(String(b.fileName || b.targetName));
       if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
       if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
       if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
@@ -2353,8 +2457,8 @@ function scanContent(filePath, content) {
     modules: bindingSemantics.modules,
     bindingDirectories: bindingSemantics.bindingDirectories,
     servicePrograms: bindingSemantics.servicePrograms,
-    diagnostics: bindingSemantics.diagnostics,
-    notes: [],
+    diagnostics: [...bindingSemantics.diagnostics, ...nativeIoDiagnostics],
+    notes: nativeIoDiagnostics.map(diagnostic => diagnostic.message),
     sqlValidation,
   };
 }
@@ -2824,6 +2928,19 @@ function scanSourceFiles(filePaths, options = {}) {
         target.kind =
           target.kind === 'FILE' && item.kind ? item.kind : target.kind || item.kind || 'FILE';
         target.keyed = Boolean(target.keyed || item.keyed);
+        target.fileType = target.fileType || item.fileType || null;
+        target.recordFormats = [
+          ...new Map(
+            [...(target.recordFormats || []), ...(item.recordFormats || [])].map(format => [
+              format.name + ':' + format.externalName,
+              format,
+            ])
+          ).values(),
+        ].sort(
+          (left, right) =>
+            left.name.localeCompare(right.name) ||
+            left.externalName.localeCompare(right.externalName)
+        );
         target.declaredAccess = uniqueSortedStrings([
           ...(target.declaredAccess || []),
           ...(item.declaredAccess || []),
@@ -2843,7 +2960,8 @@ function scanSourceFiles(filePaths, options = {}) {
         (item.evidence && item.evidence[0] && item.evidence[0].line) || 0,
       ].join('|')
     ).sort((a, b) => {
-      if (a.fileName !== b.fileName) return a.fileName.localeCompare(b.fileName);
+      if (a.fileName !== b.fileName)
+        return String(a.fileName || a.targetName).localeCompare(String(b.fileName || b.targetName));
       if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
       if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
       if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);

@@ -9,6 +9,8 @@ const {
   validateCanonicalAnalysisModel,
 } = require('../src/context/canonicalAnalysisModel');
 const { buildContext } = require('../src/context/contextBuilder');
+const { scanSourceFiles } = require('../src/scanner/rpgScanner');
+const { generateMarkdownReport } = require('../src/report/markdownReport');
 
 test('buildCanonicalAnalysisModel creates a validated semantic core with provenance and projections', () => {
   const sourceRoot = path.resolve('fixtures-root');
@@ -188,6 +190,42 @@ test('buildCanonicalAnalysisModel creates a validated semantic core with provena
   assert.equal(projectedContext.sql.statements[0].evidence[0].file, 'ORDERPGM.rpgle');
   assert.equal(projectedContext.knownFacts.enabled, false);
   assert.equal(projectedContext.knownFacts.status, 'disabled');
+});
+
+test('unresolved native mutations remain visible without a fabricated file relation', () => {
+  const filePath = path.resolve(
+    __dirname,
+    'fixtures/sanitized-corpus/scanner/core-patterns/free-native-io.rpgle'
+  );
+  const scan = scanSourceFiles([filePath]);
+  const canonical = buildCanonicalAnalysisModel({
+    program: 'FREE-NATIVE-IO',
+    sourceRoot: path.dirname(filePath),
+    sourceFiles: scan.sourceFiles,
+    dependencies: scan,
+    notes: scan.notes,
+  });
+  const usage = canonical.enrichments.nativeFileUsage;
+  const unresolved = usage.accesses.find(access => access.targetName === 'UNKNOWNREC');
+
+  assert.equal(unresolved.fileName, null);
+  assert.equal(unresolved.mutating, true);
+  assert.equal(usage.summary.unresolvedAccessCount, 1);
+  assert.equal(usage.summary.unresolvedMutationCount, 1);
+  assert.ok(canonical.enrichments.aiContext.riskHints.some(hint => /incomplete/.test(hint)));
+  assert.ok(
+    !canonical.relations.some(
+      relation => relation.type === 'ACCESSES_NATIVE_FILE' && relation.to.includes('UNKNOWNREC')
+    )
+  );
+  assert.ok(
+    canonical.relations.some(
+      relation => relation.type === 'ACCESSES_NATIVE_FILE' && relation.to === 'NATIVE_FILE:FREEFILE'
+    )
+  );
+  const report = generateMarkdownReport(buildContext({ canonicalAnalysis: canonical }), {});
+  assert.match(report, /Native mutation assessment is incomplete/);
+  assert.match(report, /UPDATE UNKNOWNREC \[UNRESOLVED\]/);
 });
 
 test('enrichCanonicalAnalysisModel updates enrichments while keeping the model valid', () => {

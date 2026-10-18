@@ -259,8 +259,12 @@ function defaultNativeFileUsage() {
       printerFileCount: 0,
       keyedFileCount: 0,
       recordFormatCount: 0,
+      mutatingAccessCount: 0,
+      unresolvedAccessCount: 0,
+      unresolvedMutationCount: 0,
     },
     files: [],
+    accesses: [],
   };
 }
 
@@ -390,6 +394,13 @@ function buildRiskHints(dependencies, sql, procedureCalls, nativeFileUsage) {
   }
   if (nativeFileUsage && nativeFileUsage.summary && nativeFileUsage.summary.mutatingFileCount > 0) {
     hints.push('Mutating native file I/O detected');
+  }
+  if (
+    nativeFileUsage &&
+    nativeFileUsage.summary &&
+    nativeFileUsage.summary.unresolvedAccessCount > 0
+  ) {
+    hints.push('Unresolved native file I/O detected; mutation assessment is incomplete');
   }
   if (
     nativeFileUsage &&
@@ -660,6 +671,11 @@ function normalizeNativeFiles(nativeFiles, sourceRoot) {
       kind: normalizeName(item.kind || 'FILE') || 'FILE',
       declaredAccess: uniqueSortedStrings(item.declaredAccess || []),
       keyed: Boolean(item.keyed),
+      fileType: item.fileType ? normalizeName(item.fileType) : null,
+      recordFormats: (item.recordFormats || []).map(format => ({
+        name: normalizeName(format.name),
+        externalName: normalizeName(format.externalName),
+      })),
       evidence: normalizeEvidenceList(item.evidence || [], sourceRoot),
     };
 
@@ -673,6 +689,18 @@ function normalizeNativeFiles(nativeFiles, sourceRoot) {
     const target = map.get(name);
     target.kind = chooseMoreSpecificNativeFileKind(target.kind, normalized.kind);
     target.keyed = Boolean(target.keyed || normalized.keyed);
+    target.fileType = target.fileType || normalized.fileType;
+    target.recordFormats = [
+      ...new Map(
+        [...(target.recordFormats || []), ...normalized.recordFormats].map(format => [
+          `${format.name}:${format.externalName}`,
+          format,
+        ])
+      ).values(),
+    ].sort(
+      (left, right) =>
+        left.name.localeCompare(right.name) || left.externalName.localeCompare(right.externalName)
+    );
     target.declaredAccess = uniqueSortedStrings([
       ...(target.declaredAccess || []),
       ...(normalized.declaredAccess || []),
@@ -701,7 +729,12 @@ function normalizeNativeFileAccesses(nativeFileAccesses, sourceRoot) {
     nativeFileAccesses,
     sourceRoot,
     (item, rootDir) => ({
-      fileName: normalizeName(item.fileName),
+      fileName: item.fileName ? normalizeName(item.fileName) : null,
+      targetName: normalizeName(item.targetName || item.fileName),
+      resolution: normalizeName(item.resolution || 'FILE'),
+      candidateFiles: uniqueSortedStrings(item.candidateFiles || []),
+      opcodeExtenders: uniqueSortedStrings(item.opcodeExtenders || []),
+      lockBehavior: normalizeName(item.lockBehavior || 'DEFAULT'),
       fileKind: normalizeName(item.fileKind || 'FILE') || 'FILE',
       opcode: normalizeName(item.opcode),
       accessKind: normalizeName(item.accessKind),
@@ -736,7 +769,8 @@ function normalizeNativeFileAccesses(nativeFileAccesses, sourceRoot) {
       evidenceCount: item.evidence.length,
     }))
     .sort((a, b) => {
-      if (a.fileName !== b.fileName) return a.fileName.localeCompare(b.fileName);
+      if (a.fileName !== b.fileName)
+        return String(a.fileName || a.targetName).localeCompare(String(b.fileName || b.targetName));
       if (a.ownerProgram !== b.ownerProgram) return a.ownerProgram.localeCompare(b.ownerProgram);
       if (a.ownerName !== b.ownerName) return a.ownerName.localeCompare(b.ownerName);
       if (a.opcode !== b.opcode) return a.opcode.localeCompare(b.opcode);
@@ -975,8 +1009,14 @@ function summarizeNativeFileUsage(nativeFiles, nativeFileAccesses) {
       printerFileCount: fileList.filter(file => file.kind === 'PRINTER').length,
       keyedFileCount: fileList.filter(file => file.keyed || file.access.position).length,
       recordFormatCount: fileList.reduce((sum, file) => sum + (file.recordFormats || []).length, 0),
+      mutatingAccessCount: (nativeFileAccesses || []).filter(access => access.mutating).length,
+      unresolvedAccessCount: (nativeFileAccesses || []).filter(access => !access.fileName).length,
+      unresolvedMutationCount: (nativeFileAccesses || []).filter(
+        access => !access.fileName && access.mutating
+      ).length,
     },
     files: fileList,
+    accesses: nativeFileAccesses || [],
   };
 }
 
@@ -1505,6 +1545,7 @@ function buildRelations(
   }
 
   for (const access of nativeFileAccesses || []) {
+    if (!access.fileName) continue;
     const from = resolveCallSourceEntityId(access, procedures);
     const to = createEntityId('NATIVE_FILE', access.fileName);
     if (!from || !to) {
@@ -1521,6 +1562,10 @@ function buildRelations(
       attributes: {
         opcode: access.opcode,
         accessKind: access.accessKind,
+        targetName: access.targetName,
+        resolution: access.resolution,
+        opcodeExtenders: access.opcodeExtenders,
+        lockBehavior: access.lockBehavior,
         recordFormat: access.recordFormat,
         keyed: Boolean(access.keyed),
         interactive: Boolean(access.interactive),
