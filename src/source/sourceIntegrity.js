@@ -339,7 +339,7 @@ function validateSourceFiles(filePaths, options = {}) {
   const results = (filePaths || []).map(filePath => {
     const relativePath = normalizeRelativePath(options.rootDir, filePath);
     const manifestEntry = manifestEntries.get(relativePath) || null;
-    return validateSourceFile(filePath, {
+    const result = validateSourceFile(filePath, {
       rootDir: options.rootDir,
       sourceType:
         options.sourceTypeByPath && options.sourceTypeByPath.get
@@ -349,6 +349,15 @@ function validateSourceFiles(filePaths, options = {}) {
       strictUtf8Only: Boolean(options.strictUtf8Only),
       normalizeText: options.normalizeText !== false,
     });
+    if (manifestEntry?.export?.status === 'failed' || manifestEntry?.exported === false) {
+      result.status = 'invalid';
+      result.normalizationStatus = 'invalid';
+      result.normalizedText = null;
+      result.issues.push(
+        buildIssue('warning', 'SOURCE_IMPORT_FAILED', `Source export failed: ${relativePath}`)
+      );
+    }
+    return result;
   });
 
   const validFiles = results

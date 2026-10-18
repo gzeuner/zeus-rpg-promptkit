@@ -296,6 +296,12 @@ function buildImportManifest({ options, summary, exportRecords, localDestination
     const origin = buildOriginRecord(record, localDestination);
     const exportDetails = buildExportRecord(record, summary, options, normalizationPolicy);
     const validationDetails = buildValidationRecord(validationResult);
+    if (!record.ok) {
+      validationDetails.status = 'invalid';
+      validationDetails.messages.push(
+        'Source export failed; existing bytes are not a valid imported baseline.'
+      );
+    }
 
     return {
       sourceLib: origin.sourceLib,
@@ -367,7 +373,7 @@ function buildImportManifest({ options, summary, exportRecords, localDestination
       fileCount: files.length,
       exportedFileCount: files.filter(entry => entry.exported).length,
       failedFileCount: files.filter(entry => !entry.exported).length,
-      invalidFileCount: validation.invalidCount,
+      invalidFileCount: files.filter(entry => entry.validation.status === 'invalid').length,
       warningCount: validation.warningCount,
     },
     files,
