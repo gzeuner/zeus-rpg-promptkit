@@ -30,7 +30,11 @@ const {
   exportDb2Metadata,
   buildDb2MetadataCanonicalUpdatesFromPayload,
 } = require('../db2/metadataExportService');
-const { exportTestData } = require('../db2/testDataExportService');
+const {
+  exportTestData,
+  INDEX_FILE: TEST_DATA_INDEX_FILE,
+  writeTestDataIndex,
+} = require('../db2/testDataExportService');
 const { buildDependencyGraph, buildGraphSummary } = require('../dependency/dependencyGraphBuilder');
 const { buildCrossProgramGraph } = require('../dependency/crossProgramGraphBuilder');
 const { pickSourceSnippet } = require('../cli/helpers/sourceSnippet');
@@ -855,12 +859,15 @@ function exportTestDataStage(state) {
   let testDataCacheMetadata;
 
   if (cachedArtifact) {
+    const cachedSummary = {
+      ...(cachedArtifact.summary || {}),
+      indexFile: TEST_DATA_INDEX_FILE,
+      cacheStatus: 'hit',
+    };
+    writeTestDataIndex(outputProgramDir, cachedArtifact.payload, cachedSummary);
     testDataExport = {
       payload: cachedArtifact.payload,
-      summary: {
-        ...(cachedArtifact.summary || {}),
-        cacheStatus: 'hit',
-      },
+      summary: cachedSummary,
       notes: Array.isArray(cachedArtifact.payload.notes) ? cachedArtifact.payload.notes : [],
     };
     testDataCacheMetadata = {
