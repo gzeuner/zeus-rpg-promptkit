@@ -12,6 +12,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const {
   ensureJavaHelperCompiled,
@@ -30,12 +31,90 @@ const {
   buildDb2SourceLinkage,
   normalizeCatalogTable,
 } = require('./db2EvidenceLinker');
+const { REDACTED_VALUE, sanitizeValue } = require('../security/secretMasking');
 
 const JSON_FILE = 'test-data.json';
+const INDEX_FILE = 'test-data-index.json';
 const MARKDOWN_FILE = 'test-data.md';
 const DEFAULT_TEST_DATA_LIMIT = 50;
+const MAX_BATCH_TABLES = 64;
 const MARKDOWN_COLUMN_LIMIT = 8;
 const MARKDOWN_ROW_LIMIT = 10;
+
+function elapsedMilliseconds(startedAt) {
+  return Number(process.hrtime.bigint() - startedAt) / 1e6;
+}
+
+function writePerformanceLog(verbose, metrics) {
+  if (!verbose) return;
+  const milliseconds = value => Number(value).toFixed(1);
+  process.stderr.write(
+    `[perf] test-data helperMs=${milliseconds(metrics.helperMs)} responseBytes=${metrics.responseBytes} parseMs=${milliseconds(metrics.parseMs)} maskMs=${milliseconds(metrics.maskMs)} artifactMs=${milliseconds(metrics.artifactMs)} totalMs=${milliseconds(metrics.totalMs)} batchCount=${metrics.batchCount} maxResponseBytes=${metrics.maxResponseBytes}\n`
+  );
+}
+
+function buildTestDataIndex(payload, summary) {
+  const tables = Array.isArray(payload && payload.tables) ? payload.tables : [];
+  const exportedTableCount = tables.filter(table => table.status === 'exported').length;
+
+  return {
+    schemaVersion: 1,
+    kind: 'test-data-index',
+    program: payload && payload.program ? payload.program : null,
+    rowLimit: Number(payload && payload.rowLimit) || null,
+    summary: {
+      status: summary && summary.status ? summary.status : 'exported',
+      tableCount:
+        summary && Number.isFinite(Number(summary.tableCount))
+          ? Number(summary.tableCount)
+          : exportedTableCount,
+      requestedTableCount:
+        summary && Number.isFinite(Number(summary.requestedTableCount))
+          ? Number(summary.requestedTableCount)
+          : tables.length,
+      skippedTableCount:
+        summary && Number.isFinite(Number(summary.skippedTableCount))
+          ? Number(summary.skippedTableCount)
+          : tables.length - exportedTableCount,
+      rowLimit: Number(payload && payload.rowLimit) || null,
+      policySummary: summary && summary.policySummary ? summary.policySummary : null,
+    },
+    tables: tables.map(table => ({
+      schema: table.schema || '',
+      table: table.table || table.systemName || '',
+      systemSchema: table.systemSchema || '',
+      systemName: table.systemName || '',
+      status: table.status || null,
+      rowCount: Number.isFinite(Number(table.rowCount)) ? Number(table.rowCount) : null,
+      maskedColumnCount:
+        table.policyDecision && Array.isArray(table.policyDecision.maskedColumns)
+          ? table.policyDecision.maskedColumns.length
+          : 0,
+      policyEligibility:
+        table.policyDecision && table.policyDecision.eligibility
+          ? table.policyDecision.eligibility
+          : null,
+      sourceLink: table.sourceLink
+        ? {
+            matchStatus: table.sourceLink.matchStatus || null,
+            sourceEvidenceCount: Array.isArray(table.sourceLink.sourceEvidence)
+              ? table.sourceLink.sourceEvidence.length
+              : 0,
+          }
+        : null,
+    })),
+  };
+}
+
+function writeTestDataIndex(outputDir, payload, summary) {
+  const filePath = path.join(outputDir, INDEX_FILE);
+  fs.writeFileSync(
+    filePath,
+    `${JSON.stringify(buildTestDataIndex(payload, summary), null, 2)}\n`,
+    'utf8'
+  );
+  return filePath;
+}
 
 function normalizeMaskColumns(testDataConfig) {
   return Array.from(
@@ -47,13 +126,14 @@ function normalizeMaskColumns(testDataConfig) {
   ).sort((a, b) => a.localeCompare(b));
 }
 
-function writeOutputs(outputDir, payload, markdown) {
+function writeOutputs(outputDir, payload, markdown, summary) {
   fs.writeFileSync(
     path.join(outputDir, JSON_FILE),
     `${JSON.stringify(payload, null, 2)}\n`,
     'utf8'
   );
   fs.writeFileSync(path.join(outputDir, MARKDOWN_FILE), markdown, 'utf8');
+  writeTestDataIndex(outputDir, payload, summary);
 }
 
 function parseJavaJson(stdout) {
@@ -62,6 +142,36 @@ function parseJavaJson(stdout) {
     return null;
   }
   return JSON.parse(content);
+}
+
+function encodeBatchField(value) {
+  return Buffer.from(String(value === undefined || value === null ? '' : value), 'utf8').toString(
+    'base64url'
+  );
+}
+
+function createBatchRequestFile(entries) {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-test-data-batch-'));
+  const filePath = path.join(tempDir, 'requests.tsv');
+  try {
+    const lines = entries.map(entry =>
+      [
+        entry.schema,
+        entry.table,
+        ...(entry.columns || [])
+          .filter(column => column && column.primaryKey)
+          .map(column => String(column.name || '').trim())
+          .filter(Boolean),
+      ]
+        .map(encodeBatchField)
+        .join('\t')
+    );
+    fs.writeFileSync(filePath, lines.length > 0 ? `${lines.join('\n')}\n` : '', 'utf8');
+    return { tempDir, filePath };
+  } catch (error) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 function parseQualifiedTableName(value) {
@@ -623,10 +733,33 @@ function exportTestData({
   testDataConfig,
   skipTestData = false,
   verbose = false,
+  helpers = {},
 }) {
+  const exportStartedAt = process.hrtime.bigint();
+  const performanceMetrics = {
+    helperMs: 0,
+    responseBytes: 0,
+    batchCount: 0,
+    maxResponseBytes: 0,
+    parseMs: 0,
+    maskMs: 0,
+    artifactMs: 0,
+    totalMs: 0,
+  };
+  const ensureHelperCompiled =
+    typeof helpers.ensureJavaHelperCompiled === 'function'
+      ? helpers.ensureJavaHelperCompiled
+      : ensureJavaHelperCompiled;
+  const runHelper =
+    typeof helpers.runJavaHelper === 'function' ? helpers.runJavaHelper : runJavaHelper;
   const rowLimit = Number(testDataConfig && testDataConfig.limit) || DEFAULT_TEST_DATA_LIMIT;
   const requestedTables = buildRequestedTables(dependencies);
   const policy = buildTestDataPolicy(testDataConfig);
+  const safeError = value => {
+    const password = String((dbConfig && dbConfig.password) || '');
+    const raw = String(value || '');
+    return sanitizeValue(password ? raw.split(password).join(REDACTED_VALUE) : raw);
+  };
 
   if (skipTestData) {
     return createSkippedSummary(
@@ -696,37 +829,142 @@ function exportTestData({
       tables: [],
       notes,
     };
-    writeOutputs(outputDir, payload, renderTestDataMarkdown(program, rowLimit, [], notes, policy));
+    const summary = {
+      status: 'exported',
+      file: JSON_FILE,
+      indexFile: INDEX_FILE,
+      markdownFile: MARKDOWN_FILE,
+      tableCount: 0,
+      requestedTableCount: 0,
+      skippedTableCount: 0,
+      rowLimit,
+      policy,
+      policySummary: summarizePolicyApplication(policy, []),
+    };
+    writeOutputs(
+      outputDir,
+      payload,
+      renderTestDataMarkdown(program, rowLimit, [], notes, policy),
+      summary
+    );
     return {
       payload,
-      summary: {
-        status: 'exported',
-        file: JSON_FILE,
-        markdownFile: MARKDOWN_FILE,
-        tableCount: 0,
-        requestedTableCount: 0,
-        skippedTableCount: 0,
-        rowLimit,
-        policy,
-        policySummary: summarizePolicyApplication(policy, []),
-      },
+      summary,
       notes,
     };
   }
 
-  try {
-    ensureJavaHelperCompiled('Db2TestDataExtractor.java', 'Db2TestDataExtractor');
-  } catch (error) {
-    return createSkippedSummary(
-      `the DB2 helper could not run: ${error.message}`,
-      `Test data extraction was skipped because the DB2 helper could not run: ${error.message}`,
-      rowLimit,
-      requestedTables.length,
-      policy
-    );
+  const eligibleEntries = plan.filter(entry => entry.status !== 'skipped');
+  let batchExecutionError = '';
+  let batchOutputError = '';
+
+  if (eligibleEntries.length > 0) {
+    try {
+      ensureHelperCompiled('Db2TestDataExtractor.java', 'Db2TestDataExtractor');
+    } catch (error) {
+      return createSkippedSummary(
+        `the DB2 helper could not run: ${safeError(error.message)}`,
+        `Test data extraction was skipped because the DB2 helper could not run: ${safeError(error.message)}`,
+        rowLimit,
+        requestedTables.length,
+        policy
+      );
+    }
+
+    if (verbose) {
+      eligibleEntries.forEach(entry => {
+        console.log(
+          `[verbose] Extracting test data for ${entry.schema}.${entry.table} (limit ${rowLimit})`
+        );
+      });
+    }
   }
 
+  function* readBatchResults() {
+    let completedCount = 0;
+    while (completedCount < eligibleEntries.length) {
+      const batchEntries = eligibleEntries.slice(completedCount, completedCount + MAX_BATCH_TABLES);
+      const requestFile = createBatchRequestFile(batchEntries);
+      let result;
+      const helperStartedAt = process.hrtime.bigint();
+      performanceMetrics.batchCount += 1;
+      try {
+        result = runHelper(
+          'Db2TestDataExtractor',
+          [
+            jdbcUrl,
+            String(dbConfig.user),
+            SECRET_ENV_SENTINEL,
+            '--batch-file',
+            requestFile.filePath,
+            String(rowLimit),
+          ],
+          { password: String(dbConfig.password) }
+        );
+      } catch (error) {
+        batchExecutionError = safeError(error.message);
+        break;
+      } finally {
+        performanceMetrics.helperMs += elapsedMilliseconds(helperStartedAt);
+        fs.rmSync(requestFile.tempDir, { recursive: true, force: true });
+      }
+      const responseBytes = Buffer.byteLength(String(result.stdout || ''), 'utf8');
+      performanceMetrics.responseBytes += responseBytes;
+      performanceMetrics.maxResponseBytes = Math.max(
+        performanceMetrics.maxResponseBytes,
+        responseBytes
+      );
+      if (result.status !== 0) {
+        batchExecutionError =
+          safeError((result.stderr || '').trim()) || 'unknown DB2 test data error';
+        break;
+      }
+      const parseStartedAt = process.hrtime.bigint();
+      let parsed;
+      try {
+        parsed = parseJavaJson(result.stdout);
+        if (
+          !parsed ||
+          !Array.isArray(parsed.results) ||
+          parsed.results.length === 0 ||
+          parsed.results.length > batchEntries.length ||
+          (parsed.hasMore !== undefined && typeof parsed.hasMore !== 'boolean') ||
+          (parsed.results.length < batchEntries.length
+            ? parsed.hasMore !== true
+            : parsed.hasMore === true) ||
+          parsed.results.some((item, index) => {
+            const table = item?.status === 'exported' ? item.data : item;
+            return (
+              !['exported', 'error'].includes(item?.status) ||
+              normalizeIdentifier(table?.schema) !==
+                normalizeIdentifier(batchEntries[index].schema) ||
+              normalizeIdentifier(table?.table) !== normalizeIdentifier(batchEntries[index].table)
+            );
+          })
+        ) {
+          throw new Error(
+            'Batch helper returned an invalid result count, identity or continuation.'
+          );
+        }
+      } catch (error) {
+        batchOutputError = safeError(error.message);
+        break;
+      } finally {
+        performanceMetrics.parseMs += elapsedMilliseconds(parseStartedAt);
+      }
+      completedCount += parsed.results.length;
+      result = null;
+      yield* parsed.results;
+    }
+  }
+
+  const batchResults = readBatchResults();
   for (const entry of plan) {
+    const sourceLink =
+      metadataLinkage.tableLinkByExactKey.get(
+        `${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`
+      ) || null;
+
     if (entry.status === 'skipped') {
       tables.push({
         schema: entry.schema,
@@ -737,42 +975,14 @@ function exportTestData({
         rows: [],
         note: entry.note,
         policyDecision: entry.policyDecision,
-        sourceLink:
-          metadataLinkage.tableLinkByExactKey.get(
-            `${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`
-          ) || null,
+        sourceLink,
       });
       notes.push(`Skipped test data extraction for ${entry.table}: ${entry.note}`);
       continue;
     }
 
-    const primaryKeyColumns = (entry.columns || [])
-      .filter(column => column && column.primaryKey)
-      .map(column => String(column.name || '').trim())
-      .filter(Boolean);
-
-    if (verbose) {
-      console.log(
-        `[verbose] Extracting test data for ${entry.schema}.${entry.table} (limit ${rowLimit})`
-      );
-    }
-
-    const result = runJavaHelper(
-      'Db2TestDataExtractor',
-      [
-        jdbcUrl,
-        String(dbConfig.user),
-        SECRET_ENV_SENTINEL,
-        entry.schema,
-        entry.table,
-        String(rowLimit),
-        primaryKeyColumns.join(','),
-      ],
-      { password: String(dbConfig.password) }
-    );
-
-    if (result.status !== 0) {
-      const errorText = (result.stderr || '').trim() || 'unknown DB2 test data error';
+    const helperResult = batchResults.next().value;
+    const addErrorResult = note => {
       tables.push({
         schema: entry.schema,
         table: entry.table,
@@ -780,19 +990,65 @@ function exportTestData({
         rowCount: 0,
         columns: [],
         rows: [],
-        note: errorText,
+        note,
         policyDecision: entry.policyDecision,
-        sourceLink:
-          metadataLinkage.tableLinkByExactKey.get(
-            `${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`
-          ) || null,
+        sourceLink,
       });
+    };
+
+    if (batchExecutionError && !helperResult) {
+      addErrorResult(batchExecutionError);
+      notes.push(
+        `Test data extraction failed for ${entry.schema}.${entry.table}: ${batchExecutionError}`
+      );
+      continue;
+    }
+
+    if (batchOutputError && !helperResult) {
+      addErrorResult(`Invalid helper output: ${batchOutputError}`);
+      notes.push(
+        `Test data extraction returned invalid output for ${entry.schema}.${entry.table}: ${batchOutputError}`
+      );
+      continue;
+    }
+
+    const returnedTable = helperResult && (helperResult.data || helperResult);
+    if (
+      !returnedTable ||
+      normalizeIdentifier(returnedTable.schema) !== normalizeIdentifier(entry.schema) ||
+      normalizeIdentifier(returnedTable.table) !== normalizeIdentifier(entry.table)
+    ) {
+      const errorMessage = 'Batch helper returned an invalid or mismatched table result.';
+      addErrorResult(`Invalid helper output: ${errorMessage}`);
+      notes.push(
+        `Test data extraction returned invalid output for ${entry.schema}.${entry.table}: ${errorMessage}`
+      );
+      continue;
+    }
+
+    if (helperResult.status === 'error') {
+      const errorText = safeError(helperResult.error).trim() || 'unknown DB2 test data error';
+      addErrorResult(errorText);
       notes.push(`Test data extraction failed for ${entry.schema}.${entry.table}: ${errorText}`);
       continue;
     }
 
+    const parsed = helperResult && helperResult.data;
+    if (!parsed || helperResult.status !== 'exported') {
+      const errorMessage = 'Batch helper returned an invalid or mismatched table result.';
+      addErrorResult(`Invalid helper output: ${errorMessage}`);
+      notes.push(
+        `Test data extraction returned invalid output for ${entry.schema}.${entry.table}: ${errorMessage}`
+      );
+      continue;
+    }
+
+    const primaryKeyColumns = (entry.columns || [])
+      .filter(column => column && column.primaryKey)
+      .map(column => String(column.name || '').trim())
+      .filter(Boolean);
+    const maskStartedAt = process.hrtime.bigint();
     try {
-      const parsed = parseJavaJson(result.stdout) || {};
       const columns = Array.isArray(parsed.columns) ? parsed.columns : [];
       const resolvedEntry = {
         schema: normalizeIdentifier(parsed.schema || entry.schema),
@@ -812,7 +1068,7 @@ function exportTestData({
         policyDecision: {
           ...entry.policyDecision,
           maskedColumns: maskingPlan.maskedColumns,
-          matchedMaskRules: maskingPlan.matchedRules,
+          matchedRules: maskingPlan.matchedRules,
         },
         sourceLink:
           metadataLinkage.tableLinkByExactKey.get(
@@ -824,25 +1080,16 @@ function exportTestData({
       }
       tables.push(tableEntry);
     } catch (error) {
-      tables.push({
-        schema: entry.schema,
-        table: entry.table,
-        status: 'error',
-        rowCount: 0,
-        columns: [],
-        rows: [],
-        note: `Invalid helper output: ${error.message}`,
-        policyDecision: entry.policyDecision,
-        sourceLink:
-          metadataLinkage.tableLinkByExactKey.get(
-            `${normalizeIdentifier(entry.schema)}|${normalizeIdentifier(entry.table)}`
-          ) || null,
-      });
+      addErrorResult(`Invalid helper output: ${safeError(error.message)}`);
       notes.push(
-        `Test data extraction returned invalid output for ${entry.schema}.${entry.table}: ${error.message}`
+        `Test data extraction returned invalid output for ${entry.schema}.${entry.table}: ${safeError(error.message)}`
       );
+    } finally {
+      performanceMetrics.maskMs += elapsedMilliseconds(maskStartedAt);
+      helperResult.data = null;
     }
   }
+  batchResults.return();
 
   const sortedNotes = Array.from(new Set(notes)).sort((a, b) => a.localeCompare(b));
   const policySummary = summarizePolicyApplication(policy, tables);
@@ -853,44 +1100,52 @@ function exportTestData({
     tables,
     notes: sortedNotes,
   };
-  writeOutputs(
-    outputDir,
-    payload,
-    renderTestDataMarkdown(program, rowLimit, tables, sortedNotes, policy)
-  );
+  const summary = {
+    status: 'exported',
+    file: JSON_FILE,
+    indexFile: INDEX_FILE,
+    markdownFile: MARKDOWN_FILE,
+    tableCount: tables.filter(table => table.status === 'exported').length,
+    requestedTableCount: requestedTables.length,
+    skippedTableCount: tables.filter(table => table.status !== 'exported').length,
+    rowLimit,
+    policy,
+    policySummary,
+    tables: tables.map(table => {
+      const link = table.sourceLink || {
+        requestedName: normalizeIdentifier(table.table),
+        matchStatus: 'resolved',
+        sourceEvidence: [],
+        sqlReferences: [],
+        nativeFiles: [],
+      };
+      return buildCompactTestDataLink(link, table);
+    }),
+  };
+  const artifactStartedAt = process.hrtime.bigint();
+  const markdown = renderTestDataMarkdown(program, rowLimit, tables, sortedNotes, policy);
+  writeOutputs(outputDir, payload, markdown, summary);
+  performanceMetrics.artifactMs = elapsedMilliseconds(artifactStartedAt);
+  performanceMetrics.totalMs = elapsedMilliseconds(exportStartedAt);
+  writePerformanceLog(verbose, performanceMetrics);
 
   return {
     payload,
-    summary: {
-      status: 'exported',
-      file: JSON_FILE,
-      markdownFile: MARKDOWN_FILE,
-      tableCount: tables.filter(table => table.status === 'exported').length,
-      requestedTableCount: requestedTables.length,
-      skippedTableCount: tables.filter(table => table.status !== 'exported').length,
-      rowLimit,
-      policy,
-      policySummary,
-      tables: tables.map(table => {
-        const link = table.sourceLink || {
-          requestedName: normalizeIdentifier(table.table),
-          matchStatus: 'resolved',
-          sourceEvidence: [],
-          sqlReferences: [],
-          nativeFiles: [],
-        };
-        return buildCompactTestDataLink(link, table);
-      }),
-    },
+    summary,
     notes: sortedNotes,
   };
 }
 
 module.exports = {
+  buildTestDataIndex,
   buildExtractionPlan,
   buildTestDataPolicy,
   exportTestData,
+  INDEX_FILE,
   DEFAULT_TEST_DATA_LIMIT,
+  maskRows,
   renderTestDataMarkdown,
   resolveMaskingPlanForTable,
+  resolvePolicyDecision,
+  writeTestDataIndex,
 };
