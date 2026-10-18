@@ -15,7 +15,15 @@ const fs = require('fs');
 const path = require('path');
 const ftp = require('basic-ftp');
 
-async function downloadDirectoryViaFtp({ host, user, password, remoteDir, localDir, verbose }) {
+async function downloadDirectoryViaFtp({
+  host,
+  port,
+  user,
+  password,
+  remoteDir,
+  localDir,
+  verbose,
+}) {
   const client = new ftp.Client(30000);
   client.ftp.verbose = false;
   let downloadedCount = 0;
@@ -25,8 +33,18 @@ async function downloadDirectoryViaFtp({ host, user, password, remoteDir, localD
     const list = await client.list(remotePath);
 
     for (const entry of list) {
-      const remoteChild = path.posix.join(remotePath, entry.name);
-      const localChild = path.join(localPath, entry.name);
+      const name = String(entry.name || '');
+      if (
+        !name ||
+        name === '.' ||
+        name === '..' ||
+        path.posix.basename(name) !== name ||
+        path.win32.basename(name) !== name
+      ) {
+        throw new Error('FTP listing contains an unsafe member name.');
+      }
+      const remoteChild = path.posix.join(remotePath, name);
+      const localChild = path.join(localPath, name);
       const isDirectory =
         entry.isDirectory === true ||
         entry.type === 2 ||
@@ -47,6 +65,7 @@ async function downloadDirectoryViaFtp({ host, user, password, remoteDir, localD
   try {
     await client.access({
       host,
+      port,
       user,
       password,
       secure: false,

@@ -230,6 +230,7 @@ async function fetchSources(options, services = {}) {
       }
       return downloadDirectoryViaFtpFn({
         host: options.host,
+        port: options.port,
         user: options.user,
         password: options.password,
         remoteDir: options.ifsDir,
