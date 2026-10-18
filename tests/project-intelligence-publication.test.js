@@ -66,6 +66,8 @@ test(
 
       const current = engine.getCurrentSnapshot();
       assert.notEqual(current.snapshotId, firstSnapshotId);
+      assert.equal(engine.inspectFreshness().status, 'unknown');
+      assert.equal(engine.inspectFreshness().reasonCode, REASON_CODES.MIXED_GENERATION);
 
       const retriever = createProjectRetriever({
         knowledgeRoot,
@@ -81,6 +83,35 @@ test(
       } finally {
         retriever.close();
       }
+
+      failRebuild = false;
+      const repaired = engine.incrementalUpdate();
+      assert.equal(repaired.mode, 'index-repair');
+      assert.equal(repaired.published, false);
+      assert.equal(repaired.snapshot.snapshotId, current.snapshotId);
+      assert.equal(engine.inspectFreshness().status, 'fresh');
+
+      const recoveredRetriever = createProjectRetriever({
+        knowledgeRoot,
+        projectId: 'knowledge-001',
+        trustedRoots: [{ rootId: 'root-001', path: sourceDir }],
+        readOnly: true,
+      });
+      try {
+        assert.ok(recoveredRetriever.retrieve({ query: 'unit-b' }).hits.length > 0);
+      } finally {
+        recoveredRetriever.close();
+      }
+
+      const search = createSearchProvider({
+        knowledgeRoot,
+        projectId: 'knowledge-001',
+      });
+      search.markCorruptAndRequireRebuild('simulated index corruption');
+      search.close();
+      const rebuilt = engine.fullRebuild();
+      assert.equal(rebuilt.mode, 'index-repair');
+      assert.equal(rebuilt.snapshot.snapshotId, current.snapshotId);
     } finally {
       engine.close();
       fs.rmSync(root, { recursive: true, force: true });

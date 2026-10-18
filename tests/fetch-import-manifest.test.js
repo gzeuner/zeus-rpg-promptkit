@@ -8,7 +8,45 @@ const { fetchSources } = require('../src/fetch/fetchService');
 const {
   IMPORT_MANIFEST_FILE,
   IMPORT_MANIFEST_SCHEMA_VERSION,
+  buildImportManifest,
 } = require('../src/fetch/importManifest');
+
+test('failed source export cannot validate stale bytes from a previous fetch', () => {
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-fetch-stale-'));
+  try {
+    const localPath = path.join(outDir, 'QRPGLESRC', 'BROKENPGM.rpgle');
+    fs.mkdirSync(path.dirname(localPath), { recursive: true });
+    fs.writeFileSync(localPath, '**FREE\nDCL-PROC OLD;\nEND-PROC;\n', 'utf8');
+    const manifest = buildImportManifest({
+      localDestination: outDir,
+      options: {
+        host: 'synthetic-system.example',
+        sourceLib: 'SOURCEN',
+        ifsDir: '/synthetic/source',
+        transport: 'sftp',
+      },
+      summary: { transportUsed: 'sftp', exportedTotal: 1, exportedSuccess: 0 },
+      exportRecords: [
+        {
+          sourceLib: 'SOURCEN',
+          sourceFile: 'QRPGLESRC',
+          member: 'BROKENPGM',
+          localPath,
+          ok: false,
+          messages: ['Synthetic export failed'],
+        },
+      ],
+    });
+    assert.equal(manifest.files[0].validation.exists, true);
+    assert.equal(manifest.files[0].export.status, 'failed');
+    assert.equal(manifest.files[0].validation.status, 'invalid');
+    assert.equal(manifest.files[0].validationStatus, 'invalid');
+    assert.match(manifest.files[0].validation.messages.join('\n'), /export failed/i);
+    assert.equal(manifest.summary.invalidFileCount, 1);
+  } finally {
+    fs.rmSync(outDir, { recursive: true, force: true });
+  }
+});
 
 test('fetchSources writes an import manifest with validated downloaded files', async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-fetch-manifest-'));

@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { createHash } = require('crypto');
 const {
   SEARCH_SCHEMA_VERSION,
   ENGINE_ID,
@@ -12,6 +13,12 @@ const {
 } = require('./constants');
 const { fail, REASON_CODES } = require('../store/errors');
 const { knowledgePaths, resolveKnowledgeRoot } = require('../store/layout');
+
+function payloadHash(value) {
+  return createHash('sha256')
+    .update(`${JSON.stringify(value)}\n`)
+    .digest('hex');
+}
 
 function resolveIndexDir(options = {}) {
   if (options.indexDir) {
@@ -51,7 +58,7 @@ function readJson(filePath) {
   }
 }
 
-function writeManifest(indexDir, { projectId, snapshotId, docCount, generation }) {
+function writeManifest(indexDir, { projectId, snapshotId, docCount, generation, contentHashes }) {
   const paths = indexPaths(indexDir);
   const manifest = {
     schemaVersion: 1,
@@ -65,6 +72,7 @@ function writeManifest(indexDir, { projectId, snapshotId, docCount, generation }
     snapshotId: snapshotId || null,
     docCount: docCount || 0,
     generation: generation || 1,
+    ...(contentHashes ? { contentHashes } : {}),
     updatedAt: new Date().toISOString(),
   };
   writeJsonAtomic(paths.manifest, manifest);
@@ -101,6 +109,21 @@ function loadIndexFiles(indexDir) {
   if (!postings || typeof postings !== 'object' || Array.isArray(postings)) {
     fail(REASON_CODES.INDEX_CORRUPT, 'postings index payload must be an object');
   }
+  if (Object.prototype.hasOwnProperty.call(manifest, 'contentHashes')) {
+    if (!manifest.contentHashes || typeof manifest.contentHashes !== 'object') {
+      fail(REASON_CODES.INDEX_CORRUPT, 'index content hashes are invalid');
+    }
+    const generation = readJson(paths.generation);
+    if (
+      manifest.contentHashes.docs !== payloadHash(docs) ||
+      manifest.contentHashes.postings !== payloadHash(postings) ||
+      manifest.contentHashes.generation !== payloadHash(generation) ||
+      generation.generation !== manifest.generation ||
+      docs.length !== manifest.docCount
+    ) {
+      fail(REASON_CODES.INDEX_CORRUPT, 'index content hashes do not match');
+    }
+  }
   return { manifest, docs, postings, paths };
 }
 
@@ -117,15 +140,21 @@ function persistIndex(indexDir, { docs, postings, projectId, snapshotId, generat
   }
   writeJsonAtomic(paths.docs, docs);
   writeJsonAtomic(paths.postings, postings);
-  writeJsonAtomic(paths.generation, {
+  const generationPayload = {
     generation: generation || 1,
     updatedAt: new Date().toISOString(),
-  });
+  };
+  writeJsonAtomic(paths.generation, generationPayload);
   return writeManifest(indexDir, {
     projectId,
     snapshotId,
     docCount: Array.isArray(docs) ? docs.length : 0,
     generation,
+    contentHashes: {
+      docs: payloadHash(docs),
+      postings: payloadHash(postings),
+      generation: payloadHash(generationPayload),
+    },
   });
 }
 

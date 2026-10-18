@@ -289,6 +289,30 @@ function wrapEngine({
       throw err;
     }
 
+    let indexAligned = false;
+    let indexReasonCode = REASON_CODES.MIXED_GENERATION;
+    try {
+      const search = openSearch(true);
+      try {
+        indexAligned = indexMatchesSnapshot(search, current);
+      } finally {
+        search.close();
+      }
+    } catch (err) {
+      indexReasonCode = (err && err.reasonCode) || REASON_CODES.MIXED_GENERATION;
+    }
+    if (!indexAligned) {
+      return {
+        status: 'unknown',
+        reasonCode: indexReasonCode,
+        snapshotId: current.snapshotId,
+        sourceInventoryHash: current.sourceInventoryHash,
+        liveSourceInventoryHash: null,
+        trustedRootIds: trustedRoots.map(root => safeRootId(root.rootId)).sort(),
+        diff: null,
+      };
+    }
+
     const trustedRootIds = trustedRoots.map(root => safeRootId(root.rootId)).sort();
     if (trustedRoots.length === 0) {
       return {
@@ -361,6 +385,36 @@ function wrapEngine({
     return [];
   }
 
+  function indexMatchesSnapshot(search, snapshot) {
+    const status = search.getStatus();
+    return status.projectId === projectId && status.snapshotId === snapshot.snapshotId;
+  }
+
+  function repairCurrentIndex(snapshot, search) {
+    const facts = loadPreviousFacts(snapshot.snapshotId);
+    const content = openContent(true);
+    const bodiesByHash = {};
+    for (const unit of facts.units) {
+      bodiesByHash[unit.contentHash] = content.getBytes(unit.contentHash).toString('utf8');
+    }
+    const docs = buildSearchDocuments({
+      projectId,
+      snapshotId: snapshot.snapshotId,
+      units: facts.units,
+      symbols: facts.symbols,
+      evidence: facts.evidence,
+      bodiesByHash,
+    });
+    search.rebuild(docs, { snapshotId: snapshot.snapshotId });
+    return {
+      ok: true,
+      mode: 'index-repair',
+      snapshot,
+      published: false,
+      repairedIndex: true,
+    };
+  }
+
   /**
    * Full rebuild from trusted roots.
    */
@@ -417,13 +471,21 @@ function wrapEngine({
     const diff = planInventoryDiff(previousUnits, inv.units);
     if (diff.isNoOp && hasCurrent) {
       const current = store.getCurrentSnapshot(projectId);
-      return {
-        ok: true,
-        mode: 'incremental-noop',
-        snapshot: current,
-        diff,
-        published: false,
-      };
+      const search = openSearch(false);
+      try {
+        if (!indexMatchesSnapshot(search, current)) {
+          return { ...repairCurrentIndex(current, search), diff };
+        }
+        return {
+          ok: true,
+          mode: 'incremental-noop',
+          snapshot: current,
+          diff,
+          published: false,
+        };
+      } finally {
+        search.close();
+      }
     }
 
     const invalidation = planInvalidation(diff, previousFacts);
@@ -448,7 +510,6 @@ function wrapEngine({
   function publishFromPlan({ mode, inventory, unitsToAnalyze, keptFacts, diff, invalidation }) {
     const snapshotId = `snap-${inventory.inventoryHash.slice(0, 16)}`;
     const analyzerRunId = `run:${analyzer.analyzerId}:${snapshotId}`;
-    const content = openContent();
     const search = openSearch(false);
 
     // Idempotent: if this inventory already published as current, no-op
@@ -458,7 +519,11 @@ function wrapEngine({
         current.snapshotId === snapshotId &&
         current.sourceInventoryHash === inventory.inventoryHash
       ) {
-        content; // silence
+        if (!indexMatchesSnapshot(search, current)) {
+          const repaired = repairCurrentIndex(current, search);
+          search.close();
+          return { ...repaired, diff };
+        }
         search.close();
         return {
           ok: true,
@@ -474,6 +539,7 @@ function wrapEngine({
 
     const bodiesByHash = {};
     try {
+      const content = openContent();
       // 1) Content store: put canonical bytes for units that need analysis + all next units
       for (const unit of inventory.units) {
         if (unit._canonicalBytes) {

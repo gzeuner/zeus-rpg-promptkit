@@ -16,6 +16,7 @@ const {
 } = require('./constants');
 const { assembleContextPackage } = require('./contextAssembler');
 const { normalizeTokenBudget } = require('./tokenBudget');
+const { seedIdsFromHits } = require('./graphExpansion');
 
 /**
  * Hybrid lexical + graph retriever for published project knowledge (ZPI-08).
@@ -130,9 +131,20 @@ function createProjectRetriever(options = {}) {
       limit,
     });
 
-    const symbols = store.listSymbols(resolvedProjectId, snap.snapshotId);
-    const relationships = store.listRelationships(resolvedProjectId, snap.snapshotId);
-    const evidenceMeta = listEvidence(store, resolvedProjectId, snap.snapshotId);
+    const seedIds = seedIdsFromHits(lexical.hits);
+    const useSlice =
+      Number.isInteger(expandHops) &&
+      expandHops >= 0 &&
+      expandHops <= 8 &&
+      seedIds.length <= 512 &&
+      seedIds.every(id => id.length <= 512);
+    const { symbols, relationships, evidenceMeta } = useSlice
+      ? store.readContextSlice(resolvedProjectId, snap.snapshotId, { seedIds, hops: expandHops })
+      : {
+          symbols: store.listSymbols(resolvedProjectId, snap.snapshotId),
+          relationships: store.listRelationships(resolvedProjectId, snap.snapshotId),
+          evidenceMeta: listEvidence(store, resolvedProjectId, snap.snapshotId),
+        };
 
     const assembled = assembleContextPackage({
       projectId: resolvedProjectId,
@@ -161,7 +173,14 @@ function createProjectRetriever(options = {}) {
     return {
       ok: true,
       contextPackage: assembled.contextPackage,
-      metrics: assembled.metrics,
+      metrics: {
+        ...assembled.metrics,
+        loaded: {
+          symbols: symbols.length,
+          relationships: relationships.length,
+          evidence: evidenceMeta.length,
+        },
+      },
       retrieval: {
         totalMatched: lexical.totalMatched,
         hitCount: (lexical.hits || []).length,

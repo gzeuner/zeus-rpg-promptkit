@@ -303,6 +303,8 @@ button,.chip,a.btn,select,input,textarea{
   overflow:hidden;
 }
 .view.active{display:grid}
+.report-view-group{display:none;overflow:hidden}
+.report-view-group.active{display:block}
 .two{grid-template-columns:minmax(260px,300px) minmax(0,1fr);gap:18px}
 .three{grid-template-columns:minmax(220px,260px) minmax(0,1fr) minmax(0,1fr);gap:18px}
 .sub{
@@ -455,6 +457,7 @@ input[type="search"]{
 .field-item strong{
   font-size:15px;
 }
+.source-fingerprint{overflow-wrap:anywhere}
 .setup-checklist{
   display:grid;
   gap:12px;
@@ -658,18 +661,16 @@ button:disabled{cursor:not-allowed;opacity:.62}
     <div id="metrics" class="metrics"><div class="panel metric"><div>Primary Tab</div><strong>Setup</strong></div><div class="panel metric"><div>First Action</div><strong>Check Readiness</strong></div><div class="panel metric"><div>Reports</div><strong>After Output</strong></div><div class="panel metric"><div>Secrets</div><strong>Hidden</strong></div></div>
     <div id="tabs" class="panel tabs" role="tablist" aria-label="Main views"><button class="tab active" role="tab" aria-selected="true">Setup</button><button class="tab" role="tab" aria-selected="false">Reports</button><button class="tab" role="tab" aria-selected="false">Advanced / Tools</button></div>
 
-    <div id="advanced" role="tabpanel" aria-labelledby="main-tab-home" hidden>
-      <div id="home" class="panel view two"></div>
-      <div id="workbench" class="panel view two"></div>
-    </div>
+    <div id="home" class="panel view two" role="tabpanel" aria-labelledby="main-tab-home"></div>
     <div id="configure" class="panel view two active" role="tabpanel" aria-labelledby="main-tab-configure"></div>
-    <div id="reports" role="tabpanel" aria-labelledby="main-tab-reports" hidden>
+    <div id="reports" class="report-view-group" role="tabpanel" aria-labelledby="main-tab-reports">
       <div id="graph" class="panel view two" role="tabpanel" aria-label="Graph"></div>
       <div id="db2" class="panel view two" role="tabpanel" aria-label="DB2 / Test Data"></div>
       <div id="prompts" class="panel view three" role="tabpanel" aria-label="Prompt Compare"></div>
       <div id="evidence" class="panel view two" role="tabpanel" aria-label="Evidence Explorer"></div>
       <div id="artifacts" class="panel view two" role="tabpanel" aria-label="Overview"></div>
     </div>
+    <div id="workbench" class="panel view two" role="tabpanel" aria-labelledby="main-tab-home"></div>
   </div>
 </div>
 
@@ -1016,13 +1017,13 @@ function renderMetrics(){
 }
 
 function renderTabs(){
-  q('reports').hidden=!isReportsTab(s.tab);
-  q('advanced').hidden=s.tab!=='home'&&s.tab!=='workbench';
+  q('reports').classList.toggle('active',isReportsTab(s.tab));
   q('tabs').setAttribute('role','tablist');
   q('tabs').setAttribute('aria-label','Main views');
   q('tabs').innerHTML=tabs.map(([id,label])=>{
     const active=(id==='reports'&&isReportsTab(s.tab))||(s.tab===id)||(id==='home'&&s.tab==='workbench');
-    return '<button id="main-tab-'+id+'" class="tab'+(active?' active':'')+'" role="tab" aria-selected="'+String(active)+'" aria-controls="'+(id==='home'?'advanced':id)+'" tabindex="'+(active?'0':'-1')+'" data-tab="'+id+'">'+label+'</button>';
+    const panel=id==='home'&&s.tab==='workbench'?'workbench':id;
+    return '<button id="main-tab-'+id+'" class="tab'+(active?' active':'')+'" role="tab" aria-selected="'+String(active)+'" aria-controls="'+panel+'" tabindex="'+(active?'0':'-1')+'" data-tab="'+id+'">'+label+'</button>';
   }).join('');
   for(const b of q('tabs').querySelectorAll('[data-tab]')) b.onclick=()=>selectTab(b.dataset.tab);
   bindRovingTabKeyboard(q('tabs'),'[data-tab]');
@@ -2738,10 +2739,18 @@ function renderGuidedDiscoveryPreview(result){
       : '');
   const fetchResult=fetchState.result&&typeof fetchState.result==='object'?fetchState.result:null;
   const fetched=fetchResult&&fetchResult.result&&Array.isArray(fetchResult.result.fetched)?fetchResult.result.fetched:[];
+  const fetchFreshness=fetchResult&&fetchResult.result&&fetchResult.result.freshness||null;
+  const fetchFreshnessTokens=fetchFreshness
+    ? '<div class="tokens"><div class="token '+esc(statusToneClass(fetchFreshness.status||'unknown'))+'">local source at fetch: '+esc(String(fetchFreshness.status||'unknown'))+'</div><div class="token">checked: '+esc(String(fetchFreshness.checkedAt||'unknown'))+'</div></div>'
+    : '';
+  const fetchedMembers=fetched.map((entry)=>{
+    const fingerprint=entry&&entry.sourceFingerprint&&entry.sourceFingerprint.sha256||entry&&entry.sha256||'';
+    return '<div class="field-item"><strong>'+esc(String(entry.member||''))+'</strong><p class="small">'+esc(String(entry.path||''))+'</p>'+(fingerprint?'<p class="small source-fingerprint">SHA-256: '+esc(String(fingerprint))+'</p>':'')+'</div>';
+  }).join('');
   const fetchResultPanel=fetchState.error
     ? '<div class="hint-list"><div class="hint-item"><strong>Read-only fetch error</strong><p>'+esc(fetchState.error)+'</p></div></div>'
     : (fetchResult
-      ? '<div class="hint-list"><div class="hint-item"><strong>Read-only fetch result</strong><div class="tokens"><div class="token '+esc(statusToneClass(fetchResult.status||'not-run'))+'">'+esc(String(fetchResult.status||'not-run'))+'</div><div class="token">remote: read-only</div><div class="token">local write: '+esc(fetchResult.status==='blocked'?'not started':'reviewed output root')+'</div></div><p>'+esc(fetchResult.notes&&fetchResult.notes.join(' ')||'No additional details.')+'</p>'+(fetched.length?'<div class="field-list">'+fetched.map((entry)=>'<div class="field-item"><strong>'+esc(String(entry.member||''))+'</strong><p class="small">'+esc(String(entry.path||''))+'</p></div>').join('')+'</div>':'')+'</div></div>'
+      ? '<div class="hint-list"><div class="hint-item"><strong>Read-only fetch result</strong><div class="tokens"><div class="token '+esc(statusToneClass(fetchResult.status||'not-run'))+'">'+esc(String(fetchResult.status||'not-run'))+'</div><div class="token">remote: read-only</div><div class="token">local write: '+esc(fetchResult.status==='blocked'?'not started':'reviewed output root')+'</div></div><p>'+esc(fetchResult.notes&&fetchResult.notes.join(' ')||'No additional details.')+'</p>'+fetchFreshnessTokens+(fetched.length?'<div class="field-list">'+fetchedMembers+'</div>':'')+'</div></div>'
       : '');
   const contextScope=workingContext
     ? '<div class="field-item"><strong>Working Context checkpoint</strong><div class="tokens"><div class="token '+(workingContext.exists?'ok':'warning')+'">'+esc(workingContext.exists?'reviewed':'missing')+'</div><div class="token">kind: '+esc(String(workingContext.activeKind||'sourceCode'))+'</div>'+(workingContext.profile?'<div class="token">profile: '+esc(String(workingContext.profile))+'</div>':'')+'</div><p class="small">'+esc([workingContext.scope&&workingContext.scope.system,workingContext.scope&&workingContext.scope.library,workingContext.scope&&workingContext.scope.sourceFile||workingContext.scope&&workingContext.scope.table,workingContext.scope&&workingContext.scope.member].map((value)=>String(value||'').trim()).filter(Boolean).join(' / ')||'No explicit system / library / source scope selected.')+'</p></div>'
@@ -4687,7 +4696,7 @@ async function boot(){
 }
 
 boot().catch((e)=>{
-  q('reports').hidden=false;
+  q('reports').classList.add('active');
   q('artifacts').classList.add('active');
   q('artifacts').innerHTML='<div class="sub"><div class="empty">'+esc(e.message||String(e))+'</div></div>';
 });

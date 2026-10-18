@@ -6,6 +6,7 @@ const { test } = require('node:test');
 
 const {
   buildFetchMemberPlan,
+  checkFetchedSourceFreshness,
   executeReadOnlyMemberFetch,
 } = require('../src/fetch/fetchMemberService');
 
@@ -84,10 +85,91 @@ test('confirmed fetch writes only the planned local artifact and returns safe me
   assert.equal(result.status, 'completed');
   assert.equal(result.remoteMutation, false);
   assert.equal(result.fetched[0].path, 'rpg_sources/QRPGLESRC/ORDERPGM.rpgle');
+  assert.match(result.fetched[0].sourceFingerprint.sha256, /^[a-f0-9]{64}$/);
+  assert.equal(result.freshness.status, 'fresh');
+  assert.equal(result.sourceFingerprints[0].sha256, result.fetched[0].sha256);
   assert.equal(fs.existsSync(path.join(cwd, result.fetched[0].path)), true);
   assert.equal(exporterArgs.writeMode, 'local');
   assert.equal(exporterArgs.sourceLib, 'APPLIB');
   assert.equal(JSON.stringify(result).includes('do-not-return'), false);
+});
+
+test('fetched source freshness detects local changes and missing artifacts', () => {
+  const cwd = temporaryWorkspace();
+  const plan = buildFetchMemberPlan({
+    cwd,
+    profile: 'dev',
+    host: 'synthetic-system.example',
+    sourceLib: 'APPLIB',
+    sourceFile: 'QRPGLESRC',
+    members: ['ORDERPGM'],
+    outputRoot: './rpg_sources',
+  });
+  const result = executeReadOnlyMemberFetch({
+    cwd,
+    plan,
+    host: 'synthetic-system.example',
+    user: 'operator',
+    password: 'do-not-return',
+    confirmPlanId: plan.planId,
+    exporter: args => {
+      fs.writeFileSync(args.targetPath, '**FREE\nD main;\n', 'utf8');
+      return { ok: true, linesWritten: 2, usedFallback: false };
+    },
+  });
+
+  assert.equal(checkFetchedSourceFreshness({ cwd, fetched: result.fetched }).status, 'fresh');
+  fs.appendFileSync(path.join(cwd, result.fetched[0].path), '// changed\n', 'utf8');
+  const changed = checkFetchedSourceFreshness({ cwd, fetched: result.fetched });
+  assert.equal(changed.status, 'changed');
+  assert.equal(changed.files[0].reason, 'source-file-changed');
+
+  fs.rmSync(path.join(cwd, result.fetched[0].path));
+  const missing = checkFetchedSourceFreshness({ cwd, fetched: result.fetched });
+  assert.equal(missing.status, 'missing');
+  assert.equal(missing.files[0].reason, 'source-file-missing');
+});
+
+test('freshness rejects paths outside the workspace without reading them', () => {
+  const cwd = temporaryWorkspace();
+  const result = checkFetchedSourceFreshness({
+    cwd,
+    fetched: [{ member: 'ORDERPGM', path: '../outside.rpgle', sha256: 'a'.repeat(64) }],
+  });
+  assert.equal(result.status, 'unknown');
+  assert.equal(result.files[0].reason, 'path-outside-workspace');
+});
+
+test('fetch plan rejects an output directory linked outside the workspace', t => {
+  const cwd = temporaryWorkspace();
+  const outside = temporaryWorkspace();
+  const link = path.join(cwd, 'linked_sources');
+  try {
+    fs.symlinkSync(outside, link, process.platform === 'win32' ? 'junction' : 'dir');
+  } catch (error) {
+    if (error.code === 'EPERM' || error.code === 'ENOTSUP') {
+      t.skip('directory links are unavailable');
+      return;
+    }
+    throw error;
+  }
+  assert.throws(
+    () =>
+      buildFetchMemberPlan({
+        cwd,
+        host: 'synthetic-system.example',
+        sourceLib: 'APPLIB',
+        members: ['ORDERPGM'],
+        outputRoot: './linked_sources',
+      }),
+    /inside the current workspace/i
+  );
+  fs.writeFileSync(path.join(outside, 'ORDERPGM.rpgle'), '**FREE\n', 'utf8');
+  const freshness = checkFetchedSourceFreshness({
+    cwd,
+    fetched: [{ path: 'linked_sources/ORDERPGM.rpgle', sha256: 'a'.repeat(64) }],
+  });
+  assert.equal(freshness.files[0].reason, 'path-outside-workspace');
 });
 
 test('confirmed fetch rejects a stale or missing confirmation before calling exporter', () => {

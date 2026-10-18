@@ -37,11 +37,7 @@ function runGoldenCorpusEvaluator() {
   const recall = precision; // for current exact corpus, baseline 1.0
 
   const hasUnresolved = runResult.results.some(
-    r =>
-      r.actual &&
-      Object.values(r.actual).some(
-        v => Array.isArray(v) && v.some(x => /UNRESOLVED|AMBIGUOUS/i.test(String(x)))
-      )
+    r => r.actual && r.actual.unresolvedNativeTargets.length > 0
   );
   const unresolvedReported = hasUnresolved ? 1 : 0;
 
@@ -52,18 +48,18 @@ function runGoldenCorpusEvaluator() {
     recall: Number(recall.toFixed(3)),
     unresolvedReported,
     matchRate: matched / cases.length,
-    baseline: { caseCount: 4, matchRate: 1.0, precision: 1.0, recall: 1.0 },
+    baseline: { caseCount: 6, matchRate: 1.0, precision: 1.0, recall: 1.0 },
   };
 }
 
 test('golden corpus evaluator reports measurable quality (precision/recall/unresolved)', () => {
   const metrics = runGoldenCorpusEvaluator();
 
-  assert.equal(metrics.caseCount, 4);
-  assert.equal(metrics.passedCaseCount, 4);
+  assert.equal(metrics.caseCount, 6);
+  assert.equal(metrics.passedCaseCount, 6);
   assert.ok(metrics.precision >= 0.99, `precision ${metrics.precision}`);
   assert.ok(metrics.recall >= 0.99, `recall ${metrics.recall}`);
-  assert.equal(metrics.unresolvedReported, 0); // current corpus has no unresolved
+  assert.equal(metrics.unresolvedReported, 1);
   assert.equal(metrics.matchRate, 1.0);
 
   // Baseline gate (initial from current performance; update only with evidence)

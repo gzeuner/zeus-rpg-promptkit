@@ -43,6 +43,21 @@ function collectActualDetections(scanSummary) {
   const sourceFiles = Array.isArray(scanSummary.sourceFiles) ? scanSummary.sourceFiles : [];
   return {
     sourceTypes: normalizeStrings(sourceFiles.map(entry => entry.sourceType)),
+    nativeFiles: normalizeStrings((scanSummary.nativeFiles || []).map(entry => entry.name)),
+    nativeIoOperations: normalizeStrings(
+      (scanSummary.nativeFileAccesses || []).map(entry => entry.opcode)
+    ),
+    unresolvedNativeTargets: normalizeStrings(
+      (scanSummary.nativeFileAccesses || [])
+        .filter(entry => !entry.fileName)
+        .map(entry => entry.targetName || '<missing>')
+    ),
+    mutatingNativeFiles: normalizeStrings(
+      (scanSummary.nativeFileAccesses || [])
+        .filter(entry => entry.mutating && entry.fileName)
+        .map(entry => entry.fileName)
+    ),
+    moduleKinds: normalizeStrings((scanSummary.modules || []).map(entry => entry.kind)),
     tables: normalizeStrings((scanSummary.tables || []).map(entry => entry.name || entry)),
     calls: normalizeStrings((scanSummary.calls || []).map(entry => entry.name || entry)),
     copyMembers: normalizeStrings(

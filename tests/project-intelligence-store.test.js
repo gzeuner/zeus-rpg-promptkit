@@ -156,6 +156,79 @@ test('parallel writer is rejected with WRITER_CONFLICT', { skip: !HAS_SQLITE }, 
   }
 });
 
+test(
+  'context slice reads only bounded graph neighbors and their evidence',
+  { skip: !HAS_SQLITE },
+  () => {
+    const root = tempRoot('zpi-context-slice');
+    const handle = createProjectKnowledgeStore({ rootPath: root, projectId: 'proj-demo' });
+    const provenance = fixtures.symbol().provenance;
+    try {
+      for (const [id, unit] of [
+        ['sym-a', 'su-a'],
+        ['sym-b', 'su-b'],
+        ['sym-c', 'su-c'],
+      ]) {
+        handle.putSymbol(
+          fixtures.symbol({
+            symbolId: id,
+            name: id.toUpperCase(),
+            provenance: { ...provenance, sourceUnitId: unit },
+          })
+        );
+        handle.putEvidenceMeta(fixtures.evidence({ evidenceId: `ev-${id}`, sourceUnitId: unit }));
+      }
+      handle.putRelationship(
+        fixtures.relationship({
+          relationshipId: 'rel-ab',
+          fromSymbolId: 'sym-a',
+          toSymbolId: 'sym-b',
+        })
+      );
+      handle.putRelationship(
+        fixtures.relationship({
+          relationshipId: 'rel-bc',
+          fromSymbolId: 'sym-b',
+          toSymbolId: 'sym-c',
+        })
+      );
+
+      const slice = handle.readContextSlice('proj-demo', 'snap-001', {
+        seedIds: ['sym-a'],
+        hops: 1,
+      });
+      assert.deepEqual(
+        slice.symbols.map(entry => entry.symbolId),
+        ['sym-a', 'sym-b']
+      );
+      assert.deepEqual(
+        slice.relationships.map(entry => entry.relationshipId),
+        ['rel-ab']
+      );
+      assert.deepEqual(
+        slice.evidenceMeta.map(entry => entry.sourceUnitId),
+        ['su-a', 'su-b']
+      );
+      const zeroHop = handle.readContextSlice('proj-demo', 'snap-001', {
+        seedIds: ['sym-a'],
+        hops: 0,
+      });
+      assert.deepEqual(
+        zeroHop.symbols.map(entry => entry.symbolId),
+        ['sym-a']
+      );
+      assert.deepEqual(zeroHop.relationships, []);
+      assert.throws(
+        () => handle.readContextSlice('proj-demo', 'snap-001', { seedIds: ['sym-a'], hops: 9 }),
+        error =>
+          error instanceof KnowledgeStoreError && error.reasonCode === REASON_CODES.SCHEMA_INVALID
+      );
+    } finally {
+      handle.close();
+    }
+  }
+);
+
 test('published snapshot is immutable', { skip: !HAS_SQLITE }, () => {
   const root = tempRoot('zpi-immut');
   const handle = createProjectKnowledgeStore({ rootPath: root, projectId: 'proj-demo' });

@@ -17,11 +17,74 @@ limitations under the License.
 'use strict';
 
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const { randomUUID } = require('crypto');
 const { spawnSync } = require('child_process');
 const { inspectInventory, printSummary } = require('./test-inventory');
+const { createEvidenceCollector } = require('./test-evidence-reporter');
 
 const PROJECT_ROOT = path.join(__dirname, '..');
 const CATEGORY_FLAGS = ['unit', 'contract', 'smoke', 'corpus', 'benchmark', 'quality'];
+
+function createTestEnvironment(parent, homeDir) {
+  const allowed = new Set([
+    'PATH',
+    'PATHEXT',
+    'SYSTEMROOT',
+    'SYSTEMDRIVE',
+    'WINDIR',
+    'COMSPEC',
+    'JAVA_HOME',
+    'NUMBER_OF_PROCESSORS',
+    'OS',
+    'PROCESSOR_ARCHITECTURE',
+    'CI',
+    'NPM_EXECPATH',
+  ]);
+  return {
+    ...Object.fromEntries(Object.entries(parent).filter(([key]) => allowed.has(key.toUpperCase()))),
+    HOME: homeDir,
+    USERPROFILE: homeDir,
+    APPDATA: homeDir,
+    LOCALAPPDATA: homeDir,
+    TMPDIR: homeDir,
+    TMP: homeDir,
+    TEMP: homeDir,
+    LANG: 'C.UTF-8',
+    LC_ALL: 'C.UTF-8',
+    TZ: 'UTC',
+  };
+}
+
+function completeTestEvidence(text, status, files, selection) {
+  let evidence;
+  try {
+    evidence = JSON.parse(text);
+    if (
+      evidence.kind !== 'zeus-test-evidence' ||
+      !Array.isArray(evidence.results) ||
+      !evidence.counts
+    )
+      throw new Error('Invalid test evidence');
+  } catch {
+    evidence = createEvidenceCollector().report();
+    evidence.reason = 'REPORTER_DID_NOT_COMPLETE';
+    status = 1;
+  }
+  evidence.runStatus = status === 0 ? 'passed' : 'failed';
+  evidence.selection = selection;
+  evidence.unreported = files
+    .filter(file => !evidence.results.some(row => row.file === file))
+    .map(file => ({
+      file,
+      status: 'not_available',
+      reason: 'TEST_FILE_NOT_REPORTED',
+      requirement: 'MAINTAINED-TESTS',
+    }));
+  if (evidence.unreported.length || !evidence.counts.executed) evidence.runStatus = 'failed';
+  return evidence;
+}
 
 function main() {
   const argv = process.argv.slice(2);
@@ -63,18 +126,47 @@ function main() {
   }
 
   process.stdout.write(`Maintained test files executed by this command: ${files.length}\n`);
-  let childEnv = process.env;
-  if (process.env.ZEUS_TEST_KEEP_ENV !== '1') {
-    childEnv = Object.fromEntries(
-      Object.entries(process.env).filter(([key]) => !key.startsWith('ZEUS_'))
+  const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-test-home-'));
+  try {
+    const reportPath = path.join(homeDir, 'evidence.json');
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--test',
+        '--test-reporter=spec',
+        '--test-reporter-destination=stdout',
+        '--test-reporter=./scripts/test-evidence-reporter.js',
+        `--test-reporter-destination=${reportPath}`,
+        ...files,
+      ],
+      {
+        stdio: 'inherit',
+        cwd: PROJECT_ROOT,
+        env: createTestEnvironment(process.env, homeDir),
+      }
     );
+    let reportText;
+    try {
+      reportText = fs.readFileSync(reportPath, 'utf8');
+    } catch {
+      reportText = undefined;
+    }
+    const evidence = completeTestEvidence(
+      reportText,
+      result.status,
+      files,
+      selectedCategories[0] || 'selected'
+    );
+    process.exitCode = evidence.runStatus === 'passed' ? 0 : 1;
+    const evidenceDir = path.join(PROJECT_ROOT, 'output', 'test-evidence');
+    fs.mkdirSync(evidenceDir, { recursive: true });
+    const name = `${process.platform}-node${process.versions.node.split('.')[0]}-${evidence.selection}-${randomUUID()}.json`;
+    fs.writeFileSync(path.join(evidenceDir, name), `${JSON.stringify(evidence, null, 2)}\n`);
+    process.stdout.write(`Test evidence: output/test-evidence/${name}\n`);
+  } finally {
+    fs.rmSync(homeDir, { recursive: true, force: true });
   }
-  const result = spawnSync(process.execPath, ['--test', ...files], {
-    stdio: 'inherit',
-    cwd: PROJECT_ROOT,
-    env: childEnv,
-  });
-  process.exit(result.status === null ? 1 : result.status);
 }
 
-main();
+if (require.main === module) main();
+module.exports = { createTestEnvironment, completeTestEvidence };

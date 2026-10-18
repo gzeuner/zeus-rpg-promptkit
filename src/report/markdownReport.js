@@ -152,7 +152,15 @@ function nativeFileUsageSection(nativeFileUsage) {
           .join('\n')
       : '- None detected';
 
-  return `## Native File I/O\n- Native Files: ${summary.fileCount || 0}\n- Read-Only Files: ${summary.readOnlyFileCount || 0}\n- Mutating Files: ${summary.mutatingFileCount || 0}\n- Interactive Files: ${summary.interactiveFileCount || 0}\n- Workstation Files: ${summary.workstationFileCount || 0}\n- Printer Files: ${summary.printerFileCount || 0}\n- Keyed Files: ${summary.keyedFileCount || 0}\n- Record Formats: ${summary.recordFormatCount || 0}\n\n${detailLines}\n`;
+  const uncertainty =
+    summary.unresolvedAccessCount > 0
+      ? '\nNative mutation assessment is incomplete: unresolved targets are not evidence of no writes.\n'
+      : '';
+  const unresolved = (nativeFileUsage.accesses || [])
+    .filter(access => !access.fileName)
+    .map(access => `- ${access.opcode} ${access.targetName || '<missing>'} [${access.resolution}]`)
+    .join('\n');
+  return `## Native File I/O\n- Native Files: ${summary.fileCount || 0}\n- Read-Only Files: ${summary.readOnlyFileCount || 0}\n- Mutating Files: ${summary.mutatingFileCount || 0}\n- Mutating Accesses: ${summary.mutatingAccessCount || 0}\n- Unresolved Accesses: ${summary.unresolvedAccessCount || 0}\n- Unresolved Mutating Accesses: ${summary.unresolvedMutationCount || 0}\n- Interactive Files: ${summary.interactiveFileCount || 0}\n- Workstation Files: ${summary.workstationFileCount || 0}\n- Printer Files: ${summary.printerFileCount || 0}\n- Keyed Files: ${summary.keyedFileCount || 0}\n- Record Formats: ${summary.recordFormatCount || 0}\n${uncertainty}\n${detailLines}\n${unresolved}\n`;
 }
 
 function sqlSection(sql) {

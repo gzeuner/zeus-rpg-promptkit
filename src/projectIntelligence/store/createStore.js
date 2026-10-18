@@ -215,6 +215,7 @@ function wrapHandle({ store, lock, paths, mode, projectId }) {
     listSymbols: (pid, sid) => store.listSymbols(pid, sid),
     putRelationship: r => store.putRelationship(r),
     listRelationships: (pid, sid) => store.listRelationships(pid, sid),
+    readContextSlice: (pid, sid, options) => store.readContextSlice(pid, sid, options),
     putAnalyzerRun: r => store.putAnalyzerRun(r),
     putEvidenceMeta: e => store.putEvidenceMeta(e),
     seal: () => store.seal(),

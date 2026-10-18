@@ -14,19 +14,19 @@ function normalize(file) {
   return String(file).split(path.sep).join('/').replace(/^\.\//, '');
 }
 
-function walk(dir, result = []) {
+function walk(dir, root, result = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const target = path.join(dir, entry.name);
-    if (entry.isDirectory()) walk(target, result);
+    if (entry.isDirectory()) walk(target, root, result);
     else if (/\.(?:test|spec)\.js$/.test(entry.name))
-      result.push(normalize(path.relative(ROOT, target)));
+      result.push(normalize(path.relative(root, target)));
   }
   return result;
 }
 
-function trackedTests() {
+function trackedTests(root) {
   const output = execFileSync('git', ['ls-files', '-z', '--', 'tests'], {
-    cwd: ROOT,
+    cwd: root,
     encoding: 'utf8',
   });
   return output
@@ -35,8 +35,8 @@ function trackedTests() {
     .map(normalize);
 }
 
-function inspectInventory(config = defaultConfig, now = new Date()) {
-  const maintained = walk(path.join(ROOT, 'tests')).sort();
+function inspectInventory(config = defaultConfig, now = new Date(), root = ROOT) {
+  const maintained = walk(path.join(root, 'tests'), root).sort();
   const maintainedSet = new Set(maintained);
   const categories = Object.fromEntries(
     Object.entries(config.categories || {}).map(([name, files]) => [
@@ -45,7 +45,7 @@ function inspectInventory(config = defaultConfig, now = new Date()) {
     ])
   );
   const explicitlyClassified = new Set(Object.values(categories).flat());
-  const implicitUnits = trackedTests().filter(
+  const implicitUnits = trackedTests(root).filter(
     file => maintainedSet.has(file) && !explicitlyClassified.has(file)
   );
   categories.unit = [...new Set([...(categories.unit || []), ...implicitUnits])].sort();

@@ -117,6 +117,21 @@ test('browser keyboard navigation preserves focus and forced-colors affordances'
     true,
     'no horizontal page overflow at 390px'
   );
+  const fetchEvidence = await browser.evaluate(`(() => {
+    s.uiActions.fetchMember.result = {
+      status: 'completed',
+      notes: [],
+      result: {
+        fetched: [{ member: 'ORDERPGM', path: 'rpg_sources/ORDERPGM.rpgle', sha256: 'a'.repeat(64) }],
+        freshness: { status: 'fresh', checkedAt: '2026-10-18T12:00:00.000Z' }
+      }
+    };
+    const panel = document.createElement('div');
+    panel.innerHTML = renderGuidedDiscoveryPreview({ result: { title: 'Fetch preview', status: 'ready' } });
+    return panel.textContent;
+  })()`);
+  assert.match(fetchEvidence, /local source at fetch: fresh/);
+  assert.match(fetchEvidence, /SHA-256: a{64}/);
 });
 
 test('real browser can operate the secure GUI setup and report navigation', async t => {

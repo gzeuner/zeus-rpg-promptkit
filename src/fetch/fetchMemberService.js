@@ -19,6 +19,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { exportSourceMemberViaJdbc } = require('./jt400CommandRunner');
+const { validateSourceFile } = require('../source/sourceIntegrity');
 
 const DEFAULT_SOURCE_FILE = 'QRPGLESRC';
 const DEFAULT_STREAM_FILE_CCSID = 1208;
@@ -61,11 +62,25 @@ function normalizeRelativeOutput(cwd, outputRoot) {
     !relative ||
     relative === '..' ||
     relative.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relative)
+    path.isAbsolute(relative) ||
+    !staysInWorkspace(cwd, resolved)
   ) {
     throw new Error('Fetch output must stay inside the current workspace.');
   }
   return { resolved, relative: relative.split(path.sep).join('/') };
+}
+
+function staysInWorkspace(cwd, targetPath) {
+  const root = fs.realpathSync(cwd);
+  let existing = path.resolve(targetPath);
+  while (!fs.existsSync(existing)) {
+    const parent = path.dirname(existing);
+    if (parent === existing) return false;
+    existing = parent;
+  }
+  const resolved = fs.realpathSync(existing);
+  const relative = path.relative(root, resolved);
+  return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 
 function summarizeEndpoint(host) {
@@ -82,6 +97,113 @@ function summarizeEndpoint(host) {
 
 function stableFingerprint(value) {
   return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 24);
+}
+
+function buildSourceFingerprint(validation) {
+  if (!validation || !validation.exists || !validation.sha256) {
+    return null;
+  }
+  return {
+    algorithm: 'sha256',
+    sha256: validation.sha256,
+    sizeBytes: validation.sizeBytes,
+  };
+}
+
+function resolveWorkspaceFile(cwd, relativePath) {
+  const root = path.resolve(cwd);
+  const absolutePath = path.resolve(root, String(relativePath || ''));
+  const relative = path.relative(root, absolutePath);
+  if (
+    !relative ||
+    relative === '..' ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative) ||
+    !staysInWorkspace(cwd, absolutePath)
+  ) {
+    return null;
+  }
+  return {
+    absolutePath,
+    relativePath: relative.split(path.sep).join('/'),
+  };
+}
+
+function checkFetchedSourceFreshness({ cwd = process.cwd(), fetched = [] } = {}) {
+  const checkedAt = new Date().toISOString();
+  const files = (Array.isArray(fetched) ? fetched : []).map(entry => {
+    const relativePath = String(entry && entry.path ? entry.path : '')
+      .trim()
+      .replace(/\\/g, '/');
+    const expectedSha256 =
+      entry && entry.sourceFingerprint && entry.sourceFingerprint.sha256
+        ? String(entry.sourceFingerprint.sha256)
+        : entry && entry.sha256
+          ? String(entry.sha256)
+          : null;
+    const workspaceFile = resolveWorkspaceFile(cwd, relativePath);
+    if (!workspaceFile) {
+      return {
+        member: entry && entry.member ? entry.member : null,
+        path: relativePath,
+        status: 'unknown',
+        reason: 'path-outside-workspace',
+        expectedSha256,
+        currentSha256: null,
+        sizeBytes: 0,
+      };
+    }
+
+    const validation = validateSourceFile(workspaceFile.absolutePath, {
+      rootDir: cwd,
+      normalizeText: false,
+    });
+    let status = 'unknown';
+    let reason = 'source-fingerprint-missing';
+    if (!validation.exists) {
+      status = 'missing';
+      reason = 'source-file-missing';
+    } else if (expectedSha256 && expectedSha256 === validation.sha256) {
+      status = 'fresh';
+      reason = 'source-fingerprint-matches';
+    } else if (expectedSha256) {
+      status = 'changed';
+      reason = 'source-file-changed';
+    }
+
+    return {
+      member: entry && entry.member ? entry.member : null,
+      path: workspaceFile.relativePath,
+      status,
+      reason,
+      expectedSha256,
+      currentSha256: validation.sha256,
+      sizeBytes: validation.sizeBytes,
+    };
+  });
+
+  let status = 'unknown';
+  let reason = 'no-fetched-files';
+  if (files.some(file => file.status === 'changed')) {
+    status = 'changed';
+    reason = 'source-file-changed';
+  } else if (files.some(file => file.status === 'missing')) {
+    status = 'missing';
+    reason = 'source-file-missing';
+  } else if (files.length > 0 && files.every(file => file.status === 'fresh')) {
+    status = 'fresh';
+    reason = 'source-fingerprint-matches';
+  } else if (files.length > 0) {
+    reason = 'source-fingerprint-unavailable';
+  }
+
+  return {
+    algorithm: 'sha256',
+    status,
+    reason,
+    checkedAt,
+    files,
+  };
 }
 
 function resolveExtension(sourceFile) {
@@ -203,11 +325,19 @@ function executeReadOnlyMemberFetch({
       if (!result || !result.ok || !stat.isFile() || stat.size === 0) {
         throw new Error('The endpoint returned no non-empty local source artifact.');
       }
+      const validation = validateSourceFile(targetPath, {
+        rootDir: cwd,
+        normalizeText: false,
+      });
+      const sourceFingerprint = buildSourceFingerprint(validation);
       fetched.push({
         member,
         path: path.relative(cwd, targetPath).split(path.sep).join('/'),
         linesWritten: Number(result.linesWritten || 0),
         usedFallback: Boolean(result.usedFallback),
+        sha256: sourceFingerprint ? sourceFingerprint.sha256 : null,
+        sizeBytes: sourceFingerprint ? sourceFingerprint.sizeBytes : stat.size,
+        sourceFingerprint,
       });
     } catch (error) {
       failures.push({ member, message: maskRuntimeMessage(error && error.message) });
@@ -221,6 +351,12 @@ function executeReadOnlyMemberFetch({
     localArtifactWrite: true,
     fetched,
     failures,
+    sourceFingerprints: fetched.map(entry => ({
+      member: entry.member,
+      path: entry.path,
+      ...entry.sourceFingerprint,
+    })),
+    freshness: checkFetchedSourceFreshness({ cwd, fetched }),
     status: failures.length ? (fetched.length ? 'warning' : 'failed') : 'completed',
   };
 }
@@ -229,6 +365,7 @@ module.exports = {
   DEFAULT_SOURCE_FILE,
   DEFAULT_STREAM_FILE_CCSID,
   buildFetchMemberPlan,
+  checkFetchedSourceFreshness,
   executeReadOnlyMemberFetch,
   normalizeMembers,
   resolveExtension,

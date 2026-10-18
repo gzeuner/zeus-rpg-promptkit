@@ -173,7 +173,11 @@ function writeAnalyzeArtifacts(state) {
       : [];
   const generatedTestDataFiles =
     context.testData && context.testData.status === 'exported'
-      ? [context.testData.file || 'test-data.json', context.testData.markdownFile || 'test-data.md']
+      ? [
+          context.testData.file || 'test-data.json',
+          context.testData.indexFile || 'test-data-index.json',
+          context.testData.markdownFile || 'test-data.md',
+        ]
       : [];
   const generatedInvestigationFiles = [];
   if (ifsPathReport && ifsPathReport.enabled) {

@@ -6,6 +6,32 @@ const path = require('path');
 
 const { runAnalyzePipeline } = require('../src/analyze/analyzePipeline');
 const { writeImportManifest } = require('../src/fetch/importManifest');
+const { validateSourceFiles } = require('../src/source/sourceIntegrity');
+
+test('source validation excludes old bytes when their manifest export failed', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-failed-source-'));
+  try {
+    const file = path.join(root, 'QRPGLESRC', 'OLDPGM.rpgle');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, '**FREE\nDCL-PROC OLDPGM;\nEND-PROC;\n');
+    for (const entry of [
+      { localPath: 'QRPGLESRC/OLDPGM.rpgle', exported: false },
+      { origin: { localPath: 'QRPGLESRC/OLDPGM.rpgle' }, export: { status: 'failed' } },
+    ]) {
+      const result = validateSourceFiles([file], {
+        rootDir: root,
+        importManifest: { files: [entry] },
+      });
+      assert.equal(result.invalidCount, 1);
+      assert.deepEqual(result.validFiles, []);
+      assert.equal(result.results[0].status, 'invalid');
+      assert.equal(result.results[0].normalizedText, null);
+      assert.ok(result.results[0].issues.some(issue => issue.code === 'SOURCE_IMPORT_FAILED'));
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('analyze pipeline validates malformed source files before scanning', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-source-integrity-'));

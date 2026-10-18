@@ -27,6 +27,7 @@ const GRAPH_FILE = 'program-call-tree.json';
 const CONTEXT_FILE = 'context.json';
 const DB2_METADATA_FILE = 'db2-metadata.json';
 const TEST_DATA_FILE = 'test-data.json';
+const TEST_DATA_INDEX_FILE = 'test-data-index.json';
 const PROMPT_FILE_PATTERN = /^ai_prompt_.*\.md$/i;
 
 function inferArtifactKind(fileName) {
@@ -108,14 +109,15 @@ function buildRunSummary(
   programOutputDir,
   analyzeManifest,
   bundleManifest,
-  workflowManifest
+  workflowManifest,
+  artifactEntries = null
 ) {
   const run = analyzeManifest && analyzeManifest.run ? analyzeManifest.run : {};
   const options =
     analyzeManifest && analyzeManifest.inputs && analyzeManifest.inputs.options
       ? analyzeManifest.inputs.options
       : {};
-  const artifacts = readArtifactEntries(programOutputDir);
+  const artifacts = artifactEntries || readArtifactEntries(programOutputDir);
 
   return {
     program,
@@ -215,6 +217,7 @@ function buildRelatedArtifactPaths(node, availablePaths) {
     if (availablePaths.has('db2-metadata.json')) result.push('db2-metadata.json');
     if (availablePaths.has('db2-metadata.md')) result.push('db2-metadata.md');
     if (availablePaths.has('test-data.json')) result.push('test-data.json');
+    if (availablePaths.has(TEST_DATA_INDEX_FILE)) result.push(TEST_DATA_INDEX_FILE);
     if (availablePaths.has('test-data.md')) result.push('test-data.md');
   }
 
@@ -253,6 +256,11 @@ function buildGraphView(programOutputDir, context, artifacts) {
       },
     ])
   );
+  const nodeTypesById = new Map();
+  for (const node of nodes) {
+    if (!nodeTypesById.has(node.id)) nodeTypesById.set(node.id, new Set());
+    nodeTypesById.get(node.id).add(node.type);
+  }
 
   for (const edge of edges) {
     if (adjacency.has(edge.from)) {
@@ -267,12 +275,8 @@ function buildGraphView(programOutputDir, context, artifacts) {
     .map(node => {
       const links = adjacency.get(node.id) || { incoming: [], outgoing: [] };
       const connected = uniqueSorted([...links.incoming, ...links.outgoing]);
-      const connectedTables = connected.filter(entry =>
-        nodes.some(candidate => candidate.id === entry && candidate.type === 'TABLE')
-      );
-      const connectedPrograms = connected.filter(entry =>
-        nodes.some(candidate => candidate.id === entry && candidate.type === 'PROGRAM')
-      );
+      const connectedTables = connected.filter(entry => nodeTypesById.get(entry)?.has('TABLE'));
+      const connectedPrograms = connected.filter(entry => nodeTypesById.get(entry)?.has('PROGRAM'));
 
       return {
         id: node.id,
@@ -313,9 +317,28 @@ function buildGraphView(programOutputDir, context, artifacts) {
   };
 }
 
-function buildDb2View(programOutputDir, promptArtifacts, artifacts) {
+function buildDb2View(programOutputDir, promptArtifacts, artifacts, evidence) {
   const db2Metadata = readJsonIfExists(path.join(programOutputDir, DB2_METADATA_FILE));
-  const testData = readJsonIfExists(path.join(programOutputDir, TEST_DATA_FILE));
+  const evidenceStatusByPath = new Map(
+    (evidence && Array.isArray(evidence.entries) ? evidence.entries : [])
+      .filter(entry => entry.evidenceType === 'artifact')
+      .map(entry => [entry.path, entry.hashStatus])
+  );
+  const useTestDataIndex =
+    evidenceStatusByPath.get(TEST_DATA_FILE) === 'fresh' &&
+    evidenceStatusByPath.get(TEST_DATA_INDEX_FILE) === 'fresh';
+  const testDataIndex = useTestDataIndex
+    ? readJsonIfExists(path.join(programOutputDir, TEST_DATA_INDEX_FILE))
+    : null;
+  if (
+    testDataIndex &&
+    (testDataIndex.schemaVersion !== 1 ||
+      testDataIndex.kind !== 'test-data-index' ||
+      !Array.isArray(testDataIndex.tables))
+  ) {
+    throw new Error(`Invalid test-data index artifact: ${TEST_DATA_INDEX_FILE}`);
+  }
+  const testData = testDataIndex || readJsonIfExists(path.join(programOutputDir, TEST_DATA_FILE));
   const tableMap = new Map();
   const availablePaths = new Set(
     (Array.isArray(artifacts) ? artifacts : []).map(artifact => artifact.path)
@@ -336,9 +359,11 @@ function buildDb2View(programOutputDir, promptArtifacts, artifacts) {
       table: table.table || table.systemName || '',
       matchStatus: table.sourceLink ? table.sourceLink.matchStatus || 'resolved' : 'resolved',
       sourceEvidenceCount:
-        table.sourceLink && Array.isArray(table.sourceLink.sourceEvidence)
-          ? table.sourceLink.sourceEvidence.length
-          : 0,
+        table.sourceLink && Number.isFinite(Number(table.sourceLink.sourceEvidenceCount))
+          ? Number(table.sourceLink.sourceEvidenceCount)
+          : table.sourceLink && Array.isArray(table.sourceLink.sourceEvidence)
+            ? table.sourceLink.sourceEvidence.length
+            : 0,
       sampleRowCount: 0,
       maskedColumnCount: 0,
       policyEligibility: null,
@@ -356,26 +381,36 @@ function buildDb2View(programOutputDir, promptArtifacts, artifacts) {
       table: table.table || table.systemName || '',
       matchStatus: table.sourceLink ? table.sourceLink.matchStatus || 'resolved' : 'resolved',
       sourceEvidenceCount:
-        table.sourceLink && Array.isArray(table.sourceLink.sourceEvidence)
-          ? table.sourceLink.sourceEvidence.length
-          : 0,
+        table.sourceLink && Number.isFinite(Number(table.sourceLink.sourceEvidenceCount))
+          ? Number(table.sourceLink.sourceEvidenceCount)
+          : table.sourceLink && Array.isArray(table.sourceLink.sourceEvidence)
+            ? table.sourceLink.sourceEvidence.length
+            : 0,
       sampleRowCount: 0,
       maskedColumnCount: 0,
       policyEligibility: null,
       relatedPromptPaths: promptArtifacts.map(artifact => artifact.path),
       relatedArtifactPaths: [],
     };
-    current.sampleRowCount = Array.isArray(table.rows) ? table.rows.length : 0;
-    current.maskedColumnCount =
-      table.policyDecision && Array.isArray(table.policyDecision.maskedColumns)
+    current.sampleRowCount = testDataIndex
+      ? Number.isFinite(Number(table.rowCount))
+        ? Number(table.rowCount)
+        : 0
+      : Array.isArray(table.rows)
+        ? table.rows.length
+        : 0;
+    current.maskedColumnCount = Number.isFinite(Number(table.maskedColumnCount))
+      ? Number(table.maskedColumnCount)
+      : table.policyDecision && Array.isArray(table.policyDecision.maskedColumns)
         ? table.policyDecision.maskedColumns.length
         : 0;
-    current.policyEligibility = table.policyDecision
-      ? table.policyDecision.eligibility || null
-      : null;
+    current.policyEligibility =
+      table.policyEligibility ||
+      (table.policyDecision ? table.policyDecision.eligibility || null : null);
     current.relatedArtifactPaths = existingDb2ArtifactPaths([
       ...current.relatedArtifactPaths,
       'test-data.json',
+      TEST_DATA_INDEX_FILE,
       'test-data.md',
     ]);
     tableMap.set(id, current);
@@ -403,13 +438,13 @@ function buildPromptView(artifacts) {
 function buildInteractiveViews(programOutputDir, context, artifacts, options = {}) {
   const promptView = buildPromptView(artifacts);
   const graphView = buildGraphView(programOutputDir, context, artifacts);
-  const db2View = buildDb2View(programOutputDir, promptView.artifacts, artifacts);
   const evidence = buildEvidenceExplorer({
     program: options.program || (context && context.program) || null,
     programOutputDir,
     analyzeManifest: options.analyzeManifest || null,
     artifacts,
   });
+  const db2View = buildDb2View(programOutputDir, promptView.artifacts, artifacts, evidence);
 
   return {
     summary: {
@@ -445,27 +480,23 @@ function readAnalysisRun(outputRoot, program) {
     program,
     analyzeManifest,
   });
+  const summary = buildRunSummary(
+    program,
+    programOutputDir,
+    analyzeManifest,
+    bundleManifest,
+    workflowManifest,
+    artifacts
+  );
 
   return {
-    summary: buildRunSummary(
-      program,
-      programOutputDir,
-      analyzeManifest,
-      bundleManifest,
-      workflowManifest
-    ),
+    summary,
     analyzeManifest,
     bundleManifest,
     workflowManifest,
     artifacts,
     workflowRunCard: buildWorkflowRunCard({
-      summary: buildRunSummary(
-        program,
-        programOutputDir,
-        analyzeManifest,
-        bundleManifest,
-        workflowManifest
-      ),
+      summary,
       analyzeManifest,
       workflowManifest,
       evidence: views.evidence,

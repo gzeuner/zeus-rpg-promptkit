@@ -4,6 +4,32 @@
   "name": "core-patterns",
   "cases": [
     {
+      "id": "fixed-native-io",
+      "title": "Fixed specs, continued RENAME and native lock-release evidence",
+      "files": ["core-patterns/fixed-native-io.rpgle"],
+      "expected": {
+        "tables": ["PLANFILE_1"],
+        "nativeFiles": ["PLANFILE_1"],
+        "nativeIoOperations": ["CHAIN", "READ", "UNLOCK", "UPDATE"],
+        "unresolvedNativeTargets": ["MISSING"],
+        "mutatingNativeFiles": ["PLANFILE_1"],
+        "moduleKinds": ["NOMAIN_MODULE"]
+      }
+    },
+    {
+      "id": "free-native-io",
+      "title": "Free declarations and native operands retain unresolved evidence",
+      "files": ["core-patterns/free-native-io.rpgle"],
+      "expected": {
+        "tables": ["FREEFILE"],
+        "nativeFiles": ["FREEFILE"],
+        "nativeIoOperations": ["CHAIN", "UNLOCK", "UPDATE"],
+        "unresolvedNativeTargets": ["UNKNOWNREC"],
+        "mutatingNativeFiles": ["FREEFILE"],
+        "moduleKinds": ["NOMAIN_MODULE"]
+      }
+    },
+    {
       "id": "free-form-rpg",
       "title": "Free-form RPG detects tables, calls, and copy members",
       "files": ["core-patterns/freeform-order.rpgle"],
