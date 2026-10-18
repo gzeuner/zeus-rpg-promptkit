@@ -216,6 +216,51 @@ test('persist, reopen, deterministic output', () => {
   reader.close();
 });
 
+test('new search indexes reject valid JSON with altered content or generation', () => {
+  for (const fileName of ['docs.json', 'postings.json', 'generation.json']) {
+    const indexDir = path.join(tempDir('zpi-index-hash'), 'lucene');
+    const writer = createSearchProvider({
+      indexDir,
+      projectId: 'proj-demo',
+      snapshotId: 'snap-001',
+    });
+    writer.rebuild(corpusDocs());
+    writer.close();
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(indexDir, 'search-manifest.json'), 'utf8')
+    );
+    assert.match(manifest.contentHashes.docs, /^[a-f0-9]{64}$/);
+    const filePath = path.join(indexDir, fileName);
+    const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (fileName === 'docs.json') content[0].title = 'ALTERED';
+    if (fileName === 'postings.json') content.unexpected = ['ALTERED'];
+    if (fileName === 'generation.json') content.generation += 1;
+    fs.writeFileSync(filePath, JSON.stringify(content));
+
+    assert.throws(
+      () => openSearchProvider({ indexDir, readOnly: true }),
+      error =>
+        error instanceof KnowledgeStoreError && error.reasonCode === REASON_CODES.INDEX_CORRUPT
+    );
+  }
+});
+
+test('legacy search indexes without content hashes remain readable', () => {
+  const indexDir = path.join(tempDir('zpi-legacy-index'), 'lucene');
+  const writer = createSearchProvider({ indexDir, projectId: 'proj-demo', snapshotId: 'snap-001' });
+  writer.rebuild(corpusDocs());
+  writer.close();
+  const manifestPath = path.join(indexDir, 'search-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  delete manifest.contentHashes;
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+
+  const reader = openSearchProvider({ indexDir, readOnly: true });
+  assert.equal(reader.checkIntegrity().ok, true);
+  reader.close();
+});
+
 test('corrupt index fails closed and recovers via rebuild', () => {
   const indexDir = path.join(tempDir(), 'lucene');
   const provider = createSearchProvider({ indexDir, projectId: 'proj-demo' });

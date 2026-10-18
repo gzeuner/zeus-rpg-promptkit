@@ -590,6 +590,84 @@ function createSqliteKnowledgeStore({
       .map(r => jsonParse(r.payload_json));
   }
 
+  function readContextSlice(projectId, snapshotId, { seedIds = [], hops = 1 } = {}) {
+    requireOpen(store);
+    if (
+      !Number.isInteger(hops) ||
+      hops < 0 ||
+      hops > 8 ||
+      !Array.isArray(seedIds) ||
+      seedIds.length > 512 ||
+      seedIds.some(id => typeof id !== 'string' || id.length > 512)
+    ) {
+      fail(REASON_CODES.SCHEMA_INVALID, 'context slice requires at most 512 seeds and 0..8 hops');
+    }
+
+    function selected(table, order, fields, ids, both = false) {
+      if (ids.length === 0) return [];
+      const params = { project_id: projectId, snapshot_id: snapshotId };
+      const slots = ids
+        .map((id, index) => {
+          params[`id${index}`] = id;
+          return `@id${index}`;
+        })
+        .join(',');
+      const predicate = fields.map(field => `${field} IN (${slots})`).join(both ? ' AND ' : ' OR ');
+      const rows = db.all(
+        `SELECT payload_json FROM ${table}
+         WHERE project_id = @project_id AND snapshot_id = @snapshot_id
+         AND (${predicate}) ORDER BY ${order} ASC LIMIT 4097`,
+        params
+      );
+      if (rows.length > 4096) {
+        fail(REASON_CODES.RESULT_LIMIT_EXCEEDED, 'context slice exceeds 4096 rows');
+      }
+      return rows.map(row => jsonParse(row.payload_json));
+    }
+
+    const visited = new Set(seedIds);
+    let frontier = [...visited].sort();
+    for (let hop = 0; hop < hops && frontier.length; hop += 1) {
+      const next = new Set();
+      for (const relationship of selected(
+        'relationships',
+        'relationship_id',
+        ['from_symbol_id', 'to_symbol_id'],
+        frontier
+      )) {
+        for (const id of [relationship.fromSymbolId, relationship.toSymbolId]) {
+          if (!visited.has(id)) {
+            visited.add(id);
+            next.add(id);
+          }
+        }
+      }
+      if (visited.size > 512) {
+        fail(REASON_CODES.RESULT_LIMIT_EXCEEDED, 'context graph exceeds 512 nodes');
+      }
+      frontier = [...next].sort();
+    }
+
+    const nodes = [...visited].sort();
+    const symbols = selected('symbols', 'symbol_id', ['symbol_id'], nodes);
+    const relationships = selected(
+      'relationships',
+      'relationship_id',
+      ['from_symbol_id', 'to_symbol_id'],
+      nodes,
+      true
+    );
+    const units = [
+      ...new Set(
+        symbols
+          .map(symbol => symbol.provenance?.sourceUnitId || symbol._sourceUnitId)
+          .filter(Boolean)
+      ),
+    ].sort();
+    const evidenceMeta = selected('evidence_meta', 'evidence_id', ['source_unit_id'], units);
+    return { symbols, relationships, evidenceMeta };
+  }
+
   function putAnalyzerRun(run) {
     requireWritable(store);
     const value = validateOrThrow(CONTRACT_IDS.ANALYZER_RUN, run);
@@ -777,6 +855,7 @@ function createSqliteKnowledgeStore({
     listSymbols,
     putRelationship,
     listRelationships,
+    readContextSlice,
     putAnalyzerRun,
     putEvidenceMeta,
 

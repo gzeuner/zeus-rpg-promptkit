@@ -174,6 +174,43 @@ test('token reduction metric is reported', { skip: !HAS_SQLITE }, () => {
   }
 });
 
+test(
+  'bounded context reads preserve the context package built from full snapshot data',
+  { skip: !HAS_SQLITE },
+  () => {
+    const { knowledgeRoot, src } = buildProject();
+    const retriever = createProjectRetriever({
+      knowledgeRoot,
+      projectId: 'proj-ret',
+      trustedRoots: [{ rootId: 'root-src', path: src }],
+    });
+    try {
+      const request = { query: 'ORDERPGM', tokenBudget: 8000, expandHops: 1, includeBodies: true };
+      const bounded = retriever.buildContextPackage(request);
+      assert.ok(bounded.metrics.loaded.symbols > 0);
+
+      const handle = retriever._store;
+      handle.readContextSlice = (projectId, snapshotId) => ({
+        symbols: handle.listSymbols(projectId, snapshotId),
+        relationships: handle.listRelationships(projectId, snapshotId),
+        evidenceMeta: handle._store._db
+          .all(
+            `SELECT payload_json FROM evidence_meta WHERE project_id = @project_id
+         AND snapshot_id = @snapshot_id ORDER BY evidence_id ASC`,
+            { project_id: projectId, snapshot_id: snapshotId }
+          )
+          .map(row => JSON.parse(row.payload_json)),
+      });
+      const full = retriever.buildContextPackage(request);
+      assert.deepEqual(bounded.contextPackage, full.contextPackage);
+      assert.deepEqual(bounded.verification, full.verification);
+      assert.ok(bounded.metrics.loaded.symbols <= full.metrics.loaded.symbols);
+    } finally {
+      retriever.close();
+    }
+  }
+);
+
 test('stale/non-published snapshot id fails closed', { skip: !HAS_SQLITE }, () => {
   const { knowledgeRoot, src } = buildProject();
   const retriever = createProjectRetriever({
