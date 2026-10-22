@@ -135,6 +135,82 @@ test('browser keyboard navigation preserves focus and forced-colors affordances'
   assert.match(fetchEvidence, /SHA-256: a{64}/);
 });
 
+test('browser can create, revise, inspect, and cancel a local collaboration task', async t => {
+  const workspace = createE2eWorkspace('zeus-gui-collaboration-e2e-');
+  let started;
+  let browser;
+  t.after(async () => {
+    if (browser) await browser.close();
+    if (started) await new Promise(resolve => started.server.close(resolve));
+    workspace.cleanup();
+  });
+  try {
+    started = await startLocalUiServer({
+      outputRoot: workspace.path('output'),
+      host: '127.0.0.1',
+      port: 0,
+      actionServiceOptions: { cwd: workspace.root, env: {} },
+    });
+    browser = await startChrome();
+  } catch (error) {
+    if (error?.code === 'E2E_PREREQUISITE_MISSING') {
+      skipOrFailPrerequisite(t, error.message);
+      return;
+    }
+    throw error;
+  }
+
+  await browser.navigate(started.url);
+  await waitFor(() =>
+    browser.evaluate(`Boolean(document.querySelector('[data-tab="collaboration"]'))`)
+  );
+  await browser.evaluate(`document.querySelector('[data-tab="collaboration"]').click()`);
+  await waitFor(() => browser.evaluate(`Boolean(document.querySelector('#collaboration.active'))`));
+  await browser.evaluate(`(() => {
+    const goal=document.querySelector('#collaboration-goal');
+    goal.value='Review a local process task';
+    goal.dispatchEvent(new Event('input',{bubbles:true}));
+    document.querySelector('#collaboration-create').requestSubmit();
+  })()`);
+  await waitFor(() =>
+    browser.evaluate(`Boolean(document.querySelector('#collaboration-task').value)`)
+  );
+  assert.match(
+    await browser.evaluate(`document.querySelector('#collaboration-status').textContent`),
+    /ready.*revision 1.*local-only/i
+  );
+  assert.equal(
+    await browser.evaluate(`document.querySelector('#collaboration-run').disabled`),
+    true
+  );
+
+  await browser.evaluate(`(() => {
+    const text=document.querySelector('#collaboration-text');
+    text.value='Check the evidence path';
+    document.querySelector('#collaboration-message').requestSubmit();
+  })()`);
+  await waitFor(() =>
+    browser.evaluate(
+      `/revision 2/.test(document.querySelector('#collaboration-status').textContent)`
+    )
+  );
+  await browser.evaluate(`document.querySelector('#collaboration-handoff').click()`);
+  await waitFor(() =>
+    browser.evaluate(`!document.querySelector('#collaboration-handoff-output').hidden`)
+  );
+  assert.match(
+    await browser.evaluate(`document.querySelector('#collaboration-handoff-output').textContent`),
+    /"approvalGranted": false/
+  );
+  await browser.evaluate(`document.querySelector('#collaboration-cancel').click()`);
+  await waitFor(() =>
+    browser.evaluate(
+      `/cancelled/.test(document.querySelector('#collaboration-status').textContent)`
+    )
+  );
+  assertNoSensitiveTerms(await browser.evaluate('document.body.innerText'));
+});
+
 test('real browser can operate the secure GUI setup and report navigation', async t => {
   const workspace = createE2eWorkspace('zeus-gui-e2e-');
   const localConfig = workspace.path('config', 'local-only');

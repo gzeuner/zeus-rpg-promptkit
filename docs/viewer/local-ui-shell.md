@@ -54,6 +54,8 @@ Behavior:
 - `GET /api/prompt-builder/context-sources`
 - `GET /api/prompt-builder/context-sources/:program/prompts`
 - `POST /api/prompt-builder/context-sources/import`
+- `POST /api/collaboration`
+- `GET /api/collaboration/events?id=<task-id>&after=<sequence>` (same-origin event stream)
 
 The browser shell consumes only those endpoints. It does not parse output directories directly.
 
@@ -72,12 +74,15 @@ The browser shell consumes only those endpoints. It does not parse output direct
 - able to show grouped read-only report views such as Overview, Graph, DB2/Test Data, Prompt Compare, and Artifacts
 - able to surface a small set of local helper views such as config metadata, `doctor` diagnostics, and AI Session Starter prompt generation
 - able to keep specialist tools such as Prompt Workbench under a clearly secondary Advanced / Tools area
+- offers a Chat tab for revisioned local collaboration tasks; task mutations stay in `.zeus/collaboration/`, require current revisions, and use the same guarded service as CLI/API/MCP
+- only runs deterministic process retrieval against an explicitly selected local catalog; task handoffs remain advisory and carry no approval
 
 The current top-level navigation still contains:
 
 - Setup
 - Reports
 - Advanced / Tools
+- Chat
 
 Interpretation guidance:
 

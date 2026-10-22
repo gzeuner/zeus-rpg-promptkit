@@ -86,6 +86,8 @@ module.exports = {
       'tests/knowledge-cli.test.js',
       'tests/session-knowledge-import.test.js',
       'tests/case-index.test.js',
+      'tests/collaboration-service.test.js',
+      'tests/local-ui-collaboration.test.js',
       'tests/knowledge-neutral-display-ui.test.js',
       'tests/knowledge-pipeline.test.js',
       'tests/test-inventory.test.js',

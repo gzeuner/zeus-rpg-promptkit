@@ -519,6 +519,49 @@ test('CLI agent preflight gives a goal-based local orientation without executing
   assert.doesNotMatch(JSON.stringify(payload), /password\s*[:=]\s*[^()\s,}]+/i);
 });
 
+test('CLI collaboration tasks preserve revisions and keep provider execution disabled', () => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-agent-task-cli-'));
+  try {
+    const created = readJson(
+      runCli(['agent', 'task', 'create', '--goal', 'Review a local process', '--json'], cwd)
+    );
+    const id = created.result.id;
+    assert.match(id, /^task-/);
+    assert.equal(created.result.authority.remoteAccess, false);
+    assert.equal(created.result.authority.approvalGranted, false);
+
+    const message = readJson(
+      runCli(
+        [
+          'agent',
+          'task',
+          'message',
+          '--id',
+          id,
+          '--expected-revision',
+          '1',
+          '--text',
+          'Please inspect scope',
+          '--json',
+        ],
+        cwd
+      )
+    );
+    assert.equal(message.result.revision, 2);
+
+    const providers = readJson(runCli(['agent', 'task', 'providers', '--json'], cwd));
+    assert.equal(providers.result.executionAvailable, false);
+    assert.deepEqual(providers.result.providers, []);
+
+    const cancelled = readJson(
+      runCli(['agent', 'task', 'cancel', '--id', id, '--expected-revision', '2', '--json'], cwd)
+    );
+    assert.equal(cancelled.result.state, 'cancelled');
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
 test('CLI agent prompt creates a copy-ready prompt from preflight metadata', () => {
   const payload = readJson(
     runCli([

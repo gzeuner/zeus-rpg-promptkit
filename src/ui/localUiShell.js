@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
+const { renderCollaborationView, renderCollaborationScript } = require('./collaborationView');
 
 function resolveBrandLogoDataUri() {
   const logoPath = path.resolve(__dirname, '../../images/tiny_tool_logo-1030x254.png');
@@ -671,6 +672,7 @@ button:disabled{cursor:not-allowed;opacity:.62}
       <div id="artifacts" class="panel view two" role="tabpanel" aria-label="Overview"></div>
     </div>
     <div id="workbench" class="panel view two" role="tabpanel" aria-labelledby="main-tab-home"></div>
+    ${renderCollaborationView()}
   </div>
 </div>
 
@@ -806,7 +808,8 @@ const s={
 const tabs=[
   ['configure','Setup'],
   ['reports','Reports'],
-  ['home','Advanced / Tools']
+  ['home','Advanced / Tools'],
+  ['collaboration','Chat']
 ];
 
 const reportViews=[
@@ -1098,6 +1101,7 @@ function renderMetrics(){
 
 function renderTabs(){
   q('reports').classList.toggle('active',isReportsTab(s.tab));
+  q('collaboration').classList.toggle('active',s.tab==='collaboration');
   q('tabs').setAttribute('role','tablist');
   q('tabs').setAttribute('aria-label','Main views');
   q('tabs').innerHTML=tabs.map(([id,label])=>{
@@ -4750,6 +4754,7 @@ async function selectTab(tab){
   }
   s.tab=tab;
   await render();
+  if(tab==='collaboration') globalThis.zeusCollaboration?.open();
 }
 
 async function render(){
@@ -4814,6 +4819,7 @@ boot().catch((e)=>{
   q('artifacts').classList.add('active');
   q('artifacts').innerHTML='<div class="sub"><div class="empty">'+esc(e.message||String(e))+'</div></div>';
 });
+${renderCollaborationScript()}
 </script>
 </body>
 </html>`;

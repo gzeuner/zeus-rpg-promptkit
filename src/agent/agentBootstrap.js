@@ -75,6 +75,12 @@ const INTENT_MAP = Object.freeze([
     firstStep:
       'Generate the sanitized feedback report, review the candidate with an explicit contract diff and regression fixture, and only then change prompts or contracts.',
   }),
+  Object.freeze({
+    intent: 'share a local process question across a human and agent',
+    commands: Object.freeze(['agent task create', 'agent task message', 'agent task run']),
+    firstStep:
+      'Create a revisioned local task with an explicit process catalog; local answers are advisory and model execution remains disabled by default.',
+  }),
 ]);
 
 const RECOMMENDED_SEQUENCE = Object.freeze([
@@ -92,6 +98,11 @@ const RECOMMENDED_SEQUENCE = Object.freeze([
   Object.freeze({
     command: 'node cli/zeus.js agent log list --json',
     purpose: 'Read prior safe lessons before repeating a failed or blocked attempt.',
+    safety: 'S0',
+  }),
+  Object.freeze({
+    command: 'node cli/zeus.js agent task list --json',
+    purpose: 'Read existing revisioned local collaboration tasks before creating or changing one.',
     safety: 'S0',
   }),
   Object.freeze({

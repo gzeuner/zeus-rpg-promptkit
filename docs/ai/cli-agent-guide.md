@@ -140,6 +140,11 @@ absolute paths. See [`process-answer-drift.md`](process-answer-drift.md).
 
 ## Stable agent response contract
 
+For a revisioned local task shared by people and adapters, see
+[`collaboration-tasks.md`](collaboration-tasks.md). Local task execution is
+limited to an explicit process catalog; provider execution stays disabled by
+default.
+
 Every `agent ... --json` response exposes the same top-level fields in addition
 to operation-specific data:
 

@@ -100,6 +100,33 @@ test('index, search ranking corpus, deterministic ordering', () => {
   provider.close();
 });
 
+test('top-k is selected after ranking rather than by document insertion order', () => {
+  const provider = createSearchProvider({ indexDir: path.join(tempDir(), 'lucene') });
+  provider.rebuild([
+    {
+      docId: 'body-only',
+      projectId: 'p',
+      snapshotId: 's',
+      kind: 'evidence',
+      title: 'Unrelated',
+      body: 'needle appears in the body',
+    },
+    {
+      docId: 'title-match',
+      projectId: 'p',
+      snapshotId: 's',
+      kind: 'source-unit',
+      title: 'needle',
+      body: 'unrelated content',
+    },
+  ]);
+
+  const result = provider.search({ query: 'needle', limit: 1 });
+  assert.equal(result.hits.length, 1);
+  assert.equal(result.hits[0].docId, 'title-match');
+  provider.close();
+});
+
 test('filters and bounded results with omission', () => {
   const root = tempDir();
   const provider = createSearchProvider({
