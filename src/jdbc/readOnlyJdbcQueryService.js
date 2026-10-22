@@ -1,12 +1,3 @@
-/*
-Copyright 2026 gzeuner - tiny-tool.de
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-*/
 'use strict';
 
 const { runJavaHelper } = require('../fetch/jt400CommandRunner');
@@ -27,7 +18,9 @@ const DEFAULT_JDBC_PROBE_SQL = 'SELECT 1 AS HEALTHCHECK';
 const JDBC_DRIVER_CLASS_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)+$/;
 
 function isJdbcConnectionConfigured(jdbcConfig) {
-  if (!jdbcConfig || typeof jdbcConfig !== 'object') return false;
+  if (!jdbcConfig || typeof jdbcConfig !== 'object') {
+    return false;
+  }
   return ['driver', 'url', 'user', 'password'].every(key =>
     Boolean(String(jdbcConfig[key] || '').trim())
   );
@@ -57,7 +50,7 @@ function validateJdbcUrl(value) {
 function getJdbcEnvironmentLoadHint(jdbcConfig) {
   const environment = String((jdbcConfig && jdbcConfig.environment) || '').trim();
   if (environment) {
-    return ` Load environment variables first: . .\\config\\load-env.ps1 -Environment ${environment}.`;
+    return ` Load environment variables first: . .\\config\\load-env.ps1 -Environment ${environment} (or use --env ${environment}).`;
   }
   return ' Load the environment file that defines this connection before retrying.';
 }
@@ -88,8 +81,9 @@ function resolveJdbcProbeSql(jdbcConfig) {
 
 function executeReadOnlyJdbcQueriesRaw({ jdbcConfig, queries, maxRows = 50, runtime = {} }) {
   const statements = normalizeSqlStatements({ statements: queries });
-  if (statements.length === 0) throw new Error('Read-only SQL query is empty.');
-
+  if (statements.length === 0) {
+    throw new Error('Read-only SQL query is empty.');
+  }
   const validatedConfig = validateJdbcConnectionConfig(jdbcConfig);
   const runJavaHelperFn = runtime.runJavaHelper || runJavaHelper;
   const { args: queryArgs, statementFile } = buildSqlRunnerArgs({
@@ -101,11 +95,11 @@ function executeReadOnlyJdbcQueriesRaw({ jdbcConfig, queries, maxRows = 50, runt
     runtime,
   });
   const args = [validatedConfig.driver, ...queryArgs];
-
   let result;
   try {
     result = runJavaHelperFn('JdbcDiagnosticQueryRunner', args, {
       password: validatedConfig.password,
+      ...(runtime.timeoutMs ? { timeout: runtime.timeoutMs } : {}),
     });
   } finally {
     removeSqlStatementsFile(statementFile);
@@ -114,27 +108,33 @@ function executeReadOnlyJdbcQueriesRaw({ jdbcConfig, queries, maxRows = 50, runt
   if (result.status !== 0) {
     throw new Error((result.stderr || '').trim() || 'JDBC diagnostic query failed.');
   }
+
   return normalizeReadOnlyBatchResult(parseReadOnlyQueryResult(result.stdout), statements);
 }
 
 function runReadOnlyJdbcQueries({ jdbcConfig, queries, maxRows = 50, runtime = {} }) {
   const validatedConfig = validateJdbcConnectionConfig(jdbcConfig);
   const statements = normalizeSqlStatements({ statements: queries });
-  if (statements.length === 0) throw new Error('Read-only SQL query is empty.');
+  if (statements.length === 0) {
+    throw new Error('Read-only SQL query is empty.');
+  }
   statements.forEach(validateReadOnlySql);
 
   if (!runtime.skipConnectionGuard) {
     ensureJdbcConnectionGuard({
       jdbcConfig: validatedConfig,
       scopeLabel: runtime.scopeLabel || 'JDBC read-only connection',
-      probeSql: resolveJdbcProbeSql(validatedConfig),
       probe: ({ query, maxRows: probeMaxRows }) =>
         executeReadOnlyJdbcQueriesRaw({
           jdbcConfig: validatedConfig,
           queries: [query],
           maxRows: probeMaxRows,
-          runtime: { ...runtime, skipConnectionGuard: true },
+          runtime: {
+            ...runtime,
+            skipConnectionGuard: true,
+          },
         }),
+      probeSql: resolveJdbcProbeSql(validatedConfig),
     });
   }
 

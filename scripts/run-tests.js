@@ -25,7 +25,7 @@ const { inspectInventory, printSummary } = require('./test-inventory');
 const { createEvidenceCollector } = require('./test-evidence-reporter');
 
 const PROJECT_ROOT = path.join(__dirname, '..');
-const CATEGORY_FLAGS = ['unit', 'contract', 'smoke', 'corpus', 'benchmark', 'quality'];
+const CATEGORY_FLAGS = ['unit', 'contract', 'smoke', 'corpus', 'benchmark', 'quality', 'resource'];
 
 function createTestEnvironment(parent, homeDir) {
   const allowed = new Set([

@@ -78,6 +78,8 @@ function buildOriginRecord(record, localDestination) {
     remotePath: record.remotePath || '',
     localPath,
     sourceType: inferSourceType(sourceFile),
+    ...(record.system ? { system: record.system } : {}),
+    ...(record.fetchedAt ? { fetchedAt: record.fetchedAt } : {}),
   };
 }
 
@@ -247,10 +249,13 @@ function summarizeImportManifest(importManifest, options = {}) {
   };
 }
 
-function writeImportManifest(localDestination, manifest) {
+function writeImportManifest(localDestination, manifest, { exclusive = false } = {}) {
   fs.mkdirSync(localDestination, { recursive: true });
   const manifestPath = path.join(localDestination, IMPORT_MANIFEST_FILE);
-  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, {
+    encoding: 'utf8',
+    flag: exclusive ? 'wx' : 'w',
+  });
   return manifestPath;
 }
 

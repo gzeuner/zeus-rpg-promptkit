@@ -15,6 +15,7 @@ CLI:
 node cli/zeus.js agent preflight --goal "<goal>" --json
 node cli/zeus.js agent bootstrap --json
 node cli/zeus.js agent log list --json
+node cli/zeus.js agent task list --json
 node cli/zeus.js agent log summary --json
 node cli/zeus.js agent feedback --json
 node cli/zeus.js agent feedback review --help
@@ -26,6 +27,12 @@ node cli/zeus.js agent prompt --goal "<goal>" --json
 ```
 
 `agent preflight` is the preferred first call. It is local and read-only: it summarizes the effective working context, visible profile names, prior sanitized lessons, capabilities, and a goal-based route. `agent prompt` then produces a copy-ready session prompt from that same preflight state.
+
+For a shared human/agent process question, create a revisioned local task with
+`agent task create --goal "<question>" --catalog <relative-path> --json`.
+Local task lookup is bounded and advisory; provider execution remains disabled
+by default. See [`collaboration-tasks.md`](collaboration-tasks.md) for mutation,
+cancellation, and recovery commands.
 
 For a known process question, use the canonical local retrieval route with an
 explicit catalog: `node cli/zeus.js process query --catalog <relative-path> --question "<question>" --json`. Prefer exact process, interface, or program identifiers when the question contains one; inspect `freshness`, `evidenceReferences`, and `unknowns` before repeating the answer as fact.

@@ -122,10 +122,12 @@ test('zeusApi exposes reusable analyze and workflow entry points', async () => {
         },
         facts: [
           {
+            id: 'orders-primary-key',
             subject: 'ORDERS',
             attribute: 'primaryKey',
             value: 'ORDER_ID',
             confidence: 'HIGH',
+            observedAt: KNOWN_FACTS_UPDATED_AT,
           },
         ],
       },

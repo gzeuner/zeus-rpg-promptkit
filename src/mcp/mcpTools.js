@@ -116,6 +116,7 @@ const { buildCommandHelpEntry } = require('../cli/commandHelp');
 const { DEFAULT_MCP_SAFE_TOOL_NAMES } = require('./mcpPolicy');
 const { buildAgentBootstrapPayload } = require('./agentBootstrap');
 const { buildWorkflowSuggestion } = require('./workflowSuggest');
+const { executeCollaborationRequest } = require('../agent/collaborationService');
 const {
   applyWorkingContextDefaults,
   buildWorkingContextView,
@@ -758,6 +759,52 @@ let listMcpTools = function listMcpTools() {
         type: 'object',
         additionalProperties: false,
         properties: {},
+      },
+    },
+    {
+      name: 'zeus.agent.task',
+      description:
+        'Create and manage revisioned local collaboration tasks. Local retrieval is advisory; provider execution stays disabled unless the host explicitly enables it. This tool is opt-in and is not in the default MCP allowlist.',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['operation'],
+        properties: {
+          operation: {
+            type: 'string',
+            enum: [
+              'create',
+              'list',
+              'show',
+              'message',
+              'run',
+              'cancel',
+              'recover',
+              'handoff',
+              'events',
+              'providers',
+              'provider-preview',
+              'provider-invoke',
+            ],
+          },
+          id: { type: 'string', minLength: 1, maxLength: 64 },
+          goal: { type: 'string', minLength: 1, maxLength: 4000 },
+          actor: { type: 'string', enum: ['human', 'agent', 'reviewer'] },
+          text: { type: 'string', minLength: 1, maxLength: 4000 },
+          scope: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              catalog: { type: 'string', minLength: 1, maxLength: 512 },
+              glossary: { type: 'string', minLength: 1, maxLength: 512 },
+            },
+          },
+          expectedRevision: { type: 'integer', minimum: 1 },
+          afterSequence: { type: 'integer', minimum: 0 },
+          providerId: { type: 'string', minLength: 1, maxLength: 128 },
+          modelId: { type: 'string', minLength: 1, maxLength: 128 },
+          previewHash: { type: 'string', pattern: '^[a-f0-9]{64}$' },
+        },
       },
     },
     {
@@ -6975,6 +7022,13 @@ async function executeMcpToolCall(name, args = {}, context = {}) {
     });
 
     return normalizeMcpResult('zeus.agent.bootstrap', bootstrapPayload);
+  }
+
+  if (name === 'zeus.agent.task') {
+    return normalizeMcpResult(
+      'zeus.agent.task',
+      await executeCollaborationRequest(args, { workspaceRoot: context.cwd || process.cwd() })
+    );
   }
 
   if (name === 'zeus.workflow.suggest') {

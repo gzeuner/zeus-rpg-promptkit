@@ -37,7 +37,8 @@ const COMMAND_METADATA = Object.freeze({
   resources: Object.freeze({
     safety: 'S0',
     scope: 'Local',
-    purpose: 'Show resolved resource model (Source/Objects/Metadata/Data) per system.',
+    purpose:
+      'Inspect resources, discover local files, and create or run explicit read-only resource jobs.',
     example: 'node cli/zeus.js resources --profile dev --json',
   }),
   context: Object.freeze({

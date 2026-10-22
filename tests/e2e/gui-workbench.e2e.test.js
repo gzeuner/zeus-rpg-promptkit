@@ -6,6 +6,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const test = require('node:test');
 const { startLocalUiServer } = require('../../src/ui/localUiServer');
 const {
@@ -134,8 +135,146 @@ test('browser keyboard navigation preserves focus and forced-colors affordances'
   assert.match(fetchEvidence, /SHA-256: a{64}/);
 });
 
+test('browser can create, revise, inspect, and cancel a local collaboration task', async t => {
+  const workspace = createE2eWorkspace('zeus-gui-collaboration-e2e-');
+  let started;
+  let browser;
+  t.after(async () => {
+    if (browser) await browser.close();
+    if (started) await new Promise(resolve => started.server.close(resolve));
+    workspace.cleanup();
+  });
+  try {
+    started = await startLocalUiServer({
+      outputRoot: workspace.path('output'),
+      host: '127.0.0.1',
+      port: 0,
+      actionServiceOptions: { cwd: workspace.root, env: {} },
+    });
+    browser = await startChrome();
+  } catch (error) {
+    if (error?.code === 'E2E_PREREQUISITE_MISSING') {
+      skipOrFailPrerequisite(t, error.message);
+      return;
+    }
+    throw error;
+  }
+
+  await browser.navigate(started.url);
+  await waitFor(() =>
+    browser.evaluate(`Boolean(document.querySelector('[data-tab="collaboration"]'))`)
+  );
+  await browser.evaluate(`document.querySelector('[data-tab="collaboration"]').click()`);
+  await waitFor(() => browser.evaluate(`Boolean(document.querySelector('#collaboration.active'))`));
+  await browser.evaluate(`(() => {
+    const goal=document.querySelector('#collaboration-goal');
+    goal.value='Review a local process task';
+    goal.dispatchEvent(new Event('input',{bubbles:true}));
+    document.querySelector('#collaboration-create').requestSubmit();
+  })()`);
+  await waitFor(() =>
+    browser.evaluate(`Boolean(document.querySelector('#collaboration-task').value)`)
+  );
+  assert.match(
+    await browser.evaluate(`document.querySelector('#collaboration-status').textContent`),
+    /ready.*revision 1.*local-only/i
+  );
+  assert.equal(
+    await browser.evaluate(`document.querySelector('#collaboration-run').disabled`),
+    true
+  );
+
+  await browser.evaluate(`(() => {
+    const text=document.querySelector('#collaboration-text');
+    text.value='Check the evidence path';
+    document.querySelector('#collaboration-message').requestSubmit();
+  })()`);
+  await waitFor(() =>
+    browser.evaluate(
+      `/revision 2/.test(document.querySelector('#collaboration-status').textContent)`
+    )
+  );
+  await browser.evaluate(`document.querySelector('#collaboration-handoff').click()`);
+  await waitFor(() =>
+    browser.evaluate(`!document.querySelector('#collaboration-handoff-output').hidden`)
+  );
+  assert.match(
+    await browser.evaluate(`document.querySelector('#collaboration-handoff-output').textContent`),
+    /"approvalGranted": false/
+  );
+  await browser.evaluate(`document.querySelector('#collaboration-cancel').click()`);
+  await waitFor(() =>
+    browser.evaluate(
+      `/cancelled/.test(document.querySelector('#collaboration-status').textContent)`
+    )
+  );
+  assertNoSensitiveTerms(await browser.evaluate('document.body.innerText'));
+});
+
 test('real browser can operate the secure GUI setup and report navigation', async t => {
   const workspace = createE2eWorkspace('zeus-gui-e2e-');
+  const localConfig = workspace.path('config', 'local-only');
+  fs.mkdirSync(localConfig, { recursive: true });
+  fs.writeFileSync(
+    workspace.path('config', 'local-only', 'profiles.json'),
+    `${JSON.stringify({
+      dev: {
+        systems: { dev: { host: 'ibmi.invalid', user: 'reader', password: 'e2e-private-token' } },
+        resourceCatalog: {
+          'dev.sources': {
+            kind: 'sourceCode',
+            system: 'dev',
+            library: 'SRCLIB',
+            sourceFiles: ['QRPGLESRC'],
+            maxMembers: 3,
+          },
+        },
+      },
+      qa: {
+        systems: { qa: { host: 'ibmi-qa.invalid', user: 'reader', password: 'e2e-private-token' } },
+        resourceCatalog: {
+          'qa.sources': {
+            kind: 'sourceCode',
+            system: 'qa',
+            library: 'QASRC',
+            sourceFiles: ['QRPGLESRC'],
+            maxMembers: 3,
+          },
+        },
+      },
+    })}\n`,
+    'utf8'
+  );
+  fs.writeFileSync(
+    workspace.path('config', 'local-only', 'ui-configurations.json'),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      configurations: [
+        {
+          id: 'dev',
+          label: 'Development',
+          profile: 'dev',
+          config: 'config/local-only/profiles.json',
+        },
+        {
+          id: 'qa',
+          label: 'QA',
+          profile: 'qa',
+          config: 'config/local-only/profiles.json',
+        },
+      ],
+    })}\n`,
+    'utf8'
+  );
+  let connectionProbeCount = 0;
+  let releaseFirstProbe;
+  let markFirstProbeStarted;
+  const firstProbeGate = new Promise(resolve => {
+    releaseFirstProbe = resolve;
+  });
+  const firstProbeStarted = new Promise(resolve => {
+    markFirstProbeStarted = resolve;
+  });
   let started;
   let browser;
   t.after(async () => {
@@ -152,6 +291,19 @@ test('real browser can operate the secure GUI setup and report navigation', asyn
       sensitiveTerms: ['e2e-private-token'],
       actionServiceOptions: {
         cwd: workspace.root,
+        connectionCheckServices: {
+          db2Query: async ({ query, maxRows }) => {
+            connectionProbeCount += 1;
+            assert.match(query, /SELECT 1 AS HEALTHCHECK/);
+            assert.equal(maxRows, 1);
+            if (connectionProbeCount === 1) {
+              markFirstProbeStarted();
+              await firstProbeGate;
+              throw new Error('synthetic connection failure');
+            }
+            return { rowCount: 1 };
+          },
+        },
         env: Object.fromEntries(
           Object.entries(process.env).filter(
             ([key]) => !/(password|secret|credential|token|private[_-]?key)/i.test(key)
@@ -188,6 +340,10 @@ test('real browser can operate the secure GUI setup and report navigation', asyn
     contextWizard: Boolean(document.querySelector('#workingContextWizardSection')),
     contextPreviewButton: Boolean(document.querySelector('[data-context-preview]')),
     catalog: Boolean(document.querySelector('#pluginCatalogSection')),
+    setupHasProfileWizard: Boolean(document.querySelector('#configure #profileWizardSection')),
+    adminHasProfileWizard: Boolean(document.querySelector('#administration #profileWizardSection')),
+    adminHasKeyWizard: Boolean(document.querySelector('#administration #profileKeyWizardSection')),
+    adminHasPluginCatalog: Boolean(document.querySelector('#administration #pluginCatalogSection')),
     body: document.body.innerText
   }))()`);
   assert.match(initial.title, /Zeus/i);
@@ -199,7 +355,131 @@ test('real browser can operate the secure GUI setup and report navigation', asyn
   assert.equal(initial.contextWizard, true);
   assert.equal(initial.contextPreviewButton, true);
   assert.equal(initial.catalog, true);
+  assert.equal(initial.setupHasProfileWizard, false);
+  assert.equal(initial.adminHasProfileWizard, true);
+  assert.equal(initial.adminHasKeyWizard, true);
+  assert.equal(initial.adminHasPluginCatalog, true);
   assertNoSensitiveTerms(initial.body, ['e2e-private-token']);
+  await browser.evaluate(`(() => {
+    const nativeFetch=window.fetch.bind(window);
+    window.__releaseQaSelection=null;
+    window.__qaSelectionHeld=new Promise(resolve=>{window.__releaseQaSelection=resolve;});
+    window.__qaSelectionStarted=false;
+    window.fetch=async (url,options={})=>{
+      const response=await nativeFetch(url,options);
+      if(String(url).startsWith('/api/ui-configuration')&&options.method==='POST'&&JSON.parse(options.body||'{}').configurationId==='qa'){
+        window.__qaSelectionStarted=true;
+        await window.__qaSelectionHeld;
+      }
+      return response;
+    };
+  })()`);
+  await browser.evaluate(
+    `(() => {const select=document.querySelector('#namedEnvironmentSelect');select.value='qa';select.dispatchEvent(new Event('change',{bubbles:true}));})()`
+  );
+  await waitFor(() => browser.evaluate('window.__qaSelectionStarted===true'));
+  await browser.evaluate(
+    `(() => {const select=document.querySelector('#namedEnvironmentSelect');select.value='dev';select.dispatchEvent(new Event('change',{bubbles:true}));})()`
+  );
+  await waitFor(() =>
+    browser.evaluate(`Boolean(document.querySelector('#namedEnvironmentSelect')?.value === 'dev')`)
+  );
+  await waitFor(() => browser.evaluate(`s.uiActions.doctor.result?.input?.probe === false`), {
+    message: 'the selected environment must run local Doctor without a network probe',
+  });
+  const selectedVersion = await browser.evaluate('s.configuration.payload.version');
+  await browser.evaluate('window.__releaseQaSelection()');
+  await waitFor(
+    () =>
+      browser.evaluate(
+        `s.configuration.payload.activeConfiguration?.id==='dev'&&!s.configuration.error`
+      ),
+    { message: 'late environment response must not replace the current selection' }
+  );
+  await browser.navigate(started.url);
+  await waitFor(
+    () =>
+      browser.evaluate(
+        `s.configuration.payload.activeConfiguration?.id==='dev'&&s.configuration.payload.version===${JSON.stringify(selectedVersion)}`
+      ),
+    { message: 'reload must retain the hash-verified selected environment' }
+  );
+  await waitFor(
+    () =>
+      browser.evaluate(
+        `Boolean(document.querySelector('#namedEnvironmentSelect')&&document.querySelector('[data-config-probe]'))`
+      ),
+    {
+      message: 'Setup controls did not finish binding after reload',
+    }
+  );
+  await browser.evaluate(`document.querySelector('[data-tab="administration"]')?.click()`);
+  await waitFor(() =>
+    browser.evaluate(
+      `Boolean(document.querySelector('#administration.active #profileWizardSection'))`
+    )
+  );
+  await browser.evaluate(`document.querySelector('[data-tab="configure"]')?.click()`);
+  await waitFor(() =>
+    browser.evaluate(`Boolean(document.querySelector('#configure.active #namedEnvironmentSelect'))`)
+  );
+  await browser.setViewport(390, 844);
+  assert.equal(
+    await browser.evaluate('document.documentElement.scrollWidth <= innerWidth'),
+    true,
+    'named environment Setup fits a narrow viewport'
+  );
+  assert.equal(connectionProbeCount, 0, 'named environment selection must not probe a connection');
+  await browser.evaluate(`document.querySelector('[data-config-probe]')?.click()`);
+  await firstProbeStarted;
+  assert.equal(connectionProbeCount, 1, 'explicit connection action runs one bounded probe');
+  assert.match(
+    await browser.evaluate(`document.querySelector('[data-config-probe]').textContent`),
+    /Testing Connections/,
+    'the GUI exposes the busy state while the connection check is running'
+  );
+  releaseFirstProbe();
+  await waitFor(
+    () => browser.evaluate(`s.uiActions.connections.result?.result?.checks?.[0]?.status==='FAIL'`),
+    {
+      message: 'connection failure must be visible and retryable',
+    }
+  );
+  await browser.evaluate(`document.querySelector('[data-config-probe]')?.click()`);
+  await waitFor(() => connectionProbeCount === 2, {
+    message: 'connection retry did not run',
+  });
+  await waitFor(
+    () => browser.evaluate(`s.uiActions.connections.result?.result?.checks?.[0]?.status==='PASS'`),
+    {
+      message: 'connection retry did not recover',
+    }
+  );
+  await waitFor(() =>
+    browser.evaluate(
+      `document.body.innerText.includes('Connection check does not grant resource data access.')`
+    )
+  );
+  assert.equal(
+    connectionProbeCount,
+    2,
+    'the selected connection is checked only by the explicit failed attempt and retry'
+  );
+  await browser.setViewport(390, 560);
+  const shortViewport = await browser.evaluate(`({
+    width:document.documentElement.scrollWidth,
+    height:document.documentElement.scrollHeight,
+    viewportWidth:innerWidth,
+    viewportHeight:innerHeight
+  })`);
+  assert.ok(
+    shortViewport.width <= shortViewport.viewportWidth,
+    'short Setup viewport has no horizontal overflow'
+  );
+  assert.ok(
+    shortViewport.height >= shortViewport.viewportHeight,
+    'short Setup viewport remains vertically scrollable'
+  );
 
   const guiActions = await browser.evaluate(`(async () => {
     const waitFor = predicate => new Promise(resolve => {
@@ -341,6 +621,89 @@ test('real browser can operate the secure GUI setup and report navigation', asyn
   assert.equal(workingContext.control.containsCredentials, false);
   assert.equal(Object.prototype.hasOwnProperty.call(workingContext, 'storagePath'), false);
   assertNoSensitiveTerms(workingContext, ['e2e-private-token']);
+});
+
+test('browser auto-selects one named environment and runs Doctor without a connection probe', async t => {
+  const workspace = createE2eWorkspace('zeus-gui-single-environment-e2e-');
+  fs.mkdirSync(workspace.path('config', 'local-only'), { recursive: true });
+  fs.writeFileSync(
+    workspace.path('config', 'local-only', 'profiles.json'),
+    `${JSON.stringify({ dev: { sourceRoot: './source', outputRoot: './output' } }, null, 2)}\n`,
+    'utf8'
+  );
+  fs.writeFileSync(
+    workspace.path('config', 'local-only', 'ui-configurations.json'),
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        configurations: [
+          {
+            id: 'dev',
+            label: 'Development',
+            profile: 'dev',
+            config: 'config/local-only/profiles.json',
+          },
+        ],
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+  const doctorCalls = [];
+  let connectionProbes = 0;
+  let started;
+  let browser;
+  t.after(async () => {
+    if (browser) await browser.close();
+    if (started) await new Promise(resolve => started.server.close(resolve));
+    workspace.cleanup();
+  });
+
+  try {
+    started = await startLocalUiServer({
+      outputRoot: workspace.path('output'),
+      host: '127.0.0.1',
+      port: 0,
+      actionServiceOptions: {
+        cwd: workspace.root,
+        env: {},
+        doctorExecutor(args) {
+          doctorCalls.push(args);
+          return { hasCriticalFailure: false, checks: [], diagnostics: [] };
+        },
+        connectionCheckServices: {
+          db2Query: async () => {
+            connectionProbes += 1;
+            return { rowCount: 1 };
+          },
+        },
+      },
+    });
+    browser = await startChrome();
+  } catch (error) {
+    if (error?.code === 'E2E_PREREQUISITE_MISSING') {
+      skipOrFailPrerequisite(t, error.message);
+      return;
+    }
+    throw error;
+  }
+
+  await browser.navigate(started.url);
+  await waitFor(
+    () =>
+      browser.evaluate(
+        `s.configuration.payload.activeConfiguration?.id==='dev'&&s.uiActions.doctor.result?.input?.probe===false`
+      ),
+    { message: 'single named environment should auto-select and run local Doctor' }
+  );
+  assert.equal(doctorCalls.length, 1);
+  assert.equal(doctorCalls[0].probe, false);
+  assert.equal(connectionProbes, 0);
+  assert.equal(
+    await browser.evaluate(`document.querySelector('#namedEnvironmentSelect')?.value`),
+    'dev'
+  );
 });
 
 test('real browser can inspect populated reports and complete Workbench actions', async t => {

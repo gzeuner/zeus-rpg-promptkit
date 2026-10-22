@@ -79,3 +79,21 @@ zeus.queryKnowledge({
   domain: 'ui',
 });
 ```
+
+## Selected local session import
+
+Session material is imported only when explicitly selected. Preview first; the
+result is classified `sensitive-local`, stays under `.zeus/`, and is not
+executed, published, or promoted into project-neutral knowledge. Markdown is
+parsed as text and HTML is parsed without executing scripts or loading remote
+resources.
+
+```text
+node cli/zeus.js knowledge preview-session --file ./notes/session.md --session-id review-001 --project zeus --json
+node cli/zeus.js knowledge import-session --file ./notes/session.md --session-id review-001 --project zeus --json
+```
+
+Pass each intended file explicitly (comma-separated with `--file`). Do not
+point this command at a chat archive directory. Review provenance and redacted
+content before using imported candidates; import does not bypass the existing
+privacy gate, review, or promotion steps.

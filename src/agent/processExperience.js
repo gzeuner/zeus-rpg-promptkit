@@ -141,8 +141,13 @@ function recordProcessExperience({
       processVersionId,
       catalog,
       processIssue: issue,
+      processOutcome: issue,
+      processTarget: surface === 'glossary-entry' ? 'glossary' : surface,
       targetSurface: surface,
       glossaryTerm,
+      processTerm: glossaryTerm,
+      processQuestion: normalizedQuestion,
+      processScenario: `process-${issue}-question`,
       correction,
       evidenceSummary,
       lesson: lesson || defaultLesson(issue),
@@ -178,6 +183,80 @@ function candidateKey(event) {
 
 function candidateId(key) {
   return `process-improvement:${crypto.createHash('sha256').update(key).digest('hex').slice(0, 16)}`;
+}
+
+function normalizedSignalTopic(event = {}) {
+  return String(
+    event.processTerm ||
+      event.glossaryTerm ||
+      event.processId ||
+      event.processQuestion ||
+      event.question ||
+      ''
+  )
+    .trim()
+    .toLocaleLowerCase('de-DE')
+    .replace(/\s+/g, ' ')
+    .slice(0, 180);
+}
+
+function buildProcessExperienceSignals(events) {
+  const groups = new Map();
+  for (const event of events) {
+    const outcome = String(event.processOutcome || event.processIssue || '').toLowerCase();
+    if (!PROCESS_ISSUES.includes(outcome)) continue;
+    const rawTarget = String(event.processTarget || '').toLowerCase();
+    let targetSurface;
+    if (rawTarget === 'glossary') targetSurface = 'glossary-entry';
+    else {
+      try {
+        targetSurface = normalizeTargetSurface(event.targetSurface || rawTarget, outcome);
+      } catch {
+        targetSurface = DEFAULT_TARGET_SURFACES[outcome];
+      }
+    }
+    const topic = normalizedSignalTopic(event) || 'unscoped-process-question';
+    const key = [outcome, targetSurface, topic].join('|');
+    const group = groups.get(key) || {
+      key,
+      outcome,
+      targetSurface,
+      topic,
+      events: [],
+    };
+    group.events.push(event);
+    groups.set(key, group);
+  }
+
+  return [...groups.values()]
+    .sort(
+      (left, right) => right.events.length - left.events.length || left.key.localeCompare(right.key)
+    )
+    .slice(0, MAX_PROCESS_CANDIDATES)
+    .map(group => {
+      const first = group.events[0];
+      const processIds = [
+        ...new Set(group.events.map(event => event.processId).filter(Boolean)),
+      ].sort();
+      return {
+        candidateId: candidateId(group.key),
+        status: group.events.length >= MIN_PROCESS_REPEATS_TO_CANDIDATE ? 'candidate' : 'observed',
+        occurrenceCount: group.events.length,
+        processOutcome: group.outcome,
+        affectedSurface:
+          group.targetSurface === 'glossary-entry' ? 'glossary' : group.targetSurface,
+        affectedTerm: first.processTerm || first.glossaryTerm || null,
+        processId: processIds[0] || null,
+        topic: group.topic,
+        rationale: IMPROVEMENT_TEXT[group.targetSurface],
+        proposedChange: IMPROVEMENT_TEXT[group.targetSurface],
+        regressionScenario: first.processScenario || `process-${group.outcome}-question`,
+        sourceEventIds: group.events
+          .map(event => String(event.eventId || '').trim())
+          .filter(Boolean)
+          .sort(),
+      };
+    });
 }
 
 function catalogFingerprint(value) {
@@ -269,7 +348,12 @@ function buildProcessImprovementReport({
     0,
     Math.min(Math.max(Number(limit) || MAX_PROCESS_CANDIDATES, 1), MAX_PROCESS_CANDIDATES)
   );
+  const signals = buildProcessExperienceSignals(processEvents).slice(
+    0,
+    Math.min(Math.max(Number(limit) || MAX_PROCESS_CANDIDATES, 1), MAX_PROCESS_CANDIDATES)
+  );
   const candidateCount = candidates.filter(candidate => candidate.status === 'candidate').length;
+  const signalCandidateCount = signals.filter(signal => signal.status === 'candidate').length;
   return {
     ok: true,
     operation: 'improvements',
@@ -286,9 +370,12 @@ function buildProcessImprovementReport({
       repeatedSignalThreshold: MIN_PROCESS_REPEATS_TO_CANDIDATE,
     },
     candidates,
+    signals,
+    experienceImprovements: signals.filter(signal => signal.status === 'candidate'),
     review: {
       required: candidates.length > 0,
       candidateCount,
+      experienceSignalCandidateCount: signalCandidateCount,
       automaticPromotion: false,
       policy:
         'Review candidates with a domain owner, add a sanitized regression fixture, and explicitly change the authoritative surface. Process experience never publishes process knowledge or edits contracts automatically.',
@@ -347,6 +434,7 @@ module.exports = {
   PROCESS_EXPERIENCE_SCHEMA_VERSION,
   PROCESS_ISSUES,
   TARGET_SURFACES,
+  buildProcessExperienceSignals,
   buildProcessImprovementCandidates,
   buildProcessImprovementReport,
   recordProcessExperience,

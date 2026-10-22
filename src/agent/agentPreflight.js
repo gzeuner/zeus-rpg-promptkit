@@ -10,6 +10,8 @@ const { buildCliAgentBootstrapPayload, readPackageVersion } = require('./agentBo
 const { buildCliWorkflowSuggestion } = require('./workflowSuggestion');
 const { buildResumeHints } = require('./agentResume');
 const { sanitizeValue } = require('../security/secretMasking');
+const { discoverResources } = require('../core/resourceDiscoveryService');
+const { inspectCaseIndex } = require('./caseIndex');
 
 const PREFLIGHT_SCHEMA_VERSION = 1;
 const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits', 'presets']);
@@ -57,7 +59,7 @@ function buildContextSummary(context) {
   };
 }
 
-function buildPreflightSuggestion({ goal, profile, program, source, out } = {}) {
+function buildPreflightSuggestion({ goal, profile, program, source, out, resourceArgs } = {}) {
   const normalizedGoal = String(goal || '').trim();
   if (!normalizedGoal) return null;
   return buildCliWorkflowSuggestion({
@@ -66,6 +68,7 @@ function buildPreflightSuggestion({ goal, profile, program, source, out } = {}) 
     program: program || null,
     source: source || null,
     out: out || null,
+    resourceArgs,
   });
 }
 
@@ -110,6 +113,7 @@ function buildCliAgentPreflightPayload({
   source = null,
   out = null,
   experienceLimit = 5,
+  resourceArgs = {},
 } = {}) {
   const workspaceRoot = path.resolve(String(cwd || process.cwd()));
   const context = buildWorkingContextView({ cwd: workspaceRoot, includeStoragePath: false });
@@ -117,8 +121,22 @@ function buildCliAgentPreflightPayload({
     String(profile || '').trim() || context.profile || context.active?.profile || null;
   const profileInventory = readProfileInventory({
     cwd: workspaceRoot,
-    args: effectiveProfile ? { profile: effectiveProfile } : {},
+    args: { ...resourceArgs, ...(effectiveProfile ? { profile: effectiveProfile } : {}) },
   });
+  let resourceDiscovery;
+  try {
+    resourceDiscovery = discoverResources(
+      { ...resourceArgs, ...(effectiveProfile ? { profile: effectiveProfile } : {}) },
+      { cwd: workspaceRoot, env: process.env }
+    );
+  } catch {
+    resourceDiscovery = {
+      status: 'unavailable',
+      profiles: [],
+      profileInventory: { count: 0, names: [] },
+      failureCode: 'RESOURCE_DISCOVERY_FAILED',
+    };
+  }
   const normalizedGoal = String(goal || '').trim() || null;
   const experience = readExperienceInventory({
     cwd: workspaceRoot,
@@ -131,13 +149,18 @@ function buildCliAgentPreflightPayload({
     program,
     source,
     out,
+    resourceArgs,
   });
   const inputRequirements = suggestion
     ? suggestion.inputRequirements
     : { concepts: [], missingInputs: [], ready: true };
   const resume = buildResumeHints({ cwd: workspaceRoot, out, program });
+  const caseIndex = inspectCaseIndex({ cwd: workspaceRoot, out });
   const contextStatePath = path.resolve(workspaceRoot, '.zeus', 'working-context.json');
   const status = profileInventory.status === 'unavailable' ? 'needs-attention' : 'ready';
+  const resourceNextCommands = Array.isArray(resourceDiscovery.profiles)
+    ? resourceDiscovery.profiles.map(profile => profile.nextCommand).filter(Boolean)
+    : [];
 
   const bootstrap = buildCliAgentBootstrapPayload();
   const resumeCommands = resume.available ? resume.commands : [];
@@ -176,6 +199,8 @@ function buildCliAgentPreflightPayload({
     effectiveProfile,
     context: buildContextSummary(context),
     profileInventory,
+    resourceDiscovery,
+    resourceNextCommands,
     experience: {
       path: experience.path,
       exists: experience.exists,
@@ -188,7 +213,10 @@ function buildCliAgentPreflightPayload({
       cli: true,
       localReadOnly: true,
       localArtifactGeneration: true,
-      remoteReadOnly: Boolean(effectiveProfile),
+      remoteReadOnly: false,
+      remoteConfigured: resourceDiscovery.profiles.some(profile =>
+        profile.resources.some(resource => resource.readiness.configured)
+      ),
       controlledWrites: true,
       mcp: 'optional-adapter',
       commandDiscovery: bootstrap.discovery,
@@ -214,6 +242,21 @@ function buildCliAgentPreflightPayload({
     legacyConcepts: inputRequirements.concepts,
     inputRequirements,
     resume,
+    caseIndex,
+    taskOrientation: {
+      task: normalizedGoal,
+      route: suggestion
+        ? suggestion.steps.map(step => ({ tool: step.tool, purpose: step.purpose || step.label }))
+        : [],
+      scope: buildContextSummary(context),
+      missingInputs: inputRequirements.missingInputs,
+      freshness: caseIndex.documents.map(document => ({
+        path: document.path,
+        role: document.role,
+        freshness: document.freshness,
+      })),
+      caseReadPlan: caseIndex.readPlan,
+    },
     warnings: [
       ...(profileInventory.status === 'unavailable'
         ? ['Profile catalog could not be loaded; local-only orientation remains available.']

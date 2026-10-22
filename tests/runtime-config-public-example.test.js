@@ -21,6 +21,7 @@ test('profiles.example.json is strict JSON, validates, and exposes the public pr
     'default-local',
     'dev',
     'demo',
+    'demo-sqlserver-jtds',
     'sftp-fetch',
     'readonly-db2',
     'combined-fetch-and-query',
@@ -41,6 +42,7 @@ test('profiles.example.json is strict JSON, validates, and exposes the public pr
     '"productionSystem"',
     '"journaledTables"',
     '"workflowTokenBudgets"',
+    '"jdbcConnections"',
   ]) {
     assert.ok(raw.includes(token), `expected ${token} in public example profile`);
   }
@@ -74,10 +76,15 @@ test('profiles.example.json is strict JSON, validates, and exposes the public pr
 });
 
 test('public example profiles resolve mixins and workflow presets without local-only files', () => {
-  const profiles = loadProfiles({ cwd: projectRoot, env: {} });
-  const devProfile = resolveProfile(profiles, 'dev', { env: {} });
-  const combinedProfile = resolveProfile(profiles, 'combined-fetch-and-query', { env: {} });
-  const sampleSourceProfile = resolveProfile(profiles, 'sample-source', { env: {} });
+  const exampleEnv = {
+    ZEUS_FETCH_HOST: 'YOUR_DEV_IBM_I_HOST',
+  };
+  const profiles = loadProfiles({ cwd: projectRoot, env: exampleEnv });
+  const devProfile = resolveProfile(profiles, 'dev', { env: exampleEnv });
+  const combinedProfile = resolveProfile(profiles, 'combined-fetch-and-query', {
+    env: exampleEnv,
+  });
+  const sampleSourceProfile = resolveProfile(profiles, 'sample-source', { env: exampleEnv });
 
   assert.equal(devProfile.db.host, 'YOUR_DEV_IBM_I_HOST');
   assert.equal(devProfile.fetch.sourceLib, 'SOURCE_EXAMPLE');
@@ -91,9 +98,14 @@ test('public example profiles resolve mixins and workflow presets without local-
     kind: 'connection-target',
     source: 'system-ref',
     systemKey: 'dev',
-    systemName: 'SYSDEV',
+    systemName: 'YOUR_DEV_SYSTEM_NAME',
     displayName: 'Development IBM i',
-    aliases: ['DEVBOX', 'SYS_TEST'],
-    configuredNames: ['DEV', 'SYSDEV', 'DEVBOX', 'SYS_TEST', 'YOUR_DEV_IBM_I_HOST'],
+    aliases: ['YOUR_DEV_SYSTEM_ALIAS'],
+    configuredNames: [
+      'DEV',
+      'YOUR_DEV_SYSTEM_NAME',
+      'YOUR_DEV_SYSTEM_ALIAS',
+      'YOUR_DEV_IBM_I_HOST',
+    ],
   });
 });

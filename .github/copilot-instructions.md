@@ -183,6 +183,9 @@ npm run test:unit           # unit tests only
 npm run test:contract       # artifact contract tests
 npm run test:smoke          # end-to-end smoke tests
 npm run test:corpus         # scanner corpus tests (fixture-based)
+npm run test:resource       # explicit resource/configuration contracts
+npm run test:e2e:gui        # browser Setup, accessibility and report journey
+npm run test:full           # required suites plus MCP/SFTP/GUI E2E
 node --test tests/<file>    # single test file
 ```
 

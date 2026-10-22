@@ -23,6 +23,19 @@ const MAX_SUGGESTION_LIMIT = 8;
 
 const OUTCOMES = Object.freeze(['success', 'partial', 'failed', 'blocked']);
 const EVENT_TYPES = Object.freeze(['failure', 'outcome', 'lesson']);
+const PROCESS_QUESTION_OUTCOMES = Object.freeze([
+  'blocked',
+  'ambiguous',
+  'incomplete',
+  'stale',
+  'corrected',
+]);
+const PROCESS_IMPROVEMENT_TARGETS = Object.freeze([
+  'glossary',
+  'extraction-rule',
+  'prompt',
+  'contract',
+]);
 const SAFE_TEXT_FIELDS = Object.freeze([
   'topic',
   'goal',
@@ -40,6 +53,9 @@ const SAFE_TEXT_FIELDS = Object.freeze([
   'processVersionId',
   'catalog',
   'processIssue',
+  'processTerm',
+  'processQuestion',
+  'processScenario',
   'targetSurface',
   'glossaryTerm',
   'correction',
@@ -179,6 +195,17 @@ function normalizeExperienceEvent(input = {}) {
     processVersionId: redactAgentText(input.processVersionId) || null,
     catalog: redactAgentText(input.catalog) || null,
     processIssue: normalizeCode(input.processIssue, null),
+    processOutcome:
+      input.processOutcome == null || String(input.processOutcome).trim() === ''
+        ? null
+        : normalizeEnum(input.processOutcome, PROCESS_QUESTION_OUTCOMES, 'processOutcome'),
+    processTarget:
+      input.processTarget == null || String(input.processTarget).trim() === ''
+        ? null
+        : normalizeEnum(input.processTarget, PROCESS_IMPROVEMENT_TARGETS, 'processTarget'),
+    processTerm: redactAgentText(input.processTerm) || null,
+    processQuestion: redactAgentText(input.processQuestion) || null,
+    processScenario: redactAgentText(input.processScenario) || null,
     targetSurface: redactAgentText(input.targetSurface) || null,
     glossaryTerm: redactAgentText(input.glossaryTerm) || null,
     correction: redactAgentText(input.correction) || null,
@@ -236,6 +263,18 @@ function normalizeStoredEvent(parsed) {
     outcome === 'success' ? 'NONE' : 'UNCLASSIFIED'
   );
   event.processIssue = normalizeCode(parsed.processIssue, null);
+  event.processOutcome =
+    parsed.processOutcome == null || String(parsed.processOutcome).trim() === ''
+      ? null
+      : PROCESS_QUESTION_OUTCOMES.includes(String(parsed.processOutcome).toLowerCase())
+        ? String(parsed.processOutcome).toLowerCase()
+        : null;
+  event.processTarget =
+    parsed.processTarget == null || String(parsed.processTarget).trim() === ''
+      ? null
+      : PROCESS_IMPROVEMENT_TARGETS.includes(String(parsed.processTarget).toLowerCase())
+        ? String(parsed.processTarget).toLowerCase()
+        : null;
   event.tags = normalizeTags(parsed.tags);
   event.redaction = {
     applied: true,
@@ -459,6 +498,8 @@ module.exports = {
   EXPERIENCE_SCHEMA_VERSION,
   MAX_LIST_LIMIT,
   OUTCOMES,
+  PROCESS_IMPROVEMENT_TARGETS,
+  PROCESS_QUESTION_OUTCOMES,
   appendAgentExperience,
   buildExperienceSummary,
   buildExperienceIntelligence,

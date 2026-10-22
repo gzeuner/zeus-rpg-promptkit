@@ -117,6 +117,30 @@ test('neutral Display UI extractor maps widget types to controlled structural ca
   assert.equal(serialized.includes('Message'), false);
 });
 
+test('neutral Display UI knowledge keeps one structural pattern per widget across formats', () => {
+  const catalog = buildNeutralDisplayUiKnowledgeCatalog({
+    recordFormats: [
+      { widgets: [{ fieldType: 'button', boundField: 'SUBMIT' }, { fieldType: 'button' }] },
+      { widgets: [{ fieldType: 'tab' }, { fieldType: 'tab' }] },
+    ],
+  });
+
+  assert.equal(catalog.patterns.length, 4);
+  assert.deepEqual(
+    catalog.patterns.map(pattern => pattern.id),
+    ['ui.toolbar-1', 'ui.toolbar-2', 'ui.navigation-3', 'ui.navigation-4']
+  );
+  assert.deepEqual(
+    catalog.patterns.map(pattern => pattern.evidenceSummary.widgetCount),
+    [1, 1, 1, 1]
+  );
+  assert.equal(
+    catalog.patterns.filter(pattern => pattern.kind === 'ui.toolbar').length,
+    2,
+    'same-class widgets remain separate in the original per-widget taxonomy'
+  );
+});
+
 test('batch extraction separates the neutral catalog from the local-only inventory', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-neutral-display-ui-batch-'));
   const sourceRoot = path.join(root, 'source');

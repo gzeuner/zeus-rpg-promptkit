@@ -28,6 +28,9 @@ Or run all three:
 npm run test:e2e
 ```
 
+The repository-wide local gate is `npm run test:full`; it runs `npm test`
+(including explicit resource jobs) and then all three portable E2E lanes.
+
 The MCP test needs only Node.js. The SFTP test prefers Docker for its OpenSSH
 fixture and automatically falls back to an embedded, ephemeral `ssh2` server
 when Docker is unavailable. The GUI test needs Chrome or Chromium and a Node

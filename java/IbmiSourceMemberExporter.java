@@ -13,10 +13,14 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 import com.ibm.as400.access.AS400;
+import com.ibm.as400.access.AS400File;
+import com.ibm.as400.access.AS400FileRecordDescription;
 import com.ibm.as400.access.IFSFile;
+import com.ibm.as400.access.QSYSObjectPathName;
+import com.ibm.as400.access.Record;
+import com.ibm.as400.access.SequentialFile;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -69,7 +73,8 @@ public class IbmiSourceMemberExporter {
         }
     }
 
-    private static int writeToLocalFile(Statement statement, String aliasName, String targetPath) throws Exception {
+    private static int writeToLocalFile(AS400 system, String sourceLib, String sourceFile, String member,
+            String targetPath) throws Exception {
         File localFile = new File(targetPath);
         File parent = localFile.getParentFile();
         if (parent != null && !parent.exists()) {
@@ -77,16 +82,31 @@ public class IbmiSourceMemberExporter {
         }
 
         int linesWritten = 0;
-        try (FileOutputStream out = new FileOutputStream(localFile);
-                OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
-                ResultSet rs = statement.executeQuery("SELECT SRCDTA FROM " + aliasName + " ORDER BY SRCSEQ")) {
-            while (rs.next()) {
-                String line = rs.getString(1);
-                writer.write(line == null ? "" : line.replaceFirst("\\s+$", ""));
-                writer.write('\n');
-                linesWritten += 1;
+        String memberPath = new QSYSObjectPathName(sourceLib, sourceFile, member, "MBR").getPath();
+        String filePath = new QSYSObjectPathName(sourceLib, sourceFile, "FILE").getPath();
+        SequentialFile source = new SequentialFile(system, memberPath);
+        try {
+            source.setRecordFormat(new AS400FileRecordDescription(system, filePath).retrieveRecordFormat()[0]);
+            source.open(AS400File.READ_ONLY, 0, AS400File.COMMIT_LOCK_LEVEL_NONE);
+            try (java.io.OutputStream out = java.nio.file.Files.newOutputStream(localFile.toPath(),
+                    java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE);
+                    OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
+                Record sourceRecord;
+                while ((sourceRecord = source.readNext()) != null) {
+                    Object value = sourceRecord.getField("SRCDTA");
+                    String line = value == null ? "" : value.toString();
+                    int end = line.length();
+                    while (end > 0 && Character.isWhitespace(line.charAt(end - 1))) {
+                        end--;
+                    }
+                    writer.write(line, 0, end);
+                    writer.write('\n');
+                    linesWritten += 1;
+                }
+                writer.flush();
             }
-            writer.flush();
+        } finally {
+            source.close();
         }
         return linesWritten;
     }
@@ -153,7 +173,7 @@ public class IbmiSourceMemberExporter {
         int streamFileCcsid = Integer.parseInt(args[7]);
         // Optional 9th argument selects the output target. Default "ifs" keeps
         // backward compatibility with the bulk IFS export pipeline; "local"
-        // writes the JDBC-fetched source directly to the local filesystem.
+        // reads the member directly and writes only to the local filesystem.
         String writeMode = args.length > 8 ? normalizeIdentifier(args[8]) : "IFS";
         boolean localWrite = "LOCAL".equals(writeMode);
 
@@ -162,6 +182,14 @@ public class IbmiSourceMemberExporter {
         Statement statement = null;
 
         try {
+            if (localWrite) {
+                system = new AS400(host, user, password.toCharArray());
+                system.setGuiAvailable(false);
+                int localLines = writeToLocalFile(system, sourceLib, sourceFile, member, targetPath);
+                System.out.println(toJson(true, localLines,
+                        new String[] { "Source member was read directly without remote SQL DDL or IFS writes." }));
+                return;
+            }
             Class.forName("com.ibm.as400.access.AS400JDBCDriver");
             connection = DriverManager.getConnection(buildJdbcUrl(host), user, password);
             statement = connection.createStatement();
@@ -177,14 +205,9 @@ public class IbmiSourceMemberExporter {
 
             int linesWritten;
             String successMessage;
-            if (localWrite) {
-                linesWritten = writeToLocalFile(statement, aliasName, targetPath);
-                successMessage = "Source member was exported via JDBC to the local filesystem with translate binary=true.";
-            } else {
-                system = new AS400(host, user, password);
-                linesWritten = writeToIfsFile(system, statement, aliasName, targetPath, streamFileCcsid);
-                successMessage = "Source member was exported via JDBC fallback with translate binary=true.";
-            }
+            system = new AS400(host, user, password);
+            linesWritten = writeToIfsFile(system, statement, aliasName, targetPath, streamFileCcsid);
+            successMessage = "Source member was exported via JDBC fallback with translate binary=true.";
 
             System.out.println(toJson(true, linesWritten, new String[] { successMessage }));
             System.exit(0);

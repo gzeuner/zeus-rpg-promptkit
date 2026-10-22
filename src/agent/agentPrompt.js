@@ -54,6 +54,17 @@ function formatPromptContext(preflight) {
     );
     lines.push(`- Resume command: ${preflight.resume.commands[0] || '(inspect manifest first)'}`);
   }
+  if (preflight.caseIndex && preflight.caseIndex.status !== 'absent') {
+    lines.push(
+      `- Case index: ${preflight.caseIndex.status}${preflight.caseIndex.caseId ? ` (${preflight.caseIndex.caseId})` : ''}`
+    );
+    for (const document of preflight.caseIndex.readPlan || []) {
+      lines.push(`- Case document: ${document.path} (${document.role}, ${document.freshness})`);
+    }
+    for (const warning of (preflight.caseIndex.warnings || []).slice(0, 4)) {
+      lines.push(`- Case warning: ${warning.code} — ${warning.message}`);
+    }
+  }
   return lines.map(line => sanitizeValue(line));
 }
 
@@ -65,6 +76,7 @@ function buildCliAgentPromptPayload({
   program = null,
   source = null,
   out = null,
+  resourceArgs = {},
 } = {}) {
   const normalizedGoal = String(goal || '').trim();
   if (!normalizedGoal) {
@@ -80,6 +92,7 @@ function buildCliAgentPromptPayload({
     program,
     source,
     out,
+    resourceArgs,
   });
   const effectiveProfile = preflight.effectiveProfile || '(not set)';
   const service = createAiSessionPromptService();
@@ -113,9 +126,14 @@ function buildCliAgentPromptPayload({
       context: preflight.context,
       checks: preflight.checks,
       experience: preflight.experience,
+      profileInventory: preflight.profileInventory,
+      resourceDiscovery: preflight.resourceDiscovery,
+      resourceNextCommands: preflight.resourceNextCommands,
       suggestion: preflight.suggestion,
       inputRequirements: preflight.inputRequirements,
       resume: preflight.resume,
+      caseIndex: preflight.caseIndex,
+      taskOrientation: preflight.taskOrientation,
     },
   };
 }

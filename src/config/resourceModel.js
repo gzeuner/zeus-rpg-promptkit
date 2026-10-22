@@ -243,6 +243,11 @@ function resolveResourceKind(kind, { profile, systems, declaredResources, derive
     systems,
     systemKey
   );
+  if (((declared && declared.system) || declaredResources.system) && !systemDefinition) {
+    throw Object.assign(new Error('Explicit resource system is not configured.'), {
+      code: 'RESOURCE_SYSTEM_UNKNOWN',
+    });
+  }
 
   // System-level resource defaults (systems.<name>.resources.<kind>).
   const systemResources = isPlainObject(systemDefinition && systemDefinition.resources)

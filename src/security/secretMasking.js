@@ -103,6 +103,18 @@ function collectSensitiveTermsFromEnv(env = process.env, additionalTerms = []) {
   return normalizeSensitiveTerms(terms);
 }
 
+function collectSecretTermsFromEnv(env = process.env) {
+  return normalizeSensitiveTerms([
+    ...Object.entries(env)
+      .filter(
+        ([key, value]) => /password|secret|token|credential|pwd|private[_-]?key/i.test(key) && value
+      )
+      .map(([, value]) => value),
+    ...parseSensitiveTermsCsv(env.ZEUS_SENSITIVE_TERMS),
+    ...parseSensitiveTermsCsv(env.ZEUS_MASK_TERMS),
+  ]).sort((left, right) => left.localeCompare(right, 'en'));
+}
+
 function maskSensitiveTermsInText(value, sensitiveTerms = []) {
   let text = String(value === undefined || value === null ? '' : value);
   const normalizedTerms = normalizeSensitiveTerms(sensitiveTerms);
@@ -332,6 +344,7 @@ function sanitizeValue(value, keyOrOptions = '', maybeOptions = {}) {
 
 module.exports = {
   REDACTED_VALUE,
+  collectSecretTermsFromEnv,
   collectSensitiveTermsFromEnv,
   maskSensitiveTermsInText,
   maskSecretsInText,

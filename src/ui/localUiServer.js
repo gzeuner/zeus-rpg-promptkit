@@ -31,6 +31,10 @@ const {
 } = require('./profileKeyWizardService');
 const { createPromptWorkbenchService } = require('./promptWorkbenchService');
 const {
+  createCollaborationService,
+  executeCollaborationRequest,
+} = require('../agent/collaborationService');
+const {
   collectSensitiveTermsFromEnv,
   maskSensitiveTermsInText,
   sanitizeValue,
@@ -42,6 +46,7 @@ const {
 } = require('../workspace/analysisRegistryService');
 const { readWorkspaceIndex, WORKSPACE_INDEX_FILE } = require('../workspace/workspaceIndexBuilder');
 const { DEFAULT_UI_HOST, DEFAULT_UI_PORT } = require('./localUiDefaults');
+const { createUiConfigurationService } = require('./uiConfigurationService');
 const { buildWorkingContextView, loadWorkingContext } = require('../context/workingContext');
 const {
   WorkingContextWizardError,
@@ -74,6 +79,10 @@ function parsePositiveInteger(value, fallback) {
 function sendJson(response, statusCode, payload, options = {}) {
   const sensitiveTerms = Array.isArray(options.sensitiveTerms) ? options.sensitiveTerms : [];
   const sanitizedPayload = sanitizeValue(payload, { sensitiveTerms });
+  if (options.sanitizeDiscovery && payload.discovery)
+    sanitizedPayload.discovery = options.sanitizeDiscovery(payload.discovery);
+  if (options.sanitizeConfigurationLabels)
+    Object.assign(sanitizedPayload, options.sanitizeConfigurationLabels(payload));
   response.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
@@ -153,6 +162,117 @@ function requireJsonRequest(request) {
   const contentType = String(request.headers['content-type'] || '').toLowerCase();
   if (!contentType.startsWith('application/json')) {
     throw new UiActionError('Invalid request: content-type must be application/json', 400);
+  }
+}
+
+function isLocalCollaborationRequest(request) {
+  let hostname;
+  try {
+    hostname = new URL(`http://${request.headers.host}`).hostname;
+  } catch {
+    return false;
+  }
+  const remote = String(request.socket.remoteAddress || '').replace(/^::ffff:/, '');
+  const loopback = value => ['localhost', '127.0.0.1', '::1', '[::1]'].includes(value);
+  return (
+    loopback(hostname) &&
+    loopback(remote) &&
+    request.headers['sec-fetch-site'] !== 'cross-site' &&
+    (!request.headers.origin || request.headers.origin === `http://${request.headers.host}`)
+  );
+}
+
+function streamCollaborationEvents({ response, url, collaboration, streams, sensitiveTerms }) {
+  if (streams.active >= 4) throw new UiActionError('Local event-stream limit reached.', 429);
+  const id = url.searchParams.get('id');
+  let cursor = Number(url.searchParams.get('after') || 0);
+  const initial = collaboration.events(id, cursor);
+  response.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-store',
+    Connection: 'keep-alive',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  streams.active += 1;
+  let interval;
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(interval);
+    streams.active -= 1;
+    response.end();
+  };
+  const startedAt = Date.now();
+  const emit = payload => {
+    if (closed) return;
+    const safe = sanitizeValue(payload, { sensitiveTerms });
+    const writable = response.write(`event: task\ndata: ${JSON.stringify(safe)}\n\n`);
+    if (payload.events.length) cursor = payload.events.at(-1).sequence;
+    if (
+      !writable ||
+      !['running', 'cancelling'].includes(payload.state) ||
+      Date.now() - startedAt > 16000
+    )
+      close();
+  };
+  response.on('close', close);
+  emit(initial);
+  if (!closed)
+    interval = setInterval(() => {
+      try {
+        emit(collaboration.events(id, cursor));
+      } catch {
+        close();
+      }
+    }, 250);
+}
+
+async function handleCollaborationRequest({
+  request,
+  response,
+  url,
+  collaborationOptions,
+  collaboration,
+  streams,
+  sensitiveTerms,
+}) {
+  if (!isLocalCollaborationRequest(request)) {
+    sendJson(response, 403, { error: 'Local same-origin collaboration only.' });
+    return;
+  }
+  try {
+    if (url.pathname === '/api/collaboration' && request.method === 'POST') {
+      requireJsonRequest(request);
+      const controller = new AbortController();
+      const abort = () => {
+        if (!response.writableEnded) controller.abort();
+      };
+      response.once('close', abort);
+      let result;
+      try {
+        result = await executeCollaborationRequest(
+          await readJsonBody(request, { maxBytes: 16 * 1024 }),
+          { ...collaborationOptions, signal: controller.signal }
+        );
+      } finally {
+        response.off('close', abort);
+      }
+      if (response.destroyed) return;
+      response.setHeader('Cache-Control', 'no-store');
+      sendJson(response, 200, result, { sensitiveTerms });
+    } else if (url.pathname === '/api/collaboration/events' && request.method === 'GET') {
+      streamCollaborationEvents({ response, url, collaboration, streams, sensitiveTerms });
+    } else {
+      sendMethodNotAllowed(response, url.pathname.endsWith('/events') ? ['GET'] : ['POST']);
+    }
+  } catch (error) {
+    if (!response.headersSent)
+      sendJson(response, error.statusCode || 400, {
+        error: 'Invalid, stale or unavailable local collaboration request.',
+        code: error.code || 'COLLABORATION_REQUEST_FAILED',
+      });
+    else response.end();
   }
 }
 
@@ -674,11 +794,24 @@ function createLocalUiRequestHandler({
   workingContextWizardService,
   profileWizardService,
   profileKeyWizardService,
+  configurationService,
+  collaborationRuntime,
   registryPath = null,
   sensitiveTerms = [],
 }) {
   const resolvedOutputRoot = path.resolve(outputRoot);
   const service = promptWorkbenchService || createPromptWorkbenchService();
+  const collaborationOptions = {
+    workspaceRoot: cwd,
+    providerRegistry: collaborationRuntime?.providerRegistry,
+    providerPolicy: collaborationRuntime?.providerPolicy,
+    providerClassification: collaborationRuntime?.providerClassification,
+    providerExecutionEnabled: collaborationRuntime?.providerExecutionEnabled,
+    providerTimeoutMs: collaborationRuntime?.providerTimeoutMs,
+    providerSensitiveTerms: sensitiveTerms,
+  };
+  const collaboration = createCollaborationService(collaborationOptions);
+  const collaborationStreams = { active: 0 };
   const uiActionService = actionService || createLocalUiActionService();
   const resolvedWorkingContextWizardService =
     workingContextWizardService || createWorkingContextWizardService({ cwd });
@@ -692,6 +825,61 @@ function createLocalUiRequestHandler({
     const segments = splitPathname(pathname);
 
     try {
+      if (pathname === '/api/collaboration' || pathname === '/api/collaboration/events') {
+        await handleCollaborationRequest({
+          request,
+          response,
+          url,
+          collaborationOptions,
+          collaboration,
+          streams: collaborationStreams,
+          sensitiveTerms,
+        });
+        return;
+      }
+      if (pathname === '/api/ui-configuration' && configurationService) {
+        try {
+          if (request.method === 'GET' || request.method === 'POST') {
+            const payload =
+              request.method === 'POST' ? await readJsonBody(request) : configurationService.read();
+            if (request.method === 'POST') {
+              requireJsonRequest(request);
+            }
+            const result =
+              request.method === 'POST' ? configurationService.select(payload) : payload;
+            sendJson(response, 200, result, {
+              sensitiveTerms,
+              sanitizeDiscovery: configurationService.sanitizeDiscovery,
+              sanitizeConfigurationLabels: configurationService.sanitizeConfigurationLabels,
+            });
+          } else sendMethodNotAllowed(response, ['GET', 'POST']);
+        } catch (error) {
+          sendJson(
+            response,
+            error.statusCode || 400,
+            { error: error.statusCode ? error.message : 'Invalid configuration request.' },
+            { sensitiveTerms }
+          );
+        }
+        return;
+      }
+      if (
+        configurationService &&
+        configurationService.read().mode !== 'legacy' &&
+        pathname.startsWith('/api/profile-wizard') &&
+        request.method !== 'GET'
+      ) {
+        sendJson(
+          response,
+          409,
+          {
+            error:
+              'Explicit configuration is read-only here. Edit its local files and apply the selection again.',
+          },
+          { sensitiveTerms }
+        );
+        return;
+      }
       const analysesHandled = await handleAnalysesRequest({
         request,
         response,
@@ -887,6 +1075,7 @@ async function startLocalUiServer({
   workingContextWizardService,
   profileWizardService,
   profileKeyWizardService,
+  collaborationRuntime,
   actionServiceOptions = {},
   registryPath = null,
   sensitiveTerms = [],
@@ -899,18 +1088,59 @@ async function startLocalUiServer({
     outputRoot: resolvedOutputRoot,
   });
   const resolvedEnv = actionServiceOptions.env || process.env;
-  const uiActionService =
-    actionService ||
-    createLocalUiActionService({
-      cwd: actionServiceOptions.cwd || process.cwd(),
-      env: resolvedEnv,
-      doctorExecutor: actionServiceOptions.doctorExecutor,
-      analyzeExecutor: actionServiceOptions.analyzeExecutor,
-      analyzeConfigResolver: actionServiceOptions.analyzeConfigResolver,
-      fetchConfigResolver: actionServiceOptions.fetchConfigResolver,
-      fetchMemberExecutor: actionServiceOptions.fetchMemberExecutor,
-      workflowConfigResolver: actionServiceOptions.workflowConfigResolver,
-    });
+  const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(resolvedEnv, sensitiveTerms);
+  const configurationService = createUiConfigurationService({
+    cwd: actionServiceOptions.cwd || process.cwd(),
+    env: resolvedEnv,
+    sensitiveTerms: resolvedSensitiveTerms,
+  });
+  const uiActionService = actionService || {
+    async executeAction(name, payload) {
+      const { selectionVersion, ...input } = payload || {};
+      let runtime;
+      let useLegacyRuntime = false;
+      try {
+        runtime = configurationService.runtime(selectionVersion, input.profile);
+      } catch (error) {
+        if (
+          configurationService.read().mode !== 'legacy' ||
+          (error.statusCode !== 409 && !actionServiceOptions.doctorExecutor)
+        )
+          throw error;
+        useLegacyRuntime = true;
+        runtime = {
+          cwd: actionServiceOptions.cwd || process.cwd(),
+          env: resolvedEnv,
+          configArgs: {},
+          exactFile: false,
+        };
+      }
+      const profile = configurationService
+        .read()
+        .discovery?.profiles?.find(entry => entry.name === input.profile);
+      if (
+        profile?.mode === 'resource-catalog' &&
+        (['fetch-member', 'read-only-resource', 'discovery-preview'].includes(name) ||
+          (name === 'doctor' && input.probe))
+      ) {
+        throw new UiActionError(
+          'Fixed resource jobs require their exact CLI approval. Use the separate connection check for login diagnostics only.',
+          409
+        );
+      }
+      const service = createLocalUiActionService({ ...actionServiceOptions, ...runtime });
+      const result = await service.executeAction(name, input);
+      if (!useLegacyRuntime) configurationService.runtime(selectionVersion, input.profile);
+      if (name === 'generate-ai-session-prompt' && runtime.configArgs.config) {
+        result.configuration = configurationService.read();
+        result.prompt +=
+          '\nExplicit GUI configuration (repeat these exact CLI flags):\n' +
+          JSON.stringify(runtime.configArgs) +
+          '\n';
+      }
+      return result;
+    },
+  };
   const resolvedProfileWizardService =
     profileWizardService ||
     createProfileWizardService({
@@ -926,7 +1156,6 @@ async function startLocalUiServer({
   const resolvedWorkingContextWizardService =
     workingContextWizardService ||
     createWorkingContextWizardService({ cwd: actionServiceOptions.cwd || process.cwd() });
-  const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(resolvedEnv, sensitiveTerms);
   const server = http.createServer(
     createLocalUiRequestHandler({
       outputRoot: resolvedOutputRoot,
@@ -936,6 +1165,8 @@ async function startLocalUiServer({
       workingContextWizardService: resolvedWorkingContextWizardService,
       profileWizardService: resolvedProfileWizardService,
       profileKeyWizardService: resolvedProfileKeyWizardService,
+      configurationService,
+      collaborationRuntime,
       registryPath: registryPath ? path.resolve(registryPath) : null,
       sensitiveTerms: resolvedSensitiveTerms,
     })

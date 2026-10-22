@@ -184,7 +184,7 @@ function printHelp() {
     '  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query'
   );
   console.log(
-    '  zeus [--config <path>] resources --profile <name> [--json]  # Zeigt das aufgeloeste Resource-Modell (Source/Objects/Metadata/Data) pro System'
+    '  zeus [--config <path>] resources --profile <name> [--json]  # Ressourcenmodell, Discovery, Wizard und explizite Analysejobs'
   );
   console.log(
     '  zeus [--config <path>] context <show|set|clear> [--profile <name>] [--active sourceCode|objects|metadata|data] [--system <name>] [--source-library <library>] [--source-file <QRPGLESRC>] [--member <name>] [--source-root <path>] [--metadata-system <name>] [--metadata-schema <schema>] [--data-system <name>] [--data-schema <schema>] [--json]  # Aktuellen Arbeitsort anzeigen/steuern'
@@ -281,7 +281,7 @@ function printHelp() {
     '  zeus knowledge <extract|validate|inspect> [options] [--json]  # LOKAL: privacy-gated project-neutral catalog'
   );
   console.log(
-    '  zeus [--config <path>] agent <bootstrap|preflight|prompt|suggest|evaluate|log> [options] [--json]  # CLI-first agent contract, evaluation, workflow suggestion, and experience log'
+    '  zeus [--config <path>] agent <bootstrap|preflight|prompt|suggest|evaluate|log|task> [options] [--json]  # CLI-first agent contract, workflow, experience, and local tasks'
   );
   console.log(
     '  zeus [--config <path>] docs generate-catalog [--output <path>] [--format markdown|json] [--json-output <path>] [--json]'

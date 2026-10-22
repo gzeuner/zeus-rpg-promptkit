@@ -120,8 +120,10 @@ corrected, record one sanitized learning signal with `process experience`.
 This reuses the local `.zeus/agent-experience.jsonl` log. Run
 `process improvements --json` to group repeated signals into reviewable
 candidates for `glossary-entry`, `extraction-rule`, `prompt`, or `contract`.
-Two matching signals make a candidate; human review and a sanitized regression
-fixture are still required, and no candidate is auto-promoted.
+The report also includes normalized signals grouped by process term, process
+ID, or question with a suggested regression scenario. Two matching signals
+make a candidate; human review and a sanitized regression fixture are still
+required, and no candidate is auto-promoted.
 
 When the signal should be reusable across environments or catalogs, combine
 review reports with `process promotion-check`. It counts only anonymized
@@ -139,6 +141,11 @@ not emit questions, answer text, matched process IDs, source content, or
 absolute paths. See [`process-answer-drift.md`](process-answer-drift.md).
 
 ## Stable agent response contract
+
+For a revisioned local task shared by people and adapters, see
+[`collaboration-tasks.md`](collaboration-tasks.md). Local task execution is
+limited to an explicit process catalog; provider execution stays disabled by
+default.
 
 Every `agent ... --json` response exposes the same top-level fields in addition
 to operation-specific data:

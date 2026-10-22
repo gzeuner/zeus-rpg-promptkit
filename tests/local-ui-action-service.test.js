@@ -115,6 +115,112 @@ test('unknown action is rejected', async () => {
   );
 });
 
+test('connection check is a separate explicit action and grants no data approval', async () => {
+  let probes = 0;
+  const service = createLocalUiActionService({
+    profiles: {
+      dev: {
+        systems: { dev: { host: 'ibmi.invalid', user: 'reader', password: 'synthetic-secret' } },
+        resourceCatalog: {
+          'dev.sources': {
+            kind: 'sourceCode',
+            system: 'dev',
+            library: 'SRCLIB',
+            sourceFiles: ['QRPGLESRC'],
+            maxMembers: 3,
+          },
+        },
+      },
+    },
+    env: {},
+    connectionCheckServices: {
+      db2Query: async ({ query, maxRows }) => {
+        probes += 1;
+        assert.match(query, /SELECT 1 AS HEALTHCHECK/);
+        assert.equal(maxRows, 1);
+        return { rowCount: 1 };
+      },
+    },
+    doctorExecutor: () => ({ hasCriticalFailure: false, checks: [], diagnostics: [] }),
+  });
+
+  const doctor = await service.executeAction('doctor', { profile: 'dev' });
+  assert.equal(doctor.input.probe, false);
+  assert.equal(probes, 0);
+
+  const checked = await service.executeAction('check-connections', { profile: 'dev' });
+  assert.equal(checked.status, 'ready', JSON.stringify(checked));
+  assert.equal(checked.approvalGranted, false);
+  assert.equal(probes, 1);
+  await assert.rejects(
+    service.executeAction('check-connections', { profile: 'dev', probe: true }),
+    /without overriding/
+  );
+});
+
+test('connection check probes each declared resource connection and fails incomplete scopes closed', async () => {
+  const observedHosts = [];
+  const profiles = {
+    multi: {
+      systems: {
+        source: { host: 'source.invalid', user: 'reader', password: 'source-secret' },
+        metadata: { host: 'metadata.invalid', user: 'reader', password: 'metadata-secret' },
+        legacy: { host: 'legacy.invalid', user: 'legacy', password: 'legacy-secret' },
+      },
+      db: { system: 'legacy', host: 'legacy.invalid', user: 'legacy', password: 'legacy-secret' },
+      resourceCatalog: {
+        'sources.main': {
+          kind: 'sourceCode',
+          system: 'source',
+          library: 'SRCLIB',
+          sourceFiles: ['QRPGLESRC'],
+          maxMembers: 3,
+        },
+        'metadata.main': {
+          kind: 'metadata',
+          system: 'metadata',
+          schemas: ['APP'],
+        },
+      },
+    },
+  };
+  const service = createLocalUiActionService({
+    profiles,
+    env: {},
+    connectionCheckServices: {
+      db2Query: async ({ dbConfig }) => {
+        observedHosts.push(dbConfig.host);
+        return { rowCount: 1 };
+      },
+    },
+  });
+
+  const checked = await service.executeAction('check-connections', { profile: 'multi' });
+  assert.equal(checked.status, 'ready');
+  assert.deepEqual(observedHosts.sort(), ['metadata.invalid', 'source.invalid']);
+  assert.equal(checked.approvalGranted, false);
+
+  const incomplete = createLocalUiActionService({
+    profiles: {
+      broken: {
+        systems: { source: { host: 'source.invalid', user: '', password: '' } },
+        db: { system: 'source', host: 'legacy.invalid', user: 'legacy', password: 'legacy-secret' },
+        resourceCatalog: profiles.multi.resourceCatalog,
+      },
+    },
+    env: {},
+    connectionCheckServices: {
+      db2Query: async () => {
+        throw new Error('An incomplete resource must not start a probe.');
+      },
+    },
+  });
+  const blocked = await incomplete.executeAction('check-connections', { profile: 'broken' });
+  assert.equal(blocked.status, 'failed');
+  assert.equal(blocked.result.checks[0].name, 'Connection scope');
+  assert.equal(blocked.result.probeRows.length, 0);
+});
+
 test('generate-ai-session-prompt action accepts valid payload and returns prompt metadata', async () => {
   const service = createLocalUiActionService();
   const result = await service.executeAction('generate-ai-session-prompt', {

@@ -24,6 +24,7 @@ const {
   writeAgentFeedbackArtifact,
 } = require('../../agent/agentFeedback');
 const { buildAgentPromotionReview } = require('../../agent/agentPromotionReview');
+const { executeCollaborationRequest } = require('../../agent/collaborationService');
 
 function printHelp() {
   console.log('Agent commands:');
@@ -43,6 +44,9 @@ function printHelp() {
   console.log('  zeus agent log list [--limit <n>] [--out <relative-jsonl>] [--json]');
   console.log('  zeus agent log summary [--out <relative-jsonl>] [--json]');
   console.log('  zeus agent log suggest --goal "<goal>" [--limit <n>] [--json]');
+  console.log(
+    '  zeus agent task <create|show|list|message|run|cancel|recover|handoff|events|providers> [options] [--json]'
+  );
   console.log('  zeus agent evaluate --list [--json]');
   console.log('  zeus agent evaluate --scenario <id> --response-file <relative-path> [--json]');
   console.log(
@@ -243,6 +247,59 @@ async function runAgent(args = {}) {
     return payload;
   }
 
+  if (subcommand === 'task') {
+    const operation = String(positional[1] || 'list')
+      .trim()
+      .toLowerCase();
+    const integerOption = (value, label, fallback) => {
+      if (value === undefined) return fallback;
+      const parsed = Number(value);
+      if (!Number.isSafeInteger(parsed) || parsed < 0) {
+        const error = new Error(`Invalid ${label}: expected a non-negative integer.`);
+        error.code = 'TOOL_INVALID_ARGUMENTS';
+        throw error;
+      }
+      return parsed;
+    };
+    const request = {
+      operation,
+      ...(args.id ? { id: args.id } : {}),
+      ...(args.goal ? { goal: args.goal } : {}),
+      ...(args.actor ? { actor: args.actor } : operation === 'message' ? { actor: 'human' } : {}),
+      ...(args.text ? { text: args.text } : {}),
+      ...(args['provider-id'] ? { providerId: args['provider-id'] } : {}),
+      ...(args['model-id'] ? { modelId: args['model-id'] } : {}),
+      ...(args['preview-hash'] ? { previewHash: args['preview-hash'] } : {}),
+      ...(args.catalog || args.glossary
+        ? {
+            scope: {
+              ...(args.catalog ? { catalog: args.catalog } : {}),
+              ...(args.glossary ? { glossary: args.glossary } : {}),
+            },
+          }
+        : {}),
+      ...(args['expected-revision'] !== undefined
+        ? { expectedRevision: integerOption(args['expected-revision'], 'expected revision') }
+        : {}),
+      ...(args['after-sequence'] !== undefined
+        ? { afterSequence: integerOption(args['after-sequence'], 'event cursor', 0) }
+        : {}),
+    };
+    const result = await executeCollaborationRequest(request, { workspaceRoot: process.cwd() });
+    const payload = finishAgentPayload(result, {
+      status: result.result?.state === 'failed' ? 'needs-attention' : 'ready',
+      sideEffects: ['create', 'message', 'run', 'cancel', 'recover'].includes(operation)
+        ? ['local-read', 'local-artifact-write']
+        : ['local-read'],
+      evidenceSources: ['revisioned local collaboration task'],
+      artifacts: result.result?.id ? [`.zeus/collaboration/${result.result.id}.json`] : [],
+      nextCommands: ['node cli/zeus.js agent task list --json'],
+    });
+    if (json.isJsonMode) json.print(payload);
+    else console.log(JSON.stringify(payload, null, 2));
+    return payload;
+  }
+
   if (subcommand === 'preflight') {
     const options = {
       cwd: process.cwd(),
@@ -252,6 +309,11 @@ async function runAgent(args = {}) {
       source: args.source || args['source-root'] || null,
       out: args.out || args.output || null,
       experienceLimit: args.limit,
+      resourceArgs: {
+        ...(args.config ? { config: args.config } : {}),
+        ...(args['base-config'] ? { 'base-config': args['base-config'] } : {}),
+        ...(args['env-files'] ? { 'env-files': args['env-files'] } : {}),
+      },
     };
     const rawPayload = buildCliAgentPreflightPayload(options);
     const payload = finishAgentPayload(rawPayload, {
@@ -282,6 +344,11 @@ async function runAgent(args = {}) {
       program: args.program || args.member || null,
       source: args.source || args['source-root'] || null,
       out: args.out || args.output || null,
+      resourceArgs: {
+        ...(args.config ? { config: args.config } : {}),
+        ...(args['base-config'] ? { 'base-config': args['base-config'] } : {}),
+        ...(args['env-files'] ? { 'env-files': args['env-files'] } : {}),
+      },
     };
     const rawPayload = buildCliAgentPromptPayload(options);
     const payload = finishAgentPayload(rawPayload, {

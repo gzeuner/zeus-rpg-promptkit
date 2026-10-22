@@ -25,6 +25,12 @@ test('local UI shell contains keyboard-first and secure setup contracts', () => 
   assert.match(html, /role="tablist"/);
   assert.match(html, /aria-selected/);
   assert.match(html, /aria-controls/);
+  assert.match(html, /\['collaboration','Chat'\]/);
+  assert.match(html, /\['administration','Administration'\]/);
+  assert.match(html, /id="collaboration"/);
+  assert.match(html, /id="administration"/);
+  assert.match(html, /textContent = message\.text/);
+  assert.match(html, /\/api\/collaboration/);
   assert.match(html, /bindRovingTabKeyboard/);
   assert.match(html, /ArrowRight/);
   assert.match(html, /prefers-reduced-motion/);
@@ -32,6 +38,10 @@ test('local UI shell contains keyboard-first and secure setup contracts', () => 
   assert.match(html, /data-setup-checklist/);
   assert.match(html, /data-operator-readiness/);
   assert.match(html, /Test Connections \(read-only\)/);
+  assert.match(html, /Environment → Connection → Work/);
+  assert.match(html, /api\/ui-configuration/);
+  assert.match(html, /data-environment-connections/);
+  assert.match(html, /selectionVersion/);
   assert.match(html, /api\/ui-context/);
   assert.match(html, /Working context/);
   assert.match(html, /workingContextWizardSection/);

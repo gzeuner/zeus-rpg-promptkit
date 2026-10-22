@@ -106,6 +106,28 @@ function resolveProfilesConfigPaths({ args = {}, cwd = process.cwd(), env = proc
   };
 }
 
+function readExplicitProfileBase(file, fsModule) {
+  const stat = fsModule.lstatSync(file);
+  if (
+    !file.toLowerCase().endsWith('.json') ||
+    !stat.isFile() ||
+    stat.isSymbolicLink() ||
+    stat.size > 1024 * 1024
+  ) {
+    throw new Error('PROFILE_BASE_FILE_INVALID: base must be a bounded regular JSON file.');
+  }
+  let base;
+  try {
+    base = JSON.parse(fsModule.readFileSync(file, 'utf8'));
+  } catch {
+    throw new Error('PROFILE_BASE_FILE_INVALID: base must contain valid JSON.');
+  }
+  if (!base || typeof base !== 'object' || Array.isArray(base)) {
+    throw new Error('PROFILE_BASE_FILE_INVALID: base must contain a profile object.');
+  }
+  return base;
+}
+
 function loadProfiles({
   cwd = process.cwd(),
   env = process.env,
@@ -113,15 +135,24 @@ function loadProfiles({
   fsModule = fs,
   mergeConfigLayers,
   validateProfiles,
+  exactFile = false,
 } = {}) {
   const configPaths = resolveProfilesConfigPaths({ args, cwd, env });
   const candidatePaths = (
     configPaths.attemptedPaths || [configPaths.preferredPath, configPaths.fallbackPath]
   ).filter(Boolean);
+  const baseProfilePath = args['base-config'];
+  if (
+    baseProfilePath !== undefined &&
+    (typeof baseProfilePath !== 'string' || !path.isAbsolute(baseProfilePath))
+  ) {
+    throw new Error('PROFILE_BASE_FILE_INVALID: --base-config requires an absolute JSON file.');
+  }
   const profilePath = candidatePaths.find(candidate => fsModule.existsSync(candidate)) || null;
   const baseFileName = profilePath ? path.basename(profilePath).toLowerCase() : '';
   const shouldLoadOverlays =
-    !profilePath || baseFileName === 'profiles.json' || baseFileName === 'profiles.example.json';
+    !exactFile &&
+    (!profilePath || baseFileName === 'profiles.json' || baseFileName === 'profiles.example.json');
   const overlayPaths = shouldLoadOverlays
     ? configPaths.configDir && fsModule.existsSync(configPaths.configDir)
       ? fsModule
@@ -134,6 +165,9 @@ function loadProfiles({
     : [];
 
   if (!profilePath) {
+    if (baseProfilePath) {
+      throw new Error('PROFILE_FILE_REQUIRED: --base-config requires an existing profile file.');
+    }
     return attachProfilesMetadata(
       {},
       {
@@ -148,6 +182,9 @@ function loadProfiles({
     const raw = fsModule.readFileSync(profilePath, 'utf8');
     const parsed = JSON.parse(raw);
     let profiles = parsed && typeof parsed === 'object' ? parsed : {};
+    if (baseProfilePath) {
+      profiles = mergeConfigLayers(readExplicitProfileBase(baseProfilePath, fsModule), profiles);
+    }
 
     for (const overlayPath of overlayPaths) {
       const overlayRaw = fsModule.readFileSync(overlayPath, 'utf8');
@@ -183,8 +220,13 @@ function loadProfiles({
     return attachProfilesMetadata(profiles, {
       ...configPaths,
       profilePath,
-      attemptedPaths: [...candidatePaths, ...overlayPaths],
-      sourceFileLabel: [profilePath, ...overlayPaths].join(' + '),
+      baseProfilePath: baseProfilePath || null,
+      attemptedPaths: [
+        ...(baseProfilePath ? [baseProfilePath] : []),
+        ...candidatePaths,
+        ...overlayPaths,
+      ],
+      sourceFileLabel: [baseProfilePath, profilePath, ...overlayPaths].filter(Boolean).join(' + '),
     });
   } catch (error) {
     throw new Error(`Failed to load profiles from ${profilePath}: ${error.message}`);

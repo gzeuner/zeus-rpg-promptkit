@@ -1,22 +1,26 @@
 ---
 Title: Local UI Shell
 Description: Dokumentation zur optionalen lokalen Viewer- und experimentellen UI-Shell fuer erzeugte Analyseartefakte.
-Last Updated: 2026-06-19
+Last Updated: 2026-10-22
 ---
 
 # Local UI Shell
 
 The Local UI is an optional, local-only, experimental viewer around existing Zeus artifacts and a small allowlisted helper surface.
 
-The supported product workflow remains:
+The supported product workflow remains CLI-first for full control. The optional Setup view also supports named local environments:
 
-1. load env explicitly in the shell
-2. run `doctor`
-3. use CLI or MCP commands from `docs/tool-catalog.md`
-4. generate artifacts and reports
+1. select one named local environment from the reviewed configuration catalog
+2. run local `doctor` readiness checks; this does not probe a remote connection
+3. choose whether to run the separate read-only connection check
+4. use CLI or MCP commands from `docs/tool-catalog.md` and generate artifacts
 5. optionally inspect those artifacts with `zeus serve`
 
-The Local UI is not the primary onboarding, configuration, fetch, query, or prompt-generation workflow. It is also not a general browser command executor.
+The Local UI is not a general browser command executor. Environment selection and connection checks are setup helpers; resource reads and source fetches still require their explicit CLI job approval.
+
+Technical profile, key, and plugin controls live on the separate Administration
+tab. Setup remains focused on choosing an environment, local readiness, and an
+explicit connection check.
 
 ## Command
 
@@ -36,7 +40,9 @@ Behavior:
 
 - `GET /api/health`
 - `GET /api/ui-metadata`
+- `GET|POST /api/ui-configuration`
 - `POST /api/ui-actions/doctor`
+- `POST /api/ui-actions/check-connections`
 - `POST /api/ui-actions/generate-ai-session-prompt`
 - `POST /api/ui-actions/analyze-existing-workspace`
 - `GET /api/runs`
@@ -52,6 +58,8 @@ Behavior:
 - `GET /api/prompt-builder/context-sources`
 - `GET /api/prompt-builder/context-sources/:program/prompts`
 - `POST /api/prompt-builder/context-sources/import`
+- `POST /api/collaboration`
+- `GET /api/collaboration/events?id=<task-id>&after=<sequence>` (same-origin event stream)
 
 The browser shell consumes only those endpoints. It does not parse output directories directly.
 
@@ -60,18 +68,25 @@ The browser shell consumes only those endpoints. It does not parse output direct
 - not required for CLI or MCP usage
 - not a replacement for shell env loading
 - not a replacement for `doctor`, `fetch`, `query-table`, `query-sql`, `resolve-object`, or other CLI/MCP commands
+- supports named environments from the local-only `config/local-only/ui-configurations.json` catalog
+- binds a selected environment to its catalog, profile config, optional base config and ordered env-file hashes
+- runs local Doctor validation after selection with `probe: false`; selection itself never contacts a remote system
+- performs a separate connection check only after an explicit user action; success does not grant data access
 - not a general browser command runner
 - most useful after artifacts already exist under the output root
 - able to list analysis runs, summarize manifests, and preview local artifacts on demand
 - able to show grouped read-only report views such as Overview, Graph, DB2/Test Data, Prompt Compare, and Artifacts
 - able to surface a small set of local helper views such as config metadata, `doctor` diagnostics, and AI Session Starter prompt generation
 - able to keep specialist tools such as Prompt Workbench under a clearly secondary Advanced / Tools area
+- offers a Chat tab for revisioned local collaboration tasks; task mutations stay in `.zeus/collaboration/`, require current revisions, and use the same guarded service as CLI/API/MCP
+- only runs deterministic process retrieval against an explicitly selected local catalog; task handoffs remain advisory and carry no approval
 
 The current top-level navigation still contains:
 
 - Setup
 - Reports
 - Advanced / Tools
+- Chat
 
 Interpretation guidance:
 
@@ -109,6 +124,7 @@ The local UI action surface is intentionally explicit and small:
 Current supported action:
 
 - `doctor` readiness check via `POST /api/ui-actions/doctor`
+- `check-connections` via `POST /api/ui-actions/check-connections`; this separate explicit action runs a constant read-only probe and grants no data access
 - `generate-ai-session-prompt` via `POST /api/ui-actions/generate-ai-session-prompt`
 - `analyze-existing-workspace` via `POST /api/ui-actions/analyze-existing-workspace`
 
@@ -117,6 +133,7 @@ Security behavior:
 - request and response format is JSON only
 - server-side validation blocks unsafe profile values
 - `generate-ai-session-prompt` accepts only `profile`, optional `environment`, `goal`, `includeDoctorSummary`, and optional compact `doctorSummary`
+- actions in a named environment also require the server-issued `selectionVersion`; browser-provided file paths, env values, targets and queries are rejected
 - `analyze-existing-workspace` accepts only `profile`, `program`, `member`, and `safeSharing`
 - browser payloads do not provide `sourceRoot`; the action always uses the selected profile's configured local source root
 - browser payloads cannot provide arbitrary shell commands, absolute paths, or traversal-style filesystem input
@@ -138,7 +155,29 @@ Analyze Workspace behavior:
 
 ## Setup and precedence
 
-The Setup tab explains precedence in simple terms:
+The Setup tab starts with **Environment → Connection → Work**. A named environment is selected from a local-only catalog. For example:
+
+```json
+{
+  "schemaVersion": 1,
+  "configurations": [
+    {
+      "id": "dev",
+      "label": "Development",
+      "profile": "dev",
+      "config": "config/local-only/profiles.json",
+      "baseConfig": "config/profiles.example.json",
+      "envFiles": ["config/local-only/.env.local", "config/local-only/.env.dev.local"]
+    }
+  ]
+}
+```
+
+Paths are workspace-relative. Later env files override earlier ones for this isolated selection. The catalog contains names and paths only; keep credential values in local env files. Invalid catalogs, stale catalog versions, changed file contents and stale action responses clear the active selection and require a fresh selection. Doctor is automatically run locally with network probing disabled. **Test Connections (read-only)** is a separate explicit action.
+
+For explicit resource catalogs, the connection action checks each enabled system or JDBC reference once using a fixed constant `SELECT 1`, a one-row limit and a short timeout. It never uses custom probe SQL, scans application tables, fetches source members or grants resource-read approval. Legacy profiles use their existing explicit Doctor probe in this action.
+
+The Setup tab also explains precedence in simple terms:
 
 - CLI overrides env
 - env overrides profile

@@ -25,6 +25,7 @@ const generationValidation = require('../generationValidation');
 const projectIntelligence = require('../projectIntelligence');
 const modulesApi = require('../modules');
 const { createAtomicModuleRegistrar } = require('../modules/moduleRegistrar');
+const { executeCollaborationRequest } = require('../agent/collaborationService');
 const { executeQueryTable } = require('../core/queryService');
 const {
   executeListRuns,
@@ -971,6 +972,11 @@ function queryKnowledge(options = {}) {
   return queryFinalKnowledgeCatalog(options);
 }
 
+function runCollaborationTask(request, options = {}) {
+  const { cwd = process.cwd(), ...runtime } = options;
+  return executeCollaborationRequest(request, { ...runtime, workspaceRoot: cwd });
+}
+
 // Central Zeus API object
 const zeus = {
   analyze,
@@ -983,6 +989,7 @@ const zeus = {
   readRun,
   readRunViews,
   runWorkflow,
+  runCollaborationTask,
 
   // Evidence graph (typed projection foundation)
   buildEvidenceGraph,
@@ -1125,6 +1132,7 @@ module.exports = {
   readRun,
   readRunViews,
   runWorkflow,
+  runCollaborationTask,
 
   // Evidence graph builder (additive)
   buildEvidenceGraph,
