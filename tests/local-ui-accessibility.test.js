@@ -32,6 +32,10 @@ test('local UI shell contains keyboard-first and secure setup contracts', () => 
   assert.match(html, /data-setup-checklist/);
   assert.match(html, /data-operator-readiness/);
   assert.match(html, /Test Connections \(read-only\)/);
+  assert.match(html, /Environment → Connection → Work/);
+  assert.match(html, /api\/ui-configuration/);
+  assert.match(html, /data-environment-connections/);
+  assert.match(html, /selectionVersion/);
   assert.match(html, /api\/ui-context/);
   assert.match(html, /Working context/);
   assert.match(html, /workingContextWizardSection/);

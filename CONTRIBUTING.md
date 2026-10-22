@@ -9,7 +9,7 @@ npm ci
 npm run format:check
 npm run lint
 npm run typecheck
-npm test
+npm run test:full
 npm run package:smoke
 ```
 
@@ -25,7 +25,9 @@ A red CI cannot be force-merged (see operating contract).
 
 ## Tests
 
-- `npm test` runs the full intended suite (contract + smoke + unit + corpus).
+- `npm test` runs contract, smoke, corpus, explicit-resource and unit suites.
+- `npm run test:full` adds the MCP, SFTP and real-browser GUI E2E lanes.
+- CI requires its browser and network-boundary fixtures; locally, optional E2E prerequisites may skip unless `ZEUS_E2E_REQUIRED=1` is set.
 - Add deterministic tests for new behavior.
 - No live IBM i or secrets in tests.
 

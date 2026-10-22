@@ -685,12 +685,14 @@ const s={
     selectedGuidedStep:'workspace',
     selectedGuidedIntent:'onboarding'
   },
+  configuration:{loading:false,busy:false,error:null,payload:null},
   aiWorkbench:{
     role:'developer',
     query:'',
     keyboardBound:false
   },
   uiActions:{
+    connections:{running:false,error:null,result:null},
     doctor:{
       profile:'dev',
       probe:false,
@@ -883,7 +885,10 @@ async function getJson(u){
 }
 
 async function sendJson(method,u,payload){
-  const r=await fetch(u,{method,headers:{'content-type':'application/json'},body:payload===undefined?undefined:JSON.stringify(payload)});
+  const isUiAction=String(u||'').startsWith('/api/ui-actions/');
+  const configurationVersion=isUiAction?s.configuration.payload?.version:null;
+  const requestPayload=isUiAction&&configurationVersion?Object.assign({},payload||{},{selectionVersion:configurationVersion}):payload;
+  const r=await fetch(u,{method,headers:{'content-type':'application/json'},body:requestPayload===undefined?undefined:JSON.stringify(requestPayload)});
   if(!r.ok){
     const txt=await r.text();
     try{
@@ -896,7 +901,82 @@ async function sendJson(method,u,payload){
       throw new Error(txt||('Request failed: '+r.status));
     }
   }
-  return r.json();
+  const result=await r.json();
+  if(isUiAction&&configurationVersion&&s.configuration.payload?.version!==configurationVersion){
+    const stale=new Error('Environment selection changed; the late response was discarded.');
+    stale.stale=true;
+    throw stale;
+  }
+  return result;
+}
+
+async function loadUiConfiguration(){
+  s.configuration.loading=true;
+  s.configuration.error=null;
+  try{
+    s.configuration.payload=await getJson('/api/ui-configuration');
+    const active=s.configuration.payload.activeConfiguration;
+    if(!active&&Array.isArray(s.configuration.payload.configurations)&&s.configuration.payload.configurations.length===1){
+      await selectUiConfiguration(s.configuration.payload.configurations[0].id);
+      return;
+    }
+    const profile=active&&active.profile||s.configuration.payload.profileSelection?.profile;
+    if(profile){
+      s.uiActions.doctor.profile=profile;
+      s.uiActions.discovery.profile=profile;
+      s.uiActions.analyze.profile=profile;
+      s.uiActions.aiSession.profile=profile;
+    }
+  }catch(error){s.configuration.error=error.message||String(error);}
+  finally{s.configuration.loading=false;}
+}
+
+async function selectUiConfiguration(configurationId){
+  const current=s.configuration.payload||{};
+  const restoreEnvironmentFocus=document.activeElement?.id==='namedEnvironmentSelect';
+  s.configuration.busy=true;
+  s.configuration.error=null;
+  s.configuration.payload=Object.assign({},current,{version:null,activeConfiguration:null});
+  s.uiActions.doctor.result=null;
+  s.uiActions.connections.result=null;
+  try{
+    const selected=await sendJson('POST','/api/ui-configuration',{
+      configurationId,
+      configurationCatalogVersion:current.configurationCatalogVersion
+    });
+    s.configuration.payload=selected;
+    const profile=selected.activeConfiguration?.profile||selected.profileSelection?.profile||'';
+    if(profile){
+      s.uiActions.doctor.profile=profile;
+      s.uiActions.discovery.profile=profile;
+      s.uiActions.analyze.profile=profile;
+      s.uiActions.aiSession.profile=profile;
+    }
+    s.uiActions.doctor.result=null;
+    s.uiActions.doctor.error=null;
+    s.uiActions.connections.result=null;
+    s.uiActions.connections.error=null;
+    await runDoctorReadinessAction(false);
+  }catch(error){
+    s.configuration.error=error.message||String(error);
+    try{s.configuration.payload=await getJson('/api/ui-configuration');}catch{}
+  }
+  finally{
+    s.configuration.busy=false;
+    renderConfigure();
+    if(restoreEnvironmentFocus) q('namedEnvironmentSelect')?.focus();
+  }
+}
+
+async function runSelectedConnectionCheck(){
+  const state=s.uiActions.connections;
+  state.running=true;state.error=null;state.result=null;
+  const reviewedVersion=s.configuration.payload?.version;
+  try{
+    state.result=await sendJson('POST','/api/ui-actions/check-connections',{profile:s.uiActions.doctor.profile});
+    if(s.configuration.payload?.version!==reviewedVersion) state.result=null;
+  }catch(error){state.error=error.message||String(error);}
+  finally{state.running=false;renderConfigure();}
 }
 
 const cloneJson=(value)=>JSON.parse(JSON.stringify(value));
@@ -3034,6 +3114,24 @@ function renderHome(){
   }
 }
 
+function renderNamedConfigurationPanel(){
+  const state=s.configuration||{};
+  const payload=state.payload||{};
+  const configurations=Array.isArray(payload.configurations)?payload.configurations:[];
+  const active=payload.activeConfiguration;
+  const checks=s.uiActions.connections||{};
+  const options=configurations.map(entry=>'<option value="'+escAttr(entry.id)+'"'+(active&&active.id===entry.id?' selected':'')+'>'+esc(entry.label)+'</option>').join('');
+  const result=checks.result&&checks.result.result;
+  return '<section class="sub" aria-labelledby="namedEnvironmentTitle"><h2 id="namedEnvironmentTitle">Environment → Connection → Work</h2><p>Select one named local environment. Its catalog, profile and ordered env files are resolved on the server and bound to file hashes. Selecting it never contacts a remote system.</p>'+
+    (state.error?'<div class="hint-list"><div class="hint-item"><strong>Environment selection</strong><p>'+esc(state.error)+'</p></div></div>':'')+
+    '<div class="field-grid"><label for="namedEnvironmentSelect">Environment</label><select id="namedEnvironmentSelect"'+(state.busy||state.loading||!configurations.length?' disabled':'')+'><option value="">'+(active?'Select another environment':'Choose an environment')+'</option>'+options+'</select></div>'+
+    '<div class="tokens"><div class="token">selection: '+esc(payload.mode||'loading')+'</div><div class="token">profile: '+esc(active&&active.profile||payload.profileSelection?.profile||'choose after selection')+'</div><div class="token">configuration hash: '+esc(payload.version?'bound':'not selected')+'</div></div>'+
+    '<div class="actions"><button class="btn" data-environment-doctor="1"'+(!payload.mode||payload.mode==='blocked'||checks.running?' disabled':'')+'>Validate locally</button><button class="btn primary" data-environment-connections="1" data-config-probe="1"'+(!payload.mode||payload.mode==='blocked'||checks.running?' disabled':'')+'>'+esc(checks.running?'Testing Connections...':'Test Connections (read-only)')+'</button></div>'+
+    (checks.error?'<p role="alert">'+esc(checks.error)+'</p>':'')+
+    (result?'<div class="hint-list" role="status">'+(result.checks||[]).map(check=>'<div class="hint-item"><strong>'+esc(check.name)+' · '+esc(check.status)+'</strong><p>'+esc(check.details)+'</p></div>').join('')+'<p>Connection check does not grant resource data access.</p></div>':'')+
+    '</section>';
+}
+
 function renderConfigure(){
   const root=q('configure');
   root.classList.toggle('active',s.tab==='configure');
@@ -3108,6 +3206,7 @@ function renderConfigure(){
   );
 
   root.innerHTML=
+    renderNamedConfigurationPanel()+
     renderConfigureStartPanel({
       draft:wizardDraft,
       signals:wizardSignals,
@@ -3122,7 +3221,7 @@ function renderConfigure(){
     })+
     renderOperatorReadinessPanel({doctorState,aiSessionState})+
     renderWorkingContextWizard()+
-    '<div class="sub"><h2>Doctor Readiness Check</h2><p>Validate the effective configuration first. Use the explicit read-only probe only when you want to test the configured IBM i / DB2 connections; it never writes remote data.</p><div class="field-grid"><label>Profile Name<input id="configDoctorProfile" value="'+escAttr(profileForWizard)+'" placeholder="dev"></label></div><div class="actions"><button class="btn" data-config-doctor="1">'+esc(doctorState.running&&!doctorState.probe?'Checking...':'Validate Configuration')+'</button><button class="btn primary" data-config-probe="1">'+esc(doctorState.running&&doctorState.probe?'Testing Connections...':'Test Connections (read-only)')+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div><div class="tokens"><div class="token '+esc(doctorTone)+'">Doctor: '+esc(doctorStatusLabel)+'</div><div class="token">profile: '+esc(profileForWizard)+'</div><div class="token">mode: '+esc(doctorState.probe?'read-only probe':'configuration only')+'</div>'+(doctorResult?'<div class="token">duration: '+esc(String(doctorResult.durationMs||0))+' ms</div>':'')+'</div>'+
+    '<div class="sub"><h2>Doctor Readiness Check</h2><p>Validate local configuration and runtime wiring. Doctor runs without network probes; use the separate connection action above when you want an explicit login check.</p><div class="field-grid"><label>Profile Name<input id="configDoctorProfile" value="'+escAttr(profileForWizard)+'" placeholder="dev"'+(s.configuration.payload?.activeConfiguration?' readonly':'')+'></label></div><div class="actions"><button class="btn" data-config-doctor="1">'+esc(doctorState.running?'Checking...':'Validate Configuration')+'</button><button class="btn" data-config-refresh="1">Refresh Metadata</button></div><div class="tokens"><div class="token '+esc(doctorTone)+'">Doctor: '+esc(doctorStatusLabel)+'</div><div class="token">profile: '+esc(profileForWizard)+'</div><div class="token">mode: configuration only</div>'+(doctorResult?'<div class="token">duration: '+esc(String(doctorResult.durationMs||0))+' ms</div>':'')+'</div>'+
     (doctorSummary?'<div class="hint-list"><div class="hint-item"><strong>Summary</strong><p>pass '+esc(String(doctorSummary.pass||0))+' • warn '+esc(String(doctorSummary.warn||0))+' • fail '+esc(String(doctorSummary.fail||0))+' • skip '+esc(String(doctorSummary.skip||0))+'</p><p class="small">'+esc(doctorHint)+'</p></div></div>':'<div class="hint-list"><div class="hint-item"><strong>Status</strong><p>'+esc(doctorHint)+'</p></div></div>')+
     doctorDiagnosticsPanel+
     renderDoctorProbeRows(doctorResult)+
@@ -3143,6 +3242,20 @@ function renderConfigure(){
       renderGuidedStepDetails(selectedStep,selectedIntent)+
       '<details><summary>Raw metadata fallback</summary>'+(fields.length>0?'<div class="field-list">'+fields.filter((field)=>field.section===String(s.uiMetadata.selectedConfigSection||defaultConfigSection())).map((field)=>'<div class="field-item"><strong>'+esc(field.label||field.key)+'</strong><p>'+esc(field.description||'')+'</p><div class="workflow-meta"><div class="token">key: '+esc(field.key)+'</div><div class="token">type: '+esc(field.type||'string')+'</div><div class="token">'+esc(field.sensitive?'sensitive':'non-sensitive')+'</div></div><div class="small">placeholder: '+esc(field.placeholder||'(none)')+'</div><div class="small">example: '+esc(field.example||'(none)')+'</div><div class="small">env: '+esc(field.envVar||'(none)')+'</div><div class="small">profile path: '+esc(field.profilePath||'(none)')+'</div></div>').join('')+'</div>':'<div class="empty">No metadata fields available.</div>')+'</details>'+
     '</div></div></details></div>';
+
+  const environmentSelect=root.querySelector('#namedEnvironmentSelect');
+  if(environmentSelect){
+    environmentSelect.onchange=async event=>{
+      const id=String(event.target.value||'').trim();
+      if(id) await selectUiConfiguration(id);
+    };
+  }
+  for(const button of root.querySelectorAll('[data-environment-doctor]')){
+    button.onclick=async ()=>{await runDoctorReadinessAction(false);renderConfigure();};
+  }
+  for(const button of root.querySelectorAll('[data-environment-connections]')){
+    button.onclick=runSelectedConnectionCheck;
+  }
 
   const bindInput=(selector,assigner)=>{
     const node=root.querySelector(selector);
@@ -3447,8 +3560,7 @@ function renderConfigure(){
         s.uiActions.discovery.profile=nextValue;
         s.uiActions.aiSession.profile=nextValue;
       }
-      await runDoctorReadinessAction(true);
-      renderConfigure();
+      await runSelectedConnectionCheck();
     };
   }
   for(const generateButton of root.querySelectorAll('[data-ai-session-generate]')){
@@ -3469,6 +3581,7 @@ function renderConfigure(){
   }
   for(const refreshButton of root.querySelectorAll('[data-config-refresh]')){
     refreshButton.onclick=async ()=>{
+      await loadUiConfiguration();
       await loadUiMetadata();
       await loadProfileWizardState();
       await loadWorkingContextState();
@@ -4686,6 +4799,7 @@ async function selectRun(program){
 async function boot(){
   renderHero();
   renderTabs();
+  await loadUiConfiguration();
   await loadUiMetadata();
   await loadProfileWizardState();
   await loadProfileKeyWizardState();

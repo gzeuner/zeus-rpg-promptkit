@@ -6,6 +6,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const test = require('node:test');
 const { startLocalUiServer } = require('../../src/ui/localUiServer');
 const {
@@ -136,6 +137,42 @@ test('browser keyboard navigation preserves focus and forced-colors affordances'
 
 test('real browser can operate the secure GUI setup and report navigation', async t => {
   const workspace = createE2eWorkspace('zeus-gui-e2e-');
+  const localConfig = workspace.path('config', 'local-only');
+  fs.mkdirSync(localConfig, { recursive: true });
+  fs.writeFileSync(
+    workspace.path('config', 'local-only', 'profiles.json'),
+    `${JSON.stringify({
+      dev: {
+        systems: { dev: { host: 'ibmi.invalid', user: 'reader', password: 'e2e-private-token' } },
+        resourceCatalog: {
+          'dev.sources': {
+            kind: 'sourceCode',
+            system: 'dev',
+            library: 'SRCLIB',
+            sourceFiles: ['QRPGLESRC'],
+            maxMembers: 3,
+          },
+        },
+      },
+    })}\n`,
+    'utf8'
+  );
+  fs.writeFileSync(
+    workspace.path('config', 'local-only', 'ui-configurations.json'),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      configurations: [
+        {
+          id: 'dev',
+          label: 'Development',
+          profile: 'dev',
+          config: 'config/local-only/profiles.json',
+        },
+      ],
+    })}\n`,
+    'utf8'
+  );
+  let connectionProbeCount = 0;
   let started;
   let browser;
   t.after(async () => {
@@ -152,6 +189,14 @@ test('real browser can operate the secure GUI setup and report navigation', asyn
       sensitiveTerms: ['e2e-private-token'],
       actionServiceOptions: {
         cwd: workspace.root,
+        connectionCheckServices: {
+          db2Query: async ({ query, maxRows }) => {
+            connectionProbeCount += 1;
+            assert.match(query, /SELECT 1 AS HEALTHCHECK/);
+            assert.equal(maxRows, 1);
+            return { rowCount: 1 };
+          },
+        },
         env: Object.fromEntries(
           Object.entries(process.env).filter(
             ([key]) => !/(password|secret|credential|token|private[_-]?key)/i.test(key)
@@ -200,6 +245,33 @@ test('real browser can operate the secure GUI setup and report navigation', asyn
   assert.equal(initial.contextPreviewButton, true);
   assert.equal(initial.catalog, true);
   assertNoSensitiveTerms(initial.body, ['e2e-private-token']);
+  await waitFor(() =>
+    browser.evaluate(`Boolean(document.querySelector('#namedEnvironmentSelect')?.value === 'dev')`)
+  );
+  await waitFor(() => browser.evaluate(`s.uiActions.doctor.result?.input?.probe === false`), {
+    message: 'the selected environment must run local Doctor without a network probe',
+  });
+  await browser.setViewport(390, 844);
+  assert.equal(
+    await browser.evaluate('document.documentElement.scrollWidth <= innerWidth'),
+    true,
+    'named environment Setup fits a narrow viewport'
+  );
+  assert.equal(connectionProbeCount, 0, 'named environment selection must not probe a connection');
+  await browser.evaluate(`document.querySelector('[data-config-probe]')?.click()`);
+  await waitFor(() => connectionProbeCount === 1, {
+    message: 'explicit connection action did not run one bounded probe',
+  });
+  await waitFor(() =>
+    browser.evaluate(
+      `document.body.innerText.includes('Connection check does not grant resource data access.')`
+    )
+  );
+  assert.equal(
+    connectionProbeCount,
+    1,
+    'the selected connection is checked once after the explicit action'
+  );
 
   const guiActions = await browser.evaluate(`(async () => {
     const waitFor = predicate => new Promise(resolve => {

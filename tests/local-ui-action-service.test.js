@@ -115,6 +115,49 @@ test('unknown action is rejected', async () => {
   );
 });
 
+test('connection check is a separate explicit action and grants no data approval', async () => {
+  let probes = 0;
+  const service = createLocalUiActionService({
+    profiles: {
+      dev: {
+        systems: { dev: { host: 'ibmi.invalid', user: 'reader', password: 'synthetic-secret' } },
+        resourceCatalog: {
+          'dev.sources': {
+            kind: 'sourceCode',
+            system: 'dev',
+            library: 'SRCLIB',
+            sourceFiles: ['QRPGLESRC'],
+            maxMembers: 3,
+          },
+        },
+      },
+    },
+    env: {},
+    connectionCheckServices: {
+      db2Query: async ({ query, maxRows }) => {
+        probes += 1;
+        assert.match(query, /SELECT 1 AS HEALTHCHECK/);
+        assert.equal(maxRows, 1);
+        return { rowCount: 1 };
+      },
+    },
+    doctorExecutor: () => ({ hasCriticalFailure: false, checks: [], diagnostics: [] }),
+  });
+
+  const doctor = await service.executeAction('doctor', { profile: 'dev' });
+  assert.equal(doctor.input.probe, false);
+  assert.equal(probes, 0);
+
+  const checked = await service.executeAction('check-connections', { profile: 'dev' });
+  assert.equal(checked.status, 'ready');
+  assert.equal(checked.approvalGranted, false);
+  assert.equal(probes, 1);
+  await assert.rejects(
+    service.executeAction('check-connections', { profile: 'dev', probe: true }),
+    /without overriding/
+  );
+});
+
 test('generate-ai-session-prompt action accepts valid payload and returns prompt metadata', async () => {
   const service = createLocalUiActionService();
   const result = await service.executeAction('generate-ai-session-prompt', {

@@ -42,6 +42,7 @@ const {
 } = require('../workspace/analysisRegistryService');
 const { readWorkspaceIndex, WORKSPACE_INDEX_FILE } = require('../workspace/workspaceIndexBuilder');
 const { DEFAULT_UI_HOST, DEFAULT_UI_PORT } = require('./localUiDefaults');
+const { createUiConfigurationService } = require('./uiConfigurationService');
 const { buildWorkingContextView, loadWorkingContext } = require('../context/workingContext');
 const {
   WorkingContextWizardError,
@@ -74,6 +75,10 @@ function parsePositiveInteger(value, fallback) {
 function sendJson(response, statusCode, payload, options = {}) {
   const sensitiveTerms = Array.isArray(options.sensitiveTerms) ? options.sensitiveTerms : [];
   const sanitizedPayload = sanitizeValue(payload, { sensitiveTerms });
+  if (options.sanitizeDiscovery && payload.discovery)
+    sanitizedPayload.discovery = options.sanitizeDiscovery(payload.discovery);
+  if (options.sanitizeConfigurationLabels)
+    Object.assign(sanitizedPayload, options.sanitizeConfigurationLabels(payload));
   response.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
@@ -674,6 +679,7 @@ function createLocalUiRequestHandler({
   workingContextWizardService,
   profileWizardService,
   profileKeyWizardService,
+  configurationService,
   registryPath = null,
   sensitiveTerms = [],
 }) {
@@ -692,6 +698,49 @@ function createLocalUiRequestHandler({
     const segments = splitPathname(pathname);
 
     try {
+      if (pathname === '/api/ui-configuration' && configurationService) {
+        try {
+          if (request.method === 'GET' || request.method === 'POST') {
+            const payload =
+              request.method === 'POST' ? await readJsonBody(request) : configurationService.read();
+            if (request.method === 'POST') {
+              requireJsonRequest(request);
+            }
+            const result =
+              request.method === 'POST' ? configurationService.select(payload) : payload;
+            sendJson(response, 200, result, {
+              sensitiveTerms,
+              sanitizeDiscovery: configurationService.sanitizeDiscovery,
+              sanitizeConfigurationLabels: configurationService.sanitizeConfigurationLabels,
+            });
+          } else sendMethodNotAllowed(response, ['GET', 'POST']);
+        } catch (error) {
+          sendJson(
+            response,
+            error.statusCode || 400,
+            { error: error.statusCode ? error.message : 'Invalid configuration request.' },
+            { sensitiveTerms }
+          );
+        }
+        return;
+      }
+      if (
+        configurationService &&
+        configurationService.read().mode !== 'legacy' &&
+        pathname.startsWith('/api/profile-wizard') &&
+        request.method !== 'GET'
+      ) {
+        sendJson(
+          response,
+          409,
+          {
+            error:
+              'Explicit configuration is read-only here. Edit its local files and apply the selection again.',
+          },
+          { sensitiveTerms }
+        );
+        return;
+      }
       const analysesHandled = await handleAnalysesRequest({
         request,
         response,
@@ -899,18 +948,59 @@ async function startLocalUiServer({
     outputRoot: resolvedOutputRoot,
   });
   const resolvedEnv = actionServiceOptions.env || process.env;
-  const uiActionService =
-    actionService ||
-    createLocalUiActionService({
-      cwd: actionServiceOptions.cwd || process.cwd(),
-      env: resolvedEnv,
-      doctorExecutor: actionServiceOptions.doctorExecutor,
-      analyzeExecutor: actionServiceOptions.analyzeExecutor,
-      analyzeConfigResolver: actionServiceOptions.analyzeConfigResolver,
-      fetchConfigResolver: actionServiceOptions.fetchConfigResolver,
-      fetchMemberExecutor: actionServiceOptions.fetchMemberExecutor,
-      workflowConfigResolver: actionServiceOptions.workflowConfigResolver,
-    });
+  const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(resolvedEnv, sensitiveTerms);
+  const configurationService = createUiConfigurationService({
+    cwd: actionServiceOptions.cwd || process.cwd(),
+    env: resolvedEnv,
+    sensitiveTerms: resolvedSensitiveTerms,
+  });
+  const uiActionService = actionService || {
+    async executeAction(name, payload) {
+      const { selectionVersion, ...input } = payload || {};
+      let runtime;
+      let useLegacyRuntime = false;
+      try {
+        runtime = configurationService.runtime(selectionVersion, input.profile);
+      } catch (error) {
+        if (
+          configurationService.read().mode !== 'legacy' ||
+          (error.statusCode !== 409 && !actionServiceOptions.doctorExecutor)
+        )
+          throw error;
+        useLegacyRuntime = true;
+        runtime = {
+          cwd: actionServiceOptions.cwd || process.cwd(),
+          env: resolvedEnv,
+          configArgs: {},
+          exactFile: false,
+        };
+      }
+      const profile = configurationService
+        .read()
+        .discovery?.profiles?.find(entry => entry.name === input.profile);
+      if (
+        profile?.mode === 'resource-catalog' &&
+        (['fetch-member', 'read-only-resource', 'discovery-preview'].includes(name) ||
+          (name === 'doctor' && input.probe))
+      ) {
+        throw new UiActionError(
+          'Fixed resource jobs require their exact CLI approval. Use the separate connection check for login diagnostics only.',
+          409
+        );
+      }
+      const service = createLocalUiActionService({ ...actionServiceOptions, ...runtime });
+      const result = await service.executeAction(name, input);
+      if (!useLegacyRuntime) configurationService.runtime(selectionVersion, input.profile);
+      if (name === 'generate-ai-session-prompt' && runtime.configArgs.config) {
+        result.configuration = configurationService.read();
+        result.prompt +=
+          '\nExplicit GUI configuration (repeat these exact CLI flags):\n' +
+          JSON.stringify(runtime.configArgs) +
+          '\n';
+      }
+      return result;
+    },
+  };
   const resolvedProfileWizardService =
     profileWizardService ||
     createProfileWizardService({
@@ -926,7 +1016,6 @@ async function startLocalUiServer({
   const resolvedWorkingContextWizardService =
     workingContextWizardService ||
     createWorkingContextWizardService({ cwd: actionServiceOptions.cwd || process.cwd() });
-  const resolvedSensitiveTerms = collectSensitiveTermsFromEnv(resolvedEnv, sensitiveTerms);
   const server = http.createServer(
     createLocalUiRequestHandler({
       outputRoot: resolvedOutputRoot,
@@ -936,6 +1025,7 @@ async function startLocalUiServer({
       workingContextWizardService: resolvedWorkingContextWizardService,
       profileWizardService: resolvedProfileWizardService,
       profileKeyWizardService: resolvedProfileKeyWizardService,
+      configurationService,
       registryPath: registryPath ? path.resolve(registryPath) : null,
       sensitiveTerms: resolvedSensitiveTerms,
     })

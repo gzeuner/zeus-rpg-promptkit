@@ -44,6 +44,7 @@
     "test:smoke": "node scripts/run-tests.js --smoke",
     "test:corpus": "node scripts/run-tests.js --corpus",
     "test:e2e": "npm run test:e2e:mcp && npm run test:e2e:sftp && npm run test:e2e:gui",
+    "test:full": "npm test && npm run test:e2e",
     "test:e2e:mcp": "node --test tests/e2e/mcp-stdio.e2e.test.js",
     "test:e2e:sftp": "node --test tests/e2e/sftp-fetch-analyze-bundle.e2e.test.js",
     "test:e2e:gui": "node --test tests/e2e/gui-workbench.e2e.test.js",

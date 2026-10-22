@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 const path = require('path');
 const { runDoctorChecks } = require('../cli/commands/doctorCommand');
 const { executeAnalyze } = require('../core/analyzeService');
+const { checkResourceConnections } = require('../core/resourceConnectionCheckService');
 const {
   loadProfiles,
   readWorkflowConfig,
@@ -916,6 +917,10 @@ function buildAnalyzeWorkspaceContext(payload, config, cwd) {
 function createLocalUiActionService({
   cwd = process.cwd(),
   env = process.env,
+  configArgs = {},
+  exactFile = false,
+  profiles = null,
+  connectionCheckServices = {},
   doctorExecutor = defaultDoctorExecutor,
   analyzeExecutor = defaultAnalyzeExecutor,
   analyzeConfigResolver = defaultAnalyzeConfigResolver,
@@ -924,16 +929,52 @@ function createLocalUiActionService({
   workflowConfigResolver = defaultWorkflowConfigResolver,
   aiSessionPromptService = createAiSessionPromptService(),
 } = {}) {
+  async function runConnectionCheckAction(rawPayload) {
+    if (!isPlainObject(rawPayload) || Object.keys(rawPayload).some(key => key !== 'profile'))
+      throw new UiActionError('Choose a profile without overriding its connections.', 400);
+    const profileName = validateProfileName(rawPayload.profile);
+    const selectedProfiles = profiles || loadProfiles({ cwd, env, args: configArgs, exactFile });
+    const selected = resolveProfile(selectedProfiles, profileName, {
+      env,
+      expandEnvPlaceholders: false,
+    });
+    if (!selected.resourceCatalog) {
+      const result = await runDoctorAction({
+        profile: profileName,
+        showResolved: false,
+        probe: true,
+      });
+      return { ...result, action: 'check-connections', approvalGranted: false };
+    }
+    const startedAt = new Date();
+    const result = await checkResourceConnections(
+      { profiles: selectedProfiles, profileName, env },
+      connectionCheckServices
+    );
+    const finishedAt = new Date();
+    return {
+      action: 'check-connections',
+      status: result.hasCriticalFailure ? 'failed' : 'ready',
+      startedAt: startedAt.toISOString(),
+      finishedAt: finishedAt.toISOString(),
+      durationMs: finishedAt.getTime() - startedAt.getTime(),
+      input: { profile: profileName },
+      approvalGranted: false,
+      result,
+    };
+  }
+
   async function runDoctorAction(rawPayload) {
     const startedAt = new Date();
     const payload = normalizeDoctorPayload(rawPayload || {});
     const args = {
+      ...configArgs,
       profile: payload.profile,
       'show-resolved': payload.showResolved,
       probe: payload.probe,
     };
 
-    const doctorResult = await Promise.resolve(doctorExecutor(args, { cwd, env }));
+    const doctorResult = await Promise.resolve(doctorExecutor(args, { cwd, env, exactFile }));
     const checks = Array.isArray(doctorResult && doctorResult.checks) ? doctorResult.checks : [];
     const diagnostics = normalizeDoctorDiagnostics(doctorResult && doctorResult.diagnostics);
     const summary = summarizeDoctorChecks(checks);
@@ -991,7 +1032,10 @@ function createLocalUiActionService({
 
     let analyzeConfig = null;
     try {
-      analyzeConfig = analyzeConfigResolver({ profile: payload.profile }, { cwd, env });
+      analyzeConfig = analyzeConfigResolver(
+        { ...configArgs, profile: payload.profile },
+        { cwd, env, args: configArgs, exactFile }
+      );
     } catch (error) {
       if (!isExpectedAnalyzeFailure(error)) {
         throw error;
@@ -1113,7 +1157,10 @@ function createLocalUiActionService({
 
     if (FETCH_CONFIG_DERIVED_DISCOVERY_ACTIONS.has(payload.actionId)) {
       try {
-        resolvedFetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
+        resolvedFetchConfig = fetchConfigResolver(
+          { ...configArgs, profile: payload.profile },
+          { cwd, env, args: configArgs, exactFile }
+        );
         configContext = buildDiscoveryConfigContext(resolvedFetchConfig, cwd);
       } catch (error) {
         if (!isExpectedDiscoveryPreparationFailure(error)) {
@@ -1127,8 +1174,14 @@ function createLocalUiActionService({
 
     if (ANALYZE_CONFIG_DERIVED_DISCOVERY_ACTIONS.has(payload.actionId)) {
       try {
-        const analyzeConfig = analyzeConfigResolver({ profile: payload.profile }, { cwd, env });
-        const workflowConfig = workflowConfigResolver({ profile: payload.profile }, { cwd, env });
+        const analyzeConfig = analyzeConfigResolver(
+          { ...configArgs, profile: payload.profile },
+          { cwd, env, args: configArgs, exactFile }
+        );
+        const workflowConfig = workflowConfigResolver(
+          { ...configArgs, profile: payload.profile },
+          { cwd, env, args: configArgs, exactFile }
+        );
         configContext = buildDb2DiscoveryConfigContext(analyzeConfig, workflowConfig);
       } catch (error) {
         if (!isExpectedDiscoveryPreparationFailure(error)) {
@@ -1146,7 +1199,10 @@ function createLocalUiActionService({
       const preparationWarnings = [];
 
       try {
-        fetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
+        fetchConfig = fetchConfigResolver(
+          { ...configArgs, profile: payload.profile },
+          { cwd, env, args: configArgs, exactFile }
+        );
       } catch (error) {
         if (!isExpectedDiscoveryPreparationFailure(error)) {
           throw error;
@@ -1155,7 +1211,10 @@ function createLocalUiActionService({
       }
 
       try {
-        workflowConfig = workflowConfigResolver({ profile: payload.profile }, { cwd, env });
+        workflowConfig = workflowConfigResolver(
+          { ...configArgs, profile: payload.profile },
+          { cwd, env, args: configArgs, exactFile }
+        );
       } catch (error) {
         if (!isExpectedDiscoveryPreparationFailure(error)) {
           throw error;
@@ -1237,7 +1296,10 @@ function createLocalUiActionService({
 
     let fetchConfig;
     try {
-      fetchConfig = fetchConfigResolver({ profile: payload.profile }, { cwd, env });
+      fetchConfig = fetchConfigResolver(
+        { ...configArgs, profile: payload.profile },
+        { cwd, env, args: configArgs, exactFile }
+      );
     } catch (error) {
       throw new UiActionError(summarizeDiscoveryPreparationFailure(error), 409);
     }
@@ -1366,6 +1428,9 @@ function createLocalUiActionService({
 
     if (normalizedAction === 'doctor') {
       return runDoctorAction(payload);
+    }
+    if (normalizedAction === 'check-connections') {
+      return runConnectionCheckAction(payload);
     }
     if (normalizedAction === 'analyze-existing-workspace') {
       return runAnalyzeExistingWorkspaceAction(payload);

@@ -650,7 +650,7 @@ test('local UI server exposes run explorer data and Prompt Workbench routes thro
         showResolved: false,
       }),
     });
-    assert.equal(doctorResponse.status, 200);
+    assert.equal(doctorResponse.status, 200, await doctorResponse.clone().text());
     assert.match(doctorResponse.headers.get('content-type') || '', /application\/json/);
     const doctorPayload = await doctorResponse.json();
     assert.equal(doctorPayload.action, 'doctor');
@@ -1387,6 +1387,89 @@ test('serve CLI boots the local UI shell on loopback and answers health checks',
       child.kill('SIGTERM');
     });
   } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('local UI binds Doctor to reviewed config files and rejects stale selections', async () => {
+  const { tempRoot, outputRoot } = createUiFixture();
+  const config = path.join(tempRoot, 'config', 'profiles.example.json');
+  const localConfigDir = path.join(tempRoot, 'config', 'local-only');
+  fs.mkdirSync(localConfigDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(localConfigDir, 'ui-configurations.json'),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      configurations: [
+        {
+          id: 'dev',
+          label: 'Development',
+          profile: 'dev',
+          config: 'config/profiles.example.json',
+        },
+      ],
+    })}\n`,
+    'utf8'
+  );
+  const started = await startLocalUiServer({
+    outputRoot,
+    port: 0,
+    actionServiceOptions: {
+      cwd: tempRoot,
+      env: {},
+      doctorExecutor(args) {
+        return {
+          hasCriticalFailure: false,
+          checks: [{ name: 'Local config', status: 'PASS', details: `Profile ${args.profile}` }],
+          diagnostics: [],
+        };
+      },
+    },
+  });
+  try {
+    const initial = await fetch(`${started.url}/api/ui-configuration`).then(response =>
+      response.json()
+    );
+    const select = await fetch(`${started.url}/api/ui-configuration`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        configurationId: 'dev',
+        configurationCatalogVersion: initial.configurationCatalogVersion,
+      }),
+    });
+    assert.equal(select.status, 200);
+    const selection = await select.json();
+    assert.equal(selection.mode, 'explicit-files');
+    assert.ok(selection.version);
+    assert.equal(selection.profileSelection.profile, 'dev');
+
+    const doctor = await fetch(`${started.url}/api/ui-actions/doctor`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ profile: 'dev', selectionVersion: selection.version }),
+    });
+    assert.equal(doctor.status, 200);
+    assert.equal((await doctor.json()).input.probe, false);
+
+    const stale = await fetch(`${started.url}/api/ui-actions/doctor`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ profile: 'dev', selectionVersion: 'stale-selection' }),
+    });
+    assert.equal(stale.status, 409);
+
+    const changed = JSON.parse(fs.readFileSync(config, 'utf8'));
+    changed.dev.outputRoot = './changed-after-review';
+    fs.writeFileSync(config, `${JSON.stringify(changed, null, 2)}\n`, 'utf8');
+    const changedSelection = await fetch(`${started.url}/api/ui-actions/doctor`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ profile: 'dev', selectionVersion: selection.version }),
+    });
+    assert.equal(changedSelection.status, 409);
+  } finally {
+    await new Promise(resolve => started.server.close(resolve));
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });
