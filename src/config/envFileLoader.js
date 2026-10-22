@@ -77,6 +77,7 @@ function resolveEnvSearchDirs({ cwd = process.cwd(), configDir } = {}) {
   let baseConfigDir;
   if (configDir) {
     baseConfigDir = path.resolve(cwd, configDir);
+    if (baseConfigDir.toLowerCase().endsWith('.json')) baseConfigDir = path.dirname(baseConfigDir);
   } else {
     const nearest = findNearestConfigDir(cwd);
     baseConfigDir = nearest || path.resolve(cwd, 'config');
@@ -188,6 +189,7 @@ function autoLoadEnvFiles({
 }
 
 module.exports = {
+  loadExplicitEnvFiles,
   autoLoadEnvFiles,
   discoverEnvFiles,
   parseEnvFileContent,
@@ -195,3 +197,35 @@ module.exports = {
   resolveEnvFileNames,
   isSecretName,
 };
+
+function loadExplicitEnvFiles(files, { env = process.env } = {}) {
+  const { parseEnv } = require('node:util');
+  if (typeof parseEnv !== 'function')
+    throw Object.assign(new Error('Native env parsing requires Node 20.12 or newer.'), {
+      code: 'ENV_NATIVE_PARSER_UNAVAILABLE',
+    });
+  if (
+    !Array.isArray(files) ||
+    !files.length ||
+    files.some(file => typeof file !== 'string' || !path.isAbsolute(file))
+  )
+    throw Object.assign(new Error('Explicit absolute env files are required.'), {
+      code: 'ENV_FILE_EXPLICIT_REQUIRED',
+    });
+  const resolved = { ...env };
+  const summaries = [];
+  for (const file of files) {
+    if (
+      !fs.lstatSync(file).isFile() ||
+      fs.lstatSync(file).isSymbolicLink() ||
+      fs.statSync(file).size > 1024 * 1024
+    )
+      throw Object.assign(new Error('Env file must be a bounded regular file.'), {
+        code: 'ENV_FILE_INVALID',
+      });
+    const entries = parseEnv(fs.readFileSync(file, 'utf8'));
+    Object.assign(resolved, entries);
+    summaries.push({ file: fs.realpathSync(file), variables: Object.keys(entries).sort() });
+  }
+  return { env: resolved, files: summaries };
+}

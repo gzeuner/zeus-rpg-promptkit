@@ -107,6 +107,7 @@ test('maintained inventory is complete, unique, deterministic, and includes MCP'
   assert.equal(first.classified, first.maintained.length);
   assert.equal(first.owners.get(MCP_TEST).length, 1);
   assert.equal(first.categories.unit.includes(MCP_TEST), true);
+  assert.ok(first.categories.resource.includes('tests/resources-command.test.js'));
 });
 
 test('an untracked maintained-path test is rejected as unclassified', () => {

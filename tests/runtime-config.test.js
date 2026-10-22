@@ -15,6 +15,7 @@ const {
   readWorkCopyConfig,
   resolveAnalyzeDbConfig,
   resolveAnalyzeConfig,
+  resolveJdbcConnection,
   resolveProfile,
   resolveProfilesConfigPaths,
   resolveFetchConfig,
@@ -50,6 +51,22 @@ test('loadProfiles falls back to profiles.example.json', () => {
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
+});
+
+test('resolveJdbcConnection resolves configured names case-insensitively', () => {
+  const resolved = resolveJdbcConnection(
+    {
+      jdbcConnections: {
+        'rol-evodb': {
+          driver: 'net.sourceforge.jtds.jdbc.Driver',
+        },
+      },
+    },
+    'ROL-EVODB'
+  );
+
+  assert.equal(resolved.name, 'rol-evodb');
+  assert.equal(resolved.config.driver, 'net.sourceforge.jtds.jdbc.Driver');
 });
 
 test('loadProfiles resolves config directory from --config before cwd/config', () => {
@@ -483,33 +500,6 @@ test('resolveAnalyzeConfig decrypts an encrypted DB password provided via env ov
   }
 });
 
-test('resolveAnalyzeConfig decrypts an encrypted fetch user provided via env override', () => {
-  const tempRoot = createTempProject({
-    sample: {
-      sourceRoot: './src',
-    },
-  });
-
-  const KEY = 'runtime-config-master-key';
-  const token = encryptSecret('fetch-user', { keyMaterial: KEY });
-
-  try {
-    const config = resolveAnalyzeConfig(
-      { profile: 'sample' },
-      {
-        cwd: tempRoot,
-        env: {
-          ZEUS_SECRET_KEY: KEY,
-          ZEUS_FETCH_USER: token,
-        },
-      }
-    );
-    assert.equal(config.ibmi.user, 'fetch-user');
-  } finally {
-    fs.rmSync(tempRoot, { recursive: true, force: true });
-  }
-});
-
 test('resolveAnalyzeConfig CLI --schema/--library override profile and env schema', () => {
   const tempRoot = createTempProject({
     sample: {
@@ -696,44 +686,6 @@ test('resolveFetchConfig accepts environment overrides for sensitive fetch setti
     assert.equal(config.streamFileCcsid, 1208);
     assert.equal(config.transport, 'jt400');
     assert.equal(config.replace, true);
-  } finally {
-    fs.rmSync(tempRoot, { recursive: true, force: true });
-  }
-});
-
-test('resolveFetchConfig decrypts encrypted fetch user and password env overrides', () => {
-  const tempRoot = createTempProject({
-    fetcher: {
-      fetch: {
-        host: 'profile-host',
-        user: 'profile-user',
-        password: 'profile-pass',
-        sourceLib: 'qrpglsrc',
-        ifsDir: '/home/profile',
-        out: './download',
-      },
-    },
-  });
-
-  const KEY = 'runtime-config-master-key';
-  const userToken = encryptSecret('fetch-user', { keyMaterial: KEY });
-  const passwordToken = encryptSecret('fetch-password', { keyMaterial: KEY });
-
-  try {
-    const config = resolveFetchConfig(
-      { profile: 'fetcher' },
-      {
-        cwd: tempRoot,
-        env: {
-          ZEUS_SECRET_KEY: KEY,
-          ZEUS_FETCH_USER: userToken,
-          ZEUS_FETCH_PASSWORD: passwordToken,
-        },
-      }
-    );
-
-    assert.equal(config.user, 'fetch-user');
-    assert.equal(config.password, 'fetch-password');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -1133,6 +1085,125 @@ test('loadProfiles with --config JSON file path loads only that file (no overlay
     assert.equal(profiles.sample.outputRoot, './direct-output');
     assert.equal(metadata.profilePath, directPath);
     assert.deepEqual(metadata.attemptedPaths, [directPath]);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('loadProfiles composes an explicit base without discovering overlays beside the base', () => {
+  const tempRoot = createTempProject({
+    'shared-options': { outputRoot: './base-output', extensions: ['.rpgle'] },
+  });
+  const base = path.join(tempRoot, 'config', 'profiles.example.json');
+  const selected = path.join(tempRoot, 'private.json');
+  fs.writeFileSync(
+    selected,
+    JSON.stringify({ scoped: { extends: 'shared-options', outputRoot: './private-output' } })
+  );
+  fs.writeFileSync(
+    path.join(tempRoot, 'config', 'profiles.unexpected.json'),
+    JSON.stringify({ scoped: { outputRoot: './unexpected' } })
+  );
+  try {
+    const profiles = loadProfiles({
+      cwd: tempRoot,
+      env: {},
+      args: { config: selected, 'base-config': base },
+      exactFile: true,
+    });
+    const resolved = resolveProfile(profiles, 'scoped', { env: {} });
+    assert.equal(resolved.outputRoot, './private-output');
+    assert.deepEqual(resolved.extensions, ['.rpgle']);
+    assert.deepEqual(getProfilesMetadata(profiles).attemptedPaths, [base, selected]);
+    assert.equal(getProfilesMetadata(profiles).baseProfilePath, base);
+    assert.throws(
+      () =>
+        resolveProfile(
+          loadProfiles({ cwd: tempRoot, env: {}, args: { config: selected }, exactFile: true }),
+          'scoped',
+          { env: {} }
+        ),
+      /not found/
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('public analysis-defaults excludes connections while default-shared preserves legacy roles', () => {
+  const profiles = loadProfiles({
+    env: {},
+    args: { config: path.resolve(__dirname, '../config/profiles.example.json') },
+    exactFile: true,
+  });
+  const options = { env: {}, expandEnvPlaceholders: false };
+  const shared = resolveProfile(profiles, 'analysis-defaults', options);
+  const legacy = resolveProfile(profiles, 'default-shared', options);
+  for (const key of [
+    'db',
+    'dbRoles',
+    'systems',
+    'jdbcConnections',
+    'fetch',
+    'commercial',
+    'bridge',
+  ])
+    assert.equal(shared[key], undefined);
+  for (const key of ['outputRoot', 'analysesRegistryPath', 'defaultWorkspaceRoot', 'extensions'])
+    assert.deepEqual(legacy[key], shared[key]);
+  assert.ok(legacy.dbRoles.metadata);
+  assert.ok(legacy.dbRoles.testData);
+});
+
+test('loadProfiles rejects invalid explicit bases instead of falling back', () => {
+  const tempRoot = createTempProject({ scoped: {} });
+  const selected = path.join(tempRoot, 'config', 'profiles.example.json');
+  const invalid = path.join(tempRoot, 'invalid.json');
+  try {
+    for (const contents of ['[]', 'null', '{']) {
+      fs.writeFileSync(invalid, contents);
+      assert.throws(() =>
+        loadProfiles({ cwd: tempRoot, env: {}, args: { config: selected, 'base-config': invalid } })
+      );
+    }
+    for (const base of [true, '', './config/profiles.example.json', tempRoot]) {
+      assert.throws(
+        () =>
+          loadProfiles({ cwd: tempRoot, env: {}, args: { config: selected, 'base-config': base } }),
+        /PROFILE_BASE_FILE_INVALID/
+      );
+    }
+    fs.writeFileSync(invalid, 'private-neutral-parse-marker');
+    assert.throws(
+      () =>
+        loadProfiles({
+          cwd: tempRoot,
+          env: {},
+          args: { config: selected, 'base-config': invalid },
+        }),
+      error =>
+        error.message.includes('PROFILE_BASE_FILE_INVALID') &&
+        !error.message.includes('private-neutral-parse-marker')
+    );
+    fs.writeFileSync(invalid, ' '.repeat(1024 * 1024 + 1));
+    assert.throws(
+      () =>
+        loadProfiles({
+          cwd: tempRoot,
+          env: {},
+          args: { config: selected, 'base-config': invalid },
+        }),
+      /PROFILE_BASE_FILE_INVALID/
+    );
+    assert.throws(
+      () =>
+        loadProfiles({
+          cwd: tempRoot,
+          env: {},
+          args: { config: path.join(tempRoot, 'missing.json'), 'base-config': selected },
+        }),
+      /PROFILE_FILE_REQUIRED/
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

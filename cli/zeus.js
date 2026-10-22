@@ -184,7 +184,7 @@ function printHelp() {
     '  zeus [--config <path>] profiles [--profile <name>] [--show-env]  # Profile anzeigen; empfohlen: dev, demo, sftp-fetch, readonly-db2, combined-fetch-and-query'
   );
   console.log(
-    '  zeus [--config <path>] resources --profile <name> [--json]  # Zeigt das aufgeloeste Resource-Modell (Source/Objects/Metadata/Data) pro System'
+    '  zeus [--config <path>] resources --profile <name> [--json]  # Ressourcenmodell, Discovery, Wizard und explizite Analysejobs'
   );
   console.log(
     '  zeus [--config <path>] context <show|set|clear> [--profile <name>] [--active sourceCode|objects|metadata|data] [--system <name>] [--source-library <library>] [--source-file <QRPGLESRC>] [--member <name>] [--source-root <path>] [--metadata-system <name>] [--metadata-schema <schema>] [--data-system <name>] [--data-schema <schema>] [--json]  # Aktuellen Arbeitsort anzeigen/steuern'

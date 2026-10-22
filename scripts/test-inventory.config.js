@@ -65,6 +65,15 @@ module.exports = {
       'tests/project-intelligence-retrieval-quality.test.js',
       'tests/project-intelligence-multi-program-recall.test.js',
     ],
+    resource: [
+      'tests/env-file-loader.test.js',
+      'tests/mcp-resources.test.js',
+      'tests/read-only-jdbc-query-service.test.js',
+      'tests/resource-model.test.js',
+      'tests/resources-command.test.js',
+      'tests/runtime-config-public-example.test.js',
+      'tests/runtime-config.test.js',
+    ],
     unit: [
       'tests/gui-workbench-contracts.test.js',
       'tests/local-ui-accessibility.test.js',

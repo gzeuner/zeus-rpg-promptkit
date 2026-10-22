@@ -65,6 +65,7 @@ function buildCliAgentPromptPayload({
   program = null,
   source = null,
   out = null,
+  resourceArgs = {},
 } = {}) {
   const normalizedGoal = String(goal || '').trim();
   if (!normalizedGoal) {
@@ -80,6 +81,7 @@ function buildCliAgentPromptPayload({
     program,
     source,
     out,
+    resourceArgs,
   });
   const effectiveProfile = preflight.effectiveProfile || '(not set)';
   const service = createAiSessionPromptService();
@@ -113,6 +115,9 @@ function buildCliAgentPromptPayload({
       context: preflight.context,
       checks: preflight.checks,
       experience: preflight.experience,
+      profileInventory: preflight.profileInventory,
+      resourceDiscovery: preflight.resourceDiscovery,
+      resourceNextCommands: preflight.resourceNextCommands,
       suggestion: preflight.suggestion,
       inputRequirements: preflight.inputRequirements,
       resume: preflight.resume,

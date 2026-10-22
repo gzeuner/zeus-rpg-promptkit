@@ -219,7 +219,6 @@ function resolveJdbcConnection(profile, connectionName) {
     error.code = 'JDBC_CONNECTION_REQUIRED';
     throw error;
   }
-
   const connections =
     profile && profile.jdbcConnections && typeof profile.jdbcConnections === 'object'
       ? profile.jdbcConnections
@@ -228,15 +227,18 @@ function resolveJdbcConnection(profile, connectionName) {
     name => name.toLowerCase() === requestedName.toLowerCase()
   );
   if (!selectedName) {
+    const available = getJdbcConnectionNames(profile);
     const error = new Error(
       `JDBC connection "${requestedName}" not found in selected profile. ` +
-        `Available connections: ${getJdbcConnectionNames(profile).join(', ') || '(none)'}`
+        `Available connections: ${available.join(', ') || '(none)'}`
     );
     error.code = 'JDBC_CONNECTION_NOT_FOUND';
     throw error;
   }
-
-  return { name: selectedName, config: connections[selectedName] };
+  return {
+    name: selectedName,
+    config: connections[selectedName],
+  };
 }
 
 // Uebersteuert defaultSchema/defaultLibrary aller aufgeloesten DB-Rollen mit den
@@ -261,7 +263,7 @@ function applyAnalyzeResourceOverrides(analyzeDbRoles, { schema = null, library 
 
 function resolveAnalyzeConfig(
   args,
-  { cwd = process.cwd(), env = process.env } = {},
+  { cwd = process.cwd(), env = process.env, exactFile = false } = {},
   {
     DEFAULT_EXTENSIONS,
     buildAnalyzeConnectionRoles,
@@ -276,7 +278,7 @@ function resolveAnalyzeConfig(
     validateAnalyzeConfig,
   } = {}
 ) {
-  const profiles = loadProfiles({ cwd, env, args });
+  const profiles = loadProfiles({ cwd, env, args, exactFile });
   const profile = resolveProfile(profiles, args.profile, { env });
   const rawProfile = resolveProfile(profiles, args.profile, {
     env,
@@ -330,7 +332,7 @@ function resolveAnalyzeConfig(
 
 function resolveFetchConfig(
   args,
-  { cwd = process.cwd(), env = process.env } = {},
+  { cwd = process.cwd(), env = process.env, exactFile = false } = {},
   {
     DEFAULT_SOURCE_FILES,
     DEFAULT_STREAM_FILE_CCSID,
@@ -343,7 +345,7 @@ function resolveFetchConfig(
     validateFetchConfig,
   } = {}
 ) {
-  const profiles = loadProfiles({ cwd, env, args });
+  const profiles = loadProfiles({ cwd, env, args, exactFile });
   const profile = resolveProfile(profiles, args.profile, { env });
   const rawProfile = resolveProfile(profiles, args.profile, {
     env,
@@ -513,11 +515,11 @@ function resolveBundleConfig(
 
 module.exports = {
   buildAnalyzeConnectionRoles,
+  getJdbcConnectionNames,
   resolveAnalyzeConfig,
   resolveAnalyzeDbConfig,
   resolveAnalyzeDbRoleConfigs,
-  getJdbcConnectionNames,
-  resolveJdbcConnection,
   resolveBundleConfig,
   resolveFetchConfig,
+  resolveJdbcConnection,
 };

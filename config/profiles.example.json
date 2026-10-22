@@ -1,4 +1,40 @@
 {
+  "resource-analysis-example": {
+    "systems": {
+      "dev": {
+        "host": "${env:EXAMPLE_DEV_HOST}",
+        "user": "${env:EXAMPLE_DEV_USER}",
+        "password": "${env:EXAMPLE_DEV_PASSWORD}"
+      },
+      "prod": {
+        "host": "${env:EXAMPLE_PROD_HOST}",
+        "user": "${env:EXAMPLE_PROD_USER}",
+        "password": "${env:EXAMPLE_PROD_PASSWORD}"
+      }
+    },
+    "resourceCatalog": {
+      "dev.sources": {
+        "kind": "sourceCode",
+        "system": "dev",
+        "library": "SRCLIB",
+        "sourceFiles": ["QRPGLESRC", "QSQLSRC"],
+        "maxMembers": 10
+      },
+      "dev.objects": {
+        "kind": "objects",
+        "system": "dev",
+        "libraries": ["OBJLIB"],
+        "objectTypes": ["*PGM", "*FILE"],
+        "maxRows": 50
+      },
+      "prod.tables": {
+        "kind": "metadata",
+        "system": "prod",
+        "schemas": ["DATA_EXAMPLE"],
+        "maxRows": 500
+      }
+    }
+  },
   "qa": {
     "qaMode": false,
     "qaStrict": "LENIENT",
@@ -62,12 +98,16 @@
       "continueOnError": false
     }
   },
-  "default-shared": {
-    "_comment": "Shared public defaults. Copy this template into your private profile file and replace placeholder values there only. Passwords should NOT be stored in clear text: put an encrypted value (enc:v1:...) into your .env (e.g. ZEUS_DB_PASSWORD=enc:v1:...) or directly into a private profile; it is decrypted transparently at runtime. Create a key via 'zeus secret init-key' and encrypt with 'zeus secret encrypt'.",
+  "analysis-defaults": {
+    "_comment": "Connection-free shared analysis options. Named resource profiles should inherit this instead of legacy environment-routed DB roles.",
     "outputRoot": "${env:ZEUS_OUTPUT_ROOT}",
     "analysesRegistryPath": "${env:ZEUS_ANALYSES_REGISTRY}",
     "defaultWorkspaceRoot": "${env:ZEUS_ANALYSES_ROOT}",
-    "extensions": [".rpgle", ".sqlrpgle", ".clle", ".clp", ".dds", ".pf", ".lf", ".bnd", ".cpy"],
+    "extensions": [".rpgle", ".sqlrpgle", ".clle", ".clp", ".dds", ".pf", ".lf", ".bnd", ".cpy"]
+  },
+  "default-shared": {
+    "_comment": "Shared public defaults. Copy this template into your private profile file and replace placeholder values there only. Passwords should NOT be stored in clear text: put an encrypted value (enc:v1:...) into your .env (e.g. ZEUS_DB_PASSWORD=enc:v1:...) or directly into a private profile; it is decrypted transparently at runtime. Create a key via 'zeus secret init-key' and encrypt with 'zeus secret encrypt'.",
+    "extends": "analysis-defaults",
     "commercial": {
       "_comment": "Optional explicit commercial host loader (ADR-006). No auto-discovery. Unset = Community-only. Prefer env placeholders; never commit real license files. CLI --commercial-module and ZEUS_COMMERCIAL_MODULE override this block.",
       "module": "${env:ZEUS_COMMERCIAL_MODULE}",
@@ -198,6 +238,21 @@
       }
     }
   },
+  "demo-sqlserver-jtds": {
+    "_comment": "Read-only external JDBC example. Configure the named connection only through local environment variables; install jtds-1.3.1.jar in java/lib before querying.",
+    "extends": "default-local",
+    "jdbcConnections": {
+      "rol-evodb": {
+        "_comment": "JTDS SQL Server connection. Use fully qualified object names in query-sql.",
+        "driver": "net.sourceforge.jtds.jdbc.Driver",
+        "url": "${env:ZEUS_ROL_JDBC_URL}",
+        "user": "${env:ZEUS_ROL_DB_USER}",
+        "password": "${env:ZEUS_ROL_DB_PASSWORD}",
+        "environment": "sqlserver-jtds",
+        "probeSql": "SELECT 1 AS HEALTHCHECK"
+      }
+    }
+  },
   "default": {
     "sourceRoot": "./rpg",
     "outputRoot": "./output",
@@ -229,24 +284,24 @@
       "dev": {
         "_comment": "Development or integration IBM i used for source fetch and safe read-only analysis.",
         "displayName": "Development IBM i",
-        "systemName": "SYSDEV",
-        "aliases": ["DEVBOX", "SYS_TEST"],
-        "host": "YOUR_DEV_IBM_I_HOST",
-        "user": "YOUR_IBM_I_USER",
-        "password": "YOUR_IBM_I_PASSWORD",
-        "defaultLibrary": "DATA_EXAMPLE",
-        "defaultSchema": "DATA_EXAMPLE"
+        "systemName": "YOUR_DEV_SYSTEM_NAME",
+        "aliases": ["YOUR_DEV_SYSTEM_ALIAS"],
+        "host": "${env:ZEUS_FETCH_HOST}",
+        "user": "${env:ZEUS_FETCH_USER}",
+        "password": "${env:ZEUS_FETCH_PASSWORD}",
+        "defaultLibrary": "<DB_LIBRARY>",
+        "defaultSchema": "<DB_SCHEMA>"
       },
       "readonly": {
         "_comment": "Read-only production-like IBM i for metadata and query access only.",
         "displayName": "Read-only IBM i",
-        "systemName": "SYSPROD",
-        "aliases": ["PRODRO", "SYS_PROD"],
-        "host": "YOUR_READONLY_IBM_I_HOST",
-        "user": "YOUR_READONLY_IBM_I_USER",
-        "password": "YOUR_READONLY_IBM_I_PASSWORD",
-        "defaultLibrary": "REPORTING_EXAMPLE",
-        "defaultSchema": "REPORTING_EXAMPLE"
+        "systemName": "YOUR_READONLY_SYSTEM_NAME",
+        "aliases": ["YOUR_READONLY_SYSTEM_ALIAS"],
+        "host": "${env:ZEUS_METADATA_DB_HOST}",
+        "user": "${env:ZEUS_METADATA_DB_USER}",
+        "password": "${env:ZEUS_METADATA_DB_PASSWORD}",
+        "defaultLibrary": "<METADATA_LIBRARY>",
+        "defaultSchema": "<METADATA_SCHEMA>"
       }
     }
   },
@@ -364,12 +419,12 @@
     "_comment": "Fetch-only profile for teams that always use SFTP over a network-accessible IBM i.",
     "extends": "default-fetch",
     "fetch": {
-      "host": "example.ibm.local",
-      "user": "YOUR_IBM_I_USER",
-      "password": "YOUR_IBM_I_PASSWORD",
-      "sourceLib": "SOURCE_EXAMPLE",
-      "sourceLibrary": "SOURCE_EXAMPLE",
-      "ifsDir": "/ifs/source-export/example",
+      "host": "${env:ZEUS_FETCH_HOST}",
+      "user": "${env:ZEUS_FETCH_USER}",
+      "password": "${env:ZEUS_FETCH_PASSWORD}",
+      "sourceLib": "${env:ZEUS_FETCH_SOURCE_LIBRARY}",
+      "sourceLibrary": "${env:ZEUS_FETCH_SOURCE_LIBRARY}",
+      "ifsDir": "${env:ZEUS_FETCH_IFS_DIR}",
       "out": "./fetched-source/sftp",
       "port": 22,
       "files": ["QRPGLESRC", "QSRVSRC"],

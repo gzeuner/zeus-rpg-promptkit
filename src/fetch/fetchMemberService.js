@@ -20,6 +20,11 @@ const fs = require('fs');
 const path = require('path');
 const { exportSourceMemberViaJdbc } = require('./jt400CommandRunner');
 const { validateSourceFile } = require('../source/sourceIntegrity');
+const {
+  IMPORT_MANIFEST_FILE,
+  buildImportManifest,
+  writeImportManifest,
+} = require('./importManifest');
 
 const DEFAULT_SOURCE_FILE = 'QRPGLESRC';
 const DEFAULT_STREAM_FILE_CCSID = 1208;
@@ -279,6 +284,7 @@ function executeReadOnlyMemberFetch({
   user,
   password,
   confirmPlanId,
+  manifestSubdirectory = null,
   exporter = exportSourceMemberViaJdbc,
 }) {
   if (!plan || plan.kind !== 'zeus-read-only-fetch-plan') {
@@ -303,11 +309,40 @@ function executeReadOnlyMemberFetch({
   const extension = resolveExtension(plan.scope.sourceFile);
   const fetched = [];
   const failures = [];
+  const exportRecords = [];
   const localSubDir = path.join(output.resolved, plan.scope.sourceFile);
+  const manifestDestination = manifestSubdirectory
+    ? path.join(output.resolved, normalizeIdentifier(manifestSubdirectory, 'manifest subdirectory'))
+    : null;
+  if (manifestDestination) {
+    normalizeRelativeOutput(cwd, path.relative(cwd, manifestDestination));
+    const manifestPath = path.join(manifestDestination, IMPORT_MANIFEST_FILE);
+    if (
+      fs.existsSync(manifestPath) ||
+      plan.scope.members.some(member =>
+        fs.existsSync(path.join(localSubDir, `${member}${resolveExtension(plan.scope.sourceFile)}`))
+      )
+    ) {
+      const error = new Error(
+        'Fetch source or manifest already exists; choose a new output directory.'
+      );
+      error.code = 'FETCH_OUTPUT_EXISTS';
+      throw error;
+    }
+  }
   fs.mkdirSync(localSubDir, { recursive: true });
 
   for (const member of plan.scope.members) {
     const targetPath = path.join(localSubDir, `${member}${extension}`);
+    const record = {
+      sourceLib: plan.scope.sourceLibrary,
+      sourceFile: plan.scope.sourceFile,
+      member,
+      localPath: targetPath,
+      system: summarizeEndpoint(host),
+      fetchedAt: new Date().toISOString(),
+      ok: false,
+    };
     try {
       const result = exporter({
         host,
@@ -339,9 +374,43 @@ function executeReadOnlyMemberFetch({
         sizeBytes: sourceFingerprint ? sourceFingerprint.sizeBytes : stat.size,
         sourceFingerprint,
       });
+      record.ok = true;
+      record.fallbackUsed = Boolean(result.usedFallback);
+      record.transportUsed = plan.endpoint.transport;
     } catch (error) {
-      failures.push({ member, message: maskRuntimeMessage(error && error.message) });
+      const message = maskRuntimeMessage(error && error.message);
+      record.messages = [message];
+      failures.push({ member, message });
     }
+    exportRecords.push(record);
+  }
+
+  let manifest = null;
+  let manifestPath = null;
+  if (manifestDestination) {
+    manifest = buildImportManifest({
+      options: {
+        host: summarizeEndpoint(host),
+        sourceLib: plan.scope.sourceLibrary,
+        files: [plan.scope.sourceFile],
+        members: plan.scope.members,
+        replace: false,
+        transport: plan.endpoint.transport,
+        streamFileCcsid: DEFAULT_STREAM_FILE_CCSID,
+      },
+      summary: {
+        transportUsed: plan.endpoint.transport,
+        encodingPolicy: 'UTF-8',
+        exportedTotal: exportRecords.length,
+        exportedSuccess: fetched.length,
+        downloadedCount: fetched.length,
+      },
+      exportRecords,
+      localDestination: manifestDestination,
+    });
+    manifest.tool.command = 'fetch-member';
+    manifest.status = failures.length ? (fetched.length ? 'partial' : 'failed') : 'completed';
+    manifestPath = writeImportManifest(manifestDestination, manifest, { exclusive: true });
   }
 
   return {
@@ -351,6 +420,15 @@ function executeReadOnlyMemberFetch({
     localArtifactWrite: true,
     fetched,
     failures,
+    ...(manifest
+      ? {
+          manifestPath: path.relative(cwd, manifestPath).split(path.sep).join('/'),
+          manifest: {
+            ...manifest,
+            localDestination: path.relative(cwd, manifestDestination).split(path.sep).join('/'),
+          },
+        }
+      : {}),
     sourceFingerprints: fetched.map(entry => ({
       member: entry.member,
       path: entry.path,

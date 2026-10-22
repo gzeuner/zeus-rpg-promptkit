@@ -252,6 +252,11 @@ async function runAgent(args = {}) {
       source: args.source || args['source-root'] || null,
       out: args.out || args.output || null,
       experienceLimit: args.limit,
+      resourceArgs: {
+        ...(args.config ? { config: args.config } : {}),
+        ...(args['base-config'] ? { 'base-config': args['base-config'] } : {}),
+        ...(args['env-files'] ? { 'env-files': args['env-files'] } : {}),
+      },
     };
     const rawPayload = buildCliAgentPreflightPayload(options);
     const payload = finishAgentPayload(rawPayload, {
@@ -282,6 +287,11 @@ async function runAgent(args = {}) {
       program: args.program || args.member || null,
       source: args.source || args['source-root'] || null,
       out: args.out || args.output || null,
+      resourceArgs: {
+        ...(args.config ? { config: args.config } : {}),
+        ...(args['base-config'] ? { 'base-config': args['base-config'] } : {}),
+        ...(args['env-files'] ? { 'env-files': args['env-files'] } : {}),
+      },
     };
     const rawPayload = buildCliAgentPromptPayload(options);
     const payload = finishAgentPayload(rawPayload, {

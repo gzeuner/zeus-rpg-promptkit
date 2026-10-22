@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "goal": "Inspect one program and its table metadata across explicitly selected systems",
+  "dataAccess": "metadata-only",
+  "outputRoot": "output/resource-job-example",
+  "resources": [
+    { "ref": "dev.sources", "sourceFiles": ["QRPGLESRC"], "members": ["ORDERPGM"] },
+    {
+      "ref": "dev.objects",
+      "libraries": ["OBJLIB"],
+      "objectTypes": ["*PGM"],
+      "objects": ["ORDERPGM"]
+    },
+    { "ref": "prod.tables", "schemas": ["DATA_EXAMPLE"], "tables": ["ORDERS"], "maxRows": 500 }
+  ]
+}

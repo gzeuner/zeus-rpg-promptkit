@@ -3,11 +3,23 @@ const assert = require('node:assert/strict');
 
 const {
   REDACTED_VALUE,
+  collectSecretTermsFromEnv,
   collectSensitiveTermsFromEnv,
   maskSensitiveTermsInText,
   maskSecretsInText,
   sanitizeValue,
 } = require('../src/security/secretMasking');
+
+test('collectSecretTermsFromEnv finds credential values without exposing their names', () => {
+  const terms = collectSecretTermsFromEnv({
+    DB_PASSWORD: 'db-pass-value',
+    API_TOKEN: 'api-token-value',
+    ZEUS_SENSITIVE_TERMS: 'private phrase',
+    ordinary: 'not-secret',
+  });
+
+  assert.deepEqual(terms, ['api-token-value', 'db-pass-value', 'private phrase']);
+});
 
 function createPrng(seed = 123456789) {
   let state = seed >>> 0;

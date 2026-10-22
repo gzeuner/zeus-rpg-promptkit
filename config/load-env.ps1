@@ -13,6 +13,8 @@
 # Verwendung danach (Dot-Sourcing, damit die Variablen in der Session bleiben):
 #   . .\config\load-env.ps1                    # Laedt config/.env.local
 #   . .\config\load-env.ps1 -Environment project  # Laedt config/.env.project.local
+#   . .\config\load-env.ps1 -Environment project -Quiet
+#   . .\config\load-env.ps1 -Environment project -Verbose  # Nur Variablennamen
 #
 # Multi-Maschinen-Setup (Sourcen von DEV_IBM_I_HOST, Metadaten von READONLY_IBM_I_HOST):
 #   In .env.project.local einfach ZEUS_METADATA_DB_HOST=READONLY_IBM_I_HOST setzen.
@@ -31,15 +33,18 @@
 #
 # Sicherheit:
 #   - Credentials werden nur in die aktuelle Session geladen
-#   - Niemals in Logs oder Prozess-Umgebung exportiert
+#   - Keine Persistenz ausserhalb dieser Shell-Session und ihrer Kindprozesse
 #   - Keine Ausgabe von Credential-Werten in der Konsole
 #
 # Ablage der .env-Dateien:
 #   Bevorzugter Speicherort ist config/local-only/ (gitignoriert, neben profiles.json).
 #   Fallback: config/ (neben diesem Skript) und Projekt-Root (rueckwaertskompatibel).
 
+[CmdletBinding()]
 param(
-    [string]$Environment = "default"
+    [ValidatePattern('^[A-Za-z0-9_-]+$')]
+    [string]$Environment = "default",
+    [switch]$Quiet
 )
 
 $ErrorActionPreference = "Stop"
@@ -66,7 +71,7 @@ function Test-NonEmptyEnvVar {
 
 $effectiveExecutionPolicy = (Get-ExecutionPolicy) 2>$null
 if ($effectiveExecutionPolicy) {
-    Write-Host "ExecutionPolicy: $effectiveExecutionPolicy" -ForegroundColor DarkCyan
+    Write-Verbose "ExecutionPolicy: $effectiveExecutionPolicy"
     if ($effectiveExecutionPolicy -in @("Restricted", "AllSigned")) {
         Write-Warning "Die aktuelle ExecutionPolicy ($effectiveExecutionPolicy) kann das Laden dieses Skripts blockieren oder teilweise verhindern."
         Write-Host "Tipp fuer diese Session: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force" -ForegroundColor Yellow
@@ -103,39 +108,37 @@ if ($Environment -ne "default") {
 
 # ── Pruefen ob Datei existiert
 if (-not (Test-Path $envFile)) {
-    Write-Warning "Env-Datei nicht gefunden: $envFile"
+    Write-Warning "Env-Datei nicht gefunden: $envFileName"
     $exampleInConfig = Join-Path $scriptDir ($envFileName -replace '\.local$', '.example')
     $exampleInRoot   = Join-Path $projectRoot ($envFileName -replace '\.local$', '.example')
     $exampleHint = if (Test-Path $exampleInConfig) { $exampleInConfig } else { $exampleInRoot }
-    Write-Host "Beispiel-Datei vorhanden: $exampleHint" -ForegroundColor Yellow
+    Write-Verbose "Beispiel-Datei: $([System.IO.Path]::GetFileName($exampleHint))"
     Write-Host "Bitte als '$envFileName' in config/local-only/ (bevorzugt) oder config/ ablegen und Werte befuellen." -ForegroundColor Yellow
     Stop-LoadEnv "Env-Datei fehlt: $envFileName" 2
 }
 
-function Load-EnvFile($filePath) {
-    $lineCount = 0
+function Import-SessionEnvFile($filePath) {
     $variableCount = 0
-    Write-Host "`n=== Lade Umgebungsvariablen aus $([System.IO.Path]::GetFileName($filePath)) ===" -ForegroundColor Cyan
-    Get-Content $filePath | Where-Object { $_ -and -not $_.StartsWith("#") } | ForEach-Object {
-        $lineCount++
-        $line = ($_ -replace '#.*$', '').Trim()
-        if ($line -and $line -match '^([A-Z_][A-Z0-9_]*)=(.*)$') {
+    Get-Content -LiteralPath $filePath | ForEach-Object {
+        $line = ($_ -replace '\s+#.*$', '').Trim()
+        if ($line -and $line -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
             $key = $matches[1]
             $value = $matches[2]
             [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
             $variableCount++
-            $displayValue = if ($key -match 'PASSWORD|SECRET|TOKEN|CREDENTIAL') { "***" } else { $value }
-            Write-Host "  $key = $displayValue" -ForegroundColor Green
+            if (-not $Quiet) { Write-Verbose "  $key (value hidden)" }
         }
     }
-    Write-Host "`nGeladen: $variableCount Variable(n) von $lineCount Zeile(n)`n"
+    if (-not $Quiet) {
+        Write-Host "Loaded $([System.IO.Path]::GetFileName($filePath)): $variableCount variable(s)."
+    }
 }
 
 # Basis (.env.local) zuerst laden, dann environment-spezifische Datei (ueberschreibt Basis)
 if ($baseEnvFile) {
-    Load-EnvFile $baseEnvFile
+    Import-SessionEnvFile $baseEnvFile
 }
-Load-EnvFile $envFile
+Import-SessionEnvFile $envFile
 
 # ── Validierung der kritischen Variablen
 $criticalVars = @(
@@ -168,6 +171,11 @@ if ($Environment -eq "project") {
     $alternativeCriticalGroups = @(
         @{ Label = "ZEUS_DB_HOST|ZEUS_DB_URL"; Variables = @("ZEUS_DB_HOST", "ZEUS_DB_URL") }
     )
+}
+
+if ($env:ZEUS_JDBC_ONLY -match '^(1|true|yes|on)$') {
+    $criticalVars = @()
+    $alternativeCriticalGroups = @()
 }
 
 $missing = @()
@@ -204,5 +212,5 @@ if ($missing.Count -gt 0) {
     Write-Host "  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force" -ForegroundColor Yellow
     Stop-LoadEnv "Pflichtvariablen fehlen oder sind leer. Secrets wurden nicht ausgegeben." 3
 } else {
-    Write-Host "Alle kritischen Variablen sind gesetzt. KI-Chat kann jetzt verwendet werden." -ForegroundColor Green
+    if (-not $Quiet) { Write-Verbose "Environment variables are available in this shell session only." }
 }

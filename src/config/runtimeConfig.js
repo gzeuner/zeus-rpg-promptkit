@@ -61,9 +61,9 @@ const {
   resolveAnalyzeConfig: resolveAnalyzeConfigModule,
   resolveAnalyzeDbConfig: resolveAnalyzeDbConfigModule,
   resolveAnalyzeDbRoleConfigs: resolveAnalyzeDbRoleConfigsModule,
-  resolveJdbcConnection: resolveJdbcConnectionModule,
   resolveBundleConfig: resolveBundleConfigModule,
   resolveFetchConfig: resolveFetchConfigModule,
+  resolveJdbcConnection: resolveJdbcConnectionModule,
 } = require('./runtimeConfigResolver');
 
 function normalizeTokenBudgetKey(value) {
@@ -128,6 +128,7 @@ function resolveProfile(profiles, profileName, options = {}) {
         resolveProfile(profiles, parentName, {
           env,
           stack: [...stack, profileName],
+          expandEnvPlaceholders,
         })
       ),
     {}
@@ -139,9 +140,8 @@ function resolveProfile(profiles, profileName, options = {}) {
   // System-Referenzen nur beim Top-Level-Aufruf auflösen (stack.length === 0).
   // Eltern-Profile behalten ihre { system: '...' }-Referenzen bis zur finalen
   // Auflösung, damit Kind-Profile diese noch überschreiben können.
-  // Beispiel: dersmt1-ase hat metadata: { system: 'test' }
-  //            dersmt1-ase-prod-meta überschreibt metadata: { system: 'prod' }
-  //            → erst beim Top-Level-Aufruf wird prod-Host eingesetzt.
+  // System-Referenzen werden nach dem Profil-Merge aufgeloest. So kann ein
+  // Kindprofil z. B. dbRoles.metadata ueberschreiben, waehrend fetch unabhaengig bleibt.
   if (stack.length === 0) {
     return resolveSystemReferences(resolved);
   }
@@ -284,10 +284,13 @@ function resolveJdbcConnection(profile, connectionName) {
   return resolveJdbcConnectionModule(profile, connectionName);
 }
 
-function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
+function resolveAnalyzeConfig(
+  args,
+  { cwd = process.cwd(), env = process.env, exactFile = false } = {}
+) {
   return resolveAnalyzeConfigModule(
     args,
-    { cwd, env },
+    { cwd, env, exactFile },
     {
       DEFAULT_EXTENSIONS,
       buildAnalyzeConnectionRoles,
@@ -304,10 +307,13 @@ function resolveAnalyzeConfig(args, { cwd = process.cwd(), env = process.env } =
   );
 }
 
-function resolveFetchConfig(args, { cwd = process.cwd(), env = process.env } = {}) {
+function resolveFetchConfig(
+  args,
+  { cwd = process.cwd(), env = process.env, exactFile = false } = {}
+) {
   return resolveFetchConfigModule(
     args,
-    { cwd, env },
+    { cwd, env, exactFile },
     {
       DEFAULT_SOURCE_FILES,
       DEFAULT_STREAM_FILE_CCSID,
@@ -370,8 +376,8 @@ module.exports = {
   DEFAULT_WORKFLOW_ANALYZE_MODES,
   DEFAULT_WORKFLOW_STEPS,
   describeProfilesLocation,
-  getJdbcConnectionNames,
   getProfilesMetadata,
+  getJdbcConnectionNames,
   loadProfiles,
   normalizeTokenBudgetKey,
   resolveAnalyzeDbConfig,

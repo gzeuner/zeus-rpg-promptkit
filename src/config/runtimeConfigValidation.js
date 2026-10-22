@@ -189,14 +189,13 @@ function validateJdbcConnectionsConfig(value, label) {
       failValidation(`${label} must not define duplicate connection names ignoring case`);
     }
     names.add(normalizedName);
-
     if (!isPlainObject(connection)) {
       failValidation(`${label}.${name} must be an object`);
     }
     for (const key of Object.keys(connection)) {
       if (!JDBC_CONNECTION_FIELDS.has(key)) {
         failValidation(
-          `${label}.${name}.${key} is not supported; valid fields are driver, url, user, password, probeSql, environment`
+          `${label}.${name}.${key} is not supported; valid fields are driver, url, user, password, probeSql`
         );
       }
     }
@@ -629,6 +628,9 @@ function validateNamedProfile(profile, label) {
   if (profile.resources !== undefined) {
     validateResourcesConfig(profile.resources, `${label}.resources`);
   }
+  if (profile.resourceCatalog !== undefined) {
+    require('./resourceAccessPlan').validateResourceCatalog(profile.resourceCatalog);
+  }
   if (profile.fetch !== undefined) {
     validateFetchProfile(profile.fetch, `${label}.fetch`);
   }
@@ -745,6 +747,7 @@ module.exports = {
   validateBundleConfig,
   validateCommercialProfile,
   validateFetchConfig,
+  validateJdbcConnectionsConfig,
   validateProfiles,
   validateResourcesConfig,
 };

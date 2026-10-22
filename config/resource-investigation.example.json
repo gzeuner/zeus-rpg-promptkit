@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "operatorId": "neutral-operator",
+  "limits": { "queries": 3, "rows": 15, "bytes": 1048576, "durationMs": 300000 },
+  "selects": [
+    {
+      "ref": "samples",
+      "schema": "DATA",
+      "table": "MYTABLE",
+      "columns": ["ID", "NAME"],
+      "maxRows": 5
+    },
+    {
+      "ref": "samples",
+      "schema": "DATA",
+      "table": "MYTABLE",
+      "columns": ["ID", "NAME"],
+      "where": [{ "column": "ID", "equals": 2 }],
+      "maxRows": 5
+    }
+  ]
+}
