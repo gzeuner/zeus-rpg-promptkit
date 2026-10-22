@@ -159,10 +159,12 @@ test('analyze core can opt in local known facts without auto-loading them by def
         },
         facts: [
           {
+            id: 'orders-owner-program',
             subject: 'ORDERS',
             attribute: 'ownerProgram',
             value: 'ORDERPGM',
             confidence: 'HIGH',
+            observedAt: KNOWN_FACTS_UPDATED_AT,
           },
         ],
       },

@@ -181,6 +181,85 @@ test('local known facts store rejects invalid time and preserves missing status'
   }
 });
 
+test('local known facts reject credential text in uncertainty entries', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-known-facts-uncertainty-'));
+  try {
+    assert.throws(
+      () =>
+        writeKnownFactsStore(
+          'dev',
+          {
+            facts: [
+              {
+                subject: 'ORDERS',
+                attribute: 'owner',
+                value: 'ORDERPGM',
+                uncertainty: ['api_key=synthetic-secret'],
+              },
+            ],
+          },
+          { cwd: tempRoot }
+        ),
+      /must not store secrets/
+    );
+    assert.equal(fs.existsSync(normalizeKnownFactsStorePath('dev', { cwd: tempRoot })), false);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('known facts updates preserve identity and observed time with optimistic file hashes', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-known-facts-revision-'));
+  const originalObservedAt = '2026-06-14T09:00:00.000Z';
+  try {
+    const first = writeKnownFactsStore(
+      'dev',
+      {
+        facts: [
+          {
+            id: 'known-orders-owner',
+            subject: 'ORDERS',
+            attribute: 'owner',
+            value: 'ORDERPGM',
+            observedAt: originalObservedAt,
+          },
+        ],
+      },
+      { cwd: tempRoot, now: '2026-06-15T00:00:00.000Z' }
+    );
+    assert.equal(first.store.facts[0].observedAt, originalObservedAt);
+    assert.equal(first.contentHash.length, 64);
+    assert.throws(
+      () =>
+        writeKnownFactsStore(
+          'dev',
+          { facts: first.store.facts },
+          { cwd: tempRoot, expectedHash: 'stale', now: '2026-06-16T00:00:00.000Z' }
+        ),
+      /changed since the expected version/
+    );
+    const next = writeKnownFactsStore(
+      'dev',
+      { facts: first.store.facts },
+      { cwd: tempRoot, expectedHash: first.contentHash, now: '2026-06-16T00:00:00.000Z' }
+    );
+    assert.equal(next.store.facts[0].id, 'known-orders-owner');
+    assert.equal(next.store.facts[0].observedAt, originalObservedAt);
+    assert.notEqual(next.contentHash, first.contentHash);
+    assert.throws(
+      () =>
+        writeKnownFactsStore(
+          'dev',
+          { facts: [first.store.facts[0], first.store.facts[0]] },
+          { cwd: tempRoot }
+        ),
+      /duplicate identities/
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test('local known facts store rejects secret-like values', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-known-facts-secrets-'));
 

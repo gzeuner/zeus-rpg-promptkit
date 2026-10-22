@@ -9,6 +9,7 @@ const {
 const { extractDisplayUiBatch } = require('../../knowledge/extractors/displayUiBatchExtractor');
 const { readFinalKnowledgeCatalog } = require('../../knowledge/knowledgePipeline');
 const { createJsonOutput } = require('../helpers/jsonOutput');
+const sessionKnowledgeImport = require('../../knowledge/sessionKnowledgeImport');
 
 function printHelp() {
   console.log('Knowledge commands:');
@@ -20,6 +21,12 @@ function printHelp() {
   );
   console.log('  zeus knowledge validate --input <project-neutral-knowledge.json> [--json]');
   console.log('  zeus knowledge inspect --input <project-neutral-knowledge.json> [--json]');
+  console.log(
+    '  zeus knowledge preview-session --file <markdown-or-html,...> --session-id <id> --project <id> --system-alias <id> --tool-version <version> [--json]'
+  );
+  console.log(
+    '  zeus knowledge import-session --file <markdown-or-html,...> --session-id <id> --project <id> --system-alias <id> --tool-version <version> [--json]'
+  );
   console.log('');
   console.log(
     'Local-only. No DDDL persistence, remote access, analyze auto-import, or MCP exposure.'
@@ -51,6 +58,13 @@ function printResult(args, result) {
     console.error(`[${result.status}] ${result.reason}`);
     return;
   }
+  if (String(result.operation || '').startsWith('session-')) {
+    console.log(
+      `Session knowledge: ${result.operation} (${result.candidate?.chunks?.length || 0} chunk(s))`
+    );
+    if (result.path) console.log(`Local candidate: ${result.path}`);
+    return;
+  }
   console.log(`Knowledge catalog: ${result.path || '(generated)'}`);
   if (result.catalog) console.log(`Patterns: ${result.catalog.patterns.length}`);
 }
@@ -65,6 +79,28 @@ async function run(args = {}) {
   }
 
   try {
+    if (operation === 'preview-session' || operation === 'import-session') {
+      const options = {
+        cwd: process.cwd(),
+        files: requiredString(args, 'file')
+          .split(',')
+          .map(file => file.trim())
+          .filter(Boolean),
+        sessionId: requiredString(args, 'session-id'),
+        scope: {
+          projectId: requiredString(args, 'project'),
+          systemAlias: requiredString(args, 'system-alias'),
+          toolVersion: requiredString(args, 'tool-version'),
+        },
+      };
+      const result =
+        operation === 'import-session'
+          ? sessionKnowledgeImport.importSessionKnowledge(options)
+          : sessionKnowledgeImport.previewSessionKnowledge(options);
+      printResult(args, result);
+      return result;
+    }
+
     if (operation === 'extract') {
       const mode = String(args.mode || 'ui-patterns')
         .trim()

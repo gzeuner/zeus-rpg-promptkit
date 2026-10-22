@@ -13,12 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 */
 const fs = require('fs');
 const path = require('path');
-const { randomUUID } = require('crypto');
+const { randomUUID, createHash } = require('crypto');
 const { version: toolVersion } = require('../../package.json');
 
 const LOCAL_KNOWN_FACTS_SCHEMA_VERSION = 1;
 const LOCAL_KNOWN_FACTS_KIND = 'zeus-local-known-facts';
 const DEFAULT_TTL_DAYS = 30;
+const MAX_STORE_BYTES = 2 * 1024 * 1024;
+const MAX_FACTS = 10000;
 const SECRET_FIELD_PATTERN =
   /(password|passwd|secret|token|api[_-]?key|access[_-]?key|credential|connection[_-]?string|dsn|private[_-]?key)/i;
 const SECRET_VALUE_PATTERN =
@@ -167,6 +169,9 @@ function sanitizeFact(input, nowIso) {
   for (const tag of tags) {
     assertSafeText('tag', tag);
   }
+  for (const item of uncertainty) {
+    assertSafeText('uncertainty', item);
+  }
 
   return {
     id,
@@ -245,12 +250,43 @@ function readKnownFactsStore(profileName, options = {}) {
     };
   }
 
-  const parsed = JSON.parse(fs.readFileSync(storePath, 'utf8'));
+  const stat = fs.lstatSync(storePath);
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.size > MAX_STORE_BYTES) {
+    throw new Error('Known facts require a bounded regular file.');
+  }
+  const bytes = fs.readFileSync(storePath);
+  if (bytes.length > MAX_STORE_BYTES) throw new Error('Known facts exceed the read limit.');
+  const parsed = JSON.parse(bytes.toString('utf8'));
   if (!parsed || typeof parsed !== 'object') {
     throw new Error(`Invalid known facts payload: ${storePath}`);
   }
   if (!Array.isArray(parsed.facts)) {
     throw new Error(`Invalid known facts facts array: ${storePath}`);
+  }
+  if (
+    parsed.schemaVersion !== LOCAL_KNOWN_FACTS_SCHEMA_VERSION ||
+    parsed.kind !== LOCAL_KNOWN_FACTS_KIND ||
+    parsed.mode !== 'local-only' ||
+    parsed.profile !== normalizeProfileName(profileName)
+  ) {
+    throw new Error(
+      'Known facts schema, mode or profile mismatch; explicit migration is required.'
+    );
+  }
+  if (
+    !parsed.versionMarker ||
+    !parsed.versionMarker.updatedAt ||
+    !parsed.versionMarker.expiresAt ||
+    !parsed.versionMarker.toolVersion ||
+    !Number.isInteger(parsed.versionMarker.ttlDays) ||
+    parsed.versionMarker.ttlDays < 1 ||
+    parsed.facts.length > MAX_FACTS ||
+    parsed.facts.some(
+      fact => !fact || typeof fact.id !== 'string' || !fact.id || !fact.observedAt
+    ) ||
+    new Set(parsed.facts.map(fact => fact.id)).size !== parsed.facts.length
+  ) {
+    throw new Error('Known facts require timestamps and unique fact identities.');
   }
 
   const store = buildStorePayload(profileName, parsed, options);
@@ -258,12 +294,35 @@ function readKnownFactsStore(profileName, options = {}) {
   const expired = Boolean(
     store.versionMarker.expiresAt && Date.parse(store.versionMarker.expiresAt) <= Date.parse(nowIso)
   );
+  const excluded = [];
+  const candidates = store.facts.filter(fact => {
+    if (fact.expiresAt && Date.parse(fact.expiresAt) <= Date.parse(nowIso)) {
+      excluded.push({ id: fact.id, reason: 'expired' });
+      return false;
+    }
+    return true;
+  });
+  const values = new Map();
+  for (const fact of candidates) {
+    const key = JSON.stringify([fact.subject, fact.attribute]);
+    if (!values.has(key)) values.set(key, new Set());
+    values.get(key).add(fact.value);
+  }
+  store.facts = candidates.filter(fact => {
+    if (values.get(JSON.stringify([fact.subject, fact.attribute])).size > 1) {
+      excluded.push({ id: fact.id, reason: 'conflicting-values' });
+      return false;
+    }
+    return true;
+  });
 
   return {
     path: storePath,
     status: expired ? 'expired' : 'ready',
     expired,
     store,
+    excluded,
+    contentHash: createHash('sha256').update(bytes).digest('hex'),
   };
 }
 
@@ -271,7 +330,33 @@ function writeKnownFactsStore(profileName, input = {}, options = {}) {
   const storePath = normalizeKnownFactsStorePath(profileName, options);
   const store = buildStorePayload(profileName, input, options);
   ensureStoreDirectory(storePath);
-  fs.writeFileSync(storePath, `${JSON.stringify(store, null, 2)}\n`, 'utf8');
+  const bytes = Buffer.from(`${JSON.stringify(store, null, 2)}\n`);
+  if (
+    bytes.length > MAX_STORE_BYTES ||
+    store.facts.length > MAX_FACTS ||
+    new Set(store.facts.map(fact => fact.id)).size !== store.facts.length
+  ) {
+    throw new Error('Known facts exceed limits or contain duplicate identities.');
+  }
+  const lockPath = `${storePath}.lock`;
+  const temporaryPath = `${storePath}.${randomUUID()}.tmp`;
+  const lock = fs.openSync(lockPath, 'wx', 0o600);
+  try {
+    if (fs.existsSync(storePath)) {
+      const current = readKnownFactsStore(profileName, options);
+      if (options.expectedHash !== undefined && options.expectedHash !== current.contentHash) {
+        throw new Error('Known facts changed since the expected version.');
+      }
+    } else if (options.expectedHash) {
+      throw new Error('Known facts expected version is missing.');
+    }
+    fs.writeFileSync(temporaryPath, bytes, { flag: 'wx', mode: 0o600 });
+    fs.renameSync(temporaryPath, storePath);
+  } finally {
+    fs.rmSync(temporaryPath, { force: true });
+    fs.closeSync(lock);
+    fs.rmSync(lockPath, { force: true });
+  }
   const nowIso = normalizeTimestamp(options.now, new Date().toISOString());
 
   const expired = Boolean(
@@ -283,6 +368,7 @@ function writeKnownFactsStore(profileName, input = {}, options = {}) {
     status: expired ? 'expired' : 'ready',
     expired,
     store,
+    contentHash: createHash('sha256').update(bytes).digest('hex'),
   };
 }
 

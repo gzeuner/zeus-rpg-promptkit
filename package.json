@@ -73,6 +73,8 @@
     "adm-zip": "^0.6.1",
     "basic-ftp": "^6.2.3",
     "glob": "^13.0.6",
+    "markdown-it": "^14.3.3",
+    "parse5": "^7.3.0",
     "ssh2-sftp-client": "^11.0.0",
     "vis-network": "10.0.2"
   },

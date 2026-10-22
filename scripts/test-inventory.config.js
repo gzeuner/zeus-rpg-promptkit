@@ -84,6 +84,8 @@ module.exports = {
       'tests/capability-registry.test.js',
       'tests/commercial-module-loader.test.js',
       'tests/knowledge-cli.test.js',
+      'tests/session-knowledge-import.test.js',
+      'tests/case-index.test.js',
       'tests/knowledge-neutral-display-ui.test.js',
       'tests/knowledge-pipeline.test.js',
       'tests/test-inventory.test.js',

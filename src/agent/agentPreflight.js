@@ -11,6 +11,7 @@ const { buildCliWorkflowSuggestion } = require('./workflowSuggestion');
 const { buildResumeHints } = require('./agentResume');
 const { sanitizeValue } = require('../security/secretMasking');
 const { discoverResources } = require('../core/resourceDiscoveryService');
+const { inspectCaseIndex } = require('./caseIndex');
 
 const PREFLIGHT_SCHEMA_VERSION = 1;
 const GLOBAL_PROFILE_KEYS = new Set(['contextOptimizer', 'testData', 'analysisLimits', 'presets']);
@@ -154,6 +155,7 @@ function buildCliAgentPreflightPayload({
     ? suggestion.inputRequirements
     : { concepts: [], missingInputs: [], ready: true };
   const resume = buildResumeHints({ cwd: workspaceRoot, out, program });
+  const caseIndex = inspectCaseIndex({ cwd: workspaceRoot, out });
   const contextStatePath = path.resolve(workspaceRoot, '.zeus', 'working-context.json');
   const status = profileInventory.status === 'unavailable' ? 'needs-attention' : 'ready';
   const resourceNextCommands = Array.isArray(resourceDiscovery.profiles)
@@ -240,6 +242,21 @@ function buildCliAgentPreflightPayload({
     legacyConcepts: inputRequirements.concepts,
     inputRequirements,
     resume,
+    caseIndex,
+    taskOrientation: {
+      task: normalizedGoal,
+      route: suggestion
+        ? suggestion.steps.map(step => ({ tool: step.tool, purpose: step.purpose || step.label }))
+        : [],
+      scope: buildContextSummary(context),
+      missingInputs: inputRequirements.missingInputs,
+      freshness: caseIndex.documents.map(document => ({
+        path: document.path,
+        role: document.role,
+        freshness: document.freshness,
+      })),
+      caseReadPlan: caseIndex.readPlan,
+    },
     warnings: [
       ...(profileInventory.status === 'unavailable'
         ? ['Profile catalog could not be loaded; local-only orientation remains available.']

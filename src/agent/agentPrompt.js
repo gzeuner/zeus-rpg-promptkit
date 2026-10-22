@@ -54,6 +54,17 @@ function formatPromptContext(preflight) {
     );
     lines.push(`- Resume command: ${preflight.resume.commands[0] || '(inspect manifest first)'}`);
   }
+  if (preflight.caseIndex && preflight.caseIndex.status !== 'absent') {
+    lines.push(
+      `- Case index: ${preflight.caseIndex.status}${preflight.caseIndex.caseId ? ` (${preflight.caseIndex.caseId})` : ''}`
+    );
+    for (const document of preflight.caseIndex.readPlan || []) {
+      lines.push(`- Case document: ${document.path} (${document.role}, ${document.freshness})`);
+    }
+    for (const warning of (preflight.caseIndex.warnings || []).slice(0, 4)) {
+      lines.push(`- Case warning: ${warning.code} — ${warning.message}`);
+    }
+  }
   return lines.map(line => sanitizeValue(line));
 }
 
@@ -121,6 +132,8 @@ function buildCliAgentPromptPayload({
       suggestion: preflight.suggestion,
       inputRequirements: preflight.inputRequirements,
       resume: preflight.resume,
+      caseIndex: preflight.caseIndex,
+      taskOrientation: preflight.taskOrientation,
     },
   };
 }
