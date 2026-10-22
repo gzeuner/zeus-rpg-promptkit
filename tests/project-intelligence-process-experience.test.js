@@ -44,6 +44,11 @@ test('process experience reuses the sanitized local agent log', () => {
   assert.equal(result.ok, true);
   assert.equal(result.event.topic, 'process');
   assert.equal(result.event.processIssue, 'AMBIGUOUS');
+  assert.equal(result.event.processOutcome, 'ambiguous');
+  assert.equal(result.event.processTarget, 'glossary');
+  assert.equal(result.event.processTerm, 'SHIPMENT');
+  assert.equal(result.event.processQuestion, result.event.question);
+  assert.equal(result.event.processScenario, 'process-ambiguous-question');
   assert.equal(result.event.targetSurface, 'glossary-entry');
   assert.doesNotMatch(JSON.stringify(result), /TOPSECRET/);
   const listed = listAgentExperience({ cwd });
@@ -85,6 +90,42 @@ test('process improvement report groups repeated signals and stays review-only',
   assert.equal(report.candidates[0].count, 2);
   assert.equal(report.candidates[0].review.requiresSanitizedRegressionFixture, true);
   assert.match(report.candidates[0].questionExamples[0], /legacy dispatch/);
+  assert.equal(report.signals[0].processOutcome, 'ambiguous');
+  assert.equal(report.signals[0].affectedSurface, 'glossary');
+  assert.equal(report.signals[0].occurrenceCount, 2);
+  assert.equal(report.experienceImprovements[0].regressionScenario, 'process-ambiguous-question');
+  assert.equal(report.review.automaticPromotion, false);
+});
+
+test('experience improvement signals group by stable process identity or normalized question', () => {
+  const cwd = createTempWorkspace();
+  for (const question of ['Where does dispatch start?', 'Where does dispatch start today?']) {
+    recordProcessExperience({
+      cwd,
+      question,
+      outcome: 'incomplete',
+      processId: 'process:dispatch',
+    });
+  }
+  recordProcessExperience({
+    cwd,
+    question: 'Which path owns the new shipment status?',
+    outcome: 'incomplete',
+  });
+  recordProcessExperience({
+    cwd,
+    question: 'Which path owns the new invoice status?',
+    outcome: 'incomplete',
+  });
+
+  const report = buildProcessImprovementReport({ cwd });
+  const processSignal = report.signals.find(signal => signal.processId === 'process:dispatch');
+  assert.equal(processSignal.status, 'candidate');
+  assert.equal(processSignal.occurrenceCount, 2);
+  assert.equal(
+    report.signals.filter(signal => signal.topic.startsWith('which path owns')).length,
+    2
+  );
 });
 
 test('process experience CLI records issues and writes a bounded candidate artifact', () => {

@@ -6,6 +6,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const { startLocalUiServer } = require('../src/ui/localUiServer');
+const { createUiConfigurationService } = require('../src/ui/uiConfigurationService');
 const { createWorkingContextWizardService } = require('../src/ui/workingContextWizardService');
 
 const projectRoot = path.resolve(__dirname, '..');
@@ -1394,6 +1395,9 @@ test('serve CLI boots the local UI shell on loopback and answers health checks',
 test('local UI binds Doctor to reviewed config files and rejects stale selections', async () => {
   const { tempRoot, outputRoot } = createUiFixture();
   const config = path.join(tempRoot, 'config', 'profiles.example.json');
+  const profiles = JSON.parse(fs.readFileSync(config, 'utf8'));
+  profiles.qa = { ...profiles.dev, outputRoot: './workspace/qa-output' };
+  fs.writeFileSync(config, `${JSON.stringify(profiles, null, 2)}\n`, 'utf8');
   const localConfigDir = path.join(tempRoot, 'config', 'local-only');
   fs.mkdirSync(localConfigDir, { recursive: true });
   fs.writeFileSync(
@@ -1405,6 +1409,12 @@ test('local UI binds Doctor to reviewed config files and rejects stale selection
           id: 'dev',
           label: 'Development',
           profile: 'dev',
+          config: 'config/profiles.example.json',
+        },
+        {
+          id: 'qa',
+          label: 'QA',
+          profile: 'qa',
           config: 'config/profiles.example.json',
         },
       ],
@@ -1430,6 +1440,10 @@ test('local UI binds Doctor to reviewed config files and rejects stale selection
     const initial = await fetch(`${started.url}/api/ui-configuration`).then(response =>
       response.json()
     );
+    assert.deepEqual(
+      initial.configurations.map(item => item.id),
+      ['dev', 'qa']
+    );
     const select = await fetch(`${started.url}/api/ui-configuration`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -1452,6 +1466,26 @@ test('local UI binds Doctor to reviewed config files and rejects stale selection
     assert.equal(doctor.status, 200);
     assert.equal((await doctor.json()).input.probe, false);
 
+    const selectQa = await fetch(`${started.url}/api/ui-configuration`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        configurationId: 'qa',
+        configurationCatalogVersion: initial.configurationCatalogVersion,
+      }),
+    });
+    assert.equal(selectQa.status, 200);
+    const qaSelection = await selectQa.json();
+    assert.equal(qaSelection.activeConfiguration.id, 'qa');
+    assert.equal(qaSelection.profileSelection.profile, 'qa');
+    const qaDoctor = await fetch(`${started.url}/api/ui-actions/doctor`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ profile: 'qa', selectionVersion: qaSelection.version }),
+    });
+    assert.equal(qaDoctor.status, 200);
+    assert.equal((await qaDoctor.json()).input.profile, 'qa');
+
     const stale = await fetch(`${started.url}/api/ui-actions/doctor`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -1462,14 +1496,63 @@ test('local UI binds Doctor to reviewed config files and rejects stale selection
     const changed = JSON.parse(fs.readFileSync(config, 'utf8'));
     changed.dev.outputRoot = './changed-after-review';
     fs.writeFileSync(config, `${JSON.stringify(changed, null, 2)}\n`, 'utf8');
+    const invalidated = await fetch(`${started.url}/api/ui-configuration`).then(response =>
+      response.json()
+    );
+    assert.equal(invalidated.mode, 'blocked');
+    assert.equal(invalidated.version, null);
+    assert.equal(invalidated.activeConfiguration, null);
+    assert.deepEqual(invalidated.profileInventory, { count: 0, names: [] });
     const changedSelection = await fetch(`${started.url}/api/ui-actions/doctor`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ profile: 'dev', selectionVersion: selection.version }),
+      body: JSON.stringify({ profile: 'qa', selectionVersion: qaSelection.version }),
     });
     assert.equal(changedSelection.status, 409);
   } finally {
     await new Promise(resolve => started.server.close(resolve));
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('UI configuration binds the exact base and ordered env files and invalidates stale layers', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'zeus-ui-config-layers-'));
+  const configDir = path.join(tempRoot, 'config', 'local-only');
+  fs.mkdirSync(configDir, { recursive: true });
+  const base = path.join(configDir, 'base.json');
+  const selected = path.join(configDir, 'profiles.json');
+  const firstEnv = path.join(configDir, '.env.first');
+  const secondEnv = path.join(configDir, '.env.second');
+  fs.writeFileSync(base, JSON.stringify({ shared: { outputRoot: './shared-output' } }), 'utf8');
+  fs.writeFileSync(
+    selected,
+    JSON.stringify({ dev: { extends: 'shared', sourceRoot: './src', outputRoot: './output' } }),
+    'utf8'
+  );
+  fs.writeFileSync(firstEnv, 'ZEUS_UI_LAYER=first\n', 'utf8');
+  fs.writeFileSync(secondEnv, 'ZEUS_UI_LAYER=second\n', 'utf8');
+
+  try {
+    const service = createUiConfigurationService({ cwd: tempRoot, env: {} });
+    const selection = service.select({
+      config: 'config/local-only/profiles.json',
+      baseConfig: 'config/local-only/base.json',
+      envFiles: ['config/local-only/.env.first', 'config/local-only/.env.second'],
+    });
+    const runtime = service.runtime(selection.version, 'dev');
+    assert.deepEqual(runtime.configArgs['env-files'].split(','), [firstEnv, secondEnv]);
+    assert.equal(runtime.configArgs['base-config'], base);
+    assert.equal(runtime.env.ZEUS_UI_LAYER, 'second');
+    assert.equal(service.read().version, selection.version);
+
+    fs.writeFileSync(secondEnv, 'ZEUS_UI_LAYER=changed-after-selection\n', 'utf8');
+    const stale = service.read();
+    assert.equal(stale.mode, 'blocked');
+    assert.equal(stale.version, null);
+    assert.equal(stale.activeConfiguration, null);
+    assert.deepEqual(stale.profileInventory, { count: 0, names: [] });
+    assert.throws(() => service.runtime(selection.version, 'dev'), /valid configuration selection/);
+  } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });

@@ -143,8 +143,12 @@ the event.
 candidate is reviewable after two matching sanitized signals; every candidate
 requires a domain review and a sanitized regression fixture. The report never
 publishes process knowledge, changes a glossary, edits an extractor, or
-modifies an authoritative contract automatically. `--out` may write only a
-workspace-contained `.zeus/*.json` review artifact.
+modifies an authoritative contract automatically. Its `signals` projection
+also groups by normalized process term, process ID, or question and includes a
+suggested regression scenario. The established `candidates` contract and
+promotion checks remain available unchanged; neither projection authorizes
+publication. `--out` may write only a workspace-contained `.zeus/*.json`
+review artifact.
 
 ## Scoped business glossary
 

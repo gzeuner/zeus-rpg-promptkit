@@ -26,7 +26,9 @@ test('local UI shell contains keyboard-first and secure setup contracts', () => 
   assert.match(html, /aria-selected/);
   assert.match(html, /aria-controls/);
   assert.match(html, /\['collaboration','Chat'\]/);
+  assert.match(html, /\['administration','Administration'\]/);
   assert.match(html, /id="collaboration"/);
+  assert.match(html, /id="administration"/);
   assert.match(html, /textContent = message\.text/);
   assert.match(html, /\/api\/collaboration/);
   assert.match(html, /bindRovingTabKeyboard/);

@@ -10,13 +10,17 @@ The Local UI is an optional, local-only, experimental viewer around existing Zeu
 
 The supported product workflow remains CLI-first for full control. The optional Setup view also supports named local environments:
 
-1. load env explicitly in the shell
-2. run `doctor`
-3. use CLI or MCP commands from `docs/tool-catalog.md`
-4. generate artifacts and reports
+1. select one named local environment from the reviewed configuration catalog
+2. run local `doctor` readiness checks; this does not probe a remote connection
+3. choose whether to run the separate read-only connection check
+4. use CLI or MCP commands from `docs/tool-catalog.md` and generate artifacts
 5. optionally inspect those artifacts with `zeus serve`
 
 The Local UI is not a general browser command executor. Environment selection and connection checks are setup helpers; resource reads and source fetches still require their explicit CLI job approval.
+
+Technical profile, key, and plugin controls live on the separate Administration
+tab. Setup remains focused on choosing an environment, local readiness, and an
+explicit connection check.
 
 ## Command
 

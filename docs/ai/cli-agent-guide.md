@@ -120,8 +120,10 @@ corrected, record one sanitized learning signal with `process experience`.
 This reuses the local `.zeus/agent-experience.jsonl` log. Run
 `process improvements --json` to group repeated signals into reviewable
 candidates for `glossary-entry`, `extraction-rule`, `prompt`, or `contract`.
-Two matching signals make a candidate; human review and a sanitized regression
-fixture are still required, and no candidate is auto-promoted.
+The report also includes normalized signals grouped by process term, process
+ID, or question with a suggested regression scenario. Two matching signals
+make a candidate; human review and a sanitized regression fixture are still
+required, and no candidate is auto-promoted.
 
 When the signal should be reusable across environments or catalogs, combine
 review reports with `process promotion-check`. It counts only anonymized

@@ -664,6 +664,7 @@ button:disabled{cursor:not-allowed;opacity:.62}
 
     <div id="home" class="panel view two" role="tabpanel" aria-labelledby="main-tab-home"></div>
     <div id="configure" class="panel view two active" role="tabpanel" aria-labelledby="main-tab-configure"></div>
+    <div id="administration" class="panel view two" role="tabpanel" aria-labelledby="main-tab-administration"></div>
     <div id="reports" class="report-view-group" role="tabpanel" aria-labelledby="main-tab-reports">
       <div id="graph" class="panel view two" role="tabpanel" aria-label="Graph"></div>
       <div id="db2" class="panel view two" role="tabpanel" aria-label="DB2 / Test Data"></div>
@@ -687,7 +688,7 @@ const s={
     selectedGuidedStep:'workspace',
     selectedGuidedIntent:'onboarding'
   },
-  configuration:{loading:false,busy:false,error:null,payload:null},
+  configuration:{loading:false,busy:false,error:null,payload:null,selectionRequest:0},
   aiWorkbench:{
     role:'developer',
     query:'',
@@ -808,6 +809,7 @@ const s={
 const tabs=[
   ['configure','Setup'],
   ['reports','Reports'],
+  ['administration','Administration'],
   ['home','Advanced / Tools'],
   ['collaboration','Chat']
 ];
@@ -914,10 +916,13 @@ async function sendJson(method,u,payload){
 }
 
 async function loadUiConfiguration(){
+  const request=++s.configuration.selectionRequest;
   s.configuration.loading=true;
   s.configuration.error=null;
   try{
-    s.configuration.payload=await getJson('/api/ui-configuration');
+    const payload=await getJson('/api/ui-configuration');
+    if(request!==s.configuration.selectionRequest) return;
+    s.configuration.payload=payload;
     const active=s.configuration.payload.activeConfiguration;
     if(!active&&Array.isArray(s.configuration.payload.configurations)&&s.configuration.payload.configurations.length===1){
       await selectUiConfiguration(s.configuration.payload.configurations[0].id);
@@ -930,11 +935,12 @@ async function loadUiConfiguration(){
       s.uiActions.analyze.profile=profile;
       s.uiActions.aiSession.profile=profile;
     }
-  }catch(error){s.configuration.error=error.message||String(error);}
-  finally{s.configuration.loading=false;}
+  }catch(error){if(request===s.configuration.selectionRequest)s.configuration.error=error.message||String(error);}
+  finally{if(request===s.configuration.selectionRequest)s.configuration.loading=false;}
 }
 
 async function selectUiConfiguration(configurationId){
+  const request=++s.configuration.selectionRequest;
   const current=s.configuration.payload||{};
   const restoreEnvironmentFocus=document.activeElement?.id==='namedEnvironmentSelect';
   s.configuration.busy=true;
@@ -947,6 +953,7 @@ async function selectUiConfiguration(configurationId){
       configurationId,
       configurationCatalogVersion:current.configurationCatalogVersion
     });
+    if(request!==s.configuration.selectionRequest) return;
     s.configuration.payload=selected;
     const profile=selected.activeConfiguration?.profile||selected.profileSelection?.profile||'';
     if(profile){
@@ -961,19 +968,23 @@ async function selectUiConfiguration(configurationId){
     s.uiActions.connections.error=null;
     await runDoctorReadinessAction(false);
   }catch(error){
+    if(request!==s.configuration.selectionRequest) return;
     s.configuration.error=error.message||String(error);
     try{s.configuration.payload=await getJson('/api/ui-configuration');}catch{}
   }
   finally{
-    s.configuration.busy=false;
-    renderConfigure();
-    if(restoreEnvironmentFocus) q('namedEnvironmentSelect')?.focus();
+    if(request===s.configuration.selectionRequest){
+      s.configuration.busy=false;
+      renderConfigure();
+      if(restoreEnvironmentFocus) q('namedEnvironmentSelect')?.focus();
+    }
   }
 }
 
 async function runSelectedConnectionCheck(){
   const state=s.uiActions.connections;
   state.running=true;state.error=null;state.result=null;
+  renderConfigure();
   const reviewedVersion=s.configuration.payload?.version;
   try{
     state.result=await sendJson('POST','/api/ui-actions/check-connections',{profile:s.uiActions.doctor.profile});
@@ -1068,11 +1079,13 @@ function renderHero(){
   q('title').textContent=x.program;
   q('subtitle').textContent=s.tab==='configure'
     ? 'Review setup, profile readiness, and safe next steps.'
-    : (isReportsTab(s.tab)
+    : (s.tab==='administration'
+      ? 'Manage local profile overlays, key readiness, and plugin metadata.'
+      : (isReportsTab(s.tab)
       ? 'Read-only reports and report views for the selected run.'
         : (s.tab==='home'||s.tab==='workbench'
         ? 'Advanced tools live here after Setup is ready.'
-        : 'Read-only explorer for generated analysis evidence.'));
+        : 'Read-only explorer for generated analysis evidence.')));
   q('chips').innerHTML=['Status: '+(x.status||'unknown'),'Mode: '+(x.workflowPreset||x.workflowMode||'standard'),'Artifacts: '+x.artifactCount,x.safeSharingEnabled?'Safe sharing':'No safe sharing'].map((v)=>'<div class="token">'+esc(v)+'</div>').join('');
 }
 
@@ -1101,6 +1114,7 @@ function renderMetrics(){
 
 function renderTabs(){
   q('reports').classList.toggle('active',isReportsTab(s.tab));
+  q('administration').classList.toggle('active',s.tab==='administration');
   q('collaboration').classList.toggle('active',s.tab==='collaboration');
   q('tabs').setAttribute('role','tablist');
   q('tabs').setAttribute('aria-label','Main views');
@@ -3138,8 +3152,10 @@ function renderNamedConfigurationPanel(){
 
 function renderConfigure(){
   const root=q('configure');
+  const adminRoot=q('administration');
   root.classList.toggle('active',s.tab==='configure');
-  if(s.tab!=='configure') return;
+  adminRoot.classList.toggle('active',s.tab==='administration');
+  if(s.tab!=='configure'&&s.tab!=='administration') return;
 
   const sections=metadataSections();
   const fields=metadataFields();
@@ -3237,15 +3253,16 @@ function renderConfigure(){
       profile:profileForWizard,
       doctorResult
     })+
-    '<div class="sub"><details id="profileWizardSection"'+(wizardDetailsOpen?' open':'')+'><summary>Local-only Profile Wizard</summary><p class="small">Use this only when you need to create or adjust the local-only profile overlay that Setup and Doctor rely on.</p>'+renderProfileWizardPanel()+'</details></div>'+
-    renderProfileKeyWizardPanel()+
-    renderPluginCatalogPanel()+
     '<div class="sub"><h2>Advanced Setup Details</h2><p class="small">These sections explain the metadata-driven wizard model and read-only preview stubs. They are optional once the main setup flow is clear.</p><details'+(discoveryResult||discoveryState.error?' open':'')+'><summary>Read-only Discovery Actions</summary><div class="stack"><div class="field-list">'+(discoveryActions.length?discoveryActions.map((action)=>'<div class="field-item"><strong>'+esc(action.title)+'</strong><p>'+esc(action.description||'')+'</p><div class="workflow-meta"><div class="token">safety: '+esc(action.safetyLevel||'S2')+'</div><div class="token">'+esc(action.status||'stubbed-preview-only')+'</div><div class="token">'+esc(action.expensive?'preview first':'read-only')+'</div></div><div class="actions"><button class="btn" data-discovery-preview="'+esc(action.id)+'">'+esc(String(action.status||'').indexOf('config-preview-ready')===0?'Preview':'Preview Stub')+'</button></div></div>').join(''):'<div class="empty">No discovery actions available.</div>')+'</div>'+(discoveryState.error?'<div class="hint-list"><div class="hint-item"><strong>Discovery preview error</strong><p>'+esc(discoveryState.error)+'</p></div></div>':'')+renderGuidedDiscoveryPreview(discoveryResult)+'</div></details><details><summary>Safe CLI Preview</summary><p class="small">Generated from the selected intent. Secrets are never included.</p><div class="field-grid"><label>Analysis Intent<select id="guidedIntentSelect">'+intents.map((intent)=>'<option value="'+escAttr(intent.id)+'"'+(selectedIntent&&intent.id===selectedIntent.id?' selected':'')+'>'+esc(intent.title)+'</option>').join('')+'</select></label></div>'+renderGuidedCliPreview(selectedIntent,profileForWizard)+'</details><details><summary>Guided Wizard Metadata</summary><div class="tokens"><div class="token">'+esc(statusLine)+'</div><div class="token">Wizard steps: '+esc(String(steps.length||0))+'</div><div class="token">Intents: '+esc(String(intents.length||0))+'</div><div class="token">Purpose labels: '+esc(String(guided&&guided.purposeLabels&&guided.purposeLabels.length||0))+'</div></div><div class="section-list">'+steps.map((step)=>'<button class="btn section-btn'+(selectedStep&&step.id===selectedStep.id?' active':'')+'" data-guided-step="'+esc(step.id)+'">'+esc(step.shortTitle||step.title)+'</button>').join('')+'</div><div class="configure-layout"><div class="section-list">'+
       sections.map((section)=>'<button class="btn section-btn'+(section.id===s.uiMetadata.selectedConfigSection?' active':'')+'" data-config-section="'+esc(section.id)+'">'+esc(section.label||section.id)+'</button>').join('')+
     '</div><div class="field-list">'+
       renderGuidedStepDetails(selectedStep,selectedIntent)+
       '<details><summary>Raw metadata fallback</summary>'+(fields.length>0?'<div class="field-list">'+fields.filter((field)=>field.section===String(s.uiMetadata.selectedConfigSection||defaultConfigSection())).map((field)=>'<div class="field-item"><strong>'+esc(field.label||field.key)+'</strong><p>'+esc(field.description||'')+'</p><div class="workflow-meta"><div class="token">key: '+esc(field.key)+'</div><div class="token">type: '+esc(field.type||'string')+'</div><div class="token">'+esc(field.sensitive?'sensitive':'non-sensitive')+'</div></div><div class="small">placeholder: '+esc(field.placeholder||'(none)')+'</div><div class="small">example: '+esc(field.example||'(none)')+'</div><div class="small">env: '+esc(field.envVar||'(none)')+'</div><div class="small">profile path: '+esc(field.profilePath||'(none)')+'</div></div>').join('')+'</div>':'<div class="empty">No metadata fields available.</div>')+'</details>'+
     '</div></div></details></div>';
+
+  adminRoot.innerHTML='<div class="sub"><div class="stack"><h2>Administration</h2><p>Technical profile, key, and plugin configuration stays here. These local-only controls do not select an operating environment or run remote checks.</p></div></div>'+
+    '<div class="sub"><details id="profileWizardSection"'+(wizardDetailsOpen?' open':'')+'><summary>Local-only Profile Wizard</summary><p class="small">Use this only when you need to create or adjust the local-only profile overlay used by Setup and Doctor.</p>'+renderProfileWizardPanel()+'</details></div>'+
+    renderProfileKeyWizardPanel()+renderPluginCatalogPanel();
 
   const environmentSelect=root.querySelector('#namedEnvironmentSelect');
   if(environmentSelect){
@@ -3261,8 +3278,8 @@ function renderConfigure(){
     button.onclick=runSelectedConnectionCheck;
   }
 
-  const bindInput=(selector,assigner)=>{
-    const node=root.querySelector(selector);
+  const bindInput=(selector,assigner,container=root)=>{
+    const node=container.querySelector(selector);
     if(node){
       node.oninput=(event)=>{
         assigner(String(event.target.value||''));
@@ -3273,25 +3290,26 @@ function renderConfigure(){
     }
   };
 
-  bindInput('#profileWizardProfileSelect',(value)=>{ s.profileWizard.selectedProfileName=value.trim(); });
-  bindInput('#profileWizardName',(value)=>{ wizardDraft.profileName=value.trim(); });
-  bindInput('#profileWizardComment',(value)=>{ wizardDraft.comment=value; });
-  bindInput('#profileWizardExtends',(value)=>{ wizardDraft.extends=value.split(',').map((entry)=>String(entry||'').trim()).filter(Boolean); });
-  bindInput('#profileWizardSourceRoot',(value)=>{ wizardDraft.sourceRoot=value.trim(); });
-  bindInput('#profileWizardOutputRoot',(value)=>{ wizardDraft.outputRoot=value.trim(); });
-  bindInput('#profileWizardRegistryPath',(value)=>{ wizardDraft.analysesRegistryPath=value.trim(); });
-  bindInput('#profileWizardDefaultDbSystem',(value)=>{ wizardDraft.environmentBindings.defaultDbSystem=value.trim(); });
-  bindInput('#profileWizardMetadataSystem',(value)=>{ wizardDraft.environmentBindings.metadataSystem=value.trim(); });
-  bindInput('#profileWizardTestDataSystem',(value)=>{ wizardDraft.environmentBindings.testDataSystem=value.trim(); });
-  bindInput('#profileWizardFetchSystem',(value)=>{ wizardDraft.environmentBindings.fetchSystem=value.trim(); });
-  bindInput('#profileWizardFetchSourceLibrary',(value)=>{ wizardDraft.fetch.sourceLibrary=value.trim().toUpperCase(); });
-  bindInput('#profileWizardFetchIfsDir',(value)=>{ wizardDraft.fetch.ifsDir=value.trim(); });
-  bindInput('#profileWizardFetchOut',(value)=>{ wizardDraft.fetch.out=value.trim(); });
-  bindInput('#profileWizardFetchFiles',(value)=>{ wizardDraft.fetch.files=value.split(',').map((entry)=>String(entry||'').trim().toUpperCase()).filter(Boolean); });
-  bindInput('#profileWizardFetchMembers',(value)=>{ wizardDraft.fetch.members=value.split(',').map((entry)=>String(entry||'').trim().toUpperCase()).filter(Boolean); });
-  bindInput('#profileWizardFetchTransport',(value)=>{ wizardDraft.fetch.transport=value.trim().toLowerCase(); });
+  const bindAdminInput=(selector,assigner)=>bindInput(selector,assigner,adminRoot);
+  bindAdminInput('#profileWizardProfileSelect',(value)=>{ s.profileWizard.selectedProfileName=value.trim(); });
+  bindAdminInput('#profileWizardName',(value)=>{ wizardDraft.profileName=value.trim(); });
+  bindAdminInput('#profileWizardComment',(value)=>{ wizardDraft.comment=value; });
+  bindAdminInput('#profileWizardExtends',(value)=>{ wizardDraft.extends=value.split(',').map((entry)=>String(entry||'').trim()).filter(Boolean); });
+  bindAdminInput('#profileWizardSourceRoot',(value)=>{ wizardDraft.sourceRoot=value.trim(); });
+  bindAdminInput('#profileWizardOutputRoot',(value)=>{ wizardDraft.outputRoot=value.trim(); });
+  bindAdminInput('#profileWizardRegistryPath',(value)=>{ wizardDraft.analysesRegistryPath=value.trim(); });
+  bindAdminInput('#profileWizardDefaultDbSystem',(value)=>{ wizardDraft.environmentBindings.defaultDbSystem=value.trim(); });
+  bindAdminInput('#profileWizardMetadataSystem',(value)=>{ wizardDraft.environmentBindings.metadataSystem=value.trim(); });
+  bindAdminInput('#profileWizardTestDataSystem',(value)=>{ wizardDraft.environmentBindings.testDataSystem=value.trim(); });
+  bindAdminInput('#profileWizardFetchSystem',(value)=>{ wizardDraft.environmentBindings.fetchSystem=value.trim(); });
+  bindAdminInput('#profileWizardFetchSourceLibrary',(value)=>{ wizardDraft.fetch.sourceLibrary=value.trim().toUpperCase(); });
+  bindAdminInput('#profileWizardFetchIfsDir',(value)=>{ wizardDraft.fetch.ifsDir=value.trim(); });
+  bindAdminInput('#profileWizardFetchOut',(value)=>{ wizardDraft.fetch.out=value.trim(); });
+  bindAdminInput('#profileWizardFetchFiles',(value)=>{ wizardDraft.fetch.files=value.split(',').map((entry)=>String(entry||'').trim().toUpperCase()).filter(Boolean); });
+  bindAdminInput('#profileWizardFetchMembers',(value)=>{ wizardDraft.fetch.members=value.split(',').map((entry)=>String(entry||'').trim().toUpperCase()).filter(Boolean); });
+  bindAdminInput('#profileWizardFetchTransport',(value)=>{ wizardDraft.fetch.transport=value.trim().toLowerCase(); });
 
-  for(const button of root.querySelectorAll('[data-pw-env-remove]')){
+  for(const button of adminRoot.querySelectorAll('[data-pw-env-remove]')){
     button.onclick=()=>{
       const index=Number.parseInt(String(button.dataset.pwEnvRemove||''),10);
       if(Number.isInteger(index)&&index>=0){
@@ -3300,7 +3318,7 @@ function renderConfigure(){
       }
     };
   }
-  for(const button of root.querySelectorAll('[data-pw-env-add]')){
+  for(const button of adminRoot.querySelectorAll('[data-pw-env-add]')){
     button.onclick=()=>{
       wizardDraft.managedEnvironments.push({
         key:'',
@@ -3328,7 +3346,7 @@ function renderConfigure(){
     ['[data-pw-env-schema]','defaultSchema']
   ];
   for(const [selector,fieldName] of envFieldMap){
-    for(const node of root.querySelectorAll(selector)){
+    for(const node of adminRoot.querySelectorAll(selector)){
       const applyValue=(value)=>{
         const index=Number.parseInt(String(
           node.dataset.pwEnvKey
@@ -3352,31 +3370,31 @@ function renderConfigure(){
       node.onchange=(event)=>applyValue(String(event.target.value||''));
     }
   }
-  for(const pwRefresh of root.querySelectorAll('[data-pw-refresh]')){
+  for(const pwRefresh of adminRoot.querySelectorAll('[data-pw-refresh]')){
     pwRefresh.onclick=async ()=>{
       await loadProfileWizardState();
       renderConfigure();
     };
   }
-  for(const pwNew of root.querySelectorAll('[data-pw-new]')){
+  for(const pwNew of adminRoot.querySelectorAll('[data-pw-new]')){
     pwNew.onclick=()=>{
       startNewProfileWizardDraft();
       renderConfigure();
     };
   }
-  for(const pwLoad of root.querySelectorAll('[data-pw-load]')){
+  for(const pwLoad of adminRoot.querySelectorAll('[data-pw-load]')){
     pwLoad.onclick=async ()=>{
       await loadProfileWizardProfile(s.profileWizard.selectedProfileName);
       renderConfigure();
     };
   }
-  for(const pwClone of root.querySelectorAll('[data-pw-clone]')){
+  for(const pwClone of adminRoot.querySelectorAll('[data-pw-clone]')){
     pwClone.onclick=()=>{
       cloneCurrentProfileWizardDraft();
       renderConfigure();
     };
   }
-  for(const pwDelete of root.querySelectorAll('[data-pw-delete]')){
+  for(const pwDelete of adminRoot.querySelectorAll('[data-pw-delete]')){
     pwDelete.onclick=async ()=>{
       const summary=findProfileWizardSummary(s.profileWizard.selectedProfileName||wizardDraft.profileName);
       if(!summary||summary.deleteAllowed!==true){
@@ -3388,37 +3406,37 @@ function renderConfigure(){
       renderConfigure();
     };
   }
-  for(const pwPreview of root.querySelectorAll('[data-pw-preview]')){
+  for(const pwPreview of adminRoot.querySelectorAll('[data-pw-preview]')){
     pwPreview.onclick=async ()=>{
       await previewProfileWizardDraft();
       renderConfigure();
     };
   }
-  for(const pwSave of root.querySelectorAll('[data-pw-save]')){
+  for(const pwSave of adminRoot.querySelectorAll('[data-pw-save]')){
     pwSave.onclick=async ()=>{
       await saveProfileWizardDraft();
       renderConfigure();
     };
   }
-  for(const pkwRefresh of root.querySelectorAll('[data-pkw-refresh]')){
+  for(const pkwRefresh of adminRoot.querySelectorAll('[data-pkw-refresh]')){
     pkwRefresh.onclick=async ()=>{
       await loadProfileKeyWizardState();
       renderConfigure();
     };
   }
-  for(const pkwInit of root.querySelectorAll('[data-pkw-init]')){
+  for(const pkwInit of adminRoot.querySelectorAll('[data-pkw-init]')){
     pkwInit.onclick=async ()=>{
       await initializeProfileKeyWizard();
       renderConfigure();
     };
   }
-  for(const pwProductionToggle of root.querySelectorAll('[data-pw-production-toggle]')){
+  for(const pwProductionToggle of adminRoot.querySelectorAll('[data-pw-production-toggle]')){
     pwProductionToggle.onclick=()=>{
       wizardDraft.productionSystem=!wizardDraft.productionSystem;
       renderConfigure();
     };
   }
-  for(const pwFetchToggle of root.querySelectorAll('[data-pw-fetch-toggle]')){
+  for(const pwFetchToggle of adminRoot.querySelectorAll('[data-pw-fetch-toggle]')){
     pwFetchToggle.onclick=()=>{
       wizardDraft.fetch.enabled=wizardDraft.fetch.enabled===false;
       renderConfigure();
@@ -3610,6 +3628,18 @@ function renderConfigure(){
       const target=String(button.dataset.setupChecklistTarget||'').trim();
       if(target==='reports'){
         await selectTab('reports');
+        return;
+      }
+      const adminTarget=target?adminRoot.querySelector('#'+target):null;
+      if(adminTarget){
+        await selectTab('administration');
+        const currentTarget=adminRoot.querySelector('#'+target);
+        if(currentTarget?.tagName==='DETAILS') currentTarget.open=true;
+        if(typeof currentTarget?.scrollIntoView==='function') currentTarget.scrollIntoView({ block:'center', behavior:'smooth' });
+        const focusTarget=currentTarget&&(currentTarget.matches('input,select,button,summary,[tabindex]')
+          ? currentTarget
+          : currentTarget.querySelector('summary,input,select,button,[tabindex]'));
+        if(focusTarget&&typeof focusTarget.focus==='function') focusTarget.focus();
         return;
       }
       const targetNode=target?root.querySelector('#'+target):null;

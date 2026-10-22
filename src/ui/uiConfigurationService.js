@@ -388,6 +388,28 @@ function createUiConfigurationService({
       blocked = true;
       catalogError = error.message;
     }
+    if (selection && (blocked || catalogError)) {
+      selection = null;
+    } else if (selection) {
+      try {
+        const catalogChanged =
+          selection.catalogFile &&
+          (!catalog ||
+            catalog.version !== selection.catalogVersion ||
+            catalog.file !== selection.catalogFile);
+        if (
+          catalogChanged ||
+          fingerprint(selection.args, selection.catalogFile, selection.catalogVersion) !==
+            selection.hash
+        ) {
+          selection = null;
+          blocked = true;
+        }
+      } catch {
+        selection = null;
+        blocked = true;
+      }
+    }
     const configurationFields = {
       configurations: (catalog?.entries || []).map(({ id, label }) => ({ id, label })),
       configurationCatalogVersion: catalog?.version || null,
