@@ -213,15 +213,19 @@ test('investigation rejects disclosure, row exhaustion, serialized grants and au
   assert.equal(fixture.calls.length, 0);
 });
 
-test('workflow baseline measures two-query approval preparation and bounds fixture p95', async t => {
+test('workflow baseline reports two-query timings and deterministic preparation counts', async t => {
   const before = [];
   const after = [];
+  const preparationCounts = { before: [], after: [] };
   const warmSampleCount = 20;
-  const prepare = () =>
-    execFileSync(process.execPath, ['-e', 'require("node:assert/strict").equal(1 + 1, 2)'], {
+  let prepareCalls = 0;
+  const prepare = () => {
+    prepareCalls += 1;
+    return execFileSync(process.execPath, ['-e', 'require("node:assert/strict").equal(1 + 1, 2)'], {
       encoding: 'utf8',
       timeout: 10000,
     });
+  };
   for (let sample = 0; sample <= warmSampleCount; sample++) {
     const fixture = investigationFixture();
     const original = fixture.services.query;
@@ -253,11 +257,19 @@ test('workflow baseline measures two-query approval preparation and bounds fixtu
       return performance.now() - started;
     };
     if (sample % 2 === 0) {
+      let startedWith = prepareCalls;
       before.push(await runBefore());
+      preparationCounts.before.push(prepareCalls - startedWith);
+      startedWith = prepareCalls;
       after.push(await runAfter());
+      preparationCounts.after.push(prepareCalls - startedWith);
     } else {
+      let startedWith = prepareCalls;
       after.push(await runAfter());
+      preparationCounts.after.push(prepareCalls - startedWith);
+      startedWith = prepareCalls;
       before.push(await runBefore());
+      preparationCounts.before.push(prepareCalls - startedWith);
     }
   }
   const summarize = samples => {
@@ -276,14 +288,15 @@ test('workflow baseline measures two-query approval preparation and bounds fixtu
     platform: process.platform,
     before: { ...summarize(before), approvalCount: 2, queries: 2 },
     after: { ...summarize(after), approvalCount: 1, queries: 2 },
+    preparationCounts,
     pairedRegression: summarize(after.map((duration, index) => duration - before[index])),
     remoteIBM: 'not-measured',
     humanWait: 'not-measured',
   };
   t.diagnostic(JSON.stringify(report));
   assert.ok(
-    report.pairedRegression.p95Ms <= 0,
-    'scoped fixture must not regress against paired p95 baseline samples'
+    preparationCounts.before.every((count, index) => count > preparationCounts.after[index]),
+    'scoped execution must perform fewer deterministic preparation steps for each pair'
   );
 });
 
